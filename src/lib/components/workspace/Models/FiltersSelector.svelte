@@ -62,7 +62,7 @@
 		<!-- TODO: Filter order matters -->
 		<div class="flex flex-col">
 			<div class=" flex items-center flex-wrap mt-1">
-				{#each selectedFilters as filter}
+				{#each selectedFilters as filter (filter.id)}
 					{@const isSelected = filter.is_global || selectedFilterIds.includes(filter.id)}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">

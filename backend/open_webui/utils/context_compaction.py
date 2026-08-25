@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -8,9 +7,10 @@ from fastapi.responses import JSONResponse
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
+from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
-    get_task_model_id,
     prompt_template,
     prompt_variables_template,
     replace_messages_variable,
@@ -234,6 +234,23 @@ def _resolve_token_threshold(global_threshold: int, global_cap: int, metadata: d
     return min(configured_threshold or global_threshold, global_cap)
 
 
+def _usage_token_count(usage: dict) -> int:
+    prompt_tokens = int(usage.get('prompt_tokens') or usage.get('prompt_eval_count') or 0)
+    if not prompt_tokens and (usage.get('prompt_n') is not None or usage.get('cache_n') is not None):
+        prompt_tokens = int(usage.get('prompt_n') or 0) + int(usage.get('cache_n') or 0)
+    if not prompt_tokens:
+        prompt_tokens = int(usage.get('input_tokens') or 0)
+
+    completion_tokens = int(
+        usage.get('completion_tokens')
+        or usage.get('output_tokens')
+        or usage.get('eval_count')
+        or usage.get('predicted_n')
+        or 0
+    )
+    return prompt_tokens + completion_tokens
+
+
 async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict | None:
     chat_data = chat.chat or {}
     history = chat_data.get('history') or {}
@@ -262,25 +279,7 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (
-            tokens := (
-                int(
-                    usage.get('prompt_tokens')
-                    or usage.get('input_tokens')
-                    or usage.get('prompt_eval_count')
-                    or usage.get('prompt_n')
-                    or 0
-                )
-                + int(
-                    usage.get('completion_tokens')
-                    or usage.get('output_tokens')
-                    or usage.get('eval_count')
-                    or usage.get('predicted_n')
-                    or 0
-                )
-                + int(usage.get('cache_n') or 0)
-            )
-        ):
+        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
             return _build_context_usage(tokens, threshold)
 
@@ -319,25 +318,7 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (
-            tokens := (
-                int(
-                    usage.get('prompt_tokens')
-                    or usage.get('input_tokens')
-                    or usage.get('prompt_eval_count')
-                    or usage.get('prompt_n')
-                    or 0
-                )
-                + int(
-                    usage.get('completion_tokens')
-                    or usage.get('output_tokens')
-                    or usage.get('eval_count')
-                    or usage.get('predicted_n')
-                    or 0
-                )
-                + int(usage.get('cache_n') or 0)
-            )
-        ):
+        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
             return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
@@ -365,23 +346,11 @@ async def _generate_summary(
     from open_webui.utils.chat import generate_chat_completion
 
     task_config = await Config.get_many(
-        'task.model.default',
-        'task.model.external',
+        'task.model.params',
         'chat.context_compaction.model',
     )
     context_compaction_model = task_config.get('chat.context_compaction.model')
-    task_model_id = (
-        context_compaction_model
-        if context_compaction_model in models
-        else get_task_model_id(
-            model_id,
-            task_config.get('task.model.default'),
-            task_config.get('task.model.external'),
-            models,
-        )
-    )
-    if task_model_id not in models:
-        task_model_id = model_id
+    task_model_id = context_compaction_model if context_compaction_model in models else model_id
     if task_model_id not in models:
         raise ValueError('No available model for context compaction')
 
@@ -394,22 +363,25 @@ async def _generate_summary(
     prompt = prompt_variables_template(prompt, {'{{PREVIOUS_SUMMARY}}': previous_summary or ''})
     prompt = await prompt_template(prompt, user)
 
-    max_tokens = models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
+    task_model_params = task_config.get('task.model.params') or {}
+    if not isinstance(task_model_params, dict):
+        task_model_params = {}
+    task_model_params = {key: value for key, value in task_model_params.items() if value is not None and value != ''}
+    task_model_params = task_model_params or {
+        'max_tokens': models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
+    }
+
     payload = {
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': prompt}],
         'stream': False,
-        **(
-            {'max_tokens': max_tokens}
-            if models[task_model_id].get('owned_by') == 'ollama'
-            else {'max_completion_tokens': max_tokens}
-        ),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': 'context_compaction',
         },
     }
 
+    payload = apply_params_to_form_data(payload, models[task_model_id], task_model_params)
     response = await generate_chat_completion(request, form_data=payload, user=user)
     summary = _response_text(response).strip()
     if summary:
@@ -429,7 +401,7 @@ def _response_text(response: Any) -> str:
 
     if isinstance(response, JSONResponse):
         try:
-            response = json.loads(response.body.decode('utf-8', 'replace'))
+            response = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
         except Exception:
             return ''
 
@@ -477,7 +449,7 @@ def _estimate_tokens(value: Any) -> int:
 
     if not isinstance(value, str):
         try:
-            value = json.dumps(value, ensure_ascii=False)
+            value = JSONCodec.dumps(value, ensure_ascii=False)
         except Exception:
             value = str(value)
 

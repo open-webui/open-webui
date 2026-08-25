@@ -11,9 +11,10 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.config import Config
 from open_webui.models.memories import Memories, MemoryModel
+from open_webui.models.users import Users
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.utils.access_control import has_permission
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.memory import (
     clean_memory_content,
     clean_memory_path,
@@ -124,6 +125,61 @@ def _memory_metadata(memory: MemoryModel) -> dict:
     }
 
 
+async def reindex_memory_vectors_for_user(
+    request: Request,
+    user_id: str,
+    memories: list[MemoryModel] | None = None,
+    user=None,
+) -> int:
+    collection_name = f'user-memory-{user_id}'
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name)
+    except Exception as e:
+        log.debug(e)
+
+    memories = memories if memories is not None else await Memories.get_memories_by_user_id(user_id)
+    memories = memories or []
+    if not memories:
+        return 0
+
+    vectors = await asyncio.gather(
+        *[
+            request.app.state.EMBEDDING_FUNCTION(
+                memory_vector_text(memory.content, memory.path),
+                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                user=user,
+            )
+            for memory in memories
+        ]
+    )
+
+    await ASYNC_VECTOR_DB_CLIENT.upsert(
+        collection_name=collection_name,
+        items=[
+            {
+                'id': memory.id,
+                'text': memory_vector_text(memory.content, memory.path),
+                'vector': vectors[idx],
+                'metadata': _memory_metadata(memory),
+            }
+            for idx, memory in enumerate(memories)
+        ],
+    )
+    return len(memories)
+
+
+async def upsert_memory_vectors_or_reindex(request: Request, user, items: list[dict]) -> None:
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.upsert(collection_name=f'user-memory-{user.id}', items=items)
+    except Exception as e:
+        message = str(e).lower()
+        if 'dimension' not in message or 'embedding' not in message:
+            raise
+
+        log.warning('Memory vector dimension mismatch for user %s; reindexing memory vectors.', user.id)
+        await reindex_memory_vectors_for_user(request, user.id, user=user)
+
+
 @router.post('/add', response_model=MemoryModel | None)
 async def add_memory(
     request: Request,
@@ -152,9 +208,10 @@ async def add_memory(
         memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
     )
 
-    await ASYNC_VECTOR_DB_CLIENT.upsert(
-        collection_name=f'user-memory-{user.id}',
-        items=[
+    await upsert_memory_vectors_or_reindex(
+        request,
+        user,
+        [
             {
                 'id': memory.id,
                 'text': memory_vector_text(memory.content, memory.path),
@@ -226,7 +283,7 @@ async def update_memories(
         response.append(result)
 
     if upsert_items:
-        await ASYNC_VECTOR_DB_CLIENT.upsert(collection_name=f'user-memory-{user.id}', items=upsert_items)
+        await upsert_memory_vectors_or_reindex(request, user, upsert_items)
 
     if delete_ids:
         await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=delete_ids)
@@ -386,8 +443,42 @@ async def read_memory_path(
 
 
 ############################
-# ResetMemoryFromVectorDB
+# ReindexMemoryVectorDB
 ############################
+@router.post('/reindex')
+async def reindex_memories_from_vector_db(
+    request: Request,
+    user=Depends(get_admin_user),
+):
+    memories = await Memories.get_memories()
+    memories = memories or []
+    memories_by_user_id = {}
+    for memory in memories:
+        memories_by_user_id.setdefault(memory.user_id, []).append(memory)
+
+    users_result = await Users.get_users()
+    users = users_result.get('users', []) if users_result else []
+    total_memories = 0
+
+    for memory_user in users:
+        total_memories += await reindex_memory_vectors_for_user(
+            request,
+            memory_user.id,
+            memories=memories_by_user_id.get(memory_user.id, []),
+            user=memory_user,
+        )
+
+    await publish_event(
+        request,
+        EVENTS.MEMORY_RESET,
+        actor=user,
+        subject_id='all',
+        subject_type='user',
+        data={'count': total_memories, 'user_count': len(users), 'reindex': True},
+    )
+    return {'status': True, 'total_users': len(users), 'total_memories': total_memories}
+
+
 @router.post('/reset', response_model=bool)
 async def reset_memory_from_vector_db(
     request: Request,
@@ -403,32 +494,7 @@ async def reset_memory_from_vector_db(
     """
     await check_memories_permission(user)
 
-    await ASYNC_VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
-
-    memories = await Memories.get_memories_by_user_id(user.id)
-
-    # Generate vectors in parallel
-    vectors = await asyncio.gather(
-        *[
-            request.app.state.EMBEDDING_FUNCTION(
-                memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
-            )
-            for memory in memories
-        ]
-    )
-
-    await ASYNC_VECTOR_DB_CLIENT.upsert(
-        collection_name=f'user-memory-{user.id}',
-        items=[
-            {
-                'id': memory.id,
-                'text': memory_vector_text(memory.content, memory.path),
-                'vector': vectors[idx],
-                'metadata': _memory_metadata(memory),
-            }
-            for idx, memory in enumerate(memories)
-        ],
-    )
+    count = await reindex_memory_vectors_for_user(request, user.id, user=user)
 
     await publish_event(
         request,
@@ -436,7 +502,7 @@ async def reset_memory_from_vector_db(
         actor=user,
         subject_id=user.id,
         subject_type='user',
-        data={'count': len(memories)},
+        data={'count': count, 'reindex': True},
     )
     return True
 
@@ -512,9 +578,10 @@ async def update_memory_by_id(
             memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
         )
 
-        await ASYNC_VECTOR_DB_CLIENT.upsert(
-            collection_name=f'user-memory-{user.id}',
-            items=[
+        await upsert_memory_vectors_or_reindex(
+            request,
+            user,
+            [
                 {
                     'id': memory.id,
                     'text': memory_vector_text(memory.content, memory.path),

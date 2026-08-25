@@ -10,7 +10,7 @@
 	dayjs.extend(isYesterday);
 	dayjs.extend(localizedFormat);
 
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -49,7 +49,7 @@
 
 	export let showUserProfile = true;
 	export let thread = false;
-	export let id = null;
+	export let id: string | null = null;
 
 	export let replyToMessage = false;
 	export let disabled = false;
@@ -146,11 +146,9 @@
 		}
 	};
 
-	onMount(async () => {
-		if (message && message?.data === true) {
-			await loadMessageData();
-		}
-	});
+	$: if (message?.data === true) {
+		loadMessageData();
+	}
 
 	$: messageOutput = Array.isArray(message?.data?.output) ? message.data.output : [];
 	$: hasStructuredOutput = buildOutputDisplayItems(messageOutput).length > 0;
@@ -209,9 +207,7 @@
 				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
 		>
 			{#if !edit && !disabled}
-				<div
-					class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
-				>
+				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-7 z-30">
 					<div
 						class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 					>
@@ -319,7 +315,7 @@
 			{#if message?.reply_to_message?.user}
 				<div class="relative text-xs mb-1">
 					<div
-						class="absolute h-3 w-7 left-[18px] top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
+						class="absolute h-3 w-7 left-[1.125rem] top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
 					></div>
 
 					<button
@@ -343,6 +339,9 @@
 									message.reply_to_message.meta.model_id}
 								class="size-4 ml-0.5 rounded-full object-cover"
 								on:error={(e) => {
+									// LICENSE covers this Open WebUI fallback logo.
+									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+									// https://docs.openwebui.com/license.
 									e.currentTarget.src = '/favicon.png';
 								}}
 							/>
@@ -386,6 +385,9 @@
 								alt={message.meta.model_name ?? message.meta.model_id}
 								class="size-8 translate-y-1 ml-0.5 object-cover rounded-full"
 								on:error={(e) => {
+									// LICENSE covers this Open WebUI fallback logo.
+									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+									// https://docs.openwebui.com/license.
 									e.currentTarget.src = '/favicon.png';
 								}}
 							/>
@@ -407,7 +409,7 @@
 
 						{#if message.created_at}
 							<div
-								class="mt-1.5 flex shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-normal first-letter:capitalize"
+								class="mt-1.5 flex shrink-0 items-center text-xs self-center hover-reveal text-gray-500 font-normal first-letter:capitalize"
 							>
 								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 									{dayjs(message.created_at / 1000000).format('HH:mm')}
@@ -450,7 +452,6 @@
 					{/if}
 
 					{#if message?.data === true}
-						<!-- loading indicator -->
 						<div class=" my-2">
 							<Skeleton />
 						</div>
@@ -549,7 +550,8 @@
 										allowEmbeds={!!message?.meta?.model_id}
 									/>
 								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-										class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
+										class="text-gray-500 text-[0.625rem] pl-1 self-center"
+										>({$i18n.t('edited')})</span
 									>{/if}
 							{/if}
 						</div>
@@ -684,7 +686,7 @@
 
 	.swipe-reply-indicator {
 		position: absolute;
-		left: 8px;
+		left: 0.5rem;
 		top: 0;
 		bottom: 0;
 		display: flex;
@@ -698,8 +700,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 32px;
-		height: 32px;
+		width: 2rem;
+		height: 2rem;
 		border-radius: 50%;
 		background-color: rgba(128, 128, 128, 0.15);
 		color: rgba(128, 128, 128, 0.8);

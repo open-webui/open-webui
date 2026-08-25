@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import re
 from typing import Any
 
 from fastapi import HTTPException
-
 from open_webui.models.config import Config
 from open_webui.models.memories import Memories
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message, get_content_from_message
 
 log = logging.getLogger(__name__)
@@ -123,7 +122,7 @@ def search_memory_rows(
 
     def sort_key(memory):
         rank = _path_rank(memory.path, lookup_path) if lookup_path else None
-        return rank if rank is not None else (9, 0), -(memory.updated_at or 0)
+        return rank if rank is not None else (9, 0), -(memory.updated_at or 0), memory.id or ''
 
     return sorted(rows, key=sort_key)[: max(1, min(limit or 20, 100))]
 
@@ -214,10 +213,10 @@ def read_memory_path_rows(
 
     def sort_key(memory):
         if memory.path == lookup_path:
-            return (0, 0, -(memory.updated_at or 0))
+            return (0, 0, -(memory.updated_at or 0), memory.id or '')
         if memory.path and memory.path.startswith(f'{lookup_path}/'):
-            return (1, len(_path_parts(memory.path)), -(memory.updated_at or 0))
-        return (2, -len(_path_parts(memory.path)), -(memory.updated_at or 0))
+            return (1, len(_path_parts(memory.path)), -(memory.updated_at or 0), memory.id or '')
+        return (2, -len(_path_parts(memory.path)), -(memory.updated_at or 0), memory.id or '')
 
     return {
         'path': lookup_path,
@@ -233,7 +232,7 @@ def memory_path_hints(query: str, memories: list, limit: int = 6) -> list[str]:
         return []
 
     hints: list[str] = []
-    for memory in memories or []:
+    for memory in sorted(memories or [], key=lambda item: (item.path or '', item.content or '', item.id or '')):
         path = memory.path
         if not path or path in hints:
             continue
@@ -320,7 +319,7 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
     seen_ids = set()
     for memory in sorted(
         [memory for memory in (all_memories or []) if memory.type == 'user'],
-        key=lambda item: (item.path or '', item.updated_at),
+        key=lambda item: (item.path or '', item.updated_at or 0, item.id or ''),
     ):
         seen_ids.add(memory.id)
         sections['user'].append(memory_label(memory))
@@ -361,12 +360,14 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
             sections[Memories.normalize_memory_type(metadata.get('type'))].append(label)
 
     parts = []
-    if sections['user']:
-        parts.append('[User Memory]\n' + '\n'.join(f'- {memory}' for memory in sections['user']))
-    if sections['neighborhood']:
-        parts.append('[Memory Neighborhood]\n' + '\n'.join(f'- {memory}' for memory in sections['neighborhood']))
-    if sections['context']:
-        parts.append('[Relevant Context]\n' + '\n'.join(f'- {memory}' for memory in sections['context']))
+    for title, key in (
+        ('User Memory', 'user'),
+        ('Memory Neighborhood', 'neighborhood'),
+        ('Relevant Context', 'context'),
+    ):
+        if sections[key]:
+            ordered = sorted(sections[key], key=lambda memory: (memory.casefold(), memory))
+            parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
     if not parts:
         return form_data
 
@@ -458,7 +459,7 @@ async def review_memory_after_turn(
         try:
             done_task.result()
         except Exception as e:
-            log.debug(f'Memory review failed: {e}')
+            log.debug('Memory review failed: %s', e)
 
     task.add_done_callback(log_failure)
 
@@ -565,6 +566,9 @@ Conversation:
             'messages': [
                 {
                     'role': 'system',
+                    # LICENSE covers this Open WebUI system identifier.
+                    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                    # https://docs.openwebui.com/license.
                     'content': "You are Open WebUI's private memory reviewer. Return only valid JSON.",
                 },
                 {'role': 'user', 'content': review_prompt},
@@ -590,7 +594,7 @@ Conversation:
         return []
 
     try:
-        parsed = json.loads(content[start : end + 1])
+        parsed = JSONCodec.loads(content[start : end + 1])
     except Exception:
         return []
 

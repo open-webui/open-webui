@@ -20,6 +20,8 @@
 	export let defaultPermissions = {};
 
 	export let setGroups = () => {};
+	/** @type {(group: any) => void} */
+	export let updateGroup = () => {};
 
 	let showEdit = false;
 	$: hasCustomPermissions = Object.keys(group?.permissions ?? {}).length > 0;
@@ -64,6 +66,7 @@
 	tabs={['general', 'permissions', 'users', 'preview']}
 	onSubmit={updateHandler}
 	onDelete={deleteHandler}
+	onMemberChange={updateGroup}
 />
 
 <button
@@ -83,7 +86,7 @@
 					</div>
 
 					<div
-						class="shrink-0 rounded-md bg-gray-500/10 px-1.5 py-0.5 text-[11px] font-normal leading-none text-gray-600 dark:text-gray-300"
+						class="shrink-0 rounded-md bg-gray-500/10 px-1.5 py-0.5 text-[0.6875rem] font-normal leading-none text-gray-600 dark:text-gray-300"
 					>
 						{$i18n.t('{{COUNT}} members', { COUNT: group?.member_count ?? 0 })}
 					</div>

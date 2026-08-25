@@ -3,7 +3,7 @@ NOTE: This vector database integration is community-supported and maintained on 
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 from open_webui.config import (
@@ -22,6 +22,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
+from open_webui.retrieval.vector.utils import iter_filter_conditions
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
@@ -29,6 +30,11 @@ from qdrant_client.models import models
 NO_LIMIT = 999999999
 
 log = logging.getLogger(__name__)
+
+
+def _metadata_filter(key: str, op: str, value: Any) -> models.FieldCondition:
+    match = models.MatchAny(any=value) if op == '$in' else models.MatchValue(value=value)
+    return models.FieldCondition(key=f'metadata.{key}', match=match)
 
 
 class QdrantClient(VectorDBBase):
@@ -119,7 +125,7 @@ class QdrantClient(VectorDBBase):
                 on_disk=self.QDRANT_ON_DISK,
             ),
         )
-        log.info(f'collection {collection_name_with_prefix} successfully created!')
+        log.info('collection %s successfully created!', collection_name_with_prefix)
 
     def _create_collection_if_not_exists(self, collection_name, dimension):
         if not self.has_collection(collection_name=collection_name):
@@ -152,10 +158,13 @@ class QdrantClient(VectorDBBase):
         if limit is None:
             limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
 
+        conditions = [_metadata_filter(key, op, value) for key, op, value in iter_filter_conditions(filter)]
+        query_filter = models.Filter(must=conditions) if conditions else None
         query_response = self.client.query_points(
             collection_name=f'{self.collection_prefix}_{collection_name}',
             query=vectors[0],
             limit=limit,
+            query_filter=query_filter,
         )
         get_result = self._result_to_get_result(query_response.points)
         return SearchResult(

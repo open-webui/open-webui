@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import DOMPurify from 'dompurify';
 import { WEBUI_BASE_URL } from '$lib/constants';
+import type { FileNavOpenRequest } from '$lib/stores';
+import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -542,13 +544,13 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 				<style>
 					pre {
 						background-color: #f6f8fa;
-						border-radius: 6px;
-						padding: 16px;
+						border-radius: 0.375rem;
+						padding: 1rem;
 						overflow: auto;
 					}
 					code {
 						font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-						font-size: 14px;
+						font-size: 0.875rem;
 					}
 					.hljs-keyword { color: #d73a49; }
 					.hljs-string { color: #032f62; }
@@ -562,7 +564,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 					.hljs-built_in { color: #005cc5; }
 					blockquote {
 						border-left: 4px solid #dfe2e5;
-						padding-left: 16px;
+						padding-left: 1rem;
 						color: #6a737d;
 						margin-left: 0;
 						margin-right: 0;
@@ -570,13 +572,13 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 					table {
 						border-collapse: collapse;
 						width: 100%;
-						margin-bottom: 16px;
+						margin-bottom: 1rem;
 					}
 					table, th, td {
 						border: 1px solid #dfe2e5;
 					}
 					th, td {
-						padding: 8px 12px;
+						padding: 0.5rem 0.75rem;
 					}
 					th {
 						background-color: #f6f8fa;
@@ -1417,6 +1419,31 @@ export const createMessagesList = (history, messageId) => {
 	return list.reverse();
 };
 
+const toTokenCount = (value: unknown) => {
+	const parsed = Number(value || 0);
+	return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
+};
+
+export const getUsageTokenCount = (usage?: Record<string, unknown> | null) => {
+	if (!usage) {
+		return 0;
+	}
+
+	let promptTokens = toTokenCount(usage.prompt_tokens || usage.prompt_eval_count || 0);
+	if (!promptTokens && (usage.prompt_n != null || usage.cache_n != null)) {
+		promptTokens = toTokenCount(usage.prompt_n || 0) + toTokenCount(usage.cache_n || 0);
+	}
+	if (!promptTokens) {
+		promptTokens = toTokenCount(usage.input_tokens || 0);
+	}
+
+	const completionTokens = toTokenCount(
+		usage.completion_tokens || usage.output_tokens || usage.eval_count || usage.predicted_n || 0
+	);
+
+	return promptTokens + completionTokens;
+};
+
 export const formatFileSize = (size) => {
 	if (size == null) return 'Unknown size';
 	if (typeof size !== 'number' || size < 0) return 'Invalid size';
@@ -1881,6 +1908,95 @@ export const extractContentFromFile = async (file: File) => {
 		});
 	}
 
+	async function extractOdsText(file: File) {
+		const [arrayBuffer, XLSX] = await Promise.all([file.arrayBuffer(), import('xlsx')]);
+		const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+		return workbook.SheetNames.map((name) =>
+			XLSX.utils.sheet_to_csv(workbook.Sheets[name], { FS: '\t' }).trim()
+		)
+			.filter(Boolean)
+			.join('\n\n');
+	}
+
+	async function extractOdfText(file: File) {
+		const [arrayBuffer, { default: JSZip }] = await Promise.all([
+			file.arrayBuffer(),
+			import('jszip')
+		]);
+
+		const content = await JSZip.loadAsync(arrayBuffer).then((zip) =>
+			zip.file('content.xml')?.async('string')
+		);
+		if (!content) {
+			throw new Error('content.xml not found');
+		}
+
+		const doc = new DOMParser().parseFromString(content, 'application/xml');
+		if (doc.getElementsByTagName('parsererror').length > 0) {
+			throw new Error('content.xml is not well-formed');
+		}
+
+		const TEXT_NS = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
+		const TABLE_NS = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0';
+		const textOf = (node: Node): string => {
+			if (node.nodeType === Node.TEXT_NODE) {
+				return node.textContent ?? '';
+			}
+			if (node.nodeType !== Node.ELEMENT_NODE) {
+				return '';
+			}
+
+			const element = node as Element;
+			if (element.namespaceURI === TEXT_NS) {
+				if (element.localName === 's') {
+					const count = Number(
+						element.getAttributeNS(TEXT_NS, 'c') ?? element.getAttribute('text:c')
+					);
+					return ' '.repeat(Number.isFinite(count) && count > 0 ? count : 1);
+				}
+				if (element.localName === 'tab') {
+					return '\t';
+				}
+				if (element.localName === 'line-break') {
+					return '\n';
+				}
+			}
+
+			return Array.from(element.childNodes).map(textOf).join('');
+		};
+
+		const blocks: string[] = [];
+		const walk = (node: Element) => {
+			if (node.namespaceURI === TABLE_NS && node.localName === 'table-row') {
+				const row = Array.from(node.getElementsByTagNameNS(TABLE_NS, 'table-cell'))
+					.map((cell) => textOf(cell).trim())
+					.join('\t')
+					.trimEnd();
+
+				if (row.length > 0) {
+					blocks.push(row);
+				}
+				return;
+			}
+
+			if (node.namespaceURI === TEXT_NS && (node.localName === 'p' || node.localName === 'h')) {
+				const text = textOf(node).trim();
+				if (text.length > 0) {
+					blocks.push(text);
+				}
+				return;
+			}
+
+			for (const child of Array.from(node.children)) {
+				walk(child);
+			}
+		};
+
+		walk(doc.documentElement);
+		return blocks.join('\n');
+	}
+
 	async function extractDocxText(file: File) {
 		const [arrayBuffer, { default: mammoth }] = await Promise.all([
 			file.arrayBuffer(),
@@ -1904,6 +2020,20 @@ export const extractContentFromFile = async (file: File) => {
 		ext === '.docx'
 	) {
 		return await extractDocxText(file);
+	}
+
+	// OpenDocument spreadsheet check
+	if (type === 'application/vnd.oasis.opendocument.spreadsheet' || ext === '.ods') {
+		return await extractOdsText(file);
+	}
+
+	// OpenDocument text/presentation check
+	if (
+		type === 'application/vnd.oasis.opendocument.text' ||
+		type === 'application/vnd.oasis.opendocument.presentation' ||
+		['.odt', '.odp'].includes(ext)
+	) {
+		return await extractOdfText(file);
 	}
 
 	// Text check (plain or common text-based)
@@ -2193,10 +2323,12 @@ export const formatSkillName = (name) => {
  */
 export const displayFileHandler = (
 	path: string,
-	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<string | null> }
+	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<FileNavOpenRequest | null> },
+	options: { page?: unknown } = {}
 ) => {
 	if (path) {
 		stores.showControls.set(true);
-		stores.showFileNavPath.set(path);
+		const page = normalizeDocumentTargetPage(options.page);
+		stores.showFileNavPath.set(page ? { path, page } : path);
 	}
 };

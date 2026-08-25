@@ -14,6 +14,7 @@
 		archiveChatById,
 		updateChatById,
 		updateChatFolderIdById,
+		markChatUnreadById,
 		getAllTags
 	} from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
@@ -84,6 +85,17 @@
 		if (res) {
 			await refreshSidebar();
 			await searchHandler();
+		}
+	};
+
+	const markUnreadHandler = async (id) => {
+		const res = await markChatUnreadById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			await refreshSidebar();
 		}
 	};
 
@@ -786,17 +798,19 @@
 												</button>
 											</Tooltip>
 
-											<Tooltip content={$i18n.t('Delete')}>
-												<button
-													class="self-center dark:hover:text-white transition"
-													on:click|stopPropagation={() => {
-														deleteChatHandler(chat.id);
-													}}
-													type="button"
-												>
-													<GarbageBin strokeWidth="2" />
-												</button>
-											</Tooltip>
+											{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+												<Tooltip content={$i18n.t('Delete')}>
+													<button
+														class="self-center dark:hover:text-white transition"
+														on:click|stopPropagation={() => {
+															deleteChatHandler(chat.id);
+														}}
+														type="button"
+													>
+														<GarbageBin strokeWidth="2" />
+													</button>
+												</Tooltip>
+											{/if}
 										</div>
 									{:else}
 										<div class="flex items-center">
@@ -815,6 +829,9 @@
 												}}
 												renameHandler={() => {
 													renameHandler(chat.id);
+												}}
+												markUnreadHandler={() => {
+													markUnreadHandler(chat.id);
 												}}
 												deleteHandler={() => {
 													menuChatId = chat.id;

@@ -16,6 +16,7 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     REDIS_KEY_PREFIX,
     WEBSOCKET_EVENT_CALLER_TIMEOUT,
+    WEBSOCKET_HEARTBEAT_INTERVAL,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_CLUSTER,
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
@@ -102,7 +103,7 @@ else:
 
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
-SESSION_POOL_TIMEOUT = 120  # seconds without heartbeat before session is reaped
+SESSION_POOL_TIMEOUT = max(WEBSOCKET_HEARTBEAT_INTERVAL * 4, 120) if WEBSOCKET_HEARTBEAT_INTERVAL is not None else 120
 
 # Dictionary to maintain the user pool
 
@@ -121,6 +122,7 @@ if WEBSOCKET_MANAGER == 'redis':
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+        cache_set_signature=True,
     )
 
     SESSION_POOL = RedisDict(
@@ -176,6 +178,7 @@ YDOC_MANAGER = YdocManager(
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
+    renew_interval = max(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, 0.5)
     while True:
         if not session_aquire_func():
             log.debug('Session cleanup lock held by another node. Retrying.')
@@ -197,53 +200,68 @@ async def periodic_session_pool_cleanup():
                             del SESSION_POOL[sid]
                         except KeyError:
                             pass
-                await asyncio.sleep(SESSION_POOL_TIMEOUT)
+
+                next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
+                lock_lost = False
+                while True:
+                    sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
+                    if sleep_for <= 0:
+                        break
+                    await asyncio.sleep(sleep_for)
+                    if not session_renew_func():
+                        log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
+                        lock_lost = True
+                        break
+
+                if lock_lost:
+                    break
         finally:
             session_release_func()
 
 
 async def periodic_usage_pool_cleanup():
-    max_retries = 2
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
-    for attempt in range(max_retries + 1):
-        if aquire_func():
-            break
-        else:
-            if attempt < max_retries:
-                log.debug(f'Cleanup lock already exists. Retry {attempt + 1} after {retry_delay}s...')
+    while True:
+        try:
+            if not aquire_func():
+                log.debug('Usage cleanup lock held by another node. Retrying.')
                 await asyncio.sleep(retry_delay)
-            else:
-                log.warning('Failed to acquire cleanup lock after retries. Skipping cleanup.')
-                return
+                continue
 
-    log.debug('Running periodic_cleanup')
-    try:
-        while True:
-            if not renew_func():
-                log.error('Unable to renew cleanup lock. Exiting usage pool cleanup.')
-                raise Exception('Unable to renew usage pool cleanup lock.')
+            try:
+                while True:
+                    if not renew_func():
+                        log.warning('Unable to renew usage cleanup lock. Retrying cleanup ownership.')
+                        break
 
-            now = int(time.time())
-            for model_id, connections in list(USAGE_POOL.items()):
-                # Creating a list of sids to remove if they have timed out
-                expired_sids = [
-                    sid for sid, details in connections.items() if now - details['updated_at'] > TIMEOUT_DURATION
-                ]
+                    now = int(time.time())
+                    for model_id, connections in list(USAGE_POOL.items()):
+                        expired_sids = [
+                            sid
+                            for sid, details in connections.items()
+                            if now - details['updated_at'] > TIMEOUT_DURATION
+                        ]
 
-                if connections and not expired_sids:
-                    continue
+                        if connections and not expired_sids:
+                            continue
 
-                for sid in expired_sids:
-                    del connections[sid]
+                        for sid in expired_sids:
+                            del connections[sid]
 
-                if not connections:
-                    log.debug(f'Cleaning up model {model_id} from usage pool')
-                    del USAGE_POOL[model_id]
-                else:
-                    USAGE_POOL[model_id] = connections
-            await asyncio.sleep(TIMEOUT_DURATION)
-    finally:
-        release_func()
+                        if not connections:
+                            log.debug('Cleaning up model %s from usage pool', model_id)
+                            try:
+                                del USAGE_POOL[model_id]
+                            except KeyError:
+                                pass
+                        else:
+                            USAGE_POOL[model_id] = connections
+                    await asyncio.sleep(TIMEOUT_DURATION)
+            finally:
+                release_func()
+        except Exception:
+            log.exception('Usage pool cleanup failed. Retrying.')
+            await asyncio.sleep(retry_delay)
 
 
 app = socketio.ASGIApp(
@@ -269,6 +287,13 @@ def get_session_ids_from_room(room):
     """Get all session IDs from a specific room."""
     members = get_room_sid_map(sio.manager, '/', room)
     return list(members) if members else []
+
+
+def get_session_ids_by_user_id(user_id: str) -> list[str]:
+    """Get known session IDs for a user across the local rooms and shared session pool."""
+    session_ids = set(get_session_ids_from_room(f'user:{user_id}'))
+    session_ids.update(sid for sid, entry in SESSION_POOL.items() if entry and entry.get('id') == user_id)
+    return list(session_ids)
 
 
 def get_user_ids_from_room(room):
@@ -299,7 +324,7 @@ async def emit_to_users(event: str, data: dict, user_ids: list[str]):
         for user_id in user_ids:
             await sio.emit(event, data, room=f'user:{user_id}')
     except Exception as e:
-        log.debug(f'Failed to emit event {event} to users {user_ids}: {e}')
+        log.debug('Failed to emit event %s to users %s: %s', event, user_ids, e)
 
 
 async def enter_room_for_users(room: str, user_ids: list[str]):
@@ -315,7 +340,7 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
             for sid in session_ids:
                 await sio.enter_room(sid, room)
     except Exception as e:
-        log.debug(f'Failed to make users {user_ids} join room {room}: {e}')
+        log.debug('Failed to make users %s join room %s: %s', user_ids, room, e)
 
 
 async def disconnect_user_sessions(user_id: str):
@@ -326,14 +351,15 @@ async def disconnect_user_sessions(user_id: str):
     The client will automatically reconnect and re-authenticate with
     fresh data from the database.
     """
-    try:
-        session_ids = get_session_ids_from_room(f'user:{user_id}')
-        for sid in session_ids:
+    session_ids = get_session_ids_by_user_id(user_id)
+    for sid in session_ids:
+        try:
             await sio.disconnect(sid)
-        if session_ids:
-            log.info(f'Disconnected {len(session_ids)} session(s) for user {user_id}')
-    except Exception as e:
-        log.warning(f'Failed to disconnect sessions for user {user_id}: {e}')
+        except Exception:
+            log.exception('Failed to disconnect session %s for user %s', sid, user_id)
+
+    if session_ids:
+        log.info('Requested disconnect of %s session(s) for user %s', len(session_ids), user_id)
 
 
 @sio.on('usage')
@@ -411,7 +437,7 @@ async def user_join(sid, data):
     # Join all the channels only if user has channels permission
     if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
         channels = await Channels.get_channels_by_user_id(user.id)
-        log.debug(f'{channels=}')
+        log.debug('channels=%r', channels)
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
 
@@ -443,7 +469,7 @@ async def join_channel(sid, data):
     # Join all the channels only if user has channels permission
     if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
         channels = await Channels.get_channels_by_user_id(user.id)
-        log.debug(f'{channels=}')
+        log.debug('channels=%r', channels)
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
 
@@ -480,7 +506,7 @@ async def join_note(sid, data):
         log.error(f'User {user.id} does not have access to note {data["note_id"]}')
         return
 
-    log.debug(f'Joining note {note.id} for user {user.id}')
+    log.debug('Joining note %s for user %s', note.id, user.id)
     await sio.enter_room(sid, f'note:{note.id}')
 
 
@@ -626,7 +652,7 @@ async def ydoc_document_join(sid, data):
         user_name = data.get('user_name', 'Anonymous')
         user_color = data.get('user_color', '#000000')
 
-        log.info(f'User {user_id} joining document {document_id}')
+        log.info('User %s joining document %s', user_id, document_id)
         await YDOC_MANAGER.add_user(document_id=document_id, user_id=sid)
 
         # Join Socket.IO room
@@ -665,7 +691,7 @@ async def ydoc_document_join(sid, data):
             skip_sid=sid,
         )
 
-        log.info(f'User {user_id} successfully joined document {document_id}')
+        log.info('User %s successfully joined document %s', user_id, document_id)
 
     except Exception as e:
         log.error(f'Error in yjs_document_join: {e}')
@@ -779,11 +805,6 @@ async def yjs_document_update(sid, data):
                 log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
                 return
 
-        try:
-            await stop_item_tasks(REDIS, document_id)
-        except Exception:
-            pass
-
         user_id = data.get('user_id', sid)
 
         update = data['update']  # List of bytes from frontend
@@ -811,6 +832,16 @@ async def yjs_document_update(sid, data):
             await document_save_handler(document_id, data.get('data', {}), user)
 
         if data.get('data'):
+            # Only drop the pending save when a new one takes its place.
+            # Updates without a content snapshot (the resync a client sends
+            # after rejoining a document) would otherwise cancel the pending
+            # save without scheduling a replacement, so the edits made just
+            # before the resync never reach the database.
+            try:
+                await stop_item_tasks(REDIS, document_id)
+            except Exception:
+                pass
+
             await create_task(REDIS, debounced_save(), document_id)
 
     except Exception as e:
@@ -826,7 +857,7 @@ async def yjs_document_leave(sid, data):
     try:
         document_id = normalize_document_id(data['document_id'])
 
-        log.info(f'User {user["id"]} leaving document {document_id}')
+        log.info('User %s leaving document %s', user['id'], document_id)
 
         # Remove user from the document
         await YDOC_MANAGER.remove_user(document_id=document_id, user_id=sid)
@@ -842,7 +873,7 @@ async def yjs_document_leave(sid, data):
         )
 
         if await YDOC_MANAGER.document_exists(document_id) and len(await YDOC_MANAGER.get_users(document_id)) == 0:
-            log.info(f'Cleaning up document {document_id} as no users are left')
+            log.info('Cleaning up document %s as no users are left', document_id)
             await YDOC_MANAGER.clear_document(document_id)
 
     except Exception as e:
@@ -904,7 +935,7 @@ async def _make_channel_emitter(request_info):
     channel_id = request_info['chat_id'].removeprefix('channel:')
     message_id = request_info['message_id']
 
-    state = {'last_emit_at': 0.0}
+    state = {'last_emit_at': 0.0, 'output': []}
     THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
 
     async def _emit_channel_update(content: str, done: bool = False, output: list | None = None):
@@ -952,10 +983,22 @@ async def _make_channel_emitter(request_info):
             if not content and not output and not done:
                 return
 
-            now = __import__('time').time()
+            now = time.time()
             if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, done, output if isinstance(output, list) else None)
+
+        elif event_type == 'response:completion':
+            from open_webui.utils.middleware import handle_responses_streaming_event
+
+            data = event_data.get('data', {})
+            state['output'], _ = handle_responses_streaming_event(data, state['output'])
+            content = get_output_text(state['output'])
+
+            now = time.time()
+            if content and (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+                state['last_emit_at'] = now
+                await _emit_channel_update(content, False, state['output'])
 
         elif event_type == 'chat:message:error':
             error = event_data.get('data', {}).get('error', {})
@@ -1038,15 +1081,13 @@ async def get_event_emitter(request_info, update_db=True):
                 embeds = event_payload.get('embeds', [])
 
                 if not event_payload.get('replace', False):
-                    message = await Chats.get_message_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
-                    )
-                    embeds.extend(message.get('embeds', []))
+                    existing_embeds = await Chats.get_message_metadata(chat_id, message_id, 'embeds')
+                    if isinstance(existing_embeds, list):
+                        embeds.extend(existing_embeds)
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
+                    chat_id,
+                    message_id,
                     {
                         'embeds': embeds,
                     },
@@ -1054,17 +1095,14 @@ async def get_event_emitter(request_info, update_db=True):
                 )
 
             elif event_type == 'files':
-                message = await Chats.get_message_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
-                )
-
                 files = event_data.get('data', {}).get('files', [])
-                files.extend(message.get('files', []))
+                existing_files = await Chats.get_message_metadata(chat_id, message_id, 'files')
+                if isinstance(existing_files, list):
+                    files.extend(existing_files)
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
+                    chat_id,
+                    message_id,
                     {
                         'files': files,
                     },
@@ -1074,17 +1112,14 @@ async def get_event_emitter(request_info, update_db=True):
             elif event_type in ('source', 'citation'):
                 data = event_data.get('data', {})
                 if data.get('type') is None:
-                    message = await Chats.get_message_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
-                    )
-
-                    sources = message.get('sources', [])
+                    sources = await Chats.get_message_metadata(chat_id, message_id, 'sources')
+                    if not isinstance(sources, list):
+                        sources = []
                     sources.append(data)
 
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
+                        chat_id,
+                        message_id,
                         {
                             'sources': sources,
                         },
@@ -1118,13 +1153,8 @@ async def get_event_call(request_info):
                 to=session_id,
                 timeout=WEBSOCKET_EVENT_CALLER_TIMEOUT,
             )
-        except TimeoutError:
+        except (TimeoutError, socketio.exceptions.TimeoutError):
             log.warning(f'Event caller timed out for session {session_id}')
-            if SESSION_POOL.get(session_id) == session:
-                try:
-                    del SESSION_POOL[session_id]
-                except KeyError:
-                    pass
             return {'error': 'Event call timed out. The browser tab may be inactive or closed.'}
 
     if 'session_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:

@@ -258,7 +258,7 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
 
         # Check if SCIM is enabled
         enable_scim = getattr(request.app.state, 'ENABLE_SCIM', False)
-        log.info(f'SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}')
+        log.info('SCIM auth check - raw ENABLE_SCIM: %s, type: %s', enable_scim, type(enable_scim))
 
         if not enable_scim:
             raise HTTPException(
@@ -268,7 +268,7 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
 
         # Verify the SCIM token
         scim_token = getattr(request.app.state, 'SCIM_TOKEN', None)
-        log.debug(f'SCIM token configured: {bool(scim_token)}')
+        log.debug('SCIM token configured: %s', bool(scim_token))
         if not scim_token or not hmac.compare_digest(token, scim_token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -517,20 +517,30 @@ async def get_users(
         # Simple filter parsing - supports userName eq, externalId eq
         if 'userName eq' in filter:
             email = filter.split('"')[1]
-            user = await Users.get_user_by_email(email, db=db)
-            users_list = [user] if user else []
-            total = 1 if user else 0
+            response = await Users.get_scim_users(filter={'email': email}, limit=1, db=db)
+            users_list = response['users']
+            total = response['total']
         elif 'externalId eq' in filter:
             external_id = filter.split('"')[1]
             user = await find_user_by_external_id(external_id, db=db)
             users_list = [user] if user else []
             total = 1 if user else 0
         else:
-            response = await Users.get_users(skip=skip, limit=limit, db=db)
+            response = await Users.get_scim_users(
+                sort={'order_by': 'created_at'},
+                skip=skip,
+                limit=limit,
+                db=db,
+            )
             users_list = response['users']
             total = response['total']
     else:
-        response = await Users.get_users(skip=skip, limit=limit, db=db)
+        response = await Users.get_scim_users(
+            sort={'order_by': 'created_at'},
+            skip=skip,
+            limit=limit,
+            db=db,
+        )
         users_list = response['users']
         total = response['total']
 
@@ -553,7 +563,7 @@ async def get_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get SCIM User by ID"""
-    user = await Users.get_user_by_id(user_id, db=db)
+    user = await Users.get_scim_user_by_id(user_id, db=db)
     if not user:
         return scim_error(status_code=status.HTTP_404_NOT_FOUND, detail=f'User {user_id} not found')
 
@@ -624,11 +634,12 @@ async def create_user(
             detail='Failed to create user',
         )
 
-    # Store externalId in the scim field
-    if user_data.externalId:
-        provider = get_scim_provider()
-        await Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
-        new_user = await Users.get_user_by_id(user_id, db=db)
+    new_user = await Users.update_user_scim_by_id(user_id, get_scim_provider(), user_data.externalId, db=db)
+    if not new_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Failed to stamp SCIM user',
+        )
 
     await publish_event(
         request,
@@ -654,7 +665,7 @@ async def update_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update SCIM User (full update)"""
-    user = await Users.get_user_by_id(user_id, db=db)
+    user = await Users.get_scim_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -700,15 +711,27 @@ async def update_user(
         await Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
         updated_user = await Users.get_user_by_id(user_id, db=db)
 
-    await publish_event(
-        request,
-        EVENTS.USER_UPDATED,
-        subject_id=user_id,
-        source='scim',
-        data={
-            'updated_fields': list(update_data.keys()) + (['externalId'] if user_data.externalId else []),
-        },
-    )
+    updated_fields = list(update_data.keys()) + (['externalId'] if user_data.externalId else [])
+    role_changed = updated_user.role != user.role
+    user_updated_fields = [field for field in updated_fields if field != 'role']
+
+    if user_updated_fields:
+        await publish_event(
+            request,
+            EVENTS.USER_UPDATED,
+            subject_id=user_id,
+            source='scim',
+            data={'updated_fields': user_updated_fields},
+        )
+
+    if role_changed:
+        await publish_event(
+            request,
+            EVENTS.USER_ROLE_UPDATED,
+            subject_id=user_id,
+            source='scim',
+            data={'role': updated_user.role},
+        )
 
     return await user_to_scim(updated_user, request, db=db)
 
@@ -722,7 +745,7 @@ async def patch_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update SCIM User (partial update)"""
-    user = await Users.get_user_by_id(user_id, db=db)
+    user = await Users.get_scim_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -764,13 +787,26 @@ async def patch_user(
     else:
         updated_user = user
 
-    await publish_event(
-        request,
-        EVENTS.USER_UPDATED,
-        subject_id=user_id,
-        source='scim',
-        data={'updated_fields': list(update_data.keys())},
-    )
+    role_changed = updated_user.role != user.role
+    user_updated_fields = [field for field in update_data.keys() if field != 'role']
+
+    if user_updated_fields:
+        await publish_event(
+            request,
+            EVENTS.USER_UPDATED,
+            subject_id=user_id,
+            source='scim',
+            data={'updated_fields': user_updated_fields},
+        )
+
+    if role_changed:
+        await publish_event(
+            request,
+            EVENTS.USER_ROLE_UPDATED,
+            subject_id=user_id,
+            source='scim',
+            data={'role': updated_user.role},
+        )
 
     return await user_to_scim(updated_user, request, db=db)
 
@@ -783,7 +819,7 @@ async def delete_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Delete SCIM User"""
-    user = await Users.get_user_by_id(user_id, db=db)
+    user = await Users.get_scim_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

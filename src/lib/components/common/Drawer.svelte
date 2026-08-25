@@ -5,6 +5,7 @@
 
 	export let show = false;
 	export let className = '';
+	export let zIndexClass = 'z-999';
 	export let onClose = () => {};
 
 	let modalElement = null;
@@ -57,7 +58,7 @@
 {#if show}
 	<div
 		bind:this={modalElement}
-		class="modal fixed right-0 bottom-0 left-0 z-999 flex h-screen max-h-[100dvh] w-full justify-center overflow-hidden overscroll-contain bg-black/60"
+		class="modal fixed right-0 bottom-0 left-0 {zIndexClass} flex h-screen max-h-[100dvh] w-full justify-center overflow-hidden overscroll-contain bg-black/60"
 		in:fly={{ y: 100, duration: 100 }}
 		on:mousedown={() => {
 			show = false;

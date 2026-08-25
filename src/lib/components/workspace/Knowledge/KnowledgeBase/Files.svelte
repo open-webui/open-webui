@@ -10,7 +10,6 @@
 	const i18n = getContext('i18n');
 
 	import { capitalizeFirstLetter, formatFileSize } from '$lib/utils';
-
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -24,25 +23,45 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import DirectoryRow from './DirectoryRow.svelte';
 
+	type KnowledgeFile = {
+		id?: string;
+		tempId?: string;
+		itemId?: string;
+		name?: string;
+		status?: string;
+		meta?: {
+			name?: string;
+			size?: number;
+		};
+		updated_at?: number;
+		user?: {
+			email?: string;
+			name?: string;
+		};
+	};
+
 	export let knowledge = null;
 	export let selectedFileId = null;
-	export let files = [];
+	export let files: KnowledgeFile[] = [];
 	export let directories = [];
 
-	export let onClick = (fileId) => {};
-	export let onDelete = (fileId) => {};
-	export let onRename = (fileId: string, name: string) => {};
-	export let onNavigateDirectory = (directoryId: string) => {};
-	export let onRenameDirectory = (id: string, name: string) => {};
-	export let onDeleteDirectory = (id: string) => {};
-	export let onMoveFileToDirectory = (fileId: string, directoryId: string) => {};
-	export let onMoveDirectoryToDirectory = (dirId: string, targetDirectoryId: string) => {};
+	export let onClick: (fileId: string | undefined) => void = () => {};
+	export let onDelete: (fileId: string | undefined) => void = () => {};
+	export let onRename: (fileId: string, name: string) => void = () => {};
+	export let onNavigateDirectory: (directoryId: string) => void = () => {};
+	export let onRenameDirectory: (id: string, name: string) => void = () => {};
+	export let onDeleteDirectory: (id: string) => void = () => {};
+	export let onMoveFileToDirectory: (fileId: string, directoryId: string) => void = () => {};
+	export let onMoveDirectoryToDirectory: (
+		dirId: string,
+		targetDirectoryId: string
+	) => void = () => {};
 
 	let editingFileId: string | null = null;
 	let editName = '';
 	let editInput: HTMLInputElement;
 
-	const startRename = (file: any) => {
+	const startRename = (file: KnowledgeFile) => {
 		editingFileId = file?.id ?? file?.tempId;
 		editName = file?.name ?? file?.meta?.name ?? '';
 		setTimeout(() => editInput?.select(), 0);
@@ -60,7 +79,7 @@
 	};
 </script>
 
-<div class=" max-h-full flex flex-col w-full gap-[0.5px]">
+<div class=" max-h-full flex flex-col w-full gap-[0.03125rem]" role="list">
 	<!-- Directories first -->
 	{#each directories as dir (dir.id)}
 		<DirectoryRow
@@ -80,6 +99,7 @@
 			class=" flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition {selectedFileId
 				? ''
 				: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
+			role="listitem"
 			draggable="true"
 			on:dragstart={(e) => {
 				const fileId = file?.id ?? file?.tempId;
@@ -94,8 +114,7 @@
 						class="p-1 rounded-full transition"
 						type="button"
 						on:click={() => {
-							let fileId = file?.id ?? file?.tempId;
-							onClick(fileId);
+							onClick(file?.id ?? file?.tempId);
 						}}
 					>
 						<DocumentPage className="size-3.5" />
@@ -140,7 +159,9 @@
 							<div class="line-clamp-1 text-xs">
 								{file?.name ?? file?.meta?.name}
 								{#if file?.meta?.size}
-									<span class="text-[11px] text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+									<span class="text-[0.6875rem] text-gray-500"
+										>{formatFileSize(file?.meta?.size)}</span
+									>
 								{/if}
 							</div>
 						{/if}
@@ -185,7 +206,7 @@
 						</button>
 
 						<div slot="content">
-							<DropdownMenu className="min-w-[140px] z-[9999999]">
+							<DropdownMenu className="min-w-[8.75rem] z-[9999999]">
 								<button
 									type="button"
 									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"

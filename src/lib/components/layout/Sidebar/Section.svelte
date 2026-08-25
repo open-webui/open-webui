@@ -131,28 +131,26 @@
 						class="group flex flex-1 h-full items-center gap-1 text-left text-xs text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors duration-100 {buttonClassName}"
 						aria-expanded={open}
 						aria-controls="{id}-content"
-						on:pointerup|stopPropagation
-						on:click={() => setOpen(!open)}
 					>
 						<span>{name}</span>
 						<span
-							class="flex opacity-0 group-hover:opacity-100 transition-all duration-100"
+							class="flex opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-100"
 							style="transform: rotate({open ? '90deg' : '0deg'})"
 						>
-							<ChevronRight className="size-[11px]" />
+							<ChevronRight className="size-[0.6875rem]" />
 						</span>
 					</button>
 
-					<slot name="action" />
+					<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+					<div class="contents" on:click={(e) => e.stopPropagation()}>
+						<slot name="action" />
+					</div>
 
 					{#if onAdd}
 						<button
 							type="button"
 							class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors duration-100"
 							aria-label={onAddLabel}
-							on:pointerup={(e) => {
-								e.stopPropagation();
-							}}
 							on:click={(e) => {
 								e.stopPropagation();
 								onAdd();

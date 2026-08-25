@@ -149,7 +149,7 @@
 						<div class="grid min-w-0 gap-1 md:grid-cols-2 md:gap-1.5">
 							<Tooltip content={$i18n.t('e.g. Tell me a fun fact')} placement="top-start">
 								<input
-									class="w-full bg-transparent text-[13px] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
+									class="w-full bg-transparent text-[0.8125rem] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
 									placeholder={$i18n.t('Title')}
 									aria-label={$i18n.t('Title')}
 									bind:value={prompt.title[0]}
@@ -158,7 +158,7 @@
 
 							<Tooltip content={$i18n.t('e.g. about the Roman Empire')} placement="top-start">
 								<input
-									class="w-full bg-transparent text-[13px] leading-5 text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+									class="w-full bg-transparent text-[0.8125rem] leading-5 text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
 									placeholder={$i18n.t('Subtitle')}
 									aria-label={$i18n.t('Subtitle')}
 									bind:value={prompt.title[1]}
@@ -172,7 +172,7 @@
 							placement="top-start"
 						>
 							<textarea
-								class="min-h-5 w-full resize-none overflow-hidden bg-transparent text-[13px] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
+								class="min-h-5 w-full resize-none overflow-hidden bg-transparent text-[0.8125rem] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
 								placeholder={$i18n.t('Content')}
 								aria-label={$i18n.t('Content')}
 								rows="1"

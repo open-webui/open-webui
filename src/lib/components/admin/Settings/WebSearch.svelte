@@ -46,7 +46,8 @@
 		'external',
 		'yandex',
 		'youcom',
-		'linkup'
+		'linkup',
+		'openserp'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'microsoft_web_iq', 'external'];
 
@@ -1008,6 +1009,25 @@
 									bind:value={webConfig.LINKUP_SEARCH_PARAMS}
 									placeholder={`{\n  "depth": "standard",\n  "outputType": "sourcedAnswer"\n}`}
 								/>
+							</div>
+						</div>
+					{:else if webConfig.WEB_SEARCH_ENGINE === 'openserp'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('OpenSERP URL')}
+								</div>
+
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+										type="text"
+										placeholder={$i18n.t('Enter OpenSERP Base URL')}
+										bind:value={webConfig.OPENSERP_BASE_URL}
+										autocomplete="off"
+										required
+									/>
+								</div>
 							</div>
 						</div>
 					{/if}

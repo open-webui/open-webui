@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 import uuid
@@ -468,14 +467,22 @@ class KnowledgeTable:
             print('search_knowledge_files error:', e)
             return KnowledgeFileListResponse(items=[], total=0)
 
-    async def check_access_by_user_id(self, id, user_id, permission='write', db: Optional[AsyncSession] = None) -> bool:
+    async def check_access_by_user_id(
+        self,
+        id,
+        user_id,
+        permission='write',
+        db: Optional[AsyncSession] = None,
+        user_group_ids: set[str] | None = None,
+    ) -> bool:
         knowledge = await self.get_knowledge_by_id(id, db=db)
         if not knowledge:
             return False
         if knowledge.user_id == user_id:
             return True
-        user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
-        user_group_ids = {group.id for group in user_groups}
+        if user_group_ids is None:
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_group_ids = {group.id for group in user_groups}
         return await AccessGrants.has_access(
             user_id=user_id,
             resource_type='knowledge',
@@ -485,24 +492,6 @@ class KnowledgeTable:
             db=db,
         )
 
-    async def get_knowledge_bases_by_user_id(
-        self, user_id: str, permission: str = 'write', db: Optional[AsyncSession] = None
-    ) -> list[KnowledgeUserModel]:
-        knowledge_bases = await self.get_knowledge_bases(db=db)
-        user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
-        user_group_ids = {group.id for group in user_groups}
-
-        # One grants query for all non-owned knowledge bases instead of one each
-        accessible_ids = await AccessGrants.get_accessible_resource_ids(
-            user_id=user_id,
-            resource_type='knowledge',
-            resource_ids=[kb.id for kb in knowledge_bases if kb.user_id != user_id],
-            permission=permission,
-            user_group_ids=user_group_ids,
-            db=db,
-        )
-        return [kb for kb in knowledge_bases if kb.user_id == user_id or kb.id in accessible_ids]
-
     async def get_knowledge_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[KnowledgeModel]:
         try:
             async with get_async_db_context(db) as db:
@@ -511,29 +500,6 @@ class KnowledgeTable:
                 return await self._to_knowledge_model(knowledge, db=db) if knowledge else None
         except Exception:
             return None
-
-    async def get_knowledge_by_id_and_user_id(
-        self, id: str, user_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[KnowledgeModel]:
-        knowledge = await self.get_knowledge_by_id(id, db=db)
-        if not knowledge:
-            return None
-
-        if knowledge.user_id == user_id:
-            return knowledge
-
-        user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
-        user_group_ids = {group.id for group in user_groups}
-        if await AccessGrants.has_access(
-            user_id=user_id,
-            resource_type='knowledge',
-            resource_id=knowledge.id,
-            permission='write',
-            user_group_ids=user_group_ids,
-            db=db,
-        ):
-            return knowledge
-        return None
 
     async def get_knowledges_by_file_id(self, file_id: str, db: Optional[AsyncSession] = None) -> list[KnowledgeModel]:
         try:
@@ -804,25 +770,6 @@ class KnowledgeTable:
                 await db.commit()
                 if form_data.access_grants is not None:
                     await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
-                return await self.get_knowledge_by_id(id=id, db=db)
-        except Exception as e:
-            log.exception(e)
-            return None
-
-    async def update_knowledge_data_by_id(
-        self, id: str, data: dict, db: Optional[AsyncSession] = None
-    ) -> Optional[KnowledgeModel]:
-        try:
-            async with get_async_db_context(db) as db:
-                await db.execute(
-                    update(Knowledge)
-                    .filter_by(id=id)
-                    .values(
-                        data=data,
-                        updated_at=int(time.time()),
-                    )
-                )
-                await db.commit()
                 return await self.get_knowledge_by_id(id=id, db=db)
         except Exception as e:
             log.exception(e)

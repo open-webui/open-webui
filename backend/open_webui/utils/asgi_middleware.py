@@ -40,6 +40,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.env import CUSTOM_API_KEY_HEADER
 from open_webui.internal.db import ScopedSession
 from open_webui.utils.auth import get_http_authorization_cred
+from open_webui.utils.security_headers import set_security_headers
 from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -47,9 +48,17 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 log = logging.getLogger(__name__)
 
 
-class CommitSessionMiddleware:
-    """Commit and release the thread-local sync `ScopedSession` after each
-    HTTP request.
+class AppHTTPMiddleware:
+    """Open WebUI's pure-ASGI HTTP middleware.
+
+    Keeps the app's request-wide behavior in one middleware layer without
+    hiding the old concerns behind a stack of wrappers:
+
+    * reject malformed `/ws/socket.io` upgrade requests
+    * stash bearer/cookie/API-key credentials on `request.state.token`
+    * stamp `X-Process-Time` and configured security headers
+    * serve the legacy `/watch` and `?shared=` redirects
+    * commit and release the thread-local sync `ScopedSession`
 
     Most requests now use the async session; the sync ScopedSession is
     only touched by startup, healthchecks, and a handful of legacy
@@ -81,156 +90,80 @@ class CommitSessionMiddleware:
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
+        # Headers derive only from env vars, which are static for the process
+        # lifetime — compute them once instead of per response.
+        self._security_headers = list(set_security_headers().items())
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope['type'] != 'http':
             await self.app(scope, receive, send)
             return
 
-        path = scope.get('path', '')
-        # Keep health probes independent from sync session commit/remove
-        # so DB pressure cannot delay or fail probe responses.
-        if path in {'/health', '/ready', '/health/db'}:
-            await self.app(scope, receive, send)
-            return
-
-        try:
-            await self.app(scope, receive, send)
-        except BaseException:
-            # Downstream did not complete successfully. Roll back any
-            # pending sync writes, release the connection, and let the
-            # exception propagate.
-            if ScopedSession.registry.has():
-                try:
-                    ScopedSession.rollback()
-                except Exception:
-                    log.exception('CommitSessionMiddleware: rollback failed after downstream error')
-                finally:
-                    ScopedSession.remove()
-            raise
-
-        # Nothing in this request touched the sync session: committing would
-        # only instantiate one to run an empty transaction.
-        if not ScopedSession.registry.has():
-            return
-
-        # Downstream completed. Commit pending sync work.
-        try:
-            ScopedSession.commit()
-        except Exception:
-            log.exception('CommitSessionMiddleware: post-request commit failed; response was already sent to client')
-            try:
-                ScopedSession.rollback()
-            except Exception:
-                log.exception('CommitSessionMiddleware: rollback failed after commit failure')
-            raise
-        finally:
-            # CRITICAL: remove() returns the connection to the pool.
-            # Without this, connections remain "checked out" and
-            # accumulate as "idle in transaction" in PostgreSQL.
-            ScopedSession.remove()
-
-
-class AuthTokenMiddleware:
-    """Extract the bearer/cookie/API-key credential and stash it on
-    `request.state.token`.
-
-    The header used for API-key transport is controlled by the
-    ``CUSTOM_API_KEY_HEADER`` environment variable (default ``x-api-key``).
-    This is useful when Open WebUI sits behind a reverse proxy that
-    consumes the ``Authorization`` header for its own authentication —
-    set the env var to a unique header (e.g. ``X-OpenWebUI-Key``) so
-    the middleware checks that instead and avoids the 401 short-circuit.
-
-    Routes that depend on `get_verified_user` etc. read this state.
-    Also stamps an `X-Process-Time` response header.
-    """
-
-    def __init__(self, app: ASGIApp, *, fastapi_app) -> None:
-        self.app = app
-        self._fastapi_app = fastapi_app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope['type'] != 'http':
-            await self.app(scope, receive, send)
+        if await self._reject_invalid_websocket(scope, receive, send):
             return
 
         start_time = time.monotonic()
         request = Request(scope)
+        self._set_token(request)
+        send_with_headers = self._send_with_headers(send, start_time)
 
+        try:
+            if await self._redirect_legacy_url(scope, receive, send_with_headers):
+                pass
+            # Keep health probes independent from sync session commit/remove so DB
+            # pressure cannot delay or fail probe responses.
+            elif scope.get('path', '') in {'/health', '/ready', '/health/db'}:
+                await self.app(scope, receive, send_with_headers)
+                return
+            else:
+                await self.app(scope, receive, send_with_headers)
+        except BaseException:
+            self._rollback_session('AppHTTPMiddleware: rollback failed after downstream error')
+            raise
+
+        self._commit_session()
+
+    def _set_token(self, request: Request) -> None:
         token = get_http_authorization_cred(request.headers.get('Authorization'))
-        if token is None:
-            cookie_token = request.cookies.get('token')
-            if cookie_token:
-                token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=cookie_token)
-        if token is None:
-            api_key = request.headers.get(CUSTOM_API_KEY_HEADER)
-            if api_key:
-                token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=api_key)
-
+        if token is None and (cookie_token := request.cookies.get('token')):
+            token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=cookie_token)
+        if token is None and (api_key := request.headers.get(CUSTOM_API_KEY_HEADER)):
+            token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=api_key)
         request.state.token = token
 
-        async def send_with_timing(message: Message) -> None:
+    def _send_with_headers(self, send: Send, start_time: float) -> Send:
+        async def send_with_headers(message: Message) -> None:
             if message['type'] == 'http.response.start':
-                process_time = time.monotonic() - start_time
                 headers = MutableHeaders(scope=message)
-                headers['X-Process-Time'] = f'{process_time:.6f}'
+                headers['X-Process-Time'] = f'{time.monotonic() - start_time:.6f}'
+                for key, value in self._security_headers:
+                    headers[key] = value
             await send(message)
 
-        await self.app(scope, receive, send_with_timing)
+        return send_with_headers
 
-
-class WebsocketUpgradeGuardMiddleware:
-    """Reject HTTP requests to `/ws/socket.io` that claim
-    `transport=websocket` but lack the proper `Upgrade`/`Connection`
-    headers.
-
-    Works around https://github.com/miguelgrinberg/python-engineio/issues/367
-    where engineio mishandles such requests.
-    """
-
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope['type'] != 'http':
-            await self.app(scope, receive, send)
-            return
-
+    async def _reject_invalid_websocket(self, scope: Scope, receive: Receive, send: Send) -> bool:
         path = scope.get('path', '')
-        if '/ws/socket.io' in path:
-            query_string = scope.get('query_string', b'').decode('latin-1', errors='replace')
-            query_params = parse_qs(query_string)
-            if query_params.get('transport', [''])[0] == 'websocket':
-                headers = _scope_headers(scope)
-                upgrade = headers.get('upgrade', '').lower()
-                connection_tokens = [token.strip() for token in headers.get('connection', '').lower().split(',')]
-                if upgrade != 'websocket' or 'upgrade' not in connection_tokens:
-                    response = JSONResponse(
-                        status_code=400,
-                        content={'detail': 'Invalid WebSocket upgrade request'},
-                    )
-                    await response(scope, receive, send)
-                    return
+        if '/ws/socket.io' not in path:
+            return False
 
-        await self.app(scope, receive, send)
+        query_params = parse_qs(scope.get('query_string', b'').decode('latin-1', errors='replace'))
+        if query_params.get('transport', [''])[0] != 'websocket':
+            return False
 
+        headers = _scope_headers(scope)
+        upgrade = headers.get('upgrade', '').lower()
+        connection_tokens = [token.strip() for token in headers.get('connection', '').lower().split(',')]
+        if upgrade == 'websocket' and 'upgrade' in connection_tokens:
+            return False
 
-class RedirectMiddleware:
-    """Rewrites a couple of legacy entry-points to the SPA's own routes:
+        response = JSONResponse(status_code=400, content={'detail': 'Invalid WebSocket upgrade request'})
+        await response(scope, receive, send)
+        return True
 
-    * ``GET /watch?v=ID`` (YouTube) → ``/?youtube=ID``
-    * ``GET /?shared=…`` (PWA share-target) → ``/?youtube=…`` /
-      ``/?load-url=…`` / ``/?q=…``
-    """
-
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope['type'] != 'http' or scope.get('method', '').upper() != 'GET':
-            await self.app(scope, receive, send)
-            return
+    async def _redirect_legacy_url(self, scope: Scope, receive: Receive, send: Send) -> bool:
+        if scope.get('method', '').upper() != 'GET':
+            return False
 
         path = scope.get('path', '')
         raw_query = scope.get('query_string', b'')
@@ -238,11 +171,9 @@ class RedirectMiddleware:
         # decode + parse_qs work for every other GET. (A false positive on the
         # substring check just falls through to the full parse below.)
         if not (path.endswith('/watch') or b'shared' in raw_query):
-            await self.app(scope, receive, send)
-            return
+            return False
 
-        query_string = raw_query.decode('latin-1', errors='replace')
-        query_params = parse_qs(query_string)
+        query_params = parse_qs(raw_query.decode('latin-1', errors='replace'))
 
         redirect_params: dict[str, str] = {}
         if path.endswith('/watch') and 'v' in query_params and query_params['v']:
@@ -270,9 +201,41 @@ class RedirectMiddleware:
             redirect_url = f'/?{urlencode(redirect_params)}'
             response = RedirectResponse(url=redirect_url)
             await response(scope, receive, send)
+            return True
+
+        return False
+
+    def _rollback_session(self, message: str) -> None:
+        if not ScopedSession.registry.has():
             return
 
-        await self.app(scope, receive, send)
+        try:
+            ScopedSession.rollback()
+        except Exception:
+            log.exception(message)
+        finally:
+            ScopedSession.remove()
+
+    def _commit_session(self) -> None:
+        # Nothing in this request touched the sync session: committing would
+        # only instantiate one to run an empty transaction.
+        if not ScopedSession.registry.has():
+            return
+
+        try:
+            ScopedSession.commit()
+        except Exception:
+            log.exception('AppHTTPMiddleware: post-request commit failed; response was already sent to client')
+            try:
+                ScopedSession.rollback()
+            except Exception:
+                log.exception('AppHTTPMiddleware: rollback failed after commit failure')
+            raise
+        finally:
+            # CRITICAL: remove() returns the connection to the pool.
+            # Without this, connections remain "checked out" and
+            # accumulate as "idle in transaction" in PostgreSQL.
+            ScopedSession.remove()
 
 
 def _scope_headers(scope: Scope) -> dict[str, str]:

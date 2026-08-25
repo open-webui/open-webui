@@ -35,7 +35,7 @@ class PaddleOCRVLLoader:
         self.file_name = os.path.basename(file_path)
 
     def load(self) -> List[Document]:
-        log.info(f'Processing with PaddleOCR-vl: {self.file_path}')
+        log.info('Processing with PaddleOCR-vl: %s', self.file_path)
 
         try:
             with open(self.file_path, 'rb') as file:
@@ -96,7 +96,7 @@ class PaddleOCRVLLoader:
                 )
 
             if skipped_pages > 0:
-                log.info(f'PaddleOCR-vl: Processed {len(documents)} pages, skipped {skipped_pages} empty pages.')
+                log.info('PaddleOCR-vl: Processed %s pages, skipped %s empty pages.', len(documents), skipped_pages)
 
             if not documents:
                 log.warning('No valid text content found by PaddleOCR-vl.')

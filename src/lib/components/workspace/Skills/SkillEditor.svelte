@@ -39,7 +39,6 @@
 		const fm = parseFrontmatter(content);
 		if (fm.name && !name) {
 			name = formatSkillName(fm.name);
-			id = fm.name;
 		}
 		if (fm.description && !description) {
 			description = fm.description;
@@ -52,6 +51,7 @@
 			return;
 		}
 		loading = true;
+		if (!edit) id = slugify(id);
 
 		await onSubmit({
 			id,
@@ -178,11 +178,12 @@
 		<div class="min-h-0 flex-1 overflow-hidden rounded-lg bg-gray-50/60 dark:bg-white/[0.03]">
 			{#if disabled}
 				<div class="h-full overflow-y-auto px-3 py-2">
-					<pre class="whitespace-pre-wrap font-mono text-[11px] leading-relaxed">{content}</pre>
+					<pre
+						class="whitespace-pre-wrap font-mono text-[0.6875rem] leading-relaxed">{content}</pre>
 				</div>
 			{:else}
 				<textarea
-					class="h-full w-full resize-none bg-transparent px-3 py-2 font-mono text-[11px] leading-relaxed outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-600"
+					class="h-full w-full resize-none bg-transparent px-3 py-2 font-mono text-[0.6875rem] leading-relaxed outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-600"
 					bind:value={content}
 					on:input={handleContentInput}
 					placeholder={$i18n.t('Enter skill instructions in markdown...')}

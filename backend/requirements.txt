@@ -16,7 +16,7 @@ joserfc==1.7.4
 requests==2.34.2
 regex==2026.5.9 # supports a per-search timeout, which `re` does not
 aiohttp==3.13.5 # do not update to 3.13.3 - broken
-aiodns==4.0.4 # makes aiohttp resolve DNS on the event loop instead of the threadpool
+aiodns==3.6.1 # keep pinned: 4.x pulls pycares 5 (c-ares 1.34.6) which breaks DNS on some hosts (#28013, #28215); opt-in via AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER
 async-timeout==5.0.1
 aiocache==0.12.3
 aiofiles==25.1.0
@@ -73,6 +73,7 @@ pypdf==6.7.5
 fpdf2==2.8.7
 pymdown-extensions==10.21.3
 docx2txt==0.9
+python-docx==1.2.0
 python-pptx==1.0.2
 msoffcrypto-tool==6.0.0
 unstructured==0.22.31
@@ -139,12 +140,6 @@ oracledb==3.4.2
 av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
 
 colbert-ai==0.2.22
-
-
-## Tests
-docker~=7.1.0
-pytest~=8.4.1
-pytest-docker~=3.2.5
 
 ## LDAP
 ldap3==2.9.1

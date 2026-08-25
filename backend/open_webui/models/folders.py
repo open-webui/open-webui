@@ -157,6 +157,11 @@ class FolderTable:
         except Exception:
             return None
 
+    async def get_folders_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> list[FolderModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Folder).filter(Folder.id.in_(ids)).order_by(Folder.updated_at.desc()))
+            return [FolderModel.model_validate(folder) for folder in result.scalars().all()]
+
     async def get_shared_folder_ids_for_user(
         self, user_id: str, user_group_ids: set[str], db: Optional[AsyncSession] = None
     ) -> dict[str, str]:
@@ -197,10 +202,14 @@ class FolderTable:
         try:
             async with get_async_db_context(db) as db:
                 folders = []
+                seen_ids = {id}
 
                 async def get_children(folder):
                     children = await self.get_folders_by_parent_id_and_user_id(folder.id, user_id, db=db)
                     for child in children:
+                        if child.id in seen_ids:
+                            continue
+                        seen_ids.add(child.id)
                         await get_children(child)
                         folders.append(child)
 
@@ -230,7 +239,9 @@ class FolderTable:
             async with get_async_db_context(db) as db:
                 # Check if folder exists
                 result = await db.execute(
-                    select(Folder).filter_by(parent_id=parent_id, user_id=user_id).filter(Folder.name.ilike(name))
+                    select(Folder)
+                    .filter_by(parent_id=parent_id, user_id=user_id)
+                    .filter(func.lower(Folder.name) == func.lower(name))
                 )
                 folder = result.scalars().first()
 
@@ -246,7 +257,9 @@ class FolderTable:
         self, parent_id: Optional[str], user_id: str, db: Optional[AsyncSession] = None
     ) -> list[FolderModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(Folder).filter_by(parent_id=parent_id, user_id=user_id))
+            result = await db.execute(
+                select(Folder).filter_by(parent_id=parent_id, user_id=user_id).order_by(Folder.updated_at.desc())
+            )
             return [FolderModel.model_validate(folder) for folder in result.scalars().all()]
 
     async def get_folder_ids_by_id_and_user_id_in_subtree(
@@ -258,15 +271,17 @@ class FolderTable:
             if not folder:
                 return []
 
-            folder_ids = [folder.id]
+            folder_ids = {folder.id}
             folders = [FolderModel.model_validate(folder)]
             while folders:
                 current_folder = folders.pop()
                 children = await self.get_folders_by_parent_id_and_user_id(current_folder.id, user_id, db=db)
-                folder_ids.extend(child.id for child in children)
-                folders.extend(children)
+                for child in children:
+                    if child.id not in folder_ids:
+                        folder_ids.add(child.id)
+                        folders.append(child)
 
-            return folder_ids
+            return list(folder_ids)
 
     async def update_folder_parent_id_by_id_and_user_id(
         self,
@@ -376,11 +391,15 @@ class FolderTable:
                     return folder_ids
 
                 folder_ids.append(folder.id)
+                seen_ids = {folder.id}
 
                 # Delete all children folders
                 async def delete_children(folder):
                     folder_children = await self.get_folders_by_parent_id_and_user_id(folder.id, user_id, db=db)
                     for folder_child in folder_children:
+                        if folder_child.id in seen_ids:
+                            continue
+                        seen_ids.add(folder_child.id)
                         await delete_children(folder_child)
                         folder_ids.append(folder_child.id)
 

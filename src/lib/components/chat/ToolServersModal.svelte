@@ -53,7 +53,7 @@
 				</div>
 			{/if}
 
-			<div class="px-5 pb-3 w-full flex flex-col justify-center">
+			<div class="px-3 pb-3 w-full flex flex-col justify-center">
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#each selectedTools as tool}
 						{@const status = authStatus(tool)}
@@ -69,17 +69,17 @@
 										{tool?.name}
 									</div>
 									{#if status}
-										<span class="text-[11px] {status.pill} shrink-0">{status.label}</span>
+										<span class="text-[0.6875rem] {status.pill} shrink-0">{status.label}</span>
 									{/if}
 									{#if toolSpecs.length > 0}
 										<span
-											class="inline-flex min-w-3 items-center justify-center text-center text-[11px] leading-none text-gray-500 dark:text-gray-400 shrink-0"
+											class="inline-flex min-w-3 items-center justify-center text-center text-[0.6875rem] leading-none text-gray-500 dark:text-gray-400 shrink-0"
 										>
 											{toolSpecs.length}
 										</span>
 									{/if}
 									{#if status}
-										<span class="size-2 rounded-full {status.dot} shrink-0"></span>
+										<span class="size-1.5 rounded-full {status.dot} shrink-0"></span>
 									{/if}
 								</div>
 
@@ -112,6 +112,9 @@
 
 			<div class="px-5 pb-5 w-full flex flex-col justify-center">
 				<div class=" text-xs text-gray-600 dark:text-gray-300 mb-2">
+					<!-- LICENSE covers this Open WebUI wordmark.
+					Do not alter, remove, obscure, or replace it except as LICENSE permits:
+					https://docs.openwebui.com/license. -->
 					{$i18n.t('Open WebUI can use tools provided by any OpenAPI server.')} <br /><a
 						class="underline"
 						href="https://github.com/open-webui/openapi-servers"

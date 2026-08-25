@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import json
 import logging
 import re
 import time
@@ -13,15 +12,15 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import Request
-from sqlalchemy import select
-from starlette.datastructures import Headers
-
 from open_webui.internal.db import get_async_db
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chat, ChatForm, Chats
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import has_active_tasks
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
+from sqlalchemy import select
+from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
 
@@ -153,11 +152,12 @@ async def create_timer(
             'cancel_on': selected_events,
             'run': run,
         },
+        timer_at=due_at,
     )
     if not chat:
         return 'Error: failed to create timer.'
 
-    return json.dumps(
+    return JSONCodec.dumps(
         {
             'status': 'set',
             'at': datetime.fromtimestamp(due_at / 1_000_000_000, timezone.utc).isoformat().replace('+00:00', 'Z'),
@@ -172,20 +172,18 @@ async def claim_due_timers(now_ns: int, limit: int = 10) -> list[tuple[str, str]
     async with get_async_db() as db:
         stmt = (
             select(Chat)
-            .where(Chat.meta['internal'].as_boolean().is_(True))
-            .where(Chat.meta['type'].as_string() == 'timer')
+            .where(Chat.timer_at <= now_ns)
             .where(Chat.meta['status'].as_string() == 'pending')
+            .order_by(Chat.timer_at)
+            .limit(limit)
         )
         if db.bind.dialect.name == 'postgresql':
             stmt = stmt.with_for_update(skip_locked=True)
 
         result = await db.execute(stmt)
-        rows = [row for row in result.scalars().all() if int((row.meta or {}).get('timer_at') or 0) <= now_ns]
-        rows.sort(key=lambda row: int((row.meta or {}).get('timer_at') or 0))
-        rows = rows[:limit]
 
         claimed = []
-        for row in rows:
+        for row in result.scalars().all():
             claim_id = str(uuid4())
             row.meta = {
                 **(row.meta or {}),
@@ -193,6 +191,7 @@ async def claim_due_timers(now_ns: int, limit: int = 10) -> list[tuple[str, str]
                 'timer_started_at': now_ns,
                 'timer_claim_id': claim_id,
             }
+            row.timer_at = None
             row.updated_at = int(time.time())
             claimed.append((row.id, claim_id))
         await db.commit()
@@ -206,9 +205,8 @@ async def cancel_timers_for_chat(
     async with get_async_db() as db:
         result = await db.execute(
             select(Chat)
+            .where(Chat.timer_at.isnot(None))
             .where(Chat.user_id == user_id)
-            .where(Chat.meta['internal'].as_boolean().is_(True))
-            .where(Chat.meta['type'].as_string() == 'timer')
             .where(Chat.meta['parent_chat_id'].as_string() == parent_chat_id)
             .where(Chat.meta['status'].as_string() == 'pending')
         )
@@ -223,6 +221,7 @@ async def cancel_timers_for_chat(
                 'timer_cancelled_at': now_ns,
                 'timer_cancelled_by': event,
             }
+            row.timer_at = None
             row.updated_at = int(time.time())
         await db.commit()
 
@@ -290,12 +289,14 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
                 if await has_active_tasks(app.state.redis, parent_chat_id):
                     timer_row = await db.get(Chat, timer_id)
                     if timer_row:
+                        timer_meta = timer_row.meta or {}
                         timer_row.meta = {
-                            **(timer_row.meta or {}),
+                            **timer_meta,
                             'status': 'pending',
                             'timer_claim_id': None,
                             'timer_started_at': None,
                         }
+                        timer_row.timer_at = timer_meta.get('timer_at')
                         timer_row.updated_at = int(time.time())
                     await db.commit()
                     return
@@ -405,7 +406,11 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         )
         request.state.token = None
         request.state.enable_api_keys = False
-        await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
+        try:
+            await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
+        except Exception as exc:
+            log.exception(f'Timer {timer_id} completion failed')
+            await _set_timer_state(timer_id, 'error', timer_error=str(exc)[:500])
 
 
 async def _set_timer_state(timer_id: str, status: str, **fields) -> None:

@@ -18,9 +18,12 @@
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
 
-	const fenceType: string = token.fenceType ?? 'default';
+	$: fenceType = token.fenceType ?? 'default';
+	$: attributes = token.attributes ?? {};
 
-	const label = fenceType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+	$: label =
+		attributes.subject || fenceType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+	$: header = attributes.recipient ? `${label} · ${attributes.recipient}` : label;
 
 	let copied = false;
 
@@ -34,13 +37,16 @@
 </script>
 
 <div class="relative group my-2 rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3">
-	<!-- Header row: type badge + copy button -->
-	<div class="flex items-center justify-between mb-2">
-		<span class="text-xs font-normal text-gray-500 dark:text-gray-400">
-			{label}
+	<div class="flex items-center justify-between gap-2 mb-2">
+		<span
+			class="text-xs font-normal text-gray-500 dark:text-gray-400 truncate"
+			dir="auto"
+			title={header}
+		>
+			{header}
 		</span>
 
-		<div class="invisible group-hover:visible flex gap-0.5">
+		<div class="hover-reveal flex gap-0.5 shrink-0">
 			<Tooltip content={copied ? $i18n.t('Copied') : $i18n.t('Copy')}>
 				<button
 					class="p-1 rounded-lg bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition"

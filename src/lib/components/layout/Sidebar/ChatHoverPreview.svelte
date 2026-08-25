@@ -100,7 +100,9 @@
 			{sideOffset}
 		>
 			<div class="border-b border-gray-50/60 px-3 py-2 dark:border-gray-800/25">
-				<div class="truncate text-[13px] font-medium leading-5 text-gray-900 dark:text-gray-100">
+				<div
+					class="truncate text-[0.8125rem] font-medium leading-5 text-gray-900 dark:text-gray-100"
+				>
 					{title || $i18n.t('Chat')}
 				</div>
 			</div>
@@ -123,7 +125,7 @@
 					</div>
 				{:else if previewReady}
 					<Messages
-						className="flex w-full pt-2 pb-0 [&_.message-listitem]:!mb-1 [&_.message-listitem]:!max-w-none [&_.message-listitem]:!px-3 [&_.pb-18]:!pb-1.5 [&_.markdown-prose]:!text-xs [&_.markdown-prose]:!leading-snug [&_.whitespace-pre-wrap]:!text-xs [&_.whitespace-pre-wrap]:!leading-snug [&_.text-\[0\.9375rem\]]:!text-xs [&_.text-sm]:!text-xs [&_.tool-call-body_pre]:!text-[11px] [&_.rounded-3xl]:!rounded-2xl [&_.chat-user_.rounded-3xl]:!bg-gray-50 dark:[&_.chat-user_.rounded-3xl]:!bg-gray-800 [&_.px-4]:!px-3 [&_.py-3]:!py-2 [&_.py-1\.5]:!py-1"
+						className="flex w-full pt-2 pb-0 [&_.message-listitem]:!mb-1 [&_.message-listitem]:!max-w-none [&_.message-listitem]:!px-3 [&_.pb-18]:!pb-1.5 [&_.markdown-prose]:!text-xs [&_.markdown-prose]:!leading-snug [&_.whitespace-pre-wrap]:!text-xs [&_.whitespace-pre-wrap]:!leading-snug [&_.text-\[0\.9375rem\]]:!text-xs [&_.text-sm]:!text-xs [&_.tool-call-body_pre]:!text-[0.6875rem] [&_.rounded-3xl]:!rounded-2xl [&_.chat-user_.rounded-3xl]:!bg-gray-50 dark:[&_.chat-user_.rounded-3xl]:!bg-gray-800 [&_.px-4]:!px-3 [&_.py-3]:!py-2 [&_.py-1\.5]:!py-1 [&_button]:!pointer-events-none"
 						chatId={`chat-hover-preview-${chatId}`}
 						user={$user}
 						prompt=""

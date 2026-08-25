@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -38,27 +39,18 @@ router = APIRouter()
 @router.get('/', response_model=list[SkillUserResponse])
 async def get_skills(
     request: Request,
+    query: Optional[str] = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
         skills = await Skills.get_skills(db=db)
     else:
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
-        all_skills = await Skills.get_skills(db=db)
-        skills = [
-            skill
-            for skill in all_skills
-            if skill.user_id == user.id
-            or await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='skill',
-                resource_id=skill.id,
-                permission='read',
-                user_group_ids=user_group_ids,
-                db=db,
-            )
-        ]
+        skills = await Skills.get_skills(db=db, user_id=user.id)
+
+    if query:
+        q = query.casefold()
+        skills = [skill for skill in skills if q in (skill.name or '').casefold()]
 
     return skills
 
@@ -93,30 +85,29 @@ async def get_skill_list(
     if direction:
         filter['direction'] = direction
 
-    if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL):
-        groups = await Groups.get_groups_by_member_id(user.id, db=db)
-        if groups:
-            filter['group_ids'] = [group.id for group in groups]
+    is_bypass_admin = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
 
+    if not is_bypass_admin:
+        filter['group_ids'] = user_group_ids
         filter['user_id'] = user.id
 
     result = await Skills.search_skills(user.id, filter=filter, skip=skip, limit=limit, db=db)
+
+    writable_skill_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id=user.id,
+        resource_type='skill',
+        resource_ids=[skill.id for skill in result.items],
+        permission='write',
+        user_group_ids=user_group_ids,
+        db=db,
+    )
 
     return SkillAccessListResponse(
         items=[
             SkillAccessResponse(
                 **skill.model_dump(),
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == skill.user_id
-                    or await AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type='skill',
-                        resource_id=skill.id,
-                        permission='write',
-                        db=db,
-                    )
-                ),
+                write_access=(is_bypass_admin or user.id == skill.user_id or skill.id in writable_skill_ids),
             )
             for skill in result.items
         ],
@@ -149,7 +140,7 @@ async def export_skills(
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
         return await Skills.get_skills(db=db)
     else:
-        return await Skills.get_skills_by_user_id(user.id, 'read', db=db)
+        return await Skills.get_skills(db=db, user_id=user.id)
 
 
 ############################
@@ -174,6 +165,13 @@ async def create_new_skill(
         )
 
     form_data.id = form_data.id.lower().replace(' ', '-')
+
+    # The id goes into /id/{id}/... paths, so anything outside the slug charset is unreachable once stored.
+    if not re.fullmatch(r'[a-z0-9_-]+', form_data.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Invalid skill ID'),
+        )
 
     existing = await Skills.get_skill_by_id(form_data.id, db=db)
     if existing is not None:

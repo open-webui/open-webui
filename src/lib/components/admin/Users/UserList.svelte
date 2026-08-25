@@ -355,6 +355,9 @@
 										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 										alt="user"
 										on:error={(e) => {
+											// LICENSE covers this Open WebUI fallback logo.
+											// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+											// https://docs.openwebui.com/license.
 											e.currentTarget.src = '/favicon.png';
 										}}
 									/>
@@ -474,18 +477,30 @@
 
 {#if !$config?.license_metadata}
 	{#if total > 50}
+		<!-- LICENSE covers the Open WebUI branding narrative here.
+		Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		https://docs.openwebui.com/license. -->
 		<div class="mt-3 mb-3 pb-1 text-gray-700 dark:text-gray-300">
 			<div class="max-w-3xl text-xs leading-5">
 				<div class="text-gray-900 dark:text-gray-100">
+					<!-- LICENSE covers this Open WebUI wordmark.
+					Do not alter, remove, obscure, or replace it except as LICENSE permits:
+					https://docs.openwebui.com/license. -->
 					{$i18n.t('Running Open WebUI for a team?')}
 				</div>
 				<div class="mt-2 space-y-2">
 					<p>
+						<!-- LICENSE covers this Open WebUI branding copy.
+						Do not alter, remove, obscure, or replace it except as LICENSE permits:
+						https://docs.openwebui.com/license. -->
 						{$i18n.t(
 							'You have more than 50 users, which often means this workspace is supporting organizational use. Open WebUI is free to use as-is, with no restrictions or hidden limits, and we want to keep it that way.'
 						)}
 					</p>
 					<p class="text-gray-500 dark:text-gray-400">
+						<!-- LICENSE covers this Open WebUI branding copy.
+						Do not alter, remove, obscure, or replace it except as LICENSE permits:
+						https://docs.openwebui.com/license. -->
 						{$i18n.t(
 							'By supporting the project through sponsorship or an enterprise license, you help us stay independent, ship new features faster, improve stability, and grow Open WebUI for the long haul.'
 						)}

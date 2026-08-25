@@ -1,9 +1,10 @@
 import logging
 import time
-from typing import Optional
+from typing import Literal, Optional
 from uuid import uuid4
 
 from open_webui.internal.db import Base, get_async_db_context
+from open_webui.utils.misc import json_text_variants
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Boolean, Column, Index, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,11 +65,17 @@ class AutomationTerminalConfig(BaseModel):
     cwd: Optional[str] = None
 
 
+class AutomationTarget(BaseModel):
+    type: Literal['chat', 'channel'] = 'chat'
+    channel_id: Optional[str] = None
+
+
 class AutomationData(BaseModel):
     prompt: str
     model_id: str
     rrule: str
     terminal: Optional[AutomationTerminalConfig] = None
+    target: Optional[AutomationTarget] = None
 
 
 class AutomationModel(BaseModel):
@@ -179,16 +186,16 @@ class AutomationTable:
         async with get_async_db_context(db) as db:
             stmt = select(Automation).filter_by(user_id=user_id)
 
-            if folder_id is not None:
-                stmt = stmt.filter(Automation.folder_id == (folder_id or None))
+            if folder_id:
+                stmt = stmt.filter(Automation.folder_id == folder_id)
 
             if query:
-                search = f'%{query}%'
-                # Search in name and prompt inside JSON data
+                # Search the name column and the prompt inside the JSON data.
+                data_text = cast(Automation.data, String)
                 stmt = stmt.filter(
                     or_(
-                        Automation.name.ilike(search),
-                        cast(Automation.data, String).ilike(search),
+                        Automation.name.ilike(f'%{query}%'),
+                        *(data_text.ilike(f'%{variant}%') for variant in json_text_variants(query)),
                     )
                 )
 

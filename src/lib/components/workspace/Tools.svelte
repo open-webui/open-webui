@@ -10,7 +10,14 @@
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, tools as _tools, user, workspaceActions } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		config,
+		tools as _tools,
+		user,
+		workspaceActions,
+		workspaceCounts
+	} from '$lib/stores';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -152,6 +159,8 @@
 
 			return direction * ((a.updated_at ?? 0) - (b.updated_at ?? 0));
 		});
+
+		workspaceCounts.update((counts) => ({ ...counts, tools: filteredItems.length }));
 	};
 
 	const setSortKey = (key: string) => {
@@ -177,6 +186,9 @@
 			return null;
 		});
 
+		// LICENSE covers this Open WebUI Community wordmark.
+		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		// https://docs.openwebui.com/license.
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
@@ -281,6 +293,9 @@
 </script>
 
 <svelte:head>
+	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
 	<title>
 		{$i18n.t('Tools')} / {$WEBUI_NAME}
 	</title>
@@ -433,7 +448,7 @@
 										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 											<Tooltip content={tool.id} className="min-w-0" placement="top-start">
 												<div
-													class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+													class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 												>
 													{tool.name}
 												</div>
@@ -441,7 +456,7 @@
 
 											{#if tool?.meta?.manifest?.version}
 												<div
-													class="min-w-0 max-w-[40%] shrink-0 truncate text-[11px] leading-5 text-gray-500"
+													class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500"
 												>
 													v{tool?.meta?.manifest?.version ?? ''}
 												</div>
@@ -449,7 +464,7 @@
 
 											<Tooltip content={dayjs(tool.updated_at * 1000).format('LLLL')}>
 												<div
-													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 												>
 													{dayjs(tool.updated_at * 1000).fromNow()}
 												</div>
@@ -478,7 +493,7 @@
 							</div>
 
 							<div
-								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
 								<Tooltip
 									content={tool?.user?.email ?? $i18n.t('Deleted User')}

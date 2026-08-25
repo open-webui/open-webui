@@ -23,6 +23,7 @@
 
 	export let history;
 	export let onNodeClick;
+	export let chatUser = null;
 
 	type LayoutDirection = 'vertical' | 'horizontal';
 	type PositionMapEntry = {
@@ -64,8 +65,11 @@
 	const drawFlow = async (direction: LayoutDirection) => {
 		const nodeList: Node[] = [];
 		const edgeList: Edge[] = [];
-		const levelOffset = direction === 'vertical' ? 150 : 300;
-		const siblingOffset = direction === 'vertical' ? 250 : 150;
+		const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+		const nodeWidth = 15 * rootFontSize;
+		const nodeHeight = 5 * rootFontSize;
+		const levelOffset = direction === 'vertical' ? nodeHeight + 70 : nodeWidth + 60;
+		const siblingOffset = direction === 'vertical' ? nodeWidth + 60 : nodeHeight + 70;
 
 		// Map to keep track of node positions at each level
 		let positionMap = new Map<string, PositionMapEntry>();
@@ -99,9 +103,10 @@
 				id: pos.id,
 				type: 'custom',
 				data: {
-					user: $user,
+					user: chatUser ?? $user,
 					message: history.messages[id],
-					model: $models.find((model) => model.id === history.messages[id].model)
+					model: $models.find((model) => model.id === history.messages[id].model),
+					direction
 				},
 				position: { x, y }
 			});

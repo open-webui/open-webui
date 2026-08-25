@@ -259,7 +259,7 @@
 					<!-- Role label -->
 					<div class="flex items-start pt-1.5">
 						<div
-							class="text-[11px] font-normal uppercase tracking-wide min-w-[4.5rem] text-gray-400 dark:text-gray-500"
+							class="text-[0.6875rem] font-normal uppercase tracking-wide min-w-[4.5rem] text-gray-400 dark:text-gray-500"
 						>
 							{getItemLabel(di)}
 						</div>
@@ -335,8 +335,8 @@
 					<!-- Delete -->
 					<div class="pt-1.5">
 						<button
+							class="hover-reveal p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
 							aria-label={$i18n.t('Delete')}
-							class="invisible group-hover:visible p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
 							on:click={() => deleteIndices(di.indices)}
 						>
 							<svg

@@ -127,7 +127,7 @@
 						<Search className="size-3.5" />
 					</div>
 					<input
-						class="w-full text-[13px] py-0.5 outline-hidden bg-transparent"
+						class="w-full text-[0.8125rem] py-0.5 outline-hidden bg-transparent"
 						bind:value={query}
 						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search')}
@@ -143,7 +143,7 @@
 				{:else}
 					{#each items as item, i}
 						{#if i === 0 || item?.type !== items[i - 1]?.type}
-							<div class="px-1.5 text-[11px] text-gray-500 py-0.5">
+							<div class="px-1.5 text-[0.6875rem] text-gray-500 py-0.5">
 								{#if item?.type === 'note'}
 									{$i18n.t('Notes')}
 								{:else if item?.type === 'collection'}
@@ -155,7 +155,7 @@
 						{/if}
 
 						<div
-							class="min-h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] bg-transparent transition-colors hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 selected-command-option-button"
+							class="min-h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[0.8125rem] bg-transparent transition-colors hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 selected-command-option-button"
 						>
 							<button
 								class="w-full flex-1"
@@ -197,7 +197,7 @@
 										placement="top-start"
 										tippyOptions={{ zIndex: 100000 }}
 									>
-										<div class="line-clamp-1 flex-1 text-[13px] text-left">
+										<div class="line-clamp-1 flex-1 text-[0.8125rem] text-left">
 											{decodeString(item?.name)}
 										</div>
 									</Tooltip>

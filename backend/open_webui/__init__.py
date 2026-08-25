@@ -18,6 +18,9 @@ def version_callback(value: bool) -> None:
     if value:
         from open_webui.env import VERSION
 
+        # LICENSE covers this Open WebUI CLI identifier.
+        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+        # https://docs.openwebui.com/license.
         typer.echo(f'Open WebUI version: {VERSION}')
         raise typer.Exit()
 
@@ -71,7 +74,7 @@ def serve(
             os.environ['LD_LIBRARY_PATH'] = ':'.join(LD_LIBRARY_PATH)
 
     import open_webui.main  # noqa: F401
-    from open_webui.env import UVICORN_WORKERS  # Import the workers setting
+    from open_webui.env import UVICORN_WORKERS, UVICORN_WS_PER_MESSAGE_DEFLATE
 
     # On Windows, uvicorn's default loop factory hardcodes ProactorEventLoop,
     # which is incompatible with psycopg v3 async.  Setting loop='none' lets
@@ -84,6 +87,7 @@ def serve(
         port=port,
         forwarded_allow_ips='*',
         workers=UVICORN_WORKERS,
+        ws_per_message_deflate=UVICORN_WS_PER_MESSAGE_DEFLATE,
         loop=loop,
     )
 
@@ -94,12 +98,15 @@ def dev(
     port: int = 8080,
     reload: bool = True,
 ):
+    from open_webui.env import UVICORN_WS_PER_MESSAGE_DEFLATE
+
     uvicorn.run(
         'open_webui.main:app',
         host=host,
         port=port,
         reload=reload,
         forwarded_allow_ips='*',
+        ws_per_message_deflate=UVICORN_WS_PER_MESSAGE_DEFLATE,
     )
 
 

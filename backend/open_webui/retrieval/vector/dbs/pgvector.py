@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -18,6 +17,7 @@ from open_webui.config import (
     PGVECTOR_POOL_TIMEOUT,
     PGVECTOR_USE_HALFVEC,
 )
+from open_webui.internal.db import ScopedSession, enable_iam_token_auth
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
@@ -25,6 +25,7 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import merge_hybrid_search_results, process_metadata
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import sanitize_text_for_db
 from pgvector.sqlalchemy import HALFVEC, Vector
 from sqlalchemy import (
@@ -87,8 +88,6 @@ class PgvectorClient(VectorDBBase):
     def __init__(self) -> None:
         # if no pgvector uri, use the existing database connection
         if not PGVECTOR_DB_URL:
-            from open_webui.internal.db import ScopedSession
-
             self.session = ScopedSession
         else:
             if isinstance(PGVECTOR_POOL_SIZE, int):
@@ -107,6 +106,7 @@ class PgvectorClient(VectorDBBase):
             else:
                 engine = create_engine(PGVECTOR_DB_URL, pool_pre_ping=True)
 
+            enable_iam_token_auth(engine)
             SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
             self.session = scoped_session(SessionLocal)
 
@@ -303,7 +303,7 @@ class PgvectorClient(VectorDBBase):
                     # Use raw SQL for BYTEA/pgcrypto
                     # Ensure metadata is converted to its JSON text representation
                     # Sanitize to strip null bytes / surrogates that PostgreSQL cannot store
-                    json_metadata = sanitize_text_for_db(json.dumps(item['metadata']))
+                    json_metadata = sanitize_text_for_db(JSONCodec.dumps(item['metadata']))
                     item_text = sanitize_text_for_db(item['text'])
                     self.session.execute(
                         text("""
@@ -326,7 +326,7 @@ class PgvectorClient(VectorDBBase):
                         },
                     )
                 self.session.commit()
-                log.info(f"Encrypted & inserted {len(items)} into '{collection_name}'")
+                log.info("Encrypted & inserted %s into '%s'", len(items), collection_name)
 
             else:
                 new_items = []
@@ -342,7 +342,7 @@ class PgvectorClient(VectorDBBase):
                     new_items.append(new_chunk)
                 self.session.bulk_save_objects(new_items)
                 self.session.commit()
-                log.info(f"Inserted {len(new_items)} items into collection '{collection_name}'.")
+                log.info("Inserted %s items into collection '%s'.", len(new_items), collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during insert: {e}')
@@ -354,7 +354,7 @@ class PgvectorClient(VectorDBBase):
                 for item in items:
                     vector = self.adjust_vector_length(item['vector'])
                     # Sanitize to strip null bytes / surrogates that PostgreSQL cannot store
-                    json_metadata = sanitize_text_for_db(json.dumps(item['metadata']))
+                    json_metadata = sanitize_text_for_db(JSONCodec.dumps(item['metadata']))
                     item_text = sanitize_text_for_db(item['text'])
                     self.session.execute(
                         text("""
@@ -381,7 +381,7 @@ class PgvectorClient(VectorDBBase):
                         },
                     )
                 self.session.commit()
-                log.info(f"Encrypted & upserted {len(items)} into '{collection_name}'")
+                log.info("Encrypted & upserted %s into '%s'", len(items), collection_name)
             else:
                 for item in items:
                     vector = self.adjust_vector_length(item['vector'])
@@ -401,7 +401,7 @@ class PgvectorClient(VectorDBBase):
                         )
                         self.session.add(new_chunk)
                 self.session.commit()
-                log.info(f"Upserted {len(items)} items into collection '{collection_name}'.")
+                log.info("Upserted %s items into collection '%s'.", len(items), collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during upsert: {e}')
@@ -712,7 +712,7 @@ class PgvectorClient(VectorDBBase):
                         query = query.filter(DocumentChunk.vmetadata[key].astext == str(value))
                 deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            log.info(f"Deleted {deleted} items from collection '{collection_name}'.")
+            log.info("Deleted %s items from collection '%s'.", deleted, collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during delete: {e}')
@@ -722,7 +722,7 @@ class PgvectorClient(VectorDBBase):
         try:
             deleted = self.session.query(DocumentChunk).delete()
             self.session.commit()
-            log.info(f"Reset complete. Deleted {deleted} items from 'document_chunk' table.")
+            log.info("Reset complete. Deleted %s items from 'document_chunk' table.", deleted)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during reset: {e}')
@@ -746,4 +746,4 @@ class PgvectorClient(VectorDBBase):
 
     def delete_collection(self, collection_name: str) -> None:
         self.delete(collection_name)
-        log.info(f"Collection '{collection_name}' deleted.")
+        log.info("Collection '%s' deleted.", collection_name)

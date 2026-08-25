@@ -225,7 +225,7 @@ def search_firecrawl(
                 )
             )
 
-        log.info(f'FireCrawl search results: {search_results}')
+        log.info('FireCrawl search results: %s', search_results)
         return search_results
     except Exception as e:
         log.error(f'Error in FireCrawl search: {e}')

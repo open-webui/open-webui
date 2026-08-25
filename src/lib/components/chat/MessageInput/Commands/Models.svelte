@@ -60,7 +60,7 @@
 	};
 </script>
 
-<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 	{$i18n.t('Models')}
 </div>
 
@@ -68,7 +68,7 @@
 	{#each filteredItems as model, modelIdx}
 		<Tooltip content={model.id} placement="top-start">
 			<button
-				class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {modelIdx ===
+				class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {modelIdx ===
 				selectedIdx
 					? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
 					: ''}"
@@ -88,6 +88,9 @@
 						alt={model?.name ?? model.id}
 						class="mr-2 size-4.5 rounded-full object-cover"
 						on:error={(e) => {
+							// LICENSE covers this Open WebUI fallback logo.
+							// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+							// https://docs.openwebui.com/license.
 							e.currentTarget.src = '/favicon.png';
 						}}
 					/>
