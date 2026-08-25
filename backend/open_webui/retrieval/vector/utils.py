@@ -1,6 +1,7 @@
 import datetime as dt
 from typing import Any
 
+from open_webui.env import RAG_METADATA_MAX_VALUE_CHARS
 from open_webui.retrieval.vector.main import SearchResult
 from open_webui.utils.misc import sanitize_text_for_db
 
@@ -20,8 +21,18 @@ KEYS_TO_EXCLUDE = [
 
 def filter_metadata(metadata: dict[str, any]) -> dict[str, any]:
     # Removes large/redundant fields from metadata dict.
-    metadata = {key: value for key, value in metadata.items() if key not in KEYS_TO_EXCLUDE}
-    return metadata
+    result = {}
+    for key, value in metadata.items():
+        if key in KEYS_TO_EXCLUDE:
+            continue
+        if RAG_METADATA_MAX_VALUE_CHARS is not None and isinstance(value, (list, dict)):
+            try:
+                if len(str(value)) > RAG_METADATA_MAX_VALUE_CHARS:
+                    continue
+            except (MemoryError, RecursionError, ValueError):
+                continue
+        result[key] = value
+    return result
 
 
 def process_metadata(
@@ -36,6 +47,12 @@ def process_metadata(
             continue
         if value is None:
             continue
+        if RAG_METADATA_MAX_VALUE_CHARS is not None and isinstance(value, (list, dict)):
+            try:
+                if len(str(value)) > RAG_METADATA_MAX_VALUE_CHARS:
+                    continue
+            except (MemoryError, RecursionError, ValueError):
+                continue
         # Convert non-serializable fields to strings
         if isinstance(value, (dt.datetime, list, dict)):
             result[key] = sanitize_text_for_db(str(value))

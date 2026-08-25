@@ -822,6 +822,11 @@ BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', '
 # for non-admin users.  When False (default), unknown collection names are
 # denied — closing the legacy unscoped namespace.
 ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
+
+RAG_METADATA_MAX_VALUE_CHARS = (
+    int(os.getenv('RAG_METADATA_MAX_VALUE_CHARS')) if os.getenv('RAG_METADATA_MAX_VALUE_CHARS') else None
+)
+
 MINERU_MAX_MARKDOWN_BYTES = (
     int(os.getenv('MINERU_MAX_MARKDOWN_BYTES')) if os.getenv('MINERU_MAX_MARKDOWN_BYTES') else None
 )
