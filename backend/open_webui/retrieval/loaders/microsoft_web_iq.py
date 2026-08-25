@@ -10,7 +10,6 @@ from langchain_core.documents import Document
 
 log = logging.getLogger(__name__)
 
-DEFAULT_MICROSOFT_WEB_IQ_API_BASE_URL = 'https://api.microsoft.ai/v3'
 MICROSOFT_BROWSE_RETRY_STATUS_CODES = {202, 429, 500, 502, 503, 504}
 MICROSOFT_BROWSE_MAX_RETRIES = 2
 
@@ -27,7 +26,7 @@ class MicrosoftWebIQLoader(BaseLoader):
         continue_on_failure: bool = True,
     ) -> None:
         self.urls = urls if isinstance(urls, list) else [urls]
-        self.api_base_url = (api_base_url or DEFAULT_MICROSOFT_WEB_IQ_API_BASE_URL).rstrip('/')
+        self.api_base_url = api_base_url.rstrip('/')
         self.api_key = api_key
         self.language = language
         self.verify_ssl = verify_ssl
