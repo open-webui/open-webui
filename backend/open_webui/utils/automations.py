@@ -25,8 +25,7 @@ from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from dateutil import parser as date_parser
-from dateutil.rrule import rrulestr
+from dateutil.rrule import HOURLY, MINUTELY, SECONDLY, rruleset, rrulestr
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.constants import ERROR_MESSAGES
@@ -78,44 +77,48 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     SECONDLY/MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
     so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
     """
-    lines = s.splitlines()
-    rule_count = sum(1 for line in lines if line.upper().startswith('RRULE:'))
-    if 'EXRULE' in s.upper():
+    upper = s.upper()
+    if 'EXRULE' in upper:
         raise ValueError('EXRULE is not supported in recurrence rules')
-    if rule_count > 1:
+
+    parsed = rrulestr(s, ignoretz=True)
+    rules = parsed._rrule if isinstance(parsed, rruleset) else [parsed]
+    if len(rules) > 1:
         raise ValueError('only one RRULE is supported per recurrence rule')
 
-    rrule_line = next((line for line in lines if line.upper().startswith('RRULE:')), s)
-    raw = rrule_line.split(':', 1)[1] if rrule_line.upper().startswith('RRULE:') else rrule_line
-    parts = {k.upper(): v for k, v in (p.split('=', 1) for p in raw.split(';') if '=' in p)}
-    freq = parts.get('FREQ', '')
+    rule = rules[0]
+    start = rule._dtstart.replace(tzinfo=None)
+    anchor = now or datetime.now()
+    lines = s.splitlines()
+    stripped = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
+    has_dtstart = any(line.upper().startswith('DTSTART') for line in lines)
+    step = {
+        SECONDLY: timedelta(seconds=rule._interval),
+        MINUTELY: timedelta(minutes=rule._interval),
+        HOURLY: timedelta(hours=rule._interval),
+    }.get(rule._freq)
 
-    if freq in ('SECONDLY', 'MINUTELY', 'HOURLY'):
-        epoch = datetime(2000, 1, 1, 0, 0, 0)
-        anchor = now or datetime.now()
-        rule = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
-        dtstart = next((line.rsplit(':', 1)[-1] for line in lines if line.upper().startswith('DTSTART')), None)
-        interval = int(parts.get('INTERVAL', '1'))
-        if interval < 1:
-            raise ValueError('RRULE INTERVAL must be a positive integer')
-        if freq == 'SECONDLY':
-            step = timedelta(seconds=interval)
-        elif freq == 'MINUTELY':
-            step = timedelta(minutes=interval)
-        else:
-            step = timedelta(hours=interval)
-        if dtstart:
-            start = date_parser.parse(dtstart, ignoretz=True)
-            emitted = ((anchor - start) // step) if anchor > start else 0
-            if 'BYMINUTE' in parts:
-                emitted *= len(parts['BYMINUTE'].split(','))
-            if 'BYSECOND' in parts:
-                emitted *= len(parts['BYSECOND'].split(','))
-            if emitted <= 100_000:
-                return rrulestr(s, ignoretz=True)
-        anchor = epoch + ((anchor - epoch) // step) * step
-        return rrulestr(rule, dtstart=anchor, ignoretz=True)
-    return rrulestr(s, ignoretz=True)
+    if step is None:
+        if not rule._dtstart.tzinfo:
+            return parsed
+        return rrulestr(stripped, dtstart=start, ignoretz=True)
+
+    if rule._interval < 1:
+        raise ValueError('RRULE INTERVAL must be a positive integer')
+    dtstart = None
+    if has_dtstart:
+        emitted = ((anchor - start) // step) if anchor > start else 0
+        emitted *= len(rule._byminute or (0,)) * len(rule._bysecond or (0,))
+        if emitted <= 100_000:
+            if rule._dtstart.tzinfo:
+                dtstart = start
+            else:
+                return parsed
+    if not has_dtstart or dtstart is None:
+        epoch = datetime(2000, 1, 1)
+        dtstart = epoch + ((anchor - epoch) // step) * step
+
+    return rrulestr(stripped, dtstart=dtstart, ignoretz=True)
 
 
 def validate_rrule(s: str, tz: str = None) -> None:
