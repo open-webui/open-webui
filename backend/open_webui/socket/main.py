@@ -121,6 +121,7 @@ if WEBSOCKET_MANAGER == 'redis':
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+        cache_set_signature=True,
     )
 
     SESSION_POOL = RedisDict(
