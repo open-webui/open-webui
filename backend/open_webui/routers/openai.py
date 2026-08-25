@@ -1359,8 +1359,21 @@ def convert_to_responses_payload(payload: dict) -> dict:
                     content_parts.append({'type': text_type, 'text': part.get('text', '')})
                 elif part.get('type') == 'image_url':
                     url_data = part.get('image_url', {})
-                    url = url_data.get('url', '') if isinstance(url_data, dict) else url_data
-                    content_parts.append({'type': 'input_image', 'image_url': url})
+                    if isinstance(url_data, dict):
+                        url = url_data.get('url', '')
+                        detail = url_data.get('detail') or 'auto'
+                    else:
+                        url = url_data if isinstance(url_data, str) else ''
+                        detail = 'auto'
+                    content_parts.append({'type': 'input_image', 'image_url': url, 'detail': detail})
+                elif part.get('type') == 'file':
+                    # OpenAI-compatible proxy path only. Open WebUI attachments are handled
+                    # separately via metadata.files/RAG and must not be converted here.
+                    file = part.get('file')
+                    if isinstance(file, dict):
+                        file_part = {k: file[k] for k in ('file_id', 'file_data', 'filename') if k in file}
+                        if 'file_id' in file_part or 'file_data' in file_part:
+                            content_parts.append({'type': 'input_file', **file_part})
         else:
             content_parts = [{'type': text_type, 'text': str(content)}]
 

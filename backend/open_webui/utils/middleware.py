@@ -2123,7 +2123,13 @@ async def convert_url_images_to_base64(form_data, user=None):
                 new_content.append(item)
                 continue
 
-            image_url = item.get('image_url', {}).get('url', '')
+            image_url_data = item.get('image_url', {})
+            if isinstance(image_url_data, dict):
+                image_url = image_url_data.get('url') or ''
+            elif isinstance(image_url_data, str):
+                image_url = image_url_data
+            else:
+                image_url = ''
             if image_url.startswith('data:image/'):
                 new_content.append(item)
                 continue
@@ -2131,10 +2137,13 @@ async def convert_url_images_to_base64(form_data, user=None):
             try:
                 base64_data = await get_image_base64_from_url(image_url, user=user)
                 if base64_data:
+                    image_url_payload = {'url': base64_data}
+                    if isinstance(image_url_data, dict) and image_url_data.get('detail'):
+                        image_url_payload['detail'] = image_url_data['detail']
                     new_content.append(
                         {
                             'type': 'image_url',
-                            'image_url': {'url': base64_data},
+                            'image_url': image_url_payload,
                         }
                     )
                 else:
