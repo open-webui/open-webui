@@ -267,6 +267,9 @@ async def create_new_model(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
         )
+    if form_data.base_model_id == form_data.id:
+        # Should never be stored: a model cannot be based on itself.
+        form_data.base_model_id = None
 
     model = await Models.get_model_by_id(form_data.id, db=db)
     if model:
@@ -418,6 +421,10 @@ async def import_models(
                 model_id = model_data.get('id')
 
                 if model_id and is_valid_model_id(model_id):
+                    if model_data.get('base_model_id') == model_id:
+                        # Should never be stored: heal bad exports/API payloads.
+                        model_data['base_model_id'] = None
+
                     # Defense-in-depth: skip models referencing inaccessible files
                     try:
                         await _verify_knowledge_file_access(
@@ -809,6 +816,9 @@ async def update_model_by_id(
 
     if 'base_model_id' not in form_data.model_fields_set:
         form_data.base_model_id = model.base_model_id
+    if form_data.base_model_id == form_data.id:
+        # Should never be stored: a model cannot be based on itself.
+        form_data.base_model_id = None
 
     if user.role != 'admin' and model.base_model_id and not form_data.base_model_id:
         raise HTTPException(
