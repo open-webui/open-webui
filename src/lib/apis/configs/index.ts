@@ -573,7 +573,10 @@ export const initiateOAuthRedirect = (tool: {
 	sessionStorage.setItem('pendingOAuthToolId', tool.id);
 	sessionStorage.setItem('oauthRedirectInProgressToolId', tool.id);
 	const authUrl = getOAuthClientAuthorizationUrl(tool.serverId, tool.authType ?? 'mcp');
-	window.open(authUrl, '_self', 'noopener');
+	const tab = window.open(authUrl, '_blank');
+	if (!tab) {
+		window.open(authUrl, '_self', 'noopener');
+	}
 };
 
 export const getCodeExecutionConfig = async (token: string) => {

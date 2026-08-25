@@ -1391,7 +1391,7 @@
 	const onMessageHandler = async (event: {
 		origin: string;
 		source: unknown;
-		data: { type: string; text: string };
+		data: { type: string; text?: string; toolId?: string; error?: string | null };
 	}) => {
 		const isSameOrigin = event.origin === window.origin;
 		const type = event.data?.type;
@@ -1410,6 +1410,29 @@
 
 		// Prompt types from an untrusted cross-origin source are silently dropped.
 		if (promptTypes.includes(type) && !isTrusted) {
+			return;
+		}
+
+		if (type === 'oauth:complete') {
+			const toolId = event.data.toolId;
+			if (!toolId) return;
+
+			if (event.data.error) {
+				sessionStorage.removeItem('oauthRedirectInProgressToolId');
+				toast.error(event.data.error);
+				return;
+			}
+
+			sessionStorage.removeItem('pendingOAuthToolId');
+			sessionStorage.removeItem('oauthRedirectInProgressToolId');
+			const updatedTools = await getTools(localStorage.token).catch(() => null);
+			if (updatedTools) {
+				tools.set(updatedTools);
+			}
+			selectedToolIds = [...new Set([...selectedToolIds, toolId])];
+			pendingOAuthTools = pendingOAuthTools.filter((tool) => tool.id !== toolId);
+			await tick();
+			await continueOAuthRedirect();
 			return;
 		}
 
@@ -3491,7 +3514,7 @@
 					);
 
 					if (message.output && message.role === 'assistant') {
-						return { role: message.role, output: message.output };
+						return { role: message.role, model: message.model, output: message.output };
 					}
 
 					if (message.role === 'user' && imageFiles.length > 0) {

@@ -1069,6 +1069,21 @@
 
 		window.addEventListener('message', windowMessageEventHandler);
 
+		const pendingOAuthToolId = sessionStorage.getItem('pendingOAuthToolId');
+		if (window.opener && window.location.pathname === '/' && pendingOAuthToolId) {
+			window.opener.postMessage(
+				{
+					type: 'oauth:complete',
+					toolId: pendingOAuthToolId,
+					error: new URLSearchParams(window.location.search).get('error')
+				},
+				window.location.origin
+			);
+			sessionStorage.removeItem('pendingOAuthToolId');
+			sessionStorage.removeItem('oauthRedirectInProgressToolId');
+			window.close();
+		}
+
 		let touchstartY = 0;
 
 		function isNavOrDescendant(el) {
