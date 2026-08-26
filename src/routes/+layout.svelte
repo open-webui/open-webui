@@ -495,62 +495,67 @@
 	};
 
 	const executeTool = async (data, cb, chatId) => {
-		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
-		const defaultInline =
-			data?.name === 'display_file' &&
-			data?.params?.path &&
-			data?.params?.inline === undefined &&
-			$settings?.terminalFileDisplay === 'inline' &&
-			isDirectTerminalServer(data.server?.url);
-		const params = defaultInline ? { ...data.params, inline: true } : data?.params;
-		const serverParams = data?.name === 'display_file' && params ? { ...params } : params;
-		if (serverParams && data?.name === 'display_file') {
-			delete serverParams.page;
-		}
+		try {
+			const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
+			const defaultInline =
+				data?.name === 'display_file' &&
+				data?.params?.path &&
+				data?.params?.inline === undefined &&
+				$settings?.terminalFileDisplay === 'inline' &&
+				isDirectTerminalServer(data.server?.url);
+			const params = defaultInline ? { ...data.params, inline: true } : data?.params;
+			const serverParams = data?.name === 'display_file' && params ? { ...params } : params;
+			if (serverParams && data?.name === 'display_file') {
+				delete serverParams.page;
+			}
 
-		console.log('executeTool', data, toolServer);
+			console.log('executeTool', data, toolServer);
 
-		if (toolServer) {
-			const res = await executeToolServer(
-				token,
-				toolServer.url,
-				data?.name,
-				serverParams,
-				toolServerData,
-				chatId
-			);
+			if (toolServer) {
+				const res = await executeToolServer(
+					token,
+					toolServer.url,
+					data?.name,
+					serverParams,
+					toolServerData,
+					chatId
+				);
 
-			console.log('executeToolServer', res);
-			const result = Array.isArray(res) ? res[0] : res;
-			const inlineDisplayFile =
-				data?.name === 'display_file' && params?.path && params?.inline === true;
-			const output =
-				inlineDisplayFile && result?.exists !== false
-					? Array.isArray(res)
-						? [terminalFileResult(result, params, toolServer.url, chatId)]
-						: terminalFileResult(result, params, toolServer.url, chatId)
-					: res;
+				console.log('executeToolServer', res);
+				const result = Array.isArray(res) ? res[0] : res;
+				const inlineDisplayFile =
+					data?.name === 'display_file' && params?.path && params?.inline === true;
+				const output =
+					inlineDisplayFile && result?.exists !== false
+						? Array.isArray(res)
+							? [terminalFileResult(result, params, toolServer.url, chatId)]
+							: terminalFileResult(result, params, toolServer.url, chatId)
+						: res;
 
-			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile) {
-				if (result?.exists !== false) {
-					displayFileHandler(
-						params.path,
-						{ showControls, showFileNavPath },
-						{ page: params?.page }
-					);
+				if (data?.name === 'display_file' && params?.path && !inlineDisplayFile) {
+					if (result?.exists !== false) {
+						displayFileHandler(
+							params.path,
+							{ showControls, showFileNavPath },
+							{ page: params?.page }
+						);
+					}
 				}
-			}
 
-			if (['write_file'].includes(data?.name) && params?.path) {
-				showFileNavDir.set(result?.path ?? params.path);
-			}
+				if (['write_file'].includes(data?.name) && params?.path) {
+					showFileNavDir.set(result?.path ?? params.path);
+				}
 
-			if (cb) {
-				cb(structuredClone(output));
-			}
-		} else {
-			if (cb) {
+				if (cb) {
+					cb(structuredClone(output));
+				}
+			} else if (cb) {
 				cb({ error: 'Tool Server Not Found' });
+			}
+		} catch (error) {
+			console.error('executeTool error:', error);
+			if (cb) {
+				cb({ error: error?.message ?? 'Tool execution failed' });
 			}
 		}
 	};
