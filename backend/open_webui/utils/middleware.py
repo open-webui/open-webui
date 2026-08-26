@@ -1293,7 +1293,7 @@ async def chat_completion_tools_handler(
         return content
 
     def get_tools_function_calling_payload(messages, task_model_id, content):
-        user_message = get_last_user_message(messages)
+        user_message = get_last_user_message(messages) or "Continue the task using tools."
 
         if user_message and messages and messages[-1]['role'] == 'user':
             # Remove the last user message to avoid duplication
@@ -1301,10 +1301,14 @@ async def chat_completion_tools_handler(
 
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = '\n'.join(
-            f'{message["role"].upper()}: """{get_content_from_message(message)}"""' for message in recent_messages
+            f'{message["role"].upper()}: """{get_content_from_message(message)}"""'
+            for message in recent_messages
+            if get_content_from_message(message)
         )
 
         prompt = f'History:\n{chat_history}\nQuery: {user_message}' if chat_history else f'Query: {user_message}'
+        if not prompt or prompt.strip() == "":
+            prompt = "Query: Continue the task using tools."
 
         return {
             'model': task_model_id,
