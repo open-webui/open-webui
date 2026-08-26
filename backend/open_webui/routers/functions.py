@@ -494,7 +494,7 @@ async def get_function_valves_spec_by_id(
 
         if hasattr(function_module, 'Valves'):
             Valves = function_module.Valves
-            schema = Valves.schema()
+            schema = Valves.model_json_schema()
             # Resolve dynamic options for select dropdowns
             schema = resolve_valves_schema_options(Valves, schema, user)
             return schema
@@ -600,7 +600,7 @@ async def get_function_user_valves_spec_by_id(
 
         if hasattr(function_module, 'UserValves'):
             UserValves = function_module.UserValves
-            schema = UserValves.schema()
+            schema = UserValves.model_json_schema()
             # Resolve dynamic options for select dropdowns
             schema = resolve_valves_schema_options(UserValves, schema, user)
             return schema

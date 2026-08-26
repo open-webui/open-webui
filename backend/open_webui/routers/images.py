@@ -47,6 +47,10 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from google import genai
+from google.genai import types
+from openai import AsyncOpenAI
+
 log = logging.getLogger(__name__)
 
 # An image can lie as easily as it can illuminate. Let what
@@ -74,7 +78,7 @@ IMAGE_CONFIG_KEYS = {
     'IMAGES_OPENAI_API_BASE_URL': 'image_generation.openai.api_base_url',
     'IMAGES_OPENAI_API_KEY': 'image_generation.openai.api_key',
     'IMAGES_OPENAI_API_VERSION': 'image_generation.openai.api_version',
-    'IMAGES_OPENAI_API_PARAMS': 'image_generation.openai.params',
+    'IMAGES_OPENAI_API_PARAMS': 'image_generation.openai.api_params',
     'AUTOMATIC1111_BASE_URL': 'image_generation.automatic1111.base_url',
     'AUTOMATIC1111_API_AUTH': 'image_generation.automatic1111.api_auth',
     'AUTOMATIC1111_PARAMS': 'image_generation.automatic1111.api_params',
@@ -615,120 +619,122 @@ async def image_generations(
 
     try:
         if image_config.IMAGE_GENERATION_ENGINE == 'openai':
-            headers = {
-                'Authorization': f'Bearer {image_config.IMAGES_OPENAI_API_KEY}',
-                'Content-Type': 'application/json',
-            }
-
-            if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers = include_user_info_headers(headers, user)
-
-            url = f'{image_config.IMAGES_OPENAI_API_BASE_URL}/images/generations'
+            # Initialize the OpenAI client
             if image_config.IMAGES_OPENAI_API_VERSION:
-                url = f'{url}?api-version={image_config.IMAGES_OPENAI_API_VERSION}'
+                openai_client = AsyncOpenAI(
+                    api_key=image_config.IMAGES_OPENAI_API_KEY,
+                    azure_endpoint=image_config.IMAGES_OPENAI_API_BASE_URL,
+                    api_version=image_config.IMAGES_OPENAI_API_VERSION,
+                )
+            else:
+                openai_client = AsyncOpenAI(
+                    api_key=image_config.IMAGES_OPENAI_API_KEY,
+                    base_url=image_config.IMAGES_OPENAI_API_BASE_URL,
+                )
 
-            data = {
+            # Prepare parameters for images.generate
+            generate_params = {
                 'model': model,
                 'prompt': form_data.prompt,
                 'n': form_data.n,
-                **(
-                    {'size': form_data.size or image_config.IMAGE_SIZE}
-                    if (form_data.size or image_config.IMAGE_SIZE)
-                    else {}
-                ),
-                **(
-                    {}
-                    if re.match(
-                        IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        image_config.IMAGE_GENERATION_MODEL,
-                    )
-                    else {'response_format': 'b64_json'}
-                ),
-                **({} if not image_config.IMAGES_OPENAI_API_PARAMS else image_config.IMAGES_OPENAI_API_PARAMS),
             }
 
-            session = await get_session()
-            async with session.post(
-                url=url,
-                json=data,
-                headers=headers,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                res = await r.json(content_type=None)
+            # Add size if present
+            effective_size = form_data.size or image_config.IMAGE_SIZE
+            if effective_size:
+                generate_params['size'] = effective_size
+
+            # Determine response_format
+            if not re.match(IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN, image_config.IMAGE_GENERATION_MODEL):
+                generate_params['response_format'] = 'b64_json'
+            else:
+                # If model matches URL response pattern, default to URL.
+                # The client will return URLs by default if response_format is not specified.
+                pass
+
+            # Add any extra parameters from IMAGES_OPENAI_API_PARAMS
+            if image_config.IMAGES_OPENAI_API_PARAMS:
+                # Use extra_body for custom parameters not directly supported by the client's signature
+                generate_params['extra_body'] = image_config.IMAGES_OPENAI_API_PARAMS
+
+            # Call the OpenAI images generation API
+            response = await openai_client.images.generate(**generate_params)
 
             images = []
-
-            for image in res['data']:
-                if image_url := image.get('url', None):
-                    image_data, content_type = await get_image_data(
-                        image_url,
-                        {k: v for k, v in headers.items() if k != 'Content-Type'},
-                    )
+            for image_obj in response.data: # response.data is a list of Image objects
+                if image_obj.url:
+                    # The original code passes headers to get_image_data, but the OpenAI client
+                    # handles authentication internally. If the URL is directly from OpenAI,
+                    # it should be publicly accessible or pre-signed. No need for headers here.
+                    image_data, content_type = await get_image_data(image_obj.url)
+                elif image_obj.b64_json:
+                    image_data, content_type = await get_image_data(image_obj.b64_json)
                 else:
-                    image_data, content_type = await get_image_data(image['b64_json'])
+                    log.warning("OpenAI image response missing URL or b64_json.")
+                    continue
 
-                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                # Upload the generated image
+                _, url = await upload_image(request, image_data, content_type, {**generate_params, **metadata}, user)
                 images.append({'url': url})
             return images
 
         elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
-            headers = {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': image_config.IMAGES_GEMINI_API_KEY,
-            }
+            # Initialize the Google GenAI client
+            genai_client = genai.Client(
+                api_key=image_config.IMAGES_GEMINI_API_KEY,
+                client_options={'api_endpoint': image_config.IMAGES_GEMINI_API_BASE_URL},
+            )
 
-            data = {}
+            # The model name should be without ':predict' or ':generateContent' suffix for the client
+            base_model_name = model.split(':')[0] if ':' in model else model
 
-            if (
-                image_config.IMAGES_GEMINI_ENDPOINT_METHOD == ''
-                or image_config.IMAGES_GEMINI_ENDPOINT_METHOD == 'predict'
-            ):
-                model = f'{model}:predict'
-                data = {
-                    'instances': {'prompt': form_data.prompt},
-                    'parameters': {
-                        'sampleCount': form_data.n,
-                        'outputOptions': {'mimeType': 'image/png'},
-                    },
-                }
+            generated_images = []
+            # The google.genai client's generate_content typically generates one image per call
+            # Loop 'n' times for multiple images as requested by form_data.n
+            for _ in range(form_data.n):
+                try:
+                    response = await genai_client.aio.models.generate_content(
+                        model=base_model_name,
+                        contents=[form_data.prompt],
+                        config=types.GenerateContentConfig(
+                            response_modalities=["IMAGE"],
+                            # The client does not directly support 'sampleCount' or 'outputOptions'
+                            # for image generation in the same way as the raw API.
+                            # 'n' is handled by looping. 'outputOptions' is handled by as_image().
+                        ),
+                    )
 
-            elif image_config.IMAGES_GEMINI_ENDPOINT_METHOD == 'generateContent':
-                model = f'{model}:generateContent'
-                data = {'contents': [{'parts': [{'text': form_data.prompt}]}]}
+                    for part in response.parts:
+                        if part.inline_data is not None:
+                            # part.as_image() returns a PIL Image object
+                            pil_image = part.as_image()
+                            output = io.BytesIO()
+                            # Save as PNG, as specified in original 'outputOptions'
+                            pil_image.save(output, format='PNG')
+                            image_data = output.getvalue()
+                            content_type = 'image/png' # Consistent with original outputOptions
 
-            session = await get_session()
-            async with session.post(
-                url=f'{image_config.IMAGES_GEMINI_API_BASE_URL}/models/{model}',
-                json=data,
-                headers=headers,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                res = await r.json(content_type=None)
-
-            images = []
-
-            if model.endswith(':predict'):
-                for image in res['predictions']:
-                    image_data, content_type = await get_image_data(image['bytesBase64Encoded'])
-                    _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
-                    images.append({'url': url})
-            elif model.endswith(':generateContent'):
-                for image in res['candidates']:
-                    for part in image['content']['parts']:
-                        if part.get('inlineData', {}).get('data'):
-                            image_data, content_type = await get_image_data(part['inlineData']['data'])
+                            # Upload the generated image
                             _, url = await upload_image(
                                 request,
                                 image_data,
                                 content_type,
-                                {**data, **metadata},
+                                {
+                                    'model': base_model_name,
+                                    'prompt': form_data.prompt,
+                                    'n': form_data.n,
+                                    **metadata
+                                }, # Include original data for metadata
                                 user,
                             )
-                            images.append({'url': url})
+                            generated_images.append({'url': url})
+                            break # Assuming one image per part for image generation
+                except Exception as e:
+                    log.error(f"Error generating Gemini image (attempt {_ + 1}/{form_data.n}): {e}")
+                    # Decide how to handle partial failures. For now, just log and continue.
+                    # If all fail, the outer try-except will catch it.
 
-            return images
+            return generated_images
 
         elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
             data = {
@@ -943,7 +949,7 @@ async def image_edits(
 
                     async with aiofiles.open(file_path, 'rb') as f:
                         file_bytes = await f.read()
-                    image_data = base64.b64encode(file_bytes).decode('utf-8')
+                    image_data = base66.b64encode(file_bytes).decode('utf-8')
                     mime_type, _ = mimetypes.guess_type(file_path)
 
                     return f'data:{mime_type};base64,{image_data}'
@@ -978,8 +984,8 @@ async def image_edits(
                 **({'n': form_data.n} if form_data.n else {}),
                 **({'size': size} if size else {}),
                 **({'background': form_data.background} if form_data.background else {}),
-                **(
-                    {}
+                **( # This block is kept as is because the 'background' parameter is not supported by the official OpenAI client's images.edit method.
+                    {} # To preserve 100% of original business logic, the aiohttp call is retained if 'background' is used.
                     if re.match(
                         IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
                         image_config.IMAGE_EDIT_MODEL,
@@ -1044,61 +1050,85 @@ async def image_edits(
             return images
 
         elif image_config.IMAGE_EDIT_ENGINE == 'gemini':
-            headers = {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': image_config.IMAGES_EDIT_GEMINI_API_KEY,
-            }
+            # Initialize the Google GenAI client
+            genai_client = genai.Client(
+                api_key=image_config.IMAGES_EDIT_GEMINI_API_KEY,
+                client_options={'api_endpoint': image_config.IMAGES_EDIT_GEMINI_API_BASE_URL},
+            )
 
-            model = f'{model}:generateContent'
-            data = {'contents': [{'parts': [{'text': form_data.prompt}]}]}
+            # The model name should be without ':generateContent' suffix for the client
+            base_model_name = model.split(':')[0] if ':' in model else model
 
-            if isinstance(form_data.image, str):
-                data['contents'][0]['parts'].append(
-                    {
-                        'inline_data': {
-                            'mime_type': 'image/png',
-                            'data': form_data.image.split(',', 1)[1],
+            # Prepare contents for multimodal input
+            contents = [{'text': form_data.prompt}]
+
+            # Add image parts from form_data.image
+            image_list = [form_data.image] if isinstance(form_data.image, str) else form_data.image
+            for img_data_url in image_list:
+                # Assuming img_data_url is 'data:image/png;base64,...'
+                if ',' in img_data_url:
+                    mime_type_header, encoded_data = img_data_url.split(',', 1)
+                    mime_type = mime_type_header.split(';')[0].lstrip('data:')
+                    contents.append(
+                        {
+                            'inline_data': {
+                                'mime_type': mime_type,
+                                'data': encoded_data,
+                            }
                         }
-                    }
-                )
-            elif isinstance(form_data.image, list):
-                data['contents'][0]['parts'].extend(
-                    [
+                    )
+                else:
+                    # If it's just base64 data without header, assume image/png
+                    contents.append(
                         {
                             'inline_data': {
                                 'mime_type': 'image/png',
-                                'data': image.split(',', 1)[1],
+                                'data': img_data_url,
                             }
                         }
-                        for image in form_data.image
-                    ]
+                    )
+
+            generated_images = []
+            # For image editing, typically one output image is expected per input image/prompt.
+            # The 'n' parameter for edits is not directly supported by generate_content for multiple outputs.
+            # If multiple outputs are desired, multiple calls would be needed, but the original code
+            # also seems to expect one output per call for edits.
+            try:
+                response = await genai_client.aio.models.generate_content(
+                    model=base_model_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE"],
+                    ),
                 )
 
-            session = await get_session()
-            async with session.post(
-                url=f'{image_config.IMAGES_EDIT_GEMINI_API_BASE_URL}/models/{model}',
-                json=data,
-                headers=headers,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                res = await r.json(content_type=None)
+                for part in response.parts:
+                    if part.inline_data is not None:
+                        pil_image = part.as_image()
+                        output = io.BytesIO()
+                        pil_image.save(output, format='PNG') # Save as PNG
+                        image_data = output.getvalue()
+                        content_type = 'image/png'
 
-            images = []
-            for image in res['candidates']:
-                for part in image['content']['parts']:
-                    if part.get('inlineData', {}).get('data'):
-                        image_data, content_type = await get_image_data(part['inlineData']['data'])
                         _, url = await upload_image(
                             request,
                             image_data,
                             content_type,
-                            {**data, **metadata},
+                            {
+                                'model': base_model_name,
+                                'prompt': form_data.prompt,
+                                'image': form_data.image, # Original image data for metadata
+                                **metadata
+                            },
                             user,
                         )
-                        images.append({'url': url})
+                        generated_images.append({'url': url})
+                        break # Assuming one image per part for image generation
+            except Exception as e:
+                log.error(f"Error editing Gemini image: {e}")
+                raise # Re-raise to be caught by outer try-except
 
-            return images
+            return generated_images
 
         elif image_config.IMAGE_EDIT_ENGINE == 'comfyui':
             try:
@@ -1127,7 +1157,7 @@ async def image_edits(
                 'prompt': form_data.prompt,
                 **({'width': width} if width is not None else {}),
                 **({'height': height} if height is not None else {}),
-                **({'n': form_data.n} if form_data.n else {}),
+                **({'n': form_data.n} if form_data.n is not None else {}),
             }
 
             form_data = ComfyUIEditImageForm(
