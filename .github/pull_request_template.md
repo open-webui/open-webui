@@ -48,7 +48,7 @@ The most impactful way to contribute to Open WebUI is through well-written bug r
 - [ ] **Changelog:** A changelog entry following [Keep a Changelog](https://keepachangelog.com/) format is included at the bottom.
 - [ ] **Documentation:** Relevant documentation has been added or updated in the [Open WebUI Docs Repository](https://github.com/open-webui/docs).
 - [ ] **Dependencies:** Any new or updated dependencies are explained, tested, and documented.
-- [ ] **Testing:** **Manual** end-to-end tests have been performed to verify the fix/feature works correctly and does not introduce regressions. Screenshots or recordings are included where applicable.
+- [ ] **Testing:** I performed **manual** end-to-end tests that verify the fix/feature works as intended and does not break related functionality. Automated tests, AI-generated tests, or agent-written test summaries are **not** a substitute for manual verification. I included reproducible steps showing the issue before the fix, tested relevant edge cases (for example URL encoding, HTML entities, and data types), and attached screenshots or recordings for the PR description where applicable.
 - [ ] **User-facing changes:** I have confirmed whether this PR changes the UI. If it does, screenshots are required, and a video recording is recommended.
 - [ ] **No Unchecked AI Code:** This PR is either human-written or has undergone thorough human review AND manual testing. Unreviewed AI-generated PRs may be closed immediately.
 - [ ] **Self-Review:** A self-review of the code has been performed, ensuring adherence to project coding standards.
@@ -108,7 +108,7 @@ The most impactful way to contribute to Open WebUI is through well-written bug r
 
 ### Screenshots or Videos
 
-- [Attach screenshots or videos for user-facing changes. For UI changes, screenshots are required, and a video recording is recommended.]
+- [Attach screenshots or videos that demonstrate the fix/feature where applicable. For UI changes, screenshots are required, and a video recording is recommended.]
 
 ### Contributor License Agreement
 
