@@ -366,7 +366,7 @@ class UsersTable:
             sub_expr = User.oauth[provider]['sub'].as_string()
             query = select(User).where(sub_expr == sub)
             # SQLite preserves JSON numeric type here; Postgres ->> already compares numeric JSON as text.
-            if session.get_bind().dialect.name == 'sqlite' and sub.isdecimal():
+            if session.get_bind().dialect.name == 'sqlite' and sub.isdecimal() and len(sub) <= 18:
                 query = select(User).where(or_(sub_expr == sub, sub_expr == int(sub)))
             row = (await session.execute(query)).scalars().first()
             return UserModel.model_validate(row) if row else None
