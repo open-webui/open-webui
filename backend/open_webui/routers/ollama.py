@@ -45,7 +45,7 @@ from open_webui.utils.payload import (
     apply_system_prompt_to_body,
 )
 from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
-from pydantic import BaseModel, ConfigDict, validator
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -1030,10 +1030,10 @@ class ChatMessage(BaseModel):
     images: list[str | None] = None
     model_config = ConfigDict(extra='allow')
 
-    @validator('content', pre=True)
+    @field_validator('content', mode='before')
     @classmethod
-    def check_at_least_one_field(cls, field_value, values, **kwargs):
-        if field_value is None and ('tool_calls' not in values or values['tool_calls'] is None):
+    def check_at_least_one_field(cls, field_value, info):
+        if field_value is None and ('tool_calls' not in info.data or info.data['tool_calls'] is None):
             raise ValueError("At least one of 'content' or 'tool_calls' must be provided")
         return field_value
 

@@ -494,7 +494,7 @@ async def get_function_valves_spec_by_id(
 
         if hasattr(function_module, 'Valves'):
             Valves = function_module.Valves
-            schema = Valves.schema()
+            schema = Valves.model_json_schema()
             # Resolve dynamic options for select dropdowns
             schema = resolve_valves_schema_options(Valves, schema, user)
             return schema
@@ -570,7 +570,7 @@ async def get_function_user_valves_by_id(
     function = await Functions.get_function_by_id(id, db=db)
     if function:
         try:
-            user_valves = await Functions.get_user_valves_by_id_and_user_id(id, user.id, db=db)
+            user_valves = await Functions.get_function_user_valves_by_id_and_user_id(id, user.id, db=db)
             return user_valves
         except Exception as e:
             raise HTTPException(
@@ -600,7 +600,7 @@ async def get_function_user_valves_spec_by_id(
 
         if hasattr(function_module, 'UserValves'):
             UserValves = function_module.UserValves
-            schema = UserValves.schema()
+            schema = UserValves.model_json_schema()
             # Resolve dynamic options for select dropdowns
             schema = resolve_valves_schema_options(UserValves, schema, user)
             return schema
