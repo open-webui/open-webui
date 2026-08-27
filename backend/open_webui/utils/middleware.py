@@ -298,6 +298,65 @@ def build_terminal_file_tool_result(
     }
 
 
+def is_terminal_tool(tool: dict | None) -> bool:
+    tool_id = (tool or {}).get('tool_id', '')
+    return (tool or {}).get('type') == 'terminal' or (isinstance(tool_id, str) and tool_id.startswith('terminal:'))
+
+
+async def get_terminal_file_display_setting(user) -> str:
+    """Resolve the user's effective 'terminalFileDisplay' interface setting.
+
+    Stored user settings are stripped of values equal to the admin defaults,
+    so fall back to 'ui.default_interface_settings' when the user has no
+    explicit value.
+    """
+    settings = getattr(user, 'settings', None)
+    if hasattr(settings, 'model_dump'):
+        settings = settings.model_dump()
+    if not isinstance(settings, dict):
+        settings = {}
+    ui_settings = settings.get('ui')
+    value = ui_settings.get('terminalFileDisplay') if isinstance(ui_settings, dict) else None
+
+    if value not in ('inline', 'sidebar'):
+        default_interface_settings = await Config.get('ui.default_interface_settings')
+        if isinstance(default_interface_settings, dict):
+            value = default_interface_settings.get('terminalFileDisplay')
+
+    return value if value in ('inline', 'sidebar') else 'sidebar'
+
+
+async def apply_terminal_display_file_defaults(
+    tool_function_name: str,
+    tool_function_params: dict,
+    tool: dict | None,
+    user,
+) -> dict:
+    """Default display_file to inline for backend-managed terminal tools when
+    the user's 'Terminal File Display' interface setting is 'inline'.
+
+    Direct (browser-executed) terminal servers apply the same default in
+    src/routes/+layout.svelte; without this, the setting has no effect on
+    'terminal:<id>' tools and display_file always opens the sidebar viewer.
+    """
+    if (
+        tool_function_name != 'display_file'
+        or not isinstance(tool_function_params, dict)
+        or not tool_function_params.get('path')
+        or 'inline' in tool_function_params
+        or not is_terminal_tool(tool)
+    ):
+        return tool_function_params
+
+    try:
+        if await get_terminal_file_display_setting(user) == 'inline':
+            return {**tool_function_params, 'inline': True}
+    except Exception as e:
+        log.debug(e)
+
+    return tool_function_params
+
+
 def tool_result_content(tool_result: Any) -> str:
     if not tool_result:
         return ''
@@ -3169,6 +3228,7 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
     direct_tool = tool.get('direct', False)
     allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
     params = {key: value for key, value in params.items() if key in allowed_params}
+    params = await apply_terminal_display_file_defaults(name, params, tool, user)
 
     try:
         if direct_tool:
@@ -5629,6 +5689,7 @@ async def streaming_chat_response_handler(response, ctx):
                         direct_tool = tool.get('direct', False)
                         allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
                         params = {key: value for key, value in params.items() if key in allowed_params}
+                        params = await apply_terminal_display_file_defaults(name, params, tool, user)
                         try:
                             if direct_tool:
                                 result = await event_caller(
