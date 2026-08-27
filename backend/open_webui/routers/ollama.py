@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from typing import Optional, Union
 from urllib.parse import urlparse
+from uuid import uuid4
 
 import aiofiles
 import aiohttp
@@ -315,6 +316,7 @@ async def update_config(
             'ollama.enable': form_data.ENABLE_OLLAMA_API,
             'ollama.base_urls': form_data.OLLAMA_BASE_URLS,
             'ollama.api_configs': api_configs,
+            'models.base_models_cache_epoch': str(uuid4()),
         }
     )
 

@@ -2841,6 +2841,7 @@ DEFAULT_CONFIG = {
     'openai.api_base_urls': OPENAI_API_BASE_URLS,
     'openai.api_configs': OPENAI_API_CONFIGS,
     'models.base_models_cache': ENABLE_BASE_MODELS_CACHE,
+    'models.base_models_cache_epoch': '',
     'tool_server.connections': TOOL_SERVER_CONNECTIONS,
     'oauth.client.timeout': OAUTH_CLIENT_TIMEOUT,
     'terminal_server.connections': TERMINAL_SERVER_CONNECTIONS,
