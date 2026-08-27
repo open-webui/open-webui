@@ -417,8 +417,10 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             log.warning(f'Failed to pre-fetch models at startup: {e}')
 
-    # Pre-fetch tool server specs so the first request doesn't pay the latency cost
-    if len(await Config.get('tool_server.connections', []) or []) > 0:
+    # Pre-fetch tool/terminal server specs so the first request doesn't pay the latency cost
+    has_tool_servers = len(await Config.get('tool_server.connections', []) or []) > 0
+    has_terminal_servers = len(await Config.get('terminal_server.connections', []) or []) > 0
+    if has_tool_servers or has_terminal_servers:
         mock_request = Request(
             {
                 'type': 'http',
@@ -435,18 +437,20 @@ async def lifespan(app: FastAPI):
             }
         )
 
-        log.info('Initializing tool servers...')
-        try:
-            await set_tool_servers(mock_request)
-            log.info('Initialized %s tool server(s)', len(app.state.TOOL_SERVERS))
-        except Exception as e:
-            log.warning(f'Failed to initialize tool servers at startup: {e}')
+        if has_tool_servers:
+            log.info('Initializing tool servers...')
+            try:
+                await set_tool_servers(mock_request)
+                log.info('Initialized %s tool server(s)', len(app.state.TOOL_SERVERS))
+            except Exception as e:
+                log.warning(f'Failed to initialize tool servers at startup: {e}')
 
-        try:
-            await set_terminal_servers(mock_request)
-            log.info('Initialized %s terminal server(s)', len(app.state.TERMINAL_SERVERS))
-        except Exception as e:
-            log.warning(f'Failed to initialize terminal servers at startup: {e}')
+        if has_terminal_servers:
+            try:
+                await set_terminal_servers(mock_request)
+                log.info('Initialized %s terminal server(s)', len(app.state.TERMINAL_SERVERS))
+            except Exception as e:
+                log.warning(f'Failed to initialize terminal servers at startup: {e}')
 
     # Mark application as ready to accept traffic from a startup perspective.
     if license_task:
