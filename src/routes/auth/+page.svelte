@@ -173,9 +173,10 @@
 
 		// Auto-redirect to SSO when OAUTH_AUTO_REDIRECT is enabled and the
 		// deployment is unambiguously SSO-only (single provider, no login form,
-		// no LDAP). Suppressed by ?form=, ?error=, onboarding, trusted-header
+		// no LDAP). Suppressed by ?form=, ?error=, ?signout, onboarding, trusted-header
 		// auth, or an existing session/token.
-		if ($config?.oauth?.auto_redirect && !form && !error) {
+		const signout = $page.url.searchParams.get('signout');
+		if ($config?.oauth?.auto_redirect && !form && !error && !signout) {
 			const providers = Object.keys($config?.oauth?.providers ?? {});
 			if (
 				providers.length === 1 &&
