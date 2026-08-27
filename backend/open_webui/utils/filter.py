@@ -159,6 +159,7 @@ async def process_filter_function(
     filter_context,
     valves_by_id,
     filter_ids,
+    tool_turns=False,
 ):
     filter_id = function.id
 
@@ -167,6 +168,11 @@ async def process_filter_function(
     )
     handler = getattr(function_module, filter_type, None)
     if not handler:
+        return form_data, valves_by_id, None
+
+    # Tool-call turns only run filters that opt in with `tool_turns = True`, and
+    # re-run them on the whole body, so an opted-in handler has to be idempotent.
+    if tool_turns and not getattr(function_module, 'tool_turns', False):
         return form_data, valves_by_id, None
 
     skip_files = (
@@ -204,6 +210,7 @@ async def process_filter_functions(
     filter_type,
     form_data,
     extra_params,
+    tool_turns=False,
 ):
     if not ENABLE_PLUGINS:
         return form_data, {}
@@ -225,11 +232,13 @@ async def process_filter_functions(
             filter_context,
             valves_by_id,
             filter_ids,
+            tool_turns=tool_turns,
         )
         skip_files = skip_files or file_handler
 
-    # Handle file cleanup for inlet
-    if skip_files:
+    # Handle file cleanup for inlet; the user turn already stripped them, and on a
+    # tool turn `metadata` is live state later tool calls still read.
+    if skip_files and not tool_turns:
         if 'files' in form_data.get('metadata', {}):
             del form_data['metadata']['files']
         if 'files' in form_data:
