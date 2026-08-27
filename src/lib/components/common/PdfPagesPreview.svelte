@@ -14,7 +14,7 @@
 	let loading = false;
 	let error = '';
 	let slides: string[] = [];
-	let pptxPreviewRef: PptxPreview;
+	let pagesPreviewRef: PptxPreview;
 	let pdfDoc: PdfDocument | null = null;
 	let loadToken = 0;
 
@@ -62,7 +62,7 @@
 	}
 
 	export const resetView = () => {
-		pptxPreviewRef?.resetView();
+		pagesPreviewRef?.resetView();
 	};
 
 	onDestroy(() => {
@@ -80,5 +80,13 @@
 		{error}
 	</div>
 {:else}
-	<PptxPreview bind:this={pptxPreviewRef} {slides} bind:currentSlide {targetPage} {className} />
+	<PptxPreview
+		bind:this={pagesPreviewRef}
+		{slides}
+		bind:currentSlide
+		{targetPage}
+		{className}
+		itemLabel="Page"
+		listLabel="Pages"
+	/>
 {/if}

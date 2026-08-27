@@ -2,8 +2,10 @@
 	// Persists across mount/unmount cycles (module-level, not per-instance)
 	let savedPath = '/';
 	let savedFileRoot = null;
-	const treeExpandedCache = new Map<string, string[]>();
-	const treeContentsCache = new Map<string, [string, any[]][]>();
+	/** @type {Map<string, string[]>} */
+	const treeExpandedCache = new Map();
+	/** @type {Map<string, [string, any[]][]>} */
+	const treeContentsCache = new Map();
 </script>
 
 <script lang="ts">
