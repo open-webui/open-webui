@@ -538,6 +538,7 @@ if ENABLE_OTEL:
 
 
 app.state.OLLAMA_MODELS = {}
+app.state.OLLAMA_MODEL_LIST_FALLBACK = {}
 
 ########################################
 #
@@ -547,6 +548,7 @@ app.state.OLLAMA_MODELS = {}
 
 
 app.state.OPENAI_MODELS = {}
+app.state.OPENAI_MODEL_LIST_FALLBACK = {}
 
 ########################################
 #

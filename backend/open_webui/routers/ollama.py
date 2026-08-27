@@ -37,7 +37,7 @@ from open_webui.utils.access_control import check_model_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import calculate_sha256
+from open_webui.utils.misc import apply_model_list_fallback, calculate_sha256
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
@@ -320,6 +320,7 @@ async def update_config(
 
     await get_all_models.cache.clear()
     request.app.state.BASE_MODELS = []
+    request.app.state.OLLAMA_MODEL_LIST_FALLBACK.clear()
     request.app.state.OLLAMA_MODELS = {}
     models = getattr(request.app.state, 'MODELS', None)
     if hasattr(models, 'clear'):
@@ -394,11 +395,15 @@ async def get_all_models(request: Request, user: UserModel | None = None):
     tasks = []
     base_urls = await Config.get('ollama.base_urls', [])
     api_configs = await Config.get('ollama.api_configs', {})
+    # Backends we query, so a failed request can reuse the models we last saw there.
+    reusable_idxs = set()
     for idx, url in enumerate(base_urls):
         api_config = resolve_api_config(api_configs, idx, url)
         if not api_config:
+            reusable_idxs.add(idx)
             tasks.append(send_get_request(f'{url}/api/tags', user=user))
         elif api_config.get('enable', True):
+            reusable_idxs.add(idx)
             tasks.append(send_get_request(f'{url}/api/tags', api_config.get('key'), user=user))
         else:
             tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
@@ -433,6 +438,13 @@ async def get_all_models(request: Request, user: UserModel | None = None):
                 m['tags'] = allowed_tags
             if connection_type:
                 m['connection_type'] = connection_type
+
+    # After the loop above, so a reused response is not prefixed and tagged twice. Forwarded user
+    # info can make a backend answer per user, and one user's list must not be reused for another.
+    if not ENABLE_FORWARD_USER_INFO_HEADERS:
+        apply_model_list_fallback(
+            request.app.state.OLLAMA_MODEL_LIST_FALLBACK, responses, reusable_idxs, base_urls, 'models'
+        )
 
     models_dict = {'models': merge_models_lists(r.get('models', []) if r else None for r in responses)}
 

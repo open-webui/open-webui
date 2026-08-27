@@ -1018,6 +1018,13 @@ DEFAULT_GROUP_SHARE_PERMISSION = 'members' if _default_group_share == 'members' 
 
 ENABLE_CUSTOM_MODEL_FALLBACK = os.getenv('ENABLE_CUSTOM_MODEL_FALLBACK', 'False').lower() == 'true'
 
+# Seconds a connection's last successful model list stays usable when a later
+# refresh of that connection fails. 0 serves no stale model list.
+try:
+    MODEL_LIST_FALLBACK_TTL = int(os.getenv('MODEL_LIST_FALLBACK_TTL', '300'))
+except ValueError:
+    MODEL_LIST_FALLBACK_TTL = 300
+
 MODELS_CACHE_TTL = os.getenv('MODELS_CACHE_TTL', '1')
 if MODELS_CACHE_TTL == '':
     MODELS_CACHE_TTL = None

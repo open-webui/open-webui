@@ -15,7 +15,7 @@ from typing import Callable, Optional, Sequence, Union
 
 import aiohttp
 import mimeparse
-from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE, MODEL_LIST_FALLBACK_TTL
 from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
@@ -1310,3 +1310,28 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
             yield bytes(buffer)
 
     return yield_safe_stream_chunks()
+
+
+def apply_model_list_fallback(last_good: dict, responses: list, reusable_idxs: set, urls: list, key: str) -> None:
+    """Cache each connection's model list, and put the last good one back when its request failed."""
+    if MODEL_LIST_FALLBACK_TTL <= 0:
+        return
+
+    for idx in reusable_idxs:
+        response = responses[idx]
+        # Some providers report a failure as an error field next to an empty list.
+        if isinstance(response, dict) and response.get('error'):
+            models = None
+        else:
+            models = response if isinstance(response, list) else (response or {}).get(key)
+
+        if isinstance(models, list):
+            last_good[idx] = (time.monotonic(), urls[idx], [{**model} for model in models])
+            continue
+
+        # The url has to match too: connections are identified by index, and another
+        # worker may still hold the models of a connection that has since been removed.
+        cached_at, cached_url, cached_models = last_good.get(idx, (0, None, None))
+        if cached_models and cached_url == urls[idx] and time.monotonic() - cached_at <= MODEL_LIST_FALLBACK_TTL:
+            log.warning('Model list request to %s failed, reusing the last known good one', urls[idx])
+            responses[idx] = {key: [{**model} for model in cached_models]}

@@ -43,7 +43,7 @@ from open_webui.utils.anthropic import ANTHROPIC_VERSION, get_anthropic_models, 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import convert_logit_bias_input_to_json
+from open_webui.utils.misc import apply_model_list_fallback, convert_logit_bias_input_to_json
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
@@ -346,6 +346,7 @@ async def get_openai_connection(idx: int) -> tuple[str, str, dict]:
 async def clear_openai_model_cache(request: Request):
     await get_all_models.cache.clear()
     request.app.state.BASE_MODELS = []
+    request.app.state.OPENAI_MODEL_LIST_FALLBACK.clear()
     request.app.state.OPENAI_MODELS = {}
     models = getattr(request.app.state, 'MODELS', None)
     if hasattr(models, 'clear'):
@@ -571,14 +572,7 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
         }
     )
 
-    await get_all_models.cache.clear()
-    request.app.state.BASE_MODELS = []
-    request.app.state.OPENAI_MODELS = {}
-    models = getattr(request.app.state, 'MODELS', None)
-    if hasattr(models, 'clear'):
-        models.clear()
-    else:
-        request.app.state.MODELS = {}
+    await clear_openai_model_cache(request)
 
     await publish_event(
         request,
@@ -677,6 +671,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
 
 
+def is_user_scoped_connection(api_config: dict) -> bool:
+    """True when a connection's model list can differ per user, so it must not be reused for another one."""
+    if api_config.get('auth_type') in ('session', 'system_oauth'):
+        return True
+    return any('{{USER_' in str(value) for value in (api_config.get('headers') or {}).values())
+
+
 async def get_all_models_responses(request: Request, user: UserModel) -> list:
     enable_openai_api, api_base_urls, api_keys, api_configs = await get_openai_runtime_config()
     if not enable_openai_api:
@@ -689,8 +690,11 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
         api_keys = await normalize_openai_api_keys(api_base_urls, api_keys)
 
     request_tasks = []
+    # Connections whose model list is the same for every user, so a failed request can reuse it.
+    reusable_idxs = set()
     for idx, url in enumerate(api_base_urls):
         if (str(idx) not in api_configs) and (url not in api_configs):  # Legacy support
+            reusable_idxs.add(idx)
             request_tasks.append(get_models_request(request, url, api_keys[idx], user=user))
         else:
             api_config = api_configs.get(
@@ -703,6 +707,8 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             if enable:
                 if len(model_ids) == 0:
+                    if not is_user_scoped_connection(api_config):
+                        reusable_idxs.add(idx)
                     request_tasks.append(get_models_request(request, url, api_keys[idx], user=user, config=api_config))
                 else:
                     model_list = {
@@ -761,6 +767,13 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
                 if provider:
                     model['provider'] = provider
+
+    # After the loop above, so a reused response is not prefixed and tagged twice. Forwarded user
+    # info can make any upstream answer per user, and one user's list must not be reused for another.
+    if not ENABLE_FORWARD_USER_INFO_HEADERS:
+        apply_model_list_fallback(
+            request.app.state.OPENAI_MODEL_LIST_FALLBACK, responses, reusable_idxs, api_base_urls, 'data'
+        )
 
     log.debug('get_all_models:responses() %s', responses)
     return responses
