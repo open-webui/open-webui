@@ -5790,17 +5790,6 @@ async def streaming_chat_response_handler(response, ctx):
                                 item['arguments'] = tc.get('function', {}).get('arguments', '{}')
                                 break
 
-                    # Append a new empty message item for the next response
-                    output.append(
-                        {
-                            'type': 'message',
-                            'id': output_id('msg'),
-                            'status': 'in_progress',
-                            'role': 'assistant',
-                            'content': [{'type': 'output_text', 'text': ''}],
-                        }
-                    )
-
                     # Emit citation sources to the frontend for display
                     if citations_enabled:
                         for source in tool_call_sources:
