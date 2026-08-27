@@ -23,6 +23,7 @@
 		listFiles,
 		readFile,
 		downloadFileBlob,
+		downloadFilePreview,
 		archiveFromTerminal,
 		uploadToTerminal,
 		createDirectory,
@@ -865,19 +866,38 @@
 			);
 			if (result) fileSqliteData = await result.blob.arrayBuffer();
 		} else if (isOffice(filePath)) {
-			const result = await downloadFileBlob(
-				terminal.url,
-				terminal.key,
-				filePath,
-				chatId ?? undefined
-			);
-			if (result) {
-				const ext = getFileExt(filePath);
-				const arrayBuffer = await result.blob.arrayBuffer();
-				try {
-					if (ext === 'docx') {
+			const ext = getFileExt(filePath);
+			try {
+				if (ext === 'docx') {
+					const preview = await downloadFilePreview(
+						terminal.url,
+						terminal.key,
+						filePath,
+						chatId ?? undefined
+					);
+					if (preview) {
+						filePdfData = await preview.blob.arrayBuffer();
+					} else {
+						const result = await downloadFileBlob(
+							terminal.url,
+							terminal.key,
+							filePath,
+							chatId ?? undefined
+						);
+						if (!result) throw new Error('Preview failed');
+						const arrayBuffer = await result.blob.arrayBuffer();
 						fileDocxData = arrayBuffer;
-					} else if (ext === 'xlsx') {
+						toast.info($i18n.t('Preview may differ from download.'));
+					}
+				} else if (ext === 'xlsx') {
+					const result = await downloadFileBlob(
+						terminal.url,
+						terminal.key,
+						filePath,
+						chatId ?? undefined
+					);
+					if (result) {
+						const arrayBuffer = await result.blob.arrayBuffer();
 						const XLSX = await import('xlsx');
 						const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
 						excelWorkbook = wb;
@@ -889,16 +909,35 @@
 							const DOMPurify = (await import('dompurify')).default;
 							fileOfficeHtml = DOMPurify.sanitize(result.html);
 						}
-					} else if (ext === 'pptx') {
-						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
-						const result = await pptxToImages(arrayBuffer);
-						fileOfficeSlides = result.images;
-						currentSlide = 0;
 					}
-				} catch (e) {
-					console.error('Failed to render Office file:', e);
-					fileContent = `Error previewing file: ${e instanceof Error ? e.message : 'Unknown error'}`;
+				} else if (ext === 'pptx') {
+					const preview = await downloadFilePreview(
+						terminal.url,
+						terminal.key,
+						filePath,
+						chatId ?? undefined
+					);
+					if (preview) {
+						filePdfData = await preview.blob.arrayBuffer();
+					} else {
+						const result = await downloadFileBlob(
+							terminal.url,
+							terminal.key,
+							filePath,
+							chatId ?? undefined
+						);
+						if (!result) throw new Error('Preview failed');
+						const arrayBuffer = await result.blob.arrayBuffer();
+						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
+						const fallback = await pptxToImages(arrayBuffer);
+						fileOfficeSlides = fallback.images;
+						currentSlide = 0;
+						toast.info($i18n.t('Preview may differ from download.'));
+					}
 				}
+			} catch (e) {
+				console.error('Failed to render Office file:', e);
+				fileContent = `Error previewing file: ${e instanceof Error ? e.message : 'Unknown error'}`;
 			}
 		} else {
 			fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);

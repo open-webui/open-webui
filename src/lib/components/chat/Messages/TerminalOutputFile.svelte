@@ -10,7 +10,7 @@
 		showFileNavPath,
 		terminalServers
 	} from '$lib/stores';
-	import { downloadFileBlob, readFile } from '$lib/apis/terminal';
+	import { downloadFileBlob, downloadFilePreview, readFile } from '$lib/apis/terminal';
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import { fileIconName } from '$lib/components/chat/FileNav/fileIcon';
@@ -143,26 +143,61 @@
 				else if (isVideo(path)) fileVideoUrl = url;
 				else fileAudioUrl = url;
 			} else if (isPdf(path) || isSqlite(path) || isOffice(path)) {
-				const result = await blobForPreview();
-				if (!result) throw new Error(t('Preview failed'));
-				const arrayBuffer = await result.blob.arrayBuffer();
 				const ext = getExt(path);
 
 				if (isPdf(path)) {
+					const result = await blobForPreview();
+					if (!result) throw new Error(t('Preview failed'));
+					const arrayBuffer = await result.blob.arrayBuffer();
 					filePdfData = arrayBuffer;
 				} else if (isSqlite(path)) {
+					const result = await blobForPreview();
+					if (!result) throw new Error(t('Preview failed'));
+					const arrayBuffer = await result.blob.arrayBuffer();
 					fileSqliteData = arrayBuffer;
 				} else if (ext === 'docx') {
-					fileDocxData = arrayBuffer;
+					const preview = await downloadFilePreview(
+						terminal.url,
+						terminal.key,
+						path,
+						chatId || undefined
+					);
+					if (preview) {
+						filePdfData = await preview.blob.arrayBuffer();
+					} else {
+						const result = await blobForPreview();
+						if (!result) throw new Error(t('Preview failed'));
+						fileDocxData = await result.blob.arrayBuffer();
+						toast.info(t('Preview may differ from download.'));
+					}
 				} else if (ext === 'xlsx' || ext === 'xls') {
+					const result = await blobForPreview();
+					if (!result) throw new Error(t('Preview failed'));
+					const arrayBuffer = await result.blob.arrayBuffer();
 					const XLSX = await import('xlsx');
 					excelWorkbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
 					excelSheetNames = excelWorkbook.SheetNames;
-					if (excelSheetNames.length > 0) await loadExcelSheet(excelSheetNames[0]);
+					if (excelSheetNames.length > 0) {
+						await loadExcelSheet(excelSheetNames[0]);
+					}
 				} else if (ext === 'pptx') {
-					const { pptxToImages } = await import('$lib/utils/pptxToHtml');
-					const result = await pptxToImages(arrayBuffer);
-					fileOfficeSlides = result.images;
+					const preview = await downloadFilePreview(
+						terminal.url,
+						terminal.key,
+						path,
+						chatId || undefined
+					);
+					if (preview) {
+						filePdfData = await preview.blob.arrayBuffer();
+					} else {
+						const result = await blobForPreview();
+						if (!result) throw new Error(t('Preview failed'));
+						const arrayBuffer = await result.blob.arrayBuffer();
+						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
+						const resultImages = await pptxToImages(arrayBuffer);
+						fileOfficeSlides = resultImages.images;
+						toast.info(t('Preview may differ from download.'));
+					}
 				}
 			} else if (terminal) {
 				fileContent = await readFile(terminal.url, terminal.key, path, chatId || undefined);

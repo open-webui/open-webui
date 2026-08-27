@@ -8,6 +8,7 @@
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
+	import PptxPdfPreview from '../../common/PptxPdfPreview.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
 	import DocxPreview from '../../common/DocxPreview.svelte';
 	import PptxPreview from '../../common/PptxPreview.svelte';
@@ -17,6 +18,7 @@
 	import FileCodeEditor from './FileCodeEditor.svelte';
 
 	let pdfViewerRef: PDFViewer;
+	let pptxPdfPreviewRef: PptxPdfPreview;
 	let fileCodeEditorRef: FileCodeEditor;
 
 	const i18n = getContext('i18n');
@@ -116,6 +118,7 @@
 	$: isNotebook = getExt(selectedFile) === 'ipynb';
 	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
+	$: isPptx = getExt(selectedFile) === 'pptx';
 
 	// For HTML files on system terminals (proxy URL), use path-based serving
 	// so the iframe can resolve relative CSS/JS/image references via cookie auth.
@@ -279,6 +282,7 @@
 	};
 
 	export const resetPdfView = () => {
+		pptxPdfPreviewRef?.resetView();
 		pdfViewerRef?.resetView();
 	};
 </script>
@@ -286,6 +290,7 @@
 <div
 	class="flex-1 {fileImageUrl !== null ||
 	fileDocxData !== null ||
+	(filePdfData !== null && isPptx) ||
 	(fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
 		: 'overflow-y-auto'} min-h-0 min-w-0 relative h-full"
@@ -321,7 +326,22 @@
 			</audio>
 		</div>
 	{:else if filePdfData !== null}
-		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} {targetPage} className="w-full h-full" />
+		{#if isPptx}
+			<PptxPdfPreview
+				bind:this={pptxPdfPreviewRef}
+				data={filePdfData}
+				bind:currentSlide
+				{targetPage}
+				className="w-full h-full"
+			/>
+		{:else}
+			<PDFViewer
+				bind:this={pdfViewerRef}
+				data={filePdfData}
+				{targetPage}
+				className="w-full h-full"
+			/>
+		{/if}
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
 	{:else if fileDocxData !== null}
