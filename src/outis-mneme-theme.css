@@ -266,6 +266,34 @@ html.outis-mneme ::selection {
 	background: rgba(45, 255, 143, 0.16);
 }
 
+/* v0.11.1 added a blanket keyboard-a11y focus ring to app.css:
+
+       :focus-visible:not(.ProseMirror):not([contenteditable='true'])
+       :not(input):not(textarea),
+       .focus-ring:focus-visible {
+           outline: 2px solid theme(--color-blue-500);
+           outline-offset: -2px;
+       }
+
+   The `:not()` list only clears the editor *element*. It misses the wrapper
+   the RichTextInput mounts into and `#chat-input-container`, and it only
+   matches `contenteditable='true'` literally (not the bare/`plaintext-only`
+   forms), so focusing the message composer -- and every other RichTextInput
+   field (channel compose, Notes) -- paints a 2px blue inset box around the
+   whole row. Reported live via screenshot after the 0.11.0 -> 0.11.1 bump.
+
+   This theme already signals editor focus with the caret and the themed
+   `::selection` above, so drop the ring on editable regions and the element
+   that directly wraps the editor. Scoped tight enough that real buttons,
+   links, menu items and `.focus-ring` controls keep their outline. */
+html.outis-mneme :is(
+		[contenteditable]:not([contenteditable='false']),
+		#chat-input-container
+	):focus-visible,
+html.outis-mneme :focus-visible:has(> :is(.ProseMirror, .tiptap, [contenteditable])) {
+	outline: none;
+}
+
 /* Chat message reading area (app.css's `.markdown-prose`, forced to
    0.9375rem/15px via a Tailwind !important arbitrary value). JetBrains Mono
    at a given rem size reads visually larger/wider than Inter at the same
