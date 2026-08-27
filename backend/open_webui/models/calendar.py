@@ -533,7 +533,8 @@ class CalendarEventTable:
                             & (CalendarEvent.start_at < end)
                             & or_(
                                 CalendarEvent.end_at.is_(None) & (CalendarEvent.start_at >= start),
-                                CalendarEvent.end_at.isnot(None) & (CalendarEvent.end_at > start),
+                                CalendarEvent.end_at.isnot(None)
+                                & ((CalendarEvent.end_at > start) | (CalendarEvent.start_at >= start)),
                             )
                         ),
                         # Recurring: fetch all (expansion in Python)
