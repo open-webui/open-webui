@@ -5223,7 +5223,12 @@ async def streaming_chat_response_handler(response, ctx):
                                                 reasoning_detail_items,
                                             )
                                             await save_current_response_stream()
-                                            data = None
+                                            # Providers such as OpenRouter send reasoning_details
+                                            # alongside the reasoning text: only drop the event when
+                                            # the details were all there was to report, otherwise the
+                                            # reasoning delta never reaches the client.
+                                            if not reasoning_content:
+                                                data = None
 
                                     if value:
                                         if (

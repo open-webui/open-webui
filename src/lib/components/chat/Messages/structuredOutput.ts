@@ -462,9 +462,12 @@ function ensureOutputItem(
 	fallback?: OutputItem
 ): OutputItem {
 	while (output.length <= outputIndex) {
-		output.push(
-			fallback ?? { type: 'message', status: 'in_progress', role: 'assistant', content: [] }
-		);
+		// Only the addressed slot gets the event's item; filler slots must not reuse its id.
+		const item =
+			output.length === outputIndex && fallback
+				? { ...fallback }
+				: { type: 'message', status: 'in_progress', role: 'assistant', content: [] };
+		output.push(item);
 	}
 	output[outputIndex] = { ...output[outputIndex] };
 	return output[outputIndex];
