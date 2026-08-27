@@ -16,7 +16,7 @@
 		uploadModel,
 		getOllamaConfig,
 		getOllamaModels
-	} from '$lib/apis/ollama';
+	} from '$lib/apis/inference';
 	import { getModels } from '$lib/apis';
 
 	import Modal from '$lib/components/common/Modal.svelte';

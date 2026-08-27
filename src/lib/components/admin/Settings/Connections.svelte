@@ -4,8 +4,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
-	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
+	import { getOllamaConfig, updateOllamaConfig, getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/inference';
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 

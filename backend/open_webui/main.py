@@ -156,8 +156,6 @@ from open_webui.routers import (
     models,
     notifications,
     notes,
-    ollama,
-    openai,
     pipelines,
     prompts,
     retrieval,
@@ -169,6 +167,7 @@ from open_webui.routers import (
     users,
     utils,
 )
+from open_webui.inference import ollama, openai
 from open_webui.routers.retrieval import (
     get_ef,
     get_embedding_function,

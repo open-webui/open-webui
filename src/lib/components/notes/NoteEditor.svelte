@@ -26,7 +26,7 @@
 	import { compressImage, copyToClipboard, convertHeicToJpeg } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getFileById, uploadFile } from '$lib/apis/files';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion } from '$lib/apis/inference';
 
 	import {
 		config,

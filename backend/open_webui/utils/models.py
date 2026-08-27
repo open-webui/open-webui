@@ -18,7 +18,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.models.users import UserModel
-from open_webui.routers import ollama, openai
+from open_webui.inference import ollama, openai
 from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import has_access, has_base_model_access
 from open_webui.utils.plugin import (

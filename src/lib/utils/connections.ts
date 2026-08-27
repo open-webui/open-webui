@@ -4,7 +4,7 @@
  * to ensure consistent add/remove logic.
  */
 
-import { getOpenAIConfig, updateOpenAIConfig } from '$lib/apis/openai';
+import { getOpenAIConfig, updateOpenAIConfig } from '$lib/apis/inference';
 import { getTerminalServerConnections, setTerminalServerConnections } from '$lib/apis/configs';
 
 // ─── OpenAI Connections ─────────────────────────────────

@@ -1,6 +1,6 @@
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
-import { getOpenAIModelsDirect } from './openai';
+import { getOpenAIModelsDirect } from '$lib/apis/inference';
 
 const TOOL_SERVER_FETCH_TIMEOUT = 10000;
 

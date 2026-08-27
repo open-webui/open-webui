@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getVersionUpdates } from '$lib/apis';
-	import { getOllamaVersion } from '$lib/apis/ollama';
+	import { getOllamaVersion } from '$lib/apis/inference';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
 	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
