@@ -367,7 +367,14 @@ class UsersTable:
             query = select(User).where(sub_expr == sub)
             # SQLite preserves JSON numeric type here; Postgres ->> already compares numeric JSON as text.
             if session.get_bind().dialect.name == 'sqlite' and sub.isdecimal():
-                query = select(User).where(or_(sub_expr == sub, sub_expr == int(sub)))
+                try:
+                    int_sub = int(sub)
+                    if len(sub) <= 19:
+                        query = select(User).where(or_(sub_expr == sub, sub_expr == int_sub))
+                    else:
+                        query = select(User).where(sub_expr == sub)
+                except ValueError:
+                    query = select(User).where(sub_expr == sub)
             row = (await session.execute(query)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
