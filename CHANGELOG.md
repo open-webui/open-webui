@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2] - 2026-08-27
+
+### Added
+
+- 🖼️ **Richer previews for terminal files.** Word documents and slide decks produced in the terminal are now previewed as the finished document rather than an approximation, and every document preview gains a page strip down the side with numbered thumbnails you can click to jump straight to a page. [Commit](https://github.com/open-webui/open-webui/commit/061fb434328ea8365cc4961519e8adbe5ac7b0c1), [Commit](https://github.com/open-webui/open-webui/commit/9d95a0148b3180ba48186bc6928713f969a69047), [Commit](https://github.com/open-webui/open-webui/commit/ae549d3e4af672a63a809e8fe2a6c91e0bfc1067)
+- ⚡ **Less overhead on every message.** Deployments without pipelines configured, which is the default, no longer pay setup work for them on each chat message and background task. [#29146](https://github.com/open-webui/open-webui/pull/29146)
+- 🤏 **More room in file previews on touch screens.** File previews on phones and tablets no longer show zoom buttons that sit over an already small preview, leaving pinch to zoom to do the job. [#29176](https://github.com/open-webui/open-webui/pull/29176), [#29152](https://github.com/open-webui/open-webui/issues/29152)
+- ♿ **Wider accessibility mode coverage.** Accessibility mode now lifts the contrast of more of the interface, including muted text, table text, icons, the colours elements change to on hover, and the highlight behind sidebar and menu items you point at, so low-contrast areas meet the level the accessibility guidelines ask for in both light and dark themes, and the close button on the folder dialog now announces itself to screen readers. [Commit](https://github.com/open-webui/open-webui/commit/e6031ea6daec897eddbcf0c8b03c2d6fad2b506e), [Commit](https://github.com/open-webui/open-webui/commit/797b4c51d1e31f614c8e6eba14ee347c61ad0c7a), [#29160](https://github.com/open-webui/open-webui/pull/29160)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Polish, Simplified Chinese, German, Catalan, and Portuguese (Brazil) were enhanced and expanded.
+
+### Fixed
+
+- 🧊 **Streaming no longer stalls on reasoning models.** A reply from a reasoning model now streams through to the end instead of showing its first few words and then freezing until generation finishes. [#29053](https://github.com/open-webui/open-webui/pull/29053), [#29035](https://github.com/open-webui/open-webui/issues/29035)
+- 💭 **Thinking stays in Thoughts.** After a model uses a tool, its reasoning for the next step now appears in the collapsed Thoughts section instead of being written into the reply as ordinary text. [#29052](https://github.com/open-webui/open-webui/pull/29052), [#29040](https://github.com/open-webui/open-webui/issues/29040)
+- 📖 **Banners with underlined text.** A banner containing underlined text now displays instead of failing to render. [#29118](https://github.com/open-webui/open-webui/pull/29118), [#29115](https://github.com/open-webui/open-webui/issues/29115)
+- 🧰 **Pinned models start with their own tools.** Starting a chat from a pinned model in the sidebar now applies that model's tools and skills instead of carrying over the ones from the model you used last. [#29058](https://github.com/open-webui/open-webui/pull/29058), [#29050](https://github.com/open-webui/open-webui/issues/29050)
+- 🚫 **Disabled models no longer vanish.** Turning a model off in the admin Models list now keeps it in view so you can turn it back on, instead of it disappearing with no way to recover it. [#29037](https://github.com/open-webui/open-webui/pull/29037), [#29036](https://github.com/open-webui/open-webui/issues/29036)
+- ✂️ **Message text kept intact.** Text containing angle brackets and a dollar sign is no longer mistaken for a skill mention and silently removed before your message reaches the model. [#29051](https://github.com/open-webui/open-webui/pull/29051), [#29041](https://github.com/open-webui/open-webui/issues/29041)
+- 📆 **Moved calendar events stay visible.** Changing an event's date no longer makes it disappear from the calendar, and events already stuck in that state show up again. [#29085](https://github.com/open-webui/open-webui/pull/29085), [#29067](https://github.com/open-webui/open-webui/issues/29067)
+- 🔢 **Accurate admin user counts.** The counts on the admin Users tabs now follow your search and reset when you switch tabs, instead of showing stale or unfiltered numbers. [#29080](https://github.com/open-webui/open-webui/pull/29080), [#29079](https://github.com/open-webui/open-webui/issues/29079)
+- 📱 **Readable model list on small screens.** The model identifier and timestamp in the workspace model list no longer overlap the model name on narrow displays. [#29084](https://github.com/open-webui/open-webui/pull/29084), [#29083](https://github.com/open-webui/open-webui/issues/29083)
+- 🧹 **Shared chats search resets.** Reopening the shared chats dialog now starts with an empty search box and the full list, rather than a leftover search term above unfiltered results. [#29082](https://github.com/open-webui/open-webui/pull/29082), [#29081](https://github.com/open-webui/open-webui/issues/29081)
+- 🔑 **Precise account matching on SQLite.** Signing in through an identity provider now matches your account on its exact identifier, so accounts whose identifier is an unusually long or zero-padded number are no longer at risk of being confused with another. [Commit](https://github.com/open-webui/open-webui/commit/17cc566707cd2ee78b460e39c7fad23b9c258c70)
+- 🗃️ **Knowledge list loads reliably.** The Knowledge page in the workspace now fills in its list on opening instead of occasionally staying empty. [Commit](https://github.com/open-webui/open-webui/commit/e6031ea6daec897eddbcf0c8b03c2d6fad2b506e)
+
+### Changed
+
+- 🏷️ **High Contrast Mode is now Accessibility Mode.** The interface setting previously called 'High Contrast Mode' is now called 'Accessibility Mode', with the same switch in the same place. [Commit](https://github.com/open-webui/open-webui/commit/e6031ea6daec897eddbcf0c8b03c2d6fad2b506e)
+
 ## [0.11.1] - 2026-08-25
 
 ### Added
