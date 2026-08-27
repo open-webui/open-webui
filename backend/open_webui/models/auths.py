@@ -157,9 +157,16 @@ class AuthsTable:
         async with get_async_db_context(db) as session:
             credential = await session.get(Auth, resolved.id)
             if not credential or not credential.active:
-                await verify_password(PLACEHOLDER_HASH)
+                try:
+                    await verify_password(PLACEHOLDER_HASH)
+                except Exception:
+                    pass
                 return
-            if not await verify_password(credential.password):
+            try:
+                if not await verify_password(credential.password):
+                    return
+            except Exception:
+                log.warning('Unparseable stored password hash for user: %s', email)
                 return
             return resolved
 
