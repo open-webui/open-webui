@@ -328,6 +328,9 @@
 			data={filePdfData}
 			bind:currentSlide
 			{targetPage}
+			singlePage={isPptx}
+			itemLabel={isPptx ? 'Slide' : 'Page'}
+			listLabel={isPptx ? 'Slides' : 'Pages'}
 			className="w-full h-full"
 		/>
 	{:else if fileSqliteData !== null}
