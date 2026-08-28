@@ -86,13 +86,13 @@ def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
             )
             OR EXISTS (
                 SELECT 1
-                FROM json_each(Chat.chat#>'{{history,messages}}') AS history_message
+                FROM json_each((Chat.chat::json)#>'{{history,messages}}') AS history_message
                 WHERE json_typeof(history_message.value->'content') = 'string'
                 AND LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
             )
             OR EXISTS (
                 SELECT 1
-                FROM json_array_elements(Chat.chat->'messages') AS legacy_message
+                FROM json_array_elements((Chat.chat::json)->'messages') AS legacy_message
                 WHERE json_typeof(legacy_message->'content') = 'string'
                 AND LOWER(legacy_message->>'content') LIKE '%' || :{key} || '%'
             )
@@ -2090,7 +2090,7 @@ class ChatTable:
                         text("""
                             NOT EXISTS (
                                 SELECT 1
-                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
+                                FROM json_array_elements_text((Chat.meta::json)->'tags') AS tag
                             )
                             """)
                     )
@@ -2101,7 +2101,7 @@ class ChatTable:
                                 text(f"""
                                     EXISTS (
                                         SELECT 1
-                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
+                                        FROM json_array_elements_text((Chat.meta::json)->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
                                     """).params(**{f'tag_id_{tag_idx}': tag_id})
@@ -2297,7 +2297,7 @@ class ChatTable:
                 ).params(tag_id=tag_id)
             elif dialect_name == 'postgresql':
                 stmt = stmt.filter(
-                    text("EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)")
+                    text("EXISTS (SELECT 1 FROM json_array_elements_text((Chat.meta::json)->'tags') elem WHERE elem = :tag_id)")
                 ).params(tag_id=tag_id)
             else:
                 raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
@@ -2377,7 +2377,7 @@ class ChatTable:
                 elif dialect_name == 'postgresql':
                     stmt = stmt.filter(
                         text(
-                            f"EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :{param})"
+                            f"EXISTS (SELECT 1 FROM json_array_elements_text((Chat.meta::json)->'tags') elem WHERE elem = :{param})"
                         )
                     ).params(**{param: tag_id})
                 else:
