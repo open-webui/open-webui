@@ -2297,7 +2297,9 @@ class ChatTable:
                 ).params(tag_id=tag_id)
             elif dialect_name == 'postgresql':
                 stmt = stmt.filter(
-                    text("EXISTS (SELECT 1 FROM json_array_elements_text((Chat.meta::json)->'tags') elem WHERE elem = :tag_id)")
+                    text(
+                        "EXISTS (SELECT 1 FROM json_array_elements_text((Chat.meta::json)->'tags') elem WHERE elem = :tag_id)"
+                    )
                 ).params(tag_id=tag_id)
             else:
                 raise NotImplementedError(f'Unsupported dialect: {dialect_name}')

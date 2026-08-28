@@ -391,11 +391,11 @@ class ModelsTable:
 
                     if dialect_name == 'sqlite':
                         tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_each(Model.meta, \'$.tags\') t WHERE unilower(t.value) = unilower(:tag_val))'
+                            "EXISTS (SELECT 1 FROM json_each(Model.meta, '$.tags') t WHERE unilower(t.value) = unilower(:tag_val))"
                         )
                     elif dialect_name == 'postgresql':
                         tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_array_elements_text(COALESCE(Model.meta::json->\'tags\', \'[]\'::json)) t WHERE LOWER(t) = :tag_val)'
+                            "EXISTS (SELECT 1 FROM json_array_elements_text(COALESCE(Model.meta::json->'tags', '[]'::json)) t WHERE LOWER(t) = :tag_val)"
                         )
                     else:
                         # Fallback for dialects with no JSON array function: LIKE on the text.
