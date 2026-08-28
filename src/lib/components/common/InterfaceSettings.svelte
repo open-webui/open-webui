@@ -490,13 +490,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="high-contrast-mode-label" class={settingLabelClass}>
-				{$i18n.t('High Contrast Mode')}
+			<div id="accessibility-mode-label" class={settingLabelClass}>
+				{$i18n.t('Accessibility Mode')}
 			</div>
 
 			<div class={settingControlClass}>
 				<Switch
-					ariaLabelledbyId="high-contrast-mode-label"
+					ariaLabelledbyId="accessibility-mode-label"
 					tooltip={true}
 					bind:state={highContrastMode}
 					inherited={isDefaultSetting('highContrastMode')}
