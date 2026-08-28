@@ -389,6 +389,7 @@ async def generate_image(
         images = await image_generations(
             request=__request__,
             form_data=CreateImageForm(prompt=prompt),
+            metadata={'chat_id': __chat_id__, 'message_id': __message_id__},
             user=user,
         )
 
@@ -457,6 +458,7 @@ async def edit_image(
         images = await image_edits(
             request=__request__,
             form_data=EditImageForm(prompt=prompt, image=image_urls),
+            metadata={'chat_id': __chat_id__, 'message_id': __message_id__},
             user=user,
         )
 

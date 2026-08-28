@@ -44,6 +44,7 @@ from open_webui.routers.audio import transcribe
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.chat_id import CHANNEL_CHAT_ID_PREFIX
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -418,8 +419,14 @@ async def upload_file_handler(
             db=db,
         )
 
-        if 'channel_id' in file_metadata:
-            channel = await Channels.get_channel_by_id_and_user_id(file_metadata['channel_id'], user.id, db=db)
+        # Files a model produces mid-reply (generated images, tool output) name the channel in chat_id.
+        channel_id = file_metadata.get('channel_id')
+        chat_id = file_metadata.get('chat_id')
+        if not channel_id and isinstance(chat_id, str) and chat_id.startswith(CHANNEL_CHAT_ID_PREFIX):
+            channel_id = chat_id.removeprefix(CHANNEL_CHAT_ID_PREFIX)
+
+        if channel_id:
+            channel = await Channels.get_channel_by_id_and_user_id(channel_id, user.id, db=db)
             if channel:
                 await Channels.add_file_to_channel_by_id(channel.id, file_item.id, user.id, db=db)
 

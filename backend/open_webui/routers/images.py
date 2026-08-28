@@ -32,6 +32,7 @@ from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.routers.files import get_file_content_by_id, upload_file_handler
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
@@ -542,7 +543,7 @@ async def upload_image(request, image_data, content_type, metadata, user, db=Non
         chat_id = metadata.get('chat_id')
         message_id = metadata.get('message_id')
 
-        if chat_id and message_id:
+        if is_saved_chat_id(chat_id) and message_id:
             await Chats.insert_chat_files(
                 chat_id=chat_id,
                 message_id=message_id,

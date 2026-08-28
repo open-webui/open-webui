@@ -32,6 +32,7 @@ from open_webui.env import (
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.models.files import Files
 from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
@@ -934,26 +935,36 @@ async def _make_channel_emitter(request_info):
     """
     channel_id = request_info['chat_id'].removeprefix('channel:')
     message_id = request_info['message_id']
+    user_id = request_info['user_id']
 
     state = {'last_emit_at': 0.0, 'output': []}
     THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
+    STARTED_AT = int(time.time())
 
-    async def _emit_channel_update(content: str, done: bool = False, output: list | None = None):
+    async def _emit_channel_update(
+        content: str | None = None,
+        done: bool = False,
+        output: list | None = None,
+        files: list | None = None,
+    ):
         from open_webui.models.messages import MessageForm, Messages
 
         msg = await Messages.get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
             return
 
-        update_form = MessageForm(content=content, data={'output': output} if output else None)
-        if done:
-            # Merge done flag into existing meta (preserve model_id etc.)
-            existing_meta = msg.meta or {}
-            update_form = MessageForm(
-                content=content,
-                data={'output': output} if output else None,
-                meta={**existing_meta, 'done': True},
-            )
+        data = {}
+        if output:
+            data['output'] = output
+        if files:
+            # Each event carries only the newly created files, and the stored key is replaced wholesale.
+            data['files'] = [*(msg.data or {}).get('files', []), *files]
+
+        update_form = MessageForm(
+            content=msg.content if content is None else content,
+            data=data,
+            meta={'done': True} if done else None,
+        )
 
         await Messages.update_message_by_id(message_id, update_form)
         message = await Messages.get_message_by_id(message_id)
@@ -970,6 +981,43 @@ async def _make_channel_emitter(request_info):
                 },
                 to=f'channel:{channel_id}',
             )
+
+    async def _attach_channel_files(files: list):
+        new_files = []
+
+        for file in files:
+            url = file.get('url') or ''
+            if url.startswith(('http://', 'https://')):
+                new_files.append(file)
+                continue
+
+            # Skip base64 payloads: the whole message is rebroadcast on every update.
+            if not url.startswith('/api/v1/files/'):
+                continue
+
+            file_id = url.removeprefix('/api/v1/files/').split('/')[0]
+            # Only files this reply just created: anything older is a file the tool named, not produced.
+            file_item = await Files.get_file_by_id(file_id)
+            if not file_item or file_item.user_id != user_id or (file_item.created_at or 0) < STARTED_AT:
+                log.debug('Skipping channel file %s', file_id)
+                continue
+
+            file_meta = file_item.meta or {}
+            new_files.append(
+                {
+                    'type': 'file',
+                    'id': file_item.id,
+                    'url': file_item.id,
+                    'name': file_item.filename,
+                    'size': file_meta.get('size'),
+                    'content_type': file_meta.get('content_type') or '',
+                }
+            )
+            # Bind to the message, the same way post_new_message does for user-uploaded channel files.
+            await Channels.set_file_message_id_in_channel_by_id(channel_id, file_item.id, message_id)
+
+        if new_files:
+            await _emit_channel_update(files=new_files)
 
     async def __channel_emitter__(event_data):
         event_type = event_data.get('type')
@@ -999,6 +1047,9 @@ async def _make_channel_emitter(request_info):
             if content and (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, False, state['output'])
+
+        elif event_type in ('files', 'chat:message:files'):
+            await _attach_channel_files(event_data.get('data', {}).get('files') or [])
 
         elif event_type == 'chat:message:error':
             error = event_data.get('data', {}).get('error', {})
