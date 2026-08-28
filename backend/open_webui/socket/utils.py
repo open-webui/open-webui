@@ -119,7 +119,7 @@ class RedisDict:
         return [(k, {**v}) for k, v in self._snapshot_mapping().items()]
 
     def _snapshot_mapping(self):
-        """Parsed snapshot shared by values() and items(); nested structures are read-only."""
+        """Parsed snapshot shared by values() and items(); values must be dicts, nested structures are read-only."""
         signature = self.redis.get(self._signature_name)
         if signature is not None and signature == self._snapshot_signature:
             return self._snapshot
