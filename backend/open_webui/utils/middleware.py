@@ -2207,6 +2207,7 @@ def process_messages_with_output(
 
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
+    Assistant messages left empty by an aborted generation are dropped.
     """
     processed = []
 
@@ -2221,6 +2222,12 @@ def process_messages_with_output(
             )
             if output_messages:
                 processed.extend(output_messages)
+                continue
+
+        # An aborted generation leaves an empty assistant turn; replaying it breaks strict providers.
+        if message.get('role') == 'assistant' and not message.get('tool_calls'):
+            content = message.get('content')
+            if not content or (isinstance(content, str) and not content.strip()):
                 continue
 
         clean_message = dict(message)
