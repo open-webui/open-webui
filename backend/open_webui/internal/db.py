@@ -6,6 +6,7 @@ import sys
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
+from unicodedata import normalize
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from open_webui.env import (
@@ -64,24 +65,27 @@ log = logging.getLogger(__name__)
 
 
 def _unicode_lower(value):
-    """Unicode caseless-fold, mirroring the builtin ``lower()`` contract.
+    """Unicode NFKC-caseless fold, mirroring the builtin ``lower()`` contract.
 
     NULL passes through as NULL, BLOBs pass through unchanged (like the
     builtin), numbers render as text (``lower(123) -> '123'``), and text
-    is folded with ``str.casefold()`` — the Unicode caseless-matching
-    algorithm. ``casefold`` is applied to both the column and the search
-    pattern, so e.g. Greek 'ΣΑΣ' matches 'σασ' (``str.lower()`` would
-    mismatch: 'ΣΑΣ' folds to 'σας' with word-final sigma while 'σασ'
-    keeps the mid-word sigma). ASCII strings use the plain ``lower()``
-    fast path (identical result for every ASCII codepoint).
+    is folded with the Unicode caseless-matching algorithm:
+    ``NFKC(casefold(NFKC(x)))``. ``casefold`` alone would still treat the
+    composed (NFC) and decomposed (NFD) spellings of e.g. Polish 'ą' or
+    'ę' as different strings, so the value is normalized before and after
+    folding — pasted text frequently arrives as NFD while typed text is
+    NFC. The same fold is applied to the column and the search pattern,
+    so e.g. Greek 'ΣΑΣ' matches 'σασ' and NFC 'ą' matches NFD 'ą'.
+    ASCII strings use a plain ``str.lower()`` fast path (identical result
+    for every ASCII codepoint, no normalization needed).
     """
     if value is None or isinstance(value, bytes):
         return value
     if isinstance(value, str):
         if value.isascii():
             return value.lower()
-        return value.casefold()
-    return str(value).casefold()
+        return normalize('NFKC', normalize('NFKC', value).casefold())
+    return normalize('NFKC', str(value).casefold())
 
 
 def _register_sqlite_search_functions(dbapi_connection):
