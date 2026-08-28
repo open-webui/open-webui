@@ -1483,7 +1483,7 @@
 								<div slot="content">
 									<DropdownMenu className="min-w-[10.625rem]">
 										<button
-											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
 											on:click={markAllChatsReadHandler}
 										>
 											<CheckIcon className="size-3.5" />
