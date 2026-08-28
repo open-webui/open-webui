@@ -5,14 +5,14 @@ import time
 from copy import deepcopy
 from typing import Any
 
-from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.internal.db import Base, JSONField, UnicodeLower, get_async_db_context, unicode_caseless
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from open_webui.utils.misc import json_text_variants
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -385,14 +385,29 @@ class ModelsTable:
 
                 tag = filter.get('tag')
                 if tag:
-                    if db.bind.dialect.name == 'sqlite' and not tag.isascii():
-                        # SQLite's LOWER() is ASCII-only, so match non-ASCII tags exact-case.
-                        meta_text = cast(Model.meta, String)
-                        variants = json_text_variants(tag)
+                    bind = await db.connection()
+                    dialect_name = bind.dialect.name
+                    tag_val = unicode_caseless(tag)
+
+                    if dialect_name == 'sqlite':
+                        tag_clause = text(
+                            'EXISTS (SELECT 1 FROM json_each(Model.meta, \'$.tags\') t WHERE unilower(t.value) = unilower(:tag_val))'
+                        )
+                    elif dialect_name == 'postgresql':
+                        tag_clause = text(
+                            'EXISTS (SELECT 1 FROM json_array_elements_text(Model.meta->\'tags\') t WHERE LOWER(t) = :tag_val)'
+                        )
                     else:
-                        meta_text = func.lower(cast(Model.meta, String))
-                        variants = json_text_variants(tag.lower())
-                    stmt = stmt.filter(or_(*(meta_text.like(f'%"{variant}"%') for variant in variants)))
+                        # Fallback for dialects with no JSON array function: LIKE on the text.
+                        meta_text = UnicodeLower(cast(Model.meta, String))
+                        variants = json_text_variants(tag_val)
+                        tag_clause = or_(*(meta_text.like(f'%"{variant}"%') for variant in variants))
+                        tag_val = None
+
+                    if tag_val is not None:
+                        stmt = stmt.filter(tag_clause.params(tag_val=tag_val))
+                    else:
+                        stmt = stmt.filter(tag_clause)
 
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')

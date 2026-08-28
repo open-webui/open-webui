@@ -37,6 +37,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool, QueuePool
 from sqlalchemy.sql.compiler import ilike_case_insensitive
+from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
@@ -105,6 +106,40 @@ def _sqlite_unilower_case_insensitive(element, compiler, **kw):
     PostgreSQL and other dialects are untouched (they keep native ILIKE).
     """
     return f'unilower({element.element._compiler_dispatch(compiler, **kw)})'
+
+
+class UnicodeLower(FunctionElement):
+    """Dialect-aware SQL ``LOWER`` for query-time case-insensitive matching.
+
+    Renders ``lower(...)`` on every dialect except SQLite, where it renders
+    ``unilower(...)`` (Unicode caseless, see above). Intended for
+    case-insensitive comparisons that are NOT backed by a builtin-``lower()``
+    expression index — those (the user-email lookups against
+    ``uq_user_email_lower``) must keep the builtin ``func.lower()`` so the
+    index stays usable and semantically consistent.
+    """
+
+    type = types.String()
+    inherit_cache = True
+
+
+@compiles(UnicodeLower)
+def _render_unicode_lower_default(element, compiler, **kw):
+    return f'lower({compiler.process(element.clauses, **kw)})'
+
+
+@compiles(UnicodeLower, 'sqlite')
+def _render_unicode_lower_sqlite(element, compiler, **kw):
+    return f'unilower({compiler.process(element.clauses, **kw)})'
+
+
+def unicode_caseless(value: str) -> str:
+    """Python-side counterpart of the SQL ``unilower()`` function.
+
+    Use it to pre-fold search patterns (and other in-Python comparisons) so
+    they meet the SQL-side ``unilower()`` folding of stored values.
+    """
+    return _unicode_lower(value)
 
 
 # ── SSL URL normalization (used by sync engine & Alembic migrations) ─

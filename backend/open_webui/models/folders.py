@@ -4,9 +4,9 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.internal.db import Base, JSONField, UnicodeLower, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, delete, func, select, or_, and_
+from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, delete, select, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ class FolderTable:
                 result = await db.execute(
                     select(Folder)
                     .filter_by(parent_id=parent_id, user_id=user_id)
-                    .filter(func.lower(Folder.name) == func.lower(name))
+                    .filter(UnicodeLower(Folder.name) == UnicodeLower(name))
                 )
                 folder = result.scalars().first()
 

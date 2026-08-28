@@ -9,7 +9,7 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
-from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.internal.db import Base, JSONField, UnicodeLower, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import PromptHistories
@@ -335,7 +335,7 @@ class PromptsTable:
 
                     if dialect_name == 'sqlite':
                         tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE unilower(t.value) = :tag_val)'
+                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE unilower(t.value) = unilower(:tag_val))'
                         )
                     elif dialect_name == 'postgresql':
                         tag_clause = text(
@@ -343,7 +343,7 @@ class PromptsTable:
                         )
                     else:
                         # Fallback for dialects with no JSON array function: LIKE on the text.
-                        tags_text = func.lower(cast(Prompt.tags, String))
+                        tags_text = UnicodeLower(cast(Prompt.tags, String))
                         tag_clause = or_(
                             *(tags_text.like(f'%"{variant}"%') for variant in json_text_variants(tag_lower))
                         )
