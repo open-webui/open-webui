@@ -272,6 +272,7 @@
 		viewOption = localStorage?.workspaceViewOption || '';
 		sourceOption = localStorage?.workspaceKnowledgeSourceOption || '';
 		loaded = true;
+		await init();
 
 		if (showCreateOnMount) {
 			showCreateModal = true;
