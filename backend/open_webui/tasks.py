@@ -32,6 +32,9 @@ async def redis_task_command_listener(app):
     while True:
         pubsub = None
         try:
+            # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+            await redis.initialize()
+
             pubsub = redis.pubsub()
             await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
             reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
