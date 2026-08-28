@@ -125,6 +125,7 @@ from open_webui.env import (
 from open_webui.events import (
     EVENTS,
     delete_event_webhook,
+    get_active_event_functions,
     get_event_webhooks,
     migrate_legacy_webhook_config,
     publish_event,
@@ -375,6 +376,7 @@ async def lifespan(app: FastAPI):
 
     if SAFE_MODE:
         await Functions.deactivate_all_functions()
+        await get_active_event_functions.cache.clear()
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.

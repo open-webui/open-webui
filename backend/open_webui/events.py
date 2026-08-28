@@ -6,13 +6,17 @@ import logging
 import time
 import uuid
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from aiocache import cached
 from open_webui.env import ENABLE_PLUGINS, VERSION
 from open_webui.models.config import Config
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.webhook import post_webhook
+
+if TYPE_CHECKING:
+    from open_webui.models.functions import FunctionModel
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +24,7 @@ MAX_STRING_LENGTH = 1000
 EVENT_WEBHOOKS_CONFIG_KEY = 'events.webhooks'
 LEGACY_WEBHOOK_CONFIG_KEY = 'webhook_url'
 DEFAULT_WEBHOOK_ID = 'default'
+EVENT_CACHE_TTL = 1
 
 
 class EventDefinition(BaseModel):
@@ -851,6 +856,12 @@ async def get_event_webhooks() -> list[dict[str, Any]]:
     return normalized
 
 
+# Dispatch-only cache; webhook writers read uncached and clear it.
+@cached(ttl=EVENT_CACHE_TTL)
+async def get_cached_event_webhooks() -> list[dict[str, Any]]:
+    return await get_event_webhooks()
+
+
 async def migrate_legacy_webhook_config() -> list[dict[str, Any]]:
     webhooks = await get_event_webhooks()
     if any(webhook.get('id') == DEFAULT_WEBHOOK_ID for webhook in webhooks):
@@ -875,6 +886,7 @@ async def migrate_legacy_webhook_config() -> list[dict[str, Any]]:
         *webhooks,
     ]
     await Config.upsert({EVENT_WEBHOOKS_CONFIG_KEY: webhooks})
+    await get_cached_event_webhooks.cache.clear()
     return webhooks
 
 
@@ -905,6 +917,7 @@ async def upsert_event_webhook(webhook: dict[str, Any]) -> dict[str, Any]:
         next_webhooks.append(normalized)
 
     await Config.upsert({EVENT_WEBHOOKS_CONFIG_KEY: next_webhooks})
+    await get_cached_event_webhooks.cache.clear()
     return next(webhook for webhook in next_webhooks if webhook.get('id') == normalized['id'])
 
 
@@ -919,6 +932,7 @@ async def delete_event_webhook(webhook_id: str) -> bool:
         values[LEGACY_WEBHOOK_CONFIG_KEY] = ''
 
     await Config.upsert(values)
+    await get_cached_event_webhooks.cache.clear()
     return True
 
 
@@ -1043,7 +1057,7 @@ async def dispatch_webhook_event(app: Any, event: Event) -> None:
     if subject_id:
         message = f'{message} ({subject_id})'
 
-    for webhook in await get_event_webhooks():
+    for webhook in await get_cached_event_webhooks():
         if not webhook.get('url') or not await event_webhook_matches(webhook, event):
             continue
 
@@ -1100,6 +1114,14 @@ class SocketSessionEventSink:
         await disconnect_user_sessions(str(subject['id']))
 
 
+# Dispatch cache, cleared by function writers; the returned list is shared, so copy before modifying.
+@cached(ttl=EVENT_CACHE_TTL)
+async def get_active_event_functions() -> list[FunctionModel]:
+    from open_webui.models.functions import Functions
+
+    return await Functions.get_functions_by_type('event', active_only=True)
+
+
 async def dispatch_event_functions(
     app: Any, event: Event, request: Any | None = None, extra_function_ids: list[str] | None = None
 ) -> None:
@@ -1113,13 +1135,13 @@ async def dispatch_event_functions(
     event_payload = event.model_dump()
 
     try:
-        event_functions = await Functions.get_functions_by_type('event', active_only=True)
+        event_functions = await get_active_event_functions()
         if extra_function_ids:
             extra_functions = await Functions.get_functions_by_ids(extra_function_ids)
             existing_ids = {function.id for function in event_functions}
-            event_functions.extend(
+            event_functions = event_functions + [
                 function for function in extra_functions if function.type == 'event' and function.id not in existing_ids
-            )
+            ]
     except Exception:
         log.exception('Event functions could not be loaded for %s', event.event)
         return

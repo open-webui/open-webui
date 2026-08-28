@@ -11,7 +11,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_PLUGINS
-from open_webui.events import EVENTS, build_event, dispatch_event_functions, publish_event, schedule_webhook_dispatch
+from open_webui.events import (
+    EVENTS,
+    build_event,
+    dispatch_event_functions,
+    get_active_event_functions,
+    publish_event,
+    schedule_webhook_dispatch,
+)
 from open_webui.internal.db import get_async_session
 from open_webui.models.functions import (
     FunctionForm,
@@ -182,7 +189,9 @@ async def sync_functions(
                     log.exception(f'Error validating valves for function {function.id}: {e}')
                     raise e
 
-        return await Functions.sync_functions(user.id, form_data.functions, db=db)
+        functions = await Functions.sync_functions(user.id, form_data.functions, db=db)
+        await get_active_event_functions.cache.clear()
+        return functions
     except Exception as e:
         log.exception(f'Failed to load a function: {e}')
         raise HTTPException(
@@ -310,6 +319,8 @@ async def toggle_function_by_id(
         schedule_webhook_dispatch(request.app, lifecycle_event)
 
         function = await Functions.update_function_by_id(id, {'is_active': not function.is_active}, db=db)
+        # Clear before publishing so the toggled function's own lifecycle event sees the new state.
+        await get_active_event_functions.cache.clear()
 
         if function:
             await publish_event(
@@ -395,6 +406,7 @@ async def update_function_by_id(
         log.debug(updated)
 
         function = await Functions.update_function_by_id(id, updated, db=db)
+        await get_active_event_functions.cache.clear()
 
         if function_type == 'filter' and getattr(function_module, 'toggle', None):
             await Functions.update_function_metadata_by_id(id, {'toggle': True}, db=db)
@@ -438,6 +450,7 @@ async def delete_function_by_id(
     result = await Functions.delete_function_by_id(id, db=db)
 
     if result:
+        await get_active_event_functions.cache.clear()
         FUNCTIONS = get_functions_cache(request)
         FUNCTIONS.pop(id, None)
         await publish_event(
