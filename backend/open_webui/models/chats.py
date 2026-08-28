@@ -63,12 +63,12 @@ def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
             EXISTS (
                 SELECT 1
                 FROM json_each(Chat.chat, '$.history.messages') AS history_message
-                WHERE LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
+                WHERE unilower(history_message.value->>'content') LIKE '%' || unilower(:{key}) || '%'
             )
             OR EXISTS (
                 SELECT 1
                 FROM json_each(Chat.chat, '$.messages') AS legacy_message
-                WHERE LOWER(legacy_message.value->>'content') LIKE '%' || :{key} || '%'
+                WHERE unilower(legacy_message.value->>'content') LIKE '%' || unilower(:{key}) || '%'
             )
         )
         """

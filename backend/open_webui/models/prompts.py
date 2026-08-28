@@ -335,7 +335,7 @@ class PromptsTable:
 
                     if dialect_name == 'sqlite':
                         tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE LOWER(t.value) = :tag_val)'
+                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE unilower(t.value) = :tag_val)'
                         )
                     elif dialect_name == 'postgresql':
                         tag_clause = text(
