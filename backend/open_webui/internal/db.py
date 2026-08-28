@@ -64,17 +64,24 @@ log = logging.getLogger(__name__)
 
 
 def _unicode_lower(value):
-    """Unicode-aware lowercase, mirroring the builtin ``lower()`` contract.
+    """Unicode caseless-fold, mirroring the builtin ``lower()`` contract.
 
     NULL passes through as NULL, BLOBs pass through unchanged (like the
-    builtin), numbers render as text (``lower(123) -> '123'``), and only
-    text gets ``str.lower()`` applied.
+    builtin), numbers render as text (``lower(123) -> '123'``), and text
+    is folded with ``str.casefold()`` — the Unicode caseless-matching
+    algorithm. ``casefold`` is applied to both the column and the search
+    pattern, so e.g. Greek 'ΣΑΣ' matches 'σασ' (``str.lower()`` would
+    mismatch: 'ΣΑΣ' folds to 'σας' with word-final sigma while 'σασ'
+    keeps the mid-word sigma). ASCII strings use the plain ``lower()``
+    fast path (identical result for every ASCII codepoint).
     """
     if value is None or isinstance(value, bytes):
         return value
     if isinstance(value, str):
-        return value.lower()
-    return str(value).lower()
+        if value.isascii():
+            return value.lower()
+        return value.casefold()
+    return str(value).casefold()
 
 
 def _register_sqlite_search_functions(dbapi_connection):
