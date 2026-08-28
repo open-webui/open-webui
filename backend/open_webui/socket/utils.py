@@ -71,6 +71,8 @@ class RedisDict:
     ):
         self.name = name
         self._signature_name = f'{name}:signature' if cache_set_signature else None
+        self._snapshot = None
+        self._snapshot_signature = None
         self.redis = get_redis_connection(
             redis_url,
             redis_sentinels,
@@ -80,9 +82,9 @@ class RedisDict:
 
     def __setitem__(self, key, value):
         serialized_value = JSONCodec.dumps(value)
-        self.redis.hset(self.name, key, serialized_value)
         if self._signature_name:
             self.redis.delete(self._signature_name)
+        self.redis.hset(self.name, key, serialized_value)
 
     def __getitem__(self, key):
         value = self.redis.hget(self.name, key)
@@ -91,11 +93,11 @@ class RedisDict:
         return JSONCodec.loads(value)
 
     def __delitem__(self, key):
+        if self._signature_name:
+            self.redis.delete(self._signature_name)
         result = self.redis.hdel(self.name, key)
         if result == 0:
             raise KeyError(key)
-        if self._signature_name:
-            self.redis.delete(self._signature_name)
 
     def __contains__(self, key):
         return self.redis.hexists(self.name, key)
@@ -107,10 +109,26 @@ class RedisDict:
         return self.redis.hkeys(self.name)
 
     def values(self):
-        return [JSONCodec.loads(v) for v in self.redis.hvals(self.name)]
+        if not self._signature_name:
+            return [JSONCodec.loads(v) for v in self.redis.hvals(self.name)]
+        return [{**v} for v in self._snapshot_mapping().values()]
 
     def items(self):
-        return [(k, JSONCodec.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
+        if not self._signature_name:
+            return [(k, JSONCodec.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
+        return [(k, {**v}) for k, v in self._snapshot_mapping().items()]
+
+    def _snapshot_mapping(self):
+        """Parsed snapshot shared by values() and items(); nested structures are read-only."""
+        signature = self.redis.get(self._signature_name)
+        if signature is not None and signature == self._snapshot_signature:
+            return self._snapshot
+        parsed = {k: JSONCodec.loads(v) for k, v in self.redis.hgetall(self.name).items()}
+        # Writers drop the signature before mutating, so an unchanged signature vouches for the content just read.
+        if signature is not None and self.redis.get(self._signature_name) == signature:
+            self._snapshot = parsed
+            self._snapshot_signature = signature
+        return parsed
 
     def set(self, mapping: dict):
         if not mapping:
@@ -127,8 +145,10 @@ class RedisDict:
             digest.update(b'\0')
         signature = digest.hexdigest()
 
-        if self._signature_name and self.redis.get(self._signature_name) == signature:
-            return
+        if self._signature_name:
+            if self.redis.get(self._signature_name) == signature:
+                return
+            self.redis.delete(self._signature_name)
 
         # Fetch existing keys before writing so we know which ones to remove.
         # HKEYS is cheap — it transfers only short key strings, not large JSON values.
@@ -154,10 +174,8 @@ class RedisDict:
 
     def clear(self):
         if self._signature_name:
-            self.redis.delete(self.name)
             self.redis.delete(self._signature_name)
-        else:
-            self.redis.delete(self.name)
+        self.redis.delete(self.name)
 
     def update(self, other=None, **kwargs):
         if other is not None:
