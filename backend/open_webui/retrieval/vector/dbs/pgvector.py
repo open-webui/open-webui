@@ -631,6 +631,7 @@ class PgvectorClient(VectorDBBase):
                 results = query.all()
 
             if not results:
+                self.session.rollback()  # read-only transaction
                 return None
 
             ids = [[result.id for result in results]]
