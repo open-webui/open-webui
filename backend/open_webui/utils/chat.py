@@ -23,6 +23,7 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.socket.main import (
+    DIRECT_CHAT_QUEUES,
     get_event_call,
     get_event_emitter,
     sio,
@@ -73,14 +74,8 @@ async def generate_direct_chat_completion(
     if form_data.get('stream'):
         q = asyncio.Queue()
 
-        async def message_listener(sid, data):
-            """
-            Handle received socket messages and push them into the queue.
-            """
-            await q.put(data)
-
-        # Register the listener
-        sio.on(channel, message_listener)
+        # Register queue in process-local registry
+        DIRECT_CHAT_QUEUES[channel] = q
 
         # Start processing chat completion in background
         res = await event_caller(
@@ -121,13 +116,15 @@ async def generate_direct_chat_completion(
             # Define a background task to run the event generator
             async def background():
                 try:
-                    del sio.handlers['/'][channel]
+                    DIRECT_CHAT_QUEUES.pop(channel, None)
+                    sio.handlers.get('/', {}).pop(channel, None)
                 except Exception as e:
                     pass
 
             # Return the streaming response
             return StreamingResponse(event_generator(), media_type='text/event-stream', background=background)
         else:
+            DIRECT_CHAT_QUEUES.pop(channel, None)
             raise Exception(str(res))
     else:
         res = await event_caller(

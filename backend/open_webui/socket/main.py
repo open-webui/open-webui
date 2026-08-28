@@ -40,7 +40,7 @@ from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.json_codec import SOCKETIO_JSON
+from open_webui.utils.json_codec import JSONCodec, SOCKETIO_JSON, dumps_bytes
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_url,
@@ -55,6 +55,13 @@ log = logging.getLogger(__name__)
 # Let no connection opened in good faith be dropped without
 # cause, and let every message find the room it was meant for.
 REDIS = None
+
+# In-memory registry of active direct-chat streaming queues for this process.
+# Maps channel string (e.g. f"{user_id}:{session_id}:{request_id}") -> asyncio.Queue
+DIRECT_CHAT_QUEUES: dict[str, asyncio.Queue] = {}
+REDIS_DIRECT_CHAT_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_chat:stream'
+REDIS_DIRECT_CHAT_RECONNECT_INTERVAL = 1.0
+REDIS_DIRECT_CHAT_MAX_RECONNECT_INTERVAL = 30.0
 
 # Configure CORS for Socket.IO
 SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
@@ -903,6 +910,89 @@ async def yjs_awareness_update(sid, data):
 
     except Exception as e:
         log.error(f'Error in yjs_awareness_update: {e}')
+
+
+async def redis_send_direct_chat_chunk(redis, channel: str, data: Any):
+    """Publish a client-to-server direct chat streaming chunk across workers."""
+    payload = dumps_bytes({'channel': channel, 'data': data})
+    if hasattr(redis, 'nodes_manager'):
+        await redis.execute_command('PUBLISH', REDIS_DIRECT_CHAT_PUBSUB_CHANNEL, payload)
+    else:
+        await redis.publish(REDIS_DIRECT_CHAT_PUBSUB_CHANNEL, payload)
+
+
+async def redis_direct_chat_listener(app=None):
+    """Background task in each worker that listens for cross-worker direct chat stream chunks."""
+    from contextlib import suppress
+
+    redis = getattr(getattr(app, 'state', None), 'redis', None) or REDIS
+    if not redis:
+        return
+
+    reconnect_interval = REDIS_DIRECT_CHAT_RECONNECT_INTERVAL
+    while True:
+        pubsub = None
+        try:
+            pubsub = redis.pubsub()
+            await pubsub.subscribe(REDIS_DIRECT_CHAT_PUBSUB_CHANNEL)
+            reconnect_interval = REDIS_DIRECT_CHAT_RECONNECT_INTERVAL
+
+            async for message in pubsub.listen():
+                if message.get('type') != 'message':
+                    continue
+                try:
+                    payload = JSONCodec.loads(message['data'])
+                    channel = payload.get('channel')
+                    data = payload.get('data')
+
+                    queue = DIRECT_CHAT_QUEUES.get(channel)
+                    if queue is not None:
+                        await queue.put(data)
+                except Exception as e:
+                    log.exception(f'Error handling distributed direct chat message: {e}')
+            log.warning('Redis direct chat listener stopped. Retrying.')
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            log.exception(f'Redis direct chat listener failed. Retrying: {e}')
+        finally:
+            if pubsub:
+                with suppress(Exception):
+                    await pubsub.aclose()
+
+        await asyncio.sleep(reconnect_interval)
+        reconnect_interval = min(reconnect_interval * 2, REDIS_DIRECT_CHAT_MAX_RECONNECT_INTERVAL)
+
+
+@sio.on('*')
+async def catch_all(event, sid, *args):
+    """Catch-all handler for dynamic channel events emitted by clients (e.g. direct chat chunks)."""
+    data = args[0] if args else None
+
+    # Fast path: the HTTP request is being handled in this same worker process
+    local_queue = DIRECT_CHAT_QUEUES.get(event)
+    if local_queue is not None:
+        await local_queue.put(data)
+        return
+
+    # Multi-worker path: forward chunk over Redis Pub/Sub so the handling worker receives it
+    if WEBSOCKET_MANAGER == 'redis':
+        target_redis = REDIS
+        if target_redis is None:
+            from open_webui.utils.redis import get_redis_connection, get_sentinels_from_env
+            ws_sentinels = get_sentinels_from_env(WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT)
+            target_redis = get_redis_connection(
+                redis_url=WEBSOCKET_REDIS_URL,
+                redis_sentinels=ws_sentinels,
+                redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+                async_mode=True,
+            )
+
+        if target_redis:
+            try:
+                await redis_send_direct_chat_chunk(target_redis, event, data)
+            except Exception as e:
+                log.error(f'Failed to relay direct chat chunk over Redis: {e}')
 
 
 @sio.event

@@ -385,6 +385,8 @@ async def lifespan(app: FastAPI):
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
+        from open_webui.socket.main import redis_direct_chat_listener
+        app.state.redis_direct_chat_listener = asyncio.create_task(redis_direct_chat_listener(app))
 
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
@@ -471,6 +473,8 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+    if hasattr(app.state, 'redis_direct_chat_listener'):
+        app.state.redis_direct_chat_listener.cancel()
 
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
