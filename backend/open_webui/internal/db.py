@@ -31,13 +31,69 @@ from open_webui.utils.json_codec import JSONCodec
 from sqlalchemy import Dialect, MetaData, create_engine, event, types
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.sql.compiler import ilike_case_insensitive
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
+
+
+# ── Unicode-aware case-insensitive search on SQLite ─────────────────
+#
+# SQLAlchemy compiles ``ilike()`` on SQLite to ``lower(x) LIKE lower(?)``,
+# but the builtin ``lower()`` folds ASCII only, so searches never match
+# Polish, Cyrillic, Greek, or accented Latin text (upstream issue #29102).
+#
+# Two pieces make the search Unicode-aware:
+#
+# 1. A custom ``unilower()`` SQL function (registered per connection).
+# 2. A compiler override rendering ILIKE case-folding as ``unilower()``
+#    on the SQLite dialect only.
+#
+# The builtin ``lower()`` is deliberately NOT overridden: it backs the
+# ``uq_user_email_lower`` unique expression index (migration
+# f0bd01a18a3d) whose stored entries were computed with the builtin
+# function, and it is used by explicit ``func.lower()`` lookups
+# (e.g. user email). ``unilower`` appears in no index, so it cannot
+# desynchronize any stored state — it only affects query-time search.
+# ─────────────────────────────────────────────────────────────────────
+
+
+def _unicode_lower(value):
+    """Unicode-aware lowercase, mirroring the builtin ``lower()`` contract.
+
+    NULL passes through as NULL, BLOBs pass through unchanged (like the
+    builtin), numbers render as text (``lower(123) -> '123'``), and only
+    text gets ``str.lower()`` applied.
+    """
+    if value is None or isinstance(value, bytes):
+        return value
+    if isinstance(value, str):
+        return value.lower()
+    return str(value).lower()
+
+
+def _register_sqlite_search_functions(dbapi_connection):
+    """Register ``unilower()`` on a raw SQLite/SQLCipher DBAPI connection."""
+    try:
+        dbapi_connection.create_function('unilower', 1, _unicode_lower, deterministic=True)
+    except TypeError:
+        # Older SQLite builds without deterministic-function support.
+        dbapi_connection.create_function('unilower', 1, _unicode_lower)
+
+
+@compiles(ilike_case_insensitive, 'sqlite')
+def _sqlite_unilower_case_insensitive(element, compiler, **kw):
+    """Render ILIKE case-folding as ``unilower()`` on SQLite.
+
+    Covers ``ilike``, ``not_ilike``, ``icontains``, and ``not_icontains``.
+    PostgreSQL and other dialects are untouched (they keep native ILIKE).
+    """
+    return f'unilower({element.element._compiler_dispatch(compiler, **kw)})'
 
 
 # ── SSL URL normalization (used by sync engine & Alembic migrations) ─
@@ -287,6 +343,9 @@ if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
 
         conn = sqlcipher3.connect(db_path, check_same_thread=False)
         conn.execute(f"PRAGMA key = '{database_password}'")
+        # The SQLCipher engine compiles with the SQLite dialect, so ILIKE
+        # renders as unilower() there too — register it on every connection.
+        _register_sqlite_search_functions(conn)
         return conn
 
     # The dummy "sqlite://" URL would cause SQLAlchemy to auto-select
@@ -341,6 +400,10 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
         if DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT:
             cursor.execute(f'PRAGMA journal_size_limit={DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT}')
         cursor.close()
+
+        # Register the Unicode-aware search functions used by the ILIKE
+        # compiler override below (upstream issue #29102).
+        _register_sqlite_search_functions(dbapi_connection)
 
     def on_connect(dbapi_connection, connection_record):
         _apply_sqlite_pragmas(dbapi_connection)
