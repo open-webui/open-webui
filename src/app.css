@@ -926,6 +926,24 @@ html.high-contrast.dark :is(.app-muted, .app-icon-muted, .tiptap table) {
 	color: var(--color-gray-300);
 }
 
+html.high-contrast:not(.dark)
+	:is(
+		#sidebar .hover\:bg-gray-100:hover,
+		#sidebar .group:hover .group-hover\:bg-gray-100,
+		.app-dropdown-menu :is(button, a):hover
+	) {
+	background-color: var(--color-gray-200) !important;
+}
+
+html.high-contrast.dark
+	:is(
+		#sidebar .dark\:hover\:bg-gray-900:hover,
+		#sidebar .group:hover .dark\:group-hover\:bg-gray-900,
+		.app-dropdown-menu :is(button, a):hover
+	) {
+	background-color: var(--color-gray-800) !important;
+}
+
 /* Accessibility Mode: the lightest muted pair, 1.58:1 in light and 2.14:1 in dark.
    text-gray-400/70 is an icon colour, so 1.4.11 governs it, and 2.07:1 misses that too. */
 @layer utilities {
