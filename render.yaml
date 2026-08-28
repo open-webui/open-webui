@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Render Blueprint for Open WebUI
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy: commit this file, push to GitHub, then in the Render dashboard:
+#   New + → Blueprint → select this repo → Apply
+#
+# NOTE: Open WebUI needs an LLM backend. By default this blueprint expects an
+# OpenAI-compatible API (OpenAI, Groq, OpenRouter, vLLM, LM Studio, ...).
+# To use an Ollama server instead, see the OLLAMA_* entries below.
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+  - type: web
+    name: open-webui
+    runtime: docker # builds the repo's root Dockerfile (frontend + FastAPI backend)
+    # free/starter have only 512MB RAM and will OOM — use standard or larger
+    plan: standard
+    # open-webui's start.sh reads Render's injected $PORT (default 10000)
+    # and binds 0.0.0.0, so no custom dockerCommand or port config is needed
+    healthCheckPath: /health
+    autoDeploy: true
+    dockerBuildArgs:
+      # Skip pre-baking whisper/embedding models into the image: much faster
+      # build, smaller image. Models download on first use into the data disk.
+      - key: USE_SLIM
+        value: 'true'
+    envVars:
+      # Signs JWTs / encrypts sessions — auto-generate a strong value
+      - key: WEBUI_SECRET_KEY
+        generateValue: true
+
+      # ── LLM backend: pick ONE of the two options ──────────────────────────
+      # Option 1 (default): any OpenAI-compatible API
+      - key: OPENAI_API_BASE_URL
+        sync: false # you'll be prompted to fill this in at deploy time
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ENABLE_OLLAMA_API
+        value: 'false'
+
+      # Option 2: an Ollama server hosted elsewhere (must be publicly
+      # reachable via HTTPS from Render — Render cannot run Ollama for you).
+      # Comment out Option 1 and uncomment these:
+      # - key: ENABLE_OLLAMA_API
+      #   value: 'true'
+      # - key: OLLAMA_BASE_URL
+      #   sync: false
+      # ──────────────────────────────────────────────────────────────────────
+
+    # Persistent storage for the SQLite DB, user accounts, chats, uploaded
+    # files and model caches. Without this disk, ALL data is wiped on every
+    # deploy/restart. Disks require a paid instance (not available on Free).
+    disk:
+      name: open-webui-data
+      mountPath: /app/backend/data
+      sizeGB: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Alternative: skip the ~15–25 min Docker build entirely by using the official
+# prebuilt image instead of building this repo (swap the service above):
+#
+# services:
+#   - type: web
+#     name: open-webui
+#     runtime: image
+#     image:
+#       url: docker.io/ghcr.io/open-webui/open-webui:0.11.1  # pin a version
+#     plan: standard
+#     healthCheckPath: /health
+#     envVars:
+#       - key: WEBUI_SECRET_KEY
+#         generateValue: true
+#     disk:
+#       name: open-webui-data
+#       mountPath: /app/backend/data
+#       sizeGB: 1
+# ─────────────────────────────────────────────────────────────────────────────
