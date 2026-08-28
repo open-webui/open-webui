@@ -57,7 +57,11 @@ async def resolve_filter_pipeline(request, model: dict, enabled_filter_ids: list
     if not ENABLE_PLUGINS:
         return [], []
 
-    active_filters = await Functions.get_active_filter_ids()
+    # Inlet, stream and outlet all resolve on the same Request; query once per request.
+    active_filters = getattr(request.state, 'active_filter_ids', None)
+    if active_filters is None:
+        active_filters = await Functions.get_active_filter_ids()
+        request.state.active_filter_ids = active_filters
     filter_ids = get_model_filter_ids(model, active_filters)
     functions_by_id = {function.id: function for function in await Functions.get_functions_by_ids(filter_ids)}
 
