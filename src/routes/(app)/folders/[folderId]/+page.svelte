@@ -9,19 +9,24 @@
 	import { getFolderById } from '$lib/apis/folders';
 	import { selectedFolder } from '$lib/stores';
 
-	let ready = false;
+	type FolderSelection = { id?: string } | null;
 
-	onMount(async () => {
-		const folderId = $page.params.folderId;
+	let ready = false;
+	let loadingFolderId: string | null = null;
+
+	const loadFolder = async (folderId: string | undefined) => {
 		if (!folderId) {
 			await goto('/');
 			return;
 		}
 
+		loadingFolderId = folderId;
+		ready = false;
+
 		// The sidebar click handler already fetches the folder and sets
 		// `selectedFolder` before navigating here; refetching would duplicate
 		// the request and re-trigger the sidebar's folder refresh.
-		if ($selectedFolder?.id !== folderId) {
+		if (($selectedFolder as FolderSelection)?.id !== folderId) {
 			const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
 				toast.error(`${error}`);
 				return null;
@@ -32,11 +37,27 @@
 				return;
 			}
 
+			if (loadingFolderId !== folderId) {
+				return;
+			}
+
 			await selectedFolder.set(folder);
 		}
 
 		ready = true;
+	};
+
+	onMount(async () => {
+		await loadFolder($page.params.folderId);
 	});
+
+	$: if (
+		ready &&
+		$page.params.folderId &&
+		($selectedFolder as FolderSelection)?.id !== $page.params.folderId
+	) {
+		loadFolder($page.params.folderId);
+	}
 
 	onDestroy(() => {
 		selectedFolder.set(null);
