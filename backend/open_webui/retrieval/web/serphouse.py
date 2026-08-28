@@ -9,7 +9,7 @@ async def search_serphouse(
     domain: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
 ) -> list[SearchResult]:
     """Query SERPHouse and return normalised organic results."""
     session = await get_session()

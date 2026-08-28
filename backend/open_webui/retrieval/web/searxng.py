@@ -40,7 +40,7 @@ async def search_searxng(
     query_url: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
     **kwargs,
 ) -> list[SearchResult]:
     """Query a SearXNG instance and return results sorted by relevance score.

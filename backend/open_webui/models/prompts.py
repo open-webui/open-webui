@@ -47,7 +47,7 @@ class PromptModel(BaseModel):
     content: str
     data: dict | None = None
     meta: dict | None = None
-    tags: list[str | None] = None
+    tags: list[str] | None = None
     is_active: bool | None = True
     version_id: str | None = None
     created_at: int | None = None
@@ -86,8 +86,8 @@ class PromptForm(BaseModel):
     content: str
     data: dict | None = None
     meta: dict | None = None
-    tags: list[str | None] = None
-    access_grants: list[dict | None] = None
+    tags: list[str] | None = None
+    access_grants: list[dict] | None = None
     version_id: str | None = None  # Active version
     commit_message: str | None = None  # For history tracking
     is_production: bool | None = True  # Whether to set new version as production
@@ -100,7 +100,7 @@ class PromptsTable:
     async def _to_prompt_model(
         self,
         prompt: Prompt,
-        access_grants: list[AccessGrantModel | None] = None,
+        access_grants: list[AccessGrantModel] | None = None,
         db: AsyncSession | None = None,
     ) -> PromptModel:
         prompt_model = PromptModel.model_validate(prompt)
@@ -557,7 +557,7 @@ class PromptsTable:
         prompt_id: str,
         name: str,
         command: str,
-        tags: list[str | None] = None,
+        tags: list[str] | None = None,
         db: AsyncSession | None = None,
     ) -> PromptModel | None:
         """Update only name, command, and tags (no history created)."""

@@ -13,7 +13,7 @@ def search_tavily(
     api_key: str,
     query: str,
     count: int,
-    filter_list: list[str | None] = None,
+    filter_list: list[str] | None = None,
     # **kwargs,
 ) -> list[SearchResult]:
     """Search using Tavily's Search API and return the results as a list of SearchResult objects.
