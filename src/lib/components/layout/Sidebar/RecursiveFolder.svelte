@@ -428,6 +428,12 @@
 	});
 
 	onDestroy(() => {
+		// Drop this folder's entry from the shared registry; otherwise a stale
+		// closure survives after the folder is deleted elsewhere and keeps
+		// firing requests for a non-existent folder id (404s on every sidebar
+		// refresh). Re-registration happens in onMount on the next mount.
+		delete folderRegistry[folderId];
+
 		if (folderElement) {
 			folderElement.removeEventListener('dragover', onDragOver);
 			folderElement.removeEventListener('drop', onDrop);
