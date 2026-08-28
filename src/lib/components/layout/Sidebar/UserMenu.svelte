@@ -570,9 +570,15 @@
 				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
-					const res = await userSignOut();
-					user.set(null);
+					// Do not clear $user here: that fires the layout's /auth redirect, which
+					// cancels the sign-out navigation below.
+					const res = await userSignOut().catch((error) => {
+						console.error('Error signing out:', error);
+						return null;
+					});
 					localStorage.removeItem('token');
+					// Must be set after userSignOut(), which clears sessionStorage.
+					sessionStorage.setItem('signedOut', 'true');
 
 					location.href = res?.redirect_url ?? '/auth';
 					show = false;

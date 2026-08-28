@@ -171,11 +171,14 @@
 		await oauthCallbackHandler();
 		form = $page.url.searchParams.get('form');
 
+		const signedOut = sessionStorage.getItem('signedOut');
+		sessionStorage.removeItem('signedOut');
+
 		// Auto-redirect to SSO when OAUTH_AUTO_REDIRECT is enabled and the
 		// deployment is unambiguously SSO-only (single provider, no login form,
-		// no LDAP). Suppressed by ?form=, ?error=, onboarding, trusted-header
-		// auth, or an existing session/token.
-		if ($config?.oauth?.auto_redirect && !form && !error) {
+		// no LDAP). Suppressed by ?form=, ?error=, a just-completed sign-out,
+		// onboarding, trusted-header auth, or an existing session/token.
+		if ($config?.oauth?.auto_redirect && !form && !error && !signedOut) {
 			const providers = Object.keys($config?.oauth?.providers ?? {});
 			if (
 				providers.length === 1 &&
