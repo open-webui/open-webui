@@ -619,6 +619,52 @@
 		return currentPath && path ? `${currentPath}/${path}` : currentPath || path;
 	};
 
+	const uploadManifestEntries = async (
+		entries: DirectoryManifestEntry[],
+		resolveDirectoryId: (entry: DirectoryManifestEntry) => string | null | undefined
+	) => {
+		const failures: Array<{ path: string; reason: string }> = [];
+
+		for (const [index, entry] of entries.entries()) {
+			const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
+			syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
+				current: index + 1,
+				total: entries.length,
+				file: displayPath
+			});
+
+			const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
+			const uploadedFile = await uploadFile(localStorage.token, fileObject, {
+				knowledge_id: knowledge.id,
+				file_hash: entry.checksum,
+				directory_id: resolveDirectoryId(entry)
+			}).catch((e) => ({ error: e }));
+
+			// A resolved upload still counts as failed when the server reported a processing error.
+			if (!uploadedFile || uploadedFile.error) {
+				const reason = uploadedFile?.error ?? $i18n.t('Failed to upload file.');
+				console.error('Upload failed:', displayPath, reason);
+				failures.push({ path: displayPath, reason: `${reason}` });
+			}
+		}
+
+		if (failures.length > 0) {
+			toast.error(
+				$i18n.t(
+					'Failed to upload {{failed}} of {{total}} files. First failure: {{file}} ({{reason}})',
+					{
+						failed: failures.length,
+						total: entries.length,
+						file: failures[0].path,
+						reason: failures[0].reason
+					}
+				)
+			);
+		}
+
+		return failures.length;
+	};
+
 	const uploadDirectoryEntries = async (entries: DirectoryFileEntry[]) => {
 		if (!knowledge) return;
 
@@ -645,30 +691,13 @@
 
 			const directoryIdByPath = await createMissingDirectories(diff);
 
-			let uploadedCount = 0;
-			for (const entry of manifest) {
-				uploadedCount++;
-				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
-				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
-					current: uploadedCount,
-					total: manifest.length,
-					file: displayPath
-				});
+			const failedCount = await uploadManifestEntries(manifest, (entry) =>
+				entry.path ? directoryIdByPath[getDirectoryUploadPath(entry.path)] : currentDirectoryId
+			);
 
-				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-				await uploadFile(localStorage.token, fileObject, {
-					knowledge_id: knowledge.id,
-					file_hash: entry.checksum,
-					directory_id: entry.path
-						? directoryIdByPath[getDirectoryUploadPath(entry.path)]
-						: currentDirectoryId
-				}).catch((e) => {
-					toast.error(`${e}`);
-					return null;
-				});
+			if (failedCount === 0) {
+				toast.success($i18n.t('File uploaded successfully'));
 			}
-
-			toast.success($i18n.t('File uploaded successfully'));
 			init();
 		} catch (e) {
 			toast.error(`${e}`);
@@ -723,36 +752,24 @@
 					diff.modified.some((m: any) => m.filename === entry.filename && m.path === entry.path)
 			);
 
-			let uploadedCount = 0;
-			for (const entry of filesToUpload) {
-				uploadedCount++;
-				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
-				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
-					current: uploadedCount,
-					total: filesToUpload.length,
-					file: displayPath
-				});
-
-				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-				await uploadFile(localStorage.token, fileObject, {
-					knowledge_id: knowledge.id,
-					file_hash: entry.checksum,
-					directory_id: entry.path ? directoryIdByPath[entry.path] : null
-				}).catch(() => null);
-			}
+			const failedCount = await uploadManifestEntries(filesToUpload, (entry) =>
+				entry.path ? directoryIdByPath[entry.path] : null
+			);
 
 			// ── 7. Report ──
-			toast.success(
-				$i18n.t(
-					'Sync complete: {{added}} added, {{modified}} modified, {{deleted}} deleted, {{unmodified}} unmodified',
-					{
-						added: diff.added.length,
-						modified: diff.modified.length,
-						deleted: diff.deleted.length,
-						unmodified: diff.unmodified_count
-					}
-				)
-			);
+			if (failedCount === 0) {
+				toast.success(
+					$i18n.t(
+						'Sync complete: {{added}} added, {{modified}} modified, {{deleted}} deleted, {{unmodified}} unmodified',
+						{
+							added: diff.added.length,
+							modified: diff.modified.length,
+							deleted: diff.deleted.length,
+							unmodified: diff.unmodified_count
+						}
+					)
+				);
+			}
 			init();
 		} catch (e) {
 			toast.error(`${e}`);

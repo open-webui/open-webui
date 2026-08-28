@@ -1232,6 +1232,7 @@
 	"Failed to update settings": "",
 	"Failed to update status": "",
 	"Failed to update webhook": "",
+	"Failed to upload {{failed}} of {{total}} files. First failure: {{file}} ({{reason}})": "",
 	"Failed to upload file.": "",
 	"Features": "",
 	"Features Permissions": "",
