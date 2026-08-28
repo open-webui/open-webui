@@ -117,12 +117,14 @@ if WEBSOCKET_MANAGER == 'redis':
         async_mode=True,
     )
 
+    # Separate key: old pods would JSON-parse the embedded signature field, and
+    # their set() would rewrite the data without it, breaking both generations.
     MODELS = RedisDict(
-        f'{REDIS_KEY_PREFIX}:models',
+        f'{REDIS_KEY_PREFIX}:models:v2',
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
-        cache_set_signature=True,
+        signature_cache=True,
     )
 
     SESSION_POOL = RedisDict(

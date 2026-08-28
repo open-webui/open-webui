@@ -61,16 +61,42 @@ class RedisLock:
 
 
 class RedisDict:
+    # NUL prefix keeps the reserved signature field clear of real keys.
+    _SIGNATURE_FIELD = '\0signature'
+
+    # Atomic data+signature swap; single-key so it works under cluster mode.
+    _SET_SCRIPT = """
+    if redis.call('hget', KEYS[1], ARGV[1]) == ARGV[2] then
+        return
+    end
+    redis.call('del', KEYS[1])
+    for i = 3, #ARGV, 2 do
+        redis.call('hset', KEYS[1], ARGV[i], ARGV[i + 1])
+    end
+    redis.call('hset', KEYS[1], ARGV[1], ARGV[2])
+    """
+
+    _SETITEM_SCRIPT = """
+    redis.call('hdel', KEYS[1], ARGV[1])
+    redis.call('hset', KEYS[1], ARGV[2], ARGV[3])
+    """
+
+    _DELITEM_SCRIPT = """
+    redis.call('hdel', KEYS[1], ARGV[1])
+    return redis.call('hdel', KEYS[1], ARGV[2])
+    """
+
     def __init__(
         self,
         name,
         redis_url,
         redis_sentinels=[],
         redis_cluster=False,
-        cache_set_signature=False,
+        signature_cache=False,
     ):
         self.name = name
-        self._signature_name = f'{name}:signature' if cache_set_signature else None
+        self._signature_field = self._SIGNATURE_FIELD if signature_cache else None
+        self._cache = (None, None)
         self.redis = get_redis_connection(
             redis_url,
             redis_sentinels,
@@ -80,10 +106,13 @@ class RedisDict:
 
     def __setitem__(self, key, value):
         serialized_value = JSONCodec.dumps(value)
-        self.redis.hset(self.name, key, serialized_value)
-        if self._signature_name:
-            self.redis.delete(self._signature_name)
+        if self._signature_field:
+            # Invalidate and write atomically so the signature never covers unseen data.
+            self.redis.eval(self._SETITEM_SCRIPT, 1, self.name, self._signature_field, key, serialized_value)
+        else:
+            self.redis.hset(self.name, key, serialized_value)
 
+    # Point reads decode fresh; their objects reach plugin code that may mutate them.
     def __getitem__(self, key):
         value = self.redis.hget(self.name, key)
         if value is None:
@@ -91,43 +120,76 @@ class RedisDict:
         return JSONCodec.loads(value)
 
     def __delitem__(self, key):
-        result = self.redis.hdel(self.name, key)
+        if self._signature_field:
+            result = self.redis.eval(self._DELITEM_SCRIPT, 1, self.name, self._signature_field, key)
+        else:
+            result = self.redis.hdel(self.name, key)
         if result == 0:
             raise KeyError(key)
-        if self._signature_name:
-            self.redis.delete(self._signature_name)
 
     def __contains__(self, key):
         return self.redis.hexists(self.name, key)
 
+    # May count the signature field; every in-tree caller only tests truthiness.
     def __len__(self):
         return self.redis.hlen(self.name)
 
     def keys(self):
-        return self.redis.hkeys(self.name)
+        keys = self.redis.hkeys(self.name)
+        if self._signature_field:
+            keys = [k for k in keys if k != self._signature_field]
+        return keys
 
+    # values() and items() share cached dicts across reads; mutating one corrupts
+    # every later read.
     def values(self):
+        if self._signature_field:
+            return list(self._get_all().values())
         return [JSONCodec.loads(v) for v in self.redis.hvals(self.name)]
 
     def items(self):
+        if self._signature_field:
+            return list(self._get_all().items())
         return [(k, JSONCodec.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
+
+    def _get_all(self):
+        signature = self.redis.hget(self.name, self._signature_field)
+        cached_signature, cached_data = self._cache
+        if signature is not None and signature == cached_signature:
+            return cached_data
+        # One HGETALL returns data and signature together, so the pair is consistent.
+        raw = self.redis.hgetall(self.name)
+        signature = raw.pop(self._signature_field, None)
+        data = {k: JSONCodec.loads(v) for k, v in raw.items()}
+        if signature is not None:
+            self._cache = (signature, data)
+        return data
 
     def set(self, mapping: dict):
         if not mapping:
             self.clear()
             return
 
-        # Serialize values once — reused for both the fingerprint and the write.
         serialized = {k: JSONCodec.dumps(v) for k, v in mapping.items()}
-        digest = hashlib.sha256()
-        for key in sorted(serialized):
-            digest.update(key.encode())
-            digest.update(b'\0')
-            digest.update(serialized[key].encode())
-            digest.update(b'\0')
-        signature = digest.hexdigest()
 
-        if self._signature_name and self.redis.get(self._signature_name) == signature:
+        if self._signature_field:
+            digest = hashlib.sha256()
+            for key in sorted(serialized):
+                digest.update(key.encode())
+                digest.update(b'\0')
+                digest.update(serialized[key].encode())
+                digest.update(b'\0')
+            signature = digest.hexdigest()
+
+            # Cheap no-change exit; the script re-checks so the swap stays atomic.
+            if self.redis.hget(self.name, self._signature_field) == signature:
+                return
+
+            args = [self._signature_field, signature]
+            for key, value in serialized.items():
+                args.append(key)
+                args.append(value)
+            self.redis.eval(self._SET_SCRIPT, 1, self.name, *args)
             return
 
         # Fetch existing keys before writing so we know which ones to remove.
@@ -143,9 +205,6 @@ class RedisDict:
         if keys_to_remove:
             self.redis.hdel(self.name, *keys_to_remove)
 
-        if self._signature_name:
-            self.redis.set(self._signature_name, signature)
-
     def get(self, key, default=None):
         try:
             return self[key]
@@ -153,11 +212,7 @@ class RedisDict:
             return default
 
     def clear(self):
-        if self._signature_name:
-            self.redis.delete(self.name)
-            self.redis.delete(self._signature_name)
-        else:
-            self.redis.delete(self.name)
+        self.redis.delete(self.name)
 
     def update(self, other=None, **kwargs):
         if other is not None:

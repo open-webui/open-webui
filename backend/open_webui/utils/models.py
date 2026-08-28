@@ -374,6 +374,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             for filter_id in set(model.pop('filter_ids', [])) | global_filter_ids
             if filter_id in enabled_filter_ids
         ]
+        # Deterministic order keeps the serialized registry identical across pods.
+        filter_ids.sort()
 
         model['actions'] = []
         for action_id in action_ids:
