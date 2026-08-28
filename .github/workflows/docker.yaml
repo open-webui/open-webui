@@ -403,5 +403,15 @@ jobs:
             [ -z "$TAG" ] && continue
             DEST="${DOCKERHUB_IMAGE}:${TAG}"
             echo "  -> ${DEST}"
-            docker buildx imagetools create -t "${DEST}" "${SOURCE}"
+            for ATTEMPT in 1 2 3; do
+              if docker buildx imagetools create -t "${DEST}" "${SOURCE}"; then
+                break
+              fi
+              if [ "${ATTEMPT}" = "3" ]; then
+                echo "Failed to copy ${DEST} after ${ATTEMPT} attempts"
+                exit 1
+              fi
+              echo "Copy attempt ${ATTEMPT} for ${DEST} failed, retrying in 15s..."
+              sleep 15
+            done
           done <<< "${{ steps.tags.outputs.tags }}"
