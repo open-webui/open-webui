@@ -35,6 +35,7 @@ from open_webui.models.models import (
     ModelParams,
     ModelResponse,
     Models,
+    normalize_model_tags,
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
@@ -211,10 +212,57 @@ async def get_models(
 ###########################
 
 
+def _get_connection_tag_names(api_configs: dict) -> list[str]:
+    """Tag names defined on connections within one provider's API configs."""
+
+    names: list[str] = []
+    for api_config in api_configs.values():
+        if not isinstance(api_config, dict) or not api_config.get('enable', True):
+            continue
+        names.extend(tag['name'] for tag in normalize_model_tags(api_config.get('tags')))
+    return names
+
+
+async def get_connection_tags() -> list[str]:
+    """Tag names defined on provider connections (Admin -> Connections).
+
+    Connection tags live in the connection config (``openai.api_configs`` /
+    ``ollama.api_configs``), not in the model DB, so tag lists derived from
+    the ``model`` table never include them. This mirrors the tags the runtime
+    model list (``/api/models``) merges into models served by those
+    connections.
+    """
+
+    values = await Config.get_many(
+        'openai.enable',
+        'openai.api_configs',
+        'ollama.enable',
+        'ollama.api_configs',
+    )
+
+    names: list[str] = []
+    if values.get('openai.enable'):
+        names.extend(_get_connection_tag_names(values.get('openai.api_configs') or {}))
+    if values.get('ollama.enable'):
+        names.extend(_get_connection_tag_names(values.get('ollama.api_configs') or {}))
+
+    return names
+
+
 @router.get('/base/tags', response_model=list[str])
 async def get_base_model_tags(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     tags = await Models.get_all_tags(user_id=user.id, is_admin=True, is_base_model=True, db=db)
-    return sorted(tags)
+
+    # Include tags defined on connections so they show up in the Admin -> Models
+    # tag filter. Collapse case variants (e.g. "Uncensored" vs "uncensored")
+    # into a single entry, keeping the first name in sort order.
+    tags = [*tags, *(await get_connection_tags())]
+
+    unique: dict[str, str] = {}
+    for name in sorted(tags):
+        unique.setdefault(name.casefold(), name)
+
+    return sorted(unique.values(), key=str.casefold)
 
 
 @router.get('/base', response_model=list[ModelResponse])

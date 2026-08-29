@@ -67,7 +67,7 @@
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 
-	type ModelListItem = { id: string; name?: string };
+	type ModelListItem = { id: string; name?: string; tags?: (string | { name?: string })[] };
 
 	let shiftKey = false;
 
@@ -279,8 +279,20 @@
 
 		const baseModelIds = new Set<string>(baseModels.map((model: ModelListItem) => model.id));
 
+		// Connection tags live in the connection config, not the model DB, so
+		// baseModels won't contain models tagged only through a connection —
+		// fall back to the runtime tags merged into the model list (#29190).
+		const matchesSelectedTag = (model: ModelListItem) => {
+			if (!selectedTag || baseModelIds.has(model.id)) {
+				return true;
+			}
+
+			const modelTags = (model.tags ?? []).map((tag) => (typeof tag === 'string' ? tag : (tag?.name ?? '')));
+			return modelTags.includes(selectedTag);
+		};
+
 		models = allModels
-			.filter((m: ModelListItem) => !selectedTag || baseModelIds.has(m.id))
+			.filter(matchesSelectedTag)
 			.map((m: ModelListItem) => {
 				const baseModel = baseModels.find((model: ModelListItem) => model.id === m.id);
 
