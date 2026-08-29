@@ -287,30 +287,30 @@
 				return true;
 			}
 
-			const modelTags = (model.tags ?? []).map((tag) => (typeof tag === 'string' ? tag : (tag?.name ?? '')));
+			const modelTags = (model.tags ?? []).map((tag) =>
+				typeof tag === 'string' ? tag : (tag?.name ?? '')
+			);
 			return modelTags.includes(selectedTag);
 		};
 
-		models = allModels
-			.filter(matchesSelectedTag)
-			.map((m: ModelListItem) => {
-				const baseModel = baseModels.find((model: ModelListItem) => model.id === m.id);
+		models = allModels.filter(matchesSelectedTag).map((m: ModelListItem) => {
+			const baseModel = baseModels.find((model: ModelListItem) => model.id === m.id);
 
-				if (baseModel) {
-					return {
-						...m,
-						...baseModel
-					};
-				} else {
-					return {
-						...m,
-						id: m.id,
-						name: m.name,
+			if (baseModel) {
+				return {
+					...m,
+					...baseModel
+				};
+			} else {
+				return {
+					...m,
+					id: m.id,
+					name: m.name,
 
-						is_active: true
-					};
-				}
-			});
+					is_active: true
+				};
+			}
+		});
 
 		modelOrderList = [
 			...modelOrderList.filter((id) => models.some((model) => model.id === id)),
