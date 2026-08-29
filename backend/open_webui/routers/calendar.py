@@ -25,7 +25,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.calendar import expand_recurring_event
+from open_webui.utils.calendar import expand_recurring_event, validate_calendar_rrule
 
 log = logging.getLogger(__name__)
 
@@ -273,6 +273,13 @@ async def get_events(
 async def create_event(request: Request, form_data: CalendarEventForm, user: UserModel = Depends(get_verified_user)):
     await check_calendar_permission(request, user)
     await _check_calendar_access(form_data.calendar_id, user, 'write')
+
+    if form_data.rrule:
+        try:
+            validate_calendar_rrule(form_data.rrule)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
     event = await CalendarEvents.insert_new_event(user.id, form_data)
     await publish_event(
         request,
@@ -324,6 +331,12 @@ async def update_event(
     # calendar alone is enough to inject an event into any other calendar.
     if form_data.calendar_id is not None and form_data.calendar_id != event.calendar_id:
         await _check_calendar_access(form_data.calendar_id, user, 'write')
+
+    if form_data.rrule:
+        try:
+            validate_calendar_rrule(form_data.rrule)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     updated = await CalendarEvents.update_event_by_id(event_id, form_data)
     if not updated:

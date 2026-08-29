@@ -79,7 +79,7 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     """
     upper = s.upper()
     if 'EXRULE' in upper:
-        raise ValueError('EXRULE is not supported in recurrence rules')
+        raise ValueError(ERROR_MESSAGES.EXRULE_UNSUPPORTED)
 
     parsed = rrulestr(s, ignoretz=True)
     rules = parsed._rrule if isinstance(parsed, rruleset) else [parsed]
@@ -136,7 +136,7 @@ def validate_rrule(s: str, tz: str = None) -> None:
     try:
         rule = _parse_rule(s, now)
     except Exception as e:
-        raise ValueError(ERROR_MESSAGES.AUTOMATION_INVALID_RRULE(e))
+        raise ValueError(ERROR_MESSAGES.INVALID_RRULE(e))
     if rule.after(now) is None:
         raise ValueError(ERROR_MESSAGES.AUTOMATION_NO_FUTURE_RUNS)
 
