@@ -6,7 +6,7 @@ import logging
 import time
 
 # local imports
-from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.internal.db import Base, JSONField, get_async_db_context, unicode_caseless
 from open_webui.utils.misc import sanitize_metadata
 from pydantic import BaseModel, ConfigDict, model_validator
 from sqlalchemy import JSON, BigInteger, Column, String, Text, delete, func, select
@@ -272,7 +272,7 @@ class FilesTable:
             return FileListResponse(items=items, total=total)
 
     @staticmethod
-    def _glob_to_like_pattern(glob: str) -> str:
+    def _glob_to_like_pattern(glob: str, fold: bool = True) -> str:
         """
         Convert a glob/fnmatch pattern to a SQL LIKE pattern.
 
@@ -282,10 +282,22 @@ class FilesTable:
 
         Args:
             glob: A glob pattern (e.g., "*.txt", "file?.doc")
+            fold: Apply the Unicode NFKC-caseless fold to the pattern before
+                escaping. Keep it in sync with the column-side folding of the
+                running dialect: SQLite folds both sides via `unilower()`, so
+                the glob must be folded here *before* escaping — folding can
+                introduce LIKE metacharacters from non-ASCII input (e.g.
+                fullwidth '％' -> '%'), and escaping must see the folded text.
+                Dialects with native ILIKE (PostgreSQL) fold case on the
+                column themselves but never NFKC-fold it, so folding the
+                pattern there would desynchronize the two sides (glob
+                'stra?e*' would stop matching 'Straße') and must stay off.
 
         Returns:
             A SQL LIKE compatible pattern with proper escaping.
         """
+        if fold:
+            glob = unicode_caseless(glob)
         # Escape SQL special characters first, then convert glob wildcards
         pattern = glob.replace('\\', '\\\\')
         pattern = pattern.replace('%', '\\%')
@@ -321,7 +333,11 @@ class FilesTable:
             if user_id:
                 stmt = stmt.filter_by(user_id=user_id)
 
-            pattern = self._glob_to_like_pattern(filename)
+            # Fold the glob only where the SQL side folds stored values the
+            # same way (SQLite unilower); native-ILIKE dialects (PostgreSQL)
+            # must match against the raw glob.
+            bind = await db.connection()
+            pattern = self._glob_to_like_pattern(filename, fold=bind.dialect.name == 'sqlite')
             if pattern != '%':
                 stmt = stmt.filter(File.filename.ilike(pattern, escape='\\'))
 

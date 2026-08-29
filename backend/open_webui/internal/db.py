@@ -68,20 +68,25 @@ log = logging.getLogger(__name__)
 def _unicode_lower(value):
     """Unicode NFKC-caseless fold, mirroring the builtin ``lower()`` contract.
 
-    NULL passes through as NULL, BLOBs pass through unchanged (like the
-    builtin), numbers render as text (``lower(123) -> '123'``), and text
-    is folded with the Unicode caseless-matching algorithm:
-    ``NFKC(casefold(NFKC(x)))``. ``casefold`` alone would still treat the
-    composed (NFC) and decomposed (NFD) spellings of e.g. Polish 'ą' or
-    'ę' as different strings, so the value is normalized before and after
-    folding — pasted text frequently arrives as NFD while typed text is
-    NFC. The same fold is applied to the column and the search pattern,
-    so e.g. Greek 'ΣΑΣ' matches 'σασ' and NFC 'ą' matches NFD 'ą'.
-    ASCII strings use a plain ``str.lower()`` fast path (identical result
-    for every ASCII codepoint, no normalization needed).
+    NULL passes through as NULL, BLOBs are decoded as text and folded like
+    the builtin (``lower(x'414243')`` is ``'abc'``), numbers render as text
+    (``lower(123) -> '123'``), and text is folded with the Unicode
+    caseless-matching algorithm ``NFKC(casefold(NFKC(x)))``. ``casefold``
+    is applied to both the column and the search pattern, so e.g. Greek
+    'ΣΑΣ' matches 'σασ' and NFC 'ą' matches NFD 'ą'. ASCII strings use a
+    plain ``str.lower()`` fast path (identical result for every ASCII
+    codepoint, no normalization needed).
+
+    Note that folds can change length ('ß' -> 'ss', 'Ｌ' -> 'L'): LIKE
+    single-character wildcards count characters of the folded text, and
+    compatibility folding can turn non-ASCII codepoints into LIKE
+    metacharacters ('％' -> '%') — call sites that escape wildcards must
+    escape the *folded* text, not the raw input.
     """
-    if value is None or isinstance(value, bytes):
-        return value
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        value = value.decode('utf-8', 'replace')
     if isinstance(value, str):
         if value.isascii():
             return value.lower()
