@@ -1576,7 +1576,19 @@ async def chat_completion(
                         target_model_id = entry['model_id']
                         assistant_message_id = entry['message_id']
                         if assistant_message_id and assistant_message_id == metadata.get('assistant_message_id'):
-                            continue
+                            # Continuations reuse an existing assistant message. Preserve its
+                            # content/output while repairing an orphaned parent link.
+                            existing_assistant_message = await Chats.get_message_by_id_and_message_id(
+                                chat_id, assistant_message_id
+                            )
+                            if existing_assistant_message:
+                                if user_message_id and existing_assistant_message.get('parentId') != user_message_id:
+                                    await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        chat_id,
+                                        assistant_message_id,
+                                        {'parentId': user_message_id},
+                                    )
+                                continue
                         if assistant_message_id:
                             assistant_message = {
                                 'id': assistant_message_id,
