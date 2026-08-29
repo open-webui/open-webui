@@ -3076,5 +3076,19 @@
 	"Youtube Language": "",
 	"Youtube Proxy URL": "",
 	"Zoom in": "",
-	"Zoom out": ""
+	"Zoom out": "",
+	"{{count}} files_one": "{{count}} berkas",
+	"{{count}} files selected. Only new and modified files will be uploaded. Deleted files will be removed. The folder structure will be mirrored. Continue?_one": "{{count}} berkas dipilih. Hanya berkas baru dan yang dimodifikasi yang akan diunggah. Berkas yang dihapus akan disingkirkan. Struktur folder akan disinkronkan. Lanjutkan?",
+	"{{count}} filters_one": "{{count}} filter",
+	"{{count}} groups_one": "{{count}} grup",
+	"{{count}} of {{total}} accessible_one": "{{count}} dari {{total}} dapat diakses",
+	"{{count}} selected_one": "{{count}} dipilih",
+	"{{count}} users_one": "{{count}} pengguna",
+	"Computing checksums ({{count}} files)_one": "Menghitung checksum ({{count}} berkas)",
+	"Every {{count}} hours_one": "Setiap {{count}} jam",
+	"Every {{count}} minutes_one": "Setiap {{count}} menit",
+	"Refresh requested: {{count}} terminal(s)_one": "Permintaan muat ulang: {{count}} terminal",
+	"Removing {{count}} stale files..._one": "Menghapus {{count}} berkas usang...",
+	"Retrieved {{count}} sources_one": "Mengambil {{count}} sumber",
+	"Starting in {{count}} minutes_one": "Mulai dalam {{count}} menit"
 }
