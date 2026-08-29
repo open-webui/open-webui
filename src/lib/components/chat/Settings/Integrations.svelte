@@ -93,7 +93,7 @@
 	});
 </script>
 
-<AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} direct />
+<AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
 <form
 	id="tab-tools"
@@ -129,7 +129,6 @@
 						{#each servers as server, idx}
 							<Connection
 								bind:connection={server}
-								direct
 								onSubmit={() => updateHandler()}
 								onDelete={() => {
 									servers = (servers ?? []).filter((_, i) => i !== idx);

@@ -1,0 +1,119 @@
+name: Build & Deploy OpenWebUI (Artha Production)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "src/**"
+      - "static/**"
+      - "package.json"
+      - "package-lock.json"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Dockerfile"
+      - "k8s/**"
+      - ".github/workflows/deploy-artha-prod.yml"
+
+concurrency:
+  group: open-webui-artha-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_OPEN_WEBUI: 762233754445.dkr.ecr.ap-south-1.amazonaws.com/artha-prod-aps1-open-webui
+  EKS_CLUSTER: artha-prod-aps1-eks
+  K8S_NAMESPACE: artha-ai
+  APP_ENVIRONMENT: production
+  APP_HOST: chat.artha.vc
+  WEBUI_URL: https://chat.artha.vc
+  ACM_CERT_ARN: arn:aws:acm:ap-south-1:762233754445:certificate/a191d801-908d-495c-bbb9-fadce239d6ab
+  OPENID_PROVIDER_URL: https://auth.artha.vc/auth/realms/artha/.well-known/openid-configuration
+  OAUTH_CLIENT_ID: open-webui-production
+
+jobs:
+  build-and-deploy:
+    name: Build → Push → Deploy (prod)
+    runs-on: ubuntu-24.04-arm
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push OpenWebUI image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.ECR_OPEN_WEBUI }}:${{ github.sha }}
+            ${{ env.ECR_OPEN_WEBUI }}:latest
+          cache-from: type=registry,ref=${{ env.ECR_OPEN_WEBUI }}:cache
+          cache-to: type=registry,ref=${{ env.ECR_OPEN_WEBUI }}:cache,mode=max
+
+      - name: Get EKS credentials
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
+
+      - name: Ensure namespace exists
+        run: |
+          kubectl get namespace "$K8S_NAMESPACE" 2>/dev/null || \
+            kubectl create namespace "$K8S_NAMESPACE"
+
+      - name: Reconcile OpenWebUI secrets
+        env:
+          WEBUI_SECRET_KEY: ${{ secrets.OPEN_WEBUI_WEBUI_SECRET_KEY }}
+          OAUTH_CLIENT_SECRET: ${{ secrets.OPEN_WEBUI_OAUTH_CLIENT_SECRET }}
+          DATABASE_URL: ${{ secrets.OPEN_WEBUI_DATABASE_URL }}
+          DATABASE_SCHEMA: open_webui
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in WEBUI_SECRET_KEY OAUTH_CLIENT_SECRET DATABASE_URL; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required GitHub secrets for OpenWebUI production deploy: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+          kubectl create secret generic open-webui-secrets \
+            --namespace "$K8S_NAMESPACE" \
+            --from-literal=WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" \
+            --from-literal=OAUTH_CLIENT_SECRET="$OAUTH_CLIENT_SECRET" \
+            --from-literal=DATABASE_URL="$DATABASE_URL" \
+            --from-literal=DATABASE_SCHEMA="$DATABASE_SCHEMA" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Render and apply K8s manifests
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          envsubst < k8s/aws/deployment.yaml | kubectl apply -f -
+          envsubst < k8s/aws/ingress.yaml | kubectl apply -f -
+          kubectl rollout status deployment/open-webui -n "$K8S_NAMESPACE" --timeout=300s
+
+      - name: Deployment summary
+        run: |
+          echo "OpenWebUI deployed SHA ${{ github.sha }} to https://${APP_HOST}"
+          kubectl get pods -n "$K8S_NAMESPACE" -l app=open-webui
+          kubectl get ingress -n "$K8S_NAMESPACE" open-webui

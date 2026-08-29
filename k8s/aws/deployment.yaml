@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-webui
+  namespace: ${K8S_NAMESPACE}
+  labels:
+    app: open-webui
+    environment: ${APP_ENVIRONMENT}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: open-webui
+  template:
+    metadata:
+      labels:
+        app: open-webui
+        environment: ${APP_ENVIRONMENT}
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: open-webui
+          image: ${ECR_OPEN_WEBUI}:${IMAGE_TAG}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ENV
+              value: "prod"
+            - name: PORT
+              value: "8080"
+            - name: WEBUI_URL
+              value: "${WEBUI_URL}"
+            - name: CORS_ALLOW_ORIGIN
+              value: "${WEBUI_URL}"
+            - name: ENABLE_OLLAMA_API
+              value: "true"
+            - name: OLLAMA_BASE_URLS
+              value: "http://ollama.${K8S_NAMESPACE}.svc.cluster.local:11434"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: open-webui-secrets
+                  key: DATABASE_URL
+            - name: DATABASE_SCHEMA
+              valueFrom:
+                secretKeyRef:
+                  name: open-webui-secrets
+                  key: DATABASE_SCHEMA
+            - name: ENABLE_OAUTH
+              value: "true"
+            - name: ENABLE_OAUTH_SIGNUP
+              value: "true"
+            - name: OAUTH_MERGE_ACCOUNTS_BY_EMAIL
+              value: "true"
+            - name: OAUTH_AUTO_REDIRECT
+              value: "false"
+            - name: OAUTH_PROVIDER_NAME
+              value: "Artha"
+            - name: OPENID_PROVIDER_URL
+              value: "${OPENID_PROVIDER_URL}"
+            - name: OPENID_REDIRECT_URI
+              value: "${WEBUI_URL}/oauth/oidc/callback"
+            - name: OAUTH_SCOPES
+              value: "openid email profile"
+            - name: OAUTH_CLIENT_ID
+              value: "${OAUTH_CLIENT_ID}"
+            - name: WEBUI_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: open-webui-secrets
+                  key: WEBUI_SECRET_KEY
+            - name: OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: open-webui-secrets
+                  key: OAUTH_CLIENT_SECRET
+          volumeMounts:
+            - name: open-webui-data
+              mountPath: /app/backend/data
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "3Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: open-webui-data
+          persistentVolumeClaim:
+            claimName: open-webui-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-webui
+  namespace: ${K8S_NAMESPACE}
+  labels:
+    app: open-webui
+    environment: ${APP_ENVIRONMENT}
+spec:
+  selector:
+    app: open-webui
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: open-webui-pvc
+  namespace: ${K8S_NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 20Gi

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging.config
 import logging
 import alembic.context
-from open_webui.env import DATABASE_PASSWORD, DATABASE_URL, LOG_FORMAT
+from open_webui.env import DATABASE_PASSWORD, DATABASE_SCHEMA, DATABASE_URL, LOG_FORMAT
 from open_webui.internal.db import enable_iam_token_auth, extract_ssl_params_from_url, reattach_ssl_params_to_url
 from open_webui.models.auths import Auth
 from open_webui.models.calendar import Calendar, CalendarEvent, CalendarEventAttendee  # noqa: F401
@@ -36,6 +36,8 @@ def run_migrations_offline() -> None:
     alembic.context.configure(
         url=db_connection_url,
         target_metadata=migration_metadata,
+        include_schemas=bool(DATABASE_SCHEMA),
+        version_table_schema=DATABASE_SCHEMA,
         literal_binds=True,
         dialect_opts={'paramstyle': 'named'},
     )
@@ -72,9 +74,16 @@ def run_migrations_online() -> None:
     live_connectable = _get_engine_connectable()
     enable_iam_token_auth(live_connectable)
     with live_connectable.connect() as live_connection:
+        if DATABASE_SCHEMA:
+            from sqlalchemy import text
+
+            live_connection.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{DATABASE_SCHEMA}"'))
+            live_connection.commit()
         alembic.context.configure(
             connection=live_connection,
             target_metadata=migration_metadata,
+            include_schemas=bool(DATABASE_SCHEMA),
+            version_table_schema=DATABASE_SCHEMA,
         )
         with alembic.context.begin_transaction():
             alembic.context.run_migrations()

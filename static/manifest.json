@@ -1,1 +1,21 @@
-{}
+{
+	"name": "Artha Group",
+	"short_name": "Artha",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#171717",
+	"theme_color": "#171717",
+	"icons": [
+		{
+			"src": "/static/favicon.png?v=artha",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any maskable"
+		},
+		{
+			"src": "/static/favicon-96x96.png?v=artha",
+			"sizes": "96x96",
+			"type": "image/png"
+		}
+	]
+}

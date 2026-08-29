@@ -1,15 +1,15 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "Artha Group",
+  "short_name": "Artha",
   "icons": [
     {
-      "src": "/static/web-app-manifest-192x192.png",
+      "src": "/static/web-app-manifest-192x192.png?v=artha",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/static/web-app-manifest-512x512.png",
+      "src": "/static/web-app-manifest-512x512.png?v=artha",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

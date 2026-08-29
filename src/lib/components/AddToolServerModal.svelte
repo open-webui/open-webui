@@ -545,20 +545,30 @@
 
 								<div class="">
 									{#if !direct}
-										<button
-											on:click={() => {
-												type = ['', 'openapi'].includes(type) ? 'mcp' : 'openapi';
-											}}
-											type="button"
-											class=" text-xs text-gray-700 dark:text-gray-300"
-										>
-											{#if ['', 'openapi'].includes(type)}
+										<div class="flex items-center gap-1 text-xs">
+											<button
+												type="button"
+												class={`rounded-md px-2 py-1 transition ${
+													type === 'openapi'
+													? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white'
+													: 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+												}`}
+												on:click={() => (type = 'openapi')}
+											>
 												{$i18n.t('OpenAPI')}
-											{:else if type === 'mcp'}
-												{$i18n.t('MCP')}
-												<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
-											{/if}
-										</button>
+											</button>
+											<button
+												type="button"
+												class={`rounded-md px-2 py-1 transition ${
+													type === 'mcp'
+													? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white'
+													: 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+												}`}
+												on:click={() => (type = 'mcp')}
+											>
+												{$i18n.t('MCP')} <span class="text-gray-500">({$i18n.t('Streamable HTTP')})</span>
+											</button>
+										</div>
 									{:else}
 										<div class="text-xs text-gray-700 dark:text-gray-300">
 											{$i18n.t('OpenAPI')}

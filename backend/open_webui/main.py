@@ -2863,15 +2863,15 @@ async def get_manifest_json():
                 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                 # https://docs.openwebui.com/license.
                 {
-                    'src': '/static/logo.png',
+                    'src': '/static/favicon.png?v=artha',
                     'type': 'image/png',
-                    'sizes': '500x500',
+                    'sizes': '512x512',
                     'purpose': 'any',
                 },
                 {
-                    'src': '/static/logo.png',
+                    'src': '/static/favicon.png?v=artha',
                     'type': 'image/png',
-                    'sizes': '500x500',
+                    'sizes': '512x512',
                     'purpose': 'maskable',
                 },
             ],
