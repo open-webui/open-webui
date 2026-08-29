@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.11.2] - 2026-08-27
+## [0.11.2] - 2026-08-29
 
 ### Added
 
@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🧊 **Streaming no longer stalls on reasoning models.** A reply from a reasoning model now streams through to the end instead of showing its first few words and then freezing until generation finishes. [#29053](https://github.com/open-webui/open-webui/pull/29053), [#29035](https://github.com/open-webui/open-webui/issues/29035)
 - 💭 **Thinking stays in Thoughts.** After a model uses a tool, its reasoning for the next step now appears in the collapsed Thoughts section instead of being written into the reply as ordinary text. [#29052](https://github.com/open-webui/open-webui/pull/29052), [#29040](https://github.com/open-webui/open-webui/issues/29040)
+- 🛑 **Stop works across instances.** Stopping a response now takes effect on deployments that spread people across several instances backed by a Redis cluster, instead of the reply continuing to the end regardless. [#29165](https://github.com/open-webui/open-webui/pull/29165), [#19840](https://github.com/open-webui/open-webui/issues/19840)
 - 📖 **Banners with underlined text.** A banner containing underlined text now displays instead of failing to render. [#29118](https://github.com/open-webui/open-webui/pull/29118), [#29115](https://github.com/open-webui/open-webui/issues/29115)
 - 🧰 **Pinned models start with their own tools.** Starting a chat from a pinned model in the sidebar now applies that model's tools and skills instead of carrying over the ones from the model you used last. [#29058](https://github.com/open-webui/open-webui/pull/29058), [#29050](https://github.com/open-webui/open-webui/issues/29050)
 - 🚫 **Disabled models no longer vanish.** Turning a model off in the admin Models list now keeps it in view so you can turn it back on, instead of it disappearing with no way to recover it. [#29037](https://github.com/open-webui/open-webui/pull/29037), [#29036](https://github.com/open-webui/open-webui/issues/29036)
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📆 **Moved calendar events stay visible.** Changing an event's date no longer makes it disappear from the calendar, and events already stuck in that state show up again. [#29085](https://github.com/open-webui/open-webui/pull/29085), [#29067](https://github.com/open-webui/open-webui/issues/29067)
 - 🔢 **Accurate admin user counts.** The counts on the admin Users tabs now follow your search and reset when you switch tabs, instead of showing stale or unfiltered numbers. [#29080](https://github.com/open-webui/open-webui/pull/29080), [#29079](https://github.com/open-webui/open-webui/issues/29079)
 - 📱 **Readable model list on small screens.** The model identifier and timestamp in the workspace model list no longer overlap the model name on narrow displays. [#29084](https://github.com/open-webui/open-webui/pull/29084), [#29083](https://github.com/open-webui/open-webui/issues/29083)
+- 🎛️ **Valves dialog stays in bounds.** A valve whose selected options form a long line no longer stretches its input past the edge of the dialog and over the page behind it. [#29203](https://github.com/open-webui/open-webui/pull/29203), [#29202](https://github.com/open-webui/open-webui/issues/29202)
 - 🧹 **Shared chats search resets.** Reopening the shared chats dialog now starts with an empty search box and the full list, rather than a leftover search term above unfiltered results. [#29082](https://github.com/open-webui/open-webui/pull/29082), [#29081](https://github.com/open-webui/open-webui/issues/29081)
 - 🔑 **Precise account matching on SQLite.** Signing in through an identity provider now matches your account on its exact identifier, so accounts whose identifier is an unusually long or zero-padded number are no longer at risk of being confused with another. [Commit](https://github.com/open-webui/open-webui/commit/17cc566707cd2ee78b460e39c7fad23b9c258c70)
 - 🗃️ **Knowledge list loads reliably.** The Knowledge page in the workspace now fills in its list on opening instead of occasionally staying empty. [Commit](https://github.com/open-webui/open-webui/commit/e6031ea6daec897eddbcf0c8b03c2d6fad2b506e)
