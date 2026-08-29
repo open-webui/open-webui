@@ -521,7 +521,13 @@
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
-				<section class="w-full" aria-labelledby="chat-conversation">
+				<section
+					class="w-full"
+					aria-labelledby="chat-conversation"
+					aria-live="polite"
+					aria-relevant="additions"
+					aria-atomic="false"
+				>
 					<h2 class="sr-only" id="chat-conversation">{$i18n.t('Chat Conversation')}</h2>
 					{#if messages.at(0)?.parentId !== null}
 						<Loader
@@ -538,7 +544,7 @@
 							</div>
 						</Loader>
 					{/if}
-					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
+					<ul>
 						{#each messages as message, messageIdx (message.id)}
 							<Message
 								{chatId}
