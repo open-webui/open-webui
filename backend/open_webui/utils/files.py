@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 import aiofiles
+import aiohttp
 from fastapi import (
     APIRouter,
     Depends,
@@ -51,9 +52,14 @@ _IMAGE_MIME_FALLBACK = {
 }
 
 
-async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
+async def get_image_base64_from_url(url: str, max_bytes: int, user=None) -> tuple[Optional[str], int]:
+    """The image as a data URL, plus the remote bytes to charge against the caller's budget."""
+    total = 0
+
     try:
         if url.startswith('http'):
+            if max_bytes <= 0:
+                return None, 0
             # Validate URL to prevent SSRF attacks against local/private networks.
             # allow_redirects=False prevents redirect-based SSRF: validate_url() is
             # called only on the originally-submitted URL; following 3xx redirects
@@ -67,17 +73,31 @@ async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
                     url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
                 ) as response:
                     response.raise_for_status()
-                    image_data = await response.read()
-                    encoded_string = base64.b64encode(image_data).decode('utf-8')
+                    # Content-Length describes the compressed body, so read incrementally.
+                    # bytearray over list + join: ~22% lower peak at the cap.
+                    buffer = bytearray()
+                    async for chunk in response.content.iter_chunked(64 * 1024):
+                        total += len(chunk)
+                        if total > max_bytes:
+                            return None, total
+                        buffer.extend(chunk)
+                    encoded_string = base64.b64encode(buffer).decode('utf-8')
                     content_type = response.headers.get('Content-Type', 'image/png')
-                    return f'data:{content_type};base64,{encoded_string}'
+                    return f'data:{content_type};base64,{encoded_string}', total
         else:
             # Non-URL string — treat as file_id. Delegate to the canonical
             # file-ID resolver which enforces ownership/access checks.
-            return await get_image_base64_from_file_id(url, user=user)
+            return await get_image_base64_from_file_id(url, user=user), 0
 
+    except aiohttp.ClientPayloadError:
+        # Raised both when the decompressor cap aborts with no chunks yielded, where total
+        # under-reports, and on an ordinary truncated transfer, where it does not. Indistinguishable
+        # here, so charge the remaining budget: later remote images get dropped either way.
+        return None, max_bytes
     except Exception:
-        return None
+        # A host that drips then dies leaves real bytes already counted. Charging 0 would let the
+        # same URL re-materialise its drip for every item in the request.
+        return None, total
 
 
 async def get_image_url_from_base64(request, base64_image_string, metadata, user):

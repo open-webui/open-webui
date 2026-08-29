@@ -30,6 +30,7 @@ from open_webui.config import (
 from open_webui.constants import TASKS
 from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
+    CHAT_IMAGE_URL_FETCH_MAX_TOTAL_BYTES,
     CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
     ENABLE_API_OUTLET_FILTERS,
@@ -2107,6 +2108,7 @@ async def chat_completion_files_handler(
 
 async def convert_url_images_to_base64(form_data, user=None):
     messages = form_data.get('messages', [])
+    remaining = CHAT_IMAGE_URL_FETCH_MAX_TOTAL_BYTES
 
     for message in messages:
         content = message.get('content')
@@ -2132,7 +2134,11 @@ async def convert_url_images_to_base64(form_data, user=None):
                 continue
 
             try:
-                base64_data = await get_image_base64_from_url(image_url, user=user)
+                base64_data, charged = await get_image_base64_from_url(image_url, max_bytes=remaining, user=user)
+                remaining -= charged
+                if charged and remaining <= 0:
+                    log.warning('Remote image fetch budget exhausted (%s bytes)', CHAT_IMAGE_URL_FETCH_MAX_TOTAL_BYTES)
+
                 if base64_data:
                     image_url_payload = {'url': base64_data}
                     if isinstance(image_url_data, dict) and image_url_data.get('detail'):
