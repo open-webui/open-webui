@@ -480,17 +480,15 @@
 				<SettingsSelect
 					bind:value={TTS_ENGINE}
 					placeholder={$i18n.t('Select a mode')}
-					on:change={async (e) => {
+					on:change={async () => {
 						await updateConfigHandler();
 						await getVoices();
 						await getModels();
 
-						const value = (e.currentTarget as HTMLSelectElement).value;
-
-						if (value === 'openai') {
+						if (TTS_ENGINE === 'openai') {
 							TTS_VOICE = 'alloy';
 							TTS_MODEL = 'tts-1';
-						} else if (value === 'mistral') {
+						} else if (TTS_ENGINE === 'mistral') {
 							TTS_VOICE = '';
 							TTS_MODEL = 'voxtral-mini-tts-2603';
 						} else {
