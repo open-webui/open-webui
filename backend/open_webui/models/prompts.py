@@ -9,7 +9,7 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
-from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.internal.db import Base, JSONField, UnicodeLower, get_async_db_context, unicode_caseless
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import PromptHistories
@@ -331,11 +331,15 @@ class PromptsTable:
                 if tag:
                     bind = await session.connection()
                     dialect_name = bind.dialect.name
-                    tag_lower = tag.lower()
+                    # NFKC-casefold the parameter: PG's LOWER() has no Greek
+                    # final-sigma rule (lower('ΣΑΣ') = 'σασ'), which str.lower()
+                    # would disagree with ('σας') — casefold matches PG exactly
+                    # and is re-folded (idempotently) by unilower() on SQLite.
+                    tag_val = unicode_caseless(tag)
 
                     if dialect_name == 'sqlite':
                         tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE LOWER(t.value) = :tag_val)'
+                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE unilower(t.value) = unilower(:tag_val))'
                         )
                     elif dialect_name == 'postgresql':
                         tag_clause = text(
@@ -343,14 +347,12 @@ class PromptsTable:
                         )
                     else:
                         # Fallback for dialects with no JSON array function: LIKE on the text.
-                        tags_text = func.lower(cast(Prompt.tags, String))
-                        tag_clause = or_(
-                            *(tags_text.like(f'%"{variant}"%') for variant in json_text_variants(tag_lower))
-                        )
-                        tag_lower = None
+                        tags_text = UnicodeLower(cast(Prompt.tags, String))
+                        tag_clause = or_(*(tags_text.like(f'%"{variant}"%') for variant in json_text_variants(tag_val)))
+                        tag_val = None
 
-                    if tag_lower is not None:
-                        query = query.filter(tag_clause.params(tag_val=tag_lower))
+                    if tag_val is not None:
+                        query = query.filter(tag_clause.params(tag_val=tag_val))
                     else:
                         query = query.filter(tag_clause)
 
