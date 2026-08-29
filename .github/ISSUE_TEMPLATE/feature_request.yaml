@@ -8,11 +8,11 @@ body:
       value: |
         # Feature Request
 
-        Describe the requested behavior, the problem it solves, and any examples, mockups, screenshots, or workflows that clarify the request.
+        Describe the requested behavior, the problem it solves, and any examples, mockups, screenshots, or workflows that clarify the request. A clear issue or discussion is the most useful contribution.
 
         Search open and closed [Issues](https://github.com/open-webui/open-webui/issues) and [Discussions](https://github.com/open-webui/open-webui/discussions) before submitting. If the request needs broad product, UX, architecture, compatibility, or maintenance discussion, please start in [Discussions](https://github.com/open-webui/open-webui/discussions) so the community can weigh in.
 
-        Please do not open a code pull request for this request unless a maintainer asks for one. Clear product context is the most useful next step.
+        Please do not open a code pull request for this request unless a maintainer asks for one, or the change is only i18n/localization. If you want to share code as reference, include it here as a local diff or patch. Clear product context is the most useful next step.
 
         Security vulnerabilities must not be reported publicly. Use the [GitHub security page](https://github.com/open-webui/open-webui/security) instead.
 
@@ -24,6 +24,8 @@ body:
         - label: I searched open and closed issues and discussions for an existing request.
           required: true
         - label: I checked whether this already exists on the `dev` branch or latest source.
+          required: true
+        - label: I understand that maintainers want a well-written issue or discussion before any code pull request.
           required: true
         - label: This request is not a security vulnerability.
           required: true

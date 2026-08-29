@@ -1,25 +1,27 @@
 <!--
 Important checks for contributors:
 1. Target the `dev` branch. PRs targeting `main` will be closed.
-2. Code pull requests should be opened only after maintainer confirmation.
-3. Do not open a code PR as the first step. Start with an Issue or Discussion unless a maintainer asked for the PR or the change is only i18n/localization.
+2. Code pull requests are not the default contribution path.
+3. Do not open a code PR as the first step. Start with a well-written Issue or Discussion unless a maintainer asked for the PR or the change is only i18n/localization.
 4. Do not delete the Contributor License Agreement section at the bottom. The CLA bot requires it.
 -->
 
 # Pull Request
 
-Thanks for helping improve Open WebUI. Please make sure the linked Issue or Discussion explains the user-facing problem, the expected outcome, and any relevant examples or constraints.
+Thanks for wanting to improve Open WebUI. The most useful contribution is usually a clear, well-written Issue, not an unsolicited code pull request.
 
-Code contributions are not the default path. Open a code pull request only when a maintainer asks for one, or for narrow i18n/localization updates. For real, reproducible bugs, start with a well-described [Issue](https://github.com/open-webui/open-webui/issues). For feature requests, UI/UX changes, behavior changes, architecture changes, suspected fixes, or unconfirmed approaches, start with an active [Discussion](https://github.com/open-webui/open-webui/discussions).
+Open a code pull request only when a maintainer asks for one, or when the change is only i18n/localization. For real, reproducible bugs, start with a well-described [Issue](https://github.com/open-webui/open-webui/issues). For feature requests, UI/UX changes, behavior changes, architecture changes, suspected fixes, or unconfirmed approaches, start with an active [Discussion](https://github.com/open-webui/open-webui/discussions).
 
-If you have implementation notes, include them as reference in the Issue or Discussion. A local diff, patch, or branch can be useful context, but it does not mean a pull request is expected or will be reviewed.
+Before continuing, make sure the linked Issue or Discussion explains the user-facing problem, the expected outcome, the affected workflow, and any examples, logs, screenshots, constraints, or reproduction details needed for maintainers to evaluate it.
+
+If you have implementation notes, include them as reference in the Issue or Discussion. If you want to share code as reference, include it there as a local diff, patch, or branch note. Do not open a pull request for reference code.
 
 Unsolicited PRs may be closed without review, especially when they introduce product, architecture, compatibility, dependency, or maintenance decisions that have not been discussed.
 
 ## Checklist
 
 - [ ] This PR targets the `dev` branch.
-- [ ] This PR links to a confirmed Issue or active Discussion: `Closes #___` / `Relates to #___`.
+- [ ] This PR links to a well-described, confirmed Issue or active Discussion: `Closes #___` / `Relates to #___`.
 - [ ] A maintainer explicitly asked me to open this PR, or this PR only updates i18n/localization.
 - [ ] The change is one logical unit with no unrelated commits.
 - [ ] I matched nearby code patterns and avoided unnecessary new settings, abstractions, or dependencies.
