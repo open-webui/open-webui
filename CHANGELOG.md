@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🛡️ **Security Advisory**: This release includes security and access-control fixes. We recommend updating production deployments at your earliest convenience. Not all security fixes in this version may be enumerated in the fixed section. Some may be withheld for a short time to give administrators time to upgrade. [Advisories](https://github.com/open-webui/open-webui/security)
 - 🧊 **Streaming no longer stalls on reasoning models.** A reply from a reasoning model now streams through to the end instead of showing its first few words and then freezing until generation finishes. [#29053](https://github.com/open-webui/open-webui/pull/29053), [#29035](https://github.com/open-webui/open-webui/issues/29035)
 - 💭 **Thinking stays in Thoughts.** After a model uses a tool, its reasoning for the next step now appears in the collapsed Thoughts section instead of being written into the reply as ordinary text. [#29052](https://github.com/open-webui/open-webui/pull/29052), [#29040](https://github.com/open-webui/open-webui/issues/29040)
 - 🛑 **Stop works across instances.** Stopping a response now takes effect on deployments that spread people across several instances backed by a Redis cluster, instead of the reply continuing to the end regardless. [#29165](https://github.com/open-webui/open-webui/pull/29165), [#19840](https://github.com/open-webui/open-webui/issues/19840)
