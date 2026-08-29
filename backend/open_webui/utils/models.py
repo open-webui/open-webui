@@ -18,7 +18,6 @@ from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.models.users import UserModel
-from open_webui.inference import ollama, openai
 from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import has_access, has_base_model_access
 from open_webui.utils.plugin import (
@@ -31,26 +30,13 @@ log = logging.getLogger(__name__)
 
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
-    raw_ollama_models = await ollama.get_all_models(request, user=user)
-    return [
-        {
-            'id': model['model'],
-            'name': model['name'],
-            'object': 'model',
-            'created': 0,
-            'owned_by': 'ollama',
-            'ollama': model,
-            'loaded': 'expires_at' in model,
-            'connection_type': model.get('connection_type', 'local'),
-            'tags': model.get('tags', []),
-        }
-        for model in raw_ollama_models['models']
-    ]
+    # Ollama was removed; keep the model-discovery contract for callers.
+    return []
 
 
 async def fetch_openai_models(request: Request, user: UserModel = None):
-    openai_response = await openai.get_all_models(request, user=user)
-    return openai_response['data']
+    # OpenAI-compatible inference was removed; keep the model-discovery contract.
+    return []
 
 
 async def get_all_base_models(request: Request, user: UserModel = None):

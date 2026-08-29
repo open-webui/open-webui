@@ -167,7 +167,7 @@ from open_webui.routers import (
     users,
     utils,
 )
-from open_webui.inference import ollama, openai
+from open_webui.inference import gateway as openai
 from open_webui.routers.retrieval import (
     get_ef,
     get_embedding_function,
@@ -781,8 +781,6 @@ app.add_middleware(
 app.mount('/ws', socket_app)
 
 
-app.include_router(ollama.router, prefix='/ollama', tags=['ollama'])
-app.include_router(openai.router, prefix='/openai', tags=['openai'])
 
 
 app.include_router(pipelines.router, prefix='/api/v1/pipelines', tags=['pipelines'])

@@ -6,16 +6,8 @@ from fastapi import Request
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
-from open_webui.inference.ollama import (
-    GenerateEmbedForm,
-)
-from open_webui.inference.ollama import (
-    embed as ollama_embed,
-)
-from open_webui.inference.openai import embeddings as openai_embeddings
+from open_webui.inference.gateway import inference_engine_unavailable
 from open_webui.utils.models import check_model_access
-from open_webui.utils.payload import convert_embed_payload_openai_to_ollama
-from open_webui.utils.response import convert_embedding_response_ollama_to_openai
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -70,19 +62,5 @@ async def generate_embeddings(
         if not bypass_filter and user.role == 'user':
             await check_model_access(user, model)
 
-    # Ollama backend — use /api/embed which supports batch input natively
-    if model.get('owned_by') == 'ollama':
-        ollama_payload = convert_embed_payload_openai_to_ollama(form_data)
-        response = await ollama_embed(
-            request=request,
-            form_data=GenerateEmbedForm(**ollama_payload),
-            user=user,
-        )
-        return convert_embedding_response_ollama_to_openai(response)
-
-    # Default: OpenAI or compatible backend
-    return await openai_embeddings(
-        request=request,
-        form_data=form_data,
-        user=user,
-    )
+    # The provider implementation is intentionally absent until OpenDevin is wired in.
+    inference_engine_unavailable()

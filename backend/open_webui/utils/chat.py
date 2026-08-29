@@ -13,12 +13,7 @@ from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.functions import generate_function_chat_completion
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
-from open_webui.inference.ollama import (
-    generate_chat_completion as generate_ollama_chat_completion,
-)
-from open_webui.inference.openai import (
-    generate_chat_completion as generate_openai_chat_completion,
-)
+from open_webui.inference.gateway import generate_chat_completion as generate_inference_chat_completion
 from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
@@ -285,7 +280,7 @@ async def generate_chat_completion(
         if model.get('owned_by') == 'ollama':
             # Using /ollama/api/chat endpoint
             form_data = convert_payload_openai_to_ollama(form_data)
-            response = await generate_ollama_chat_completion(
+            response = await generate_inference_chat_completion(
                 request=request,
                 form_data=form_data,
                 user=user,
@@ -300,7 +295,7 @@ async def generate_chat_completion(
             else:
                 return convert_response_ollama_to_openai(response)
         else:
-            return await generate_openai_chat_completion(
+            return await generate_inference_chat_completion(
                 request=request,
                 form_data=form_data,
                 user=user,
