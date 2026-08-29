@@ -58,17 +58,18 @@ def chat_search_terms(text: str) -> list[str]:
 
 def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
     if dialect_name == 'sqlite':
+        # unicode_lower() is registered per SQLite connection in internal/db.py.
         return f"""
         (
             EXISTS (
                 SELECT 1
                 FROM json_each(Chat.chat, '$.history.messages') AS history_message
-                WHERE LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
+                WHERE unicode_lower(history_message.value->>'content') LIKE '%' || :{key} || '%'
             )
             OR EXISTS (
                 SELECT 1
                 FROM json_each(Chat.chat, '$.messages') AS legacy_message
-                WHERE LOWER(legacy_message.value->>'content') LIKE '%' || :{key} || '%'
+                WHERE unicode_lower(legacy_message.value->>'content') LIKE '%' || :{key} || '%'
             )
         )
         """

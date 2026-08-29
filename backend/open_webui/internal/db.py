@@ -28,16 +28,46 @@ from open_webui.env import (
     OPEN_WEBUI_DIR,
 )
 from open_webui.utils.json_codec import JSONCodec
-from sqlalchemy import Dialect, MetaData, create_engine, event, types
+from sqlalchemy import Dialect, Engine, MetaData, create_engine, event, types
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.sql.compiler import ilike_case_insensitive
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
+
+
+# ── Unicode-aware case folding for SQLite ────────────────────────────
+#
+# SQLite's builtin lower() folds ASCII only, so ilike() (compiled to
+# ``lower(x) LIKE lower(y)``) is case-sensitive for non-ASCII text.
+# The builtin lower() is left untouched: the uq_user_email_lower
+# expression index depends on its folding staying stable.  The listener
+# is class-level because the @compiles hook affects every SQLite engine
+# in the process.  str.lower, not casefold: raw-SQL callers compare
+# against a Python-side .lower().
+# ─────────────────────────────────────────────────────────────────────
+
+
+def _unicode_lower(value: Any) -> Any:
+    return value.lower() if isinstance(value, str) else value
+
+
+@event.listens_for(Engine, 'connect')
+def _register_unicode_lower(dbapi_connection, connection_record):
+    # sqlite3 and aiosqlite's adapter expose create_function; other DBAPIs lack it.
+    if hasattr(dbapi_connection, 'create_function'):
+        dbapi_connection.create_function('unicode_lower', 1, _unicode_lower, deterministic=True)
+
+
+@compiles(ilike_case_insensitive, 'sqlite')
+def _compile_ilike_operand_sqlite(element, compiler, **kw):
+    return f'unicode_lower({compiler.process(element.element, **kw)})'
 
 
 # ── SSL URL normalization (used by sync engine & Alembic migrations) ─

@@ -386,7 +386,8 @@ class ModelsTable:
                 tag = filter.get('tag')
                 if tag:
                     if db.bind.dialect.name == 'sqlite' and not tag.isascii():
-                        # SQLite's LOWER() is ASCII-only, so match non-ASCII tags exact-case.
+                        # SQLite's lower() is ASCII-only, and this matches raw JSON text where
+                        # non-ASCII may be \uXXXX-escaped, so non-ASCII tags match exact-case.
                         meta_text = cast(Model.meta, String)
                         variants = json_text_variants(tag)
                     else:
