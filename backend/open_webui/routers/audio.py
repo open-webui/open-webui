@@ -79,6 +79,7 @@ TTS_CONFIG_KEYS = {
     'OPENAI_API_BASE_URL': 'audio.tts.openai.api_base_url',
     'OPENAI_API_KEY': 'audio.tts.openai.api_key',
     'OPENAI_PARAMS': 'audio.tts.openai.params',
+    'ELEVENLABS_PARAMS': 'audio.tts.elevenlabs.params',
     'API_KEY': 'audio.tts.api_key',
     'ENGINE': 'audio.tts.engine',
     'MODEL': 'audio.tts.model',
@@ -238,6 +239,7 @@ class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
     OPENAI_PARAMS: Optional[dict] = None
+    ELEVENLABS_PARAMS: Optional[dict] = None
     API_KEY: str
     ENGINE: str
     MODEL: str
@@ -412,6 +414,19 @@ async def _tts_elevenlabs(request, payload, file_path, file_body_path, user):
     if available_voices and voice_id not in available_voices:
         raise HTTPException(status_code=400, detail='Invalid voice id')
 
+    # Anything configured in `audio.tts.elevenlabs.params` overrides the defaults
+    # below. `voice_settings` is merged key by key so a partial override (say,
+    # stability only) keeps the remaining defaults, and `style` /
+    # `use_speaker_boost` become reachable — ElevenLabs accepts both, but they
+    # were never sent. Eleven v3 in particular needs stability set to one of its
+    # three discrete modes, which a fixed 0.5 made unreachable.
+    elevenlabs_params = await Config.get('audio.tts.elevenlabs.params') or {}
+    voice_settings = {
+        'stability': 0.5,
+        'similarity_boost': 0.5,
+        **(elevenlabs_params.get('voice_settings') or {}),
+    }
+
     r = None
     try:
         session = await get_session()
@@ -420,7 +435,8 @@ async def _tts_elevenlabs(request, payload, file_path, file_body_path, user):
             json={
                 'text': payload['input'],
                 'model_id': await Config.get('audio.tts.model'),
-                'voice_settings': {'stability': 0.5, 'similarity_boost': 0.5},
+                'voice_settings': voice_settings,
+                **{k: v for k, v in elevenlabs_params.items() if k != 'voice_settings'},
             },
             headers={
                 'Accept': 'audio/mpeg',

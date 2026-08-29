@@ -39,6 +39,7 @@
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
 	let TTS_OPENAI_PARAMS = '';
+	let TTS_ELEVENLABS_PARAMS = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_BASE_URL = '';
@@ -143,11 +144,21 @@
 			return;
 		}
 
+		let elevenlabsParams = {};
+		try {
+			elevenlabsParams = TTS_ELEVENLABS_PARAMS ? JSON.parse(TTS_ELEVENLABS_PARAMS) : {};
+			TTS_ELEVENLABS_PARAMS = JSON.stringify(elevenlabsParams, null, 2);
+		} catch (e) {
+			toast.error($i18n.t('Invalid JSON format for Parameters'));
+			return;
+		}
+
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
 				OPENAI_PARAMS: openaiParams,
+				ELEVENLABS_PARAMS: elevenlabsParams,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
@@ -199,6 +210,7 @@
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
 			TTS_OPENAI_PARAMS = JSON.stringify(res?.tts?.OPENAI_PARAMS ?? '', null, 2);
+			TTS_ELEVENLABS_PARAMS = JSON.stringify(res?.tts?.ELEVENLABS_PARAMS ?? '', null, 2);
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -672,6 +684,20 @@
 						/>
 					</AdminSettingField>
 				</div>
+				{#if TTS_ENGINE === 'elevenlabs'}
+					<AdminSettingField
+						label={$i18n.t('Additional Parameters')}
+						description={$i18n.t(
+							'Enter additional ElevenLabs TTS request parameters as JSON. Use "voice_settings" to set stability, similarity_boost, style, or use_speaker_boost.'
+						)}
+					>
+						<Textarea
+							className={textareaClass}
+							bind:value={TTS_ELEVENLABS_PARAMS}
+							placeholder={$i18n.t('Enter additional parameters in JSON format')}
+						/>
+					</AdminSettingField>
+				{/if}
 			{:else if TTS_ENGINE === 'azure'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 					<AdminSettingField label={$i18n.t('TTS Voice')}>
