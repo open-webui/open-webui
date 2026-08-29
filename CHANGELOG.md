@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚫 **Disabled models no longer vanish.** Turning a model off in the admin Models list now keeps it in view so you can turn it back on, instead of it disappearing with no way to recover it. [#29037](https://github.com/open-webui/open-webui/pull/29037), [#29036](https://github.com/open-webui/open-webui/issues/29036)
 - ✂️ **Message text kept intact.** Text containing angle brackets and a dollar sign is no longer mistaken for a skill mention and silently removed before your message reaches the model. [#29051](https://github.com/open-webui/open-webui/pull/29051), [#29041](https://github.com/open-webui/open-webui/issues/29041)
 - 📆 **Moved calendar events stay visible.** Changing an event's date no longer makes it disappear from the calendar, and events already stuck in that state show up again. [#29085](https://github.com/open-webui/open-webui/pull/29085), [#29067](https://github.com/open-webui/open-webui/issues/29067)
+- 🔁 **Repeats follow the event.** A repeating event now works out its occurrences from its own date and time, where a repeat rule carrying a start date of its own could place them on the wrong weekday or at the wrong hour. [Commit](https://github.com/open-webui/open-webui/commit/a93c5080380447e3ab9113cacb73b61c57cbc308)
 - 🔢 **Accurate admin user counts.** The counts on the admin Users tabs now follow your search and reset when you switch tabs, instead of showing stale or unfiltered numbers. [#29080](https://github.com/open-webui/open-webui/pull/29080), [#29079](https://github.com/open-webui/open-webui/issues/29079)
 - 📱 **Readable model list on small screens.** The model identifier and timestamp in the workspace model list no longer overlap the model name on narrow displays. [#29084](https://github.com/open-webui/open-webui/pull/29084), [#29083](https://github.com/open-webui/open-webui/issues/29083)
 - 🎛️ **Valves dialog stays in bounds.** A valve whose selected options form a long line no longer stretches its input past the edge of the dialog and over the page behind it. [#29203](https://github.com/open-webui/open-webui/pull/29203), [#29202](https://github.com/open-webui/open-webui/issues/29202)
@@ -35,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- ⏱️ **Daily limit on repeats.** A calendar event can no longer be set to repeat more often than once a day, and saving one that repeats more often is now refused with a message explaining the limit. [Commit](https://github.com/open-webui/open-webui/commit/a93c5080380447e3ab9113cacb73b61c57cbc308)
 - 🏷️ **High Contrast Mode is now Accessibility Mode.** The interface setting previously called 'High Contrast Mode' is now called 'Accessibility Mode', with the same switch in the same place. [Commit](https://github.com/open-webui/open-webui/commit/e6031ea6daec897eddbcf0c8b03c2d6fad2b506e)
 
 ## [0.11.1] - 2026-08-25
