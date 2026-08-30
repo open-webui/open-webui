@@ -131,6 +131,22 @@ async def get_channel_member_user_ids(
     return list(dict.fromkeys([*user_ids, channel.user_id]))
 
 
+async def check_group_share_access(
+    user: UserModel,
+    group_ids: list[str] | None,
+    db: AsyncSession | None = None,
+) -> None:
+    """Ensure the caller is allowed to share to every given group."""
+    if not group_ids or user.role == 'admin':
+        return
+
+    allowed_group_ids = {
+        group.id for group in await Groups.get_groups(filter={'member_id': user.id, 'share': True}, db=db)
+    }
+    if not allowed_group_ids.issuperset(group_ids):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+
 ############################
 # Channels Enabled Dependency
 # The creator has set this table; let every voice that
@@ -308,6 +324,8 @@ async def create_new_channel(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+    await check_group_share_access(user, form_data.group_ids, db=db)
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
@@ -640,6 +658,8 @@ async def add_members_by_id(
 
     if channel.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    await check_group_share_access(user, form_data.group_ids, db=db)
 
     try:
         memberships = await Channels.add_members_to_channel(
