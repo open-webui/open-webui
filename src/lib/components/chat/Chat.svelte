@@ -1219,7 +1219,12 @@
 				} else if (type === 'chat:active') {
 					if (!data?.active) {
 						taskIds = null;
-						if ($chatId && !$temporaryChatEnabled && hasPendingAssistantLeaf()) {
+						if (
+							$chatId &&
+							!$temporaryChatEnabled &&
+							!message.done &&
+							(message.childrenIds?.length ?? 0) === 0
+						) {
 							await loadChat();
 						}
 						if ($chatId && !$temporaryChatEnabled) {
