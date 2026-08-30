@@ -65,8 +65,21 @@
 		getUsageTokenCount
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import {
+		applyGenerationUsage,
+		completeGenerationStats,
+		createGenerationStats,
+		recordGenerationDelta,
+		syncGenerationProgress,
+		type GenerationStats
+	} from '$lib/utils/generationStats';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
-	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
+	import {
+		applyResponseStreamEvent,
+		getGeneratedText,
+		getOutputText,
+		type OutputItem
+	} from './Messages/structuredOutput';
 
 	import {
 		archiveChatById,
@@ -1208,6 +1221,8 @@
 			if (message) {
 				const data = event?.data?.data ?? null;
 
+				ensureGenerationStats(message);
+
 				if (type === 'status') {
 					if (message?.statusHistory) {
 						message.statusHistory.push(data);
@@ -1248,6 +1263,12 @@
 					}
 				} else if (type === 'chat:message:delta' || type === 'message') {
 					message.content += data.content;
+					if (!message.done) {
+						message.generationStats = recordGenerationDelta(
+							message.generationStats,
+							data.content ?? ''
+						);
+					}
 				} else if (type === 'chat:message' || type === 'replace') {
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
@@ -1388,6 +1409,8 @@
 				} else {
 					console.log('Unknown message type', data);
 				}
+
+				trackGenerationProgress(message);
 
 				history.messages[event.message_id] = message;
 			}
@@ -2727,7 +2750,45 @@
 		}
 	};
 
+	// Text reaches a response through three different socket paths (chat
+	// completions, the Responses API, and chat:message events), so every one of
+	// them funnels through these helpers to keep the live token/rate readout in
+	// step regardless of which event carried it.
+	type MeasuredMessage = {
+		content?: string;
+		output?: OutputItem[];
+		done?: boolean;
+		generationStats?: GenerationStats;
+	};
+
+	// Reasoning is streamed as its own output items and never reaches
+	// message.content, so measuring content alone misses every thinking token and
+	// leaves the rate window covering only the visible answer.
+	const getMeasuredText = (message: MeasuredMessage) =>
+		message.output?.length ? getGeneratedText(message.output) : (message.content ?? '');
+
+	const ensureGenerationStats = (message: MeasuredMessage) => {
+		if (!message.generationStats || (message.generationStats.completedAt && !message.done)) {
+			message.generationStats = createGenerationStats(Date.now(), getMeasuredText(message).length);
+		}
+	};
+
+	const trackGenerationProgress = (message: MeasuredMessage) => {
+		if (message?.done) {
+			// A finished response keeps the numbers it ended with.
+			return;
+		}
+
+		ensureGenerationStats(message);
+		message.generationStats = syncGenerationProgress(
+			message.generationStats,
+			getMeasuredText(message)
+		);
+	};
+
 	const responseCompletionEventHandler = (data, message) => {
+		ensureGenerationStats(message);
+
 		message.output = applyResponseStreamEvent(message.output ?? [], data);
 
 		if (data?.type === 'response.output_text.delta') {
@@ -2744,12 +2805,18 @@
 			message.content = getOutputText(message.output) || message.content;
 		}
 
+		trackGenerationProgress(message);
+
 		history.messages[message.id] = message;
 		history = history;
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+
+		// Runs before any content lands so a continued response baselines against
+		// the text already on the message instead of recounting it.
+		ensureGenerationStats(message);
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
@@ -2778,6 +2845,7 @@
 					console.log('Empty response');
 				} else {
 					message.content += value;
+					message.generationStats = recordGenerationDelta(message.generationStats, value);
 
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
@@ -2802,8 +2870,17 @@
 			message.arena = true;
 		}
 
+		// Covers the non-stream and output-replacement paths, which set the whole
+		// body instead of appending; a no-op when the delta above already counted it.
+		// Runs before the usage payload so the provider's numbers win.
+		message.generationStats = syncGenerationProgress(
+			message.generationStats,
+			getMeasuredText(message)
+		);
+
 		if (usage) {
 			message.usage = usage;
+			message.generationStats = applyGenerationUsage(message.generationStats, usage);
 		}
 
 		history.messages[message.id] = message;
@@ -2811,6 +2888,7 @@
 
 		if (done) {
 			message.done = true;
+			message.generationStats = completeGenerationStats(message.generationStats);
 			const visibleContent =
 				getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
 
@@ -2835,6 +2913,11 @@
 			);
 
 			history.messages[message.id] = message;
+
+			// The backend persists assistant messages from a fixed field whitelist,
+			// so the client-measured generation stats only survive a reload if we
+			// write them back ourselves. Fire-and-forget, like the handler below.
+			saveChatHandler(chatId, history);
 
 			await tick();
 			if (shouldAutoScrollResponse()) {
@@ -3247,6 +3330,7 @@
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: modelIdx ? modelIdx : _modelIdx,
+					generationStats: createGenerationStats(),
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
@@ -3759,6 +3843,10 @@
 			if (responseMessage) {
 				history.messages[history.currentId] = responseMessage;
 			}
+
+			// A stopped response never reaches the completion event, so its stats
+			// need saving here for the same reason.
+			saveChatHandler($chatId, history);
 
 			if (shouldAutoScrollResponse()) {
 				scrollToBottom();

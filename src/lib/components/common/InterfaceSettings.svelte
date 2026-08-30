@@ -71,6 +71,7 @@
 
 	let temporaryChatByDefault = false;
 	let chatFadeStreamingText = true;
+	let showGenerationStats = true;
 	let collapseCodeBlocks = false;
 	let renderMarkdownInUserMessages = true;
 	let renderMarkdownInAssistantMessages = true;
@@ -274,6 +275,7 @@
 
 		displayMultiModelResponsesInTabs = currentSettings?.displayMultiModelResponsesInTabs ?? false;
 		chatFadeStreamingText = currentSettings?.chatFadeStreamingText ?? true;
+		showGenerationStats = currentSettings?.showGenerationStats ?? true;
 
 		richTextInput = currentSettings?.richTextInput ?? true;
 		showFormattingToolbar = currentSettings?.showFormattingToolbar ?? false;
@@ -869,6 +871,29 @@
 		</div>
 		<p class={settingDescriptionClass}>
 			{$i18n.t('Fade streaming text as it arrives.')}
+		</p>
+	</div>
+
+	<div>
+		<div class={settingRowClass}>
+			<div id="generation-stats-label" class={settingLabelClass}>
+				{$i18n.t('Live Generation Stats')}
+			</div>
+
+			<div class={settingControlClass}>
+				<Switch
+					ariaLabelledbyId="generation-stats-label"
+					tooltip={true}
+					bind:state={showGenerationStats}
+					inherited={isDefaultSetting('showGenerationStats')}
+					on:change={() => {
+						saveSettings({ showGenerationStats });
+					}}
+				/>
+			</div>
+		</div>
+		<p class={settingDescriptionClass}>
+			{$i18n.t('Show token count, speed and elapsed time under each response.')}
 		</p>
 	</div>
 

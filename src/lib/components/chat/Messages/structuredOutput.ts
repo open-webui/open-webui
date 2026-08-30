@@ -236,9 +236,10 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 	};
 }
 
-function buildReasoningToken(item: OutputItem, isLastItem: boolean) {
+function buildReasoningToken(item: OutputItem, isLastItem: boolean, messageDone: boolean) {
 	const duration = item.duration ?? '';
-	const isDone = isDoneStatus(item.status) || item.duration !== undefined || !isLastItem;
+	const isDone =
+		messageDone || isDoneStatus(item.status) || item.duration !== undefined || !isLastItem;
 	const text = getReasoningText(item)
 		.split('\n')
 		.map((line) => (line.startsWith('>') ? line : `> ${line}`))
@@ -255,9 +256,10 @@ function buildReasoningToken(item: OutputItem, isLastItem: boolean) {
 	};
 }
 
-function buildCodeInterpreterToken(item: OutputItem, isLastItem: boolean) {
+function buildCodeInterpreterToken(item: OutputItem, isLastItem: boolean, messageDone: boolean) {
 	const duration = item.duration ?? '';
-	const isDone = isDoneStatus(item.status) || item.duration !== undefined || !isLastItem;
+	const isDone =
+		messageDone || isDoneStatus(item.status) || item.duration !== undefined || !isLastItem;
 	const code = item.code ?? '';
 	const lang = item.lang ?? 'python';
 
@@ -307,8 +309,8 @@ function getOpenAIToolSummary(item: OutputItem): string {
 	return '';
 }
 
-function buildOpenAIToolToken(item: OutputItem, isLastItem: boolean) {
-	const isDone = isDoneStatus(item.status) || !isLastItem;
+function buildOpenAIToolToken(item: OutputItem, isLastItem: boolean, messageDone: boolean) {
+	const isDone = messageDone || isDoneStatus(item.status) || !isLastItem;
 	return {
 		summary: isDone ? 'Tool Executed' : 'Executing...',
 		text: getOpenAIToolSummary(item),
@@ -325,24 +327,30 @@ function buildOpenAIToolToken(item: OutputItem, isLastItem: boolean) {
 function buildDetailToken(
 	item: OutputItem,
 	isLastItem: boolean,
-	toolOutputByCallId: Record<string, OutputItem>
+	toolOutputByCallId: Record<string, OutputItem>,
+	messageDone: boolean
 ): OutputDetailToken | null {
 	if (item.type === 'function_call') {
 		return buildToolCallToken(item, toolOutputByCallId);
 	}
 	if (item.type === 'reasoning') {
-		return buildReasoningToken(item, isLastItem);
+		return buildReasoningToken(item, isLastItem, messageDone);
 	}
 	if (item.type === 'open_webui:code_interpreter') {
-		return buildCodeInterpreterToken(item, isLastItem);
+		return buildCodeInterpreterToken(item, isLastItem, messageDone);
 	}
 	if (item.type && OPENAI_TOOL_NAMES[item.type]) {
-		return buildOpenAIToolToken(item, isLastItem);
+		return buildOpenAIToolToken(item, isLastItem, messageDone);
 	}
 	return null;
 }
 
-export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDisplayItem[] {
+export function buildOutputDisplayItems(
+	output: OutputItem[] = [],
+	// A finished message can have nothing still in progress, whatever the last
+	// item's status says.
+	messageDone = false
+): OutputDisplayItem[] {
 	const displayItems: OutputDisplayItem[] = [];
 	const currentDetailTokens: OutputDetailToken[] = [];
 	const toolOutputByCallId: Record<string, OutputItem> = {};
@@ -400,7 +408,12 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 		}
 
 		if (item.type && GROUPABLE_OUTPUT_TYPES.has(item.type)) {
-			const token = buildDetailToken(item, index === output.length - 1, toolOutputByCallId);
+			const token = buildDetailToken(
+				item,
+				index === output.length - 1,
+				toolOutputByCallId,
+				messageDone
+			);
 			if (token) {
 				currentDetailTokens.push(token);
 			}
@@ -443,6 +456,28 @@ export function getOutputText(output?: OutputItem[] | null): string {
 		.join('\n');
 }
 
+/**
+ * Every piece of text the model generated, reasoning included.
+ *
+ * getOutputText() deliberately returns only the visible message text, which is
+ * what belongs in message.content. This is for measuring how much the model
+ * actually produced, where reasoning tokens count just as much as the answer.
+ */
+export function getGeneratedText(output?: OutputItem[] | null): string {
+	return (output ?? [])
+		.map((item) => {
+			if (item?.type === 'message') {
+				return getMessageText(item);
+			}
+			if (item?.type === 'reasoning') {
+				return getReasoningText(item);
+			}
+			return '';
+		})
+		.filter((text) => text)
+		.join('\n');
+}
+
 function appendDelta(current: unknown, delta: unknown): unknown {
 	if (typeof current === 'string' || typeof delta === 'string') {
 		return `${current ?? ''}${delta ?? ''}`;
@@ -466,7 +501,8 @@ function ensureOutputItem(
 	fallback?: OutputItem
 ): OutputItem {
 	while (output.length <= outputIndex) {
-		// Only the addressed slot gets the event's item; filler slots must not reuse its id.
+		// Only the addressed slot gets the event's item;
+		// filler slots must not reuse its id
 		const item =
 			output.length === outputIndex && fallback
 				? { ...fallback }
