@@ -600,13 +600,20 @@
 	const MAX_WIDTH = 480;
 
 	let isResizing = false;
+	let activePointerId: number | null = null;
+	let activeResizer: HTMLElement | null = null;
 
 	let startWidth = 0;
 	let startClientX = 0;
 
-	const resizeStartHandler = (e: MouseEvent) => {
+	const resizeStartHandler = (e: PointerEvent) => {
 		if ($mobile) return;
+
+		e.preventDefault();
 		isResizing = true;
+		activePointerId = e.pointerId;
+		activeResizer = e.currentTarget as HTMLElement;
+		activeResizer.setPointerCapture?.(e.pointerId);
 
 		startClientX = e.clientX;
 		startWidth = $sidebarWidth ?? 245;
@@ -614,21 +621,35 @@
 		document.body.style.userSelect = 'none';
 	};
 
-	const resizeEndHandler = () => {
+	const resizeEndHandler = (e?: PointerEvent) => {
 		if (!isResizing) return;
+		if (e && activePointerId !== null && e.pointerId !== activePointerId) return;
+
 		isResizing = false;
+
+		if (activePointerId !== null && activeResizer?.hasPointerCapture?.(activePointerId)) {
+			activeResizer.releasePointerCapture(activePointerId);
+		}
+		activePointerId = null;
+		activeResizer = null;
 
 		document.body.style.userSelect = '';
 		localStorage.setItem('sidebarWidth', String($sidebarWidth));
 	};
 
-	const resizeSidebarHandler = (endClientX) => {
+	const resizeSidebarHandler = (endClientX: number) => {
 		const dx = endClientX - startClientX;
 		const newSidebarWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
 
 		sidebarWidth.set(newSidebarWidth);
 		document.documentElement.style.setProperty('--sidebar-width', `${newSidebarWidth}px`);
 	};
+
+	onDestroy(() => {
+		if (isResizing) {
+			document.body.style.userSelect = '';
+		}
+	});
 
 	onMount(async () => {
 		try {
@@ -861,13 +882,13 @@
 />
 
 <svelte:window
-	on:mousemove={(e) => {
+	on:pointermove={(e) => {
 		if (!isResizing) return;
+		if (activePointerId !== null && e.pointerId !== activePointerId) return;
 		resizeSidebarHandler(e.clientX);
 	}}
-	on:mouseup={() => {
-		resizeEndHandler();
-	}}
+	on:pointerup={resizeEndHandler}
+	on:pointercancel={resizeEndHandler}
 />
 
 <MobileSwipePanel
@@ -1728,12 +1749,13 @@
 			<div
 				class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20"
 				id="sidebar-resizer"
-				on:mousedown={resizeStartHandler}
+				on:pointerdown={resizeStartHandler}
 				role="separator"
 			>
 				<div
 					class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"
-				/>
+					style="touch-action: none;"
+				></div>
 			</div>
 		{/if}
 	{/if}
