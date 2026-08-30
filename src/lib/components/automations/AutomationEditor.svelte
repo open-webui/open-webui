@@ -109,6 +109,9 @@
 
 		const parts: Record<string, string> = {};
 		rrule
+			.split(/\s+/)
+			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
+			.join('')
 			.replace('RRULE:', '')
 			.split(';')
 			.forEach((part) => {
