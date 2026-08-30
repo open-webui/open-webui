@@ -8,7 +8,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse
-from open_webui.utils.automations import rrule_interval_seconds
+from open_webui.utils.calendar import event_rrule_interval_seconds
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import (
     JSON,
@@ -199,7 +199,7 @@ class CalendarEventForm(BaseModel):
     def reject_sub_daily_rrule(cls, value: Optional[str]) -> Optional[str]:
         if value:
             try:
-                interval = rrule_interval_seconds(value)
+                interval = event_rrule_interval_seconds(value)
             except ValueError:
                 raise
             except Exception as e:
@@ -229,7 +229,7 @@ class CalendarEventUpdateForm(BaseModel):
     def reject_sub_daily_rrule(cls, value: Optional[str]) -> Optional[str]:
         if value:
             try:
-                interval = rrule_interval_seconds(value)
+                interval = event_rrule_interval_seconds(value)
             except ValueError:
                 raise
             except Exception as e:

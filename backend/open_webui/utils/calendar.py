@@ -9,7 +9,7 @@ import logging
 from zoneinfo import ZoneInfo
 
 from dateutil.rrule import rrulestr
-from open_webui.utils.automations import _resolve_tz
+from open_webui.utils.automations import _resolve_tz, rrule_interval_seconds
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +75,12 @@ def expand_recurring_event(
             instances.append(instance)
 
     return instances
+
+
+def event_rrule_interval_seconds(rrule_str: str) -> int | None:
+    """Interval between occurrences as the calendar expands them, ignoring the rule's own DTSTART."""
+    rule_str = '\n'.join(line for line in rrule_str.splitlines() if not line.upper().startswith('DTSTART')) or rrule_str
+    return rrule_interval_seconds(rule_str)
 
 
 def ns_from_date(year: int, month: int, day: int, tz: str | None = None) -> int:

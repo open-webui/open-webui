@@ -178,7 +178,7 @@ def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
 
 
 def rrule_interval_seconds(s: str) -> Optional[int]:
-    """Approximate interval between recurrences in seconds, ignoring DTSTART.
+    """Approximate interval between recurrences in seconds.
 
     Returns None for one-shot (COUNT=1) schedules or rules
     with fewer than two future occurrences.
@@ -186,8 +186,7 @@ def rrule_interval_seconds(s: str) -> Optional[int]:
     if 'COUNT=1' in s:
         return None
     now = datetime.now()
-    stripped = '\n'.join(line for line in s.splitlines() if not line.upper().startswith('DTSTART')) or s
-    rule = _parse_rule(stripped, now)
+    rule = _parse_rule(s, now)
     first = rule.after(now)
     if first is None:
         return None
