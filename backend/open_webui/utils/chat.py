@@ -1,5 +1,4 @@
 import asyncio
-import copy
 import logging
 import random
 import sys
@@ -329,12 +328,10 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         raise Exception('Missing message id')
 
     model_id = data['model']
-    model = models.get(model_id)
-    if model is None:
+    if model_id not in models:
         raise Exception('Model not found')
-    # Filters may mutate __model__, and merged-dict values share nested state with the process-wide RedisDict snapshot.
-    if models is not request.app.state.MODELS and model_id != getattr(request.state, 'model', {}).get('id'):
-        model = request.app.state.MODELS.get(model_id) or copy.deepcopy(model)
+
+    model = models[model_id]
 
     try:
         data = await process_pipeline_outlet_filter(request, data, user, models)
