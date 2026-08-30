@@ -6,17 +6,17 @@ from open_webui.utils.json_codec import JSONCodec
 ASK_USER_NAME = 'ask_user'
 
 
-def get_ask_user_tool_call(tool_calls: list[dict]) -> tuple[dict | None, str | None]:
+def get_ask_user_tool_calls(tool_calls: list[dict]) -> tuple[list[dict], str | None]:
     ask_user_calls = [
         tool_call for tool_call in tool_calls if tool_call.get('function', {}).get('name') == ASK_USER_NAME
     ]
     if not ask_user_calls:
-        return None, None
-    if len(tool_calls) != 1:
-        return ask_user_calls[0], 'Error: ask_user must be called by itself after research.'
+        return [], None
     if len(ask_user_calls) != 1:
-        return ask_user_calls[0], 'Error: only one ask_user call is allowed per turn.'
-    return ask_user_calls[0], None
+        return ask_user_calls, 'Error: only one ask_user call is allowed per turn.'
+    if len(tool_calls) != 1:
+        return ask_user_calls, 'Error: ask_user must be called by itself after research.'
+    return ask_user_calls, None
 
 
 def normalize_ask_user_request(arguments: dict) -> dict:
@@ -77,68 +77,70 @@ def normalize_ask_user_request(arguments: dict) -> dict:
     }
 
 
-def stage_ask_user_tool_call(
+def stage_ask_user_tool_calls(
     tool_calls: list[dict],
     output: list[dict],
     make_output_id: Callable[[str], str],
-) -> dict | None:
-    tool_call, error = get_ask_user_tool_call(tool_calls)
-    if not tool_call:
-        return None
+) -> tuple[bool, str | None]:
+    ask_user_calls, error = get_ask_user_tool_calls(tool_calls)
+    if not ask_user_calls:
+        return False, None
 
-    call_id = tool_call.get('id') or make_output_id('fc')
-    raw_arguments = tool_call.get('function', {}).get('arguments', '{}')
-    arguments = raw_arguments
+    for tool_call in ask_user_calls:
+        call_id = tool_call.get('id') or make_output_id('fc')
+        raw_arguments = tool_call.get('function', {}).get('arguments', '{}')
+        arguments = raw_arguments
 
-    if not error:
-        try:
-            parsed_arguments = JSONCodec.loads(raw_arguments or '{}')
-            if not isinstance(parsed_arguments, dict):
-                raise ValueError('ask_user arguments must be an object.')
-            arguments = JSONCodec.dumps(normalize_ask_user_request(parsed_arguments))
-        except (JSONCodec.JSONDecodeError, TypeError, ValueError) as exc:
-            error = f'Error: {exc}'
+        if not error:
+            try:
+                parsed_arguments = JSONCodec.loads(raw_arguments or '{}')
+                if not isinstance(parsed_arguments, dict):
+                    raise ValueError('ask_user arguments must be an object.')
+                arguments = JSONCodec.dumps(normalize_ask_user_request(parsed_arguments))
+            except (JSONCodec.JSONDecodeError, TypeError, ValueError) as exc:
+                error = f'Error: {exc}'
 
-    item = {
-        'type': 'function_call',
-        'id': call_id or make_output_id('fc'),
-        'call_id': call_id,
-        'name': ASK_USER_NAME,
-        'arguments': arguments,
-        'status': 'completed' if error else 'pending',
-    }
+        item = {
+            'type': 'function_call',
+            'id': call_id,
+            'call_id': call_id,
+            'name': ASK_USER_NAME,
+            'arguments': arguments,
+            'status': 'completed' if error else 'pending',
+        }
 
-    existing_item = next(
-        (
-            existing
-            for existing in output
-            if existing.get('type') == 'function_call'
-            and (
-                existing.get('call_id') == call_id
-                or existing.get('id') == tool_call.get('id')
-                or (
-                    not existing.get('call_id')
-                    and existing.get('name') == ASK_USER_NAME
-                    and existing.get('status') not in {'rejected', 'failed'}
+        existing_item = next(
+            (
+                existing
+                for existing in output
+                if existing.get('type') == 'function_call'
+                and (
+                    existing.get('call_id') == call_id
+                    or existing.get('id') == tool_call.get('id')
+                    or (
+                        not existing.get('call_id')
+                        and existing.get('name') == ASK_USER_NAME
+                        and existing.get('status') not in {'rejected', 'failed'}
+                    )
                 )
-            )
-        ),
-        None,
-    )
-    if existing_item:
-        existing_item.update(item)
-    else:
-        output.append(item)
-
-    if error:
-        output.append(
-            {
-                'type': 'function_call_output',
-                'id': make_output_id('fco'),
-                'call_id': call_id,
-                'output': [{'type': 'input_text', 'text': error}],
-                'status': 'completed',
-            }
+            ),
+            None,
         )
+        if existing_item:
+            existing_item.update(item)
+        else:
+            output.append(item)
 
-    return {'call_id': call_id, 'error': error, 'item': item}
+        # Every invalid call needs its own result, or the UI waits on it forever.
+        if error:
+            output.append(
+                {
+                    'type': 'function_call_output',
+                    'id': make_output_id('fco'),
+                    'call_id': call_id,
+                    'output': [{'type': 'input_text', 'text': error}],
+                    'status': 'completed',
+                }
+            )
+
+    return True, error
