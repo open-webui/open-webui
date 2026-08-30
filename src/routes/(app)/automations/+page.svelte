@@ -306,7 +306,7 @@
 	};
 
 	const formatRRule = (rrule: string): string => {
-		const match = rrule.match(/DTSTART(?:;[^:]*)?:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
+		const match = rrule.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 		// Detect one-time schedule (ONCE)
 		if (/COUNT=1(?!\d)/.test(rrule)) {
 			if (match) {

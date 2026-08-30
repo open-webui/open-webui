@@ -95,7 +95,7 @@
 	};
 
 	const formatSchedule = (rrule: string): string => {
-		const match = rrule.match(/DTSTART(?:;[^:]*)?:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
+		const match = rrule.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 		if (/COUNT=1(?!\d)/.test(rrule)) {
 			if (match) {
 				const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`);
