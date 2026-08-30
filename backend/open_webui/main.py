@@ -587,7 +587,7 @@ app.state.SCIM_TOKEN = SCIM_TOKEN
 ########################################
 
 app.state.BASE_MODELS = []
-app.state.BASE_MODELS_EPOCH = None
+app.state.BASE_MODELS_EPOCH = ''
 
 ########################################
 #

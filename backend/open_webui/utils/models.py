@@ -72,25 +72,26 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         'evaluation.arena.models',
         'models.default_metadata',
     )
-    # A changed epoch means another instance edited a provider, so our cached models are stale.
     cache_epoch = config.get('models.base_models_cache_epoch')
-    stale = request.app.state.BASE_MODELS_EPOCH != cache_epoch
+    if request.app.state.BASE_MODELS_EPOCH != cache_epoch:
+        # Another instance changed a provider connection, so our cached models are outdated.
+        refresh = True
 
-    if refresh or stale:
+    if refresh:
         await openai.get_all_models.cache.clear()
         await ollama.get_all_models.cache.clear()
 
     if (
         request.app.state.MODELS
         and request.app.state.BASE_MODELS
-        and (config.get('models.base_models_cache') and not (refresh or stale))
+        and (config.get('models.base_models_cache') and not refresh)
     ):
         base_models = request.app.state.BASE_MODELS
     else:
         base_models = await get_all_base_models(request, user=user)
-        request.app.state.BASE_MODELS_EPOCH = cache_epoch
         if base_models:
             request.app.state.BASE_MODELS = base_models
+            request.app.state.BASE_MODELS_EPOCH = cache_epoch
         else:
             base_models = request.app.state.BASE_MODELS
 

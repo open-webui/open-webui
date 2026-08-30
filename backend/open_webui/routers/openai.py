@@ -345,7 +345,6 @@ async def get_openai_connection(idx: int) -> tuple[str, str, dict]:
 
 
 async def clear_openai_model_cache(request: Request):
-    await Config.upsert({'models.base_models_cache_epoch': str(uuid4())})
     await get_all_models.cache.clear()
     request.app.state.BASE_MODELS = []
     request.app.state.OPENAI_MODELS = {}
@@ -570,10 +569,18 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
             'openai.api_base_urls': form_data.OPENAI_API_BASE_URLS,
             'openai.api_keys': api_keys,
             'openai.api_configs': api_configs,
+            'models.base_models_cache_epoch': str(uuid4()),
         }
     )
 
-    await clear_openai_model_cache(request)
+    await get_all_models.cache.clear()
+    request.app.state.BASE_MODELS = []
+    request.app.state.OPENAI_MODELS = {}
+    models = getattr(request.app.state, 'MODELS', None)
+    if hasattr(models, 'clear'):
+        models.clear()
+    else:
+        request.app.state.MODELS = {}
 
     await publish_event(
         request,
