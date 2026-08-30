@@ -3389,31 +3389,30 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
             )
             form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
 
-            if not paused:
-                filtered_form_data, _ = await process_filter_functions(
-                    request=request,
-                    filter_context=None,
-                    filter_functions=await get_filter_functions(request, model, metadata.get('filter_ids', [])),
-                    filter_type='inlet',
-                    form_data=form_data,
-                    extra_params={
-                        '__event_emitter__': event_emitter,
-                        '__event_call__': event_caller,
-                        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
-                        '__metadata__': metadata,
-                        '__oauth_token__': await get_system_oauth_token(request, user),
-                        '__request__': request,
-                        '__model__': model,
-                        '__chat_id__': chat_id,
-                        '__message_id__': message_id,
-                    },
-                    tool_turns=True,
-                )
-                # The caller holds its own reference, so a filter that returned a new
-                # body has to be swapped in rather than rebound.
-                if filtered_form_data is not form_data:
-                    form_data.clear()
-                    form_data.update(filtered_form_data)
+        if not paused:
+            filtered_form_data, _ = await process_filter_functions(
+                request=request,
+                filter_context=None,
+                filter_functions=(
+                    await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_PLUGINS else []
+                ),
+                filter_type='inlet',
+                form_data=dict(form_data),
+                extra_params={
+                    '__event_emitter__': event_emitter,
+                    '__event_call__': event_caller,
+                    '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+                    '__metadata__': metadata,
+                    '__oauth_token__': await get_system_oauth_token(request, user),
+                    '__request__': request,
+                    '__model__': model,
+                    '__chat_id__': chat_id,
+                    '__message_id__': message_id,
+                },
+                tool_call_continuation=True,
+            )
+            form_data.clear()
+            form_data.update(filtered_form_data)
 
         return paused
 
@@ -4223,8 +4222,6 @@ async def streaming_chat_response_handler(response, ctx):
         '__oauth_token__': await get_system_oauth_token(request, user),
         '__request__': request,
         '__model__': model,
-        '__chat_id__': metadata.get('chat_id'),
-        '__message_id__': metadata.get('message_id'),
     }
 
     filter_functions = (
@@ -4245,15 +4242,19 @@ async def streaming_chat_response_handler(response, ctx):
             tag_boundary_positions = {}
             response_stream_task_id = metadata.get('task_id') or metadata.get('message_id')
 
-            async def apply_tool_turn_inlet(new_form_data):
+            async def apply_continuation_inlet(new_form_data):
                 new_form_data, _ = await process_filter_functions(
                     request=request,
                     filter_context=filter_context,
                     filter_functions=filter_functions,
                     filter_type='inlet',
                     form_data=new_form_data,
-                    extra_params=extra_params,
-                    tool_turns=True,
+                    extra_params={
+                        **extra_params,
+                        '__chat_id__': metadata.get('chat_id'),
+                        '__message_id__': metadata.get('message_id'),
+                    },
+                    tool_call_continuation=True,
                 )
                 return new_form_data
 
@@ -5979,7 +5980,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     }
                                 )
 
-                        new_form_data = await apply_tool_turn_inlet(new_form_data)
+                        new_form_data = await apply_continuation_inlet(new_form_data)
 
                         res = await generate_chat_completion(
                             request,
@@ -6189,7 +6190,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 ],
                             }
 
-                            new_form_data = await apply_tool_turn_inlet(new_form_data)
+                            new_form_data = await apply_continuation_inlet(new_form_data)
 
                             res = await generate_chat_completion(
                                 request,
