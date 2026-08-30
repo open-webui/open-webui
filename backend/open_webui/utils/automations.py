@@ -89,7 +89,7 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     rule = rules[0]
     start = rule._dtstart.replace(tzinfo=None)
     anchor = now or datetime.now()
-    lines = s.splitlines()
+    lines = s.split()
     stripped = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
     has_dtstart = any(line.upper().startswith('DTSTART') for line in lines)
     step = {
