@@ -1215,7 +1215,6 @@
 	"Failed to load usage": "",
 	"Failed to move chat": "",
 	"Failed to process URL: {{url}}": "",
-	"Failed to read {{failed}} of {{total}} files. Nothing was uploaded. First failure: {{file}}": "",
 	"Failed to read clipboard contents": "",
 	"Failed to refresh terminals: {{error}}": "",
 	"Failed to remove member": "",

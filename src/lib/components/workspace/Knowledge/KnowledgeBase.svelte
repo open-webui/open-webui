@@ -513,7 +513,6 @@
 			if (isFileSystemAccessSupported) {
 				const dirHandle = await window.showDirectoryPicker();
 				const collected: DirectoryFileEntry[] = [];
-				const unreadable: string[] = [];
 
 				async function traverse(handle: FileSystemDirectoryHandle, dirPath = '') {
 					for await (const entry of handle.values()) {
@@ -522,14 +521,8 @@
 						if (hasHiddenFolder(entryPath)) continue;
 
 						if (entry.kind === 'file') {
-							// The browser can refuse to open a file it just listed, e.g. a path too long for Windows.
-							try {
-								const file = await entry.getFile();
-								collected.push({ path: dirPath, filename: entry.name, file });
-							} catch (error) {
-								console.error('Failed to read file:', entryPath, error);
-								unreadable.push(entryPath);
-							}
+							const file = await entry.getFile();
+							collected.push({ path: dirPath, filename: entry.name, file });
 						} else if (entry.kind === 'directory') {
 							await traverse(entry, entryPath);
 						}
@@ -537,26 +530,10 @@
 				}
 
 				await traverse(dirHandle, dirHandle.name);
-
-				// The sync caller deletes knowledge base files that are missing from the manifest.
-				if (unreadable.length > 0) {
-					toast.error(
-						$i18n.t(
-							'Failed to read {{failed}} of {{total}} files. Nothing was uploaded. First failure: {{file}}',
-							{
-								failed: unreadable.length,
-								total: collected.length + unreadable.length,
-								file: unreadable[0]
-							}
-						)
-					);
-					return null;
-				}
-
 				return collected;
 			} else {
 				// Firefox fallback
-				return await new Promise((resolve, reject) => {
+				return new Promise((resolve, reject) => {
 					const input = document.createElement('input');
 					input.type = 'file';
 					input.webkitdirectory = true;
