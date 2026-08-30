@@ -173,6 +173,7 @@ li p {
 }
 
 select {
+	color-scheme: light;
 	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 	background-position: right 0rem center;
 	background-repeat: no-repeat;
@@ -184,6 +185,10 @@ select {
 	-moz-appearance: none;
 	/* for Chrome */
 	-webkit-appearance: none;
+}
+
+.dark select {
+	color-scheme: dark;
 }
 
 .dark select:not([class*='bg-transparent']) {
