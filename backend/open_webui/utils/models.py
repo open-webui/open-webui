@@ -374,6 +374,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             for filter_id in set(model.pop('filter_ids', [])) | global_filter_ids
             if filter_id in enabled_filter_ids
         ]
+        # Set order varies per process, and an unstable order defeats the RedisDict content signature.
+        filter_ids.sort()
 
         model['actions'] = []
         for action_id in action_ids:
