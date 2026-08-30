@@ -5538,7 +5538,6 @@ async def streaming_chat_response_handler(response, ctx):
                     response_tool_calls = tool_calls.pop(0)
                     ask_user_staged, ask_user_error = stage_ask_user_tool_calls(response_tool_calls, output, output_id)
                     if ask_user_error:
-                        # Errors are already staged as results, so drop the calls and let the model see them.
                         response_tool_calls = [
                             tool_call
                             for tool_call in response_tool_calls

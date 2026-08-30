@@ -12,10 +12,10 @@ def get_ask_user_tool_calls(tool_calls: list[dict]) -> tuple[list[dict], str | N
     ]
     if not ask_user_calls:
         return [], None
-    if len(ask_user_calls) != 1:
-        return ask_user_calls, 'Error: only one ask_user call is allowed per turn.'
     if len(tool_calls) != 1:
         return ask_user_calls, 'Error: ask_user must be called by itself after research.'
+    if len(ask_user_calls) != 1:
+        return ask_user_calls, 'Error: only one ask_user call is allowed per turn.'
     return ask_user_calls, None
 
 
@@ -102,7 +102,7 @@ def stage_ask_user_tool_calls(
 
         item = {
             'type': 'function_call',
-            'id': call_id,
+            'id': call_id or make_output_id('fc'),
             'call_id': call_id,
             'name': ASK_USER_NAME,
             'arguments': arguments,
