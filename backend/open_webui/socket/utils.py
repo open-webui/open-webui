@@ -11,6 +11,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.redis import get_redis_connection
 
 YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
+SCAN_BATCH_SIZE = 200
 
 
 class RedisLock:
@@ -108,13 +109,13 @@ class RedisDict:
         """Yield lists of (key, value) pairs via incremental HSCAN; a field may repeat across batches."""
         cursor = 0
         while True:
-            cursor, batch = self.redis.hscan(self.name, cursor, count=200)
+            cursor, batch = self.redis.hscan(self.name, cursor, count=SCAN_BATCH_SIZE)
             if batch:
                 yield [(k, JSONCodec.loads(v)) for k, v in batch.items()]
             if cursor == 0:
                 break
 
-    def discard(self, *keys):
+    def pop_many(self, *keys):
         """Delete fields in one HDEL; no keys is a no-op (HDEL rejects an empty field list)."""
         if keys:
             self.redis.hdel(self.name, *keys)
@@ -152,7 +153,8 @@ class RedisDict:
         # We never DELETE the whole hash — this eliminates the race window
         # where concurrent readers would see an empty models dict.
         self.redis.hset(self.name, mapping=serialized)
-        self.discard(*keys_to_remove)
+        if keys_to_remove:
+            self.redis.hdel(self.name, *keys_to_remove)
 
         self._last_signature = signature
 
