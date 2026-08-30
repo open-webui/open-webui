@@ -95,8 +95,8 @@
 	};
 
 	const formatSchedule = (rrule: string): string => {
+		const match = rrule.match(/DTSTART(?:;[^:]*)?:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 		if (/COUNT=1(?!\d)/.test(rrule)) {
-			const match = rrule.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
 			if (match) {
 				const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`);
 				return `${$i18n.t('Once')} · ${d.toLocaleDateString(undefined, {
@@ -120,9 +120,8 @@
 			});
 
 		const freq = parts.FREQ || '';
-		const dtstart = rrule.match(/DTSTART:\d{8}T(\d{2})(\d{2})/);
-		const hour = parseInt(parts.BYHOUR || dtstart?.[1] || '0');
-		const minute = (parts.BYMINUTE || dtstart?.[2] || '0').padStart(2, '0');
+		const hour = parseInt(parts.BYHOUR || match?.[4] || '0');
+		const minute = (parts.BYMINUTE || match?.[5] || '0').padStart(2, '0');
 		const interval = parseInt(parts.INTERVAL || '1');
 		const ampm = hour >= 12 ? 'PM' : 'AM';
 		const hour12 = hour % 12 || 12;
