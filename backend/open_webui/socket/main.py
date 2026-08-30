@@ -5,6 +5,7 @@ import logging
 import random
 import sys
 import time
+from contextlib import suppress
 
 import pycrdt as Y
 import socketio
@@ -40,13 +41,14 @@ from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.json_codec import SOCKETIO_JSON
+from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
     get_sentinels_from_env,
 )
+from redis.asyncio.client import PubSub
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -173,6 +175,11 @@ YDOC_MANAGER = YdocManager(
     redis=REDIS,
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
+
+REDIS_DIRECT_COMPLETION_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
+
+# Per-request queues for direct completion chunks, relayed from other workers via Redis pub/sub.
+DIRECT_COMPLETION_CHANNELS: dict[str, tuple[asyncio.Queue, PubSub | None, asyncio.Task | None]] = {}
 
 
 async def periodic_session_pool_cleanup():
@@ -924,6 +931,61 @@ async def disconnect(sid, reason=None):
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")
+
+
+async def open_direct_completion_channel(channel: str) -> asyncio.Queue:
+    """Open the queue receiving the client's chunk emits for one direct completion."""
+    queue = asyncio.Queue()
+    pubsub = None
+    listener_task = None
+
+    if REDIS is not None:
+        # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+        await REDIS.initialize()
+
+        pubsub = REDIS.pubsub()
+        await pubsub.subscribe(f'{REDIS_DIRECT_COMPLETION_CHANNEL}:{channel}')
+
+        async def relay_listener():
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                try:
+                    await queue.put(JSONCodec.loads(message['data']))
+                except Exception as e:
+                    log.exception(f'Error relaying direct completion chunk: {e}')
+
+        listener_task = asyncio.create_task(relay_listener())
+
+    DIRECT_COMPLETION_CHANNELS[channel] = (queue, pubsub, listener_task)
+    return queue
+
+
+async def close_direct_completion_channel(channel: str) -> None:
+    _, pubsub, listener_task = DIRECT_COMPLETION_CHANNELS.pop(channel, (None, None, None))
+    if listener_task is not None:
+        listener_task.cancel()
+        with suppress(asyncio.CancelledError, Exception):
+            await listener_task
+    if pubsub is not None:
+        with suppress(Exception):
+            await pubsub.aclose()
+
+
+@sio.on('*')
+async def relay_direct_completion_event(event, sid, *args):
+    if event.count(':') != 2 or not args:
+        return
+
+    entry = DIRECT_COMPLETION_CHANNELS.get(event)
+    if entry is not None:
+        queue, _, _ = entry
+        await queue.put(args[0])
+    elif REDIS is not None:
+        # The first channel segment is the user id; relay only chunks a session emits for its own user.
+        session = SESSION_POOL.get(sid)
+        if session and session.get('id') == event.split(':', 1)[0]:
+            await REDIS.publish(f'{REDIS_DIRECT_COMPLETION_CHANNEL}:{event}', JSONCodec.dumps(args[0]))
 
 
 async def _make_channel_emitter(request_info):

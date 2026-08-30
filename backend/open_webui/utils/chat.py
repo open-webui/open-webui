@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import random
 import sys
@@ -23,9 +22,10 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.socket.main import (
+    close_direct_completion_channel,
     get_event_call,
     get_event_emitter,
-    sio,
+    open_direct_completion_channel,
 )
 from open_webui.utils.filter import (
     get_filter_functions,
@@ -71,64 +71,54 @@ async def generate_direct_chat_completion(
     logging.info('WebSocket channel: %s', channel)
 
     if form_data.get('stream'):
-        q = asyncio.Queue()
-
-        async def message_listener(sid, data):
-            """
-            Handle received socket messages and push them into the queue.
-            """
-            await q.put(data)
-
-        # Register the listener
-        sio.on(channel, message_listener)
+        queue = await open_direct_completion_channel(channel)
 
         # Start processing chat completion in background
-        res = await event_caller(
-            {
-                'type': 'request:chat:completion',
-                'data': {
-                    'form_data': form_data,
-                    'model': models[form_data['model']],
-                    'channel': channel,
-                    'session_id': session_id,
-                },
-            }
-        )
+        try:
+            res = await event_caller(
+                {
+                    'type': 'request:chat:completion',
+                    'data': {
+                        'form_data': form_data,
+                        'model': models[form_data['model']],
+                        'channel': channel,
+                        'session_id': session_id,
+                    },
+                }
+            )
 
-        log.info('res: %s', res)
+            log.info('res: %s', res)
 
-        if res.get('status', False):
-            # Define a generator to stream responses
-            async def event_generator():
-                nonlocal q
-                try:
-                    while True:
-                        data = await q.get()  # Wait for new messages
-                        if isinstance(data, dict):
-                            if 'done' in data and data['done']:
-                                break  # Stop streaming when 'done' is received
+            if not res.get('status', False):
+                raise Exception(str(res))
+        except BaseException:
+            await close_direct_completion_channel(channel)
+            raise
 
-                            yield f'data: {JSONCodec.dumps(data)}\n\n'
-                        elif isinstance(data, str):
-                            if 'data:' in data:
-                                yield f'{data}\n\n'
-                            else:
-                                yield f'data: {data}\n\n'
-                except Exception as e:
-                    log.debug('Error in event generator: %s', e)
-                    pass
+        # Define a generator to stream responses
+        async def event_generator():
+            try:
+                while True:
+                    data = await queue.get()  # Wait for new messages
+                    if isinstance(data, dict):
+                        if 'done' in data and data['done']:
+                            break  # Stop streaming when 'done' is received
 
-            # Define a background task to run the event generator
-            async def background():
-                try:
-                    del sio.handlers['/'][channel]
-                except Exception as e:
-                    pass
+                        yield f'data: {JSONCodec.dumps(data)}\n\n'
+                    elif isinstance(data, str):
+                        if 'data:' in data:
+                            yield f'{data}\n\n'
+                        else:
+                            yield f'data: {data}\n\n'
+            except Exception as e:
+                log.debug('Error in event generator: %s', e)
+                pass
+            finally:
+                # Not in a response background task: those are skipped on cancellation.
+                await close_direct_completion_channel(channel)
 
-            # Return the streaming response
-            return StreamingResponse(event_generator(), media_type='text/event-stream', background=background)
-        else:
-            raise Exception(str(res))
+        # Return the streaming response
+        return StreamingResponse(event_generator(), media_type='text/event-stream')
     else:
         res = await event_caller(
             {
