@@ -75,7 +75,6 @@
 								return null;
 							});
 							localStorage.removeItem('token');
-							// Must be set after userSignOut(), which clears sessionStorage.
 							sessionStorage.setItem('signedOut', 'true');
 							location.href = res?.redirect_url ?? '/auth';
 						}}>{$i18n.t('Sign Out')}</button
