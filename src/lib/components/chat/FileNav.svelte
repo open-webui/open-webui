@@ -889,7 +889,6 @@
 						if (!result) throw new Error('Preview failed');
 						const arrayBuffer = await result.blob.arrayBuffer();
 						fileDocxData = arrayBuffer;
-						toast.info($i18n.t('Preview may differ from download.'));
 					}
 				} else if (ext === 'xlsx') {
 					const result = await downloadFileBlob(
@@ -934,7 +933,6 @@
 						const fallback = await pptxToImages(arrayBuffer);
 						fileOfficeSlides = fallback.images;
 						currentSlide = 0;
-						toast.info($i18n.t('Preview may differ from download.'));
 					}
 				}
 			} catch (e) {
