@@ -539,6 +539,9 @@ async def get_channel_members_by_id(
         if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
+    if user.role != 'admin' and order_by and order_by.startswith('group_id:'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
     if channel.type == 'dm':
         user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
         fetched_users = await Users.get_users_by_user_ids(user_ids, db=db)

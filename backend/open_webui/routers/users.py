@@ -159,6 +159,12 @@ async def search_users(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if user.role != 'admin' and order_by and order_by.startswith('group_id:'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     limit = PAGE_ITEM_COUNT
 
     page = max(1, page)
