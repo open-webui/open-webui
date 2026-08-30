@@ -46,9 +46,32 @@
 	let lastVisualFrequency = 'DAILY';
 	let prevFrequency = 'DAILY';
 
-	// carried through untouched: the dropdown has no field for either
-	let count: string = '';
-	let dtstartLine: string = '';
+	let count = '';
+	let until = '';
+	let dtstartLine = '';
+
+	const PERIOD_MS: Record<string, number> = {
+		HOURLY: 3_600_000,
+		DAILY: 86_400_000,
+		WEEKLY: 604_800_000,
+		MONTHLY: 2_419_200_000
+	};
+
+	const stampMs = (stamp: string): number => {
+		const match = stamp.match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+		return match
+			? new Date(+match[1], +match[2] - 1, +match[3], +match[4], +match[5]).getTime()
+			: NaN;
+	};
+
+	// periods are the shortest a run can be spaced by, so a bound survives only when it definitely has a run left
+	const carriedBound = (freq: string): string => {
+		const step = interval * PERIOD_MS[freq];
+		if (until) return stampMs(until) - step > Date.now() ? `UNTIL=${until}` : '';
+		const runsPerPeriod = freq === 'WEEKLY' && selectedDays.length ? selectedDays.length : 1;
+		const lastRun = stampMs(dtstartLine) + Math.floor((+count - 1) / runsPerPeriod) * step;
+		return count && lastRun > Date.now() ? `COUNT=${count}` : '';
+	};
 
 	$: if (frequency !== 'CUSTOM') {
 		lastVisualFrequency = frequency;
@@ -72,9 +95,10 @@
 			const dt = onceDate.replace(/-/g, '') + 'T' + onceTime.replace(/:/g, '') + '00';
 			return `DTSTART:${dt}\nRRULE:FREQ=DAILY;COUNT=1`;
 		}
+		const bound = carriedBound(lastVisualFrequency);
 		let parts = [`FREQ=${lastVisualFrequency}`];
 		if (interval > 1) parts.push(`INTERVAL=${interval}`);
-		if (count) parts.push(`COUNT=${count}`);
+		if (bound) parts.push(bound);
 		if (lastVisualFrequency === 'WEEKLY' && selectedDays.length) {
 			parts.push(`BYDAY=${selectedDays.join(',')}`);
 		}
@@ -86,7 +110,7 @@
 		}
 		parts.push(`BYMINUTE=${minute}`);
 		const rule = `RRULE:${parts.join(';')}`;
-		return dtstartLine ? `${dtstartLine}\n${rule}` : rule;
+		return count && bound ? `${dtstartLine}\n${rule}` : rule;
 	};
 
 	export const buildRrule = (): string => {
@@ -95,9 +119,10 @@
 			const dt = onceDate.replace(/-/g, '') + 'T' + onceTime.replace(/:/g, '') + '00';
 			return `DTSTART:${dt}\nRRULE:FREQ=DAILY;COUNT=1`;
 		}
+		const bound = carriedBound(frequency);
 		let parts = [`FREQ=${frequency}`];
 		if (interval > 1) parts.push(`INTERVAL=${interval}`);
-		if (count) parts.push(`COUNT=${count}`);
+		if (bound) parts.push(bound);
 		if (frequency === 'WEEKLY' && selectedDays.length) {
 			parts.push(`BYDAY=${selectedDays.join(',')}`);
 		}
@@ -109,10 +134,13 @@
 		}
 		parts.push(`BYMINUTE=${minute}`);
 		const rule = `RRULE:${parts.join(';')}`;
-		return dtstartLine ? `${dtstartLine}\n${rule}` : rule;
+		return count && bound ? `${dtstartLine}\n${rule}` : rule;
 	};
 
 	export const parseRrule = (s: string) => {
+		count = '';
+		until = '';
+		dtstartLine = '';
 		// Detect ONCE (COUNT=1 with DTSTART)
 		if (/COUNT=1(?!\d)/.test(s)) {
 			frequency = 'ONCE';
@@ -146,6 +174,7 @@
 		selectedDays = parts.BYDAY ? parts.BYDAY.split(',') : [];
 		monthDay = parseInt(parts.BYMONTHDAY || '1');
 		count = parts.COUNT || '';
+		until = parts.UNTIL || '';
 		dtstartLine = s.split(/\s+/).find((line) => line.toUpperCase().startsWith('DTSTART')) || '';
 	};
 
