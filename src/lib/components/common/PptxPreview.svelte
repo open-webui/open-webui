@@ -121,6 +121,10 @@
 		}
 	};
 
+	const focusPreview = () => {
+		if (!rootEl?.contains(document.activeElement)) rootEl?.focus();
+	};
+
 	const zoomIn = () => {
 		if (!pzInstance || !stageEl) return;
 		pzInstance.zoomTo(stageEl.clientWidth / 2, stageEl.clientHeight / 2, 1.25);
@@ -227,14 +231,15 @@
 	});
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
-
-<div
-	bind:this={rootEl}
-	class="relative grid {hideThumbs
-		? 'grid-cols-[minmax(0,1fr)]'
-		: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
->
+	<div
+		bind:this={rootEl}
+		tabindex="0"
+		on:keydown={handleKeyDown}
+		on:pointerdown={focusPreview}
+		class="relative grid {hideThumbs
+			? 'grid-cols-[minmax(0,1fr)]'
+			: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
+	>
 	<aside
 		class={hideThumbs
 			? 'hidden'

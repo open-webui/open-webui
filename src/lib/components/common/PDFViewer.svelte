@@ -386,6 +386,10 @@
 		void selectPage(selectedPage + (e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 1));
 	};
 
+	const focusViewer = () => {
+		if (!outerContainer?.contains(document.activeElement)) outerContainer?.focus();
+	};
+
 	const loadPdf = async () => {
 		if (!url && !data) return;
 
@@ -462,9 +466,7 @@
 	});
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
-
-<div class="relative {className}">
+	<div class="relative {className}">
 	{#if loading}
 		<div class="absolute inset-0 flex items-center justify-center">
 			<Spinner className="size-5" />
@@ -475,14 +477,17 @@
 		</div>
 	{/if}
 
-	<div
-		class={singlePage
-			? 'overflow-hidden h-full flex items-center justify-center overscroll-contain'
-			: 'overflow-y-auto h-full'}
-		bind:this={outerContainer}
-		on:scroll={handleScroll}
-		on:wheel|nonpassive={handleWheel}
-	>
+		<div
+			class={singlePage
+				? 'overflow-hidden h-full flex items-center justify-center overscroll-contain'
+				: 'overflow-y-auto h-full'}
+			bind:this={outerContainer}
+			tabindex="0"
+			on:scroll={handleScroll}
+			on:wheel|nonpassive={handleWheel}
+			on:pointerdown={focusViewer}
+			on:keydown={handleKeyDown}
+		>
 		<div bind:this={sceneElement} class={singlePage ? '' : 'w-full'}></div>
 	</div>
 
