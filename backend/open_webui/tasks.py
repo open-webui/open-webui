@@ -23,7 +23,6 @@ response_streams: dict[str, dict] = {}
 REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
 REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
-# lane before id: a client-supplied id must not collide with another stream's key
 REDIS_RESPONSE_STREAM_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:tasks:response_stream'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
 REDIS_PUBSUB_RECONNECT_INTERVAL = 1.0
@@ -31,22 +30,16 @@ REDIS_PUBSUB_MAX_RECONNECT_INTERVAL = 30.0
 
 RESPONSE_STREAM_EXPIRE_SECONDS = REDIS_RESPONSE_STREAM_TTL if REDIS_RESPONSE_STREAM_TTL > 0 else None
 
-# TTL refresh cadence; also bounds how long an evicted ledger key goes unnoticed
 RESPONSE_STREAM_EXPIRE_REFRESH_SECONDS = (
     min(10, RESPONSE_STREAM_EXPIRE_SECONDS / 2) if RESPONSE_STREAM_EXPIRE_SECONDS else 10
 )
 
-# Append growth outside the journaled leaf is rewritten in batches of at least this size
 RESPONSE_STREAM_DRIFT_REWRITE_CHARS = 4096
 
-# Per-process incremental-writer state for in-flight response streams, keyed by task id
 _stream_states: dict[str, dict] = {}
 
-# Sentinel distinguishing "structures differ" from "no difference" in _grown_leaves
 _DIFFERS = object()
 
-# Marks a slot whose field does not exist in the hash yet; None is not usable
-# as the marker because output items themselves may legally be None
 _UNWRITTEN = object()
 
 
@@ -67,20 +60,18 @@ def _queue_stream_key_deletes(pipe, task_id: str):
     pipe.delete(_ledger_key(task_id))
     pipe.delete(_content_key(task_id))
     pipe.delete(_journal_key(task_id))
-    # previous-release writers still use the global hash; drop with the next release
     pipe.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
 
 
 def _new_stream_state() -> dict:
     return {
-        'slots': [],  # one slot per output item
+        'slots': [],
         'next_field': 0,
-        'saved_order': None,  # fkey list as last written into the meta field
-        'saved_journal': None,  # [fkey, leaf path, nonce] of the active journal
-        'journal_bytes': 0,  # server-side byte length of the journal value
+        'saved_order': None,
+        'saved_journal': None,
+        'journal_bytes': 0,
         'content': '',
-        'content_bytes': 0,  # server-side byte length of the content value
-        # keys are armed at creation, so the first probe is due one refresh later
+        'content_bytes': 0,
         'expire_after': time.monotonic() + RESPONSE_STREAM_EXPIRE_REFRESH_SECONDS,
     }
 
@@ -172,7 +163,9 @@ async def cleanup_task(redis, task_id: str, id=None):
     """
     Remove a completed or canceled task from the global `tasks` dictionary.
     """
-    # local state first: it must go even when Redis is unreachable
+    if redis:
+        await redis_cleanup_task(redis, task_id, id)
+
     tasks.pop(task_id, None)  # Remove the task if it exists
     response_streams.pop(task_id, None)
     _stream_states.pop(task_id, None)
@@ -182,9 +175,6 @@ async def cleanup_task(redis, task_id: str, id=None):
         item_tasks[id].remove(task_id)
         if not item_tasks[id]:  # If no tasks left for this ID, remove the entry
             item_tasks.pop(id, None)
-
-    if redis:
-        await redis_cleanup_task(redis, task_id, id)
 
 
 async def create_task(redis, coroutine, id=None, task_id=None):
@@ -229,14 +219,11 @@ async def list_task_ids_by_item_id(redis, id):
 
 
 def _rewrite_budget(item_json_chars: int) -> int:
-    # scales with the item's serialized size so batch rewrites amortize to O(new content)
     return max(RESPONSE_STREAM_DRIFT_REWRITE_CHARS, item_json_chars // 4)
 
 
 def _grown_leaves(previous, current, path=()):  # noqa: C901
-    """Compare two JSON structures; return None when identical, a list of
-    (path, grown chars) when every difference is a string leaf growing by
-    appending, _DIFFERS otherwise."""
+    """None when identical, [(path, grown chars)] when every difference is an appending string leaf, else _DIFFERS."""
     if isinstance(previous, str) and isinstance(current, str):
         if previous == current:
             return None
@@ -285,16 +272,12 @@ def _total_growth(grown, skip=None):
 
 
 def _item_id(item):
-    # output is user-editable via the chats API: items may not be dicts, ids may not be str
     item_id = item.get('id') if isinstance(item, dict) else None
     return item_id if isinstance(item_id, str) else None
 
 
 def _choose_journal_slot(slots, diffs, appendable, journal_ref):
-    """The journal follows growth, not position: it stays on its item while that
-    item keeps appending and moves to the biggest grower once it goes quiet.
-    A demoted slot's diff is set to _DIFFERS in place so it rewrites in full
-    (its field lags the journal). Returns (journal_ref, journaled fkey)."""
+    """Returns (journal_ref, journaled fkey); a demoted slot's diff becomes _DIFFERS in place so it rewrites in full."""
     if journal_ref:
         for index, slot in enumerate(slots):
             if slot['fkey'] != journal_ref[0]:
@@ -304,22 +287,19 @@ def _choose_journal_slot(slots, diffs, appendable, journal_ref):
                 diffs[index] = _DIFFERS
                 break
             return journal_ref, journal_ref[0]
-        # falling out of the loop means the bound item was realigned away
     if appendable:
         return None, max(appendable, key=lambda fkey: _total_growth(appendable[fkey]))
     return None, None
 
 
 def _collect_changed_fields(slots, output, journal_ref):
-    """Serialize every item whose content changed. Returns the dirty fields,
-    how many of them are new, the journal op and the updated journal ref."""
+    """Serialize every item whose content changed; returns (fields, new field count, journal op, journal ref)."""
     diffs = [
         _DIFFERS if slot['snapshot'] is _UNWRITTEN else _grown_leaves(slot['snapshot'], item)
         for slot, item in zip(slots, output)
     ]
 
     growing = {slot['fkey']: diff for slot, diff in zip(slots, diffs) if isinstance(diff, list)}
-    # a root-level string leaf has an empty path and cannot be journaled
     appendable = {fkey: diff for fkey, diff in growing.items() if all(path for path, _ in diff)}
     journal_ref, target_fkey = _choose_journal_slot(slots, diffs, appendable, journal_ref)
 
@@ -335,7 +315,6 @@ def _collect_changed_fields(slots, output, journal_ref):
             if not write_field:
                 continue
         elif fkey in growing and _total_growth(growing[fkey]) <= _rewrite_budget(slot['item_json_chars']):
-            # non-journaled append growth defers under the geometric budget
             continue
 
         if slot['snapshot'] is _UNWRITTEN:
@@ -353,16 +332,14 @@ def _is_rendered(path):
 
 
 def _journal_leaf(grown, item):
-    """Pick the leaf to journal: prefer what the UI renders (content and summary
-    text lanes) over larger unrendered twins such as reasoning_details."""
+    """Pick the leaf to journal, preferring rendered text lanes over larger unrendered twins."""
     rendered = [leaf_path for leaf_path, _ in grown if _is_rendered(leaf_path)]
     candidates = rendered or [leaf_path for leaf_path, _ in grown]
     return max(candidates, key=lambda p: len(_leaf_value(item, p)))
 
 
 def _diff_journal_item(slot, journal_ref, item, grown):
-    """Decide how to persist the journaled item. Returns
-    (write_field, journal op, journal_ref)."""
+    """Decide how to persist the journaled item; returns (write_field, journal op, journal_ref)."""
     preferred = _journal_leaf(grown, item)
 
     journal = None
@@ -373,14 +350,10 @@ def _diff_journal_item(slot, journal_ref, item, grown):
         _set_leaf(slot['snapshot'], preferred, text)
     else:
         if _is_rendered(preferred) and not _is_rendered(journal_ref[1]):
-            # a rendered lane started growing while an unrendered one holds the
-            # journal: rewrite in full so the next save re-binds to it
             return True, None, None
         growth = next((growth for leaf_path, growth in grown if leaf_path == journal_ref[1]), 0)
         if not growth and preferred != journal_ref[1]:
-            # the bound leaf idles while another grows: rewrite in full, re-bind next save
             return True, None, None
-        # growth > 0 here: the idle case returned above
         leaf = _leaf_value(item, journal_ref[1])
         journal = ('append', leaf[len(leaf) - growth :])
         _set_leaf(slot['snapshot'], journal_ref[1], leaf)
@@ -388,8 +361,6 @@ def _diff_journal_item(slot, journal_ref, item, grown):
     drift = _total_growth(grown, skip=journal_ref[1])
     if drift > _rewrite_budget(slot['item_json_chars']):
         if preferred != journal_ref[1]:
-            # a better leaf outranks the journaled one: drop the journal
-            # with the full write so the next save re-binds it
             return True, None, None
         return True, journal, journal_ref
     return False, journal, journal_ref
@@ -442,7 +413,7 @@ async def _refresh_ttls(redis, state, task_id) -> bool:
         keys.append(_content_key(task_id))
     if state['saved_journal']:
         keys.append(_journal_key(task_id))
-    for key in keys:  # separate calls: the keys hash to different cluster slots
+    for key in keys:
         if RESPONSE_STREAM_EXPIRE_SECONDS:
             alive = await redis.expire(key, RESPONSE_STREAM_EXPIRE_SECONDS)
         else:
@@ -454,8 +425,7 @@ async def _refresh_ttls(redis, state, task_id) -> bool:
 
 
 async def _write_stream(redis, state, task_id, chat_id, message_id, content, output) -> bool:  # noqa: C901
-    """One incremental persistence pass. False means the server state no longer
-    matches the local mirror and the stream must be rebuilt."""
+    """One incremental persistence pass; False means the stream lost sync with Redis and must be rebuilt."""
     ledger_key = _ledger_key(task_id)
     content_key = _content_key(task_id)
     journal_key = _journal_key(task_id)
@@ -477,8 +447,7 @@ async def _write_stream(redis, state, task_id, chat_id, message_id, content, out
             {'v': 1, 'chat_id': chat_id, 'message_id': message_id, 'order': order, 'journal': journal_ref}
         )
 
-    # text lanes first: a torn read then sees newer text, never older;
-    # stripped like the DB convention, raw lanes would raise on strict UTF-8
+    # text lanes before the ledger: a torn read then sees newer text, never older
     if journal is not None:
         kind, text = journal
         if kind == 'set':
@@ -509,7 +478,6 @@ async def _write_stream(redis, state, task_id, chat_id, message_id, content, out
 
     if fields:
         if RESPONSE_STREAM_EXPIRE_SECONDS and state['saved_order'] is None:
-            # one packet: a kill between HSET and EXPIRE would leak an unexpiring key
             pipe = redis.pipeline()
             pipe.hset(ledger_key, mapping=fields)
             pipe.expire(ledger_key, RESPONSE_STREAM_EXPIRE_SECONDS)
@@ -521,7 +489,6 @@ async def _write_stream(redis, state, task_id, chat_id, message_id, content, out
         state['saved_order'] = order
         state['saved_journal'] = journal_ref
     if orphans:
-        # after the HSET: the new meta no longer names these fields
         await redis.hdel(ledger_key, *orphans)
 
     return await _refresh_ttls(redis, state, task_id)
@@ -554,7 +521,7 @@ async def save_response_stream(
     try:
         if await _write_stream(redis, state, task_id, chat_id, message_id, content, output):
             return
-        log.info(f'Response stream {task_id} for chat {chat_id} state out of sync, rebuilding')
+        log.info('Response stream %s for chat %s state out of sync, rebuilding', task_id, chat_id)
         state = _stream_states[task_id] = _new_stream_state()
         pipe = redis.pipeline()
         _queue_stream_key_deletes(pipe, task_id)
@@ -562,13 +529,13 @@ async def save_response_stream(
         if await _write_stream(redis, state, task_id, chat_id, message_id, content, output):
             return
     except BaseException:
-        # the local mirror may be ahead of Redis: drop it and re-prove next save
         _stream_states.pop(task_id, None)
         raise
-    # even the rebuild failed (e.g. a concurrent cleanup): start clean next save
     _stream_states.pop(task_id, None)
     log.warning(
-        f'Response stream {task_id} for chat {chat_id} was not persisted this save, retrying from scratch next save'
+        'Response stream %s for chat %s was not persisted this save, retrying from scratch next save',
+        task_id,
+        chat_id,
     )
 
 
@@ -577,8 +544,7 @@ async def _load_stream(redis, task_id: str, fields: dict) -> dict | None:
         try:
             meta = JSONCodec.loads(fields['meta'])
             if meta.get('v') != 1:
-                # written by a newer release during a rolling upgrade
-                log.debug(f'Response stream {task_id} skipped: unknown layout version')
+                log.debug('Response stream %s skipped: unknown layout version', task_id)
                 return None
             output = [JSONCodec.loads(fields[fkey]) for fkey in meta['order']]
             journal_ref = meta.get('journal')
@@ -587,13 +553,12 @@ async def _load_stream(redis, task_id: str, fields: dict) -> dict | None:
                 journal = await redis.get(_journal_key(task_id))
                 marker, _, text = (journal or '').partition(':')
                 if marker != nonce:
-                    # the journal was rewritten between our HGETALL and GET: re-read once
                     if is_retry:
-                        log.debug(f'Response stream {task_id} skipped: journal nonce mismatch')
+                        log.debug('Response stream %s skipped: journal nonce mismatch', task_id)
                         return None
                     fields = await redis.hgetall(_ledger_key(task_id))
                     if not fields:
-                        log.debug(f'Response stream {task_id} skipped: ledger gone during retry')
+                        log.debug('Response stream %s skipped: ledger gone during retry', task_id)
                         return None
                     continue
                 _set_leaf(output[meta['order'].index(fkey)], path, text)
@@ -605,8 +570,7 @@ async def _load_stream(redis, task_id: str, fields: dict) -> dict | None:
                 'output': output,
             }
         except (KeyError, ValueError, IndexError, TypeError, AttributeError):
-            # torn or partially cleaned-up write: skip rather than render a wrong snapshot
-            log.debug(f'Response stream {task_id} skipped: torn or partial write', exc_info=True)
+            log.debug('Response stream %s skipped: torn or partial write', task_id, exc_info=True)
             return None
 
 
@@ -619,7 +583,7 @@ async def _gather_ledger_streams(redis, chat_id: str, task_ids: list[str]) -> tu
     legacy_task_ids = []
     for task_id, fields in zip(task_ids, ledgers):
         if isinstance(fields, BaseException):
-            log.warning(f'Response stream {task_id} overlay skipped for chat {chat_id}', exc_info=fields)
+            log.warning('Response stream %s overlay skipped for chat %s', task_id, chat_id, exc_info=fields)
         elif fields:
             with_ledger.append((task_id, fields))
         else:
@@ -632,46 +596,34 @@ async def _gather_ledger_streams(redis, chat_id: str, task_ids: list[str]) -> tu
     streams = []
     for (task_id, _), stream in zip(with_ledger, loaded):
         if isinstance(stream, BaseException):
-            log.warning(f'Response stream {task_id} overlay unreadable for chat {chat_id}', exc_info=stream)
+            log.warning('Response stream %s overlay unreadable for chat %s', task_id, chat_id, exc_info=stream)
         elif stream and stream.get('chat_id') == chat_id:
             streams.append(stream)
     return streams, legacy_task_ids
 
 
 async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
-    if not redis:
-        return [
-            stream
-            for task_id in await list_task_ids_by_item_id(redis, chat_id)
-            if (stream := response_streams.get(task_id)) and stream.get('chat_id') == chat_id
-        ]
-
-    try:
-        task_ids = await list_task_ids_by_item_id(redis, chat_id)
-        if not task_ids:
-            return []
-        streams, legacy_task_ids = await _gather_ledger_streams(redis, chat_id, task_ids)
-
-        if legacy_task_ids:
-            # streams written by processes still running the previous release
-            try:
-                for value in await redis.hmget(REDIS_RESPONSE_STREAMS_KEY, legacy_task_ids):
-                    if not value:
-                        continue
-                    try:
-                        data = JSONCodec.loads(value)
-                    except Exception:
-                        continue
-                    if data.get('chat_id') == chat_id:
-                        streams.append(data)
-            except Exception:
-                # the legacy hash lives on its own slot: its loss must not drop the rest
-                log.warning(f'Legacy response stream overlay unavailable for chat {chat_id}', exc_info=True)
-        return streams
-    except Exception:
-        # the overlay is cosmetic: a Redis hiccup must not fail the whole chat load
-        log.warning(f'Response stream overlay unavailable for chat {chat_id}', exc_info=True)
+    task_ids = await list_task_ids_by_item_id(redis, chat_id)
+    if not task_ids:
         return []
+
+    if redis:
+        streams, legacy_task_ids = await _gather_ledger_streams(redis, chat_id, task_ids)
+        values = await redis.hmget(REDIS_RESPONSE_STREAMS_KEY, legacy_task_ids) if legacy_task_ids else []
+        for value in values:
+            if not value:
+                continue
+            try:
+                data = JSONCodec.loads(value)
+            except Exception:
+                continue
+            if data.get('chat_id') == chat_id:
+                streams.append(data)
+        return streams
+
+    return [
+        stream for task_id in task_ids if (stream := response_streams.get(task_id)) and stream.get('chat_id') == chat_id
+    ]
 
 
 async def clear_response_stream(redis, task_id: str | None):
