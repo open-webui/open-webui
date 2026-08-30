@@ -106,7 +106,7 @@
 
 	export const parseRrule = (s: string) => {
 		// Detect ONCE (COUNT=1 with DTSTART)
-		if (s.includes('COUNT=1')) {
+		if (/COUNT=1(?!\d)/.test(s)) {
 			frequency = 'ONCE';
 			const match = s.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
 			if (match) {
@@ -116,7 +116,10 @@
 			return;
 		}
 		const parts: Record<string, string> = {};
-		s.replace('RRULE:', '')
+		s.split(/\s+/)
+			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
+			.join('')
+			.replace('RRULE:', '')
 			.split(';')
 			.forEach((p) => {
 				const [k, v] = p.split('=');
