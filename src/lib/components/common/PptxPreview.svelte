@@ -233,7 +233,7 @@
 
 <div
 	bind:this={rootEl}
-	role="region"
+	role="application"
 	aria-label={`${itemLabel} preview`}
 	tabindex="0"
 	on:keydown={handleKeyDown}

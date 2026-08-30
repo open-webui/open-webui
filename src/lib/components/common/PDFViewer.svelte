@@ -482,7 +482,7 @@
 			? 'overflow-hidden h-full flex items-center justify-center overscroll-contain'
 			: 'overflow-y-auto h-full'}
 		bind:this={outerContainer}
-		role="region"
+		role="application"
 		aria-label={`${itemLabel} viewer`}
 		tabindex="0"
 		on:scroll={handleScroll}
