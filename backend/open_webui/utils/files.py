@@ -53,7 +53,6 @@ _IMAGE_MIME_FALLBACK = {
 
 
 async def get_image_base64_from_url(url: str, max_bytes: int, user=None) -> tuple[Optional[str], int]:
-    """The image as a data URL, plus the remote bytes to charge against the caller's budget."""
     total = 0
 
     try:
@@ -73,15 +72,13 @@ async def get_image_base64_from_url(url: str, max_bytes: int, user=None) -> tupl
                     url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
                 ) as response:
                     response.raise_for_status()
-                    # Content-Length describes the compressed body, so read incrementally.
-                    # bytearray over list + join: ~22% lower peak at the cap.
-                    buffer = bytearray()
+                    image_data = bytearray()
                     async for chunk in response.content.iter_chunked(64 * 1024):
                         total += len(chunk)
                         if total > max_bytes:
                             return None, total
-                        buffer.extend(chunk)
-                    encoded_string = base64.b64encode(buffer).decode('utf-8')
+                        image_data.extend(chunk)
+                    encoded_string = base64.b64encode(image_data).decode('utf-8')
                     content_type = response.headers.get('Content-Type', 'image/png')
                     return f'data:{content_type};base64,{encoded_string}', total
         else:
@@ -90,13 +87,9 @@ async def get_image_base64_from_url(url: str, max_bytes: int, user=None) -> tupl
             return await get_image_base64_from_file_id(url, user=user), 0
 
     except aiohttp.ClientPayloadError:
-        # Raised both when the decompressor cap aborts with no chunks yielded, where total
-        # under-reports, and on an ordinary truncated transfer, where it does not. Indistinguishable
-        # here, so charge the remaining budget: later remote images get dropped either way.
+        # Charge the whole budget, not total: a decompressor-cap abort under-reports it, so a bomb could repeat.
         return None, max_bytes
     except Exception:
-        # A host that drips then dies leaves real bytes already counted. Charging 0 would let the
-        # same URL re-materialise its drip for every item in the request.
         return None, total
 
 

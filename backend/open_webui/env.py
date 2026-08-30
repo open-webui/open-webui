@@ -1046,7 +1046,6 @@ ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK = (
     os.getenv('ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK', 'False').lower() == 'true'
 )
 
-# Byte budget for remote http(s) image fetches in one chat completion. 0 or less fetches none.
 CHAT_IMAGE_URL_FETCH_MAX_TOTAL_BYTES = os.getenv('CHAT_IMAGE_URL_FETCH_MAX_TOTAL_BYTES', str(20 * 1024 * 1024))
 try:
     CHAT_IMAGE_URL_FETCH_MAX_TOTAL_BYTES = int(CHAT_IMAGE_URL_FETCH_MAX_TOTAL_BYTES)

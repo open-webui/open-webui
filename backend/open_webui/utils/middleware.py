@@ -2134,9 +2134,9 @@ async def convert_url_images_to_base64(form_data, user=None):
                 continue
 
             try:
-                base64_data, charged = await get_image_base64_from_url(image_url, max_bytes=remaining, user=user)
-                remaining -= charged
-                if charged and remaining <= 0:
+                base64_data, used_bytes = await get_image_base64_from_url(image_url, max_bytes=remaining, user=user)
+                remaining -= used_bytes
+                if used_bytes and remaining <= 0:
                     log.warning('Remote image fetch budget exhausted (%s bytes)', CHAT_IMAGE_URL_FETCH_MAX_TOTAL_BYTES)
 
                 if base64_data:
