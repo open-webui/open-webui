@@ -15,11 +15,12 @@ log = logging.getLogger(__name__)
 tasks: dict[str, asyncio.Task] = {}
 item_tasks = {}
 response_streams: dict[str, dict] = {}
+_stream_states: dict[str, dict] = {}
 
 
 REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
-REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
+REDIS_RESPONSE_STREAM_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:tasks:response_stream'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
 REDIS_PUBSUB_RECONNECT_INTERVAL = 1.0
 REDIS_PUBSUB_MAX_RECONNECT_INTERVAL = 30.0
@@ -82,7 +83,7 @@ async def redis_save_task(redis: Redis, task_id: str, item_id: str | None):
 async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline()
     pipe.hdel(REDIS_TASKS_KEY, task_id)
-    pipe.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
+    pipe.delete(_stream_key(task_id))
     if item_id:
         pipe.srem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
         await pipe.execute()
@@ -120,6 +121,7 @@ async def cleanup_task(redis, task_id: str, id=None):
 
     tasks.pop(task_id, None)  # Remove the task if it exists
     response_streams.pop(task_id, None)
+    _stream_states.pop(task_id, None)
 
     # If an ID is provided, remove the task from the item_tasks dictionary
     if id and task_id in item_tasks.get(id, []):
@@ -169,6 +171,55 @@ async def list_task_ids_by_item_id(redis, id):
     return item_tasks.get(id, [])
 
 
+def _stream_key(task_id: str) -> str:
+    return f'{REDIS_RESPONSE_STREAM_KEY_PREFIX}:{task_id}'
+
+
+def _escape_text(text: str) -> str:
+    """A JSON string body without its quotes."""
+    # escaping is per code point, so it distributes over the append below and leaves no raw newline
+    return JSONCodec.dumps(text)[1:-1]
+
+
+def _longest_text(node) -> str:
+    """The longest string leaf anywhere in node."""
+    if isinstance(node, str):
+        return node
+    children = node.values() if isinstance(node, dict) else node if isinstance(node, list) else ()
+    return max((_longest_text(child) for child in children), key=len, default='')
+
+
+def _elide_text(node, text: str, path=()):
+    """A copy of node with every string leaf equal to text blanked, plus the paths of those leaves."""
+    if isinstance(node, str):
+        return ('', [list(path)]) if node == text else (node, [])
+    if isinstance(node, dict):
+        keys = list(node)
+        values = [node[key] for key in keys]
+    elif isinstance(node, list):
+        keys = list(range(len(node)))
+        values = node
+    else:
+        return node, []
+
+    copies = []
+    paths = []
+    for key, value in zip(keys, values):
+        copy, elided_paths = _elide_text(value, text, path + (key,))
+        copies.append(copy)
+        paths += elided_paths
+    return (dict(zip(keys, copies)) if isinstance(node, dict) else copies), paths
+
+
+def _restore_text(data: dict, paths: list, text: str):
+    """Put text back at every path _elide_text blanked."""
+    for path in paths:
+        node = data
+        for step in path[:-1]:
+            node = node[step]
+        node[path[-1]] = text
+
+
 async def save_response_stream(
     redis,
     task_id: str | None,
@@ -188,10 +239,22 @@ async def save_response_stream(
     }
 
     if redis:
-        await redis.hset(REDIS_RESPONSE_STREAMS_KEY, task_id, dumps_bytes(data))
+        # content is the lane that grows for the rest of the response once it starts
+        text = content or _longest_text(data)
+        elided, paths = _elide_text(data, text) if text else (data, [])
+        head = JSONCodec.dumps({**elided, 'lane': paths})
+        state = _stream_states.get(task_id)
+
+        key = _stream_key(task_id)
+        pipe = redis.pipeline()
+        if state and state['head'] == head and text.startswith(state['text']):
+            pipe.append(key, _escape_text(text[len(state['text']) :]))
+        else:
+            pipe.set(key, f'{head}\n{_escape_text(text)}')
         if REDIS_RESPONSE_STREAM_TTL > 0:
-            with suppress(Exception):
-                await redis.hexpire(REDIS_RESPONSE_STREAMS_KEY, REDIS_RESPONSE_STREAM_TTL, task_id)
+            pipe.expire(key, REDIS_RESPONSE_STREAM_TTL)
+        await pipe.execute()
+        _stream_states[task_id] = {'head': head, 'text': text}
     else:
         response_streams[task_id] = data
 
@@ -202,13 +265,15 @@ async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
         return []
 
     if redis:
-        values = await redis.hmget(REDIS_RESPONSE_STREAMS_KEY, task_ids)
+        values = await asyncio.gather(*(redis.get(_stream_key(task_id)) for task_id in task_ids))
         streams = []
         for value in values:
             if not value:
                 continue
             try:
-                data = JSONCodec.loads(value)
+                head, _, text = value.partition('\n')
+                data = JSONCodec.loads(head)
+                _restore_text(data, data.pop('lane'), JSONCodec.loads('"' + text + '"'))
             except Exception:
                 continue
             if data.get('chat_id') == chat_id:
@@ -223,8 +288,9 @@ async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
 async def clear_response_stream(redis, task_id: str | None):
     if not task_id:
         return
+    _stream_states.pop(task_id, None)
     if redis:
-        await redis.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
+        await redis.delete(_stream_key(task_id))
     else:
         response_streams.pop(task_id, None)
 
