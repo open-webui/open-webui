@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from contextlib import suppress
+from typing import Any
 from uuid import uuid4
 
 from redis.asyncio import Redis
@@ -84,6 +85,7 @@ async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline()
     pipe.hdel(REDIS_TASKS_KEY, task_id)
     pipe.delete(_stream_key(task_id))
+    _stream_states.pop(task_id, None)
     if item_id:
         pipe.srem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
         await pipe.execute()
@@ -181,7 +183,7 @@ def _escape_text(text: str) -> str:
     return JSONCodec.dumps(text)[1:-1]
 
 
-def _longest_text(node) -> str:
+def _longest_text(node: Any) -> str:
     """The longest string leaf anywhere in node."""
     if isinstance(node, str):
         return node
@@ -189,7 +191,7 @@ def _longest_text(node) -> str:
     return max((_longest_text(child) for child in children), key=len, default='')
 
 
-def _elide_text(node, text: str, path=()):
+def _elide_text(node: Any, text: str, path: tuple = ()) -> tuple:
     """A copy of node with every string leaf equal to text blanked, plus the paths of those leaves."""
     if isinstance(node, str):
         return ('', [list(path)]) if node == text else (node, [])
@@ -211,7 +213,7 @@ def _elide_text(node, text: str, path=()):
     return (dict(zip(keys, copies)) if isinstance(node, dict) else copies), paths
 
 
-def _restore_text(data: dict, paths: list, text: str):
+def _restore_text(data: dict, paths: list, text: str) -> None:
     """Put text back at every path _elide_text blanked."""
     for path in paths:
         node = data
@@ -239,22 +241,33 @@ async def save_response_stream(
     }
 
     if redis:
-        # content is the lane that grows for the rest of the response once it starts
+        # content is the string that keeps growing for the rest of the response once it starts
         text = content or _longest_text(data)
         elided, paths = _elide_text(data, text) if text else (data, [])
-        head = JSONCodec.dumps({**elided, 'lane': paths})
+        head = JSONCodec.dumps({**elided, 'paths': paths})
         state = _stream_states.get(task_id)
 
         key = _stream_key(task_id)
+        appending = state and state['head'] == head and text.startswith(state['text'])
         pipe = redis.pipeline()
-        if state and state['head'] == head and text.startswith(state['text']):
-            pipe.append(key, _escape_text(text[len(state['text']) :]))
+        if appending:
+            delta = _escape_text(text[len(state['text']) :])
+            size = state['size'] + len(delta.encode('utf-8'))
+            pipe.append(key, delta)
         else:
-            pipe.set(key, f'{head}\n{_escape_text(text)}')
+            value = f'{head}\n{_escape_text(text)}'
+            size = len(value.encode('utf-8'))
+            pipe.set(key, value)
         if REDIS_RESPONSE_STREAM_TTL > 0:
             pipe.expire(key, REDIS_RESPONSE_STREAM_TTL)
-        await pipe.execute()
-        _stream_states[task_id] = {'head': head, 'text': text}
+        results = await pipe.execute()
+
+        # a length we did not expect means the key was evicted, or already took this delta from a save that raised
+        if appending and results[0] != size:
+            value = f'{head}\n{_escape_text(text)}'
+            size = len(value.encode('utf-8'))
+            await redis.set(key, value, ex=REDIS_RESPONSE_STREAM_TTL if REDIS_RESPONSE_STREAM_TTL > 0 else None)
+        _stream_states[task_id] = {'head': head, 'text': text, 'size': size}
     else:
         response_streams[task_id] = data
 
@@ -273,7 +286,7 @@ async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
             try:
                 head, _, text = value.partition('\n')
                 data = JSONCodec.loads(head)
-                _restore_text(data, data.pop('lane'), JSONCodec.loads('"' + text + '"'))
+                _restore_text(data, data.pop('paths'), JSONCodec.loads('"' + text + '"'))
             except Exception:
                 continue
             if data.get('chat_id') == chat_id:
