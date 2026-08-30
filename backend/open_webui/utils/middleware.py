@@ -49,7 +49,7 @@ from open_webui.models.folders import Folders
 from open_webui.models.models import Models
 from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import UserModel, Users, UserSettings
 from open_webui.retrieval.utils import get_sources_from_items
 from open_webui.routers.images import (
     CreateImageForm,
@@ -298,61 +298,37 @@ def build_terminal_file_tool_result(
     }
 
 
-def is_terminal_tool(tool: dict | None) -> bool:
-    tool_id = (tool or {}).get('tool_id', '')
-    return (tool or {}).get('type') == 'terminal' or (isinstance(tool_id, str) and tool_id.startswith('terminal:'))
-
-
-async def get_terminal_file_display_setting(user) -> str:
-    """Resolve the user's effective 'terminalFileDisplay' interface setting.
-
-    Stored user settings are stripped of values equal to the admin defaults,
-    so fall back to 'ui.default_interface_settings' when the user has no
-    explicit value.
-    """
-    settings = getattr(user, 'settings', None)
-    if hasattr(settings, 'model_dump'):
-        settings = settings.model_dump()
-    if not isinstance(settings, dict):
-        settings = {}
-    ui_settings = settings.get('ui')
-    value = ui_settings.get('terminalFileDisplay') if isinstance(ui_settings, dict) else None
+async def is_terminal_file_display_inline(user: UserModel) -> bool:
+    """Stored user settings drop values equal to the admin default, so fall back to that default."""
+    ui_settings = user.settings.ui if isinstance(user.settings, UserSettings) else None
+    value = (ui_settings or {}).get('terminalFileDisplay')
 
     if value not in ('inline', 'sidebar'):
         default_interface_settings = await Config.get('ui.default_interface_settings')
         if isinstance(default_interface_settings, dict):
             value = default_interface_settings.get('terminalFileDisplay')
 
-    return value if value in ('inline', 'sidebar') else 'sidebar'
+    return value == 'inline'
 
 
-async def apply_terminal_display_file_defaults(
+async def apply_display_file_inline_default(
     tool_function_name: str,
     tool_function_params: dict,
     tool: dict | None,
-    user,
+    user: UserModel,
 ) -> dict:
-    """Default display_file to inline for backend-managed terminal tools when
-    the user's 'Terminal File Display' interface setting is 'inline'.
-
-    Direct (browser-executed) terminal servers apply the same default in
-    src/routes/+layout.svelte; without this, the setting has no effect on
-    'terminal:<id>' tools and display_file always opens the sidebar viewer.
-    """
+    """Apply the user's 'Terminal File Display' setting to backend-managed terminal tools."""
+    tool_id = (tool or {}).get('tool_id', '')
     if (
         tool_function_name != 'display_file'
-        or not isinstance(tool_function_params, dict)
         or not tool_function_params.get('path')
         or 'inline' in tool_function_params
-        or not is_terminal_tool(tool)
+        or not (isinstance(tool_id, str) and tool_id.startswith('terminal:'))
     ):
         return tool_function_params
 
-    try:
-        if await get_terminal_file_display_setting(user) == 'inline':
-            return {**tool_function_params, 'inline': True}
-    except Exception as e:
-        log.debug(e)
+    if await is_terminal_file_display_inline(user):
+        return {**tool_function_params, 'inline': True}
 
     return tool_function_params
 
@@ -3228,7 +3204,7 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
     direct_tool = tool.get('direct', False)
     allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
     params = {key: value for key, value in params.items() if key in allowed_params}
-    params = await apply_terminal_display_file_defaults(name, params, tool, user)
+    params = await apply_display_file_inline_default(name, params, tool, user)
 
     try:
         if direct_tool:
@@ -5689,7 +5665,7 @@ async def streaming_chat_response_handler(response, ctx):
                         direct_tool = tool.get('direct', False)
                         allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
                         params = {key: value for key, value in params.items() if key in allowed_params}
-                        params = await apply_terminal_display_file_defaults(name, params, tool, user)
+                        params = await apply_display_file_inline_default(name, params, tool, user)
                         try:
                             if direct_tool:
                                 result = await event_caller(
