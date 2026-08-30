@@ -154,7 +154,7 @@ export class SocketIOCollaborationProvider {
 										document_id: this.documentId,
 										user_id: this.user?.id,
 										socket_id: this.socket.id,
-										update: Y.encodeStateAsUpdate(this.doc)
+										update: Array.from(Y.encodeStateAsUpdate(this.doc))
 									});
 								} else {
 									console.warn('Yjs document is empty, not sending state.');

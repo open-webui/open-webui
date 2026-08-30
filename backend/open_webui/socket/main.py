@@ -5,6 +5,7 @@ import logging
 import random
 import sys
 import time
+from typing import Any
 
 import pycrdt as Y
 import socketio
@@ -66,18 +67,13 @@ def get_room_sid_map(manager, namespace: str, room: str):
 
 
 class JSONOnlyPacket(Packet):
-    """Packet class that keeps every payload JSON-only.
-
-    Client attachments arrive as int lists, the form the Yjs handlers already store and apply,
-    and nothing server-side builds bytes, so python-socketio's recursive per-emit scan for
-    binary is pure overhead. With it off, an emit that does carry bytes raises in encode()
-    instead of being framed as an attachment.
-    """
+    """Packet class for JSON-serializable payloads only, skipping python-socketio's per-emit binary scan."""
 
     uses_binary_events = False
 
     @classmethod
-    def reconstruct_binary(cls, data, attachments):
+    def reconstruct_binary(cls, data: Any, attachments: list[bytes]):
+        """Normalize client attachments to int lists, the form the Yjs handlers store and apply."""
         return super().reconstruct_binary(data, [list(attachment) for attachment in attachments])
 
 
