@@ -421,8 +421,8 @@ async def upload_file_handler(
 
         # Files a model produces mid-reply (generated images, tool output) name the channel in chat_id.
         channel_id = file_metadata.get('channel_id')
-        chat_id = file_metadata.get('chat_id')
-        if not channel_id and isinstance(chat_id, str) and chat_id.startswith(CHANNEL_CHAT_ID_PREFIX):
+        chat_id = file_metadata.get('chat_id') or ''
+        if not channel_id and chat_id.startswith(CHANNEL_CHAT_ID_PREFIX):
             channel_id = chat_id.removeprefix(CHANNEL_CHAT_ID_PREFIX)
 
         if channel_id:

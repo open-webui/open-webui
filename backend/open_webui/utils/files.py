@@ -32,6 +32,7 @@ from open_webui.storage.provider import Storage
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r'!\[(.*?)\]\((.+?)\)', re.IGNORECASE)
+FILE_CONTENT_URL_PREFIX = '/api/v1/files/'
 
 # Extension-based MIME fallback, only used when ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK is True.
 _IMAGE_MIME_FALLBACK = {
@@ -49,6 +50,13 @@ _IMAGE_MIME_FALLBACK = {
     '.heif': 'image/heif',
     '.avif': 'image/avif',
 }
+
+
+def get_file_id_from_url(url: str) -> Optional[str]:
+    """Reverse of the get_file_content_by_id url that upload_image and upload_audio return."""
+    if not url.startswith(FILE_CONTENT_URL_PREFIX):
+        return None
+    return url.removeprefix(FILE_CONTENT_URL_PREFIX).split('/')[0]
 
 
 async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:

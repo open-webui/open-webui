@@ -41,6 +41,7 @@ from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.files import get_file_id_from_url
 from open_webui.utils.json_codec import SOCKETIO_JSON
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
@@ -953,18 +954,22 @@ async def _make_channel_emitter(request_info):
         if not msg or msg.channel_id != channel_id:
             return
 
-        data = {}
-        if output:
-            data['output'] = output
-        if files:
-            # Each event carries only the newly created files, and the stored key is replaced wholesale.
-            data['files'] = [*(msg.data or {}).get('files', []), *files]
+        if content is None:
+            content = msg.content
 
-        update_form = MessageForm(
-            content=msg.content if content is None else content,
-            data=data,
-            meta={'done': True} if done else None,
-        )
+        data = {'output': output} if output else None
+        if files:
+            data = {**(data or {}), 'files': [*(msg.data or {}).get('files', []), *files]}
+
+        update_form = MessageForm(content=content, data=data)
+        if done:
+            # Merge done flag into existing meta (preserve model_id etc.)
+            existing_meta = msg.meta or {}
+            update_form = MessageForm(
+                content=content,
+                data=data,
+                meta={**existing_meta, 'done': True},
+            )
 
         await Messages.update_message_by_id(message_id, update_form)
         message = await Messages.get_message_by_id(message_id)
@@ -992,14 +997,14 @@ async def _make_channel_emitter(request_info):
                 continue
 
             # Skip base64 payloads: the whole message is rebroadcast on every update.
-            if not url.startswith('/api/v1/files/'):
+            file_id = get_file_id_from_url(url)
+            if not file_id:
+                log.debug('Skipping channel file: url is not a stored file')
                 continue
 
-            file_id = url.removeprefix('/api/v1/files/').split('/')[0]
-            # Only files this reply just created: anything older is a file the tool named, not produced.
-            file_item = await Files.get_file_by_id(file_id)
-            if not file_item or file_item.user_id != user_id or (file_item.created_at or 0) < STARTED_AT:
-                log.debug('Skipping channel file %s', file_id)
+            file_item = await Files.get_file_by_id_and_user_id(file_id, user_id)
+            if not file_item or (file_item.created_at or 0) < STARTED_AT:
+                log.debug('Skipping channel file %s: not created by this reply', file_id)
                 continue
 
             file_meta = file_item.meta or {}
@@ -1010,10 +1015,9 @@ async def _make_channel_emitter(request_info):
                     'url': file_item.id,
                     'name': file_item.filename,
                     'size': file_meta.get('size'),
-                    'content_type': file_meta.get('content_type') or '',
+                    'content_type': file_meta.get('content_type'),
                 }
             )
-            # Bind to the message, the same way post_new_message does for user-uploaded channel files.
             await Channels.set_file_message_id_in_channel_by_id(channel_id, file_item.id, message_id)
 
         if new_files:
