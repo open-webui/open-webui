@@ -4216,6 +4216,7 @@ async def streaming_chat_response_handler(response, ctx):
             tag_scan_positions = {}
             tag_boundary_positions = {}
             response_stream_task_id = metadata.get('task_id') or metadata.get('message_id')
+            response_stream_state = {}
 
             def tag_output_handler(content_type, tags, output):
                 """
@@ -4667,6 +4668,7 @@ async def streaming_chat_response_handler(response, ctx):
                             metadata.get('message_id'),
                             joined_content or get_output_text(current_stream_output),
                             current_stream_output,
+                            response_stream_state,
                         )
 
                     def get_response_delta_key(delta_data: dict):

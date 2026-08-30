@@ -16,7 +16,6 @@ log = logging.getLogger(__name__)
 tasks: dict[str, asyncio.Task] = {}
 item_tasks = {}
 response_streams: dict[str, dict] = {}
-_stream_states: dict[str, dict] = {}
 
 
 REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
@@ -85,7 +84,6 @@ async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline()
     pipe.hdel(REDIS_TASKS_KEY, task_id)
     pipe.delete(_stream_key(task_id))
-    _stream_states.pop(task_id, None)
     if item_id:
         pipe.srem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
         await pipe.execute()
@@ -123,7 +121,6 @@ async def cleanup_task(redis, task_id: str, id=None):
 
     tasks.pop(task_id, None)  # Remove the task if it exists
     response_streams.pop(task_id, None)
-    _stream_states.pop(task_id, None)
 
     # If an ID is provided, remove the task from the item_tasks dictionary
     if id and task_id in item_tasks.get(id, []):
@@ -178,21 +175,27 @@ def _stream_key(task_id: str) -> str:
 
 
 def _escape_text(text: str) -> str:
-    """A JSON string body without its quotes."""
+    """
+    Serialize text as a JSON string body, without the surrounding quotes.
+    """
     # escaping is per code point, so it distributes over the append below and leaves no raw newline
     return JSONCodec.dumps(text)[1:-1]
 
 
 def _longest_text(node: Any) -> str:
-    """The longest string leaf anywhere in node."""
+    """
+    Find the longest string leaf anywhere in node.
+    """
     if isinstance(node, str):
         return node
     children = node.values() if isinstance(node, dict) else node if isinstance(node, list) else ()
     return max((_longest_text(child) for child in children), key=len, default='')
 
 
-def _elide_text(node: Any, text: str, path: tuple = ()) -> tuple:
-    """A copy of node with every string leaf equal to text blanked, plus the paths of those leaves."""
+def _elide_text(node: Any, text: str, path: tuple[Any, ...] = ()) -> tuple[Any, list[list]]:
+    """
+    Copy node with every string leaf equal to text blanked, and collect the paths of those leaves.
+    """
     if isinstance(node, str):
         return ('', [list(path)]) if node == text else (node, [])
     if isinstance(node, dict):
@@ -213,8 +216,10 @@ def _elide_text(node: Any, text: str, path: tuple = ()) -> tuple:
     return (dict(zip(keys, copies)) if isinstance(node, dict) else copies), paths
 
 
-def _restore_text(data: dict, paths: list, text: str) -> None:
-    """Put text back at every path _elide_text blanked."""
+def _restore_text(data: dict[str, Any], paths: list[list], text: str) -> None:
+    """
+    Put text back at every path _elide_text blanked.
+    """
     for path in paths:
         node = data
         for step in path[:-1]:
@@ -229,6 +234,7 @@ async def save_response_stream(
     message_id: str | None,
     content: str,
     output: list,
+    state: dict[str, Any],
 ):
     if not task_id or not chat_id or not message_id:
         return
@@ -241,14 +247,12 @@ async def save_response_stream(
     }
 
     if redis:
-        # content is the string that keeps growing for the rest of the response once it starts
         text = content or _longest_text(data)
-        elided, paths = _elide_text(data, text) if text else (data, [])
+        elided, paths = _elide_text(data, text)
         head = JSONCodec.dumps({**elided, 'paths': paths})
-        state = _stream_states.get(task_id)
 
         key = _stream_key(task_id)
-        appending = state and state['head'] == head and text.startswith(state['text'])
+        appending = state.get('head') == head and text.startswith(state['text'])
         pipe = redis.pipeline()
         if appending:
             delta = _escape_text(text[len(state['text']) :])
@@ -267,7 +271,7 @@ async def save_response_stream(
             value = f'{head}\n{_escape_text(text)}'
             size = len(value.encode('utf-8'))
             await redis.set(key, value, ex=REDIS_RESPONSE_STREAM_TTL if REDIS_RESPONSE_STREAM_TTL > 0 else None)
-        _stream_states[task_id] = {'head': head, 'text': text, 'size': size}
+        state.update(head=head, text=text, size=size)
     else:
         response_streams[task_id] = data
 
@@ -301,7 +305,6 @@ async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
 async def clear_response_stream(redis, task_id: str | None):
     if not task_id:
         return
-    _stream_states.pop(task_id, None)
     if redis:
         await redis.delete(_stream_key(task_id))
     else:
