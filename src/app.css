@@ -420,23 +420,14 @@ html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):
 	outline-offset: -2px;
 }
 
-/* a bare editor has no visible bounds of its own, so the ring goes on the wrapper the user sees */
+/* a bare editable layer has no visible bounds of its own, so the ring goes on the visible box */
 html.high-contrast #message-input-container:has(#chat-input:focus-visible),
-html.high-contrast .message-edit-container:has([id^='message-edit-']:focus-visible) {
+html.high-contrast .message-edit-container:has([id^='message-edit-']:focus-visible),
+html.high-contrast .cm-editor:has(.cm-content:focus-visible) {
 	outline: 2px solid theme(--color-blue-500);
 	outline-offset: -2px;
 
-	:is(#chat-input, [id^='message-edit-']):focus-visible {
-		outline: none;
-	}
-}
-
-/* the code editor's editable layer scrolls past the box, so the ring goes on the editor itself */
-html.high-contrast .cm-editor.cm-focused {
-	outline: 2px solid theme(--color-blue-500);
-	outline-offset: -2px;
-
-	.cm-content:focus-visible {
+	:is(#chat-input, [id^='message-edit-'], .cm-content):focus-visible {
 		outline: none;
 	}
 }
