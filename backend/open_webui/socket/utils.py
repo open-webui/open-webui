@@ -154,8 +154,8 @@ class RedisDict:
 
     def clear(self):
         if self._signature_name:
-            self.redis.delete(self.name)
             self.redis.delete(self._signature_name)
+            self.redis.delete(self.name)
         else:
             self.redis.delete(self.name)
 
