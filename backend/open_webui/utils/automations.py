@@ -89,7 +89,7 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     rule = rules[0]
     start = rule._dtstart.replace(tzinfo=None)
     anchor = now or datetime.now()
-    lines = s.splitlines()
+    lines = s.split()
     stripped = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
     has_dtstart = any(line.upper().startswith('DTSTART') for line in lines)
     step = {
@@ -183,9 +183,7 @@ def rrule_interval_seconds(s: str) -> Optional[int]:
     Returns None for one-shot (COUNT=1) schedules or rules
     with fewer than two future occurrences.
     """
-    if 'COUNT=1' in s:
-        return None
-    s = '\n'.join(line for line in s.splitlines() if not line.upper().startswith('DTSTART')) or s
+    s = '\n'.join(part for part in s.split() if not part.upper().startswith('DTSTART')) or s
     now = datetime.now()
     rule = _parse_rule(s, now)
     first = rule.after(now)
