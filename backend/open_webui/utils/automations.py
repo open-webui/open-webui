@@ -89,9 +89,9 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     rule = rules[0]
     start = rule._dtstart.replace(tzinfo=None)
     anchor = now or datetime.now()
-    lines = s.split()
-    stripped = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
-    has_dtstart = any(line.upper().startswith('DTSTART') for line in lines)
+    parts = s.split()
+    stripped = '\n'.join(part for part in parts if not part.upper().startswith('DTSTART')) or s
+    has_dtstart = any(part.upper().startswith('DTSTART') for part in parts)
     step = {
         SECONDLY: timedelta(seconds=rule._interval),
         MINUTELY: timedelta(minutes=rule._interval),
