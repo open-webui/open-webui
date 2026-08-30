@@ -305,6 +305,13 @@
 		await getAutomationList();
 	};
 
+	const dtstartWeekday = (match: RegExpMatchArray | null) =>
+		match
+			? ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][
+					new Date(`${match[1]}-${match[2]}-${match[3]}T00:00`).getDay()
+				]
+			: '';
+
 	const formatRRule = (rrule: string): string => {
 		const match = rrule.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 		// Detect one-time schedule (ONCE)
@@ -338,11 +345,13 @@
 		if (freq === 'HOURLY') return iv === 1 ? 'Hourly' : `Every ${iv} hours`;
 		if (freq === 'DAILY') return `Daily at ${time}`;
 		if (freq === 'WEEKLY') {
-			const days = parts.BYDAY || '';
+			const days = parts.BYDAY || dtstartWeekday(match);
 			return days ? `${days} at ${time}` : `Weekly at ${time}`;
 		}
-		if (freq === 'MONTHLY')
-			return `Monthly on the ${parts.BYMONTHDAY || '1'}${ordinal(parts.BYMONTHDAY || '1')} at ${time}`;
+		if (freq === 'MONTHLY') {
+			const monthDay = String(parseInt(parts.BYMONTHDAY || match?.[3] || '1'));
+			return `Monthly on the ${monthDay}${ordinal(monthDay)} at ${time}`;
+		}
 		return rrule;
 	};
 
