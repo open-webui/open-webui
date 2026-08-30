@@ -148,15 +148,15 @@ async def build_tool_server_headers(
     cookies = {}
 
     if auth_type == 'bearer':
-        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+        headers.update(bearer_auth_header(connection.get('key', '')))
     elif auth_type == 'session':
         cookies = request.cookies if hasattr(request, 'cookies') else {}
-        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+        headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
         cookies = request.cookies if hasattr(request, 'cookies') else {}
         oauth_token = extra_params.get('__oauth_token__', None)
         if oauth_token:
-            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+            headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
     elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
         try:
             splits = server_id.split(':')
@@ -166,7 +166,7 @@ async def build_tool_server_headers(
                 user.id, f'{connection_type}:{oauth_server_id}'
             )
             if oauth_token:
-                headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+                headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
         except Exception as e:
             log.error(f'Error getting OAuth token: {e}')
 

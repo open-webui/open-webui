@@ -334,8 +334,9 @@ class PromptsTable:
                     tag_lower = tag.lower()
 
                     if dialect_name == 'sqlite':
+                        tag_lower = tag.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
                         tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE LOWER(t.value) = :tag_val)'
+                            "EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE t.value LIKE :tag_val ESCAPE '\\')"
                         )
                     elif dialect_name == 'postgresql':
                         tag_clause = text(
