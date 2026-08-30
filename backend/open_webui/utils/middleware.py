@@ -2198,14 +2198,6 @@ def strip_reasoning_details(output: list) -> list:
     ]
 
 
-def get_content_parts(message: dict) -> list:
-    """Return a message's content as a list of content parts."""
-    content = message.get('content')
-    if isinstance(content, list):
-        return content
-    return [{'type': 'text', 'text': content}] if content else []
-
-
 def process_messages_with_output(
     messages: list[dict],
     reasoning_format: str | None = None,
@@ -2217,7 +2209,6 @@ def process_messages_with_output(
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
     """
     processed = []
-    merge_with_previous = False
 
     for message in messages:
         if message.get('role') == 'assistant' and message.get('output'):
@@ -2232,23 +2223,10 @@ def process_messages_with_output(
                 processed.extend(output_messages)
                 continue
 
-        # Aborted generations leave an empty assistant turn; strict providers reject it, and adjacent user turns too.
-        if message.get('role') == 'assistant' and not message.get('tool_calls'):
-            content = get_content_from_message(message) or ''
-            has_meaningful_content = content.strip() if isinstance(content, str) else content
-            if not has_meaningful_content:
-                merge_with_previous = bool(processed)
-                continue
-
         clean_message = dict(message)
         for key in ('id', 'files', 'output', 'model', 'contextSummary', 'context_summary', 'usage'):
             clean_message.pop(key, None)
-        if merge_with_previous and processed[-1].get('role') == clean_message.get('role'):
-            merged_parts = [*get_content_parts(processed[-1]), *get_content_parts(clean_message)]
-            processed[-1] = {**clean_message, 'content': merged_parts}
-        else:
-            processed.append(clean_message)
-        merge_with_previous = False
+        processed.append(clean_message)
 
     return processed
 
@@ -2285,6 +2263,17 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
             sanitized.append(message)
 
     return sanitized
+
+
+def drop_empty_assistant_messages(messages: list[dict]) -> list[dict]:
+    """Drop assistant turns an aborted generation left without content, which strict providers reject on replay."""
+    return [
+        message
+        for message in messages
+        if message.get('role') != 'assistant'
+        or message.get('tool_calls')
+        or any(text.strip() for text in _get_text_parts(message))
+    ]
 
 
 # Ids are validated as [a-z0-9_-]+ on create; matching that keeps ordinary "<$..." text intact.
@@ -2519,6 +2508,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         reasoning_format=get_reasoning_format(model),
     )
     form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
+    form_data['messages'] = drop_empty_assistant_messages(form_data['messages'])
 
     system_message = get_system_message(form_data.get('messages', []))
     if system_message:  # Chat Controls/User Settings
@@ -3410,6 +3400,7 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
                 reasoning_format=get_reasoning_format(model),
             )
             form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
+            form_data['messages'] = drop_empty_assistant_messages(form_data['messages'])
 
         return paused
 
