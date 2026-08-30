@@ -83,7 +83,7 @@ from open_webui.utils.access_control.files import get_owner_accessible_folder_fi
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.ask_user import stage_ask_user_tool_call
 from open_webui.utils.chat import generate_chat_completion
-from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.chat_id import CHANNEL_CHAT_ID_PREFIX, is_saved_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.context_compaction import compact_messages_for_request
 from open_webui.utils.files import (
@@ -592,6 +592,14 @@ def get_response_completion_event_data(event: dict) -> dict:
         **event,
         'response': response_data,
     }
+
+
+def strip_input_image_parts(item: dict) -> dict:
+    """Copy an output item without its input_image parts; those base64 data URIs are LLM-only."""
+    item = {**item}
+    if item.get('type') == 'function_call_output':
+        item['output'] = [part for part in item.get('output', []) if part.get('type') != 'input_image']
+    return item
 
 
 def handle_responses_streaming_event(
@@ -4188,6 +4196,7 @@ async def streaming_chat_response_handler(response, ctx):
     event_caller = ctx['event_caller']
     chat_id = metadata.get('chat_id') or ''
     save_to_chat = is_saved_chat_id(chat_id)
+    is_channel_chat = chat_id.startswith(CHANNEL_CHAT_ID_PREFIX)
 
     extra_params = {
         '__event_emitter__': event_emitter,
@@ -4553,6 +4562,21 @@ async def streaming_chat_response_handler(response, ctx):
             def full_output():
                 return prior_output + output if prior_output else output
 
+            async def emit_output_item_event(event_type: str, item: dict, output_index: int) -> None:
+                """Send one output item to the client; channel chats get full snapshots instead."""
+                if is_channel_chat:
+                    return
+                await event_emitter(
+                    {
+                        'type': 'response:completion',
+                        'data': {
+                            'type': event_type,
+                            'output_index': len(prior_output) + output_index,
+                            'item': strip_input_image_parts(item),
+                        },
+                    }
+                )
+
             def get_message_error_content(error):
                 if isinstance(error, HTTPException):
                     error = error.detail
@@ -4746,10 +4770,14 @@ async def streaming_chat_response_handler(response, ctx):
 
                         response_data = get_response_data_with_full_output_index(response_data)
                         await flush_pending_delta_data()
+                        event_data = get_response_completion_event_data(response_data)
+                        if prior_output and isinstance(event_data.get('response'), dict):
+                            # A continuation's output covers only this leg; sending it would drop the tool history.
+                            event_data['response'].pop('output', None)
                         await event_emitter(
                             {
                                 'type': 'response:completion',
-                                'data': get_response_completion_event_data(response_data),
+                                'data': event_data,
                             }
                         )
                         await save_current_response_stream(stream_output)
@@ -5570,6 +5598,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     'status': 'in_progress',
                                 }
                             )
+                            await emit_output_item_event('response.output_item.added', output[-1], len(output) - 1)
 
                     tool_approval_mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
                     if (
@@ -5594,14 +5623,15 @@ async def streaming_chat_response_handler(response, ctx):
                         )
                         return
 
-                    await event_emitter(
-                        {
-                            'type': 'chat:completion',
-                            'data': {
-                                'output': full_output(),
-                            },
-                        }
-                    )
+                    if is_channel_chat:
+                        await event_emitter(
+                            {
+                                'type': 'chat:completion',
+                                'data': {
+                                    'output': full_output(),
+                                },
+                            }
+                        )
 
                     tools = metadata.get('tools', {})
 
@@ -5785,14 +5815,16 @@ async def streaming_chat_response_handler(response, ctx):
                                 **({'embeds': result.get('embeds')} if result.get('embeds') else {}),
                             }
                         )
+                        await emit_output_item_event('response.output_item.done', output[-1], len(output) - 1)
 
                     # Update function_call statuses and parsed/sanitized arguments.
                     for tc in response_tool_calls:
                         call_id = tc.get('id', '')
-                        for item in output:
+                        for output_index, item in enumerate(output):
                             if item.get('type') == 'function_call' and item.get('call_id') == call_id:
                                 item['status'] = result_status_by_call_id.get(call_id, 'completed')
                                 item['arguments'] = tc.get('function', {}).get('arguments', '{}')
+                                await emit_output_item_event('response.output_item.done', item, output_index)
                                 break
 
                     # Emit citation sources to the frontend for display
@@ -5857,25 +5889,15 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                         tool_call_sources.clear()
 
-                    # Strip input_image parts (large base64 data URIs) from the
-                    # output sent to the frontend — they're only for LLM consumption
-                    # via convert_output_to_messages.
-                    frontend_output = []
-                    for item in full_output():
-                        if item.get('type') == 'function_call_output':
-                            parts = item.get('output', [])
-                            if any(p.get('type') == 'input_image' for p in parts):
-                                item = {**item, 'output': [p for p in parts if p.get('type') != 'input_image']}
-                        frontend_output.append(item)
-
-                    await event_emitter(
-                        {
-                            'type': 'chat:completion',
-                            'data': {
-                                'output': frontend_output,
-                            },
-                        }
-                    )
+                    if is_channel_chat:
+                        await event_emitter(
+                            {
+                                'type': 'chat:completion',
+                                'data': {
+                                    'output': [strip_input_image_parts(item) for item in full_output()],
+                                },
+                            }
+                        )
 
                     try:
                         new_form_data = {

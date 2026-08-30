@@ -499,8 +499,9 @@ function setPart(
 function findOutputItemIndex(output: OutputItem[], item: OutputItem): number {
 	return output.findIndex(
 		(existing) =>
-			(!!item.id && existing?.id === item.id) ||
-			(!!item.call_id && existing?.call_id === item.call_id)
+			existing?.type === item.type &&
+			((!!item.id && existing?.id === item.id) ||
+				(!!item.call_id && existing?.call_id === item.call_id))
 	);
 }
 
