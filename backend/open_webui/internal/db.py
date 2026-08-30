@@ -6,6 +6,7 @@ import re
 import sys
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
@@ -268,6 +269,23 @@ def _create_async_engine(*args, **kwargs):
     return create_async_engine(*args, **_json_codec_kwargs(kwargs))
 
 
+@lru_cache(maxsize=512)
+def _compile_sqlite_like(pattern: str, escape: str | None) -> re.Pattern | None:
+    """Compile an already lowercased LIKE pattern, or None if it ends on a dangling escape."""
+    regex = []
+    escaped = False
+    for char in pattern:
+        if escape and not escaped and char == escape:
+            escaped = True
+            continue
+        regex.append('.*' if not escaped and char == '%' else '.' if not escaped and char == '_' else re.escape(char))
+        escaped = False
+    if escaped:
+        return None
+
+    return re.compile(''.join(regex), re.DOTALL)
+
+
 # ============================================================
 # SYNC ENGINE (used only for: startup migrations, config loading,
 #              Alembic, peewee migration, health checks)
@@ -327,21 +345,11 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
             if pattern is None or value is None:
                 return None
 
-            regex = []
-            escaped = False
-            escape = str(escape).lower() if escape is not None else None
-            for char in str(pattern).lower():
-                if escape and not escaped and char == escape:
-                    escaped = True
-                    continue
-                regex.append(
-                    '.*' if not escaped and char == '%' else '.' if not escaped and char == '_' else re.escape(char)
-                )
-                escaped = False
-            if escaped:
+            compiled = _compile_sqlite_like(str(pattern).lower(), str(escape).lower() if escape is not None else None)
+            if compiled is None:
                 return False
 
-            return re.fullmatch(''.join(regex), str(value).lower(), re.DOTALL) is not None
+            return compiled.fullmatch(str(value).lower()) is not None
 
         dbapi_connection.create_function('like', 2, like, deterministic=True)
         dbapi_connection.create_function('like', 3, like, deterministic=True)
