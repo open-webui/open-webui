@@ -2265,14 +2265,21 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     return sanitized
 
 
-def drop_empty_assistant_messages(messages: list[dict]) -> list[dict]:
-    """Drop assistant turns an aborted generation left without content, which strict providers reject on replay."""
+def _has_non_blank_content(message: dict) -> bool:
+    content = message.get('content')
+    if isinstance(content, list):
+        return any(
+            part.get('type') != 'text' or part.get('text', '').strip() for part in content if isinstance(part, dict)
+        )
+    return bool(isinstance(content, str) and content.strip())
+
+
+def strip_empty_assistant_messages(messages: list[dict]) -> list[dict]:
+    """Drop assistant turns providers reject on replay: no tool calls, and only blank text or reasoning."""
     return [
         message
         for message in messages
-        if message.get('role') != 'assistant'
-        or message.get('tool_calls')
-        or any(text.strip() for text in _get_text_parts(message))
+        if message.get('role') != 'assistant' or message.get('tool_calls') or _has_non_blank_content(message)
     ]
 
 
@@ -2508,7 +2515,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         reasoning_format=get_reasoning_format(model),
     )
     form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
-    form_data['messages'] = drop_empty_assistant_messages(form_data['messages'])
+    form_data['messages'] = strip_empty_assistant_messages(form_data['messages'])
 
     system_message = get_system_message(form_data.get('messages', []))
     if system_message:  # Chat Controls/User Settings
@@ -3400,7 +3407,7 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
                 reasoning_format=get_reasoning_format(model),
             )
             form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
-            form_data['messages'] = drop_empty_assistant_messages(form_data['messages'])
+            form_data['messages'] = strip_empty_assistant_messages(form_data['messages'])
 
         return paused
 
