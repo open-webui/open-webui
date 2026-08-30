@@ -814,11 +814,15 @@ async def get_user_by_id(user_id: str, user=Depends(get_admin_user), db: AsyncSe
 
 @router.get('/{user_id}/info', response_model=UserInfoResponse)
 async def get_user_info_by_id(
-    user_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    user_id: str, session_user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
     user = await Users.get_user_by_id(user_id, db=db)
     if user:
         groups = await Groups.get_groups_by_member_id(user_id, db=db)
+        if session_user.role != 'admin':
+            session_user_groups = await Groups.get_groups_by_member_id(session_user.id, db=db)
+            session_user_group_ids = {group.id for group in session_user_groups}
+            groups = [group for group in groups if group.id in session_user_group_ids]
         return UserInfoResponse(
             **{
                 **user.model_dump(),
