@@ -168,7 +168,6 @@
 						const result = await blobForPreview();
 						if (!result) throw new Error(t('Preview failed'));
 						fileDocxData = await result.blob.arrayBuffer();
-						toast.info(t('Preview may differ from download.'));
 					}
 				} else if (ext === 'xlsx' || ext === 'xls') {
 					const result = await blobForPreview();
@@ -196,7 +195,6 @@
 						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
 						const resultImages = await pptxToImages(arrayBuffer);
 						fileOfficeSlides = resultImages.images;
-						toast.info(t('Preview may differ from download.'));
 					}
 				}
 			} else if (terminal) {
