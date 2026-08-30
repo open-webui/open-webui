@@ -18,6 +18,7 @@ from open_webui.env import (
     PIP_OPTIONS,
     PIP_PACKAGE_INDEX_OPTIONS,
 )
+from open_webui.events import get_active_event_functions
 from open_webui.models.functions import FunctionModel, Functions
 from open_webui.models.tools import Tools
 
@@ -310,6 +311,7 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
         del sys.modules[module_name]
 
         await Functions.update_function_by_id(function_id, {'is_active': False})
+        await get_active_event_functions.cache.clear()
         raise e
     finally:
         os.unlink(temp_file.name)

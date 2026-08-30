@@ -856,7 +856,6 @@ async def get_event_webhooks() -> list[dict[str, Any]]:
     return normalized
 
 
-# Dispatch-only cache; webhook writers read uncached and clear it.
 @cached(ttl=EVENT_CACHE_TTL)
 async def get_cached_event_webhooks() -> list[dict[str, Any]]:
     return await get_event_webhooks()
@@ -886,7 +885,6 @@ async def migrate_legacy_webhook_config() -> list[dict[str, Any]]:
         *webhooks,
     ]
     await Config.upsert({EVENT_WEBHOOKS_CONFIG_KEY: webhooks})
-    await get_cached_event_webhooks.cache.clear()
     return webhooks
 
 
@@ -1114,7 +1112,6 @@ class SocketSessionEventSink:
         await disconnect_user_sessions(str(subject['id']))
 
 
-# Dispatch cache, cleared by function writers; the returned list is shared, so copy before modifying.
 @cached(ttl=EVENT_CACHE_TTL)
 async def get_active_event_functions() -> list[FunctionModel]:
     from open_webui.models.functions import Functions
@@ -1135,13 +1132,13 @@ async def dispatch_event_functions(
     event_payload = event.model_dump()
 
     try:
-        event_functions = await get_active_event_functions()
+        event_functions = list(await get_active_event_functions())
         if extra_function_ids:
             extra_functions = await Functions.get_functions_by_ids(extra_function_ids)
             existing_ids = {function.id for function in event_functions}
-            event_functions = event_functions + [
+            event_functions.extend(
                 function for function in extra_functions if function.type == 'event' and function.id not in existing_ids
-            ]
+            )
     except Exception:
         log.exception('Event functions could not be loaded for %s', event.event)
         return

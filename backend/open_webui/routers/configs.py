@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from mcp.shared.auth import OAuthMetadata
 from open_webui.config import BannerModel
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
-from open_webui.events import EVENTS, publish_event
+from open_webui.events import EVENTS, get_cached_event_webhooks, publish_event
 from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -100,6 +100,7 @@ class ImportConfigForm(BaseModel):
 @router.post('/import', response_model=dict)
 async def import_config(request: Request, form_data: ImportConfigForm, user=Depends(get_admin_user)):
     await Config.upsert(form_data.config)
+    await get_cached_event_webhooks.cache.clear()
     await publish_event(
         request,
         EVENTS.CONFIG_IMPORTED,
