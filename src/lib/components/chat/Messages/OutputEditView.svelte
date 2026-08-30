@@ -138,7 +138,7 @@
 
 	function getMessageText(item: any): string {
 		return (item.content ?? [])
-			.filter((p: any) => p.type === 'output_text' || 'text' in p)
+			.filter((p: any) => p && (p.type === 'output_text' || 'text' in p))
 			.map((p: any) => p.text ?? '')
 			.join('\n');
 	}
@@ -146,7 +146,9 @@
 	function updateMessageText(idx: number, text: string) {
 		const next = [...output];
 		const item = { ...next[idx] };
-		const parts = (item.content ?? []).filter((p: any) => p.type === 'output_text' || 'text' in p);
+		const parts = (item.content ?? []).filter(
+			(p: any) => p && (p.type === 'output_text' || 'text' in p)
+		);
 		item.content = [{ ...(parts[0] ?? { type: 'output_text' }), text }];
 		next[idx] = item;
 		output = next;
@@ -155,7 +157,7 @@
 
 	function getReasoningText(item: any): string {
 		return (item.summary ?? item.content ?? [])
-			.filter((p: any) => 'text' in p)
+			.filter((p: any) => p && 'text' in p)
 			.map((p: any) => p.text ?? '')
 			.join('');
 	}
