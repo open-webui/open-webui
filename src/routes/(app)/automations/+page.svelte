@@ -327,8 +327,9 @@
 				if (k && v) parts[k] = v;
 			});
 		const freq = parts.FREQ || '';
-		const hour = parseInt(parts.BYHOUR || '0');
-		const min = (parts.BYMINUTE || '0').padStart(2, '0');
+		const dtstart = rrule.match(/DTSTART:\d{8}T(\d{2})(\d{2})/);
+		const hour = parseInt(parts.BYHOUR || dtstart?.[1] || '0');
+		const min = (parts.BYMINUTE || dtstart?.[2] || '0').padStart(2, '0');
 		const iv = parseInt(parts.INTERVAL || '1');
 		const ampm = hour >= 12 ? 'PM' : 'AM';
 		const h12 = hour % 12 || 12;

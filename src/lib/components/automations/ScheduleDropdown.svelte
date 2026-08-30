@@ -133,8 +133,9 @@
 		}
 		frequency = freq;
 		interval = parseInt(parts.INTERVAL || '1');
-		hour = parseInt(parts.BYHOUR || '9');
-		minute = parseInt(parts.BYMINUTE || '0');
+		const dtstart = s.match(/DTSTART:\d{8}T(\d{2})(\d{2})/);
+		hour = parseInt(parts.BYHOUR || dtstart?.[1] || '9');
+		minute = parseInt(parts.BYMINUTE || dtstart?.[2] || '0');
 		selectedDays = parts.BYDAY ? parts.BYDAY.split(',') : [];
 		monthDay = parseInt(parts.BYMONTHDAY || '1');
 	};
