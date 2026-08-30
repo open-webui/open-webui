@@ -46,6 +46,10 @@
 	let lastVisualFrequency = 'DAILY';
 	let prevFrequency = 'DAILY';
 
+	// carried through untouched: the dropdown has no field for either
+	let count: string = '';
+	let dtstartLine: string = '';
+
 	$: if (frequency !== 'CUSTOM') {
 		lastVisualFrequency = frequency;
 	}
@@ -70,6 +74,7 @@
 		}
 		let parts = [`FREQ=${lastVisualFrequency}`];
 		if (interval > 1) parts.push(`INTERVAL=${interval}`);
+		if (count) parts.push(`COUNT=${count}`);
 		if (lastVisualFrequency === 'WEEKLY' && selectedDays.length) {
 			parts.push(`BYDAY=${selectedDays.join(',')}`);
 		}
@@ -80,7 +85,8 @@
 			parts.push(`BYHOUR=${hour}`);
 		}
 		parts.push(`BYMINUTE=${minute}`);
-		return `RRULE:${parts.join(';')}`;
+		const rule = `RRULE:${parts.join(';')}`;
+		return dtstartLine ? `${dtstartLine}\n${rule}` : rule;
 	};
 
 	export const buildRrule = (): string => {
@@ -91,6 +97,7 @@
 		}
 		let parts = [`FREQ=${frequency}`];
 		if (interval > 1) parts.push(`INTERVAL=${interval}`);
+		if (count) parts.push(`COUNT=${count}`);
 		if (frequency === 'WEEKLY' && selectedDays.length) {
 			parts.push(`BYDAY=${selectedDays.join(',')}`);
 		}
@@ -101,7 +108,8 @@
 			parts.push(`BYHOUR=${hour}`);
 		}
 		parts.push(`BYMINUTE=${minute}`);
-		return `RRULE:${parts.join(';')}`;
+		const rule = `RRULE:${parts.join(';')}`;
+		return dtstartLine ? `${dtstartLine}\n${rule}` : rule;
 	};
 
 	export const parseRrule = (s: string) => {
@@ -137,6 +145,8 @@
 		minute = parseInt(parts.BYMINUTE || '0');
 		selectedDays = parts.BYDAY ? parts.BYDAY.split(',') : [];
 		monthDay = parseInt(parts.BYMONTHDAY || '1');
+		count = parts.COUNT || '';
+		dtstartLine = s.split(/\s+/).find((line) => line.toUpperCase().startsWith('DTSTART')) || '';
 	};
 
 	export const getScheduleLabel = (): string => {
