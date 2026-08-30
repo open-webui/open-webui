@@ -4,7 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
-	import { setTextScale } from '$lib/utils/text-scale';
+	import { normalizeAppFontFamily, setAppFontFamily, setTextScale } from '$lib/utils/text-scale';
 
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -115,7 +115,10 @@
 	let showManageImageCompressionModal = false;
 
 	let textScale: number | null = null;
+	let fontFamily: string | null = null;
+	let fontFamilyInput = '';
 	let showTextScaleSlider = false;
+	let showFontFamilyInput = false;
 	const settingRowClass = 'flex items-center justify-between gap-2.5';
 	const settingLabelClass = 'min-w-0 text-xs text-gray-600 dark:text-gray-400';
 	const settingControlClass = 'flex shrink-0 items-center justify-end gap-1.5';
@@ -234,9 +237,18 @@
 	};
 
 	export const save = async () => {
+		const normalizedFontFamily = normalizeAppFontFamily(fontFamilyInput) || null;
+		fontFamily = normalizedFontFamily;
+		fontFamilyInput = normalizedFontFamily ?? '';
+
+		if (!externalSettings) {
+			setAppFontFamily(fontFamily || defaultFontFamily());
+		}
+
 		saveSettings({
 			models: [defaultModelId],
-			imageCompressionSize: imageCompressionSize
+			imageCompressionSize: imageCompressionSize,
+			fontFamily
 		});
 	};
 
@@ -253,6 +265,51 @@
 		}
 
 		saveSettings({ textScale });
+	};
+
+	const defaultFontFamily = () => normalizeAppFontFamily(defaultSettings.fontFamily) || null;
+
+	const previewFontFamily = (value: string) => {
+		fontFamilyInput = value;
+		fontFamily = normalizeAppFontFamily(value) || null;
+
+		if (!externalSettings) {
+			setAppFontFamily(fontFamily || defaultFontFamily());
+		}
+	};
+
+	const setFontFamilyHandler = (value: string | null) => {
+		const normalized = normalizeAppFontFamily(value);
+		fontFamily = normalized || null;
+		fontFamilyInput = normalized;
+
+		if (!externalSettings) {
+			setAppFontFamily(fontFamily || defaultFontFamily());
+		}
+
+		saveSettings({ fontFamily });
+	};
+
+	const toggleFontFamilyInput = () => {
+		if (!showFontFamilyInput && (fontFamily === null || isDefaultSetting('fontFamily'))) {
+			fontFamily = fontFamily ?? defaultFontFamily();
+			fontFamilyInput = fontFamily ?? '';
+			showFontFamilyInput = true;
+
+			if (!externalSettings) {
+				setAppFontFamily(fontFamily);
+			}
+		} else {
+			showFontFamilyInput = false;
+			fontFamily = null;
+			fontFamilyInput = '';
+
+			if (!externalSettings) {
+				setAppFontFamily(defaultFontFamily());
+			}
+
+			saveSettings({ fontFamily });
+		}
 	};
 
 	const init = () => {
@@ -338,7 +395,10 @@
 		webSearch = currentSettings?.webSearch ?? null;
 
 		textScale = currentSettings?.textScale ?? null;
+		fontFamily = normalizeAppFontFamily(currentSettings?.fontFamily) || null;
+		fontFamilyInput = fontFamily ?? '';
 		showTextScaleSlider = false;
+		showFontFamilyInput = false;
 
 		defaultUploadContext = currentSettings?.defaultUploadContext ?? 'focused';
 	};
@@ -485,6 +545,46 @@
 		{/if}
 		<p class={settingDescriptionClass}>
 			{$i18n.t('Set a local zoom level for the app interface.')}
+		</p>
+	</div>
+
+	<div>
+		<div class={settingRowClass}>
+			<label id="font-family-label" class={settingLabelClass} for="font-family-input">
+				{$i18n.t('Font Family')}
+			</label>
+
+			<div class={settingControlClass}>
+				<button
+					class={actionButtonClass}
+					aria-labelledby="font-family-label font-family-state"
+					type="button"
+					on:click={toggleFontFamilyInput}
+				>
+					<span id="font-family-state">
+						{!showFontFamilyInput && (fontFamily === null || isDefaultSetting('fontFamily'))
+							? $i18n.t('Default')
+							: $i18n.t('Custom')}
+					</span>
+				</button>
+			</div>
+		</div>
+
+		{#if showFontFamilyInput || (fontFamily !== null && !isDefaultSetting('fontFamily'))}
+			<div class="mt-1.5 flex items-center pb-1">
+				<input
+					id="font-family-input"
+					class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+					type="text"
+					placeholder="Aptos"
+					bind:value={fontFamilyInput}
+					on:input={(event) => previewFontFamily(event.currentTarget.value)}
+					on:change={(event) => setFontFamilyHandler(event.currentTarget.value)}
+				/>
+			</div>
+		{/if}
+		<p class={settingDescriptionClass}>
+			{$i18n.t('Use a local font family for the app interface.')}
 		</p>
 	</div>
 

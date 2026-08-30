@@ -14,7 +14,7 @@
 	import { getBanners } from '$lib/apis/configs';
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { getUserSettings } from '$lib/apis/users';
-	import { setTextScale } from '$lib/utils/text-scale';
+	import { setAppFontFamily, setTextScale } from '$lib/utils/text-scale';
 
 	import { WEBUI_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -98,6 +98,7 @@
 		loadKeybindings(userSettings?.keybindings);
 
 		setTextScale($settings?.textScale ?? 1);
+		setAppFontFamily($settings?.fontFamily ?? null);
 
 		if (cb) {
 			await cb();
