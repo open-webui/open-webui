@@ -368,6 +368,8 @@ async def fetch_url(
 
 async def generate_image(
     prompt: str,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
     __event_emitter__: callable = None,
@@ -378,6 +380,8 @@ async def generate_image(
     Generate an image based on a text prompt.
 
     :param prompt: A detailed description of the image to generate
+    :param width: Optional image width in pixels (requires height as well)
+    :param height: Optional image height in pixels (requires width as well)
     :return: Confirmation that the image was generated, or an error message
     """
     if __request__ is None:
@@ -386,9 +390,13 @@ async def generate_image(
     try:
         user = UserModel(**__user__) if __user__ else None
 
+        form_kwargs = {'prompt': prompt}
+        if width is not None and height is not None:
+            form_kwargs['size'] = f'{width}x{height}'
+
         images = await image_generations(
             request=__request__,
-            form_data=CreateImageForm(prompt=prompt),
+            form_data=CreateImageForm(**form_kwargs),
             user=user,
         )
 
@@ -434,6 +442,8 @@ async def generate_image(
 async def edit_image(
     prompt: str,
     image_urls: list[str],
+    width: Optional[int] = None,
+    height: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
     __event_emitter__: callable = None,
@@ -446,6 +456,8 @@ async def edit_image(
 
     :param prompt: A description of the transformation to apply to the provided images
     :param image_urls: Source image URLs to modify or use as composition inputs
+    :param width: Optional output image width in pixels (requires height as well)
+    :param height: Optional output image height in pixels (requires width as well)
     :return: Confirmation that the images were edited, or an error message
     """
     if __request__ is None:
@@ -454,9 +466,13 @@ async def edit_image(
     try:
         user = UserModel(**__user__) if __user__ else None
 
+        form_kwargs = {'prompt': prompt, 'image': image_urls}
+        if width is not None and height is not None:
+            form_kwargs['size'] = f'{width}x{height}'
+
         images = await image_edits(
             request=__request__,
-            form_data=EditImageForm(prompt=prompt, image=image_urls),
+            form_data=EditImageForm(**form_kwargs),
             user=user,
         )
 
