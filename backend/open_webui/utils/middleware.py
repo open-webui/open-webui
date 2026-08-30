@@ -2198,6 +2198,14 @@ def strip_reasoning_details(output: list) -> list:
     ]
 
 
+def get_content_parts(message: dict) -> list:
+    """Return a message's content as a list of content parts."""
+    content = message.get('content')
+    if isinstance(content, list):
+        return content
+    return [{'type': 'text', 'text': content}] if content else []
+
+
 def process_messages_with_output(
     messages: list[dict],
     reasoning_format: str | None = None,
@@ -2207,9 +2215,9 @@ def process_messages_with_output(
 
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
-    Assistant messages left empty by an aborted generation are dropped.
     """
     processed = []
+    merge_with_previous = False
 
     for message in messages:
         if message.get('role') == 'assistant' and message.get('output'):
@@ -2224,16 +2232,23 @@ def process_messages_with_output(
                 processed.extend(output_messages)
                 continue
 
-        # An aborted generation leaves an empty assistant turn; replaying it breaks strict providers.
+        # Aborted generations leave an empty assistant turn; strict providers reject it, and adjacent user turns too.
         if message.get('role') == 'assistant' and not message.get('tool_calls'):
-            content = message.get('content')
-            if not content or (isinstance(content, str) and not content.strip()):
+            content = get_content_from_message(message) or ''
+            has_meaningful_content = content.strip() if isinstance(content, str) else content
+            if not has_meaningful_content:
+                merge_with_previous = bool(processed)
                 continue
 
         clean_message = dict(message)
         for key in ('id', 'files', 'output', 'model', 'contextSummary', 'context_summary', 'usage'):
             clean_message.pop(key, None)
-        processed.append(clean_message)
+        if merge_with_previous and processed[-1].get('role') == clean_message.get('role'):
+            merged_parts = [*get_content_parts(processed[-1]), *get_content_parts(clean_message)]
+            processed[-1] = {**clean_message, 'content': merged_parts}
+        else:
+            processed.append(clean_message)
+        merge_with_previous = False
 
     return processed
 
