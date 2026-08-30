@@ -814,6 +814,9 @@
 							bind:this={contentContainerElement}
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
+							role="status"
+							aria-live="polite"
+							aria-atomic="false"
 						>
 							{#if hasResponseContent && message.error !== true}
 								<!-- always show message contents even if there's an error -->
