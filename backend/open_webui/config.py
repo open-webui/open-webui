@@ -259,8 +259,18 @@ if ENV == 'prod':
         OLLAMA_BASE_URL = 'http://ollama-service.open-webui.svc.cluster.local:11434'
 
 
-def _resolve_ollama_base_url(url: str) -> str:
-    """If the default Ollama port (11434) is unreachable, try the fallback port (12434)."""
+# Ports probed, in order, when no explicit Ollama base URL was configured.
+# Each serves the Ollama API; the first reachable one wins.
+OLLAMA_API_PORTS = (11434, 17434)
+
+
+def _resolve_ollama_base_url(url: str, ports: tuple = OLLAMA_API_PORTS) -> str:
+    """Probe the known Ollama API ports and use the first one that answers.
+
+    The default port is tried first, so an existing setup is never redirected
+    away from it. `ports` is injectable so this can be tested against free
+    ports rather than the real ones, which may be in use on a dev machine.
+    """
 
     def reachable(host: str, port: int) -> bool:
         try:
@@ -271,16 +281,23 @@ def _resolve_ollama_base_url(url: str) -> str:
 
     host = urlparse(url).hostname or 'localhost'
 
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        default = pool.submit(reachable, host, 11434)
-        fallback = pool.submit(reachable, host, 12434)
+    with ThreadPoolExecutor(max_workers=len(ports)) as pool:
+        results = list(pool.map(lambda port: reachable(host, port), ports))
 
-    if not default.result() and fallback.result():
-        url = url.replace(':11434', ':12434')
-        log.info('Ollama port 11434 unreachable on %s, falling back to 12434', host)
-    elif not default.result():
-        log.info('Ollama ports 11434 and 12434 both unreachable on %s', host)
+    default_port, *fallback_ports = ports
+    if results[0]:
+        return url
 
+    for port, is_up in zip(fallback_ports, results[1:]):
+        if is_up:
+            log.info('Port %d unreachable on %s, falling back to %d', default_port, host, port)
+            return url.replace(f':{default_port}', f':{port}')
+
+    log.info(
+        'No Ollama API port reachable on %s (tried %s)',
+        host,
+        ', '.join(str(p) for p in ports),
+    )
     return url
 
 
