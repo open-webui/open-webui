@@ -466,7 +466,7 @@
 	});
 </script>
 
-	<div class="relative {className}">
+<div class="relative {className}">
 	{#if loading}
 		<div class="absolute inset-0 flex items-center justify-center">
 			<Spinner className="size-5" />
@@ -477,17 +477,19 @@
 		</div>
 	{/if}
 
-		<div
-			class={singlePage
-				? 'overflow-hidden h-full flex items-center justify-center overscroll-contain'
-				: 'overflow-y-auto h-full'}
-			bind:this={outerContainer}
-			tabindex="0"
-			on:scroll={handleScroll}
-			on:wheel|nonpassive={handleWheel}
-			on:pointerdown={focusViewer}
-			on:keydown={handleKeyDown}
-		>
+	<div
+		class={singlePage
+			? 'overflow-hidden h-full flex items-center justify-center overscroll-contain'
+			: 'overflow-y-auto h-full'}
+		bind:this={outerContainer}
+		role="region"
+		aria-label={`${itemLabel} viewer`}
+		tabindex="0"
+		on:scroll={handleScroll}
+		on:wheel|nonpassive={handleWheel}
+		on:pointerdown={focusViewer}
+		on:keydown={handleKeyDown}
+	>
 		<div bind:this={sceneElement} class={singlePage ? '' : 'w-full'}></div>
 	</div>
 

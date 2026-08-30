@@ -231,15 +231,17 @@
 	});
 </script>
 
-	<div
-		bind:this={rootEl}
-		tabindex="0"
-		on:keydown={handleKeyDown}
-		on:pointerdown={focusPreview}
-		class="relative grid {hideThumbs
-			? 'grid-cols-[minmax(0,1fr)]'
-			: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
-	>
+<div
+	bind:this={rootEl}
+	role="region"
+	aria-label={`${itemLabel} preview`}
+	tabindex="0"
+	on:keydown={handleKeyDown}
+	on:pointerdown={focusPreview}
+	class="relative grid {hideThumbs
+		? 'grid-cols-[minmax(0,1fr)]'
+		: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
+>
 	<aside
 		class={hideThumbs
 			? 'hidden'
