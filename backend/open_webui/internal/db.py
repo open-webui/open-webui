@@ -271,14 +271,17 @@ def _create_async_engine(*args, **kwargs):
 
 @lru_cache(maxsize=512)
 def _compile_sqlite_like(pattern: str, escape: str | None) -> re.Pattern | None:
-    """Compile an already lowercased LIKE pattern, or None if it ends on a dangling escape."""
+    """Compile a LIKE pattern case-insensitively, or None if it ends on a dangling escape."""
     regex = []
     escaped = False
-    for char in pattern:
+    escape = escape.lower() if escape is not None else None
+    for char in pattern.lower():
         if escape and not escaped and char == escape:
             escaped = True
             continue
-        regex.append('.*' if not escaped and char == '%' else '.' if not escaped and char == '_' else re.escape(char))
+        regex.append(
+            '.*' if not escaped and char == '%' else '.' if not escaped and char == '_' else re.escape(char),
+        )
         escaped = False
     if escaped:
         return None
@@ -345,7 +348,7 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
             if pattern is None or value is None:
                 return None
 
-            compiled = _compile_sqlite_like(str(pattern).lower(), str(escape).lower() if escape is not None else None)
+            compiled = _compile_sqlite_like(str(pattern), str(escape) if escape is not None else None)
             if compiled is None:
                 return False
 
