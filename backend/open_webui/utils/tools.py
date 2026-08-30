@@ -1299,36 +1299,7 @@ async def set_terminal_servers(request: Request):
             }
         )
 
-    terminal_servers = await get_tool_servers_data(server_configs)
-
-    # A failed spec fetch (e.g. cold orchestrator right after a restart) must
-    # not evict a previously cached spec: keep the last known good entry for
-    # any enabled connection that dropped out instead of caching its absence.
-    expected_urls = {
-        server_config['info']['id'] or str(idx): server_config['url']
-        for idx, server_config in enumerate(server_configs)
-        if server_config['config']['enable']
-    }
-    missing_ids = set(expected_urls) - {server.get('id') for server in terminal_servers}
-    if missing_ids:
-        previous_servers = getattr(request.app.state, 'TERMINAL_SERVERS', None) or []
-        if request.app.state.redis is not None:
-            try:
-                data = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
-                if data is not None:
-                    previous_servers = JSONCodec.loads(data)
-            except Exception as e:
-                log.error(f'Error fetching terminal_servers from Redis: {e}')
-        for server in previous_servers:
-            server_id = server.get('id')
-            if server_id in missing_ids and server.get('url') == expected_urls[server_id]:
-                log.warning(
-                    "Spec fetch for terminal server '%s' failed; keeping previously cached specs",
-                    server_id,
-                )
-                terminal_servers.append(server)
-
-    request.app.state.TERMINAL_SERVERS = terminal_servers
+    request.app.state.TERMINAL_SERVERS = await get_tool_servers_data(server_configs)
 
     # Fetch system prompts concurrently (runs at cache time, not per-request)
     connections_by_id = {c.get('id'): c for c in connections if c.get('id')}
@@ -1352,12 +1323,9 @@ async def set_terminal_servers(request: Request):
     )
 
     if request.app.state.redis is not None:
-        try:
-            await request.app.state.redis.set(
-                f'{REDIS_KEY_PREFIX}:terminal_servers', JSONCodec.dumps(request.app.state.TERMINAL_SERVERS)
-            )
-        except Exception as e:
-            log.error(f'Error caching terminal_servers to Redis: {e}')
+        await request.app.state.redis.set(
+            f'{REDIS_KEY_PREFIX}:terminal_servers', JSONCodec.dumps(request.app.state.TERMINAL_SERVERS)
+        )
 
     return request.app.state.TERMINAL_SERVERS
 
@@ -1408,8 +1376,7 @@ async def get_terminal_tools(
     terminal_servers = await get_terminal_servers(request)
     server_data = next((s for s in terminal_servers if s.get('id') == terminal_id), None)
     if server_data is None:
-        # The cache can lack this server when its spec fetch failed earlier
-        # (e.g. it was still starting up); rebuild once before giving up.
+        # An earlier failed spec fetch is cached as an absence, so rebuild once before giving up
         terminal_servers = await set_terminal_servers(request)
         server_data = next((s for s in terminal_servers if s.get('id') == terminal_id), None)
     if server_data is None:
