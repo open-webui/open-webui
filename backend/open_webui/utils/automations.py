@@ -183,8 +183,6 @@ def rrule_interval_seconds(s: str) -> Optional[int]:
     Returns None for one-shot (COUNT=1) schedules or rules
     with fewer than two future occurrences.
     """
-    if 'COUNT=1' in s:
-        return None
     now = datetime.now()
     rule = _parse_rule(s, now)
     first = rule.after(now)
