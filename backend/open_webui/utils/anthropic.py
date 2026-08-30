@@ -874,15 +874,18 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                                 }
                                 yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
-                            # Close the block once arguments form complete JSON, without re-parsing on every chunk
-                            buffered = tool['arguments']
+                            # Close the block once arguments form complete JSON
                             if (
                                 tool['started']
                                 and not tool['stopped']
-                                and (buffered[-1] == '}' or buffered[-1].isspace() or buffered[0] != '{')
+                                and (
+                                    tool['arguments'][-1] == '}'
+                                    or tool['arguments'][-1].isspace()
+                                    or tool['arguments'][0] != '{'
+                                )
                             ):
                                 try:
-                                    JSONCodec.loads(buffered)
+                                    JSONCodec.loads(tool['arguments'])
                                     tool['stopped'] = True
                                     block_stop = {
                                         'type': 'content_block_stop',
