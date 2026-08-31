@@ -178,7 +178,7 @@ async def process_filter_function(
         request, filter_id, load_from_db=(filter_type != 'stream'), function=function
     )
     handler = getattr(function_module, filter_type, None)
-    if not handler:
+    if not callable(handler):
         return form_data, valves_by_id, None
 
     skip_files = (
