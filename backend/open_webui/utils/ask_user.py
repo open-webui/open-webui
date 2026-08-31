@@ -15,7 +15,7 @@ def get_ask_user_tool_calls(tool_calls: list[dict]) -> tuple[list[dict], str | N
     if len(tool_calls) != 1:
         return (
             ask_user_calls,
-            'Error: ask_user was not run because it must be called by itself; the other tool calls in this turn did run, so call ask_user again on its own.',
+            'Error: ask_user must be the only tool call, so it did not run. The others ran. Call ask_user on its own.',
         )
     if len(ask_user_calls) != 1:
         return ask_user_calls, 'Error: only one ask_user call is allowed per turn.'
