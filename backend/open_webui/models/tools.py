@@ -89,7 +89,7 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
-    access_grants: list[dict | None] = None
+    access_grants: list[dict] | None = None
 
 
 class ToolValves(BaseModel):
@@ -103,7 +103,7 @@ class ToolsTable:
     async def _to_tool_model(
         self,
         tool: Tool,
-        access_grants: list[AccessGrantModel | None] = None,
+        access_grants: list[AccessGrantModel] | None = None,
         db: AsyncSession | None = None,
     ) -> ToolModel:
         tool_model = ToolModel.model_validate(tool)

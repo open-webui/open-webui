@@ -87,7 +87,7 @@ class PromptForm(BaseModel):
     data: dict | None = None
     meta: dict | None = None
     tags: list[str | None] = None
-    access_grants: list[dict | None] = None
+    access_grants: list[dict] | None = None
     version_id: str | None = None  # Active version
     commit_message: str | None = None  # For history tracking
     is_production: bool | None = True  # Whether to set new version as production
@@ -100,7 +100,7 @@ class PromptsTable:
     async def _to_prompt_model(
         self,
         prompt: Prompt,
-        access_grants: list[AccessGrantModel | None] = None,
+        access_grants: list[AccessGrantModel] | None = None,
         db: AsyncSession | None = None,
     ) -> PromptModel:
         prompt_model = PromptModel.model_validate(prompt)
