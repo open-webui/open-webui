@@ -86,13 +86,14 @@ async def get_image_url_from_base64(request, base64_image_string, metadata, user
         # Extract base64 image data from the line
         image_data, content_type = await get_image_data(base64_image_string)
         if image_data is not None:
-            _, image_url = await upload_image(
+            _, image_file = await upload_image(
                 request,
                 image_data,
                 content_type,
                 metadata,
                 user,
             )
+            image_url = image_file['url']
 
         return image_url
     return None

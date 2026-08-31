@@ -938,20 +938,26 @@ async def _make_channel_emitter(request_info):
     state = {'last_emit_at': 0.0, 'output': []}
     THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
 
-    async def _emit_channel_update(content: str, done: bool = False, output: list | None = None):
+    async def _emit_channel_update(
+        content: str,
+        done: bool = False,
+        output: list | None = None,
+        data: dict | None = None,
+    ):
         from open_webui.models.messages import MessageForm, Messages
 
         msg = await Messages.get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
             return
 
-        update_form = MessageForm(content=content, data={'output': output} if output else None)
+        update_data = data or ({'output': output} if output else None)
+        update_form = MessageForm(content=content, data=update_data)
         if done:
             # Merge done flag into existing meta (preserve model_id etc.)
             existing_meta = msg.meta or {}
             update_form = MessageForm(
                 content=content,
-                data={'output': output} if output else None,
+                data=update_data,
                 meta={**existing_meta, 'done': True},
             )
 
@@ -999,6 +1005,29 @@ async def _make_channel_emitter(request_info):
             if content and (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, False, state['output'])
+
+        elif event_type in ('files', 'chat:message:files'):
+            from open_webui.models.messages import Messages
+
+            files = event_data.get('data', {}).get('files', [])
+            if not files:
+                return
+
+            msg = await Messages.get_message_by_id(message_id)
+            if not msg or msg.channel_id != channel_id:
+                return
+
+            existing_files = (msg.data or {}).get('files')
+            for file in files:
+                if isinstance(file, dict) and file.get('id'):
+                    file['url'] = file['id']
+                    await Channels.add_file_to_channel_by_id(channel_id, file['id'], msg.user_id)
+                    await Channels.set_file_message_id_in_channel_by_id(channel_id, file['id'], message_id)
+
+            if isinstance(existing_files, list):
+                files.extend(existing_files)
+
+            await _emit_channel_update(msg.content, data={'files': files})
 
         elif event_type == 'chat:message:error':
             error = event_data.get('data', {}).get('error', {})

@@ -552,7 +552,12 @@ async def upload_image(request, image_data, content_type, metadata, user, db=Non
             )
 
     url = request.app.url_path_for('get_file_content_by_id', id=file_item.id)
-    return file_item, url
+    return file_item, {
+        'id': file_item.id,
+        'url': url,
+        'name': (file_item.meta or {}).get('name') or file_item.filename,
+        'content_type': (file_item.meta or {}).get('content_type'),
+    }
 
 
 @router.post('/generations')
@@ -668,8 +673,8 @@ async def image_generations(
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
 
-                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
-                images.append({'url': url})
+                _, image_file = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                images.append(image_file)
             return images
 
         elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
@@ -712,21 +717,21 @@ async def image_generations(
             if model.endswith(':predict'):
                 for image in res['predictions']:
                     image_data, content_type = await get_image_data(image['bytesBase64Encoded'])
-                    _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
-                    images.append({'url': url})
+                    _, image_file = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                    images.append(image_file)
             elif model.endswith(':generateContent'):
                 for image in res['candidates']:
                     for part in image['content']['parts']:
                         if part.get('inlineData', {}).get('data'):
                             image_data, content_type = await get_image_data(part['inlineData']['data'])
-                            _, url = await upload_image(
+                            _, image_file = await upload_image(
                                 request,
                                 image_data,
                                 content_type,
                                 {**data, **metadata},
                                 user,
                             )
-                            images.append({'url': url})
+                            images.append(image_file)
 
             return images
 
@@ -776,14 +781,14 @@ async def image_generations(
                     headers,
                     trusted_base_url=image_config.COMFYUI_BASE_URL,
                 )
-                _, url = await upload_image(
+                _, image_file = await upload_image(
                     request,
                     image_data,
                     content_type,
                     {**form_data.model_dump(exclude_none=True), **metadata},
                     user,
                 )
-                images.append({'url': url})
+                images.append(image_file)
             return images
         elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
             # Automatic1111 holds one checkpoint instance-wide, so set_image_model
@@ -823,14 +828,14 @@ async def image_generations(
 
             for image in res['images']:
                 image_data, content_type = await get_image_data(image)
-                _, url = await upload_image(
+                _, image_file = await upload_image(
                     request,
                     image_data,
                     content_type,
                     {**data, 'info': res['info'], **metadata},
                     user,
                 )
-                images.append({'url': url})
+                images.append(image_file)
             return images
     except Exception as e:
         error = e
@@ -1039,8 +1044,8 @@ async def image_edits(
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
 
-                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
-                images.append({'url': url})
+                _, image_file = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                images.append(image_file)
             return images
 
         elif image_config.IMAGE_EDIT_ENGINE == 'gemini':
@@ -1089,14 +1094,14 @@ async def image_edits(
                 for part in image['content']['parts']:
                     if part.get('inlineData', {}).get('data'):
                         image_data, content_type = await get_image_data(part['inlineData']['data'])
-                        _, url = await upload_image(
+                        _, image_file = await upload_image(
                             request,
                             image_data,
                             content_type,
                             {**data, **metadata},
                             user,
                         )
-                        images.append({'url': url})
+                        images.append(image_file)
 
             return images
 
@@ -1173,14 +1178,14 @@ async def image_edits(
                     headers,
                     trusted_base_url=image_config.IMAGES_EDIT_COMFYUI_BASE_URL,
                 )
-                _, url = await upload_image(
+                _, image_file = await upload_image(
                     request,
                     image_data,
                     content_type,
                     {**form_data.model_dump(exclude_none=True), **metadata},
                     user,
                 )
-                images.append({'url': url})
+                images.append(image_file)
 
             return images
     except Exception as e:
