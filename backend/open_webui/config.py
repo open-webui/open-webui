@@ -76,10 +76,6 @@ def run_migrations():
         log.exception(f'Error running migrations: {e}')
 
 
-if ENABLE_DB_MIGRATIONS:
-    run_migrations()
-
-
 async def import_legacy_config_json():
     """Migrate legacy config.json → database on first run."""
     if not os.path.exists(f'{DATA_DIR}/config.json'):
@@ -3241,3 +3237,14 @@ Config.configure(
     enable_persistent=ENABLE_PERSISTENT_CONFIG,
     enable_oauth_persistent=ENABLE_OAUTH_PERSISTENT_CONFIG,
 )
+
+
+# Run migrations at the end of this module: the migration environment
+# imports model modules whose import chains circle back into this module
+# (models/calendar -> utils.automations -> events -> retrieval/web/utils),
+# so every name above must already be bound when those imports re-enter
+# config mid-execution. Running migrations earlier aborts them with a
+# circular ImportError on fresh installs, leaving the database without
+# any tables (#29280).
+if ENABLE_DB_MIGRATIONS:
+    run_migrations()
