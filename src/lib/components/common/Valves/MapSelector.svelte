@@ -1,5 +1,6 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
+	import { config } from '$lib/stores';
 
 	let map;
 	let mapElement;
@@ -28,10 +29,13 @@
 			];
 		}
 
-		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			attribution:
-				'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-		}).addTo(map);
+		const tileServerUrl = $config?.ui?.map_tile_server_url;
+
+		if (tileServerUrl) {
+			L.tileLayer(tileServerUrl, {
+				attribution: $config?.ui?.map_tile_server_attribution
+			}).addTo(map);
+		}
 
 		const setMarkers = (points) => {
 			if (map) {

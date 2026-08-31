@@ -1749,6 +1749,13 @@ RESPONSE_WATERMARK = os.getenv('RESPONSE_WATERMARK', '')
 
 IFRAME_CSP = os.getenv('IFRAME_CSP', '')
 
+MAP_TILE_SERVER_URL = os.getenv('MAP_TILE_SERVER_URL', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+
+MAP_TILE_SERVER_ATTRIBUTION = os.getenv(
+    'MAP_TILE_SERVER_ATTRIBUTION',
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+)
+
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.getenv('USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS', 'False').lower() == 'true'
 )

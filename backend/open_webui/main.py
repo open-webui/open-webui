@@ -59,6 +59,8 @@ from open_webui.config import (
     GOOGLE_DRIVE_API_KEY,
     GOOGLE_DRIVE_CLIENT_ID,
     IFRAME_CSP,
+    MAP_TILE_SERVER_ATTRIBUTION,
+    MAP_TILE_SERVER_URL,
     OAUTH_PROVIDERS,
     ONEDRIVE_CLIENT_ID_BUSINESS,
     ONEDRIVE_CLIENT_ID_PERSONAL,
@@ -2413,6 +2415,8 @@ async def get_app_config(request: Request):
                     'pending_user_overlay_content': config.get('ui.pending_user_overlay_content'),
                     'response_watermark': config.get('ui.watermark'),
                     'iframe_csp': IFRAME_CSP,
+                    'map_tile_server_url': MAP_TILE_SERVER_URL,
+                    'map_tile_server_attribution': MAP_TILE_SERVER_ATTRIBUTION,
                 },
                 'license_metadata': license_metadata,
                 **(

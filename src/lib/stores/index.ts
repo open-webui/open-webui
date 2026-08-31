@@ -375,6 +375,8 @@ type Config = {
 		pending_user_overlay_content?: string;
 		response_watermark?: string;
 		iframe_csp?: string;
+		map_tile_server_url?: string;
+		map_tile_server_attribution?: string;
 	};
 };
 
