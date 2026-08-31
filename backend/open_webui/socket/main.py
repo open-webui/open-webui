@@ -206,7 +206,7 @@ async def periodic_session_pool_cleanup():
                     if expired:
                         log.warning('Reaping %d orphaned session(s) from the session pool', len(expired))
                         if WEBSOCKET_MANAGER == 'redis':
-                            SESSION_POOL.pop_many(*expired)
+                            SESSION_POOL.delete_many(*expired)
                         else:
                             for sid in expired:
                                 SESSION_POOL.pop(sid, None)

@@ -115,10 +115,11 @@ class RedisDict:
             if cursor == 0:
                 break
 
-    def pop_many(self, *keys):
+    def delete_many(self, *keys):
         """Delete fields in one HDEL; no keys is a no-op (HDEL rejects an empty field list)."""
         if keys:
             self.redis.hdel(self.name, *keys)
+            self._last_signature = None
 
     def set(self, mapping: dict):
         if not mapping:
