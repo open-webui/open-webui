@@ -81,7 +81,7 @@ from open_webui.tasks import clear_response_stream, save_response_stream
 from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
-from open_webui.utils.ask_user import stage_ask_user_tool_call
+from open_webui.utils.ask_user import stage_ask_user_tool_calls
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
@@ -5531,12 +5531,14 @@ async def streaming_chat_response_handler(response, ctx):
                     tool_call_iterations += 1
 
                     response_tool_calls = tool_calls.pop(0)
-                    ask_user_stage = stage_ask_user_tool_call(response_tool_calls, output, output_id)
-                    if ask_user_stage:
-                        if ask_user_stage['error']:
-                            await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
-                            continue
-
+                    ask_user_staged, ask_user_error = stage_ask_user_tool_calls(response_tool_calls, output, output_id)
+                    if ask_user_error:
+                        response_tool_calls = [
+                            tool_call
+                            for tool_call in response_tool_calls
+                            if tool_call.get('function', {}).get('name') != 'ask_user'
+                        ]
+                    elif ask_user_staged:
                         if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
                             await pause_for_tool_approval(
                                 metadata['chat_id'],
@@ -5568,7 +5570,8 @@ async def streaming_chat_response_handler(response, ctx):
 
                     tool_approval_mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
                     if (
-                        tool_approval_mode == 'ask'
+                        response_tool_calls
+                        and tool_approval_mode == 'ask'
                         and is_saved_chat_id(metadata.get('chat_id'))
                         and metadata.get('message_id')
                     ):
