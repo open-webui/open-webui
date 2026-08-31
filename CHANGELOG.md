@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3] - 2026-08-31
+
+### Fixed
+
+- 💥 **Chat branches stay connected after reloads.** Replies saved under a previous message now stay listed under that previous message too, so branch arrows, exports, reloads, and later edits keep the full conversation visible. Chats already saved with the missing branch link are repaired when opened. [#29299](https://github.com/open-webui/open-webui/issues/29299)
+- 🧱 **Upgrades fail clearly instead of starting half-updated.** If a database migration fails, Open WebUI now stops at the real migration error instead of continuing to start and then throwing confusing missing table or missing column errors such as `chat.timer_at`. This fixes the upgrade failure reported after moving from 0.11.0, 0.11.1, or 0.11.2. [#29280](https://github.com/open-webui/open-webui/issues/29280)
+- 🔌 **Disconnect OAuth only appears when there is OAuth to disconnect.** MCP tool servers that use no authentication no longer show the Disconnect OAuth button. The button now appears only for an OAuth MCP server with a connected account. [#29296](https://github.com/open-webui/open-webui/issues/29296)
+- 🔤 **Custom interface fonts reach more of the app.** The font chosen in Interface settings now applies through the main, primary, and secondary font paths, so dropdowns and other interface text do not randomly fall back to the default font.
+
+### Changed
+
+- 🌐 **Indonesian translation coverage was expanded.** More Indonesian text is now filled in for file counts, selected items, groups, filters, schedules, terminal refresh messages, stale file cleanup, and retrieved sources. [#29294](https://github.com/open-webui/open-webui/pull/29294)
+
 ## [0.11.2] - 2026-08-31
 
 ### Added

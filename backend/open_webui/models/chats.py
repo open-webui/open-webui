@@ -456,6 +456,23 @@ class ChatTable:
             message_id = next_id
         return message_id
 
+    @staticmethod
+    def _add_child_id_to_parent(messages: dict, parent_id: str | None, child_id: str) -> bool:
+        parent = messages.get(parent_id) if parent_id else None
+        if not isinstance(parent, dict):
+            return False
+
+        child_ids = parent.get('childrenIds')
+        if not isinstance(child_ids, list):
+            child_ids = []
+            parent['childrenIds'] = child_ids
+
+        if child_id in child_ids:
+            return False
+
+        child_ids.append(child_id)
+        return True
+
     def _repair_chat_current_id(self, chat: dict) -> bool:
         history = chat.get('history')
         if not isinstance(history, dict):
@@ -464,6 +481,12 @@ class ChatTable:
         messages = history.get('messages')
         if not isinstance(messages, dict):
             return False
+
+        changed = False
+        for message_id, message in messages.items():
+            if not isinstance(message, dict):
+                continue
+            changed = self._add_child_id_to_parent(messages, message.get('parentId'), message_id) or changed
 
         current_id = history.get('currentId')
         current_message = messages.get(current_id)
@@ -494,7 +517,7 @@ class ChatTable:
                     history['currentId'] = last_descendant_id
                     return True
 
-            return False
+            return changed
 
         latest_leaf_id = None
         latest_timestamp = -1
@@ -509,7 +532,7 @@ class ChatTable:
                 latest_timestamp = timestamp
 
         if not latest_leaf_id or latest_leaf_id == current_id:
-            return False
+            return changed
 
         history['currentId'] = latest_leaf_id
         return True
@@ -998,6 +1021,8 @@ class ChatTable:
                 'timestamp': message.get('timestamp') or int(time.time()),
             }
             history['currentId'] = message_id
+
+        ChatTable._add_child_id_to_parent(messages, messages[message_id].get('parentId'), message_id)
         return messages[message_id]
 
     async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
