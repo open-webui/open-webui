@@ -75,7 +75,7 @@
 								return null;
 							});
 							localStorage.removeItem('token');
-							location.href = res?.redirect_url ?? '/auth';
+							location.href = res?.redirect_url ?? '/auth?logout=true';
 						}}>{$i18n.t('Sign Out')}</button
 					>
 				</div>

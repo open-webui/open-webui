@@ -573,7 +573,7 @@
 					const res = await userSignOut();
 					localStorage.removeItem('token');
 
-					location.href = res?.redirect_url ?? '/auth';
+					location.href = res?.redirect_url ?? '/auth?logout=true';
 					show = false;
 				}}
 			>
