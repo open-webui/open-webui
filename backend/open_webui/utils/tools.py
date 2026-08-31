@@ -1368,7 +1368,10 @@ async def get_terminal_tools(
     - Builds callables that route through the terminal proxy
     """
     connections = await Config.get('terminal_server.connections', []) or []
-    connection = next((c for c in connections if c.get('id') == terminal_id), None)
+    connection = next(
+        (terminal_connection for terminal_connection in connections if terminal_connection.get('id') == terminal_id),
+        None,
+    )
     if connection is None:
         raise RuntimeError(f"Terminal server '{terminal_id}' not found")
     if not connection.get('enabled', True):
