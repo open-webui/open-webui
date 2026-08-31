@@ -1338,7 +1338,13 @@ async def get_terminal_servers(request: Request):
             data = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
             if data is not None:
                 terminal_servers = JSONCodec.loads(data)
-                request.app.state.TERMINAL_SERVERS = terminal_servers
+                connections = await Config.get('terminal_server.connections', []) or []
+                if terminal_servers or not any(
+                    connection.get('url') and connection.get('enabled', True) for connection in connections
+                ):
+                    request.app.state.TERMINAL_SERVERS = terminal_servers
+                else:
+                    terminal_servers = None
         except Exception as e:
             log.error(f'Error fetching terminal_servers from Redis: {e}')
 
@@ -1374,7 +1380,7 @@ async def get_terminal_tools(
 
     # Find the cached spec data for this terminal
     terminal_servers = await get_terminal_servers(request)
-    server_data = next((s for s in terminal_servers if s.get('id') == terminal_id), None)
+    server_data = next((server for server in terminal_servers if server.get('id') == terminal_id), None)
     if server_data is None:
         raise RuntimeError(f"Terminal server '{terminal_id}' is unavailable")
 
