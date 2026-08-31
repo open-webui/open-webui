@@ -853,6 +853,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                                 raise ValueError(f'page.goto() returned None for url {url}')
 
                             text = self.evaluator.evaluate(page, browser, response)
+                            page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}
                             yield Document(page_content=text, metadata=metadata)
                     except Exception as e:
@@ -888,6 +889,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                                 raise ValueError(f'page.goto() returned None for url {url}')
 
                             text = await self.evaluator.evaluate_async(page, browser, response)
+                            await page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}
                             yield Document(page_content=text, metadata=metadata)
                     except Exception as e:
