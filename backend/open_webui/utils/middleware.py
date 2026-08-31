@@ -3221,10 +3221,12 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
 
 async def drain_approved_tool_calls(request, form_data, user, model, metadata) -> bool:
     chat_id = metadata.get('chat_id')
-    message_id = metadata.get('message_id') or metadata.get('assistant_message_id')
-    if not is_saved_chat_id(chat_id) or not message_id:
+    assistant_message_id = metadata.get('assistant_message_id')
+    # Only a resume/continue payload re-enters an existing message; other paths mint a fresh id with nothing to drain.
+    if not is_saved_chat_id(chat_id) or not assistant_message_id:
         return False
 
+    message_id = metadata.get('message_id') or assistant_message_id
     message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
     output = message.get('output') if message else None
     if not isinstance(output, list):
