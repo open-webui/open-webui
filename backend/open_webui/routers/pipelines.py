@@ -69,6 +69,9 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
     if 'pipeline' in model:
         sorted_filters.append(model)
 
+    if not sorted_filters:
+        return payload
+
     async with aiohttp.ClientSession(trust_env=True) as session:
         for filter in sorted_filters:
             urlIdx = filter.get('urlIdx')
@@ -131,6 +134,9 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
 
     if 'pipeline' in model:
         sorted_filters = [model] + sorted_filters
+
+    if not sorted_filters:
+        return payload
 
     async with aiohttp.ClientSession(trust_env=True) as session:
         for filter in sorted_filters:

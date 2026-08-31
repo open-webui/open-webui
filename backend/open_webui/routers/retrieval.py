@@ -790,7 +790,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_TRUST_ENV: bool | None = None
     WEB_SEARCH_RESULT_COUNT: int | None = None
     WEB_SEARCH_CONCURRENT_REQUESTS: int | None = None
-    WEB_SEARCH_DOMAIN_FILTER_LIST: list[str | None] = []
+    WEB_SEARCH_DOMAIN_FILTER_LIST: list[str] | None = []
     WEB_FETCH_MAX_CONTENT_LENGTH: int | None = None
     WEB_LOADER_CONCURRENT_REQUESTS: int | None = None
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: bool | None = None
@@ -848,7 +848,7 @@ class WebConfig(BaseModel):
     EXTERNAL_WEB_SEARCH_API_KEY: str | None = None
     EXTERNAL_WEB_LOADER_URL: str | None = None
     EXTERNAL_WEB_LOADER_API_KEY: str | None = None
-    YOUTUBE_LOADER_LANGUAGE: list[str | None] = None
+    YOUTUBE_LOADER_LANGUAGE: list[str] | None = None
     YOUTUBE_LOADER_PROXY_URL: str | None = None
     YOUTUBE_LOADER_TRANSLATION: str | None = None
     YANDEX_WEB_SEARCH_URL: str | None = None
@@ -938,7 +938,7 @@ class ConfigForm(BaseModel):
     FILE_MAX_COUNT: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_WIDTH: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_HEIGHT: Union[int, str | None] = None
-    ALLOWED_FILE_EXTENSIONS: list[str | None] = None
+    ALLOWED_FILE_EXTENSIONS: list[str] | None = None
 
     # Integration settings
     ENABLE_GOOGLE_DRIVE_INTEGRATION: bool | None = None

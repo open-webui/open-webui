@@ -12,7 +12,7 @@ async def search_openserp(
     base_url: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
 ) -> list[SearchResult]:
     """Query an OpenSERP instance and return normalised results.
 

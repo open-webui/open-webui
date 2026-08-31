@@ -362,7 +362,7 @@ class MessageStats(BaseModel):
     token_count: int | None = None
     timestamp: int | None = None
     rating: int | None = None  # Derived from message.annotation.rating
-    tags: list[str | None] = None  # Derived from message.annotation.tags
+    tags: list[str] | None = None  # Derived from message.annotation.tags
 
 
 class ChatHistoryStats(BaseModel):
@@ -2558,7 +2558,7 @@ class ChatTable:
         file_ids: list[str],
         user_id: str,
         db: AsyncSession | None = None,
-    ) -> list[ChatFileModel | None]:
+    ) -> list[ChatFileModel] | None:
         if not file_ids:
             return None
 

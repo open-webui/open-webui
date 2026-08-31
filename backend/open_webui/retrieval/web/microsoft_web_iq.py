@@ -15,7 +15,7 @@ def search_microsoft_web_iq(
     api_key: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
     language: str = 'en',
     user=None,
 ) -> list[SearchResult]:

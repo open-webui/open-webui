@@ -185,6 +185,7 @@ def rrule_interval_seconds(s: str) -> Optional[int]:
     """
     if 'COUNT=1' in s:
         return None
+    s = '\n'.join(line for line in s.splitlines() if not line.upper().startswith('DTSTART')) or s
     now = datetime.now()
     rule = _parse_rule(s, now)
     first = rule.after(now)

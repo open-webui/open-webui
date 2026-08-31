@@ -81,7 +81,7 @@ from open_webui.tasks import clear_response_stream, save_response_stream
 from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
-from open_webui.utils.ask_user import stage_ask_user_tool_call
+from open_webui.utils.ask_user import stage_ask_user_tool_calls
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
@@ -94,6 +94,7 @@ from open_webui.utils.files import (
 )
 from open_webui.utils.filter import (
     FilterContext,
+    get_filter_context,
     get_filter_functions,
     process_filter_functions,
 )
@@ -186,6 +187,12 @@ def _is_tool_result_error(value: Any) -> bool:
     return False
 
 
+def normalize_messages_for_model(form_data: dict) -> dict:
+    form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
+    form_data['messages'] = merge_system_messages(form_data.get('messages', []))
+    return form_data
+
+
 async def publish_chat_finished_event(
     request: Request, user: UserModel, metadata: dict, title: str, content: str, output: list | None = None
 ):
@@ -258,12 +265,7 @@ def build_terminal_file_tool_result(
     if isinstance(tool_result, (list, tuple)) and tool_result and isinstance(tool_result[0], dict):
         tool_result = tool_result[0]
 
-    if (
-        tool_function_name != 'display_file'
-        or tool_function_params.get('inline') is not True
-        or not isinstance(tool_result, dict)
-        or tool_result.get('exists') is False
-    ):
+    if tool_function_name != 'display_file' or not isinstance(tool_result, dict) or tool_result.get('exists') is False:
         return None
 
     tool_id = (tool or {}).get('tool_id', '')
@@ -284,7 +286,7 @@ def build_terminal_file_tool_result(
         **tool_result,
         'type': 'file',
         'source': 'open_terminal',
-        'displayed': True,
+        **({'displayed': True} if tool_function_params.get('inline') is True else {}),
         'terminal_selector': terminal_selector,
         **({'terminal_id': terminal_id} if terminal_id else {}),
         **({'terminal_url': server_url} if server_url and not terminal_id else {}),
@@ -1771,6 +1773,12 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
         return form_data
 
+    is_channel_chat = chat_id.startswith('channel:')
+    image_metadata = {
+        'message_id': metadata.get('message_id', None),
+        **({'channel_id': chat_id.removeprefix('channel:')} if is_channel_chat else {'chat_id': chat_id}),
+    }
+
     if not is_saved_chat_id(chat_id):
         message_list = form_data.get('messages', [])
     else:
@@ -1815,10 +1823,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
             images = await image_edits(
                 request=request,
                 form_data=EditImageForm(**{'prompt': prompt, 'image': input_images}),
-                metadata={
-                    'chat_id': metadata.get('chat_id', None),
-                    'message_id': metadata.get('message_id', None),
-                },
+                metadata=image_metadata,
                 user=user,
             )
 
@@ -1836,7 +1841,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                         'files': [
                             {
                                 'type': 'image',
-                                'url': image['url'],
+                                **image,
                             }
                             for image in images
                         ]
@@ -1926,10 +1931,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
             images = await image_generations(
                 request=request,
                 form_data=CreateImageForm(**{'prompt': prompt}),
-                metadata={
-                    'chat_id': metadata.get('chat_id', None),
-                    'message_id': metadata.get('message_id', None),
-                },
+                metadata=image_metadata,
                 user=user,
             )
 
@@ -1947,7 +1949,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                         'files': [
                             {
                                 'type': 'image',
-                                'url': image['url'],
+                                **image,
                             }
                             for image in images
                         ]
@@ -2265,7 +2267,8 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     return sanitized
 
 
-SKILL_MENTION_RE = re.compile(r'<(?:\$([^|>]+)(?:\|[^>]*)?|/([^|>]+)\|[^>]*)>')
+# Ids are validated as [a-z0-9_-]+ on create; matching that keeps ordinary "<$..." text intact.
+SKILL_MENTION_RE = re.compile(r'<(?:\$([a-z0-9_-]+)(?:\|[^>]*)?|/([a-z0-9_-]+)\|[^>]*)>')
 
 
 def _get_text_parts(message: dict) -> list[str]:
@@ -2287,7 +2290,7 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
     return ids
 
 
-SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[^|>]+(?:\|([^>]*))?|/[^|>]+\|([^>]*))>')
+SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[a-z0-9_-]+(?:\|([^>]*))?|/[a-z0-9_-]+\|([^>]*))>')
 
 
 def strip_skill_mentions(messages: list[dict]) -> None:
@@ -2397,7 +2400,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['model'] = selected_model_id
             metadata['selected_model_id'] = selected_model_id
 
-    # Captured before apply_params_to_form_data pops 'params'; feeds metadata['system_prompt'] below
+    # Captured before apply_params_to_form_data pops 'params'; populates metadata['system_prompt'] below
     model_system_prompt = (form_data.get('params') or {}).get('system')
 
     form_data = apply_params_to_form_data(form_data, model)
@@ -2623,13 +2626,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise e
 
+    filter_functions = []
+    filter_context = get_filter_context(request) if ENABLE_PLUGINS else None
     if ENABLE_PLUGINS:
         try:
             filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
 
             form_data, flags = await process_filter_functions(
                 request=request,
-                filter_context=None,
+                filter_context=filter_context,
                 filter_functions=filter_functions,
                 filter_type='inlet',
                 form_data=form_data,
@@ -3094,13 +3099,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
-    # Strip empty text content blocks from multimodal messages
-    # to prevent errors from providers like Gemini and Claude
-    form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
+    if ENABLE_PLUGINS:
+        try:
+            form_data, _ = await process_filter_functions(
+                request=request,
+                filter_context=filter_context,
+                filter_functions=filter_functions,
+                filter_type='request',
+                form_data=form_data,
+                extra_params=extra_params,
+            )
+        except Exception as e:
+            raise Exception(f'{e}')
 
-    # Merge any duplicate system messages into a single message at position 0
-    # to prevent template parsing errors with strict chat templates (e.g. Qwen)
-    form_data['messages'] = merge_system_messages(form_data.get('messages', []))
+    form_data = normalize_messages_for_model(form_data)
 
     return form_data, metadata, events
 
@@ -3225,10 +3237,12 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
 
 async def drain_approved_tool_calls(request, form_data, user, model, metadata) -> bool:
     chat_id = metadata.get('chat_id')
-    message_id = metadata.get('message_id') or metadata.get('assistant_message_id')
-    if not is_saved_chat_id(chat_id) or not message_id:
+    assistant_message_id = metadata.get('assistant_message_id')
+    # Only a resume/continue payload re-enters an existing message; other paths mint a fresh id with nothing to drain.
+    if not is_saved_chat_id(chat_id) or not assistant_message_id:
         return False
 
+    message_id = metadata.get('message_id') or assistant_message_id
     message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
     output = message.get('output') if message else None
     if not isinstance(output, list):
@@ -3387,6 +3401,34 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
                 reasoning_format=get_reasoning_format(model),
             )
             form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
+
+        if not paused and ENABLE_PLUGINS:
+            filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
+            if filter_functions:
+                filtered_form_data, _ = await process_filter_functions(
+                    request=request,
+                    filter_context=get_filter_context(request),
+                    filter_functions=filter_functions,
+                    filter_type='request',
+                    form_data=form_data,
+                    extra_params={
+                        '__event_emitter__': event_emitter,
+                        '__event_call__': event_caller,
+                        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+                        '__metadata__': metadata,
+                        '__oauth_token__': await get_system_oauth_token(request, user),
+                        '__request__': request,
+                        '__model__': model,
+                        '__chat_id__': metadata.get('chat_id'),
+                        '__message_id__': metadata.get('message_id'),
+                    },
+                )
+                if filtered_form_data is not form_data:
+                    form_data.clear()
+                    form_data.update(filtered_form_data)
+
+        if not paused:
+            normalize_messages_for_model(form_data)
 
         return paused
 
@@ -4196,6 +4238,8 @@ async def streaming_chat_response_handler(response, ctx):
         '__oauth_token__': await get_system_oauth_token(request, user),
         '__request__': request,
         '__model__': model,
+        '__chat_id__': metadata.get('chat_id'),
+        '__message_id__': metadata.get('message_id'),
     }
 
     filter_functions = (
@@ -5222,7 +5266,12 @@ async def streaming_chat_response_handler(response, ctx):
                                                 reasoning_detail_items,
                                             )
                                             await save_current_response_stream()
-                                            data = None
+                                            # Providers such as OpenRouter send reasoning_details
+                                            # alongside the reasoning text: only drop the event when
+                                            # the details were all there was to report, otherwise the
+                                            # reasoning delta never reaches the client.
+                                            if not reasoning_content:
+                                                data = None
 
                                     if value:
                                         if (
@@ -5530,12 +5579,14 @@ async def streaming_chat_response_handler(response, ctx):
                     tool_call_iterations += 1
 
                     response_tool_calls = tool_calls.pop(0)
-                    ask_user_stage = stage_ask_user_tool_call(response_tool_calls, output, output_id)
-                    if ask_user_stage:
-                        if ask_user_stage['error']:
-                            await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
-                            continue
-
+                    ask_user_staged, ask_user_error = stage_ask_user_tool_calls(response_tool_calls, output, output_id)
+                    if ask_user_error:
+                        response_tool_calls = [
+                            tool_call
+                            for tool_call in response_tool_calls
+                            if tool_call.get('function', {}).get('name') != 'ask_user'
+                        ]
+                    elif ask_user_staged:
                         if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
                             await pause_for_tool_approval(
                                 metadata['chat_id'],
@@ -5567,7 +5618,8 @@ async def streaming_chat_response_handler(response, ctx):
 
                     tool_approval_mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
                     if (
-                        tool_approval_mode == 'ask'
+                        response_tool_calls
+                        and tool_approval_mode == 'ask'
                         and is_saved_chat_id(metadata.get('chat_id'))
                         and metadata.get('message_id')
                     ):
@@ -5789,17 +5841,6 @@ async def streaming_chat_response_handler(response, ctx):
                                 item['arguments'] = tc.get('function', {}).get('arguments', '{}')
                                 break
 
-                    # Append a new empty message item for the next response
-                    output.append(
-                        {
-                            'type': 'message',
-                            'id': output_id('msg'),
-                            'status': 'in_progress',
-                            'role': 'assistant',
-                            'content': [{'type': 'output_text', 'text': ''}],
-                        }
-                    )
-
                     # Emit citation sources to the frontend for display
                     if citations_enabled:
                         for source in tool_call_sources:
@@ -5937,6 +5978,18 @@ async def streaming_chat_response_handler(response, ctx):
                                         ],
                                     }
                                 )
+
+                        if filter_functions:
+                            new_form_data, _ = await process_filter_functions(
+                                request=request,
+                                filter_context=filter_context,
+                                filter_functions=filter_functions,
+                                filter_type='request',
+                                form_data=new_form_data,
+                                extra_params=extra_params,
+                            )
+
+                        new_form_data = normalize_messages_for_model(new_form_data)
 
                         res = await generate_chat_completion(
                             request,
@@ -6145,6 +6198,18 @@ async def streaming_chat_response_handler(response, ctx):
                                     ),
                                 ],
                             }
+
+                            if filter_functions:
+                                new_form_data, _ = await process_filter_functions(
+                                    request=request,
+                                    filter_context=filter_context,
+                                    filter_functions=filter_functions,
+                                    filter_type='request',
+                                    form_data=new_form_data,
+                                    extra_params=extra_params,
+                                )
+
+                            new_form_data = normalize_messages_for_model(new_form_data)
 
                             res = await generate_chat_completion(
                                 request,

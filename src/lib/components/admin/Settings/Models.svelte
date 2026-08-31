@@ -269,6 +269,14 @@
 
 		baseModels = await getBaseModels(localStorage.token, selectedTag);
 		allModels = await getModels(localStorage.token);
+
+		const providerModels = await getModels(localStorage.token, null, true);
+		const allModelIds = new Set<string>(allModels.map((model: ModelListItem) => model.id));
+		allModels = [
+			...allModels,
+			...providerModels.filter((model: ModelListItem) => !allModelIds.has(model.id))
+		];
+
 		const baseModelIds = new Set<string>(baseModels.map((model: ModelListItem) => model.id));
 
 		models = allModels

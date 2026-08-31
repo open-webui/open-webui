@@ -163,7 +163,9 @@
 			</div>
 		</ConsecutiveDetailsGroup>
 	{:else if displayItem.type === 'file'}
-		<TerminalOutputFile item={displayItem.item} {chatId} />
+		{#if displayItem.item?.displayed || $settings?.terminalFileDisplay === 'inline'}
+			<TerminalOutputFile item={displayItem.item} {chatId} />
+		{/if}
 	{:else}
 		{@const detailToken = displayItem.token}
 		{#if detailToken.attributes?.type === 'tool_calls'}

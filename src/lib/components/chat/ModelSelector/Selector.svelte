@@ -1081,8 +1081,12 @@
 											<button
 												type="button"
 												class="focus-ring flex size-[1.375rem] shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {compareEnabled
-													? 'bg-gray-50 text-gray-700 hover:bg-gray-50 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/60'
-													: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
+													? ($settings?.highContrastMode ?? false)
+														? 'bg-gray-200 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-800'
+														: 'bg-gray-50 text-gray-700 hover:bg-gray-50 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/60'
+													: ($settings?.highContrastMode ?? false)
+														? 'text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+														: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
 												aria-label={$i18n.t('Compare')}
 												aria-pressed={compareEnabled}
 												on:click={() => {
@@ -1100,8 +1104,14 @@
 											placeholder={$i18n.t('All')}
 											align="end"
 											items={modelFilterItems}
-											triggerClass="relative flex h-[1.375rem] max-w-32 items-center gap-0.5 rounded-xl bg-transparent px-1.5 text-[0.6875rem] font-normal text-gray-400 transition-colors duration-100 hover:bg-gray-50/40 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800/40 dark:hover:text-gray-300"
-											itemClass="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] capitalize hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
+											triggerClass="relative flex h-[1.375rem] max-w-32 items-center gap-0.5 rounded-xl bg-transparent px-1.5 text-[0.6875rem] font-normal transition-colors duration-100 {($settings?.highContrastMode ??
+											false)
+												? 'text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+												: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
+											itemClass="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] capitalize {($settings?.highContrastMode ??
+											false)
+												? 'hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+												: 'hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
 											contentClass="min-w-36 model-selector-child-menu"
 											onChange={setModelFilter}
 										/>
@@ -1195,7 +1205,9 @@
 										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
 										class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {selectedModelIdx ===
 										filteredItems.length + targetIndex
-											? 'bg-gray-50/70 dark:bg-gray-800/60'
+											? ($settings?.highContrastMode ?? false)
+												? 'bg-gray-200 dark:bg-gray-800'
+												: 'bg-gray-50/70 dark:bg-gray-800/60'
 											: ''}"
 									>
 										<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
@@ -1243,9 +1255,14 @@
 										role="option"
 										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
 										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
-										class="focus-ring flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {selectedModelIdx ===
+										class="focus-ring flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {($settings?.highContrastMode ??
+										false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'} {selectedModelIdx ===
 										filteredItems.length + targetIndex
-											? 'bg-gray-50/70 dark:bg-gray-800/60'
+											? ($settings?.highContrastMode ?? false)
+												? 'bg-gray-200 dark:bg-gray-800'
+												: 'bg-gray-50/70 dark:bg-gray-800/60'
 											: ''}"
 										on:click={() => {
 											downloadModelHandler(target);

@@ -1144,6 +1144,7 @@
 	const terminalEventHandler = (type: string, data: any) => {
 		if (type === 'terminal:display_file') {
 			if (!data?.path) return;
+			if ($settings?.terminalFileDisplay === 'inline') return;
 			displayFileHandler(data.path, { showControls, showFileNavPath }, { page: data?.page });
 		} else if (type === 'terminal:write_file' || type === 'terminal:replace_file_content') {
 			if (!data?.path) return;
@@ -1219,7 +1220,11 @@
 				} else if (type === 'chat:active') {
 					if (!data?.active) {
 						taskIds = null;
-						if ($chatId && !$temporaryChatEnabled && hasPendingAssistantLeaf()) {
+						if (
+							$chatId &&
+							!$temporaryChatEnabled &&
+							hasPendingAssistantLeaf(event?.message_id ?? null)
+						) {
 							await loadChat();
 						}
 						if ($chatId && !$temporaryChatEnabled) {
@@ -1499,9 +1504,9 @@
 		} catch {}
 	};
 
-	const hasPendingAssistantLeaf = () =>
-		Object.values(history.messages).some(
-			(message) =>
+	const hasPendingAssistantLeaf = (messageId: string | null = null) =>
+		(messageId ? [history.messages[messageId]] : Object.values(history.messages)).some(
+			(message: any) =>
 				message?.role === 'assistant' && !message.done && (message.childrenIds?.length ?? 0) === 0
 		);
 
@@ -2113,8 +2118,9 @@
 
 		autoScroll = true;
 
-		await resetInput();
+		// resetInput() must stay last: the selected model's defaults override the draft's selection.
 		await restoreChatInput(sessionStorage.getItem('chat-input'));
+		await resetInput();
 		await chatId.set('');
 		await chatTitle.set('');
 

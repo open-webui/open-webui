@@ -31,7 +31,10 @@
 			const startDate = new Date(startMs);
 			const endDate = new Date(endMs);
 			const d = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-			const last = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()).getTime();
+			const last = Math.max(
+				d.getTime(),
+				new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()).getTime()
+			);
 			while (d.getTime() <= last) {
 				const key = d.getTime().toString();
 				(map[key] ??= []).push(e);
@@ -90,7 +93,7 @@
 		const dayEndMs = dayStartMs + 86_400_000;
 		return filteredEvents.filter((e) => {
 			const startMs = e.start_at / NS;
-			const endMs = (e.end_at || e.start_at) / NS;
+			const endMs = Math.max(startMs, (e.end_at || e.start_at) / NS);
 			return startMs < dayEndMs && endMs >= dayStartMs;
 		});
 	}

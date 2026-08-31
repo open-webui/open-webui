@@ -48,6 +48,10 @@
 			return (b.member_count ?? 0) - (a.member_count ?? 0) || a.name.localeCompare(b.name);
 		});
 
+	$: if (loaded) {
+		adminGroupCount.set(filteredGroups.length);
+	}
+
 	/** @type {any} */
 	let defaultPermissions = {};
 
@@ -56,7 +60,6 @@
 
 	const setGroups = async () => {
 		groups = await getGroups(localStorage.token);
-		adminGroupCount.set(groups.length);
 	};
 
 	/** @param {any} updatedGroup */

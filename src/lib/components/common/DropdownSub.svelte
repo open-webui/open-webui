@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import { settings } from '$lib/stores';
 	import { tick } from 'svelte';
 
 	/** CSS classes for the sub-content container */
@@ -153,7 +154,14 @@
 <svelte:window on:scroll|capture={positionContent} on:resize={positionContent} />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div use:trigger class="w-full" on:mouseenter={handleMouseEnter} on:mouseleave={handleMouseLeave}>
+<div
+	use:trigger
+	class="w-full {($settings?.highContrastMode ?? false)
+		? '[&>button:hover]:bg-gray-200! dark:[&>button:hover]:bg-gray-800!'
+		: '[&>button:hover]:bg-gray-50/60 dark:[&>button:hover]:bg-gray-800/60'}"
+	on:mouseenter={handleMouseEnter}
+	on:mouseleave={handleMouseLeave}
+>
 	<slot name="trigger" />
 </div>
 
