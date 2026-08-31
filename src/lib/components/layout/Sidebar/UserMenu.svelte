@@ -571,7 +571,6 @@
 				type="button"
 				on:click={async () => {
 					const res = await userSignOut();
-					user.set(null);
 					localStorage.removeItem('token');
 
 					location.href = res?.redirect_url ?? '/auth';
