@@ -918,6 +918,14 @@ async def image_edits(
                 return data
 
             if data.startswith('http://') or data.startswith('https://'):
+                parsed = urlparse(data)
+                if (
+                    parsed.netloc == urlparse(str(request.base_url)).netloc
+                    and parsed.path.startswith('/api/v1/files/')
+                    and '/content' in parsed.path
+                ):
+                    return await load_url_image(parsed.path)
+
                 # Validate URL to prevent SSRF attacks against local/private networks.
                 # allow_redirects=False prevents redirect-based SSRF: validate_url() is
                 # called only on the originally-submitted URL; following 3xx redirects
