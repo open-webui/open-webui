@@ -271,7 +271,7 @@ def _create_async_engine(*args, **kwargs):
 
 @lru_cache(maxsize=512)
 def _compile_sqlite_like(pattern: str, escape: str | None) -> re.Pattern | None:
-    """Compile a LIKE pattern case-insensitively, or None if it ends on a dangling escape."""
+    """Compile a LIKE pattern into a regex matching lowercased values, or None on a dangling escape."""
     regex = []
     escaped = False
     escape = escape.lower() if escape is not None else None
@@ -279,9 +279,7 @@ def _compile_sqlite_like(pattern: str, escape: str | None) -> re.Pattern | None:
         if escape and not escaped and char == escape:
             escaped = True
             continue
-        regex.append(
-            '.*' if not escaped and char == '%' else '.' if not escaped and char == '_' else re.escape(char),
-        )
+        regex.append('.*' if not escaped and char == '%' else '.' if not escaped and char == '_' else re.escape(char))
         escaped = False
     if escaped:
         return None
