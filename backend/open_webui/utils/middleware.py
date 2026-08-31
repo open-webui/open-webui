@@ -94,6 +94,7 @@ from open_webui.utils.files import (
 )
 from open_webui.utils.filter import (
     FilterContext,
+    get_filter_context,
     get_filter_functions,
     process_filter_functions,
 )
@@ -184,6 +185,12 @@ def _is_tool_result_error(value: Any) -> bool:
         )
 
     return False
+
+
+def normalize_messages_for_model(form_data: dict) -> dict:
+    form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
+    form_data['messages'] = merge_system_messages(form_data.get('messages', []))
+    return form_data
 
 
 async def publish_chat_finished_event(
@@ -2393,7 +2400,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['model'] = selected_model_id
             metadata['selected_model_id'] = selected_model_id
 
-    # Captured before apply_params_to_form_data pops 'params'; feeds metadata['system_prompt'] below
+    # Captured before apply_params_to_form_data pops 'params'; populates metadata['system_prompt'] below
     model_system_prompt = (form_data.get('params') or {}).get('system')
 
     form_data = apply_params_to_form_data(form_data, model)
@@ -2619,13 +2626,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise e
 
+    filter_functions = []
+    filter_context = get_filter_context(request) if ENABLE_PLUGINS else None
     if ENABLE_PLUGINS:
         try:
             filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
 
             form_data, flags = await process_filter_functions(
                 request=request,
-                filter_context=None,
+                filter_context=filter_context,
                 filter_functions=filter_functions,
                 filter_type='inlet',
                 form_data=form_data,
@@ -3090,13 +3099,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
-    # Strip empty text content blocks from multimodal messages
-    # to prevent errors from providers like Gemini and Claude
-    form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
+    if ENABLE_PLUGINS:
+        try:
+            form_data, _ = await process_filter_functions(
+                request=request,
+                filter_context=filter_context,
+                filter_functions=filter_functions,
+                filter_type='request',
+                form_data=form_data,
+                extra_params=extra_params,
+            )
+        except Exception as e:
+            raise Exception(f'{e}')
 
-    # Merge any duplicate system messages into a single message at position 0
-    # to prevent template parsing errors with strict chat templates (e.g. Qwen)
-    form_data['messages'] = merge_system_messages(form_data.get('messages', []))
+    form_data = normalize_messages_for_model(form_data)
 
     return form_data, metadata, events
 
@@ -3385,6 +3401,34 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
                 reasoning_format=get_reasoning_format(model),
             )
             form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
+
+        if not paused and ENABLE_PLUGINS:
+            filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
+            if filter_functions:
+                filtered_form_data, _ = await process_filter_functions(
+                    request=request,
+                    filter_context=get_filter_context(request),
+                    filter_functions=filter_functions,
+                    filter_type='request',
+                    form_data=form_data,
+                    extra_params={
+                        '__event_emitter__': event_emitter,
+                        '__event_call__': event_caller,
+                        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+                        '__metadata__': metadata,
+                        '__oauth_token__': await get_system_oauth_token(request, user),
+                        '__request__': request,
+                        '__model__': model,
+                        '__chat_id__': metadata.get('chat_id'),
+                        '__message_id__': metadata.get('message_id'),
+                    },
+                )
+                if filtered_form_data is not form_data:
+                    form_data.clear()
+                    form_data.update(filtered_form_data)
+
+        if not paused:
+            normalize_messages_for_model(form_data)
 
         return paused
 
@@ -4194,6 +4238,8 @@ async def streaming_chat_response_handler(response, ctx):
         '__oauth_token__': await get_system_oauth_token(request, user),
         '__request__': request,
         '__model__': model,
+        '__chat_id__': metadata.get('chat_id'),
+        '__message_id__': metadata.get('message_id'),
     }
 
     filter_functions = (
@@ -5933,6 +5979,18 @@ async def streaming_chat_response_handler(response, ctx):
                                     }
                                 )
 
+                        if filter_functions:
+                            new_form_data, _ = await process_filter_functions(
+                                request=request,
+                                filter_context=filter_context,
+                                filter_functions=filter_functions,
+                                filter_type='request',
+                                form_data=new_form_data,
+                                extra_params=extra_params,
+                            )
+
+                        new_form_data = normalize_messages_for_model(new_form_data)
+
                         res = await generate_chat_completion(
                             request,
                             new_form_data,
@@ -6140,6 +6198,18 @@ async def streaming_chat_response_handler(response, ctx):
                                     ),
                                 ],
                             }
+
+                            if filter_functions:
+                                new_form_data, _ = await process_filter_functions(
+                                    request=request,
+                                    filter_context=filter_context,
+                                    filter_functions=filter_functions,
+                                    filter_type='request',
+                                    form_data=new_form_data,
+                                    extra_params=extra_params,
+                                )
+
+                            new_form_data = normalize_messages_for_model(new_form_data)
 
                             res = await generate_chat_completion(
                                 request,
