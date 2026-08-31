@@ -269,9 +269,15 @@ def _create_async_engine(*args, **kwargs):
     return create_async_engine(*args, **_json_codec_kwargs(kwargs))
 
 
+# ============================================================
+# SYNC ENGINE (used only for: startup migrations, config loading,
+#              Alembic, peewee migration, health checks)
+# ============================================================
+
+
 @lru_cache(maxsize=512)
 def _compile_sqlite_like(pattern: str, escape: str | None) -> re.Pattern | None:
-    """Compile a LIKE pattern into a regex matching lowercased values, or None on a dangling escape."""
+    """Lowercase and compile a LIKE pattern into a regex matching lowercased values, or None on a dangling escape."""
     regex = []
     escaped = False
     escape = escape.lower() if escape is not None else None
@@ -286,11 +292,6 @@ def _compile_sqlite_like(pattern: str, escape: str | None) -> re.Pattern | None:
 
     return re.compile(''.join(regex), re.DOTALL)
 
-
-# ============================================================
-# SYNC ENGINE (used only for: startup migrations, config loading,
-#              Alembic, peewee migration, health checks)
-# ============================================================
 
 # Handle SQLCipher URLs
 if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
