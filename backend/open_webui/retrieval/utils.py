@@ -896,17 +896,56 @@ def generate_openai_batch_embeddings(
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
         headers = include_user_info_headers(headers, user)
 
-    r = requests.post(
-        f'{url}/embeddings',
-        headers=headers,
-        json=json_data,
-    )
-    r.raise_for_status()
-    data = r.json()
-    if 'data' in data:
-        return [elem['embedding'] for elem in data['data']]
-    else:
-        raise ValueError("Unexpected OpenAI embeddings response: missing 'data' key")
+    max_retries = 5
+    base_delay = 1.0
+    retryable = {429, 500, 502, 503, 504}
+
+    for attempt in range(max_retries):
+        try:
+            r = requests.post(
+                f'{url}/embeddings',
+                headers=headers,
+                json=json_data,
+            )
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            # Network/timeout errors are transient — retry with exponential backoff.
+            if attempt < max_retries - 1:
+                wait = base_delay * (2**attempt)
+                log.warning(
+                    'generate_openai_batch_embeddings: network error (attempt %d/%d), '
+                    'retrying in %.1fs: %s',
+                    attempt + 1,
+                    max_retries,
+                    wait,
+                    e,
+                )
+                time.sleep(wait)
+                continue
+            # Last attempt: propagate the original exception.
+            raise
+
+        if r.status_code in retryable and attempt < max_retries - 1:
+            wait = base_delay * (2**attempt)
+            log.warning(
+                'generate_openai_batch_embeddings: HTTP %s (attempt %d/%d), '
+                'retrying in %.1fs',
+                r.status_code,
+                attempt + 1,
+                max_retries,
+                wait,
+            )
+            time.sleep(wait)
+            continue
+
+        # Success (200) or non-retryable status (400/401/403...) → fail immediately.
+        r.raise_for_status()
+        data = r.json()
+        if 'data' in data:
+            return [elem['embedding'] for elem in data['data']]
+        else:
+            raise ValueError("Unexpected OpenAI embeddings response: missing 'data' key")
+
+    raise Exception(f'generate_openai_batch_embeddings: max retries ({max_retries}) exceeded')
 
 
 async def agenerate_openai_batch_embeddings(
@@ -926,21 +965,61 @@ async def agenerate_openai_batch_embeddings(
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
         headers = include_user_info_headers(headers, user)
 
-    async with aiohttp.ClientSession(
-        trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-    ) as session:
-        async with session.post(
-            f'{url}/embeddings',
-            headers=headers,
-            json=form_data,
-            ssl=AIOHTTP_CLIENT_SESSION_SSL,
-        ) as r:
-            r.raise_for_status()
-            data = await r.json()
-            if 'data' in data:
-                return [item['embedding'] for item in data['data']]
-            else:
-                raise ValueError("Unexpected OpenAI embeddings response: missing 'data' key")
+    max_retries = 5
+    base_delay = 1.0
+    retryable = {429, 500, 502, 503, 504}
+
+    for attempt in range(max_retries):
+        try:
+            async with aiohttp.ClientSession(
+                trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            ) as session:
+                async with session.post(
+                    f'{url}/embeddings',
+                    headers=headers,
+                    json=form_data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as r:
+                    if r.status in retryable and attempt < max_retries - 1:
+                        wait = base_delay * (2**attempt)
+                        log.warning(
+                            'agenerate_openai_batch_embeddings: HTTP %s (attempt %d/%d), '
+                            'retrying in %.1fs',
+                            r.status,
+                            attempt + 1,
+                            max_retries,
+                            wait,
+                        )
+                        await asyncio.sleep(wait)
+                        continue
+
+                    # Success (200) or non-retryable status (400/401/403...) → fail immediately.
+                    r.raise_for_status()
+                    data = await r.json()
+                    if 'data' in data:
+                        return [item['embedding'] for item in data['data']]
+                    else:
+                        raise ValueError("Unexpected OpenAI embeddings response: missing 'data' key")
+        except (asyncio.TimeoutError, aiohttp.ClientConnectionError) as e:
+            # Network/timeout errors are transient — retry with exponential backoff.
+            # aiohttp.ClientResponseError (HTTP status errors) is deliberately NOT
+            # caught here, so non-retryable statuses fail immediately.
+            if attempt < max_retries - 1:
+                wait = base_delay * (2**attempt)
+                log.warning(
+                    'agenerate_openai_batch_embeddings: network error (attempt %d/%d), '
+                    'retrying in %.1fs: %s',
+                    attempt + 1,
+                    max_retries,
+                    wait,
+                    e,
+                )
+                await asyncio.sleep(wait)
+                continue
+            # Last attempt: propagate the original exception.
+            raise
+
+    raise Exception(f'agenerate_openai_batch_embeddings: max retries ({max_retries}) exceeded')
 
 
 def generate_azure_openai_batch_embeddings(
