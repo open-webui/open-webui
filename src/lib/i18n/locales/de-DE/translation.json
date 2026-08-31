@@ -2884,6 +2884,7 @@
 	"Upload Audio": "Audio hochladen",
 	"Upload directory": "Ordner Hochladen",
 	"Upload failed": "Upload fehlgeschlagen",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Dateien hochladen",
 	"Upload Files": "Datei(en) hochladen",
 	"Upload Model": "Modell hochladen",

@@ -2912,6 +2912,7 @@
 	"Upload Audio": "Prześlij audio",
 	"Upload directory": "Prześlij katalog",
 	"Upload failed": "Przesyłanie nie powiodło się",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Prześlij pliki",
 	"Upload Files": "Prześlij pliki",
 	"Upload Model": "Prześlij Model",

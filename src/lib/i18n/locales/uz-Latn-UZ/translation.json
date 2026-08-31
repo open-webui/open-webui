@@ -2884,6 +2884,7 @@
 	"Upload Audio": "Audio yuklash",
 	"Upload directory": "Yuklab olish katalogi",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Fayllarni yuklash",
 	"Upload Files": "Fayllarni yuklash",
 	"Upload Model": "",

@@ -2884,6 +2884,7 @@
 	"Upload Audio": "Uaslódáil Fuaim",
 	"Upload directory": "Uaslódáil eolaire",
 	"Upload failed": "Theip ar an uaslódáil",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Uaslódáil comhaid",
 	"Upload Files": "Uaslódáil Comhaid",
 	"Upload Model": "Uaslódáil Samhail",

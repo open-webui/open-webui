@@ -2884,6 +2884,7 @@
 	"Upload Audio": "Ladda upp ljud",
 	"Upload directory": "Uppladdningskatalog",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Ladda upp filer",
 	"Upload Files": "Ladda upp filer",
 	"Upload Model": "Ladda upp modell",

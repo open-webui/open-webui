@@ -2870,6 +2870,7 @@
 	"Upload Audio": "上傳音訊",
 	"Upload directory": "上傳目錄",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "上傳檔案",
 	"Upload Files": "上傳檔案",
 	"Upload Model": "上傳模型",

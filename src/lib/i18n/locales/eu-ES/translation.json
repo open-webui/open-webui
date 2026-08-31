@@ -2884,6 +2884,7 @@
 	"Upload Audio": "",
 	"Upload directory": "Karga direktorioa",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Kargatu fitxategiak",
 	"Upload Files": "Kargatu fitxategiak",
 	"Upload Model": "",

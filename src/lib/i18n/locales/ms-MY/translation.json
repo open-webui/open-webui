@@ -2870,6 +2870,7 @@
 	"Upload Audio": "Muat Naik Audio",
 	"Upload directory": "Muat Naik Direktori",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Muat Naik Fail",
 	"Upload Files": "Muat Naik Fail",
 	"Upload Model": "Muat Naik Model",

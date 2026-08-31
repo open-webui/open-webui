@@ -2884,6 +2884,7 @@
 	"Upload Audio": "Send ljóð inn",
 	"Upload directory": "Innsendingarfíluskrá",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Send fílur inn",
 	"Upload Files": "Send fílur inn",
 	"Upload Model": "Send modell inn",

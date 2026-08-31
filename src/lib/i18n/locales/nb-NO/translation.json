@@ -2884,6 +2884,7 @@
 	"Upload Audio": "",
 	"Upload directory": "Mappe for opplastinger",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Last opp filer",
 	"Upload Files": "Last opp filer",
 	"Upload Model": "",

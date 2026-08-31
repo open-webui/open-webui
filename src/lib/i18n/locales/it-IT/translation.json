@@ -2898,6 +2898,7 @@
 	"Upload Audio": "Carica Audio",
 	"Upload directory": "Carica cartella",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Carica file",
 	"Upload Files": "Carica File",
 	"Upload Model": "",

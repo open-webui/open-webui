@@ -2870,6 +2870,7 @@
 	"Upload Audio": "",
 	"Upload directory": "སྤར་བའི་ཐོ་འཚོལ།",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "ཡིག་ཆ་སྤར་བ།",
 	"Upload Files": "ཡིག་ཆ་སྤར་བ།",
 	"Upload Model": "",

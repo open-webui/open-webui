@@ -2884,6 +2884,7 @@
 	"Upload Audio": "Аудио юклаш",
 	"Upload directory": "Юклаб олиш каталоги",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Файлларни юклаш",
 	"Upload Files": "Файлларни юклаш",
 	"Upload Model": "",

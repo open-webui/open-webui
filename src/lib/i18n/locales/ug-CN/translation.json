@@ -2884,6 +2884,7 @@
 	"Upload Audio": "ئاۋاز چىقىرىش",
 	"Upload directory": "چىقىرىش قىسقۇچى",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "ھۆججەت چىقىرىش",
 	"Upload Files": "ھۆججەت چىقىرىش",
 	"Upload Model": "",

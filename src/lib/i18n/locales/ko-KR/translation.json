@@ -2873,6 +2873,7 @@
 	"Upload Audio": "오디오 업로드",
 	"Upload directory": "디렉토리 업로드",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "파일 업로드",
 	"Upload Files": "파일 업로드",
 	"Upload Model": "모델 업로드",

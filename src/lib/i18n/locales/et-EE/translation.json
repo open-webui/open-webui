@@ -2884,6 +2884,7 @@
 	"Upload Audio": "Laadi heli üles",
 	"Upload directory": "Üleslaadimise kataloog",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Laadi failid üles",
 	"Upload Files": "Laadi failid üles",
 	"Upload Model": "Laadi mudel üles",

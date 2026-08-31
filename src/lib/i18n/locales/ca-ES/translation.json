@@ -2898,6 +2898,7 @@
 	"Upload Audio": "Pujar àudio",
 	"Upload directory": "Pujar directori",
 	"Upload failed": "La càrrega ha fallat",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Pujar fitxers",
 	"Upload Files": "Pujar fitxers",
 	"Upload Model": "Pujar model",

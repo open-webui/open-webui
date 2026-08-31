@@ -2912,6 +2912,7 @@
 	"Upload Audio": "",
 	"Upload directory": "Завантажити каталог",
 	"Upload failed": "",
+	"Upload failed for {{failed}} of {{total}} files.": "",
 	"Upload files": "Завантажити файли",
 	"Upload Files": "Завантажити файли",
 	"Upload Model": "",
