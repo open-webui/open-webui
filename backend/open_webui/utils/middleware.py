@@ -303,7 +303,7 @@ async def is_terminal_file_display_inline(user: UserModel) -> bool:
     ui_settings = user.settings.ui if isinstance(user.settings, UserSettings) else None
     value = (ui_settings or {}).get('terminalFileDisplay')
 
-    if value not in ('inline', 'sidebar'):
+    if value is None:
         default_interface_settings = await Config.get('ui.default_interface_settings')
         if isinstance(default_interface_settings, dict):
             value = default_interface_settings.get('terminalFileDisplay')
