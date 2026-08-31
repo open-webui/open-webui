@@ -258,12 +258,7 @@ def build_terminal_file_tool_result(
     if isinstance(tool_result, (list, tuple)) and tool_result and isinstance(tool_result[0], dict):
         tool_result = tool_result[0]
 
-    if (
-        tool_function_name != 'display_file'
-        or tool_function_params.get('inline') is not True
-        or not isinstance(tool_result, dict)
-        or tool_result.get('exists') is False
-    ):
+    if tool_function_name != 'display_file' or not isinstance(tool_result, dict) or tool_result.get('exists') is False:
         return None
 
     tool_id = (tool or {}).get('tool_id', '')
@@ -284,7 +279,7 @@ def build_terminal_file_tool_result(
         **tool_result,
         'type': 'file',
         'source': 'open_terminal',
-        'displayed': True,
+        **({'displayed': True} if tool_function_params.get('inline') is True else {}),
         'terminal_selector': terminal_selector,
         **({'terminal_id': terminal_id} if terminal_id else {}),
         **({'terminal_url': server_url} if server_url and not terminal_id else {}),
