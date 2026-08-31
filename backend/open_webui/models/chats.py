@@ -2558,7 +2558,7 @@ class ChatTable:
         file_ids: list[str],
         user_id: str,
         db: AsyncSession | None = None,
-    ) -> list[ChatFileModel | None]:
+    ) -> list[ChatFileModel] | None:
         if not file_ids:
             return None
 
