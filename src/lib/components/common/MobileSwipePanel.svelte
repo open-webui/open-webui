@@ -62,7 +62,7 @@
 		return (
 			target instanceof Element &&
 			!!target.closest(
-				'input, textarea, select, [role="menu"], [contenteditable="true"], [data-sidebar-no-gesture]'
+				'input, textarea, select, [role="dialog"], [role="menu"], [contenteditable="true"], [data-sidebar-no-gesture]'
 			)
 		);
 	};
