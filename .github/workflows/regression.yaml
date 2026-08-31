@@ -1,0 +1,72 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Regression — run the open-webui/tests unit suite against a release candidate
+# The suite runs on PRs into main titled with a version, or touching package.json
+# ─────────────────────────────────────────────────────────────────────────────
+name: Regression
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+# Runs are queued rather than cancelled: an edit to a release PR would otherwise
+# discard a suite already in progress and report the required check red.
+concurrency:
+  group: regression-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ── A release bumps the version; the title carries it by convention ──────
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      release: ${{ steps.check.outputs.release }}
+    steps:
+      - name: Look for a version title or a change to package.json
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ github.event.pull_request.title }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [[ "$TITLE" =~ ^v?[0-9]+\.[0-9]+ ]]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Assigned rather than piped into the test, so a failed listing stops the job
+          # instead of reading as an untouched package.json.
+          files="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$NUMBER/files" --paginate --jq '.[].filename')"
+          if grep -qxF 'package.json' <<<"$files"; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::\"$TITLE\" does not start with a version and package.json is untouched, skipping the regression suite"
+          fi
+
+  # ── Run the external suite against the head of the pull request ──────────
+  regression:
+    name: Suite
+    needs: gate
+    if: needs.gate.outputs.release == 'true'
+    permissions:
+      contents: read
+    uses: open-webui/tests/.github/workflows/regression.yml@main
+    with:
+      open-webui-ref: ${{ github.event.pull_request.head.sha }}
+
+  # ── Single check to require in branch protection ─────────────────────────
+  result:
+    name: Result
+    needs: [gate, regression]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Fail unless the suite passed or was not required
+        if: needs.gate.result != 'success' || (needs.regression.result != 'success' && needs.regression.result != 'skipped')
+        run: exit 1
