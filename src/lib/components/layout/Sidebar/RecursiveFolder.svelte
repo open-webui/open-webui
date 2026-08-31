@@ -428,6 +428,8 @@
 	});
 
 	onDestroy(() => {
+		delete folderRegistry[folderId];
+
 		if (folderElement) {
 			folderElement.removeEventListener('dragover', onDragOver);
 			folderElement.removeEventListener('drop', onDrop);
