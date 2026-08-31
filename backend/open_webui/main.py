@@ -2980,6 +2980,11 @@ async def check_db_health():
 
 
 # --- static assets & files ---
+# Windows registry entries can override these with text/plain, which breaks module and wasm loading
+mimetypes.add_type('text/javascript', '.js')
+mimetypes.add_type('text/javascript', '.mjs')
+mimetypes.add_type('application/wasm', '.wasm')
+
 # Serve build-time static assets (CSS, JS, images, favicon, etc.)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 
@@ -3025,7 +3030,6 @@ def swagger_ui_html(*args, **kwargs):
 applications.get_swagger_ui_html = swagger_ui_html
 
 if os.path.exists(FRONTEND_BUILD_DIR):
-    mimetypes.add_type('text/javascript', '.js')
     pyodide_dir = FRONTEND_BUILD_DIR / 'pyodide'
     if os.path.exists(pyodide_dir):
         app.mount('/pyodide', CORSStaticFiles(directory=pyodide_dir), name='pyodide')
