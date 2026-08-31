@@ -311,7 +311,7 @@ async def is_terminal_file_display_inline(user: UserModel) -> bool:
     return value == 'inline'
 
 
-async def apply_display_file_inline_default(
+async def apply_terminal_file_display_default(
     tool_function_name: str,
     tool_function_params: dict,
     tool: dict | None,
@@ -3204,7 +3204,7 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
     direct_tool = tool.get('direct', False)
     allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
     params = {key: value for key, value in params.items() if key in allowed_params}
-    params = await apply_display_file_inline_default(name, params, tool, user)
+    params = await apply_terminal_file_display_default(name, params, tool, user)
 
     try:
         if direct_tool:
@@ -5665,7 +5665,7 @@ async def streaming_chat_response_handler(response, ctx):
                         direct_tool = tool.get('direct', False)
                         allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
                         params = {key: value for key, value in params.items() if key in allowed_params}
-                        params = await apply_display_file_inline_default(name, params, tool, user)
+                        params = await apply_terminal_file_display_default(name, params, tool, user)
                         try:
                             if direct_tool:
                                 result = await event_caller(
