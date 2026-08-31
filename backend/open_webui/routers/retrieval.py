@@ -790,7 +790,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_TRUST_ENV: bool | None = None
     WEB_SEARCH_RESULT_COUNT: int | None = None
     WEB_SEARCH_CONCURRENT_REQUESTS: int | None = None
-    WEB_SEARCH_DOMAIN_FILTER_LIST: list[str | None] = []
+    WEB_SEARCH_DOMAIN_FILTER_LIST: list[str] | None = []
     WEB_FETCH_MAX_CONTENT_LENGTH: int | None = None
     WEB_LOADER_CONCURRENT_REQUESTS: int | None = None
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: bool | None = None
