@@ -1078,7 +1078,12 @@
 						const entry = item.webkitGetAsEntry?.();
 
 						if (entry?.isDirectory) {
-							directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
+							try {
+								directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
+							} catch (error) {
+								handleUploadError(error);
+								return;
+							}
 						} else {
 							const file = item.getAsFile();
 							if (file) {
