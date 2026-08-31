@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { updateUserPassword, userSignOut } from '$lib/apis/auths';
+	import { getLogoutRedirectUrl, updateUserPassword, userSignOut } from '$lib/apis/auths';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
@@ -32,7 +32,7 @@
 				});
 
 				localStorage.removeItem('token');
-				location.href = signOutRes?.redirect_url ?? '/auth?logout=true';
+				location.href = getLogoutRedirectUrl(signOutRes?.redirect_url);
 			}
 
 			currentPassword = '';
