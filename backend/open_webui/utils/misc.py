@@ -89,7 +89,7 @@ def get_allow_block_lists(filter_list):
     return allow_list, block_list
 
 
-def is_string_allowed(string: Union[str, Sequence[str]], filter_list: list[str | None] = None) -> bool:
+def is_string_allowed(string: Union[str, Sequence[str]], filter_list: list[str] | None = None) -> bool:
     """
     Checks if a string is allowed based on the provided filter list.
     :param string: The string or sequence of strings to check (e.g., domain or hostname).
@@ -150,7 +150,7 @@ def _host_matches_pattern(host: str, pattern: str) -> bool:
     return host == pattern or host.endswith('.' + pattern)
 
 
-def is_host_allowed(host: Union[str, Sequence[str]], filter_list: list[str | None] = None) -> bool:
+def is_host_allowed(host: Union[str, Sequence[str]], filter_list: list[str] | None = None) -> bool:
     """Allow/block a hostname (or list of hostnames / resolved IPs) against a
     WEB_FETCH_FILTER_LIST-style filter, matching on label boundaries.
 
@@ -172,7 +172,7 @@ def is_host_allowed(host: Union[str, Sequence[str]], filter_list: list[str | Non
     return not is_host_blocked(hosts, filter_list)
 
 
-def is_host_blocked(host: Union[str, Sequence[str]], filter_list: list[str | None] = None) -> bool:
+def is_host_blocked(host: Union[str, Sequence[str]], filter_list: list[str] | None = None) -> bool:
     """Whether a host or resolved address matches a block entry, ignoring any allow entries."""
     _, block_list = get_allow_block_lists(filter_list)
     hosts = [host] if isinstance(host, str) else list(host or [])
@@ -778,7 +778,7 @@ def openai_chat_chunk_message_template(
     model: str,
     content: str | None = None,
     reasoning_content: str | None = None,
-    tool_calls: list[dict | None] = None,
+    tool_calls: list[dict] | None = None,
     usage: dict | None = None,
     message_id: str | None = None,
 ) -> dict:
@@ -809,7 +809,7 @@ def openai_chat_completion_message_template(
     model: str,
     message: str | None = None,
     reasoning_content: str | None = None,
-    tool_calls: list[dict | None] = None,
+    tool_calls: list[dict] | None = None,
     usage: dict | None = None,
 ) -> dict:
     template = openai_chat_message_template(model)

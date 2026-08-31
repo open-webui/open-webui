@@ -970,12 +970,12 @@ class GenerateCompletionForm(BaseModel):
     model: str
     prompt: str | None = None
     suffix: str | None = None
-    images: list[str | None] = None
+    images: list[str] | None = None
     format: Union[dict, str | None] = None
     options: dict | None = None
     system: str | None = None
     template: str | None = None
-    context: list[int | None] = None
+    context: list[int] | None = None
     stream: bool | None = True
     raw: bool | None = None
     keep_alive: Union[int, str | None] = None
@@ -1026,8 +1026,8 @@ class ChatMessage(BaseModel):
 
     role: str
     content: str | None = None
-    tool_calls: list[dict | None] = None
-    images: list[str | None] = None
+    tool_calls: list[dict] | None = None
+    images: list[str] | None = None
     model_config = ConfigDict(extra='allow')
 
     @validator('content', pre=True)
@@ -1048,7 +1048,7 @@ class GenerateChatCompletionForm(BaseModel):
     template: str | None = None
     stream: bool | None = True
     keep_alive: Union[int, str | None] = None
-    tools: list[dict | None] = None
+    tools: list[dict] | None = None
     model_config = ConfigDict(extra='allow')
 
 

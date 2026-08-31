@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 def search_duckduckgo(
     query: str,
     count: int,
-    filter_list: list[str | None] = None,
+    filter_list: list[str] | None = None,
     concurrent_requests: int | None = None,
     backend: str | None = 'auto',
 ) -> list[SearchResult]:

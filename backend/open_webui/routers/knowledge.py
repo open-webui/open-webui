@@ -1074,7 +1074,7 @@ async def update_external_knowledge_source(
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
-    files: list[FileMetadataResponse | None] = None
+    files: list[FileMetadataResponse] | None = None
     write_access: bool | None = False
 
 
