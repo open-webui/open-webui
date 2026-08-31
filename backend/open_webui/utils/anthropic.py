@@ -878,11 +878,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                             if (
                                 tool['started']
                                 and not tool['stopped']
-                                and (
-                                    tool['arguments'][-1] == '}'
-                                    or tool['arguments'][-1].isspace()
-                                    or tool['arguments'][0] != '{'
-                                )
+                                and (tool['arguments'].rstrip()[-1:] == '}' or tool['arguments'].lstrip()[:1] != '{')
                             ):
                                 try:
                                     JSONCodec.loads(tool['arguments'])
