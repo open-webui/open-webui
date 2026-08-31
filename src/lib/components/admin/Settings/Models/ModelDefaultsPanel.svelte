@@ -168,7 +168,11 @@
 					</button>
 
 					{#if showCapabilities}
-						<div class="pb-2" on:click={updateDirty} on:change={updateDirty}>
+						<div
+							class="max-h-[24rem] overflow-y-auto pb-2 pr-1 scrollbar-hover"
+							on:click={updateDirty}
+							on:change={updateDirty}
+						>
 							<Capabilities bind:capabilities={defaultCapabilities} />
 
 							{#if availableFeatures.length > 0}
@@ -231,7 +235,12 @@
 					</button>
 
 					{#if showPromptSuggestions}
-						<div class="pb-2" on:click={updateDirty} on:change={updateDirty} on:input={updateDirty}>
+						<div
+							class="max-h-[24rem] overflow-y-auto pb-2 pr-1 scrollbar-hover"
+							on:click={updateDirty}
+							on:change={updateDirty}
+							on:input={updateDirty}
+						>
 							<PromptSuggestions bind:promptSuggestions />
 						</div>
 					{/if}
