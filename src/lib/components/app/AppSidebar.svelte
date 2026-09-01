@@ -19,11 +19,11 @@
 
 		<Tooltip content="Home" placement="right">
 			<button
-				aria-label="Home"
+				aria-label="Navigate to home"
 				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
 				on:click={() => {
 					selected = 'home';
-
+			
 					if (window.electronAPI) {
 						window.electronAPI.load('home');
 					}
@@ -51,7 +51,7 @@
 			</div>
 		{/if}
 		<button
-			aria-label="Chat"
+			aria-label="Navigate to chat list"
 			class=" cursor-pointer bg-transparent"
 			on:click={() => {
 				selected = '';
