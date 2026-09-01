@@ -477,6 +477,82 @@ def _is_same_origin(url: str, base_url: str) -> bool:
     )
 
 
+# The file-content route this app serves: /api/v1/files/{id}/content, optionally
+# followed by a filename. Anchored so a lookalike path such as
+# /evil/api/v1/files/x/content on the same host cannot match.
+_LOCAL_FILE_CONTENT_RE = re.compile(r'^/api/v1/files/(?P<file_id>[^/]+)/content(?:/[^/]*)?$')
+
+
+def _resolve_local_file_path(url: str, trusted_origins: list[str]) -> str | None:
+    """Return the local route for ``url`` if it points back at this deployment.
+
+    An absolute URL to our own file store must be read through the local file route
+    with the caller's identity: the endpoint requires an authenticated session, so an
+    anonymous self-fetch is rejected (401), and on a private-network deployment the
+    SSRF guard blocks it before that. Returning None leaves the URL on the ordinary
+    external path, so third-party URLs are untouched and no credentials are ever
+    attached to them.
+
+    Matching on origin rather than ``netloc`` alone also normalises default ports, and
+    the returned path has any deployment subpath prefix stripped so the local branch
+    sees the canonical route.
+    """
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return None
+
+        for origin in trusted_origins:
+            if not origin or not _is_same_origin(url, origin):
+                continue
+
+            # This forces our prefix to be a path that is in origin
+            prefix = urlparse(origin).path.rstrip('/')
+            path = parsed.path
+            if prefix:
+                if not path.startswith(prefix):
+                    continue
+                path = path[len(prefix) :]
+
+            if _LOCAL_FILE_CONTENT_RE.match(path):
+                return path
+    except ValueError:
+        log.debug('Could not parse image URL as a local file route: %s', url)
+
+    return None
+
+
+async def _trusted_self_origins(request: Request) -> list[str]:
+    """Origins that mean 'this deployment'.
+
+    The admin-configured WEBUI_URL is authoritative and is checked first: behind a
+    reverse proxy, request.base_url can be an internal address that never matches the
+    public URL the client was given. base_url remains the fallback for deployments that
+    leave WEBUI_URL unset.
+
+    base_url reflects X-Forwarded-* headers, so it is client-influenced. That is safe
+    here because a match only routes the read through get_file_content_by_id(), which
+    still enforces this user's access control -- it avoids an unauthenticated
+    self-fetch, it never grants access.
+    """
+    origins = []
+
+    try:
+        values = await get_config_values({'WEBUI_URL': 'webui.url'})
+        webui_url = (values.get('WEBUI_URL') or '').strip()
+        if webui_url:
+            origins.append(webui_url)
+    except Exception as e:
+        log.debug('Could not read webui.url config: %s', e)
+
+    try:
+        origins.append(str(request.base_url))
+    except Exception as e:
+        log.debug('Could not derive request base_url: %s', e)
+
+    return origins
+
+
 async def get_image_data(data: str, headers=None, trusted_base_url: str | None = None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
@@ -912,19 +988,16 @@ async def image_edits(
     model = image_config.IMAGE_EDIT_MODEL if form_data.model is None else form_data.model
 
     try:
+        trusted_origins = await _trusted_self_origins(request)
 
         async def load_url_image(data):
             if data.startswith('data:'):
                 return data
-
+            # This decouples image_edits with validating URL and fetching them
             if data.startswith('http://') or data.startswith('https://'):
-                parsed = urlparse(data)
-                if (
-                    parsed.netloc == urlparse(str(request.base_url)).netloc
-                    and parsed.path.startswith('/api/v1/files/')
-                    and '/content' in parsed.path
-                ):
-                    return await load_url_image(parsed.path)
+                local_path = _resolve_local_file_path(data, trusted_origins)
+                if local_path:
+                    return await load_url_image(local_path)
 
                 # Validate URL to prevent SSRF attacks against local/private networks.
                 # allow_redirects=False prevents redirect-based SSRF: validate_url() is
