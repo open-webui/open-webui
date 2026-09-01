@@ -55,7 +55,7 @@ dependencies = [
     "regex==2026.5.9",
     "mcp==1.27.2",
 
-    "openai==2.29.0",
+    "openai==3.6.0",
     "anthropic==0.86.0",
     "google-genai==1.66.0",
 
