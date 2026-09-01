@@ -1,70 +1,54 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Regression — run the open-webui/tests unit suite against a release candidate
-# The suite runs on PRs into main titled with a version, or touching package.json
+# Tests — run the open-webui/tests unit suite against a release candidate
+# Release pull requests go from dev into main and are titled with the version
 # ─────────────────────────────────────────────────────────────────────────────
 name: Tests
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     types: [opened, synchronize, reopened, edited]
 
+# An edit must not cancel a running suite: the replacement run would skip it and still report green.
 concurrency:
   group: regression-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event.action != 'edited' }}
 
 jobs:
-  # ── A release bumps the version; the title carries it by convention ──────
-  gate:
-    name: Gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      pull-requests: read
-    outputs:
-      release: ${{ steps.check.outputs.release }}
-    steps:
-      - name: Look for a version title or a change to package.json
-        id: check
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TITLE: ${{ github.event.pull_request.title }}
-          NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          if [[ "$TITLE" =~ ^v?[0-9]+\.[0-9]+ ]]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # Assigned rather than piped into the test, so a failed listing stops the job
-          # instead of reading as an untouched package.json.
-          files="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$NUMBER/files" --paginate --jq '.[].filename')"
-          if grep -qxF 'package.json' <<<"$files"; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "release=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::\"$TITLE\" does not start with a version and package.json is untouched, skipping the regression suite"
-          fi
-
-  # ── Run the external suite against the head of the pull request ──────────
+  # Into main only the release branch counts; into dev any version title does, so the
+  # suite can be exercised outside a release. Expressions have no regex, hence the digits.
   regression:
     name: Suite
-    needs: gate
-    if: needs.gate.outputs.release == 'true'
+    if: >-
+      (github.event.pull_request.base.ref == 'dev' ||
+      github.event.pull_request.head.ref == 'dev') &&
+      (github.event.action != 'edited' || github.event.changes.title != null) &&
+      (startsWith(github.event.pull_request.title, 'v') ||
+      startsWith(github.event.pull_request.title, '0') ||
+      startsWith(github.event.pull_request.title, '1') ||
+      startsWith(github.event.pull_request.title, '2') ||
+      startsWith(github.event.pull_request.title, '3') ||
+      startsWith(github.event.pull_request.title, '4') ||
+      startsWith(github.event.pull_request.title, '5') ||
+      startsWith(github.event.pull_request.title, '6') ||
+      startsWith(github.event.pull_request.title, '7') ||
+      startsWith(github.event.pull_request.title, '8') ||
+      startsWith(github.event.pull_request.title, '9'))
     permissions:
       contents: read
     uses: open-webui/tests/.github/workflows/regression.yml@main
     with:
       open-webui-ref: ${{ github.event.pull_request.head.sha }}
 
-  # ── Single check to require in branch protection ─────────────────────────
+  # Single check to require in branch protection.
   result:
     name: Result
-    needs: [gate, regression]
+    needs: [regression]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
     steps:
       - name: Fail unless the suite passed or was not required
-        if: needs.gate.result != 'success' || (needs.regression.result != 'success' && needs.regression.result != 'skipped')
+        if: needs.regression.result != 'success' && needs.regression.result != 'skipped'
         run: exit 1
