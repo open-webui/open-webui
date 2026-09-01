@@ -159,7 +159,7 @@ all = [
     "playwright==1.60.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
     "elasticsearch==9.4.1",
 
-    "qdrant-client==1.18.0",
+    "qdrant-client==1.19.0",
     
     "weaviate-client==4.20.3",
     "pymilvus==2.6.14",
