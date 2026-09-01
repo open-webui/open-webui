@@ -1,5 +1,9 @@
 /*
- * Outis-Mneme theme — see ../OUTIS_MNEME_THEME_SPEC.md
+ * Outis-Mneme theme (dark) — see ../OUTIS_MNEME_THEME_SPEC.md
+ *
+ * Colour only. The typeface, flat corners, reading-size scale and focus
+ * behaviour this theme shares with outis-light live in
+ * outis-theme-shared.css, which +layout.svelte imports first.
  *
  * Everything here is a CSS custom property override scoped to `html.outis-mneme`
  * (added by the theme switcher alongside the standard `dark` class — see
@@ -7,8 +11,6 @@
  * every `bg-gray-900`, `text-blue-500`, `rounded-lg`, etc. utility class
  * across the app already resolves through these same variable names.
  */
-
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
 html.outis-mneme {
 	/* Neutral scale — near-black, green-tinted (replaces the default grays) */
@@ -69,64 +71,9 @@ html.outis-mneme {
 	--color-yellow-500: #f5c542;
 	--color-yellow-600: #d9a82a;
 
-	/* Flat corners everywhere the radius scale reaches. */
-	--radius-xs: 0px;
-	--radius-sm: 0px;
-	--radius-md: 0px;
-	--radius-lg: 0px;
-	--radius-xl: 0px;
-	--radius-2xl: 0px;
-	--radius-3xl: 0px;
-	--radius-4xl: 0px;
-	--radius: 0px;
-
-	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-
-	/* JetBrains Mono reads ~20% larger than Inter at an equal rem size (fixed
-	   width, taller x-height) -- validated live on .markdown-prose (15px felt
-	   right sized down to 12px). One shared ratio, applied to every
-	   reading-density class below instead of re-deriving it per class. */
-	--outis-mneme-prose-scale: 0.8;
-
-	/* Tailwind's own --font-sans/--font-mono tokens — separate from the
-	   direct font-family above. Components that opt into an explicit
-	   `font-sans`/`font-mono` utility class (menus, dropdowns, etc.) don't
-	   inherit the html-level font-family; they resolve through these
-	   instead. Found via a real dropdown menu still rendering in Inter. */
-	--font-sans: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-html.outis-mneme pre {
-	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-/* The login/signup email+password inputs (and any other input a browser
-   recognizes for autofill) are `bg-transparent` in the component's own
-   markup -- correct, theme-following CSS. The white background reported
-   live comes from the browser itself: Chrome/Safari apply autofill styling
-   via an internal UA style that plain `background-color` cannot override,
-   at any specificity or with !important, once a field is autofilled or
-   Chrome recognizes a saved credential for it. The only working override is
-   this box-shadow-inset trick (paints an opaque inset shadow the size of the
-   field, visually replacing the background) plus -webkit-text-fill-color
-   (autofill also force-recolors the text itself, independent of `color`),
-   plus a very long background-color transition delay, which stops Chrome's
-   periodic re-application of its own yellow/white flash from being visible.
-   No prior handling for this existed anywhere in the codebase. */
-html.outis-mneme input:-webkit-autofill,
-html.outis-mneme input:-webkit-autofill:hover,
-html.outis-mneme input:-webkit-autofill:focus,
-html.outis-mneme input:-webkit-autofill:active {
-	box-shadow: 0 0 0 1000px var(--color-gray-950) inset !important;
-	-webkit-text-fill-color: var(--color-gray-50) !important;
-	caret-color: var(--color-gray-50);
-	transition: background-color 5000s ease-in-out 0s;
-}
-
-html.outis-mneme input:autofill {
-	background-color: var(--color-gray-950) !important;
-	color: var(--color-gray-50) !important;
+	/* Consumed by the autofill rules in outis-theme-shared.css. */
+	--outis-input-bg: #090d0c;
+	--outis-input-fg: #d4ede2;
 }
 
 /* Finding 3 (OUTIS_MNEME_CONSISTENCY_SPEC.md): literal `text-white`/
@@ -197,36 +144,6 @@ html.outis-mneme [class~='bg-blue-500'][class~='text-white'] {
 	color: var(--color-gray-950);
 }
 
-/* `rounded-full` (144 component files) is a fixed 9999px utility, not driven
-   by the --radius-* scale above, so flattening that scale alone leaves every
-   pill-shaped button (Sign in, Check Again, ...) and every genuine circle
-   (avatars, status dots, circular icon buttons) rounded. Square requested for
-   all of them, not just corner-radius elements — flatten the class directly.
-   One known gap: a single inline `border-radius: 50%` in a scoped
-   <style> block (Message.svelte's swipe-reply icon) isn't reachable by a
-   global class selector; low-traffic enough to leave for a follow-up. */
-html.outis-mneme .rounded-full {
-	border-radius: 0;
-}
-
-/* Toast notifications (svelte-sonner) ship their own corner radii via a
-   package-level --border-radius custom property and two hardcoded values
-   (a 4px action button, a 50% circular close button) -- none of it routes
-   through Tailwind's --radius-* scale, so the flattening above never
-   reached it. */
-html.outis-mneme [data-sonner-toaster] {
-	--border-radius: 0px;
-}
-
-html.outis-mneme [data-sonner-toast] [data-button],
-html.outis-mneme [data-sonner-toast] [data-close-button] {
-	border-radius: 0;
-}
-
-html.outis-mneme .sonner-loading-bar {
-	border-radius: 0;
-}
-
 /* app.css's `.dark body { background: #171717; color: #eee }` is a hardcoded
    literal, not a `var(--color-gray-*)` reference like everything else — the
    one exception to the token system found during testing. Override it
@@ -264,130 +181,6 @@ html.outis-mneme .editor-selection {
    editor's blur-preserved selection, and code blocks -- read as one color. */
 html.outis-mneme ::selection {
 	background: rgba(45, 255, 143, 0.16);
-}
-
-/* v0.11.1 added a blanket keyboard-a11y focus ring to app.css:
-
-       :focus-visible:not(.ProseMirror):not([contenteditable='true'])
-       :not(input):not(textarea),
-       .focus-ring:focus-visible {
-           outline: 2px solid theme(--color-blue-500);
-           outline-offset: -2px;
-       }
-
-   The `:not()` list only clears the editor *element*. It misses the wrapper
-   the RichTextInput mounts into and `#chat-input-container`, and it only
-   matches `contenteditable='true'` literally (not the bare/`plaintext-only`
-   forms), so focusing the message composer -- and every other RichTextInput
-   field (channel compose, Notes) -- paints a 2px blue inset box around the
-   whole row. Reported live via screenshot after the 0.11.0 -> 0.11.1 bump.
-
-   This theme already signals editor focus with the caret and the themed
-   `::selection` above, so drop the ring on editable regions and the element
-   that directly wraps the editor. Scoped tight enough that real buttons,
-   links, menu items and `.focus-ring` controls keep their outline.
-
-   Excluded under `html.high-contrast`: app.css pairs the blanket rule with
-       html.high-contrast :is(input, textarea, [contenteditable='true'],
-       .ProseMirror):focus-visible { outline: 2px solid ... }
-   which deliberately puts the editor ring back for users who opt into
-   high-contrast mode. Our `:is()` list contains an id (`#chat-input-container`),
-   so the whole selector carries id-level specificity and silently beats that
-   rule -- removing a focus indicator from exactly the users who asked for
-   stronger ones. The `:not(.high-contrast)` guard yields to it instead. */
-html.outis-mneme:not(.high-contrast) :is(
-		[contenteditable]:not([contenteditable='false']),
-		#chat-input-container
-	):focus-visible,
-html.outis-mneme:not(.high-contrast) :focus-visible:has(> :is(.ProseMirror, .tiptap, [contenteditable])) {
-	outline: none;
-}
-
-/* Chat message reading area (app.css's `.markdown-prose`, forced to
-   0.9375rem/15px via a Tailwind !important arbitrary value). JetBrains Mono
-   at a given rem size reads visually larger/wider than Inter at the same
-   size — its fixed-width glyphs and taller x-height take up more room — so
-   the nominal 15px felt oversized once the whole UI switched fonts. First
-   pass (0.8125rem/13px) still read too big in practice; settled on
-   0.75rem/12px, which lines up with the base 12px reading size most
-   monospace-first terminal/dashboard UIs use.
-
-   `.input-prose` (the chat compose box) shares the same 0.9375rem/15px base
-   and the same oversize-in-JetBrains-Mono problem, but was left untuned --
-   the box you type into sat visibly larger than the response rendered
-   directly above it. `.markdown-prose-sm`/`.markdown-prose-xs`/
-   `.input-prose-sm` (citations, tool valve descriptions, notes) have the
-   same defect one step removed, at their own Tailwind text-sm/text-xs
-   bases. All five now share the one `--outis-mneme-prose-scale` ratio
-   instead of a size hand-picked per class. See
-   OUTIS_MNEME_CONSISTENCY_SPEC.md Finding 1. */
-html.outis-mneme .markdown-prose,
-html.outis-mneme .input-prose {
-	font-size: calc(0.9375rem * var(--outis-mneme-prose-scale)) !important; /* 12px */
-}
-
-html.outis-mneme .markdown-prose-sm,
-html.outis-mneme .input-prose-sm {
-	font-size: calc(0.875rem * var(--outis-mneme-prose-scale)) !important; /* 11.2px */
-}
-
-html.outis-mneme .markdown-prose-xs {
-	font-size: calc(0.75rem * var(--outis-mneme-prose-scale)) !important; /* 9.6px */
-}
-
-/* Finding 1 covered the two prose *classes* the reading area is built from
-   (.markdown-prose, .input-prose), but 0.9375rem/15px turns out to also be
-   hardcoded ad-hoc, as a repeated Tailwind arbitrary value, across ~20 other
-   message-chrome spots that were never wrapped in either class: the
-   "Explored ..." tool-status chip (ConsecutiveDetailsGroup.svelte,
-   StatusHistory/StatusItem.svelte, ToolCallDisplay.svelte, Collapsible.svelte),
-   the message author-name label (Name.svelte), the user's own message
-   display and its edit textarea (UserMessage.svelte, ResponseMessage.svelte,
-   OutputEditView.svelte), and structured-output rendering
-   (StructuredOutputRenderer.svelte, MarkdownTokens.svelte). Reported live via
-   screenshot: the "Explored ..." chip and the "Follow up" suggestions both
-   read visibly larger than the response text between them. One rule catches
-   every one of them, since they all share the identical literal class token
-   -- same 0.8x ratio as the reading area, so this reading chrome stays in
-   step with it instead of drifting again later. FollowUps.svelte was moved
-   onto this same token (it was `text-sm`, a different literal) rather than
-   given its own separate scale, so there's one convention for "message
-   reading chrome text size," not two. */
-html.outis-mneme [class~='text-[0.9375rem]'] {
-	font-size: calc(0.9375rem * var(--outis-mneme-prose-scale));
-}
-
-/* Tailwind's `emerald` family is a separate color scale from `green`/`blue`
-   and was never touched by this theme, so the "success/positive/connected"
-   checkmarks and status dots that use it (tool-call chips, terminal
-   connection status, automation status) render in stock Tailwind emerald --
-   a third green hue next to the theme's actual accent, visible right next to
-   the text sized by the rule above. `border-emerald-500` (AlertRenderer's
-   TIP-callout border) is deliberately left alone: that component assigns a
-   distinct hue per alert type (note/tip/important/warning/caution) on
-   purpose, and only the text color is what's visibly inconsistent here. */
-html.outis-mneme [class~='text-emerald-500'],
-html.outis-mneme [class~='text-emerald-600'],
-html.outis-mneme [class~='text-emerald-700'],
-html.outis-mneme [class~='dark:text-emerald-400'] {
-	color: var(--color-blue-500);
-}
-
-/* Headings inside the reading area (app.css's `prose-h1:text-xl
-   prose-h2:text-lg prose-h3:text-base`, i.e. fixed 20px/18px/16px) don't
-   inherit from .markdown-prose's font-size above — they're each given
-   their own explicit size by the prose plugin. Shrinking only the body
-   text widened the heading-to-body contrast (was ~1.3x, became ~1.7x),
-   which read as headings being oddly loud/heavy. Scaled the whole
-   hierarchy down together, keeping the same relative proportions. */
-html.outis-mneme .markdown-prose h1 {
-	font-size: 1rem !important; /* 16px, was 20px */
-}
-html.outis-mneme .markdown-prose h2 {
-	font-size: 0.875rem !important; /* 14px, was 18px */
-}
-html.outis-mneme .markdown-prose h3 {
-	font-size: 0.8125rem !important; /* 13px, was 16px */
 }
 
 /* ---------------------------------------------------------------------
@@ -482,14 +275,6 @@ html.outis-mneme .input-prose-sm :not(pre) > code {
  * codemirror-outis-mneme-theme.ts, which explains the reasoning in full.
  * ------------------------------------------------------------------ */
 
-/* CodeBlock.svelte's wrapper carries `text-sm` (14px), inherited by the
-   highlight.js path while a response is still streaming (before CodeMirror
-   takes over) -- same 14px-vs-12px mismatch fixed for CodeMirror itself in
-   codemirror-outis-mneme-theme.ts, same reason. */
-html.outis-mneme div[class*='language-'] {
-	font-size: 0.75rem;
-}
-
 html.outis-mneme .hljs {
 	background: #0f1512;
 	color: #b9d9cb;
@@ -583,31 +368,10 @@ html.outis-mneme div:has(> div[class*='language-']) .dark\:bg-black {
 	background-color: #0f1512;
 }
 
-/* The collapsed body is padded `px-4` while the header above it and the
-   stdout panel below it both use `px-3.5`, so "N hidden lines" sat two
-   pixels right of the language label it should line up under. Only
-   visible once the two stopped sharing a background colour. 14px matches
-   the rest of the block. */
-html.outis-mneme div[class*='language-'] > div.pt-1.pb-2.px-4 {
-	padding-inline: 0.875rem;
-}
-
 /* Same chrome, its text: `text-white`, which left the language label and the
    Collapse/Run/Save/Copy controls brighter than any token in the code below
    them. They're furniture, not content — drop them to gray-300 so the code
    is the brightest thing in its own block. */
 html.outis-mneme div:has(> div[class*='language-']) > .sticky {
 	color: #7aab98;
-}
-
-/* Icons — all ~182 of Open WebUI's icon components hardcode
-   stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-   inline on their <svg>. currentColor already picks up the theme fine, but
-   the rounded caps/joins read soft against the flat, sharp-cornered
-   surfaces everywhere else. stroke-linecap/stroke-linejoin are real CSS
-   properties (not just SVG presentation attributes), so one global
-   selector overrides all 182 components without touching any of them. */
-html.outis-mneme svg {
-	stroke-linecap: square;
-	stroke-linejoin: miter;
 }
