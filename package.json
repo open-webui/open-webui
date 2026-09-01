@@ -93,7 +93,7 @@
 		"chart.js": "^4.5.0",
 		"codemirror": "^6.0.1",
 		"codemirror-lang-elixir": "^4.0.0",
-		"codemirror-lang-hcl": "^0.1.0",
+		"codemirror-lang-hcl": "^0.2.0",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"docx-preview": "^0.4.0",
