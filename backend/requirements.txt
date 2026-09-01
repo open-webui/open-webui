@@ -117,7 +117,7 @@ google-api-python-client==2.197.0
 google-auth-httplib2==0.4.0
 google-auth-oauthlib==1.4.0
 
-googleapis-common-protos==1.75.0
+googleapis-common-protos==1.75.2
 google-cloud-storage==3.9.0
 
 ## Databases
