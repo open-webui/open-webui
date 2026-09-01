@@ -51,7 +51,7 @@ dependencies = [
     "loguru==0.7.3",
     "asgiref==3.11.1",
 
-    "tiktoken==0.13.0",
+    "tiktoken==0.14.0",
     "regex==2026.5.9",
     "mcp==1.27.2",
 

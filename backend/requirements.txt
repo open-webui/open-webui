@@ -44,7 +44,7 @@ loguru==0.7.3
 asgiref==3.11.1
 
 # AI libraries
-tiktoken==0.13.0
+tiktoken==0.14.0
 mcp==1.27.2
 
 openai==2.29.0
