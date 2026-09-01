@@ -147,7 +147,7 @@
 					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
 				: $mobile
 					? ''
-					: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'
+					: ' hover:bg-gray-100 dark:hover:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-900'
 	}  whitespace-nowrap text-ellipsis transition`;
 
 	const selectChatHandler = (event?: MouseEvent) => {
@@ -609,7 +609,7 @@
 					? ($settings?.highContrastMode ?? false)
 						? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
 						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-					: 'hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis relative transition {generating
+					: 'hover:bg-gray-100 dark:hover:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis relative transition {generating
 				? 'cursor-not-allowed'
 				: ''}"
 		>

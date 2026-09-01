@@ -524,7 +524,7 @@
 											</div>
 										</div>
 
-										{#if (tools?.[toolId]?.authenticated ?? true) && toolId.startsWith('server:mcp:')}
+										{#if tools?.[toolId]?.authenticated === true && toolId.startsWith('server:mcp:')}
 											<div class="shrink-0">
 												<Tooltip content={$i18n.t('Disconnect OAuth')}>
 													<button

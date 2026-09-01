@@ -95,7 +95,7 @@
 	};
 
 	const formatSchedule = (rrule: string): string => {
-		if (rrule.includes('COUNT=1')) {
+		if (/COUNT=1(?!\d)/.test(rrule)) {
 			const match = rrule.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
 			if (match) {
 				const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`);
@@ -109,6 +109,9 @@
 
 		const parts: Record<string, string> = {};
 		rrule
+			.split(/\s+/)
+			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
+			.join('')
 			.replace('RRULE:', '')
 			.split(';')
 			.forEach((part) => {

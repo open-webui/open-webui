@@ -13,7 +13,7 @@ async def search_serper(
     api_key: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
 ) -> list[SearchResult]:
     """Query the serper.dev Google Search API and return normalised results.
 

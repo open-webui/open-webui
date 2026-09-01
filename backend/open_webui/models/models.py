@@ -180,7 +180,7 @@ class ModelForm(BaseModel):
     name: str
     meta: ModelMeta
     params: ModelParams
-    access_grants: list[dict | None] = None
+    access_grants: list[dict] | None = None
     is_active: bool = True
 
 
@@ -191,7 +191,7 @@ class ModelsTable:
     async def _to_model_model(
         self,
         model: Model,
-        access_grants: list[AccessGrantModel | None] = None,
+        access_grants: list[AccessGrantModel] | None = None,
         db: AsyncSession | None = None,
     ) -> ModelModel:
         if isinstance(model.meta, dict):

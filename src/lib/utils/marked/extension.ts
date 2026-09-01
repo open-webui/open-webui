@@ -102,6 +102,10 @@ function detailsExtension() {
 	};
 }
 
+function underlineRenderer(this: any, token: any) {
+	return `<u>${this.parser.parseInline(token.tokens)}</u>`;
+}
+
 function underlineExtension() {
 	return {
 		name: 'underline',
@@ -117,7 +121,8 @@ function underlineExtension() {
 				text: match[1],
 				tokens: this.lexer.inlineTokens(match[1])
 			};
-		}
+		},
+		renderer: underlineRenderer
 	};
 }
 

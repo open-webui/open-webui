@@ -731,7 +731,12 @@
 						{/if}
 
 						{#if edit === true}
-							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-3 py-3 my-2">
+							<div
+								class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-3 py-3 my-2 {($settings?.highContrastMode ??
+								false)
+									? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500'
+									: ''}"
+							>
 								{#if editedOutput}
 									<!-- Structured output editor (visual + JSON toggle) -->
 									<OutputEditView
@@ -745,7 +750,7 @@
 									<textarea
 										id="message-edit-{message.id}"
 										bind:this={editTextAreaElement}
-										class=" bg-transparent outline-hidden w-full resize-none text-[0.9375rem]"
+										class=" bg-transparent outline-hidden focus-visible:outline-none! w-full resize-none text-[0.9375rem]"
 										bind:value={editedContent}
 										on:input={(e) => {
 											const messagesContainer = document.getElementById('messages-container');

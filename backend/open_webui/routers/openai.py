@@ -30,6 +30,7 @@ from open_webui.env import (
     ENABLE_OPENAI_API_PASSTHROUGH,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.internal.db import get_async_session
@@ -76,6 +77,7 @@ log = logging.getLogger(__name__)
 _STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
 _MODEL_LIST_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
 _UNSUPPORTED_OPENAI_MODEL_KEYWORDS = ('babbage', 'dall-e', 'davinci', 'embedding', 'tts', 'whisper')
+BASE_MODELS_CACHE_KEY = f'{REDIS_KEY_PREFIX}:models:base'
 
 
 def _clean_proxy_headers(raw_headers) -> dict:
@@ -345,6 +347,9 @@ async def get_openai_connection(idx: int) -> tuple[str, str, dict]:
 
 async def clear_openai_model_cache(request: Request):
     await get_all_models.cache.clear()
+    redis = getattr(request.app.state, 'redis', None)
+    if redis is not None:
+        await redis.delete(BASE_MODELS_CACHE_KEY)
     request.app.state.BASE_MODELS = []
     request.app.state.OPENAI_MODELS = {}
     models = getattr(request.app.state, 'MODELS', None)
@@ -571,14 +576,7 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
         }
     )
 
-    await get_all_models.cache.clear()
-    request.app.state.BASE_MODELS = []
-    request.app.state.OPENAI_MODELS = {}
-    models = getattr(request.app.state, 'MODELS', None)
-    if hasattr(models, 'clear'):
-        models.clear()
-    else:
-        request.app.state.MODELS = {}
+    await clear_openai_model_cache(request)
 
     await publish_event(
         request,

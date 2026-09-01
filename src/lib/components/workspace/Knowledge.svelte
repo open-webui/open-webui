@@ -272,6 +272,11 @@
 		viewOption = localStorage?.workspaceViewOption || '';
 		sourceOption = localStorage?.workspaceKnowledgeSourceOption || '';
 		loaded = true;
+		await tick();
+
+		if (items === null && !itemsLoading) {
+			await init();
+		}
 
 		if (showCreateOnMount) {
 			showCreateModal = true;

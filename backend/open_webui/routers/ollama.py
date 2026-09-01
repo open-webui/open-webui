@@ -25,6 +25,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.internal.db import get_async_session
@@ -56,6 +57,7 @@ log = logging.getLogger(__name__)
 # in ZlibError.  See https://github.com/aio-libs/aiohttp/issues/4462.
 _STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
 _MODEL_LIST_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+BASE_MODELS_CACHE_KEY = f'{REDIS_KEY_PREFIX}:models:base'
 
 
 def _clean_proxy_headers(raw_headers) -> dict:
@@ -319,6 +321,9 @@ async def update_config(
     )
 
     await get_all_models.cache.clear()
+    redis = getattr(request.app.state, 'redis', None)
+    if redis is not None:
+        await redis.delete(BASE_MODELS_CACHE_KEY)
     request.app.state.BASE_MODELS = []
     request.app.state.OLLAMA_MODELS = {}
     models = getattr(request.app.state, 'MODELS', None)
@@ -970,12 +975,12 @@ class GenerateCompletionForm(BaseModel):
     model: str
     prompt: str | None = None
     suffix: str | None = None
-    images: list[str | None] = None
+    images: list[str] | None = None
     format: Union[dict, str | None] = None
     options: dict | None = None
     system: str | None = None
     template: str | None = None
-    context: list[int | None] = None
+    context: list[int] | None = None
     stream: bool | None = True
     raw: bool | None = None
     keep_alive: Union[int, str | None] = None
@@ -1026,8 +1031,8 @@ class ChatMessage(BaseModel):
 
     role: str
     content: str | None = None
-    tool_calls: list[dict | None] = None
-    images: list[str | None] = None
+    tool_calls: list[dict] | None = None
+    images: list[str] | None = None
     model_config = ConfigDict(extra='allow')
 
     @validator('content', pre=True)
@@ -1048,7 +1053,7 @@ class GenerateChatCompletionForm(BaseModel):
     template: str | None = None
     stream: bool | None = True
     keep_alive: Union[int, str | None] = None
-    tools: list[dict | None] = None
+    tools: list[dict] | None = None
     model_config = ConfigDict(extra='allow')
 
 

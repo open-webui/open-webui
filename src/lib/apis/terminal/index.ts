@@ -292,6 +292,29 @@ export const downloadFileBlob = async (
 	return { blob, filename };
 };
 
+export const downloadFilePreview = async (
+	baseUrl: string,
+	apiKey: string,
+	path: string,
+	sessionId?: string
+): Promise<{ blob: Blob; filename: string } | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}&preview=true`;
+	const headers: Record<string, string> = bearerHeaders(apiKey);
+	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const res = await fetch(url, { headers }).catch(() => null);
+
+	if (!res) return null;
+	if (!res.ok) return null;
+
+	const contentType = res.headers.get('content-type') ?? '';
+	const filename = path.split('/').pop() ?? 'file';
+	if (!contentType.includes('application/pdf')) return null;
+
+	const blob = await res.blob().catch(() => null);
+	if (!blob) return null;
+	return { blob, filename };
+};
+
 export const archiveFromTerminal = async (
 	baseUrl: string,
 	apiKey: string,

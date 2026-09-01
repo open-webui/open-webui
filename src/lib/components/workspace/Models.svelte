@@ -735,14 +735,14 @@
 												<Tooltip content={model.name} className="min-w-0" placement="top-start">
 													<a
 														href={`/?model=${encodeURIComponent(model.id)}`}
-														class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+														class="block truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 													>
 														{model.name}
 													</a>
 												</Tooltip>
 
 												<div
-													class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500"
+													class="hidden min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500 sm:block"
 												>
 													{model.id}
 												</div>
