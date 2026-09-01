@@ -9,11 +9,11 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, edited]
 
-# Runs are queued rather than cancelled: an edit to a release PR would otherwise
-# discard a suite already in progress and report the required check red.
+# A superseded run is cancelled outright: queuing it would just burn a runner
+# on a commit nobody ships, and make the author wait out a stale check.
 concurrency:
   group: regression-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   # ── A release bumps the version; the title carries it by convention ──────
