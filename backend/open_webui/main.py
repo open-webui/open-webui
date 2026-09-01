@@ -106,6 +106,7 @@ from open_webui.env import (
     MAX_BODY_LOG_SIZE,
     # Redis
     REDIS_KEY_PREFIX,
+    REDIS_TASK_TTL,
     REDIS_URL,
     RESET_CONFIG_ON_START,
     SAFE_MODE,
@@ -199,6 +200,7 @@ from open_webui.tasks import (
     list_task_ids_by_item_id,
     list_tasks,
     redis_task_command_listener,
+    redis_task_heartbeat_loop,
     stop_item_tasks,
     stop_task,
 )  # Import from tasks.py
@@ -385,6 +387,8 @@ async def lifespan(app: FastAPI):
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
+        if REDIS_TASK_TTL > 0:
+            app.state.redis_task_heartbeat_loop = asyncio.create_task(redis_task_heartbeat_loop(app))
 
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
@@ -471,6 +475,9 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+
+    if hasattr(app.state, 'redis_task_heartbeat_loop'):
+        app.state.redis_task_heartbeat_loop.cancel()
 
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
