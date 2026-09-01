@@ -1,0 +1,396 @@
+/*
+ * Outis-Light theme — see ../OUTIS_LIGHT_THEME_SPEC.md
+ *
+ * The light half of the Outis identity. Colour only: the typeface, flat
+ * corners, reading-size scale and focus behaviour are shared with
+ * outis-mneme and live in outis-theme-shared.css.
+ *
+ * Scoped to `html.outis-light`, which the theme switcher adds alongside
+ * `light` (not `dark` — see app.html / General.svelte / +layout.svelte).
+ * That one difference is what makes this a separate palette rather than a
+ * few overrides: with `dark` absent, the base half of every
+ * `x dark:y` utility pair is live instead of the dark half, Tailwind
+ * Typography resolves `--tw-prose-*` instead of `--tw-prose-invert-*`, and
+ * `bg-white` stops being a scrim and becomes the app's ground.
+ *
+ * Design note. outis-mneme is a phosphor tube: light is emitted, so the
+ * ground is near-black and every colour glows on top of it. Inverting that
+ * literally would be unreadable, so this theme takes the other half of the
+ * same lineage — ink on paper, the line-printer page. Same green-tinted
+ * hue family (OKLCH H162), read from the other end: outis-mneme's darkest
+ * surface (#0f1512) is almost exactly this theme's darkest ink (#0e1913).
+ * The paper is deliberately cool rather than cream, so a screenshot of
+ * either theme is obviously the same product.
+ */
+
+html.outis-light {
+	/* Neutral scale — green-tinted paper through green-black ink. Holds
+	   src/tailwind.css's own lightness ramp so every existing light-mode
+	   layout keeps the contrast relationship it was designed with, and adds
+	   chroma at H162. Contrast on the paper below: 1.08 / 1.17 / 1.29 /
+	   1.53 / 1.99 / 2.68 / 5.29 / 7.94 / 12.26 / 14.62 / 17.58 / 19.07 —
+	   gray-600 is the first rung that carries body text, which is where
+	   stock light mode starts using it. */
+	--color-gray-50: #eff5f2;
+	--color-gray-100: #e4ede8;
+	--color-gray-200: #d7e3dd;
+	--color-gray-300: #c3d2ca;
+	--color-gray-400: #a7bab0;
+	--color-gray-500: #8ca195;
+	--color-gray-600: #596f63;
+	--color-gray-700: #40544a;
+	--color-gray-800: #27372f;
+	--color-gray-850: #1c2a22;
+	--color-gray-900: #0e1913;
+	--color-gray-950: #070e0a;
+
+	/* The paper, and the ink.
+
+	   outis-mneme deliberately does NOT override --color-white: in dark mode
+	   `bg-white` is a scrim and `text-white` is a one-off contrast fix, so a
+	   blanket override there is all risk and no payoff. In light mode the
+	   opposite holds — `bg-white` (118 usages) is the app's ground, and
+	   leaving it pure white against a tinted gray-50 reads as a bug rather
+	   than as a theme. --color-black gets the same treatment so `bg-black/60`
+	   modal scrims tint into the family instead of sitting outside it. */
+	--color-white: #fafdfc;
+	--color-black: #070e0a;
+
+	/* Accent (H158). Blue is the interactive/focus/link colour throughout the
+	   app and green is already "positive", so both map to one scale and the
+	   whole app reads as a single accent hue — same rule as outis-mneme, one
+	   ramp rebuilt for a light ground.
+
+	   500 is anchored at 4.70:1 on the paper: the AA floor for the links,
+	   focus rings and `bg-blue-500 text-white` badges that use it. 500 -> 950
+	   is an even OKLCH lightness ramp (ΔL ≈ 0.062/step) with chroma tapering
+	   alongside, the correction OUTIS_MNEME_CONSISTENCY_SPEC.md Finding 2
+	   applied to the dark ramp. 600 (6.20:1) carries hover states and filled
+	   buttons.
+
+	   Note this theme needs no equivalent of outis-mneme's
+	   `bg-blue-500 text-white` override: paper text on #008350 is 4.70:1, so
+	   that pairing is already correct here. */
+	--color-blue-50: #e6fcee;
+	--color-blue-100: #cbf8dc;
+	--color-blue-200: #a2f0c2;
+	--color-blue-300: #6de3a4;
+	--color-blue-400: #00bc76;
+	--color-blue-500: #008350;
+	--color-blue-600: #006e43;
+	--color-blue-700: #005a36;
+	--color-blue-800: #00472a;
+	--color-blue-900: #00351e;
+	--color-blue-950: #002412;
+
+	--color-green-50: var(--color-blue-50);
+	--color-green-100: var(--color-blue-100);
+	--color-green-200: var(--color-blue-200);
+	--color-green-300: var(--color-blue-300);
+	--color-green-400: var(--color-blue-400);
+	--color-green-500: var(--color-blue-500);
+	--color-green-600: var(--color-blue-600);
+	--color-green-700: var(--color-blue-700);
+	--color-green-800: var(--color-blue-800);
+	--color-green-900: var(--color-blue-900);
+	--color-green-950: var(--color-blue-950);
+
+	/* Danger / warning keep their own hue, retuned to sit on paper rather
+	   than on near-black. Red 500/600 measure 4.70:1 and 6.30:1; yellow is a
+	   fill/icon colour in stock Tailwind too, so it stays a true yellow at
+	   2.47:1 / 3.49:1 rather than being darkened into an ochre that no
+	   longer reads as "warning". */
+	--color-red-500: #d2383a;
+	--color-red-600: #b91c26;
+	--color-yellow-500: #d79700;
+	--color-yellow-600: #b47d00;
+
+	/* Consumed by the autofill rules in outis-theme-shared.css. */
+	--outis-input-bg: #fafdfc;
+	--outis-input-fg: #27372f;
+}
+
+/* app.css's `body { background: #fff; color: #000 }` is a hardcoded literal,
+   not a `var(--color-*)` reference like everything else — the light-mode
+   twin of the `.dark body` rule outis-mneme overrides for the same reason.
+   Override it directly rather than relying on custom-property cascade. */
+html.outis-light body {
+	background: #fafdfc;
+	color: #27372f;
+}
+
+/* Filled primary controls, light-mode half.
+
+   The app writes these two ways, and both are the same idea -- a solid dark
+   fill on the light ground, inverting to a solid light fill on the dark one:
+
+     bg-black      hover:bg-gray-900  text-white   dark:bg-white     dark:text-black
+     bg-gray-900   hover:bg-black     text-white   dark:bg-gray-100  dark:text-gray-900
+
+   84 `bg-black` token usages (81 of those files also carry `dark:bg-white`)
+   and 14 bare `bg-gray-900` ones -- Save & Create in the Tool/Skill/Function
+   editors, ConfirmDialog's confirm, AskUserCard's answer buttons, the
+   Save/Cancel pair on an edited message, Switch's ON state, SyncStatsModal's
+   progress bar, ModelEditor's avatar badge. Every one of them is a filled
+   control, never a panel: `bg-gray-900` is a near-black, and light mode has
+   no reason to paint a surface with it.
+
+   outis-mneme re-skins the dark half of the first pattern onto the accent so
+   a primary CTA reads as *the* accent colour rather than an unthemed
+   white/black pair. This does the same for the light half of both, so a
+   filled control means one thing across the whole theme, and matches what
+   the same control looks like in outis-mneme. blue-600 holds paper text at
+   6.20:1 and `text-gray-100` at 5.6:1; the hover partners step to blue-700.
+
+   (outis-mneme covers only the first pattern -- its `dark:bg-gray-100` /
+   `dark:bg-gray-200` half is still stock, so Save & Create renders pale mint
+   there while other CTAs render accent. Same gap, mirrored; left alone here
+   rather than changing the dark theme's appearance as a side effect of
+   adding a light one.)
+
+   `[class~=]` matches the exact class token, so the 64+ `bg-black/5`,
+   `bg-black/60` etc. modal scrims -- a different token -- are untouched. */
+html.outis-light [class~='bg-black'],
+html.outis-light [class~='bg-gray-900'] {
+	background-color: var(--color-blue-600);
+}
+html.outis-light [class~='hover:bg-gray-900']:hover,
+html.outis-light [class~='hover:bg-gray-900/90']:hover,
+html.outis-light [class~='hover:bg-gray-850']:hover,
+html.outis-light [class~='hover:bg-black']:hover {
+	background-color: var(--color-blue-700);
+}
+
+/* app.css's `.editor-selection { background: rgba(180, 213, 255, 0.5) }` is
+   the same class of hardcoded-literal issue as `body` above -- Tiptap's
+   text-selection highlight in every RichTextInput (chat compose, channel
+   compose, Notes) renders in a stock blue unrelated to the theme.
+
+   `.editor-selection` only ever applies once the editor has *lost* focus
+   (SelectionDecoration in RichTextInput.svelte returns null while focused).
+   The far more common case -- selecting text while still focused -- is the
+   browser's own `::selection`, which app.css never overrides, so it falls
+   back to the stock light blue too. Both get the same value as CodeMirror's
+   selection layer (codemirror-outis-light-theme.ts), so all three selection
+   surfaces in the app read as one colour. */
+html.outis-light .editor-selection,
+html.outis-light ::selection {
+	background: rgba(0, 131, 80, 0.14);
+}
+
+/* ---------------------------------------------------------------------
+ * The reading area's color system
+ *
+ * The light-mode mirror of outis-mneme's prose ladder. Tailwind Typography
+ * hardcodes literal colors for every role but exposes each as a
+ * --tw-prose-* custom property, so this is a set of variable swaps rather
+ * than per-element restyling. Without `dark`, it is these properties that
+ * resolve rather than the --tw-prose-invert-* ones outis-mneme sets.
+ *
+ * Same role order as the dark theme, lightness flipped — headings carry
+ * the most contrast, then bold, then body, then the quiet roles:
+ *
+ *   headings  #543900  10.46:1  ochre — see below
+ *   strong    #37473f   9.61:1  above body, below headings
+ *   body      #3f5047   8.38:1  the reading baseline
+ *   links     #007548   5.64:1  the accent, the one interactive colour
+ *   quiet     #607369   4.94:1  quotes, lead, captions, counters
+ *   trace     #d7e3dd           rules, borders, quote bars
+ *
+ * Headings break the ladder's hue on purpose, exactly as they do in the
+ * dark theme: they take the warm hue the code palette uses for strings.
+ * Warm-on-cool separates them from body text by *hue* rather than by
+ * another near-black tone, so the answer's spine is scannable without a
+ * second ink weight competing with it — and prose and code draw from one
+ * palette. That leaves green meaning exactly one thing in the reading
+ * area: interactive.
+ * ------------------------------------------------------------------ */
+html.outis-light .markdown-prose,
+html.outis-light .markdown-prose-sm,
+html.outis-light .markdown-prose-xs,
+html.outis-light .input-prose,
+html.outis-light .input-prose-sm {
+	--tw-prose-headings: #543900;
+	--tw-prose-bold: #37473f;
+	--tw-prose-body: #3f5047;
+	--tw-prose-kbd: #37473f;
+	--tw-prose-lead: #607369;
+	--tw-prose-quotes: #607369;
+	--tw-prose-captions: #607369;
+	--tw-prose-counters: #607369;
+	--tw-prose-bullets: #76897f;
+	--tw-prose-links: #007548;
+	--tw-prose-hr: #d7e3dd;
+	--tw-prose-quote-borders: #d7e3dd;
+	--tw-prose-th-borders: #d7e3dd;
+	--tw-prose-td-borders: #e4ede8;
+}
+
+/* Inline code. There is no --tw-prose-code to set here: the repo's
+   tailwind.config.js turns the typography plugin's `code` styles off
+   entirely (`code: false`), so an inline `snippet` inherits body color and
+   reads as ordinary prose. Given a real rule, and the same colour the code
+   blocks use for identifiers, so a snippet in a sentence and a snippet in a
+   block match. Its ground is one step off the block's own, the mirror of
+   what outis-mneme does. `:not(pre) > code` keeps this off fenced blocks,
+   which CodeMirror and highlight.js own. */
+html.outis-light .markdown-prose :not(pre) > code,
+html.outis-light .markdown-prose-sm :not(pre) > code,
+html.outis-light .markdown-prose-xs :not(pre) > code,
+html.outis-light .input-prose :not(pre) > code,
+html.outis-light .input-prose-sm :not(pre) > code {
+	color: #3a4d43;
+	background: #e4ede8;
+	padding: 0.1em 0.35em;
+	font-size: 0.95em;
+}
+
+/* ---------------------------------------------------------------------
+ * Code blocks
+ *
+ * A chat code block renders through one of two paths (CodeBlock.svelte):
+ * CodeMirror when the block is interactive, and highlight.js otherwise —
+ * e.g. while a response is still streaming. CodeMirror is handled in
+ * codemirror-outis-light-theme.ts; these rules give the highlight.js path
+ * the same palette, so a block doesn't recolour itself as it finishes
+ * streaming.
+ *
+ * CodeBlock.svelte imports `github-dark.min.css` unconditionally, with no
+ * light-mode counterpart anywhere in the codebase — so without these rules
+ * a light theme gets dark code blocks. Every selector below already exists
+ * in that stylesheet; these simply outweigh it.
+ *
+ * Same six-role split as the CodeMirror theme, same reasoning, same values:
+ * syntax is the one place the one-accent rule is dropped, because reading
+ * code depends on telling token categories apart at a glance. The four hues
+ * sit on one OKLCH plane equalised by *contrast* (7.01–7.03:1 on the block's
+ * ground, a 0.02 spread), so no token outshines its neighbours. Keep these
+ * in sync with codemirror-outis-light-theme.ts.
+ * ------------------------------------------------------------------ */
+
+html.outis-light .hljs {
+	background: #eff5f2;
+	color: #3a4d43;
+}
+
+/* Keywords */
+html.outis-light .hljs-keyword,
+html.outis-light .hljs-selector-tag,
+html.outis-light .hljs-subst {
+	color: #105f31;
+}
+
+/* Names: functions, types, classes, tags, selectors */
+html.outis-light .hljs-title,
+html.outis-light .hljs-title.class_,
+html.outis-light .hljs-title.function_,
+html.outis-light .hljs-section,
+html.outis-light .hljs-type,
+html.outis-light .hljs-built_in,
+html.outis-light .hljs-name,
+html.outis-light .hljs-attr,
+html.outis-light .hljs-attribute,
+html.outis-light .hljs-meta,
+html.outis-light .hljs-selector-id,
+html.outis-light .hljs-selector-class,
+html.outis-light .hljs-selector-attr,
+html.outis-light .hljs-selector-pseudo {
+	color: #005b6c;
+}
+
+/* Literal values */
+html.outis-light .hljs-number,
+html.outis-light .hljs-literal,
+html.outis-light .hljs-symbol,
+html.outis-light .hljs-bullet,
+html.outis-light .hljs-formula {
+	color: #5f4687;
+}
+
+/* Text data — the only warm hue */
+html.outis-light .hljs-string,
+html.outis-light .hljs-regexp,
+html.outis-light .hljs-template-tag,
+html.outis-light .hljs-template-variable,
+html.outis-light .hljs-code {
+	color: #6f4c00;
+}
+
+/* Plain identifiers */
+html.outis-light .hljs-variable,
+html.outis-light .hljs-params {
+	color: #3a4d43;
+}
+
+/* Structure */
+html.outis-light .hljs-operator,
+html.outis-light .hljs-punctuation {
+	color: #5f7368;
+}
+
+html.outis-light .hljs-comment,
+html.outis-light .hljs-quote,
+html.outis-light .hljs-doctag {
+	color: #677c71;
+	font-style: italic;
+}
+
+html.outis-light .hljs-addition {
+	color: #105f31;
+}
+html.outis-light .hljs-deletion {
+	color: #b63032;
+}
+html.outis-light .hljs-emphasis {
+	font-style: italic;
+}
+html.outis-light .hljs-strong {
+	font-weight: 600;
+}
+
+/* Every surface CodeBlock.svelte paints is `bg-white dark:bg-black`; in
+   light mode that resolves to the paper, while the code itself sits on
+   gray-50, leaving a two-tone seam through the block. There are six of
+   them: the header, its buttons, the spacer strip under it, the collapsed
+   "N hidden lines" body, the plot canvas, and the stdout/stderr panel. They
+   all carry the same `bg-white` utility, so one rule covers the set — and
+   covers any future one. Scoped by the `language-*` container
+   CodeBlock.svelte wraps the code in, so it can't reach any other
+   `bg-white` in the app. (outis-mneme does the same for `dark:bg-black`.) */
+html.outis-light div:has(> div[class*='language-']) [class~='bg-white'] {
+	background-color: #eff5f2;
+}
+
+/* The Outis mark (static/favicon.png) is a single flat fill of the DARK
+   theme's accent, #2dff8f — correct on near-black, but 1.3:1 on paper, so on
+   this theme the sign-in logo, the assistant's avatar on every reply, the
+   notification toast icon and the model-editor default image all but vanish.
+   The splash art needs no such treatment: static/splash.png (the asset the
+   light branch of app.html already picks) is drawn in #090d0c ink and reads
+   correctly as-is.
+
+   The mark is one flat colour on transparency, so a brightness filter maps it
+   exactly rather than approximately: 0.431 x (45, 255, 143) = (19, 110, 62),
+   which is blue-600 to within a hair — the same green a primary button uses,
+   at 6.0:1 on the paper. That avoids shipping a second copy of the artwork
+   that would then have to be kept in sync with the first.
+
+   The mark ships at two paths and both are in use: components reference
+   `/static/favicon.png` directly (OnBoarding, NotificationToast, ModelEditor),
+   while safeImageUrl.ts's PLACEHOLDER_IMAGE and AtCommands' onerror fall back
+   to `/favicon.png` — which is what the model avatar on the chat placeholder
+   actually loads. Matching the suffix covers both without listing them.
+
+   `[src$=]` still can't reach a user's own uploaded avatar: those are served
+   from `/api/v1/users/<id>/profile/image` or a data: URL. */
+html.outis-light img[src$='favicon.png'] {
+	filter: brightness(0.431);
+}
+
+/* Same chrome, its text: `text-black`, which left the language label and the
+   Collapse/Run/Save/Copy controls darker than any token in the code below
+   them. They're furniture, not content — lift them to gray-600 so the code
+   is the strongest thing in its own block. */
+html.outis-light div:has(> div[class*='language-']) > .sticky {
+	color: #596f63;
+}
