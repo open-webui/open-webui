@@ -9,7 +9,7 @@
 	import { json } from '@codemirror/lang-json';
 	import { indentWithTab } from '@codemirror/commands';
 	import { indentUnit } from '@codemirror/language';
-	import { outisMneme } from '$lib/codemirror-outis-mneme-theme';
+	import { outisEditorTheme } from '$lib/codemirror-outis-theme';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -28,7 +28,6 @@
 
 	function initCodeMirror() {
 		if (cmEditor || !cmContainer) return;
-		const isDark = document.documentElement.classList.contains('dark');
 		cmEditor = new EditorView({
 			state: EditorState.create({
 				doc: JSON.stringify(output, null, 2),
@@ -37,7 +36,7 @@
 					keymap.of([indentWithTab]),
 					indentUnit.of('  '),
 					json(),
-					editorTheme.of(isDark ? outisMneme : []),
+					editorTheme.of(outisEditorTheme()),
 					EditorView.theme({
 						'&': { fontSize: '13px' },
 						'.cm-content': { fontFamily: 'ui-monospace, monospace' },

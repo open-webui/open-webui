@@ -6,7 +6,7 @@
 	import { indentWithTab } from '@codemirror/commands';
 	import { indentUnit } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
-	import { outisMneme } from '$lib/codemirror-outis-mneme-theme';
+	import { outisEditorTheme } from '$lib/codemirror-outis-theme';
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -25,8 +25,6 @@
 	};
 
 	onMount(async () => {
-		const isDark = document.documentElement.classList.contains('dark');
-
 		const extensions = [
 			Prec.highest(
 				keymap.of([
@@ -55,7 +53,7 @@
 					dispatch('change', value);
 				}
 			}),
-			editorTheme.of(isDark ? outisMneme : []),
+			editorTheme.of(outisEditorTheme()),
 			editorLanguage.of([]),
 			EditorView.theme({
 				'&': { fontSize: '0.75rem' },
@@ -81,8 +79,7 @@
 
 		// Watch dark mode
 		const observer = new MutationObserver(() => {
-			const dark = document.documentElement.classList.contains('dark');
-			editor?.dispatch({ effects: editorTheme.reconfigure(dark ? outisMneme : []) });
+			editor?.dispatch({ effects: editorTheme.reconfigure(outisEditorTheme()) });
 		});
 		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 

@@ -11,7 +11,7 @@
 	import { indentUnit } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 
-	import { outisMneme } from '$lib/codemirror-outis-mneme-theme';
+	import { outisEditorTheme, outisEditorThemeKey } from '$lib/codemirror-outis-theme';
 
 	import { onMount, createEventDispatcher, getContext, tick, onDestroy } from 'svelte';
 
@@ -85,7 +85,7 @@
 		codeEditor?.focus();
 	};
 
-	let isDarkMode = false;
+	let appliedEditorTheme = outisEditorThemeKey();
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
 
@@ -241,9 +241,6 @@ print("${endTag}")
 
 		_value = value;
 
-		// Check if html class has dark mode
-		isDarkMode = document.documentElement.classList.contains('dark');
-
 		// python code editor, highlight python code
 		codeEditor = new EditorView({
 			state: EditorState.create({
@@ -253,29 +250,22 @@ print("${endTag}")
 			parent: codeEditorContainerElement
 		});
 
-		if (isDarkMode) {
-			codeEditor.dispatch({
-				effects: editorTheme.reconfigure(outisMneme)
-			});
-		}
+		appliedEditorTheme = outisEditorThemeKey();
+		codeEditor.dispatch({
+			effects: editorTheme.reconfigure(outisEditorTheme())
+		});
 
-		// listen to html class changes this should fire only when dark mode is toggled
+		// listen to html class changes; fires whenever the theme is switched
 		const observer = new MutationObserver((mutations) => {
 			mutations.forEach((mutation) => {
 				if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-					const _isDarkMode = document.documentElement.classList.contains('dark');
+					const key = outisEditorThemeKey();
 
-					if (_isDarkMode !== isDarkMode) {
-						isDarkMode = _isDarkMode;
-						if (_isDarkMode) {
-							codeEditor.dispatch({
-								effects: editorTheme.reconfigure(outisMneme)
-							});
-						} else {
-							codeEditor.dispatch({
-								effects: editorTheme.reconfigure()
-							});
-						}
+					if (key !== appliedEditorTheme) {
+						appliedEditorTheme = key;
+						codeEditor.dispatch({
+							effects: editorTheme.reconfigure(outisEditorTheme())
+						});
 					}
 				}
 			});
