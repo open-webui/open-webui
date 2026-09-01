@@ -9,8 +9,6 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, edited]
 
-# A superseded run is cancelled outright: queuing it would just burn a runner
-# on a commit nobody ships, and make the author wait out a stale check.
 concurrency:
   group: regression-${{ github.ref }}
   cancel-in-progress: true
