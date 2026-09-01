@@ -285,12 +285,21 @@ html.outis-mneme ::selection {
    This theme already signals editor focus with the caret and the themed
    `::selection` above, so drop the ring on editable regions and the element
    that directly wraps the editor. Scoped tight enough that real buttons,
-   links, menu items and `.focus-ring` controls keep their outline. */
-html.outis-mneme :is(
+   links, menu items and `.focus-ring` controls keep their outline.
+
+   Excluded under `html.high-contrast`: app.css pairs the blanket rule with
+       html.high-contrast :is(input, textarea, [contenteditable='true'],
+       .ProseMirror):focus-visible { outline: 2px solid ... }
+   which deliberately puts the editor ring back for users who opt into
+   high-contrast mode. Our `:is()` list contains an id (`#chat-input-container`),
+   so the whole selector carries id-level specificity and silently beats that
+   rule -- removing a focus indicator from exactly the users who asked for
+   stronger ones. The `:not(.high-contrast)` guard yields to it instead. */
+html.outis-mneme:not(.high-contrast) :is(
 		[contenteditable]:not([contenteditable='false']),
 		#chat-input-container
 	):focus-visible,
-html.outis-mneme :focus-visible:has(> :is(.ProseMirror, .tiptap, [contenteditable])) {
+html.outis-mneme:not(.high-contrast) :focus-visible:has(> :is(.ProseMirror, .tiptap, [contenteditable])) {
 	outline: none;
 }
 
