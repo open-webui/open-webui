@@ -16,24 +16,15 @@ concurrency:
 
 jobs:
   # Into main only the release branch counts; into dev any version title does, so the
-  # suite can be exercised outside a release. Expressions have no regex, hence the digits.
+  # suite can be exercised outside a release. Expressions have no regex, hence the literal prefixes.
   regression:
     name: Suite
     if: >-
       (github.event.pull_request.base.ref == 'dev' ||
       github.event.pull_request.head.ref == 'dev') &&
       (github.event.action != 'edited' || github.event.changes.title != null) &&
-      (startsWith(github.event.pull_request.title, 'v') ||
-      startsWith(github.event.pull_request.title, '0') ||
-      startsWith(github.event.pull_request.title, '1') ||
-      startsWith(github.event.pull_request.title, '2') ||
-      startsWith(github.event.pull_request.title, '3') ||
-      startsWith(github.event.pull_request.title, '4') ||
-      startsWith(github.event.pull_request.title, '5') ||
-      startsWith(github.event.pull_request.title, '6') ||
-      startsWith(github.event.pull_request.title, '7') ||
-      startsWith(github.event.pull_request.title, '8') ||
-      startsWith(github.event.pull_request.title, '9'))
+      (startsWith(github.event.pull_request.title, '0.') ||
+      startsWith(github.event.pull_request.title, '1.'))
     permissions:
       contents: read
     uses: open-webui/tests/.github/workflows/regression.yml@main
