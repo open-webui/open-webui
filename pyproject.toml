@@ -29,7 +29,7 @@ dependencies = [
     "aiofiles==25.1.0",
     "starlette-compress==1.7.1",
     "Brotli==1.2.0",
-    "brotlicffi==1.2.0.1",
+    "brotlicffi==1.2.0.2",
     "httpx[socks,http2,zstd,cli,brotli]==0.28.1",
     "starsessions[redis]==2.2.1",
     "python-mimeparse==2.0.0",
