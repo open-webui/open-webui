@@ -116,7 +116,7 @@ dependencies = [
     "ddgs==9.14.4",
 
     "google-api-python-client==2.197.0",
-    "google-auth-httplib2==0.4.0",
+    "google-auth-httplib2==0.4.2",
     "google-auth-oauthlib==1.4.0",
 
     "googleapis-common-protos==1.75.0",
