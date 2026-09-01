@@ -2,7 +2,7 @@
 # Regression — run the open-webui/tests unit suite against a release candidate
 # The suite runs on PRs into main titled with a version, or touching package.json
 # ─────────────────────────────────────────────────────────────────────────────
-name: Regression
+name: Tests
 
 on:
   pull_request:
