@@ -41,7 +41,7 @@ dependencies = [
 
     "pycrdt==0.13.1",
     "redis==8.0.1",
-    "hiredis==3.4.0",
+    "hiredis==3.4.1",
     # "valkey-glide-sync==2.3.1",  # optional: install manually if VECTOR_DB=valkey
 
     "pytz==2026.2",
