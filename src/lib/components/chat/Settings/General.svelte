@@ -17,7 +17,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'oled-dark', 'outis-mneme'];
+	let themes = ['dark', 'light', 'oled-dark', 'outis-mneme', 'outis-light'];
 	let selectedTheme = 'outis-mneme';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -133,7 +133,9 @@
 					? 'light'
 					: _theme === 'outis-mneme'
 						? 'dark outis-mneme'
-						: _theme;
+						: _theme === 'outis-light'
+							? 'light outis-light'
+							: _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -178,7 +180,9 @@
 								? '#983724'
 								: _theme === 'outis-mneme'
 									? '#090d0c'
-									: '#ffffff'
+									: _theme === 'outis-light'
+										? '#fafdfc'
+										: '#ffffff'
 				);
 			}
 		}
@@ -204,6 +208,16 @@
 			document.documentElement.style.setProperty('--color-gray-900', '#0f1512');
 			document.documentElement.style.setProperty('--color-gray-950', '#090d0c');
 			document.documentElement.classList.add('dark', 'outis-mneme');
+		}
+
+		if (_theme === 'outis-light') {
+			// Mirror of the block above: the dark themes leave these four set as
+			// inline style, which outranks any class selector, so they have to be
+			// cleared rather than overridden for the light palette to apply.
+			['--color-gray-800', '--color-gray-850', '--color-gray-900', '--color-gray-950'].forEach(
+				(p) => document.documentElement.style.removeProperty(p)
+			);
+			document.documentElement.classList.add('light', 'outis-light');
 		}
 
 		console.log(_theme);
@@ -235,6 +249,7 @@
 					<option value="dark">🌑 {$i18n.t('Dark')}</option>
 					<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 					<option value="outis-mneme">🟢 Outis-Mneme</option>
+					<option value="outis-light">🟩 Outis-Light</option>
 					<option value="light">☀️ {$i18n.t('Light')}</option>
 					{#if $config?.features?.enable_easter_eggs}
 						<option value="her">🌷 Her</option>
