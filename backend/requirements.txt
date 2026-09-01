@@ -130,7 +130,7 @@ boto3==1.42.62
 # mariadb==1.1.14 should be added if you want to support MariaDB
 # valkey-glide-sync==2.3.1 # optional: install manually if VECTOR_DB=valkey
 
-pymilvus==2.6.14
+pymilvus==3.0.1
 qdrant-client==1.18.0
 playwright==1.60.0 # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
 elasticsearch==9.4.1
