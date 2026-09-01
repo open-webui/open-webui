@@ -16,7 +16,7 @@ joserfc==1.7.4
 requests==2.34.2
 regex==2026.5.9 # supports a per-search timeout, which `re` does not
 aiohttp==3.13.5 # do not update to 3.13.3 - broken
-aiodns==3.6.1 # keep pinned: 4.x pulls pycares 5 (c-ares 1.34.6) which breaks DNS on some hosts (#28013, #28215); opt-in via AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER
+aiodns==4.0.4 # keep pinned: 4.x pulls pycares 5 (c-ares 1.34.6) which breaks DNS on some hosts (#28013, #28215); opt-in via AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER
 async-timeout==5.0.1
 aiocache==0.12.3
 aiofiles==25.1.0
