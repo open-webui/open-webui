@@ -154,7 +154,6 @@ async def proxy_terminal(
         cookies = request.cookies
         headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
-        cookies = request.cookies
         # Resolve the token server-side from the caller's OAuth session; never trust a client header.
         oauth_token = None
         try:
