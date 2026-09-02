@@ -82,7 +82,9 @@
 	import { getChannels } from '$lib/apis/channels';
 
 	const handledChannelMentionKeys = new Set();
+	const handledChannelUnreadKeys = new Set();
 	const MAX_HANDLED_CHANNEL_MENTIONS = 500;
+	const MAX_HANDLED_CHANNEL_UNREADS = 500;
 
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
@@ -813,8 +815,17 @@
 
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
-		const mentionUserIds = Array.isArray(event?.mention_user_ids) ? event.mention_user_ids : [];
-		const isMentioned = type === 'message' && mentionUserIds.includes($user?.id);
+		const isMentioned = type === 'mention';
+		const unreadKey = `${event.channel_id}:${event.message_id}`;
+		const isNewUnreadMessage =
+			(type === 'message' || type === 'mention') && !handledChannelUnreadKeys.has(unreadKey);
+		if (isNewUnreadMessage) {
+			if (handledChannelUnreadKeys.size >= MAX_HANDLED_CHANNEL_UNREADS) {
+				const oldestKey = handledChannelUnreadKeys.values().next().value;
+				if (oldestKey) handledChannelUnreadKeys.delete(oldestKey);
+			}
+			handledChannelUnreadKeys.add(unreadKey);
+		}
 
 		if (isMentioned && event?.user?.id !== $user?.id) {
 			const mentionKey = `${event.channel_id}:${event.message_id}:${$user?.id}`;
@@ -838,15 +849,17 @@
 					});
 				}
 
-				toast.custom(NotificationToast, {
-					componentProps: {
-						onClick: () => goto(`/channels/${event.channel_id}`),
-						content: data?.content,
-						title
-					},
-					duration: 15000,
-					unstyled: true
-				});
+				if ($isLastActiveTab) {
+					toast.custom(NotificationToast, {
+						componentProps: {
+							onClick: () => goto(`/channels/${event.channel_id}`),
+							content: data?.content,
+							title
+						},
+						duration: 15000,
+						unstyled: true
+					});
+				}
 			}
 		}
 
@@ -858,7 +871,7 @@
 					channels.set(
 						$channels.map((ch) => {
 							if (ch.id === event.channel_id) {
-								if (type === 'message') {
+								if (isNewUnreadMessage) {
 									return {
 										...ch,
 										unread_count: (ch.unread_count ?? 0) + 1,
@@ -886,7 +899,7 @@
 				}
 			}
 
-			if (type === 'message' && !isMentioned) {
+			if (type === 'message') {
 				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
 
 				if ($isLastActiveTab) {

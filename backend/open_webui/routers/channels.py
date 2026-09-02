@@ -1158,9 +1158,7 @@ async def model_response_handler(request, channel, message, user, db=None):
     return True
 
 
-async def new_message_handler(
-    request: Request, id: str, form_data: MessageForm, user, db, mention_user_ids_out: list[str] | None = None
-):
+async def new_message_handler(request: Request, id: str, form_data: MessageForm, user, db):
     channel = await Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1200,13 +1198,9 @@ async def new_message_handler(
             # authorized to read this channel. This prevents a crafted U:
             # mention from notifying an unrelated instance user.
             resolved_mention_user_ids = await get_channel_mention_user_ids(channel, message, user.id, db=db)
-            if mention_user_ids_out is not None:
-                mention_user_ids_out.extend(resolved_mention_user_ids)
-
             event_data = {
                 'channel_id': channel.id,
                 'message_id': message.id,
-                'mention_user_ids': resolved_mention_user_ids,
                 'data': {
                     'type': 'message',
                     'data': {'temp_id': form_data.temp_id, **message.model_dump()},
@@ -1220,6 +1214,13 @@ async def new_message_handler(
                 event_data,
                 to=f'channel:{channel.id}',
             )
+
+            if resolved_mention_user_ids:
+                await emit_to_users(
+                    'events:channel',
+                    {**event_data, 'data': {**event_data['data'], 'type': 'mention'}},
+                    resolved_mention_user_ids,
+                )
 
             if message.parent_id:
                 # If this message is a reply, emit to the parent message as well
@@ -1260,15 +1261,7 @@ async def post_new_message(
     await check_channels_access(request, user)
 
     try:
-        mention_user_ids = []
-        message, channel = await new_message_handler(
-            request,
-            id,
-            form_data,
-            user,
-            db,
-            mention_user_ids_out=mention_user_ids,
-        )
+        message, channel = await new_message_handler(request, id, form_data, user, db)
         try:
             if files := message.data.get('files', []):
                 for file in files:
@@ -2069,12 +2062,9 @@ async def post_webhook_message(
     # Get full message and emit event
     message = await Messages.get_message_by_id(message.id, db=db)
 
-    mention_user_ids = await get_channel_mention_user_ids(channel, message, message.user_id, db=db)
-
     event_data = {
         'channel_id': channel.id,
         'message_id': message.id,
-        'mention_user_ids': mention_user_ids,
         'data': {
             'type': 'message',
             'data': {
@@ -2099,6 +2089,14 @@ async def post_webhook_message(
         event_data,
         to=f'channel:{channel.id}',
     )
+
+    resolved_mention_user_ids = await get_channel_mention_user_ids(channel, message, message.user_id, db=db)
+    if resolved_mention_user_ids:
+        await emit_to_users(
+            'events:channel',
+            {**event_data, 'data': {**event_data['data'], 'type': 'mention'}},
+            resolved_mention_user_ids,
+        )
 
     await publish_event(
         request,
