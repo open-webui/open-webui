@@ -81,7 +81,7 @@
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
 
-	const handledChannelMentionKeys: Set<string> = new Set();
+	const handledChannelMentionKeys = new Set();
 	const MAX_HANDLED_CHANNEL_MENTIONS = 500;
 
 	const unregisterServiceWorkers = async () => {
@@ -813,9 +813,7 @@
 
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
-		const mentionUserIds: string[] = Array.isArray(event?.mention_user_ids)
-			? event.mention_user_ids
-			: [];
+		const mentionUserIds = Array.isArray(event?.mention_user_ids) ? event.mention_user_ids : [];
 		const isMentioned = type === 'message' && mentionUserIds.includes($user?.id);
 
 		if (isMentioned && event?.user?.id !== $user?.id) {

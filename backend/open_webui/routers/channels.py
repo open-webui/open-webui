@@ -979,9 +979,7 @@ async def get_channel_mention_user_ids(channel, message, sender_id, db=None) -> 
         # Group and DM access is membership-based. ``is_active`` is the
         # membership flag used by the channel model; it is not presence.
         member_ids = {
-            member.user_id
-            for member in await Channels.get_members_by_channel_id(channel.id, db=db)
-            if member.is_active
+            member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db) if member.is_active
         }
         allowed_user_ids = {u.id for u in await Users.get_users_by_user_ids(list(member_ids), db=db)}
     else:
