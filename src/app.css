@@ -715,7 +715,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 .tippy-box[data-theme~='transparent'] {
-	@apply bg-transparent p-0 m-0;
+	@apply bg-transparent p-0 m-0 text-inherit;
 }
 
 /* this is a rough fix for the first cursor position when the first paragraph is empty */
