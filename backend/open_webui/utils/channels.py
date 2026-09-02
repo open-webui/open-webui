@@ -10,6 +10,13 @@ def extract_mentions(message: str, triggerChar: str = '@'):
     return [{'id_type': id_type, 'id': id_value} for id_type, id_value in matches]
 
 
+def extract_user_mention_ids(message: str, sender_id: str, allowed_user_ids: set[str]) -> list[str]:
+    """Return unique, authorized IDs from persisted encoded U mentions."""
+    mentioned_ids = set(re.findall(r'<@U:([^|>]+)(?:\|[^>]*)?>', message))
+    mentioned_ids.discard(sender_id)
+    return sorted(mentioned_ids.intersection(allowed_user_ids))
+
+
 def replace_mentions(message: str, triggerChar: str = '@', use_label: bool = True):
     """
     Replace mentions in the message with either their label (after the pipe `|`)

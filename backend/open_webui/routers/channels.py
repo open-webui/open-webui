@@ -44,7 +44,7 @@ from open_webui.socket.main import (
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.channels import extract_mentions, replace_mentions
+from open_webui.utils.channels import extract_mentions, extract_user_mention_ids, replace_mentions
 from open_webui.utils.files import get_image_base64_from_file_id
 from open_webui.utils.models import (
     get_all_models,
@@ -973,6 +973,25 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
     return True
 
 
+async def get_channel_mention_user_ids(channel, message, sender_id, db=None) -> list[str]:
+    """Resolve encoded user mentions to valid users authorized to read a channel."""
+    if channel.type in ['group', 'dm']:
+        # Group and DM access is membership-based. ``is_active`` is the
+        # membership flag used by the channel model; it is not presence.
+        member_ids = {
+            member.user_id
+            for member in await Channels.get_members_by_channel_id(channel.id, db=db)
+            if member.is_active
+        }
+        allowed_user_ids = {u.id for u in await Users.get_users_by_user_ids(list(member_ids), db=db)}
+    else:
+        # Standard channels use read access grants (including public grants),
+        # rather than ChannelMember rows.
+        allowed_user_ids = {u.id for u in await get_channel_users_with_access(channel, 'read', db=db)}
+
+    return extract_user_mention_ids(message.content, sender_id, allowed_user_ids)
+
+
 async def model_response_handler(request, channel, message, user, db=None):
     MODELS = {model['id']: model for model in await get_filtered_models(await get_all_models(request, user=user), user)}
 
@@ -1141,7 +1160,9 @@ async def model_response_handler(request, channel, message, user, db=None):
     return True
 
 
-async def new_message_handler(request: Request, id: str, form_data: MessageForm, user, db):
+async def new_message_handler(
+    request: Request, id: str, form_data: MessageForm, user, db, mention_user_ids_out: list[str] | None = None
+):
     channel = await Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1176,9 +1197,18 @@ async def new_message_handler(request: Request, id: str, form_data: MessageForm,
                         await Channels.update_member_active_status(channel.id, member.user_id, True, db=db)
 
             message = await Messages.get_message_by_id(message.id, db=db)
+
+            # Mentions are authoritative only when they refer to valid users
+            # authorized to read this channel. This prevents a crafted U:
+            # mention from notifying an unrelated instance user.
+            resolved_mention_user_ids = await get_channel_mention_user_ids(channel, message, user.id, db=db)
+            if mention_user_ids_out is not None:
+                mention_user_ids_out.extend(resolved_mention_user_ids)
+
             event_data = {
                 'channel_id': channel.id,
                 'message_id': message.id,
+                'mention_user_ids': resolved_mention_user_ids,
                 'data': {
                     'type': 'message',
                     'data': {'temp_id': form_data.temp_id, **message.model_dump()},
@@ -1232,7 +1262,15 @@ async def post_new_message(
     await check_channels_access(request, user)
 
     try:
-        message, channel = await new_message_handler(request, id, form_data, user, db)
+        mention_user_ids = []
+        message, channel = await new_message_handler(
+            request,
+            id,
+            form_data,
+            user,
+            db,
+            mention_user_ids_out=mention_user_ids,
+        )
         try:
             if files := message.data.get('files', []):
                 for file in files:
@@ -1243,7 +1281,6 @@ async def post_new_message(
             log.debug(e)
 
         active_user_ids = await get_user_ids_from_room(f'channel:{channel.id}')
-
         # NOTE: We intentionally do NOT pass db to background_handler.
         # Background tasks should manage their own short-lived sessions to avoid
         # holding database connections during slow operations (e.g., LLM calls).
@@ -2033,9 +2070,12 @@ async def post_webhook_message(
     # Get full message and emit event
     message = await Messages.get_message_by_id(message.id, db=db)
 
+    mention_user_ids = await get_channel_mention_user_ids(channel, message, message.user_id, db=db)
+
     event_data = {
         'channel_id': channel.id,
         'message_id': message.id,
+        'mention_user_ids': mention_user_ids,
         'data': {
             'type': 'message',
             'data': {
