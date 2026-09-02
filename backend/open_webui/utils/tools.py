@@ -575,14 +575,17 @@ async def get_builtin_tools(
             await Config.get('user.permissions'),
         )
 
+    metadata = extra_params.get('__metadata__') or {}
+
     # Time utilities - available for date calculations
     if is_builtin_tool_enabled('time'):
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
-    if is_builtin_tool_enabled('user_input', True):
+    # User input - answers are resolved against the stored assistant message;
+    # temporary and channel IDs have no chats row to resolve them against.
+    if is_builtin_tool_enabled('user_input', True) and is_saved_chat_id(metadata.get('chat_id')):
         builtin_functions.append(ask_user)
 
-    metadata = extra_params.get('__metadata__') or {}
     chat_files = metadata.get('files') or extra_params.get('__files__') or []
     has_chat_files = any(
         isinstance(item, dict)
