@@ -5665,6 +5665,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 except Exception as e:
                                     log.debug(e)
                                     return None
+                        if not isinstance(params, dict):
+                            return None
                         tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
                         return params
 
