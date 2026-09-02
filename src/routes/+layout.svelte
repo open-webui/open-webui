@@ -81,6 +81,9 @@
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
 
+	const handledChannelMentionKeys: Set<string> = new Set();
+	const MAX_HANDLED_CHANNEL_MENTIONS = 500;
+
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
 			try {
@@ -808,10 +811,49 @@
 			}
 		}
 
+		const type = event?.data?.type ?? null;
+		const data = event?.data?.data ?? null;
+		const mentionUserIds: string[] = Array.isArray(event?.mention_user_ids)
+			? event.mention_user_ids
+			: [];
+		const isMentioned = type === 'message' && mentionUserIds.includes($user?.id);
+
+		if (isMentioned && event?.user?.id !== $user?.id) {
+			const mentionKey = `${event.channel_id}:${event.message_id}:${$user?.id}`;
+			if (!handledChannelMentionKeys.has(mentionKey)) {
+				if (handledChannelMentionKeys.size >= MAX_HANDLED_CHANNEL_MENTIONS) {
+					const oldestKey = handledChannelMentionKeys.values().next().value;
+					if (oldestKey) handledChannelMentionKeys.delete(oldestKey);
+				}
+				handledChannelMentionKeys.add(mentionKey);
+				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
+
+				if (
+					$isLastActiveTab &&
+					($settings?.notificationEnabled ?? false) &&
+					typeof Notification !== 'undefined' &&
+					Notification.permission === 'granted'
+				) {
+					new Notification(`${title} / Open WebUI`, {
+						body: data?.content,
+						icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
+					});
+				}
+
+				toast.custom(NotificationToast, {
+					componentProps: {
+						onClick: () => goto(`/channels/${event.channel_id}`),
+						content: data?.content,
+						title
+					},
+					duration: 15000,
+					unstyled: true
+				});
+			}
+		}
+
 		if ((!channel || isInBackground) && event?.user?.id !== $user?.id) {
 			await tick();
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
 
 			if ($channels) {
 				if ($channels.find((ch) => ch.id === event.channel_id) && $channelId !== event.channel_id) {
@@ -846,7 +888,7 @@
 				}
 			}
 
-			if (type === 'message') {
+			if (type === 'message' && !isMentioned) {
 				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
 
 				if ($isLastActiveTab) {
