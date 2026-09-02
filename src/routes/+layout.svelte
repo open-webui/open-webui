@@ -909,7 +909,7 @@
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
 						new Notification(`${title} / Open WebUI`, {
-							body: data?.content,
+							body: cleanNotificationText(data?.content ?? ''),
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
 					}
