@@ -66,6 +66,7 @@
 	import {
 		bestMatchingLanguage,
 		cleanText,
+		cleanNotificationText,
 		displayFileHandler,
 		getUserTimezone,
 		removeAllDetails
@@ -844,7 +845,7 @@
 					Notification.permission === 'granted'
 				) {
 					new Notification(`${title} / Open WebUI`, {
-						body: data?.content,
+						body: cleanNotificationText(data?.content ?? ''),
 						icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 					});
 				}

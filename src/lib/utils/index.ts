@@ -1035,6 +1035,15 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
+export const cleanNotificationText = (content: string) => {
+	const contentWithReadableMentions = content.replace(
+		/<@U:[^|>]+(?:\|([^>]*))?>/g,
+		(_match, label) => (label ? `@${label}` : '@teammate')
+	);
+
+	return cleanText(contentWithReadableMentions);
+};
+
 export const removeDetails = (content, types) => {
 	return replaceOutsideCode(content, (segment) => {
 		for (const type of types) {
