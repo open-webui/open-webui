@@ -1035,10 +1035,12 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
+// Serialized user mentions use <@U:user-id|display label>.
+const USER_MENTION_TAG_REGEX = /<@U:[^|>]+(?:\|([^>]*))?>/g;
+
 export const cleanNotificationText = (content: string) => {
-	const contentWithReadableMentions = content.replace(
-		/<@U:[^|>]+(?:\|([^>]*))?>/g,
-		(_match, label) => (label ? `@${label}` : '@teammate')
+	const contentWithReadableMentions = content.replace(USER_MENTION_TAG_REGEX, (_match, label) =>
+		label ? `@${label}` : '@teammate'
 	);
 
 	return cleanText(contentWithReadableMentions);
