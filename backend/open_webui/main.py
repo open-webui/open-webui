@@ -1450,12 +1450,21 @@ async def chat_completion(
                             **metadata,
                             'message_id': all_assistant_ids[0],
                         }
+                        title_model_id = next(
+                            (
+                                entry['model_id']
+                                for entry in message_ids
+                                if entry.get('message_id') == all_assistant_ids[0]
+                            ),
+                            None,
+                        )
                         event_emitter = await get_event_emitter(title_metadata, update_db=False)
                         title_ctx = {
                             'request': request,
                             'form_data': form_data,
                             'user': user,
                             'metadata': title_metadata,
+                            'model': title_model_id,
                             'tasks': {TASKS.TITLE_GENERATION: initial_title_generation},
                             'event_emitter': event_emitter,
                         }

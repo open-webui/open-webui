@@ -3669,6 +3669,11 @@ async def background_tasks_handler(ctx):
             return
         message = messages_map.get(metadata['message_id'])
 
+        # The initial title-generation task can run before the persisted assistant
+        # message carries its model field. Fall back to the model passed in ctx.
+        if message and 'model' not in message and 'model' in ctx:
+            message['model'] = ctx['model']
+
         message_list = get_message_list(messages_map, metadata['message_id'])
 
         # Remove details tags and files from the messages.
