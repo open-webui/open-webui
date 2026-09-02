@@ -1039,11 +1039,9 @@ export const cleanText = (content: string) => {
 const USER_MENTION_TAG_REGEX = /<@U:[^|>]+(?:\|([^>]*))?>/g;
 
 export const cleanNotificationText = (content: string) => {
-	const contentWithReadableMentions = content.replace(USER_MENTION_TAG_REGEX, (_match, label) =>
-		label ? `@${label}` : '@teammate'
-	);
+	const contentWithoutMentions = content.replace(USER_MENTION_TAG_REGEX, ' ');
 
-	return cleanText(contentWithReadableMentions);
+	return cleanText(contentWithoutMentions);
 };
 
 export const removeDetails = (content, types) => {
