@@ -69,22 +69,23 @@ def match_budget():
 
 
 def is_regex_pattern(pattern: str) -> bool:
-    """Detect if a pattern looks like regex (|, .*, .+, \d, \w, \s, [...])."""
+    r"""Detect if a pattern looks like regex (|, .*, .+, \d, \w, \s, [...])."""
     return (
         '|' in pattern
         or '.*' in pattern
         or '.+' in pattern
         or '.?' in pattern
-        or '\d' in pattern
-        or '\w' in pattern
-        or '\s' in pattern
+        or r'\d' in pattern
+        or r'\w' in pattern
+        or r'\s' in pattern
         or bool(re.search(r'\[.+\]', pattern))
     )
 
 
 def normalize_regex(pattern: str) -> str:
-    """Normalize POSIX BRE patterns to Python regex (\| → |)."""
-    return pattern.replace('\\|', '|').replace('\|', '|')
+    r"""Normalize POSIX BRE patterns to Python regex (\| → |)."""
+    # Two passes: an escaped backslash in front of a pipe leaves a second escape behind.
+    return pattern.replace(r'\|', '|').replace(r'\|', '|')
 
 
 def validate_regex_quantifiers(pattern: str) -> str | None:
