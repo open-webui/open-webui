@@ -87,7 +87,7 @@ export type TerminalServer = {
 	name: string;
 	contexts?: Record<string, false | { context_id?: string }>;
 	config?: {
-		chat_uploads?: 'default' | 'filesystem';
+		chat_uploads?: 'default' | 'filesystem' | 'filesystem_inline_images';
 		[key: string]: unknown;
 	};
 };
