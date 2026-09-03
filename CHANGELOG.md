@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 🏷️ **Custom file metadata reaches the model.** Metadata attached to an uploaded file now travels with the pieces that file is split into and arrives with the retrieved sources, the oversized and internal fields left out. [#29499](https://github.com/open-webui/open-webui/pull/29499), [#29486](https://github.com/open-webui/open-webui/issues/29486), [Commit](https://github.com/open-webui/open-webui/commit/894655f66b9563890e63c76090ddecc90a311eb2)
+- 🏷️ **Custom file metadata.** Metadata attached to an uploaded file now travels with the pieces that file is split into and arrives with the retrieved sources, the oversized and internal fields left out. [#29499](https://github.com/open-webui/open-webui/pull/29499), [#29486](https://github.com/open-webui/open-webui/issues/29486), [Commit](https://github.com/open-webui/open-webui/commit/894655f66b9563890e63c76090ddecc90a311eb2)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for Traditional Chinese, Korean, Finnish, Russian, and Ukrainian were enhanced and expanded.
 
