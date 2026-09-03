@@ -1035,6 +1035,22 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
+// Serialized user mentions use <@U:user-id|display label>.
+const USER_MENTION_TAG_REGEX = /<@U:[^|>]+(?:\|([^>]*))?>/g;
+
+export const cleanNotificationText = (content: string) => {
+	const contentWithoutMentions = content.replace(USER_MENTION_TAG_REGEX, ' ');
+
+	return cleanText(contentWithoutMentions);
+};
+
+export const containsUserMention = (content: string, userId: string) => {
+	if (!userId) return false;
+
+	const escapedUserId = escapeRegExp(userId);
+	return new RegExp(`<@U:${escapedUserId}(?:\\|[^>]*)?>`).test(content);
+};
+
 export const removeDetails = (content, types) => {
 	return replaceOutsideCode(content, (segment) => {
 		for (const type of types) {

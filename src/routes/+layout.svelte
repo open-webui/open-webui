@@ -66,6 +66,8 @@
 	import {
 		bestMatchingLanguage,
 		cleanText,
+		cleanNotificationText,
+		containsUserMention,
 		displayFileHandler,
 		getUserTimezone,
 		removeAllDetails
@@ -80,6 +82,11 @@
 	import { getUserSettings } from '$lib/apis/users';
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
+
+	const handledChannelMentionKeys = new Set();
+	const handledChannelUnreadKeys = new Set();
+	const MAX_HANDLED_CHANNEL_MENTIONS = 500;
+	const MAX_HANDLED_CHANNEL_UNREADS = 500;
 
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
@@ -808,17 +815,67 @@
 			}
 		}
 
+		const type = event?.data?.type ?? null;
+		const data = event?.data?.data ?? null;
+		const isMentioned = type === 'mention';
+		const isCurrentUserMentioned =
+			type === 'message' && containsUserMention(data?.content ?? '', $user?.id ?? '');
+		const unreadKey = `${event.channel_id}:${event.message_id}`;
+		const isNewUnreadMessage =
+			(type === 'message' || type === 'mention') && !handledChannelUnreadKeys.has(unreadKey);
+		if (isNewUnreadMessage) {
+			if (handledChannelUnreadKeys.size >= MAX_HANDLED_CHANNEL_UNREADS) {
+				const oldestKey = handledChannelUnreadKeys.values().next().value;
+				if (oldestKey) handledChannelUnreadKeys.delete(oldestKey);
+			}
+			handledChannelUnreadKeys.add(unreadKey);
+		}
+
+		if (isMentioned && event?.user?.id !== $user?.id) {
+			const mentionKey = `${event.channel_id}:${event.message_id}:${$user?.id}`;
+			if (!handledChannelMentionKeys.has(mentionKey)) {
+				if (handledChannelMentionKeys.size >= MAX_HANDLED_CHANNEL_MENTIONS) {
+					const oldestKey = handledChannelMentionKeys.values().next().value;
+					if (oldestKey) handledChannelMentionKeys.delete(oldestKey);
+				}
+				handledChannelMentionKeys.add(mentionKey);
+				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
+
+				if (
+					$isLastActiveTab &&
+					($settings?.notificationEnabled ?? false) &&
+					typeof Notification !== 'undefined' &&
+					Notification.permission === 'granted'
+				) {
+					new Notification(`${title} / Open WebUI`, {
+						body: cleanNotificationText(data?.content ?? ''),
+						icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
+					});
+				}
+
+				if ($isLastActiveTab) {
+					toast.custom(NotificationToast, {
+						componentProps: {
+							onClick: () => goto(`/channels/${event.channel_id}`),
+							content: cleanNotificationText(data?.content ?? ''),
+							title
+						},
+						duration: 15000,
+						unstyled: true
+					});
+				}
+			}
+		}
+
 		if ((!channel || isInBackground) && event?.user?.id !== $user?.id) {
 			await tick();
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
 
 			if ($channels) {
 				if ($channels.find((ch) => ch.id === event.channel_id) && $channelId !== event.channel_id) {
 					channels.set(
 						$channels.map((ch) => {
 							if (ch.id === event.channel_id) {
-								if (type === 'message') {
+								if (isNewUnreadMessage) {
 									return {
 										...ch,
 										unread_count: (ch.unread_count ?? 0) + 1,
@@ -846,16 +903,20 @@
 				}
 			}
 
-			if (type === 'message') {
+			if (type === 'message' && !isCurrentUserMentioned) {
 				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
 
 				if ($isLastActiveTab) {
-					if ($settings?.notificationEnabled ?? false) {
+					if (
+						($settings?.notificationEnabled ?? false) &&
+						typeof Notification !== 'undefined' &&
+						Notification.permission === 'granted'
+					) {
 						// LICENSE covers this Open WebUI notification identifier.
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
 						new Notification(`${title} / Open WebUI`, {
-							body: data?.content,
+							body: cleanNotificationText(data?.content ?? ''),
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
 					}
@@ -866,7 +927,7 @@
 						onClick: () => {
 							goto(`/channels/${event.channel_id}`);
 						},
-						content: data?.content,
+						content: cleanNotificationText(data?.content ?? ''),
 						title: `${title}`
 					},
 					duration: 15000,
