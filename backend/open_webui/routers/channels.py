@@ -44,7 +44,12 @@ from open_webui.socket.main import (
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.channels import extract_mentions, replace_mentions
+from open_webui.utils.channels import (
+    contains_user_mentions,
+    extract_mentions,
+    extract_user_mention_ids,
+    replace_mentions,
+)
 from open_webui.utils.files import get_image_base64_from_file_id
 from open_webui.utils.models import (
     get_all_models,
@@ -973,6 +978,28 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
     return True
 
 
+async def get_channel_mention_user_ids(channel, message, sender_id, db=None) -> list[str]:
+    """Resolve encoded user mentions to valid users authorized to read a channel."""
+    # Avoid membership/access queries for the common case of a message without
+    # a user mention.
+    if not contains_user_mentions(message.content):
+        return []
+
+    if channel.type in ['group', 'dm']:
+        # Group and DM access is membership-based. ``is_active`` is the
+        # membership flag used by the channel model; it is not presence.
+        member_ids = {
+            member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db) if member.is_active
+        }
+        allowed_user_ids = {u.id for u in await Users.get_users_by_user_ids(list(member_ids), db=db)}
+    else:
+        # Standard channels use read access grants (including public grants),
+        # rather than ChannelMember rows.
+        allowed_user_ids = {u.id for u in await get_channel_users_with_access(channel, 'read', db=db)}
+
+    return extract_user_mention_ids(message.content, sender_id, allowed_user_ids)
+
+
 async def model_response_handler(request, channel, message, user, db=None):
     MODELS = {model['id']: model for model in await get_filtered_models(await get_all_models(request, user=user), user)}
 
@@ -1176,6 +1203,11 @@ async def new_message_handler(request: Request, id: str, form_data: MessageForm,
                         await Channels.update_member_active_status(channel.id, member.user_id, True, db=db)
 
             message = await Messages.get_message_by_id(message.id, db=db)
+
+            # Mentions are authoritative only when they refer to valid users
+            # authorized to read this channel. This prevents a crafted U:
+            # mention from notifying an unrelated instance user.
+            resolved_mention_user_ids = await get_channel_mention_user_ids(channel, message, user.id, db=db)
             event_data = {
                 'channel_id': channel.id,
                 'message_id': message.id,
@@ -1192,6 +1224,13 @@ async def new_message_handler(request: Request, id: str, form_data: MessageForm,
                 event_data,
                 to=f'channel:{channel.id}',
             )
+
+            if resolved_mention_user_ids:
+                await emit_to_users(
+                    'events:channel',
+                    {**event_data, 'data': {**event_data['data'], 'type': 'mention'}},
+                    resolved_mention_user_ids,
+                )
 
             if message.parent_id:
                 # If this message is a reply, emit to the parent message as well
@@ -2060,6 +2099,14 @@ async def post_webhook_message(
         event_data,
         to=f'channel:{channel.id}',
     )
+
+    resolved_mention_user_ids = await get_channel_mention_user_ids(channel, message, message.user_id, db=db)
+    if resolved_mention_user_ids:
+        await emit_to_users(
+            'events:channel',
+            {**event_data, 'data': {**event_data['data'], 'type': 'mention'}},
+            resolved_mention_user_ids,
+        )
 
     await publish_event(
         request,
