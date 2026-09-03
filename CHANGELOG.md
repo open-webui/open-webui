@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.4] - 2026-09-03
+
+### Added
+
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Traditional Chinese, Korean, and Finnish were enhanced and expanded.
+
+### Fixed
+
+- 🧹 **Direct connections stop leaking listeners.** A server talking to a direct connection no longer leaves a listener behind for every request that ends any way but a clean finish, which grew without limit while a connection kept failing. [#29509](https://github.com/open-webui/open-webui/pull/29509)
+- 🏷️ **Custom file metadata reaches the model.** Metadata attached to an uploaded file now travels with the pieces that file is split into, so it arrives with the retrieved sources instead of staying behind on the file record. [#29499](https://github.com/open-webui/open-webui/pull/29499), [#29486](https://github.com/open-webui/open-webui/issues/29486)
+- 🔦 **Readable slash command labels.** The entries in the slash command menu no longer show as white text on a white background in the light theme. [#29512](https://github.com/open-webui/open-webui/pull/29512), [#29510](https://github.com/open-webui/open-webui/issues/29510)
+- 🖌️ **Editing an image you uploaded.** An image already held by Open WebUI can now be used with image editing, where fetching its own link back over the network could fail on a private network or without a sign-in. [Commit](https://github.com/open-webui/open-webui/commit/50413f34824ea49d5b94d3a97f3fe4bb2e881e38)
+
 ## [0.11.3] - 2026-08-31
 
 ### Added
