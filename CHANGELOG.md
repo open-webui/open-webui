@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🛡️ **Security Advisory**: This release includes security and access-control fixes. We recommend updating production deployments at your earliest convenience. Not all security fixes in this version may be enumerated in the fixed section. Some may be withheld for a short time to give administrators time to upgrade. [Advisories](https://github.com/open-webui/open-webui/security)
 - 🧹 **Direct connections stop leaking listeners.** A server talking to a direct connection no longer leaves a listener behind for every request that ends any way but a clean finish, which grew without limit while a connection kept failing. [#29509](https://github.com/open-webui/open-webui/pull/29509)
 - 🏷️ **Custom file metadata reaches the model.** Metadata attached to an uploaded file now travels with the pieces that file is split into, so it arrives with the retrieved sources instead of staying behind on the file record, with the oversized and internal fields left out. [#29499](https://github.com/open-webui/open-webui/pull/29499), [#29486](https://github.com/open-webui/open-webui/issues/29486), [Commit](https://github.com/open-webui/open-webui/commit/894655f66b9563890e63c76090ddecc90a311eb2)
 - 🔦 **Readable slash command labels.** The entries in the slash command menu no longer show as white text on a white background in the light theme. [#29512](https://github.com/open-webui/open-webui/pull/29512), [#29510](https://github.com/open-webui/open-webui/issues/29510)
