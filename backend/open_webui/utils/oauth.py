@@ -1662,6 +1662,14 @@ class OAuthManager:
             log.debug('Using creator ID %s for potential group creation.', creator_id)
 
             for group_name in user_oauth_groups:
+                if not group_name:
+                    continue
+                # OAUTH_BLOCKED_GROUPS must apply to creation, not only membership
+                # add/remove — otherwise ENABLE_OAUTH_GROUP_CREATION floods the
+                # group table with blocked IdP groups on every login.
+                if is_in_blocked_groups(group_name, blocked_groups):
+                    log.debug("Skipping creation of blocked OAuth group '%s'", group_name)
+                    continue
                 if group_name not in all_group_names:
                     log.info("Group '%s' not found via OAuth claim. Creating group...", group_name)
                     try:
