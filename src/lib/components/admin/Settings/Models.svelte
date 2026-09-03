@@ -268,14 +268,7 @@
 		}
 
 		baseModels = await getBaseModels(localStorage.token, selectedTag);
-		allModels = await getModels(localStorage.token);
-
-		const providerModels = await getModels(localStorage.token, null, true);
-		const allModelIds = new Set<string>(allModels.map((model: ModelListItem) => model.id));
-		allModels = [
-			...allModels,
-			...providerModels.filter((model: ModelListItem) => !allModelIds.has(model.id))
-		];
+		allModels = await getModels(localStorage.token, null, false, false, true);
 
 		const baseModelIds = new Set<string>(baseModels.map((model: ModelListItem) => model.id));
 
@@ -287,7 +280,8 @@
 				if (baseModel) {
 					return {
 						...m,
-						...baseModel
+						...baseModel,
+						is_active: baseModel?.is_active ?? m?.is_active ?? true
 					};
 				} else {
 					return {
@@ -295,7 +289,7 @@
 						id: m.id,
 						name: m.name,
 
-						is_active: true
+						is_active: m?.is_active ?? true
 					};
 				}
 			});

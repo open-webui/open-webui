@@ -873,8 +873,16 @@ if ENABLE_SCIM:
 
 @app.get('/api/models')
 @app.get('/api/v1/models')  # Experimental: Compatibility with OpenAI API
-async def get_models(request: Request, refresh: bool = False, user=Depends(get_verified_user)):
-    all_models = await get_all_models(request, refresh=refresh, user=user)
+async def get_models(
+    request: Request,
+    refresh: bool = False,
+    include_inactive: bool = False,
+    user=Depends(get_verified_user),
+):
+    if include_inactive and user.role != 'admin':
+        include_inactive = False
+
+    all_models = await get_all_models(request, refresh=refresh, user=user, include_inactive=include_inactive)
 
     # Filter out filter pipelines
     models = [
@@ -887,7 +895,8 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
 
     # Access-filter first so the per-model payload work below only runs for
     # models the caller can actually see.
-    models = await get_filtered_models(models, user)
+    if not (include_inactive and user.role == 'admin'):
+        models = await get_filtered_models(models, user)
 
     for model in models:
         info = model.get('info') if isinstance(model.get('info'), dict) else {}

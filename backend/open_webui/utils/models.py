@@ -66,7 +66,12 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     return function_models + openai_models + ollama_models
 
 
-async def get_all_models(request, refresh: bool = False, user: UserModel = None):
+async def get_all_models(
+    request,
+    refresh: bool = False,
+    user: UserModel = None,
+    include_inactive: bool = False,
+):
     config = await Config.get_many(
         'models.base_models_cache',
         'evaluation.arena.enable',
@@ -107,6 +112,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # deep copy the base models to avoid modifying the original list
     models = [model.copy() for model in base_models]
+    for model in models:
+        model.setdefault('is_active', True)
 
     # If there are no models, return an empty list
     if len(models) == 0:
@@ -181,7 +188,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             model = base_model_lookup.get(custom_model.id)
 
             if model:
-                if custom_model.is_active:
+                model['is_active'] = custom_model.is_active
+                if custom_model.is_active or include_inactive:
                     model['name'] = custom_model.name
                     model['info'] = custom_model.model_dump()
                     schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
@@ -202,10 +210,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
                     model['action_ids'] = action_ids
                     model['filter_ids'] = filter_ids
+                    if not custom_model.is_active and not include_inactive:
+                        models = [m for m in models if m is not model]
                 else:
                     models = [m for m in models if m is not model]
 
-        elif custom_model.is_active:
+        elif custom_model.is_active or include_inactive:
             if custom_model.id in existing_ids:
                 continue
 
@@ -230,6 +240,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 'owned_by': owned_by,
                 'connection_type': connection_type,
                 'preset': True,
+                'is_active': custom_model.is_active,
                 **({'pipe': pipe} if pipe is not None else {}),
                 **({'provider': base_model.get('provider')} if base_model and base_model.get('provider') else {}),
                 **({'loaded': base_model.get('loaded')} if base_model and base_model.get('loaded') is not None else {}),
@@ -438,7 +449,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     log.debug('get_all_models() returned %s models', len(models))
 
-    models_dict = {model['id']: model for model in models}
+    models_dict = {model['id']: model for model in models if model.get('is_active', True)}
     if isinstance(request.app.state.MODELS, RedisDict):
         try:
             request.app.state.MODELS.set(models_dict)

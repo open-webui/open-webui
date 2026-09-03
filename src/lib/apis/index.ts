@@ -24,11 +24,15 @@ export const getModels = async (
 	token: string = '',
 	connections: object | null = null,
 	base: boolean = false,
-	refresh: boolean = false
+	refresh: boolean = false,
+	include_inactive: boolean = false
 ) => {
 	const searchParams = new URLSearchParams();
 	if (refresh) {
 		searchParams.append('refresh', 'true');
+	}
+	if (include_inactive) {
+		searchParams.append('include_inactive', 'true');
 	}
 
 	let error = null;
