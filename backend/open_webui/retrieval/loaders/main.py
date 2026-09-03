@@ -3,6 +3,7 @@ import csv
 import logging
 import os
 import sys
+import zipfile
 
 import ftfy
 import requests
@@ -14,7 +15,6 @@ from langchain_community.document_loaders import (
     Docx2txtLoader,
     PyPDFLoader,
     TextLoader,
-    YoutubeLoader,
 )
 from langchain_core.documents import Document
 from open_webui.env import (
@@ -89,6 +89,15 @@ known_source_ext = [
     'yml',
     'toml',
 ]
+
+known_archive_ext = {'docx', 'epub', 'odt', 'pptx', 'xlsx'}
+known_archive_content_types = {
+    'application/epub+zip',
+    'application/vnd.oasis.opendocument.text',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
 
 
 class ExcelLoader:
@@ -186,10 +195,11 @@ class PptxLoader:
 
 
 class TikaLoader:
-    def __init__(self, url, file_path, mime_type=None, extract_images=None):
+    def __init__(self, url, file_path, mime_type=None, extract_images=None, server_version='3'):
         self.url = url
         self.file_path = file_path
         self.mime_type = mime_type
+        self.server_version = str(server_version or '3')
 
         self.extract_images = extract_images
 
@@ -205,16 +215,15 @@ class TikaLoader:
         if self.extract_images == True:
             headers['X-Tika-PDFextractInlineImages'] = 'true'
 
-        endpoint = self.url
-        if not endpoint.endswith('/'):
-            endpoint += '/'
-        endpoint += 'tika/text'
+        endpoint_path = 'tika/json/text' if self.server_version == '4' else 'tika/text'
+        content_key = 'tk:content' if self.server_version == '4' else 'X-TIKA:content'
+        endpoint = f'{self.url.rstrip("/")}/{endpoint_path}'
 
         r = requests.put(endpoint, data=data, headers=headers, verify=REQUESTS_VERIFY)
 
         if r.ok:
             raw_metadata = r.json()
-            text = raw_metadata.get('X-TIKA:content', '<No text content found>').strip()
+            text = raw_metadata.get(content_key, '<No text content found>').strip()
 
             if 'Content-Type' in raw_metadata:
                 headers['Content-Type'] = raw_metadata['Content-Type']
@@ -477,6 +486,27 @@ class Loader:
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split('.')[-1].lower()
 
+        if file_ext in known_archive_ext or file_content_type in known_archive_content_types:
+            max_file_size = self.kwargs.get('FILE_MAX_SIZE')
+            try:
+                max_file_size_bytes = int(max_file_size) * 1024 * 1024 if max_file_size else 100 * 1024 * 1024
+            except (TypeError, ValueError):
+                max_file_size_bytes = 100 * 1024 * 1024
+
+            if max_file_size_bytes > 0:
+                try:
+                    with zipfile.ZipFile(file_path) as archive:
+                        uncompressed_size = sum(entry.file_size for entry in archive.infolist())
+                except (zipfile.BadZipFile, OSError):
+                    pass
+                else:
+                    max_bytes = min(
+                        max(10 * 1024 * 1024, os.path.getsize(file_path) * 100),
+                        max_file_size_bytes,
+                    )
+                    if uncompressed_size > max_bytes:
+                        raise ValueError('Document archive is too large after decompression')
+
         if (
             self.engine == 'external'
             and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL')
@@ -503,6 +533,7 @@ class Loader:
                 loader = TikaLoader(
                     url=self.kwargs.get('TIKA_SERVER_URL'),
                     file_path=file_path,
+                    server_version=self.kwargs.get('TIKA_SERVER_VERSION'),
                     extract_images=self.kwargs.get('PDF_EXTRACT_IMAGES'),
                 )
         elif (

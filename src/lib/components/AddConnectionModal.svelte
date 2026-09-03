@@ -18,6 +18,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from './common/Textarea.svelte';
+	import { normalizeTags } from '$lib/utils/tags';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -249,7 +250,7 @@
 				: '';
 
 			enable = connection.config?.enable ?? true;
-			tags = connection.config?.tags ?? [];
+			tags = normalizeTags(connection.config?.tags);
 			prefixId = connection.config?.prefix_id ?? '';
 			passthroughParams = Array.isArray(connection.config?.passthrough_params)
 				? connection.config.passthrough_params.join(', ')
@@ -606,6 +607,7 @@
 											<option value="">{$i18n.t('Default')}</option>
 											<option value="azure">{$i18n.t('Azure OpenAI')}</option>
 											<option value="llama.cpp">{$i18n.t('llama.cpp')}</option>
+											<option value="lmstudio">{$i18n.t('LM Studio')}</option>
 											<option value="litellm">{$i18n.t('LiteLLM')}</option>
 										</select>
 									</div>

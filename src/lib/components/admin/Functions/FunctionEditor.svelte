@@ -100,6 +100,14 @@ class Filter:
 
         return body
 
+    def request(self, body: dict, __user__: Optional[dict] = None) -> dict:
+        # Modify the request body before each model/provider call.
+        print(f"request:{__name__}")
+        print(f"request:body:{body}")
+        print(f"request:user:{__user__}")
+
+        return body
+
     def outlet(self, body: dict, __user__: Optional[dict] = None) -> dict:
         # Modify or analyze the response body after processing by the API.
         # This function is the post-processor for the API, which can be used to modify the response
@@ -198,6 +206,14 @@ class Filter:
                 raise Exception(
                     f"Conversation turn limit exceeded. Max turns: {self.valves.max_turns}"
                 )
+
+        return body
+
+    def request(self, body: dict, user: Optional[dict] = None) -> dict:
+        # Modify the request body before each model/provider call.
+        print(f"request:{__name__}")
+        print(f"request:body:{body}")
+        print(f"request:user:{user}")
 
         return body
 

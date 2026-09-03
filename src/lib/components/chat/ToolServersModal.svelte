@@ -53,7 +53,7 @@
 				</div>
 			{/if}
 
-			<div class="px-5 pb-3 w-full flex flex-col justify-center">
+			<div class="px-3 pb-3 w-full flex flex-col justify-center">
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#each selectedTools as tool}
 						{@const status = authStatus(tool)}
@@ -79,7 +79,7 @@
 										</span>
 									{/if}
 									{#if status}
-										<span class="size-2 rounded-full {status.dot} shrink-0"></span>
+										<span class="size-1.5 rounded-full {status.dot} shrink-0"></span>
 									{/if}
 								</div>
 

@@ -17,6 +17,7 @@ from open_webui.config import (
     MILVUS_TOKEN,
     MILVUS_URI,
 )
+from open_webui.retrieval.vector.dbs.milvus import _metadata_exprs
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
@@ -221,13 +222,14 @@ class MilvusClient(VectorDBBase):
 
         self.client.load_collection(mt_collection)
 
+        expr = [f"{RESOURCE_ID_FIELD} == '{resource_id}'", *_metadata_exprs(filter)]
         results = self.client.search(
             collection_name=mt_collection,
             data=vectors,
             anns_field='vector',
             search_params={'metric_type': MILVUS_METRIC_TYPE, 'params': {}},
             limit=limit,
-            filter=f"{RESOURCE_ID_FIELD} == '{resource_id}'",
+            filter=' and '.join(expr),
             output_fields=['id', 'text', 'metadata'],
         )
 

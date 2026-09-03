@@ -11,7 +11,11 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, RAG_EMBEDDING_CONTENT_PREFIX
+from open_webui.config import (
+    BYPASS_ADMIN_ACCESS_CONTROL,
+    ENABLE_KNOWLEDGE_FILE_RETENTION,
+    RAG_EMBEDDING_CONTENT_PREFIX,
+)
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
@@ -55,6 +59,26 @@ router = APIRouter()
 ############################
 
 PAGE_ITEM_COUNT = 30
+
+
+async def delete_file_resource(file: FileModel, db: AsyncSession) -> bool:
+    try:
+        file_collection = f'file-{file.id}'
+        if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+            await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+    except Exception as e:
+        log.debug('This was most likely caused by bypassing embedding processing')
+        log.debug(e)
+
+    result = await Files.delete_file_by_id(file.id, db=db)
+    if result and file.path:
+        try:
+            await asyncio.to_thread(Storage.delete_file, file.path)
+        except Exception as e:
+            log.debug(e)
+
+    return result
+
 
 ############################
 # Knowledge Base Embedding
@@ -518,7 +542,7 @@ EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY = 'external_knowledge.connections'
 EXTERNAL_KNOWLEDGE_PROVIDERS = {'qdrant', 'milvus', 'pgvector'}
 
 
-def _validate_external_connection_form(form_data: ExternalKnowledgeConnectionForm) -> tuple[str, dict]:
+def _get_external_connection_provider_and_config(form_data: ExternalKnowledgeConnectionForm) -> tuple[str, dict]:
     provider = form_data.provider.lower().strip()
     if provider not in EXTERNAL_KNOWLEDGE_PROVIDERS:
         raise HTTPException(
@@ -540,13 +564,13 @@ def _validate_external_connection_form(form_data: ExternalKnowledgeConnectionFor
     return provider, {key: value for key, value in config.items() if key in allowed_config_keys}
 
 
-def _external_auth_config(provider: str, incoming: Optional[dict], existing: Optional[dict] = None) -> dict:
+def _get_external_auth_config(provider: str, incoming: Optional[dict], existing: Optional[dict] = None) -> dict:
     if provider == 'pgvector':
         return {}
     return existing if incoming is None else incoming or {}
 
 
-def _normalize_external_source(source: ExternalKnowledgeSourceForm, provider: str) -> ExternalKnowledgeSourceForm:
+def _get_normalized_external_source(source: ExternalKnowledgeSourceForm, provider: str) -> ExternalKnowledgeSourceForm:
     source.type = (source.type or 'collection').strip()
     source.name = source.name.strip()
 
@@ -577,7 +601,7 @@ def _normalize_external_source(source: ExternalKnowledgeSourceForm, provider: st
     return source
 
 
-def _sanitize_external_connection(connection: dict) -> dict:
+def _get_sanitized_external_connection(connection: dict) -> dict:
     sanitized = {**connection}
     sanitized.pop('auth_config', None)
     sanitized['auth_configured'] = bool(connection.get('auth_config'))
@@ -592,17 +616,17 @@ async def _set_external_connections(connections: list[dict]) -> None:
     await Config.upsert({EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY: connections})
 
 
-def _external_connection_dict(
+def _get_external_connection_from_form(
     form_data: ExternalKnowledgeConnectionForm, user_id: str, id: Optional[str] = None
 ) -> dict:
-    provider, config = _validate_external_connection_form(form_data)
+    provider, config = _get_external_connection_provider_and_config(form_data)
     now = int(time.time())
     return {
         'id': id or str(uuid.uuid4()),
         'name': form_data.name.strip(),
         'provider': provider,
         'endpoint': form_data.endpoint.strip(),
-        'auth_config': _external_auth_config(provider, form_data.auth_config),
+        'auth_config': _get_external_auth_config(provider, form_data.auth_config),
         'config': config,
         'capabilities': form_data.capabilities or {'retrieve': True},
         'health': None,
@@ -613,17 +637,17 @@ def _external_connection_dict(
     }
 
 
-def _external_connection_update_dict(
+def _get_external_connection_update_from_form(
     form_data: ExternalKnowledgeConnectionForm,
     existing: dict,
 ) -> dict:
-    provider, config = _validate_external_connection_form(form_data)
+    provider, config = _get_external_connection_provider_and_config(form_data)
     return {
         **existing,
         'name': form_data.name.strip(),
         'provider': provider,
         'endpoint': form_data.endpoint.strip(),
-        'auth_config': _external_auth_config(provider, form_data.auth_config, existing.get('auth_config')) or {},
+        'auth_config': _get_external_auth_config(provider, form_data.auth_config, existing.get('auth_config')) or {},
         'config': config,
         'capabilities': form_data.capabilities or {'retrieve': True},
         'enabled': form_data.enabled,
@@ -631,12 +655,14 @@ def _external_connection_update_dict(
     }
 
 
-async def _get_external_connection(id: str) -> Optional[dict]:
+async def _get_external_connection_by_id(id: str) -> Optional[dict]:
     connections = await _get_external_connections()
     return next((connection for connection in connections if connection.get('id') == id), None)
 
 
-async def _count_external_connection_mappings(connection_id: str, db: Optional[AsyncSession] = None) -> int:
+async def _get_knowledge_base_count_for_external_connection(
+    connection_id: str, db: Optional[AsyncSession] = None
+) -> int:
     count = 0
     for knowledge in await Knowledges.get_knowledge_bases(db=db):
         if (knowledge.meta or {}).get('external', {}).get('connection_id') == connection_id:
@@ -645,11 +671,8 @@ async def _count_external_connection_mappings(connection_id: str, db: Optional[A
 
 
 @router.get('/external/connections', response_model=ExternalKnowledgeConnectionListResponse)
-async def get_external_knowledge_connections(
-    user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    connections = [_sanitize_external_connection(connection) for connection in await _get_external_connections()]
+async def get_external_knowledge_connections(user=Depends(get_admin_user)):
+    connections = [_get_sanitized_external_connection(connection) for connection in await _get_external_connections()]
     return ExternalKnowledgeConnectionListResponse(items=connections, total=len(connections))
 
 
@@ -660,10 +683,10 @@ async def create_external_knowledge_connection(
     user=Depends(get_admin_user),
 ):
     connections = await _get_external_connections()
-    connection = _external_connection_dict(form_data, user.id)
+    connection = _get_external_connection_from_form(form_data, user.id)
     connections.append(connection)
     await _set_external_connections(connections)
-    sanitized = _sanitize_external_connection(connection)
+    sanitized = _get_sanitized_external_connection(connection)
     await publish_event(
         request,
         EVENTS.KNOWLEDGE_EXTERNAL_CONNECTION_CREATED,
@@ -678,12 +701,11 @@ async def create_external_knowledge_connection(
 async def get_external_knowledge_connection(
     id: str,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
-    connection = await _get_external_connection(id)
+    connection = await _get_external_connection_by_id(id)
     if not connection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
-    return _sanitize_external_connection(connection)
+    return _get_sanitized_external_connection(connection)
 
 
 @router.patch('/external/connections/{id}', response_model=dict)
@@ -698,10 +720,10 @@ async def update_external_knowledge_connection(
     if idx is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    connection = _external_connection_update_dict(form_data, connections[idx])
+    connection = _get_external_connection_update_from_form(form_data, connections[idx])
     connections[idx] = connection
     await _set_external_connections(connections)
-    sanitized = _sanitize_external_connection(connection)
+    sanitized = _get_sanitized_external_connection(connection)
     await publish_event(
         request,
         EVENTS.KNOWLEDGE_EXTERNAL_CONNECTION_UPDATED,
@@ -719,11 +741,11 @@ async def delete_external_knowledge_connection(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    connection = await _get_external_connection(id)
+    connection = await _get_external_connection_by_id(id)
     if not connection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if await _count_external_connection_mappings(id, db=db) > 0:
+    if await _get_knowledge_base_count_for_external_connection(id, db=db) > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='External connection is still used by knowledge bases.',
@@ -745,9 +767,8 @@ async def delete_external_knowledge_connection(
 async def test_external_knowledge_connection(
     id: str,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
-    connection = await _get_external_connection(id)
+    connection = await _get_external_connection_by_id(id)
     if not connection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -766,7 +787,7 @@ async def test_external_knowledge_connection(
     return health
 
 
-async def _test_external_source_definition(
+async def _get_external_source_test_result(
     request: Request,
     connection: dict,
     source: ExternalKnowledgeSourceForm,
@@ -777,7 +798,7 @@ async def _test_external_source_definition(
     if not query.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Test query is required.')
 
-    source = _normalize_external_source(source, connection.get('provider'))
+    source = _get_normalized_external_source(source, connection.get('provider'))
     test_knowledge = KnowledgeResponse(
         id='external-test',
         user_id=user.id,
@@ -820,14 +841,14 @@ async def test_external_knowledge_source(
     user=Depends(get_admin_user),
 ):
     if form_data.connection_id:
-        existing_connection = await _get_external_connection(form_data.connection_id)
+        existing_connection = await _get_external_connection_by_id(form_data.connection_id)
         if not existing_connection:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='External connection not found.')
-        connection = _external_connection_update_dict(form_data.connection, existing_connection)
+        connection = _get_external_connection_update_from_form(form_data.connection, existing_connection)
     else:
-        connection = _external_connection_dict(form_data.connection, user.id, id='external-test')
+        connection = _get_external_connection_from_form(form_data.connection, user.id, id='external-test')
 
-    return await _test_external_source_definition(
+    return await _get_external_source_test_result(
         request,
         connection,
         form_data.source,
@@ -843,14 +864,13 @@ async def test_external_knowledge_retrieval(
     id: str,
     form_data: ExternalKnowledgeRetrieveTestForm,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
-    connection = await _get_external_connection(id)
+    connection = await _get_external_connection_by_id(id)
     if not connection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
     source = form_data.source or ExternalKnowledgeSourceForm(name='test', config={'content_field': 'payload.text'})
-    return await _test_external_source_definition(request, connection, source, form_data.query, form_data.count, user)
+    return await _get_external_source_test_result(request, connection, source, form_data.query, form_data.count, user)
 
 
 @router.post('/external/knowledge/create', response_model=KnowledgeResponse | None)
@@ -860,12 +880,12 @@ async def create_external_knowledge(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    connection = await _get_external_connection(form_data.connection_id)
+    connection = await _get_external_connection_by_id(form_data.connection_id)
     if not connection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     if not form_data.name.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Knowledge name is required.')
-    source = _normalize_external_source(form_data.source, connection.get('provider'))
+    source = _get_normalized_external_source(form_data.source, connection.get('provider'))
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
@@ -913,9 +933,9 @@ async def create_external_knowledge_source(
     if not form_data.name.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Knowledge name is required.')
 
-    connection = _external_connection_dict(form_data.connection, user.id)
-    source = _normalize_external_source(form_data.source, connection.get('provider'))
-    test_result = await _test_external_source_definition(
+    connection = _get_external_connection_from_form(form_data.connection, user.id)
+    source = _get_normalized_external_source(form_data.source, connection.get('provider'))
+    test_result = await _get_external_source_test_result(
         request,
         connection,
         source,
@@ -989,9 +1009,9 @@ async def update_external_knowledge_source(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='External connection not found.')
 
     existing_connection = connections[idx]
-    connection = _external_connection_update_dict(form_data.connection, existing_connection)
-    source = _normalize_external_source(form_data.source, connection.get('provider'))
-    test_result = await _test_external_source_definition(
+    connection = _get_external_connection_update_from_form(form_data.connection, existing_connection)
+    source = _get_normalized_external_source(form_data.source, connection.get('provider'))
+    test_result = await _get_external_source_test_result(
         request,
         connection,
         source,
@@ -1054,7 +1074,7 @@ async def update_external_knowledge_source(
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
-    files: list[FileMetadataResponse | None] = None
+    files: list[FileMetadataResponse] | None = None
     write_access: bool | None = False
 
 
@@ -1248,7 +1268,6 @@ async def get_pending_knowledge_files(
     id: str,
     stream: bool = Query(False),
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     """Return files that are being processed for this knowledge base but not yet linked.
 
@@ -1261,7 +1280,11 @@ async def get_pending_knowledge_files(
     When ``stream=true``, returns an SSE stream that polls every 3 seconds
     and emits the current pending file list.  Closes when no files remain.
     """
-    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
+    # Database operations manage their own short-lived sessions internally.
+    # Holding a session here would keep a connection for the entire stream
+    # (up to an hour) and exhaust the connection pool under concurrent load.
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1276,7 +1299,6 @@ async def get_pending_knowledge_files(
             resource_type='knowledge',
             resource_id=knowledge.id,
             permission='read',
-            db=db,
         )
     ):
         raise HTTPException(
@@ -1285,7 +1307,7 @@ async def get_pending_knowledge_files(
         )
 
     if not stream:
-        return await Files.get_pending_files_for_knowledge(id, db=db)
+        return await Files.get_pending_files_for_knowledge(id)
 
     async def event_stream(knowledge_id: str):
         MAX_POLL_DURATION = 3600  # 1 hour max
@@ -1573,7 +1595,7 @@ async def remove_file_from_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
-    delete_file: bool = Query(True),
+    delete_file: bool = Query(not ENABLE_KNOWLEDGE_FILE_RETENTION),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -1634,18 +1656,7 @@ async def remove_file_from_knowledge_by_id(
 
     # Anyone with write permission or higher can delete files
     if delete_file and (file.user_id == user.id or user.role == 'admin'):
-        try:
-            # Remove the file's collection from vector database
-            file_collection = f'file-{form_data.file_id}'
-            if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-        except Exception as e:
-            log.debug('This was most likely caused by bypassing embedding processing')
-            log.debug(e)
-            pass
-
-        # Delete file from database
-        await Files.delete_file_by_id(form_data.file_id, db=db)
+        await delete_file_resource(file, db)
 
     if knowledge:
         response = KnowledgeFilesResponse(
@@ -1725,7 +1736,12 @@ async def delete_knowledge_by_id(
     # Clean up vector DB
     if is_external_knowledge(knowledge):
         connection_id = (knowledge.meta or {}).get('external', {}).get('connection_id')
-        if connection_id:
+        # Connections are admin-owned and shared across knowledge bases
+        if (
+            connection_id
+            and user.role == 'admin'
+            and await _get_knowledge_base_count_for_external_connection(connection_id, db=db) <= 1
+        ):
             connections = [
                 connection for connection in await _get_external_connections() if connection.get('id') != connection_id
             ]
@@ -1790,11 +1806,17 @@ async def reset_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    files = await Knowledges.get_files_by_id(id, db=db) if not ENABLE_KNOWLEDGE_FILE_RETENTION else []
+
     try:
         await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass
+
+    for file in files:
+        if file.user_id == user.id or user.role == 'admin':
+            await delete_file_resource(file, db)
 
     knowledge = await Knowledges.reset_knowledge_by_id(id=id, include_directories=include_directories, db=db)
     if knowledge:
@@ -1970,19 +1992,13 @@ async def sync_knowledge_cleanup(
         except Exception:
             pass
 
-        try:
-            collection_name = f'file-{file_id}'
-            if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name):
-                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name)
-        except Exception:
-            pass
-
-        if file.user_id == user.id or user.role == 'admin':
-            await Files.delete_file_by_id(file_id, db=db)
-            try:
-                await asyncio.to_thread(Storage.delete_file, file.path)
-            except Exception:
-                pass
+        linked_knowledges = await Knowledges.get_knowledges_by_file_id(file_id, db=db)
+        if (
+            not ENABLE_KNOWLEDGE_FILE_RETENTION
+            and not linked_knowledges
+            and (file.user_id == user.id or user.role == 'admin')
+        ):
+            await delete_file_resource(file, db)
 
     # ── Remove orphaned directories (children before parents) ──
     for dir_id in reversed(form_data.dir_ids):

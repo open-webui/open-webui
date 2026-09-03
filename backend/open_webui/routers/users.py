@@ -41,6 +41,7 @@ from open_webui.utils.auth import (
     get_admin_user,
     get_password_hash,
     get_verified_user,
+    revoke_user_tokens,
     validate_password,
 )
 from open_webui.utils.chat_variables import ChatVariablesError, normalize_user_variables, validate_user_variables
@@ -111,14 +112,14 @@ async def get_users(
     filter = {}
     if query:
         filter['query'] = query
-    if order_by:
-        filter['order_by'] = order_by
-    if direction:
-        filter['direction'] = direction
 
-    filter['direction'] = direction
-
-    result = await Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
+    result = await Users.get_users(
+        filter=filter,
+        sort={'order_by': order_by, 'direction': direction},
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
     users = result['users']
     total = result['total']
@@ -166,12 +167,14 @@ async def search_users(
     filter = {}
     if query:
         filter['query'] = query
-    if order_by:
-        filter['order_by'] = order_by
-    if direction:
-        filter['direction'] = direction
 
-    return await Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
+    return await Users.get_users(
+        filter=filter,
+        sort={'order_by': order_by, 'direction': direction},
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
 
 ############################
@@ -234,6 +237,7 @@ class SharingPermissions(BaseModel):
     public_notes: bool = False
     folders: bool = False
     public_chats: bool = False
+    open_chats: bool = False
     public_calendars: bool = False
 
 
@@ -470,7 +474,6 @@ async def get_default_user_permissions_defaults(user=Depends(get_admin_user)):
 async def get_user_settings_by_session_user(
     raw: bool = False,
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     # user already fetched by get_verified_user — no need to refetch
     if raw:
@@ -507,12 +510,12 @@ async def update_user_settings_by_session_user(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    updated_user_settings = form_data.model_dump()
+    updated_user_settings = form_data.model_dump(exclude_unset=True)
     ui_settings = updated_user_settings.get('ui')
     if (
         user.role != 'admin'
         and ui_settings is not None
-        and 'toolServers' in ui_settings.keys()
+        and 'toolServers' in ui_settings
         and not await has_permission(
             user.id,
             'features.direct_tool_servers',
@@ -569,7 +572,6 @@ async def update_user_settings_by_session_user(
 async def get_user_status_by_session_user(
     request: Request,
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     if not await Config.get('users.enable_status'):
         raise HTTPException(
@@ -619,7 +621,7 @@ async def update_user_status_by_session_user(
 
 
 @router.get('/user/info', response_model=dict | None)
-async def get_user_info_by_session_user(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_user_info_by_session_user(user=Depends(get_verified_user)):
     # user already fetched by get_verified_user — no need to refetch
     return user.info
 
@@ -965,7 +967,8 @@ async def update_user_by_id(
                 raise HTTPException(400, detail=str(e))
 
             hashed = await get_password_hash(form_data.password)
-            await Auths.update_user_password_by_id(user_id, hashed, db=db)
+            if await Auths.update_user_password_by_id(user_id, hashed, db=db):
+                await revoke_user_tokens(request, user_id)
 
         # Build update dict from only the provided fields
         update_data = {}

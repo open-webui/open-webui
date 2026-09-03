@@ -114,6 +114,23 @@ def get_channel_permitted_group_and_user_ids(
     }
 
 
+async def get_channel_member_user_ids(
+    channel: ChannelModel,
+    db: Optional[AsyncSession] = None,
+) -> Optional[list[str]]:
+    permitted_ids = get_channel_permitted_group_and_user_ids(channel, permission='read')
+    if permitted_ids is None:
+        return None
+
+    user_ids = permitted_ids.get('user_ids') or []
+    group_ids = permitted_ids.get('group_ids') or []
+    if group_ids:
+        for member_ids in (await Groups.get_group_user_ids_by_ids(group_ids, db=db)).values():
+            user_ids.extend(member_ids)
+
+    return list(dict.fromkeys([*user_ids, channel.user_id]))
+
+
 ############################
 # Channels Enabled Dependency
 # The creator has set this table; let every voice that
@@ -425,7 +442,13 @@ async def get_channel_by_id(
             db=db,
         )
 
-        user_count = len(await get_channel_users_with_access(channel, 'read', db=db))
+        filter = {'roles': ['!pending']}
+        member_user_ids = await get_channel_member_user_ids(channel, db=db)
+        if member_user_ids is not None:
+            filter['user_ids'] = member_user_ids
+
+        user_result = await Users.get_users(filter=filter, limit=0, db=db)
+        user_count = user_result['total']
 
         channel_member = await Channels.get_member_by_channel_and_user_id(channel.id, user.id, db=db)
         unread_count = await Messages.get_unread_message_count(
@@ -530,21 +553,22 @@ async def get_channel_members_by_id(
 
         if query:
             filter['query'] = query
-        if order_by:
-            filter['order_by'] = order_by
-        if direction:
-            filter['direction'] = direction
 
         if channel.type == 'group':
             filter['channel_id'] = channel.id
         else:
             filter['roles'] = ['!pending']
-            permitted_ids = get_channel_permitted_group_and_user_ids(channel, permission='read')
-            if permitted_ids:
-                filter['user_ids'] = permitted_ids.get('user_ids')
-                filter['group_ids'] = permitted_ids.get('group_ids')
+            member_user_ids = await get_channel_member_user_ids(channel, db=db)
+            if member_user_ids is not None:
+                filter['user_ids'] = member_user_ids
 
-        result = await Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
+        result = await Users.get_users(
+            filter=filter,
+            sort={'order_by': order_by, 'direction': direction},
+            skip=skip,
+            limit=limit,
+            db=db,
+        )
 
         fetched_users = result['users']
         total = result['total']
@@ -1075,16 +1099,10 @@ async def model_response_handler(request, channel, message, user, db=None):
                         ],
                     ]
 
-                # Resolve model config (same helpers automations use)
-                from open_webui.utils.automations import (
-                    _resolve_model_features,
-                    _resolve_model_filter_ids,
-                    _resolve_model_tool_ids,
-                )
+                # Resolve model config (same path automations use)
+                from open_webui.utils.automations import _resolve_model_defaults
 
-                tool_ids = _resolve_model_tool_ids(request.app, model_id)
-                features = await _resolve_model_features(request.app, model_id)
-                filter_ids = _resolve_model_filter_ids(request.app, model_id)
+                tool_ids, features, filter_ids, _ = await _resolve_model_defaults(request.app, model_id)
 
                 # Build full form_data — same shape as frontend POST.
                 # The channel: prefix routes pipeline events to the
@@ -1224,7 +1242,7 @@ async def post_new_message(
         except Exception as e:
             log.debug(e)
 
-        active_user_ids = get_user_ids_from_room(f'channel:{channel.id}')
+        active_user_ids = await get_user_ids_from_room(f'channel:{channel.id}')
 
         # NOTE: We intentionally do NOT pass db to background_handler.
         # Background tasks should manage their own short-lived sessions to avoid

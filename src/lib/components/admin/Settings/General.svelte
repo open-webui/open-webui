@@ -416,7 +416,8 @@
 						<div class="mt-0.5 space-y-2">
 							<div class="flex items-center justify-between gap-4 py-0.5">
 								<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-									{Object.keys(defaultInterfaceSettings).length} {$i18n.t('settings configured')}
+									{Object.keys(defaultInterfaceSettings).length}
+									{$i18n.t('settings configured')}
 								</div>
 
 								{#if Object.keys(defaultInterfaceSettings).length > 0}

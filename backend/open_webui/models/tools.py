@@ -89,7 +89,7 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
-    access_grants: list[dict | None] = None
+    access_grants: list[dict] | None = None
 
 
 class ToolValves(BaseModel):
@@ -103,7 +103,7 @@ class ToolsTable:
     async def _to_tool_model(
         self,
         tool: Tool,
-        access_grants: list[AccessGrantModel | None] = None,
+        access_grants: list[AccessGrantModel] | None = None,
         db: AsyncSession | None = None,
     ) -> ToolModel:
         tool_model = ToolModel.model_validate(tool)
@@ -169,20 +169,37 @@ class ToolsTable:
                 for tool in tools
             }
 
-    async def get_tools(self, defer_content: bool = False, db: AsyncSession | None = None) -> list[ToolUserModel]:
+    async def get_tools(
+        self,
+        defer_content: bool = False,
+        db: AsyncSession | None = None,
+        user_id: str | None = None,
+        user_group_ids: set[str] | None = None,
+        permission: str = 'read',
+    ) -> list[ToolUserModel]:
         async with get_async_db_context(db) as db:
-            if defer_content:
-                # Skip Tool.content (plugin source, potentially large) via a
-                # column select; Row attributes satisfy from_attributes.
-                result = await db.execute(
-                    select(
-                        Tool.id, Tool.user_id, Tool.name, Tool.specs, Tool.meta, Tool.updated_at, Tool.created_at
-                    ).order_by(Tool.updated_at.desc())
+            # Skip Tool.content (plugin source, potentially large) via a
+            # column select; Row attributes satisfy from_attributes.
+            stmt = (
+                select(Tool.id, Tool.user_id, Tool.name, Tool.specs, Tool.meta, Tool.updated_at, Tool.created_at)
+                if defer_content
+                else select(Tool)
+            ).order_by(Tool.updated_at.desc())
+
+            if user_id is not None:
+                if user_group_ids is None:
+                    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
+                stmt = AccessGrants.has_permission_filter(
+                    db=db,
+                    query=stmt,
+                    DocumentModel=Tool,
+                    filter={'user_id': user_id, 'group_ids': user_group_ids},
+                    resource_type='tool',
+                    permission=permission,
                 )
-                all_tools = result.all()
-            else:
-                result = await db.execute(select(Tool).order_by(Tool.updated_at.desc()))
-                all_tools = result.scalars().all()
+
+            result = await db.execute(stmt)
+            all_tools = result.all() if defer_content else result.scalars().all()
 
             user_ids = list(set(tool.user_id for tool in all_tools))
             tool_ids = [tool.id for tool in all_tools]
@@ -217,20 +234,15 @@ class ToolsTable:
         defer_content: bool = False,
         db: AsyncSession | None = None,
     ) -> list[ToolUserModel]:
-        tools = await self.get_tools(defer_content=defer_content, db=db)
         user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
         user_group_ids = {group.id for group in user_groups}
-
-        # One grants query for all non-owned tools instead of one per tool
-        accessible_ids = await AccessGrants.get_accessible_resource_ids(
-            user_id=user_id,
-            resource_type='tool',
-            resource_ids=[tool.id for tool in tools if tool.user_id != user_id],
-            permission=permission,
-            user_group_ids=user_group_ids,
+        return await self.get_tools(
+            defer_content=defer_content,
             db=db,
+            user_id=user_id,
+            user_group_ids=user_group_ids,
+            permission=permission,
         )
-        return [tool for tool in tools if tool.user_id == user_id or tool.id in accessible_ids]
 
     async def get_tool_valves_by_id(self, id: str, db: AsyncSession | None = None) -> dict | None:
         try:

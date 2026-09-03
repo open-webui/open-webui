@@ -22,7 +22,7 @@
 		socket,
 		config,
 		isApp,
-		models,
+		visiblePinnedModels,
 		selectedFolder,
 		WEBUI_NAME,
 		sidebarWidth
@@ -120,9 +120,7 @@
 
 	let showCreateFolderModal = false;
 
-	let pinnedModels = [];
-
-	let showPinnedModels = false;
+	let showPinnedModels = true;
 	let showPinnedNotes = false;
 	let showChannels = false;
 	let showFolders = false;
@@ -130,6 +128,7 @@
 	let showChatsMenu = false;
 
 	let folders = {};
+	type SelectedSidebarFolder = { id: string } | null;
 	let folderRegistry: Record<
 		string,
 		{
@@ -144,6 +143,14 @@
 	let newFolderId = null;
 
 	let sharedFolders: any[] = [];
+
+	const initSelectedFolderChats = (folder: SelectedSidebarFolder) => {
+		if (!folder?.id) {
+			return;
+		}
+
+		folderRegistry[folder.id]?.setFolderItems?.();
+	};
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
@@ -230,29 +237,33 @@
 		}
 	};
 
-	$: if ($selectedFolder) {
-		initFolders();
-	}
+	$: initSelectedFolderChats($selectedFolder as SelectedSidebarFolder);
 
 	const initFolders = async () => {
 		if ($config?.features?.enable_folders === false) {
 			return;
 		}
 
-		const folderList = await getFolders(localStorage.token).catch((error) => {
-			return [];
-		});
+		const [folderList, sharedFolderList] = await Promise.all([
+			getFolders(localStorage.token).catch((error) => {
+				return [];
+			}),
+			getSharedFolders(localStorage.token).catch((error) => {
+				return [];
+			})
+		]);
 		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
 
-		folders = {};
+		sharedFolders = sharedFolderList;
+		const folderMap: Record<string, any> = {};
 
 		// First pass: Initialize all folder entries
 		for (const folder of folderList) {
 			// Ensure folder is added to folders with its data
-			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+			folderMap[folder.id] = { ...(folderMap[folder.id] || {}), ...folder };
 
 			if (newFolderId && folder.id === newFolderId) {
-				folders[folder.id].new = true;
+				folderMap[folder.id].new = true;
 				newFolderId = null;
 			}
 		}
@@ -261,46 +272,38 @@
 		for (const folder of folderList) {
 			if (folder.parent_id) {
 				// Ensure the parent folder is initialized if it doesn't exist
-				if (!folders[folder.parent_id]) {
-					folders[folder.parent_id] = {}; // Create a placeholder if not already present
+				if (!folderMap[folder.parent_id]) {
+					folderMap[folder.parent_id] = {}; // Create a placeholder if not already present
 				}
 
 				// Initialize childrenIds array if it doesn't exist and add the current folder id
-				folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
-					? [...folders[folder.parent_id].childrenIds, folder.id]
+				folderMap[folder.parent_id].childrenIds = folderMap[folder.parent_id].childrenIds
+					? [...folderMap[folder.parent_id].childrenIds, folder.id]
 					: [folder.id];
 
 				// Sort the children by updated_at field
-				folders[folder.parent_id].childrenIds.sort((a, b) => {
-					return folders[b].updated_at - folders[a].updated_at;
+				folderMap[folder.parent_id].childrenIds.sort((a, b) => {
+					return folderMap[b].updated_at - folderMap[a].updated_at;
 				});
 			}
 		}
 
 		// Merge shared folders into the same structure
-		try {
-			sharedFolders = await getSharedFolders(localStorage.token);
-		} catch (e) {
-			sharedFolders = [];
-		}
-
 		for (const sf of sharedFolders) {
-			if (folders[sf.id]) continue; // Already owned by user
-			folders[sf.id] = { ...sf, shared: true };
+			if (folderMap[sf.id]) continue; // Already owned by user
+			folderMap[sf.id] = { ...sf, shared: true };
 		}
 
 		// Build parent-child relationships for shared folders
 		for (const sf of sharedFolders) {
-			if (folders[sf.id]?.shared && sf.parent_id && folders[sf.parent_id]) {
-				folders[sf.parent_id].childrenIds = folders[sf.parent_id].childrenIds
-					? [...new Set([...folders[sf.parent_id].childrenIds, sf.id])]
+			if (folderMap[sf.id]?.shared && sf.parent_id && folderMap[sf.parent_id]) {
+				folderMap[sf.parent_id].childrenIds = folderMap[sf.parent_id].childrenIds
+					? [...new Set([...folderMap[sf.parent_id].childrenIds, sf.id])]
 					: [sf.id];
 			}
 		}
-	};
 
-	const initSharedFolders = async () => {
-		await initFolders();
+		folders = folderMap;
 	};
 
 	const createFolder = async ({ name, data, parent_id }) => {
@@ -375,8 +378,6 @@
 		allChatsLoaded = false;
 		chatListReady = false;
 
-		initFolders();
-		initSharedFolders();
 		await Promise.all([
 			(async () => {
 				console.log('Init tags');
@@ -599,13 +600,20 @@
 	const MAX_WIDTH = 480;
 
 	let isResizing = false;
+	let activePointerId: number | null = null;
+	let activeResizer: HTMLElement | null = null;
 
 	let startWidth = 0;
 	let startClientX = 0;
 
-	const resizeStartHandler = (e: MouseEvent) => {
+	const resizeStartHandler = (e: PointerEvent) => {
 		if ($mobile) return;
+
+		e.preventDefault();
 		isResizing = true;
+		activePointerId = e.pointerId;
+		activeResizer = e.currentTarget as HTMLElement;
+		activeResizer.setPointerCapture?.(e.pointerId);
 
 		startClientX = e.clientX;
 		startWidth = $sidebarWidth ?? 245;
@@ -613,21 +621,35 @@
 		document.body.style.userSelect = 'none';
 	};
 
-	const resizeEndHandler = () => {
+	const resizeEndHandler = (e?: PointerEvent) => {
 		if (!isResizing) return;
+		if (e && activePointerId !== null && e.pointerId !== activePointerId) return;
+
 		isResizing = false;
+
+		if (activePointerId !== null && activeResizer?.hasPointerCapture?.(activePointerId)) {
+			activeResizer.releasePointerCapture(activePointerId);
+		}
+		activePointerId = null;
+		activeResizer = null;
 
 		document.body.style.userSelect = '';
 		localStorage.setItem('sidebarWidth', String($sidebarWidth));
 	};
 
-	const resizeSidebarHandler = (endClientX) => {
+	const resizeSidebarHandler = (endClientX: number) => {
 		const dx = endClientX - startClientX;
 		const newSidebarWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
 
 		sidebarWidth.set(newSidebarWidth);
 		document.documentElement.style.setProperty('--sidebar-width', `${newSidebarWidth}px`);
 	};
+
+	onDestroy(() => {
+		if (isResizing) {
+			document.body.style.userSelect = '';
+		}
+	});
 
 	onMount(async () => {
 		try {
@@ -674,12 +696,6 @@
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
 				}
-			}),
-			settings.subscribe((value) => {
-				if (pinnedModels != value?.pinnedModels ?? []) {
-					pinnedModels = value?.pinnedModels ?? [];
-					showPinnedModels = pinnedModels.length > 0;
-				}
 			})
 		];
 
@@ -700,7 +716,12 @@
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
-		const unregisterFolderRefreshHandler = registerFolderRefreshHandler((folderId, chat) => {
+		const unregisterFolderRefreshHandler = registerFolderRefreshHandler(async (folderId, chat) => {
+			// null refreshes the folder tree; undefined refreshes all folder chat lists.
+			if (folderId === null) {
+				return initFolders();
+			}
+
 			if (folderId) {
 				if (chat) {
 					return folderRegistry[folderId]?.upsertChat?.(chat);
@@ -861,13 +882,13 @@
 />
 
 <svelte:window
-	on:mousemove={(e) => {
+	on:pointermove={(e) => {
 		if (!isResizing) return;
+		if (activePointerId !== null && e.pointerId !== activePointerId) return;
 		resizeSidebarHandler(e.clientX);
 	}}
-	on:mouseup={() => {
-		resizeEndHandler();
-	}}
+	on:pointerup={resizeEndHandler}
+	on:pointercancel={resizeEndHandler}
 />
 
 <MobileSwipePanel
@@ -940,7 +961,7 @@
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 						>
 							<div
-								class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+								class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 							>
 								<!-- LICENSE covers this Open WebUI sidebar logo.
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -974,7 +995,7 @@
 								aria-label={$i18n.t('New Chat')}
 							>
 								<div
-									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 								>
 									<EditPencilIcon className="size-4" strokeWidth="1.5" />
 								</div>
@@ -996,7 +1017,7 @@
 								aria-label={$i18n.t('Search')}
 							>
 								<div
-									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 								>
 									<SearchIcon className="size-4" strokeWidth="1.5" />
 								</div>
@@ -1027,7 +1048,7 @@
 												? ($settings?.highContrastMode ?? false)
 													? 'bg-black/[0.035] dark:bg-white/[0.06]'
 													: 'bg-black/[0.035] dark:bg-white/[0.045]'
-												: 'group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}"
+												: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-900'}"
 										>
 											{#if itemId === 'notes'}
 												<NotesIcon className="size-4" strokeWidth="1.5" />
@@ -1060,7 +1081,7 @@
 									aria-label={$i18n.t('User menu')}
 								>
 									<div
-										class="self-center relative flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+										class="self-center relative flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 									>
 										<img
 											src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
@@ -1123,7 +1144,7 @@
 					class="sidebar px-1 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
 				>
 					<a
-						class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-50 dark:hover:bg-gray-900 transition no-drag-region"
+						class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 						href="/"
 						draggable="false"
 						on:click={newChatHandler}
@@ -1155,7 +1176,7 @@
 						placement="bottom"
 					>
 						<button
-							class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition {isWindows
+							class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {isWindows
 								? 'cursor-pointer'
 								: 'cursor-[w-resize]'}"
 							on:click={() => {
@@ -1177,7 +1198,7 @@
 				</div>
 
 				<div
-					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-2.5 pb-2.5"
+					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 pt-2.5 pb-2.5"
 					on:scroll={(e) => {
 						if (e.target.scrollTop === 0) {
 							scrollTop = 0;
@@ -1190,7 +1211,7 @@
 						<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 							<a
 								id="sidebar-new-chat-button"
-								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900 transition outline-none"
+								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 								href="/"
 								draggable="false"
 								on:click={newChatHandler}
@@ -1211,7 +1232,7 @@
 						<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 							<button
 								id="sidebar-search-button"
-								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900 transition outline-none"
+								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 								on:click={() => {
 									showSearch.set(true);
 								}}
@@ -1244,7 +1265,7 @@
 												? ($settings?.highContrastMode ?? false)
 													? 'bg-black/[0.035] dark:bg-white/[0.06]'
 													: 'bg-black/[0.035] dark:bg-white/[0.045]'
-												: 'hover:bg-gray-50 dark:hover:bg-gray-900'}"
+												: 'hover:bg-gray-100 dark:hover:bg-gray-900'}"
 											href={meta.href}
 											on:click={itemClickHandler}
 											draggable="false"
@@ -1276,11 +1297,10 @@
 						</div>
 					</div>
 
-					{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
+					{#if $visiblePinnedModels.length > 0}
 						<SidebarSection
 							id="sidebar-models"
 							bind:open={showPinnedModels}
-							className="mt-0.5"
 							name={$i18n.t('Models')}
 							dragAndDrop={false}
 						>
@@ -1292,7 +1312,6 @@
 						<SidebarSection
 							id="sidebar-pinned-notes"
 							bind:open={showPinnedNotes}
-							className="mt-0.5"
 							name={$i18n.t('Notes')}
 							dragAndDrop={false}
 							onAdd={async () => {
@@ -1311,7 +1330,6 @@
 						<SidebarSection
 							id="sidebar-channels"
 							bind:open={showChannels}
-							className="mt-0.5"
 							name={$i18n.t('Channels')}
 							dragAndDrop={false}
 							onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
@@ -1345,7 +1363,6 @@
 						<SidebarSection
 							id="sidebar-folders"
 							bind:open={showFolders}
-							className="mt-0.5"
 							name={$i18n.t('Folders')}
 							onAdd={() => {
 								showCreateFolderModal = true;
@@ -1397,7 +1414,6 @@
 
 					<SidebarSection
 						id="sidebar-chats"
-						className="mt-0.5"
 						name={$i18n.t('Chats')}
 						on:change={async (e) => {
 							selectedFolder.set(null);
@@ -1432,6 +1448,10 @@
 
 								if (chat) {
 									console.log(chat);
+									if (!chat.folder_id && !chat.pinned) {
+										return;
+									}
+
 									if (chat.folder_id) {
 										const res = await updateChatFolderIdById(
 											localStorage.token,
@@ -1484,7 +1504,7 @@
 								<div slot="content">
 									<DropdownMenu className="min-w-[10.625rem]">
 										<button
-											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
 											on:click={markAllChatsReadHandler}
 										>
 											<CheckIcon className="size-3.5" />
@@ -1693,7 +1713,7 @@
 							>
 								<button
 									type="button"
-									class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+									class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 									aria-label={$i18n.t('User menu')}
 								>
 									<div class=" self-center mr-3 relative flex-shrink-0">
@@ -1727,14 +1747,15 @@
 
 		{#if !$mobile && visible}
 			<div
-				class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20"
+				class="relative flex items-center justify-center group border-r border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20 bg-transparent p-0 appearance-none"
 				id="sidebar-resizer"
-				on:mousedown={resizeStartHandler}
+				on:pointerdown={resizeStartHandler}
 				role="separator"
 			>
 				<div
 					class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"
-				/>
+					style="touch-action: none;"
+				></div>
 			</div>
 		{/if}
 	{/if}

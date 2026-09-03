@@ -52,7 +52,7 @@
 	<div class="flex flex-col mb-1">
 		{#if tools.length > 0}
 			<div class=" flex items-center flex-wrap mt-1">
-				{#each selectedTools as tool, toolIdx}
+				{#each selectedTools as tool, toolIdx (tool.id)}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox

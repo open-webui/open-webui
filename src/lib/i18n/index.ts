@@ -65,6 +65,8 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 				default: fallbackDefaultLocale
 			},
 			ns: 'translation',
+			keySeparator: false,
+			nsSeparator: false,
 			returnEmptyString: false,
 			interpolation: {
 				escapeValue: false // not needed for svelte as it escapes by default

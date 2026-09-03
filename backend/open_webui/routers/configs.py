@@ -13,7 +13,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import get_custom_headers
+from open_webui.utils.headers import bearer_auth_header, get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
@@ -27,7 +27,6 @@ from open_webui.utils.oauth import (
     resolve_oauth_client_info,
 )
 from open_webui.utils.tools import (
-    bearer_auth_header,
     get_tool_server_data,
     get_tool_server_url,
     set_terminal_servers,
@@ -279,7 +278,11 @@ async def set_tool_servers_config(
                         OAuthClientInformationFull(**oauth_client_info),
                     )
                 except Exception as e:
-                    log.debug('Failed to add OAuth client for MCP tool server: %s', e)
+                    log.debug(
+                        'Failed to add OAuth client for MCP tool server %s: %s',
+                        server_id,
+                        f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
+                    )
                     continue
 
     await publish_event(
@@ -728,7 +731,7 @@ async def set_code_execution_config(
 class ModelsConfigForm(BaseModel):
     DEFAULT_MODELS: str | None
     DEFAULT_PINNED_MODELS: str | None
-    MODEL_ORDER_LIST: list[str | None]
+    MODEL_ORDER_LIST: list[str] | None
     DEFAULT_MODEL_METADATA: dict | None = None
     DEFAULT_MODEL_PARAMS: dict | None = None
 

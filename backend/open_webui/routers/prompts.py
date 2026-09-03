@@ -36,7 +36,7 @@ class PromptVersionUpdateForm(BaseModel):
 class PromptMetadataForm(BaseModel):
     name: str
     command: str
-    tags: list[str | None] = None
+    tags: list[str] | None = None
 
 
 router = APIRouter()

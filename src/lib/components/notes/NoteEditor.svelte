@@ -21,8 +21,6 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
-
 	import { compressImage, copyToClipboard, convertHeicToJpeg } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getFileById, uploadFile } from '$lib/apis/files';
@@ -1006,8 +1004,8 @@ ${content}
 	</div>
 </DeleteConfirmDialog>
 
-<PaneGroup direction="horizontal" class="w-full h-full">
-	<Pane defaultSize={70} minSize={30} class="h-full flex flex-col w-full relative">
+<div class="w-full h-full flex">
+	<div class="h-full flex flex-col min-w-0 flex-1 relative">
 		<div class="relative flex-1 w-full h-full flex justify-center pt-2" id="note-editor">
 			{#if loading}
 				<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
@@ -1468,7 +1466,7 @@ ${content}
 				</div>
 			</div>
 		{/if}
-	</Pane>
+	</div>
 	<NotePanel bind:show={showNoteChat}>
 		{#if noteChatLoading}
 			<div class="flex h-full items-center justify-center">
@@ -1511,4 +1509,4 @@ ${content}
 			/>
 		{/if}
 	</NotePanel>
-</PaneGroup>
+</div>

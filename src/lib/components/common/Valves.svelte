@@ -70,7 +70,7 @@
 			{#if (valves[property] ?? null) !== null}
 				<!-- {valves[property]} -->
 				<div class="flex mt-0.5 mb-0.5 space-x-2">
-					<div class=" flex-1">
+					<div class=" flex-1 min-w-0">
 						{#if valvesSpec.properties[property]?.enum ?? null}
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"

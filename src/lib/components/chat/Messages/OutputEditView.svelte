@@ -138,7 +138,7 @@
 
 	function getMessageText(item: any): string {
 		return (item.content ?? [])
-			.filter((p: any) => p.type === 'output_text' || 'text' in p)
+			.filter((p: any) => p && (p.type === 'output_text' || 'text' in p))
 			.map((p: any) => p.text ?? '')
 			.join('\n');
 	}
@@ -146,7 +146,9 @@
 	function updateMessageText(idx: number, text: string) {
 		const next = [...output];
 		const item = { ...next[idx] };
-		const parts = (item.content ?? []).filter((p: any) => p.type === 'output_text' || 'text' in p);
+		const parts = (item.content ?? []).filter(
+			(p: any) => p && (p.type === 'output_text' || 'text' in p)
+		);
 		item.content = [{ ...(parts[0] ?? { type: 'output_text' }), text }];
 		next[idx] = item;
 		output = next;
@@ -155,7 +157,7 @@
 
 	function getReasoningText(item: any): string {
 		return (item.summary ?? item.content ?? [])
-			.filter((p: any) => 'text' in p)
+			.filter((p: any) => p && 'text' in p)
 			.map((p: any) => p.text ?? '')
 			.join('');
 	}
@@ -270,7 +272,7 @@
 						{#if di.type === 'message'}
 							<textarea
 								use:fitContent
-								class="w-full bg-transparent outline-hidden resize-none overflow-hidden text-[0.9375rem] p-1.5 rounded-lg"
+								class="w-full bg-transparent outline-hidden focus-visible:outline-none! resize-none overflow-hidden text-[0.9375rem] p-1.5 rounded-lg"
 								value={getMessageText(di.item)}
 								on:input={(e) => {
 									updateMessageText(di.indices[0], e.target.value);
@@ -282,7 +284,7 @@
 						{:else if di.type === 'reasoning'}
 							<textarea
 								use:fitContent
-								class="w-full bg-transparent outline-hidden resize-none overflow-hidden text-[0.9375rem] text-gray-500 dark:text-gray-400 p-1.5 rounded-lg"
+								class="w-full bg-transparent outline-hidden focus-visible:outline-none! resize-none overflow-hidden text-[0.9375rem] text-gray-500 dark:text-gray-400 p-1.5 rounded-lg"
 								value={getReasoningText(di.item)}
 								on:input={(e) => {
 									updateReasoningText(di.indices[0], e.target.value);

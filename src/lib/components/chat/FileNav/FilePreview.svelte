@@ -7,7 +7,7 @@
 	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
-	import PDFViewer from '../../common/PDFViewer.svelte';
+	import PdfPagesPreview from '../../common/PdfPagesPreview.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
 	import DocxPreview from '../../common/DocxPreview.svelte';
 	import PptxPreview from '../../common/PptxPreview.svelte';
@@ -16,7 +16,7 @@
 	import SqliteView from './SqliteView.svelte';
 	import FileCodeEditor from './FileCodeEditor.svelte';
 
-	let pdfViewerRef: PDFViewer;
+	let pdfPagesPreviewRef: PdfPagesPreview;
 	let fileCodeEditorRef: FileCodeEditor;
 
 	const i18n = getContext('i18n');
@@ -39,6 +39,7 @@
 	export let fileOfficeHtml: string | null = null;
 	export let fileOfficeSlides: string[] | null = null;
 	export let currentSlide = 0;
+	export let targetPage: number | null = null;
 	export let excelSheetNames: string[] = [];
 	export let selectedExcelSheet = '';
 	export let onSheetChange: ((sheet: string) => void) | null = null;
@@ -47,6 +48,12 @@
 	export let readOnly = false;
 
 	export let onSave: ((content: string) => Promise<void>) | null = null;
+	export let searchTarget: {
+		line: number;
+		column: number;
+		length: number;
+		requestId: number;
+	} | null = null;
 
 	export let editing = false;
 	let editContent = '';
@@ -109,6 +116,7 @@
 	$: isNotebook = getExt(selectedFile) === 'ipynb';
 	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
+	$: isPptx = getExt(selectedFile) === 'pptx';
 
 	// For HTML files on system terminals (proxy URL), use path-based serving
 	// so the iframe can resolve relative CSS/JS/image references via cookie auth.
@@ -265,19 +273,21 @@
 
 	let panzoomRef: PanzoomContainer;
 	let pptxPreviewRef: PptxPreview;
+	let imageZoomLevel = 1;
 	export const resetImageView = () => {
 		panzoomRef?.reset();
 		pptxPreviewRef?.resetView();
 	};
 
 	export const resetPdfView = () => {
-		pdfViewerRef?.resetView();
+		pdfPagesPreviewRef?.resetView();
 	};
 </script>
 
 <div
 	class="flex-1 {fileImageUrl !== null ||
 	fileDocxData !== null ||
+	filePdfData !== null ||
 	(fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
 		: 'overflow-y-auto'} min-h-0 min-w-0 relative h-full"
@@ -288,6 +298,7 @@
 	{:else if fileImageUrl !== null}
 		<PanzoomContainer
 			bind:this={panzoomRef}
+			bind:zoomLevel={imageZoomLevel}
 			className="w-full h-full flex items-center justify-center"
 			options={{ zoomDoubleClickSpeed: 1 }}
 		>
@@ -312,11 +323,20 @@
 			</audio>
 		</div>
 	{:else if filePdfData !== null}
-		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
+		<PdfPagesPreview
+			bind:this={pdfPagesPreviewRef}
+			data={filePdfData}
+			bind:currentSlide
+			{targetPage}
+			singlePage={isPptx}
+			itemLabel={isPptx ? 'Slide' : 'Page'}
+			listLabel={isPptx ? 'Slides' : 'Pages'}
+			className="w-full h-full"
+		/>
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
 	{:else if fileDocxData !== null}
-		<DocxPreview data={fileDocxData} className="w-full h-full" />
+		<DocxPreview data={fileDocxData} {targetPage} className="w-full h-full" />
 	{:else if fileOfficeHtml !== null}
 		<div class="flex flex-col h-full">
 			<div class="office-preview overflow-auto flex-1 min-h-0">
@@ -345,16 +365,31 @@
 			bind:this={pptxPreviewRef}
 			slides={fileOfficeSlides}
 			bind:currentSlide
+			{targetPage}
 			className="w-full h-full"
 		/>
 	{:else if fileContent !== null}
-		{#if isHtml && !showRaw && serveUrl}
+		{#if searchTarget}
+			<div class="absolute inset-0">
+				<FileCodeEditor
+					bind:this={fileCodeEditorRef}
+					value={fileContent ?? ''}
+					filePath={selectedFile}
+					onSave={readOnly ? null : onSave}
+					{searchTarget}
+				/>
+			</div>
+		{:else if isHtml && !showRaw && serveUrl}
 			{#if overlay}
 				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 			{/if}
 			<iframe
 				src={serveUrl}
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
@@ -366,7 +401,11 @@
 			{/if}
 			<iframe
 				srcdoc={injectCsp(fileContent, $config?.ui?.iframe_csp ?? '')}
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
@@ -469,6 +508,58 @@
 	{:else}
 		<div class="text-xs text-gray-400 text-center pt-8">
 			{$i18n.t('Could not read file.')}
+		</div>
+	{/if}
+
+	{#if !fileLoading && fileImageUrl !== null}
+		<div
+			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-gray-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-gray-700/60 dark:bg-gray-850/90"
+		>
+			<!-- Pinch covers in/out on coarse pointers; reset has no gesture, so it stays -->
+			<button
+				type="button"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
+				on:click={() => panzoomRef?.zoomOut()}
+				aria-label={$i18n.t('Zoom out')}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3.5"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M4 10a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</button>
+			<button
+				type="button"
+				class="h-7 min-w-12 shrink-0 rounded-md px-1.5 py-1 text-center text-[0.6875rem] font-normal tabular-nums text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				on:click={() => panzoomRef?.reset()}
+				aria-label={$i18n.t('Reset zoom')}
+			>
+				{Math.round(imageZoomLevel * 100)}%
+			</button>
+			<button
+				type="button"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
+				on:click={() => panzoomRef?.zoomIn()}
+				aria-label={$i18n.t('Zoom in')}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3.5"
+				>
+					<path
+						d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+					/>
+				</svg>
+			</button>
 		</div>
 	{/if}
 </div>
