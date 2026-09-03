@@ -1528,8 +1528,10 @@ class OAuthManager:
             # Keep existing users at their current role unless the provider sent roles.
             role = user.role if user else auth_config.DEFAULT_USER_ROLE
 
-            # Next block extracts the roles from the user data, accepting nested claims of any depth
-            if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
+            # Next block extracts the roles from the user data, accepting nested claims of any depth.
+            # Allowed-roles gating must not require OAUTH_ADMIN_ROLES to be set; an empty
+            # admin list previously skipped extraction entirely (fail-open).
+            if oauth_claim and oauth_allowed_roles:
                 claim_data = user_data
                 nested_claims = oauth_claim.split('.')
                 for nested_claim in nested_claims:
@@ -1557,30 +1559,40 @@ class OAuthManager:
             log.debug('Accepted user roles: %s', oauth_allowed_roles)
             log.debug('Accepted admin roles: %s', oauth_admin_roles)
 
-            # If roles are present in the token, they must match; otherwise deny access
-            if oauth_roles:
-                matched = False
-                for allowed_role in oauth_allowed_roles:
-                    if allowed_role == '*' or allowed_role in oauth_roles:
-                        log.debug('Assigned user the user role')
-                        role = 'user'
-                        matched = True
-                        break
-                for admin_role in oauth_admin_roles:
-                    if admin_role in oauth_roles:
-                        log.debug('Assigned user the admin role')
-                        role = 'admin'
-                        matched = True
-                        break
-                if not matched:
-                    log.warning(
-                        f'OAuth role management enabled but user roles do not match any allowed/admin roles. '
-                        f'User roles: {oauth_roles}, allowed: {oauth_allowed_roles}, admin: {oauth_admin_roles}'
-                    )
-                    raise HTTPException(
-                        status.HTTP_403_FORBIDDEN,
-                        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                    )
+            # If role management is on, missing or unmatched roles deny access
+            # (previously a missing claim skipped the 403 and used DEFAULT_USER_ROLE).
+            if not oauth_roles:
+                log.warning(
+                    'OAuth role management enabled but token has no roles claim. '
+                    f'allowed: {oauth_allowed_roles}, admin: {oauth_admin_roles}'
+                )
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+
+            matched = False
+            for allowed_role in oauth_allowed_roles:
+                if allowed_role == '*' or allowed_role in oauth_roles:
+                    log.debug('Assigned user the user role')
+                    role = 'user'
+                    matched = True
+                    break
+            for admin_role in oauth_admin_roles or []:
+                if admin_role in oauth_roles:
+                    log.debug('Assigned user the admin role')
+                    role = 'admin'
+                    matched = True
+                    break
+            if not matched:
+                log.warning(
+                    f'OAuth role management enabled but user roles do not match any allowed/admin roles. '
+                    f'User roles: {oauth_roles}, allowed: {oauth_allowed_roles}, admin: {oauth_admin_roles}'
+                )
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
         else:
             if not user:
                 # If role management is disabled, use the default role for new users
