@@ -1634,6 +1634,14 @@ def get_splitter_length_function(
     return len
 
 
+def filter_file_metadata(metadata: dict | None) -> dict:
+    metadata = dict(metadata or {})
+    data = metadata.pop('data', None)
+    if isinstance(data, dict):
+        metadata = {**filter_metadata(data), **metadata}
+    return filter_metadata(metadata)
+
+
 def save_docs_to_vector_db(
     request: Request,
     docs,
@@ -1898,7 +1906,7 @@ async def process_file(
                     Document(
                         page_content=form_data.content.replace('<br/>', '\n'),
                         metadata={
-                            **file.meta,
+                            **filter_file_metadata(file.meta),
                             'name': file.filename,
                             'created_by': file.user_id,
                             'file_id': file.id,
@@ -1934,7 +1942,7 @@ async def process_file(
                         Document(
                             page_content=stored_content,
                             metadata={
-                                **file.meta,
+                                **filter_file_metadata(file.meta),
                                 'name': file.filename,
                                 'created_by': file.user_id,
                                 'file_id': file.id,
@@ -1967,7 +1975,7 @@ async def process_file(
                         Document(
                             page_content=doc.page_content,
                             metadata={
-                                **file.meta,
+                                **filter_file_metadata(file.meta),
                                 **filter_metadata(doc.metadata),
                                 'name': file.filename,
                                 'created_by': file.user_id,
@@ -1982,7 +1990,7 @@ async def process_file(
                         Document(
                             page_content=file.data.get('content', ''),
                             metadata={
-                                **file.meta,
+                                **filter_file_metadata(file.meta),
                                 'name': file.filename,
                                 'created_by': file.user_id,
                                 'file_id': file.id,
@@ -3315,7 +3323,7 @@ async def process_files_batch(
                 Document(
                     page_content=text_content.replace('<br/>', '\n'),
                     metadata={
-                        **file.meta,
+                        **filter_file_metadata(file.meta),
                         'name': file.filename,
                         'created_by': file.user_id,
                         'file_id': file.id,
