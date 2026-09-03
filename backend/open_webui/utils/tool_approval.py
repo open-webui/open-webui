@@ -17,6 +17,88 @@ class ResolveToolCallForm(BaseModel):
     timed_out: bool = False
 
 
+APPROVAL_PENDING_STATUSES = frozenset({'pending', 'queued', 'requires_approval'})
+APPROVAL_TERMINAL_STATUSES = frozenset({'rejected', 'failed', 'incomplete'})
+
+
+def get_tool_call_id(item: dict) -> str | None:
+    return item.get('call_id') or item.get('id') or None
+
+
+def get_resolved_call_ids(output: list[dict]) -> set:
+    """Return call IDs that already have a function-call result."""
+    return {
+        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
+    }
+
+
+def is_paused_for_tool_approval(output: list[dict]) -> bool:
+    """Return whether any unresolved call is waiting for approval or execution."""
+    resolved_call_ids = get_resolved_call_ids(output)
+    return any(
+        item.get('type') == 'function_call'
+        and item.get('call_id')
+        and item.get('status') in APPROVAL_PENDING_STATUSES
+        and item.get('call_id') not in resolved_call_ids
+        for item in output
+    )
+
+
+def has_unapproved_tool_call(output: list[dict]) -> bool:
+    """Return whether a non-ask_user call still needs user approval."""
+    resolved_call_ids = get_resolved_call_ids(output)
+    return any(
+        item.get('type') == 'function_call'
+        and item.get('name') != 'ask_user'
+        and get_tool_call_id(item)
+        and item.get('status') not in APPROVAL_TERMINAL_STATUSES
+        and item.get('approved') is not True
+        and get_tool_call_id(item) not in resolved_call_ids
+        for item in output
+    )
+
+
+def assign_tool_approval_statuses(output: list[dict]) -> None:
+    """Arm every unresolved call in a batch using its own call ID.
+
+    Streaming finalization marks calls `completed` once their arguments are
+    complete, before approval and execution. A call is only resolved when it
+    has a matching `function_call_output`, so unresolved `completed` calls must
+    be re-armed as well. Exactly one call remains `pending`; the rest queue.
+    """
+    resolved_call_ids = get_resolved_call_ids(output)
+    candidates = []
+    has_pending_approval = False
+
+    for item in output:
+        if item.get('type') != 'function_call':
+            continue
+        if not item.get('call_id') and item.get('id'):
+            item['call_id'] = item['id']
+
+        call_id = item.get('call_id')
+        if not call_id or call_id in resolved_call_ids:
+            continue
+
+        status_value = item.get('status')
+        if status_value in APPROVAL_TERMINAL_STATUSES:
+            continue
+        if status_value in {'pending', 'requires_approval'}:
+            has_pending_approval = True
+            continue
+        if status_value == 'queued' and item.get('approved') is True:
+            continue
+
+        candidates.append(item)
+
+    for item in candidates:
+        if has_pending_approval:
+            item['status'] = 'queued'
+        else:
+            item['status'] = 'pending'
+            has_pending_approval = True
+
+
 async def resolve_tool_call_output(
     chat_id: str,
     message_id: str,
@@ -52,9 +134,10 @@ async def resolve_tool_call_output(
     function_call.setdefault('call_id', form_data.call_id)
     tool_name = function_call.get('name')
 
-    if any(
-        item.get('type') == 'function_call_output' and item.get('call_id') == form_data.call_id for item in output
-    ) or function_call.get('status') not in {'pending', 'queued', 'requires_approval'}:
+    if (
+        form_data.call_id in get_resolved_call_ids(output)
+        or function_call.get('status') not in APPROVAL_PENDING_STATUSES
+    ):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Tool call has already been resolved.')
 
     if form_data.action == 'approve':
@@ -115,17 +198,12 @@ async def resolve_tool_call_output(
     if event_emitter:
         await event_emitter({'type': 'chat:completion', 'data': {'output': output}})
 
-    result_call_ids = {
-        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
+    return {
+        'chat': chat,
+        'message': message,
+        'output': output,
+        'paused': is_paused_for_tool_approval(output),
     }
-    paused = any(
-        item.get('type') == 'function_call'
-        and item.get('call_id')
-        and item.get('status') in {'pending', 'queued', 'requires_approval'}
-        and item.get('call_id') not in result_call_ids
-        for item in output
-    )
-    return {'chat': chat, 'message': message, 'output': output, 'paused': paused}
 
 
 async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat=None) -> dict:

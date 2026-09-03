@@ -131,6 +131,12 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
+from open_webui.utils.tool_approval import (
+    assign_tool_approval_statuses,
+    get_resolved_call_ids,
+    has_unapproved_tool_call,
+    is_paused_for_tool_approval,
+)
 from open_webui.utils.tools import (
     build_tool_server_headers,
     get_attached_knowledge,
@@ -3248,9 +3254,7 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
     if not isinstance(output, list):
         return False
 
-    result_call_ids = {
-        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
-    }
+    result_call_ids = get_resolved_call_ids(output)
     approved_calls = [
         item
         for item in output
@@ -3261,15 +3265,7 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
         and item.get('call_id') not in result_call_ids
     ]
     if not approved_calls:
-        if metadata.get('params', {}).get('tool_approval_mode', 'full') == 'ask' and any(
-            item.get('type') == 'function_call'
-            and item.get('name') != 'ask_user'
-            and (item.get('call_id') or item.get('id'))
-            and item.get('status') == 'queued'
-            and item.get('approved') is not True
-            and (item.get('call_id') or item.get('id')) not in result_call_ids
-            for item in output
-        ):
+        if metadata.get('params', {}).get('tool_approval_mode', 'full') == 'ask' and has_unapproved_tool_call(output):
             event_emitter, _ = await get_event_emitter_and_caller(metadata)
             await pause_for_tool_approval(chat_id, message_id, output, form_data, metadata)
             if event_emitter:
@@ -3327,31 +3323,9 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
         changed = True
 
     if changed:
-        result_call_ids = {
-            item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
-        }
-        if metadata.get('params', {}).get('tool_approval_mode', 'full') == 'ask' and any(
-            item.get('type') == 'function_call'
-            and item.get('name') != 'ask_user'
-            and (item.get('call_id') or item.get('id'))
-            and item.get('status') == 'queued'
-            and item.get('approved') is not True
-            and (item.get('call_id') or item.get('id')) not in result_call_ids
-            for item in output
-        ):
+        if metadata.get('params', {}).get('tool_approval_mode', 'full') == 'ask' and has_unapproved_tool_call(output):
             await pause_for_tool_approval(chat_id, message_id, output, form_data, metadata)
-            result_call_ids = {
-                item.get('call_id')
-                for item in output
-                if item.get('type') == 'function_call_output' and item.get('call_id')
-            }
-        paused = any(
-            item.get('type') == 'function_call'
-            and item.get('call_id')
-            and item.get('status') in {'pending', 'queued', 'requires_approval'}
-            and item.get('call_id') not in result_call_ids
-            for item in output
-        )
+        paused = is_paused_for_tool_approval(output)
         if not paused:
             output.append(
                 {
@@ -3436,25 +3410,7 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
 
 
 async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[dict], form_data: dict, metadata: dict):
-    result_call_ids = {
-        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
-    }
-    has_pending_approval = False
-    for item in output:
-        if item.get('type') == 'function_call' and not item.get('call_id') and item.get('id'):
-            item['call_id'] = item['id']
-
-        if (
-            item.get('type') == 'function_call'
-            and item.get('call_id')
-            and item.get('call_id') not in result_call_ids
-            and item.get('status') != 'rejected'
-        ):
-            if not has_pending_approval:
-                item['status'] = 'pending'
-                has_pending_approval = True
-            elif item.get('status') == 'in_progress':
-                item['status'] = 'queued'
+    assign_tool_approval_statuses(output)
 
     await Chats.upsert_message_to_chat_by_id_and_message_id(
         chat_id,
