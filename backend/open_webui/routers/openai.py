@@ -51,7 +51,11 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
-from open_webui.utils.responses_state import apply_responses_stateful_payload, convert_responses_result
+from open_webui.utils.responses_state import (
+    apply_responses_stateful_payload,
+    convert_responses_result,
+    convert_to_responses_payload,
+)
 from open_webui.utils.session_pool import (
     cleanup_response,
     get_client_timeout,
@@ -1249,186 +1253,6 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     return url, payload
 
 
-# Fields accepted by the Responses API for each input item type.
-RESPONSES_ALLOWED_FIELDS: dict[str, set[str]] = {
-    'message': {'type', 'role', 'content'},
-    'function_call': {'type', 'call_id', 'name', 'arguments', 'id'},
-    'function_call_output': {'type', 'call_id', 'output'},
-}
-
-
-def _normalize_stored_item(item: dict) -> dict:
-    """Strip local-only fields from a stored output item before replaying it.
-
-    Open WebUI stores extra bookkeeping fields (``id``, ``status``,
-    ``started_at``, ``ended_at``, ``duration``, ``_tag_type``,
-    ``attributes``, ``summary``, etc.) that the Responses API does
-    not accept.  This helper returns a copy containing only the
-    fields the API understands.
-    """
-    item_type = item.get('type', '')
-    allowed = RESPONSES_ALLOWED_FIELDS.get(item_type)
-    if allowed is None:
-        # Unknown type — pass through as-is (e.g. reasoning, extension items).
-        return item
-    return {k: v for k, v in item.items() if k in allowed}
-
-
-def convert_to_responses_payload(payload: dict) -> dict:
-    """
-    Convert Chat Completions payload to Responses API format.
-
-    Chat Completions: { messages: [{role, content}], ... }
-    Responses API: { input: [{type: "message", role, content: [...]}], instructions: "system" }
-    """
-    messages = payload.pop('messages', [])
-
-    system_content = ''
-    input_items = []
-
-    for msg in messages:
-        role = msg.get('role', 'user')
-        content = msg.get('content', '')
-
-        # Check for stored output items (from previous Responses API turn)
-        stored_output = msg.get('output')
-        if stored_output and isinstance(stored_output, list):
-            input_items.extend(_normalize_stored_item(item) for item in stored_output)
-            continue
-
-        if role == 'system':
-            if isinstance(content, str):
-                system_content = content
-            elif isinstance(content, list):
-                system_content = '\n'.join(p.get('text', '') for p in content if p.get('type') == 'text')
-            continue
-
-        # Handle assistant messages with tool_calls (from convert_output_to_messages)
-        if role == 'assistant' and msg.get('tool_calls'):
-            # Add text content as message if present
-            if content:
-                text = (
-                    content
-                    if isinstance(content, str)
-                    else '\n'.join(p.get('text', '') for p in content if p.get('type') == 'text')
-                )
-                if text.strip():
-                    input_items.append(
-                        {
-                            'type': 'message',
-                            'role': 'assistant',
-                            'content': [{'type': 'output_text', 'text': text}],
-                        }
-                    )
-            # Convert each tool_call to a function_call input item
-            for tool_call in msg['tool_calls']:
-                func = tool_call.get('function', {})
-                input_items.append(
-                    {
-                        'type': 'function_call',
-                        'call_id': tool_call.get('id', ''),
-                        'name': func.get('name', ''),
-                        'arguments': func.get('arguments', '{}'),
-                    }
-                )
-            continue
-
-        # Handle tool result messages
-        if role == 'tool':
-            input_items.append(
-                {
-                    'type': 'function_call_output',
-                    'call_id': msg.get('tool_call_id', ''),
-                    'output': msg.get('content', ''),
-                }
-            )
-            continue
-
-        # Convert content format
-        text_type = 'output_text' if role == 'assistant' else 'input_text'
-
-        if isinstance(content, str):
-            content_parts = [{'type': text_type, 'text': content}]
-        elif isinstance(content, list):
-            content_parts = []
-            for part in content:
-                if part.get('type') == 'text':
-                    content_parts.append({'type': text_type, 'text': part.get('text', '')})
-                elif part.get('type') == 'image_url':
-                    url_data = part.get('image_url', {})
-                    if isinstance(url_data, dict):
-                        url = url_data.get('url', '')
-                        detail = url_data.get('detail') or 'auto'
-                    else:
-                        url = url_data if isinstance(url_data, str) else ''
-                        detail = 'auto'
-                    content_parts.append({'type': 'input_image', 'image_url': url, 'detail': detail})
-                elif part.get('type') == 'file':
-                    # OpenAI-compatible proxy path only. Open WebUI attachments are handled
-                    # separately via metadata.files/RAG and must not be converted here.
-                    file = part.get('file')
-                    if isinstance(file, dict):
-                        file_part = {k: file[k] for k in ('file_id', 'file_data', 'filename') if k in file}
-                        if 'file_id' in file_part or 'file_data' in file_part:
-                            content_parts.append({'type': 'input_file', **file_part})
-        else:
-            content_parts = [{'type': text_type, 'text': str(content)}]
-
-        input_items.append({'type': 'message', 'role': role, 'content': content_parts})
-
-    responses_payload = {**payload, 'input': input_items}
-
-    # Forward previous_response_id when the middleware has set it
-    # (only used when ENABLE_RESPONSES_API_STATEFUL is enabled).
-    previous_response_id = responses_payload.pop('previous_response_id', None)
-    if previous_response_id:
-        responses_payload['previous_response_id'] = previous_response_id
-
-    if system_content:
-        responses_payload['instructions'] = system_content
-
-    if 'max_tokens' in responses_payload:
-        responses_payload['max_output_tokens'] = responses_payload.pop('max_tokens')
-
-    if 'max_completion_tokens' in responses_payload:
-        responses_payload['max_output_tokens'] = responses_payload.pop('max_completion_tokens')
-
-    # Remove Chat Completions-only parameters not supported by the Responses API
-    for unsupported_key in (
-        'stream_options',
-        'logit_bias',
-        'frequency_penalty',
-        'presence_penalty',
-        'stop',
-    ):
-        responses_payload.pop(unsupported_key, None)
-
-    # Convert Chat Completions tools format to Responses API format
-    # Chat Completions: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
-    # Responses API:    {"type": "function", "name": ..., "description": ..., "parameters": ...}
-    if 'tools' in responses_payload and isinstance(responses_payload['tools'], list):
-        converted_tools = []
-        for tool in responses_payload['tools']:
-            if isinstance(tool, dict) and 'function' in tool:
-                func = tool['function']
-                converted_tool = {'type': tool.get('type', 'function')}
-                if isinstance(func, dict):
-                    converted_tool['name'] = func.get('name', '')
-                    if 'description' in func:
-                        converted_tool['description'] = func['description']
-                    if 'parameters' in func:
-                        converted_tool['parameters'] = func['parameters']
-                    if 'strict' in func:
-                        converted_tool['strict'] = func['strict']
-                converted_tools.append(converted_tool)
-            else:
-                # Already in correct format or unknown format, pass through
-                converted_tools.append(tool)
-        responses_payload['tools'] = converted_tools
-
-    return responses_payload
-
-
 @router.post('/chat/completions')
 async def generate_chat_completion(
     request: Request,
@@ -1533,7 +1357,10 @@ async def generate_chat_completion(
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
 
     is_responses = api_config.get('api_type') == 'responses'
-    payload = apply_responses_stateful_payload(payload, is_responses, ENABLE_RESPONSES_API_STATEFUL)
+    try:
+        payload = apply_responses_stateful_payload(payload, is_responses, ENABLE_RESPONSES_API_STATEFUL)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if api_config.get('azure') or api_config.get('provider') == 'azure':
         # Only set api-key header if not using Azure Entra ID authentication

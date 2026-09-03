@@ -126,9 +126,10 @@ from open_webui.utils.payload import apply_params_to_form_data, apply_system_pro
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
 from open_webui.utils.responses_state import (
-    get_completed_response_metadata,
+    build_stateful_tool_continuation_messages,
     get_openai_url_idx,
     get_stateful_response_id,
+    handle_responses_lifecycle_event,
     pop_stateful_response_id,
     trim_stateful_messages,
 )
@@ -555,7 +556,15 @@ def deep_merge(target, source):
         return source
 
 
-RESPONSE_COMPLETION_RESPONSE_FIELDS = ('error', 'id', 'output', 'usage')
+RESPONSE_COMPLETION_RESPONSE_FIELDS = (
+    'error',
+    'id',
+    'incomplete_details',
+    'output',
+    'previous_response_id',
+    'status',
+    'usage',
+)
 
 
 def get_response_completion_event_data(event: dict) -> dict:
@@ -881,34 +890,13 @@ def handle_responses_streaming_event(
 
         return current_output, None
 
-    elif event_type == 'response.completed':
-        # State Machine Event: Completed
-        response_data = data.get('response', {})
-        final_output = response_data.get('output')
-
-        # Some providers send an empty output on response.completed despite having streamed items
-        new_output = final_output if final_output else current_output
-
-        # Ensure reasoning items are marked as completed in the final output
-        if new_output:
-            for item in new_output:
-                if item.get('type') == 'reasoning' and item.get('status') != 'completed':
-                    item['status'] = 'completed'
-
-        return new_output, get_completed_response_metadata(response_data)
-
-    elif event_type == 'response.in_progress':
-        # State Machine Event: In Progress
-        # We could extract metadata if needed, but for now just acknowledge iteration
-        return current_output, None
-
-    elif event_type == 'response.failed':
-        # State Machine Event: Failed
-        error = data.get('response', {}).get('error', {})
-        return current_output, {'error': error}
-
     else:
-        return current_output, None
+        lifecycle_result = handle_responses_lifecycle_event(
+            event_type,
+            data.get('response', {}),
+            current_output,
+        )
+        return lifecycle_result if lifecycle_result is not None else (current_output, None)
 
 
 def get_source_context(sources: list, source_ids: dict = None, include_content: bool = True) -> str:
@@ -2415,7 +2403,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     user_message_id = metadata.get('user_message_id')
     stateful_responses = await is_stateful_responses_model(request, model)
 
-    if stateful_responses and is_saved_chat_id(chat_id) and user_message_id:
+    if stateful_responses and not form_data.get('conversation') and is_saved_chat_id(chat_id) and user_message_id:
         previous_response_id = await load_stateful_response_id(
             chat_id,
             user_message_id,
@@ -3124,10 +3112,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = normalize_messages_for_model(form_data)
 
-    if form_data.get('previous_response_id'):
-        # Hermes already owns the transcript referenced by previous_response_id.
-        # Re-sending OpenWebUI's replay duplicates history and, after Hermes has
-        # compacted it, can restore the very context that compaction removed.
+    if stateful_responses and (form_data.get('previous_response_id') or form_data.get('conversation')):
+        # The upstream owns the transcript referenced by previous_response_id
+        # or conversation. Re-sending OpenWebUI's replay duplicates history.
         form_data['messages'] = trim_stateful_messages(
             form_data.get('messages', []),
             regeneration=bool(regeneration_prompt),
@@ -4106,9 +4093,11 @@ async def non_streaming_chat_response_handler(response, ctx):
             choices = response_data.get('choices', [])
             response_output = response_data.get('output')
             content = choices[0].get('message', {}).get('content') if choices else ''
+            response_status = response_data.get('response_status')
+            response_done = response_status not in {'queued', 'in_progress'}
 
-            if choices and (content or response_output):
-                if content or response_output:
+            if choices and (content or response_output or response_data.get('response_id')):
+                if content or response_output or response_data.get('response_id'):
                     await event_emitter(
                         {
                             'type': 'chat:completion',
@@ -4157,9 +4146,15 @@ async def non_streaming_chat_response_handler(response, ctx):
                         {
                             'type': 'chat:completion',
                             'data': {
-                                'done': True,
+                                'done': response_done,
                                 'output': response_output,
                                 'title': title,
+                                **({'responseStatus': response_status} if response_status else {}),
+                                **(
+                                    {'incompleteDetails': response_data['incomplete_details']}
+                                    if response_data.get('incomplete_details') is not None
+                                    else {}
+                                ),
                             },
                         }
                     )
@@ -4173,10 +4168,16 @@ async def non_streaming_chat_response_handler(response, ctx):
                             metadata['chat_id'],
                             metadata['message_id'],
                             {
-                                'done': True,
+                                'done': response_done,
                                 'role': 'assistant',
                                 'output': response_output,
                                 **({'responseId': response_id} if response_id else {}),
+                                **({'responseStatus': response_status} if response_status else {}),
+                                **(
+                                    {'incompleteDetails': response_data['incomplete_details']}
+                                    if response_data.get('incomplete_details') is not None
+                                    else {}
+                                ),
                                 **({'usage': usage} if usage else {}),
                             },
                         )
@@ -4613,6 +4614,9 @@ async def streaming_chat_response_handler(response, ctx):
 
             usage = None
             last_response_id = None
+            last_response_status = None
+            last_incomplete_details = None
+            last_response_error = None
 
             def full_output():
                 return prior_output + output if prior_output else output
@@ -4696,6 +4700,9 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
+                    nonlocal last_response_status
+                    nonlocal last_incomplete_details
+                    nonlocal last_response_error
 
                     response_tool_calls = []
 
@@ -4943,8 +4950,15 @@ async def streaming_chat_response_handler(response, ctx):
                                             response_metadata,
                                             ENABLE_RESPONSES_API_STATEFUL,
                                         )
-                                        if response_id:
+                                        if response_id and response_metadata.get('done'):
                                             last_response_id = response_id
+
+                                        if response_metadata.get('response_status'):
+                                            last_response_status = response_metadata['response_status']
+                                        if response_metadata.get('incomplete_details') is not None:
+                                            last_incomplete_details = response_metadata['incomplete_details']
+                                        if response_metadata.get('error') is not None:
+                                            last_response_error = response_metadata['error']
 
                                         # Normalize and capture usage for DB persistence
                                         if response_metadata.get('usage'):
@@ -5953,14 +5967,20 @@ async def streaming_chat_response_handler(response, ctx):
                             'metadata': metadata,
                         }
 
-                        if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
+                        if ENABLE_RESPONSES_API_STATEFUL and (last_response_id or new_form_data.get('conversation')):
                             system_message = get_system_message(form_data['messages'])
-                            new_form_data['messages'] = (
-                                [system_message] if system_message else []
-                            ) + convert_output_to_messages(
-                                output, raw=True, reasoning_format=get_reasoning_format(model)
+                            tool_outputs = [
+                                item
+                                for item in output
+                                if item.get('type') == 'function_call_output'
+                                and item.get('call_id') in result_status_by_call_id
+                            ]
+                            new_form_data['messages'] = build_stateful_tool_continuation_messages(
+                                system_message,
+                                tool_outputs,
                             )
-                            new_form_data['previous_response_id'] = last_response_id
+                            if not new_form_data.get('conversation'):
+                                new_form_data['previous_response_id'] = last_response_id
                         else:
                             tool_messages = convert_output_to_messages(
                                 output,
@@ -6253,10 +6273,12 @@ async def streaming_chat_response_handler(response, ctx):
                             await emit_message_error(error_content)
                             break
 
-                # Mark all in-progress items as completed
-                for item in output:
-                    if item.get('status') == 'in_progress':
-                        item['status'] = 'completed'
+                # Chat Completions has no response-level status. For Responses,
+                # preserve provider item states unless the response completed.
+                if last_response_status in (None, 'completed'):
+                    for item in output:
+                        if item.get('status') == 'in_progress':
+                            item['status'] = 'completed'
 
                 current_output = full_output()
                 title = await Chats.get_chat_title_by_id(metadata['chat_id']) if save_to_chat else ''
@@ -6264,6 +6286,9 @@ async def streaming_chat_response_handler(response, ctx):
                     'done': True,
                     'output': current_output,
                     'title': title,
+                    **({'responseStatus': last_response_status} if last_response_status else {}),
+                    **({'incompleteDetails': last_incomplete_details} if last_incomplete_details is not None else {}),
+                    **({'error': last_response_error} if last_response_error is not None else {}),
                     **({'usage': usage} if usage else {}),
                 }
 
@@ -6277,6 +6302,13 @@ async def streaming_chat_response_handler(response, ctx):
                             'done': True,
                             'output': current_output,
                             **({'responseId': last_response_id} if last_response_id else {}),
+                            **({'responseStatus': last_response_status} if last_response_status else {}),
+                            **(
+                                {'incompleteDetails': last_incomplete_details}
+                                if last_incomplete_details is not None
+                                else {}
+                            ),
+                            **({'error': {'content': last_response_error}} if last_response_error is not None else {}),
                             **({'usage': usage} if usage else {}),
                         },
                     )
