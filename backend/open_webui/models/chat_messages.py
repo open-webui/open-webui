@@ -143,6 +143,8 @@ class ChatMessage(Base):
     # Model (for assistant messages)
     model_id = Column(Text, nullable=True, index=True)
     response_id = Column(Text, nullable=True)
+    response_status = Column(Text, nullable=True)
+    incomplete_details = Column(JSON, nullable=True)
 
     # Attachments
     files = Column(JSON, nullable=True)
@@ -190,6 +192,8 @@ class ChatMessageModel(BaseModel):
     output: Optional[list] = None
     model_id: Optional[str] = None
     response_id: Optional[str] = None
+    response_status: Optional[str] = None
+    incomplete_details: Optional[dict] = None
     files: Optional[list] = None
     sources: Optional[list] = None
     embeds: Optional[list] = None
@@ -224,6 +228,10 @@ class ChatMessageTable:
             message.model_id = data.get('model_id') or data.get('model')
         if 'response_id' in data or 'responseId' in data:
             message.response_id = data.get('response_id') or data.get('responseId')
+        if 'response_status' in data or 'responseStatus' in data:
+            message.response_status = data.get('response_status') or data.get('responseStatus')
+        if 'incomplete_details' in data or 'incompleteDetails' in data:
+            message.incomplete_details = data.get('incomplete_details') or data.get('incompleteDetails')
         if 'files' in data:
             message.files = data.get('files')
         if 'sources' in data:
@@ -259,6 +267,8 @@ class ChatMessageTable:
             output=data.get('output'),
             model_id=data.get('model_id') or data.get('model'),
             response_id=data.get('response_id') or data.get('responseId'),
+            response_status=data.get('response_status') or data.get('responseStatus'),
+            incomplete_details=data.get('incomplete_details') or data.get('incompleteDetails'),
             files=data.get('files'),
             sources=data.get('sources'),
             embeds=data.get('embeds'),
@@ -357,6 +367,8 @@ class ChatMessageTable:
         'parent_id': 'parentId',
         'model_id': 'model',
         'response_id': 'responseId',
+        'response_status': 'responseStatus',
+        'incomplete_details': 'incompleteDetails',
         'status_history': 'statusHistory',
         'context_summary': 'contextSummary',
         'created_at': 'timestamp',

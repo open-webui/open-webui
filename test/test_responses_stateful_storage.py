@@ -70,6 +70,8 @@ async def chat_message_table(chat_messages_module, monkeypatch):
                 output JSON,
                 model_id TEXT,
                 response_id TEXT,
+                response_status TEXT,
+                incomplete_details JSON,
                 files JSON,
                 sources JSON,
                 embeds JSON,
@@ -110,12 +112,16 @@ async def test_response_id_round_trip_through_normalized_message_table(chat_mess
             'role': 'assistant',
             'model': 'hermes',
             'responseId': 'resp_first',
+            'responseStatus': 'incomplete',
+            'incompleteDetails': {'reason': 'max_output_tokens'},
             'content': 'First response',
         },
     )
 
     messages = await chat_message_table.get_messages_map_by_chat_id('chat-1')
     assert messages['assistant-1']['responseId'] == 'resp_first'
+    assert messages['assistant-1']['responseStatus'] == 'incomplete'
+    assert messages['assistant-1']['incompleteDetails'] == {'reason': 'max_output_tokens'}
     assert 'response_id' not in messages['assistant-1']
 
     await chat_message_table.upsert_message(
@@ -194,6 +200,18 @@ def load_response_id_migration(monkeypatch):
     return module
 
 
+def load_response_status_migration(monkeypatch):
+    alembic_module = types.ModuleType('alembic')
+    alembic_module.op = None
+    monkeypatch.setitem(sys.modules, 'alembic', alembic_module)
+
+    source = ROOT / 'backend/open_webui/migrations/versions/f7d8e9a0b1c2_add_responses_status_to_chat_message.py'
+    spec = importlib.util.spec_from_file_location('open_webui_test_response_status_migration', source)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def test_response_id_migration_adds_backfills_and_drops_column(monkeypatch):
     engine = sa.create_engine('sqlite:///:memory:')
     metadata = sa.MetaData()
@@ -256,5 +274,43 @@ def test_response_id_migration_adds_backfills_and_drops_column(monkeypatch):
 
         migration.downgrade()
         assert 'response_id' not in {column['name'] for column in sa.inspect(connection).get_columns('chat_message')}
+
+    engine.dispose()
+
+
+def test_response_status_migration_adds_and_drops_columns(monkeypatch):
+    engine = sa.create_engine('sqlite:///:memory:')
+    metadata = sa.MetaData()
+    sa.Table(
+        'chat_message',
+        metadata,
+        sa.Column('id', sa.Text(), primary_key=True),
+        sa.Column('response_id', sa.Text()),
+    )
+    metadata.create_all(engine)
+
+    with engine.begin() as connection:
+        migration = load_response_status_migration(monkeypatch)
+
+        class MigrationOperations:
+            @staticmethod
+            def add_column(table_name, column):
+                column_type = 'JSON' if isinstance(column.type, sa.JSON) else 'TEXT'
+                connection.execute(sa.text(f'ALTER TABLE {table_name} ADD COLUMN {column.name} {column_type}'))
+
+            @staticmethod
+            def drop_column(table_name, column_name):
+                connection.execute(sa.text(f'ALTER TABLE {table_name} DROP COLUMN {column_name}'))
+
+        migration.op = MigrationOperations
+        migration.upgrade()
+        assert {'response_status', 'incomplete_details'} <= {
+            column['name'] for column in sa.inspect(connection).get_columns('chat_message')
+        }
+
+        migration.downgrade()
+        assert {'response_status', 'incomplete_details'}.isdisjoint(
+            column['name'] for column in sa.inspect(connection).get_columns('chat_message')
+        )
 
     engine.dispose()
