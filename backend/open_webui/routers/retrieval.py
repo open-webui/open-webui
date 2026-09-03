@@ -1967,6 +1967,7 @@ async def process_file(
                         Document(
                             page_content=doc.page_content,
                             metadata={
+                                **file.meta,
                                 **filter_metadata(doc.metadata),
                                 'name': file.filename,
                                 'created_by': file.user_id,
