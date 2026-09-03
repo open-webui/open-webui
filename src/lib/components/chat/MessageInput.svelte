@@ -884,13 +884,19 @@
 		if (!selectedId) return null;
 
 		const systemTerminal = (servers ?? []).find(
-			(t: any) => t.id && t.id === selectedId && t.config?.chat_uploads === 'filesystem'
+			(t: any) =>
+				t.id &&
+				t.id === selectedId &&
+				['filesystem', 'filesystem_inline_images'].includes(t.config?.chat_uploads)
 		);
 		if (systemTerminal) return systemTerminal;
 
 		return (
 			(settingsValue?.terminalServers ?? []).find(
-				(t: any) => t.url === selectedId && t.enabled && t.config?.chat_uploads === 'filesystem'
+				(t: any) =>
+					t.url === selectedId &&
+					t.enabled &&
+					['filesystem', 'filesystem_inline_images'].includes(t.config?.chat_uploads)
 			) ?? null
 		);
 	};
@@ -902,6 +908,12 @@
 		}
 
 		const filesystemUploadTerminal = getFilesystemUploadTerminal();
+
+		const uploadToFilesystem =
+			!!filesystemUploadTerminal &&
+			(filesystemUploadTerminal.config?.chat_uploads === 'filesystem' ||
+				(filesystemUploadTerminal.config?.chat_uploads === 'filesystem_inline_images' &&
+					!file.type.startsWith('image/')));
 
 		if (!filesystemUploadTerminal && fileUploadCapableModels.length !== selectedModelIds.length) {
 			toast.error($i18n.t('Model(s) do not support file upload'));
@@ -933,7 +945,7 @@
 
 		files = [...files, fileItem];
 
-		if (filesystemUploadTerminal) {
+		if (uploadToFilesystem) {
 			try {
 				const cwd =
 					(

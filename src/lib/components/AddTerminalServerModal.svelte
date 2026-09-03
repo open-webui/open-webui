@@ -36,7 +36,7 @@
 	let auth_type = 'bearer';
 	let path = '/openapi.json';
 	let enabled = false;
-	let chatUploads: 'default' | 'filesystem' = 'default';
+	let chatUploads: 'default' | 'filesystem' | 'filesystem_inline_images' = 'default';
 	let chatContextMode: 'default' | 'chat_id' | 'off' = 'default';
 	let automationContextMode: 'default' | 'automation_id' | 'off' = 'default';
 	let showAdvanced = false;
@@ -81,7 +81,12 @@
 			auth_type = connection?.auth_type ?? 'bearer';
 			path = connection?.path ?? '/openapi.json';
 			enabled = connection?.enabled ?? true;
-			chatUploads = connection?.config?.chat_uploads === 'filesystem' ? 'filesystem' : 'default';
+			chatUploads =
+				connection?.config?.chat_uploads === 'filesystem_inline_images'
+					? 'filesystem_inline_images'
+					: connection?.config?.chat_uploads === 'filesystem'
+						? 'filesystem'
+						: 'default';
 			accessGrants = connection?.config?.access_grants ?? [];
 
 			// Restore policy state
@@ -383,7 +388,7 @@
 		else delete connectionConfig.access_grants;
 		if (useContexts) connectionConfig.contexts = contexts;
 		else delete connectionConfig.contexts;
-		if (chatUploads === 'filesystem') connectionConfig.chat_uploads = 'filesystem';
+		if (chatUploads !== 'default') connectionConfig.chat_uploads = chatUploads;
 		else delete connectionConfig.chat_uploads;
 
 		const result = {
@@ -556,6 +561,9 @@
 									>
 										<option value="default">{$i18n.t('Default')}</option>
 										<option value="filesystem">{$i18n.t('Filesystem')}</option>
+										<option value="filesystem_inline_images"
+											>{$i18n.t('Filesystem (Inline Images)')}</option
+										>
 									</select>
 								</div>
 							</div>

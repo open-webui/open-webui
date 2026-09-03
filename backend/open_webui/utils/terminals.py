@@ -8,7 +8,7 @@ TERMINAL_CONTEXT_HEADER = 'X-Terminal-Context-Id'
 TERMINAL_CONTEXT_DEFAULT = 'default'
 TERMINAL_CONTEXT_TYPES = {'chat', 'automation'}
 TERMINAL_CONTEXT_ID_SOURCES = {'chat': 'chat_id', 'automation': 'automation_id'}
-TERMINAL_CHAT_UPLOAD_MODES = {'default', 'filesystem'}
+TERMINAL_CHAT_UPLOAD_MODES = {'default', 'filesystem', 'filesystem_inline_images'}
 
 
 def is_terminal_orchestrator(connection: dict) -> bool:
