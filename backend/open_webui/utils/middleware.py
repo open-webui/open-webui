@@ -119,7 +119,6 @@ from open_webui.utils.misc import (
     is_string_allowed,
     merge_system_messages,
     prepend_to_first_user_message_content,
-    replace_system_message_content,
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
@@ -3084,6 +3083,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if sources and prompt:
         form_data['messages'] = await apply_source_context_to_messages(request, form_data['messages'], sources, prompt)
+    metadata['rag_context_applied'] = bool(sources and prompt)
 
     # If there are citations, add them to the data_items
     sources = [
@@ -5564,23 +5564,33 @@ async def streaming_chat_response_handler(response, ctx):
                     CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS,
                 )
                 tool_call_sources = []  # Track citation sources from tool results
-                all_tool_call_sources = []  # Accumulated sources across all iterations
                 user_message = get_last_user_message(form_data['messages'])
+
+                # Shared <source> id counter across iterations. Pre-seed it
+                # with any file sources the pre-loop RAG injection numbered
+                # (1..k) so tool-source ids continue without collision.
+                source_ids = {}
+                if metadata.get('rag_context_applied'):
+                    get_source_context(metadata.get('sources', []), source_ids)
+                tool_source_context_injected = False
+
+                # Continuation requests are built as a growing byte-prefix:
+                # accumulated_messages carries every turn that has already been
+                # sent, and each iteration appends ONLY its own assistant/tool
+                # messages followed by a model-only citation user message. The
+                # request therefore stays a pure extension of the previous one,
+                # so the prompt-cache prefix extends through the user's prompt,
+                # every earlier tool-call round and every citation block.
+                # converted_upto tracks how much of `output` has already been
+                # folded in; `output` is rebound across rounds, so the cursor is
+                # re-anchored to the reset boundary after each continuation.
+                accumulated_messages = list(form_data['messages'])
+                converted_upto = 0
 
                 # Check if citations are enabled for this model
                 citations_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
                     'citations', True
                 )
-
-                # Use the pre-RAG system content captured before the
-                # initial file-source injection in process_chat_payload.
-                # This ensures restore truly undoes the RAG template.
-                original_system_content = metadata.get('system_prompt')
-                if original_system_content is None:
-                    original_system_message = get_system_message(form_data['messages'])
-                    original_system_content = (
-                        get_content_from_message(original_system_message) if original_system_message else None
-                    )
 
                 while tool_calls and (
                     max_tool_call_iterations is None or tool_call_iterations < max_tool_call_iterations
@@ -5851,65 +5861,36 @@ async def streaming_chat_response_handler(response, ctx):
                                 break
 
                     # Emit citation sources to the frontend for display
+                    pending_source_context = ''
                     if citations_enabled:
                         for source in tool_call_sources:
                             await event_emitter({'type': 'source', 'data': source})
 
-                        # Apply tool source context to messages for the model.
-                        # Restoring to pre-RAG original prevents duplicating
-                        # the RAG template across file and tool sources.
-                        all_tool_call_sources.extend(tool_call_sources)
-                        if all_tool_call_sources and user_message:
-                            # Restore pre-RAG message state before re-applying
-                            # to prevent RAG template duplication.
-                            original_user_message = metadata.get('user_prompt') or user_message
-                            set_last_user_message_content(
-                                original_user_message,
-                                form_data['messages'],
-                            )
-                            if original_system_content is not None:
-                                if get_system_message(form_data['messages']):
-                                    replace_system_message_content(
-                                        original_system_content,
-                                        form_data['messages'],
-                                    )
-                                else:
-                                    form_data['messages'] = add_or_update_system_message(
-                                        original_system_content,
-                                        form_data['messages'],
-                                    )
-                            else:
-                                replace_system_message_content('', form_data['messages'])
-
-                            # Build context: file sources with content,
-                            # tool sources as citation markers only.
-                            source_ids = {}
+                        # Build this iteration's citation block for the model.
+                        # Appended as a user message right after this round's
+                        # tool results — never between an assistant tool_calls
+                        # message and its tool result. First block carries the
+                        # full RAG template; later ones reuse a compact
+                        # <context> wrapper since the instructions were already
+                        # given. rag_context_applied covers the case where the
+                        # file-source injection already rendered the template,
+                        # so the whole conversation has exactly one copy.
+                        if tool_call_sources and user_message:
                             source_context = get_source_context(
-                                metadata.get('sources', []), source_ids
-                            ) + get_source_context(
-                                all_tool_call_sources,
+                                tool_call_sources,
                                 source_ids,
                                 include_content=False,
-                            )
-                            source_context = source_context.strip()
+                            ).strip()
                             if source_context:
-                                rag_content = await rag_template(
-                                    await Config.get('rag.template'),
-                                    source_context,
-                                    user_message,
-                                )
-                                if RAG_SYSTEM_CONTEXT:
-                                    form_data['messages'] = add_or_update_system_message(
-                                        rag_content,
-                                        form_data['messages'],
-                                        append=True,
-                                    )
+                                if tool_source_context_injected or metadata.get('rag_context_applied'):
+                                    pending_source_context = f'<context>\n{source_context}\n</context>'
                                 else:
-                                    form_data['messages'] = add_or_update_user_message(
-                                        rag_content,
-                                        form_data['messages'],
-                                        append=False,
+                                    pending_source_context = await rag_template(
+                                        await Config.get('rag.template'),
+                                        source_context,
+                                        user_message,
                                     )
+                                    tool_source_context_injected = True
                         tool_call_sources.clear()
 
                     # Strip input_image parts (large base64 data URIs) from the
@@ -5949,44 +5930,34 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                             new_form_data['previous_response_id'] = last_response_id
                         else:
-                            tool_messages = convert_output_to_messages(
-                                output,
+                            # Convert only the rounds not yet folded in. The
+                            # earlier turns already sit in accumulated_messages,
+                            # so this emits exactly the current iteration's
+                            # assistant/tool messages and nothing else.
+                            delta_messages = convert_output_to_messages(
+                                output[converted_upto:],
                                 raw=True,
                                 reasoning_format=get_reasoning_format(model),
                                 flatten_tool_images=True,
                             )
+                            accumulated_messages.extend(delta_messages)
+                            converted_upto = len(output)
 
-                            # Chat Completions providers don't support multimodal
-                            # tool messages.  Extract images into a user message.
-                            image_urls = []
-                            for message in tool_messages:
-                                if message.get('role') == 'tool' and isinstance(message.get('content'), list):
-                                    text_parts = []
-                                    for part in message['content']:
-                                        if part.get('type') == 'input_text':
-                                            text_parts.append(part.get('text', ''))
-                                        elif part.get('type') == 'input_image':
-                                            image_urls.append(part.get('image_url', ''))
-                                    message['content'] = ''.join(text_parts)
-
-                            new_form_data['messages'] = [
-                                *form_data['messages'],
-                                *tool_messages,
-                            ]
-
-                            if image_urls:
-                                new_form_data['messages'].append(
+                            # Model-only tool citation context for this iteration,
+                            # placed after its tool results (delta_messages ends
+                            # on this round's tool messages or the flattened
+                            # image message). The next request is then a pure
+                            # byte extension of this one: both the already-sent
+                            # prefix and this block are reused verbatim.
+                            if pending_source_context:
+                                accumulated_messages.append(
                                     {
                                         'role': 'user',
-                                        'content': [
-                                            {
-                                                'type': 'text',
-                                                'text': 'Here are the images from the tool results above. Please analyze them.',
-                                            },
-                                            *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
-                                        ],
+                                        'content': pending_source_context + '\n',
                                     }
                                 )
+
+                            new_form_data['messages'] = list(accumulated_messages)
 
                         if filter_functions:
                             new_form_data, _ = await process_filter_functions(
@@ -6029,6 +6000,9 @@ async def streaming_chat_response_handler(response, ctx):
                             output = []
                             await stream_body_handler(res, new_form_data)
                             output[:0] = prior_output
+                            # Re-anchor the conversion cursor: prior_output is
+                            # the already-converted part of the rebound list.
+                            converted_upto = len(prior_output)
                             prior_output = []
                         elif getattr(res, 'status_code', 200) >= 400:
                             await emit_message_error(get_message_error_content(get_response_error_detail(res)))
