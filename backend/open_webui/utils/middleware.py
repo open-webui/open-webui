@@ -5571,7 +5571,9 @@ async def streaming_chat_response_handler(response, ctx):
                 # (1..k) so tool-source ids continue without collision.
                 source_ids = {}
                 if metadata.get('rag_context_applied'):
-                    get_source_context(metadata.get('sources', []), source_ids)
+                    # Only the id counter matters here; skip rendering document
+                    # bodies just to burn ids into the shared counter.
+                    get_source_context(metadata.get('sources', []), source_ids, include_content=False)
                 tool_source_context_injected = False
 
                 # Continuation requests are built as a growing byte-prefix:
@@ -6166,15 +6168,21 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         try:
+                            # Reuse the accumulated turns (which carry every
+                            # tool round + citation block) and convert only the
+                            # code-interpreter item appended after the last
+                            # tool round, so this follow-up stays a byte
+                            # extension of the last tool-call request and the
+                            # model keeps seeing all citation ids.
                             new_form_data = {
                                 **form_data,
                                 'model': model_id,
                                 'stream': True,
                                 'metadata': metadata,
                                 'messages': [
-                                    *form_data['messages'],
+                                    *accumulated_messages,
                                     *convert_output_to_messages(
-                                        output,
+                                        output[converted_upto:],
                                         raw=True,
                                         reasoning_format=get_reasoning_format(model),
                                         flatten_tool_images=True,
