@@ -142,6 +142,7 @@ class ChatMessage(Base):
 
     # Model (for assistant messages)
     model_id = Column(Text, nullable=True, index=True)
+    response_id = Column(Text, nullable=True)
 
     # Attachments
     files = Column(JSON, nullable=True)
@@ -188,6 +189,7 @@ class ChatMessageModel(BaseModel):
     content: Optional[Any] = None  # str or list of blocks
     output: Optional[list] = None
     model_id: Optional[str] = None
+    response_id: Optional[str] = None
     files: Optional[list] = None
     sources: Optional[list] = None
     embeds: Optional[list] = None
@@ -220,6 +222,8 @@ class ChatMessageTable:
             message.output = data.get('output')
         if 'model_id' in data or 'model' in data:
             message.model_id = data.get('model_id') or data.get('model')
+        if 'response_id' in data or 'responseId' in data:
+            message.response_id = data.get('response_id') or data.get('responseId')
         if 'files' in data:
             message.files = data.get('files')
         if 'sources' in data:
@@ -254,6 +258,7 @@ class ChatMessageTable:
             content=data.get('content'),
             output=data.get('output'),
             model_id=data.get('model_id') or data.get('model'),
+            response_id=data.get('response_id') or data.get('responseId'),
             files=data.get('files'),
             sources=data.get('sources'),
             embeds=data.get('embeds'),
@@ -351,6 +356,7 @@ class ChatMessageTable:
     DB_TO_JSON_KEY_MAP = {
         'parent_id': 'parentId',
         'model_id': 'model',
+        'response_id': 'responseId',
         'status_history': 'statusHistory',
         'context_summary': 'contextSummary',
         'created_at': 'timestamp',

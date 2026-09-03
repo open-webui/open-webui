@@ -28,6 +28,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_OPENAI_API_PASSTHROUGH,
+    ENABLE_RESPONSES_API_STATEFUL,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
     REDIS_KEY_PREFIX,
@@ -50,6 +51,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
+from open_webui.utils.responses_state import apply_responses_stateful_payload, convert_responses_result
 from open_webui.utils.session_pool import (
     cleanup_response,
     get_client_timeout,
@@ -1427,40 +1429,6 @@ def convert_to_responses_payload(payload: dict) -> dict:
     return responses_payload
 
 
-def convert_responses_result(response: dict) -> dict:
-    """
-    Convert non-streaming Responses API result to Chat Completions format.
-
-    Extracts text from message output items so all downstream consumers
-    (frontend tasks, get_content_from_response) work without modification.
-    """
-    output_items = response.get('output', [])
-
-    content = ''
-    for item in output_items:
-        if item.get('type') == 'message':
-            for part in item.get('content', []):
-                if part.get('type') == 'output_text':
-                    content += part.get('text', '')
-
-    return {
-        'id': response.get('id', ''),
-        'object': 'chat.completion',
-        'model': response.get('model', ''),
-        'choices': [
-            {
-                'index': 0,
-                'message': {
-                    'role': 'assistant',
-                    'content': content,
-                },
-                'finish_reason': 'stop',
-            }
-        ],
-        'usage': response.get('usage', {}),
-    }
-
-
 @router.post('/chat/completions')
 async def generate_chat_completion(
     request: Request,
@@ -1565,6 +1533,7 @@ async def generate_chat_completion(
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
 
     is_responses = api_config.get('api_type') == 'responses'
+    payload = apply_responses_stateful_payload(payload, is_responses, ENABLE_RESPONSES_API_STATEFUL)
 
     if api_config.get('azure') or api_config.get('provider') == 'azure':
         # Only set api-key header if not using Azure Entra ID authentication

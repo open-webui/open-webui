@@ -125,6 +125,13 @@ from open_webui.utils.misc import (
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
+from open_webui.utils.responses_state import (
+    get_completed_response_metadata,
+    get_openai_url_idx,
+    get_stateful_response_id,
+    pop_stateful_response_id,
+    trim_stateful_messages,
+)
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.task import (
     get_task_model_id,
@@ -888,11 +895,7 @@ def handle_responses_streaming_event(
                 if item.get('type') == 'reasoning' and item.get('status') != 'completed':
                     item['status'] = 'completed'
 
-        return new_output, {
-            'usage': response_data.get('usage'),
-            'done': True,
-            'response_id': response_data.get('id'),
-        }
+        return new_output, get_completed_response_metadata(response_data)
 
     elif event_type == 'response.in_progress':
         # State Machine Event: In Progress
@@ -2128,6 +2131,34 @@ async def convert_url_images_to_base64(form_data, user=None):
 MESSAGE_REPLAY_KEYS = ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage', 'model')
 
 
+async def load_stateful_response_id(chat_id: str, user_message_id: str, model_id: str | None) -> str | None:
+    messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
+    if not messages_map:
+        return None
+    return get_stateful_response_id(messages_map, user_message_id, model_id)
+
+
+async def is_stateful_responses_model(request, model: dict) -> bool:
+    """Check the resolved connection before changing replay semantics."""
+    if not ENABLE_RESPONSES_API_STATEFUL:
+        return False
+
+    url_idx = get_openai_url_idx(model, request.app.state.MODELS)
+    if url_idx is None:
+        return False
+
+    try:
+        # Imported lazily to avoid a module cycle: the OpenAI router imports
+        # middleware helpers through the normal chat request path.
+        from open_webui.routers.openai import get_openai_connection
+
+        _, _, api_config = await get_openai_connection(url_idx)
+        return api_config.get('api_type') == 'responses'
+    except Exception:
+        log.exception('Unable to determine whether model %s uses the Responses API', model.get('id'))
+        return False
+
+
 async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
     """
     Load the message chain from DB up to message_id,
@@ -2382,6 +2413,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # which the frontend strips, causing tool calls to be merged into content.
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
+    stateful_responses = await is_stateful_responses_model(request, model)
+
+    if stateful_responses and is_saved_chat_id(chat_id) and user_message_id:
+        previous_response_id = await load_stateful_response_id(
+            chat_id,
+            user_message_id,
+            form_data.get('model'),
+        )
+        if previous_response_id:
+            form_data['previous_response_id'] = previous_response_id
 
     if is_saved_chat_id(chat_id) and user_message_id:
         db_messages = await load_messages_from_db(chat_id, user_message_id)
@@ -2424,7 +2465,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
-    if is_saved_chat_id(chat_id) and user_message_id:
+    if is_saved_chat_id(chat_id) and user_message_id and not form_data.get('previous_response_id'):
         if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
             compaction_models = {
                 **dict(request.app.state.MODELS.items()),
@@ -3082,6 +3123,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception(f'{e}')
 
     form_data = normalize_messages_for_model(form_data)
+
+    if form_data.get('previous_response_id'):
+        # Hermes already owns the transcript referenced by previous_response_id.
+        # Re-sending OpenWebUI's replay duplicates history and, after Hermes has
+        # compacted it, can restore the very context that compaction removed.
+        form_data['messages'] = trim_stateful_messages(
+            form_data.get('messages', []),
+            regeneration=bool(regeneration_prompt),
+        )
 
     return form_data, metadata, events
 
@@ -4118,6 +4168,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     usage = normalize_usage(response_data.get('usage', {}) or {})
 
                     if save_to_chat:
+                        response_id = response_data.get('response_id') if ENABLE_RESPONSES_API_STATEFUL else None
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
@@ -4125,6 +4176,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 'done': True,
                                 'role': 'assistant',
                                 'output': response_output,
+                                **({'responseId': response_id} if response_id else {}),
                                 **({'usage': usage} if usage else {}),
                             },
                         )
@@ -4887,10 +4939,12 @@ async def streaming_chat_response_handler(response, ctx):
                                     # calls. The outer middleware manages the
                                     # actual completion signal.
                                     if response_metadata:
-                                        if ENABLE_RESPONSES_API_STATEFUL:
-                                            response_id = response_metadata.pop('response_id', None)
-                                            if response_id:
-                                                last_response_id = response_id
+                                        response_id = pop_stateful_response_id(
+                                            response_metadata,
+                                            ENABLE_RESPONSES_API_STATEFUL,
+                                        )
+                                        if response_id:
+                                            last_response_id = response_id
 
                                         # Normalize and capture usage for DB persistence
                                         if response_metadata.get('usage'):
@@ -6222,6 +6276,7 @@ async def streaming_chat_response_handler(response, ctx):
                         {
                             'done': True,
                             'output': current_output,
+                            **({'responseId': last_response_id} if last_response_id else {}),
                             **({'usage': usage} if usage else {}),
                         },
                     )
