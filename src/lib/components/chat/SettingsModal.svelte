@@ -134,41 +134,45 @@
 	const isAdminTab = (tabId: string) => tabId.startsWith('admin:');
 	const adminTabSegment = (tabId: string) => tabId.replace('admin:', '');
 	const adminTabPanelId = (tabId: string) => `tab-${tabId.replace(':', '-')}`;
-	const personalSettingGroups: Record<string, string> = {
-		general: 'Basics',
-		interface: 'Basics',
-		notifications: 'Basics',
-		shortcuts: 'Basics',
-		connections: 'Services',
-		tools: 'Services',
-		personalization: 'Preferences',
-		audio: 'Preferences',
-		data_controls: 'Data',
-		usage: 'Data',
-		archived_chats: 'Data',
-		account: 'Profile',
-		about: 'Profile'
+	let personalSettingGroups: Record<string, string> = {};
+	let adminSettingGroups: Record<string, string> = {};
+
+	$: personalSettingGroups = {
+		general: $i18n.t('Basics'),
+		interface: $i18n.t('Basics'),
+		notifications: $i18n.t('Basics'),
+		shortcuts: $i18n.t('Basics'),
+		connections: $i18n.t('Services'),
+		tools: $i18n.t('Services'),
+		personalization: $i18n.t('Preferences'),
+		audio: $i18n.t('Preferences'),
+		data_controls: $i18n.t('Data'),
+		usage: $i18n.t('Data'),
+		archived_chats: $i18n.t('Data'),
+		account: $i18n.t('Profile'),
+		about: $i18n.t('Profile')
 	};
-	const adminSettingGroups: Record<string, string> = {
-		'admin:general': 'System',
-		'admin:authentication': 'System',
-		'admin:connections': 'AI',
-		'admin:models': 'AI',
-		'admin:subagents': 'AI',
-		'admin:evaluations': 'Quality',
-		'admin:analytics': 'Quality',
-		'admin:integrations': 'Tools',
-		'admin:documents': 'Tools',
-		'admin:web': 'Tools',
-		'admin:code-execution': 'Tools',
-		'admin:pipelines': 'Tools',
-		'admin:interface': 'Experience',
-		'admin:audio': 'Experience',
-		'admin:images': 'Experience',
-		'admin:db': 'Data'
+	$: adminSettingGroups = {
+		'admin:general': $i18n.t('System'),
+		'admin:authentication': $i18n.t('System'),
+		'admin:connections': $i18n.t('AI'),
+		'admin:models': $i18n.t('AI'),
+		'admin:subagents': $i18n.t('AI'),
+		'admin:evaluations': $i18n.t('Quality'),
+		'admin:analytics': $i18n.t('Quality'),
+		'admin:integrations': $i18n.t('Tools'),
+		'admin:documents': $i18n.t('Tools'),
+		'admin:web': $i18n.t('Tools'),
+		'admin:code-execution': $i18n.t('Tools'),
+		'admin:pipelines': $i18n.t('Tools'),
+		'admin:interface': $i18n.t('Experience'),
+		'admin:audio': $i18n.t('Experience'),
+		'admin:images': $i18n.t('Experience'),
+		'admin:db': $i18n.t('Data')
 	};
 	const settingGroupTitle = (tabId: string) =>
-		(isAdminTab(tabId) ? adminSettingGroups[tabId] : personalSettingGroups[tabId]) ?? 'General';
+		(isAdminTab(tabId) ? adminSettingGroups[tabId] : personalSettingGroups[tabId]) ??
+		$i18n.t('General');
 	const shouldShowSettingGroup = (tabIds: string[], index: number) =>
 		index === 0 || settingGroupTitle(tabIds[index]) !== settingGroupTitle(tabIds[index - 1]);
 	const settingGroupHeadingClass = (first: boolean) =>
@@ -977,7 +981,7 @@
 				{#each filteredPersonalSettings as tabId, index (tabId)}
 					{#if shouldShowSettingGroup(filteredPersonalSettings, index)}
 						<span class={settingGroupHeadingClass(index === 0)}>
-							{$i18n.t(settingGroupTitle(tabId))}
+							{settingGroupTitle(tabId)}
 						</span>
 					{/if}
 
@@ -1169,7 +1173,7 @@
 				{#each filteredAdminSettings as tabId, index (tabId)}
 					{#if shouldShowSettingGroup(filteredAdminSettings, index)}
 						<span class={settingGroupHeadingClass(index === 0)}>
-							{$i18n.t(settingGroupTitle(tabId))}
+							{settingGroupTitle(tabId)}
 						</span>
 					{/if}
 
