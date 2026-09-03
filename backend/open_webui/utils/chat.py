@@ -79,25 +79,34 @@ async def generate_direct_chat_completion(
             """
             await q.put(data)
 
+        def remove_message_listener():
+            sio.handlers['/'].pop(channel, None)
+
         # Register the listener
         sio.on(channel, message_listener)
 
         # Start processing chat completion in background
-        res = await event_caller(
-            {
-                'type': 'request:chat:completion',
-                'data': {
-                    'form_data': form_data,
-                    'model': models[form_data['model']],
-                    'channel': channel,
-                    'session_id': session_id,
-                },
-            }
-        )
+        try:
+            res = await event_caller(
+                {
+                    'type': 'request:chat:completion',
+                    'data': {
+                        'form_data': form_data,
+                        'model': models[form_data['model']],
+                        'channel': channel,
+                        'session_id': session_id,
+                    },
+                }
+            )
 
-        log.info('res: %s', res)
+            log.info('res: %s', res)
 
-        if res.get('status', False):
+            status = res.get('status', False)
+        except BaseException:
+            remove_message_listener()
+            raise
+
+        if status:
             # Define a generator to stream responses
             async def event_generator():
                 nonlocal q
@@ -117,17 +126,17 @@ async def generate_direct_chat_completion(
                 except Exception as e:
                     log.debug('Error in event generator: %s', e)
                     pass
+                finally:
+                    remove_message_listener()
 
             # Define a background task to run the event generator
             async def background():
-                try:
-                    del sio.handlers['/'][channel]
-                except Exception as e:
-                    pass
+                remove_message_listener()
 
             # Return the streaming response
             return StreamingResponse(event_generator(), media_type='text/event-stream', background=background)
         else:
+            remove_message_listener()
             raise Exception(str(res))
     else:
         res = await event_caller(
