@@ -44,7 +44,12 @@ from open_webui.socket.main import (
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.channels import extract_mentions, extract_user_mention_ids, replace_mentions
+from open_webui.utils.channels import (
+    contains_user_mentions,
+    extract_mentions,
+    extract_user_mention_ids,
+    replace_mentions,
+)
 from open_webui.utils.files import get_image_base64_from_file_id
 from open_webui.utils.models import (
     get_all_models,
@@ -975,6 +980,11 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
 
 async def get_channel_mention_user_ids(channel, message, sender_id, db=None) -> list[str]:
     """Resolve encoded user mentions to valid users authorized to read a channel."""
+    # Avoid membership/access queries for the common case of a message without
+    # a user mention.
+    if not contains_user_mentions(message.content):
+        return []
+
     if channel.type in ['group', 'dm']:
         # Group and DM access is membership-based. ``is_active`` is the
         # membership flag used by the channel model; it is not presence.

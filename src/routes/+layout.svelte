@@ -67,6 +67,7 @@
 		bestMatchingLanguage,
 		cleanText,
 		cleanNotificationText,
+		containsUserMention,
 		displayFileHandler,
 		getUserTimezone,
 		removeAllDetails
@@ -817,6 +818,8 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 		const isMentioned = type === 'mention';
+		const isCurrentUserMentioned =
+			type === 'message' && containsUserMention(data?.content ?? '', $user?.id ?? '');
 		const unreadKey = `${event.channel_id}:${event.message_id}`;
 		const isNewUnreadMessage =
 			(type === 'message' || type === 'mention') && !handledChannelUnreadKeys.has(unreadKey);
@@ -854,7 +857,7 @@
 					toast.custom(NotificationToast, {
 						componentProps: {
 							onClick: () => goto(`/channels/${event.channel_id}`),
-							content: data?.content,
+							content: cleanNotificationText(data?.content ?? ''),
 							title
 						},
 						duration: 15000,
@@ -900,11 +903,15 @@
 				}
 			}
 
-			if (type === 'message') {
+			if (type === 'message' && !isCurrentUserMentioned) {
 				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
 
 				if ($isLastActiveTab) {
-					if ($settings?.notificationEnabled ?? false) {
+					if (
+						($settings?.notificationEnabled ?? false) &&
+						typeof Notification !== 'undefined' &&
+						Notification.permission === 'granted'
+					) {
 						// LICENSE covers this Open WebUI notification identifier.
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
@@ -920,7 +927,7 @@
 						onClick: () => {
 							goto(`/channels/${event.channel_id}`);
 						},
-						content: data?.content,
+						content: cleanNotificationText(data?.content ?? ''),
 						title: `${title}`
 					},
 					duration: 15000,

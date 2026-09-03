@@ -1044,6 +1044,13 @@ export const cleanNotificationText = (content: string) => {
 	return cleanText(contentWithoutMentions);
 };
 
+export const containsUserMention = (content: string, userId: string) => {
+	if (!userId) return false;
+
+	const escapedUserId = escapeRegExp(userId);
+	return new RegExp(`<@U:${escapedUserId}(?:\\|[^>]*)?>`).test(content);
+};
+
 export const removeDetails = (content, types) => {
 	return replaceOutsideCode(content, (segment) => {
 		for (const type of types) {
