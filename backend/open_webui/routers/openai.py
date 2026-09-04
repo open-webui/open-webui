@@ -1416,8 +1416,12 @@ def convert_to_responses_payload(payload: dict) -> dict:
                         converted_tool['description'] = func['description']
                     if 'parameters' in func:
                         converted_tool['parameters'] = func['parameters']
-                    if 'strict' in func:
-                        converted_tool['strict'] = func['strict']
+                    # The Responses API defaults function tools to strict schemas, while
+                    # Chat Completions defaults to loose ones. Tools converted from Chat
+                    # Completions (including MCP/OpenAPI-derived ones) usually carry loose
+                    # schemas, so default to strict=False to keep omission semantics for
+                    # optional properties. Explicit values are preserved.
+                    converted_tool['strict'] = func.get('strict', False)
                 converted_tools.append(converted_tool)
             else:
                 # Already in correct format or unknown format, pass through
