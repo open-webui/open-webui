@@ -140,6 +140,8 @@ class KnowledgeDirectoryModel(BaseModel):
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
+    file_count: Optional[int] = None
+
 
 class KnowledgeDirectoryForm(BaseModel):
     name: str
@@ -864,7 +866,26 @@ class KnowledgeTable:
 
             stmt = stmt.order_by(KnowledgeDirectory.name.asc())
             result = await db.execute(stmt)
-            return [KnowledgeDirectoryModel.model_validate(d) for d in result.scalars().all()]
+            directories = result.scalars().all()
+
+            file_counts = {}
+            if directories:
+                file_count_result = await db.execute(
+                    select(KnowledgeFile.directory_id, func.count(KnowledgeFile.id))
+                    .where(KnowledgeFile.directory_id.in_([d.id for d in directories]))
+                    .group_by(KnowledgeFile.directory_id)
+                )
+                file_counts = dict(file_count_result.all())
+
+            return [
+                KnowledgeDirectoryModel.model_validate(
+                    {
+                        **KnowledgeDirectoryModel.model_validate(d).model_dump(),
+                        'file_count': file_counts.get(d.id, 0),
+                    }
+                )
+                for d in directories
+            ]
 
     async def get_all_directories(
         self,
