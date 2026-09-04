@@ -1759,6 +1759,7 @@ export interface ModelConfig {
 export interface ModelMeta {
 	toolIds: never[];
 	description?: string;
+	i18n?: Record<string, Record<string, any>>;
 	hidden?: boolean;
 	capabilities?: object;
 	profile_image_url?: string;
