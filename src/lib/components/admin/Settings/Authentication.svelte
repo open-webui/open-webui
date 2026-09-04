@@ -167,6 +167,14 @@
 				</AdminSettingRow>
 
 				<AdminSettingRow
+					label={$i18n.t('Login Form')}
+					description={$i18n.t('Show the email and password form on the sign-in page.')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_LOGIN_FORM} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
+				<AdminSettingRow
 					label={$i18n.t('New Sign Ups')}
 					description={$i18n.t('Allow new users to create accounts.')}
 					let:labelId
