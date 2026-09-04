@@ -11,15 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🏷️ **Custom file metadata.** Metadata attached to an uploaded file now travels with the pieces that file is split into and arrives with the retrieved sources, the oversized and internal fields left out. [#29499](https://github.com/open-webui/open-webui/pull/29499), [#29486](https://github.com/open-webui/open-webui/issues/29486), [Commit](https://github.com/open-webui/open-webui/commit/894655f66b9563890e63c76090ddecc90a311eb2)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for Traditional Chinese, Korean, Finnish, Russian, and Ukrainian were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for Traditional Chinese, Korean, Finnish, Russian, Ukrainian, German, and Spanish were enhanced and expanded.
 
 ### Fixed
 
 - 🛡️ **Security Advisory**: This release includes security and access-control fixes. We recommend updating production deployments at your earliest convenience. Not all security fixes in this version may be enumerated in the fixed section. Some may be withheld for a short time to give administrators time to upgrade. [Advisories](https://github.com/open-webui/open-webui/security)
+- 🐍 **Saving a tool or function.** Saving a tool or function in the admin pages no longer fails with a missing module error from the built-in code formatter, which was not installing everything it needed. [#29503](https://github.com/open-webui/open-webui/pull/29503)
 - 🧹 **Direct connections stop leaking listeners.** A server talking to a direct connection no longer leaves a listener behind for every request that ends any way but a clean finish, which grew without limit while a connection kept failing. [#29509](https://github.com/open-webui/open-webui/pull/29509)
 - 🔦 **Readable slash command labels.** The entries in the slash command menu no longer show as white text on a white background in the light theme. [#29512](https://github.com/open-webui/open-webui/pull/29512), [#29510](https://github.com/open-webui/open-webui/issues/29510)
 - 🖌️ **Editing an image you uploaded.** An image already held by Open WebUI can now be used with image editing, where fetching its own link back over the network could fail on a private network or without a sign-in. [Commit](https://github.com/open-webui/open-webui/commit/50413f34824ea49d5b94d3a97f3fe4bb2e881e38)
-- 🗂️ **Translatable settings group headings.** The headings that group the settings pages, such as Basics and Services, now take their wording from the interface language instead of always reading in English. [Commit](https://github.com/open-webui/open-webui/commit/cffd734a1847593bb04c5b5a54d08daf3de0f614), [Commit](https://github.com/open-webui/open-webui/commit/006f95ee595a4d1d63b705c517f1c64cf9ebc676)
+- 🗂️ **Wider translation coverage.** Text that was fixed in English, from the headings grouping the settings pages to labels and messages across the admin pages, the workspace, and notifications, now takes its wording from the interface language. [Commit](https://github.com/open-webui/open-webui/commit/cffd734a1847593bb04c5b5a54d08daf3de0f614), [Commit](https://github.com/open-webui/open-webui/commit/006f95ee595a4d1d63b705c517f1c64cf9ebc676), [Commit](https://github.com/open-webui/open-webui/commit/f677fdbf5074e07216d9bb18d6934f3cfabb5839), [Commit](https://github.com/open-webui/open-webui/commit/237b11c6d944e083445e4ef53f5947b40bb80c6c), [Commit](https://github.com/open-webui/open-webui/commit/8aa25dd3585fe38062d2205231a440db31e330f3)
 
 ## [0.11.3] - 2026-08-31
 
