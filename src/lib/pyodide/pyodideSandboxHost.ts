@@ -209,6 +209,10 @@ export class PyodideSandboxHost {
 	constructor() {
 		this.iframe = document.createElement('iframe');
 		this.iframe.setAttribute('sandbox', 'allow-scripts');
+		this.iframe.setAttribute(
+			'allow',
+			'local-network-access; local-network; loopback-network'
+		);
 		this.iframe.setAttribute('aria-hidden', 'true');
 		this.iframe.setAttribute('title', 'pyodide-sandbox');
 		this.iframe.style.display = 'none';
