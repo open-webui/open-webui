@@ -122,7 +122,15 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 print("${endTag}")
 `;
 
-			const packages = ['black'];
+			// black's pyodide-lock entry declares no dependencies, so micropip installs none of them
+			const packages = [
+				'black',
+				'click',
+				'mypy_extensions',
+				'pathspec',
+				'platformdirs',
+				'pytokens'
+			];
 
 			function handleMessage(event) {
 				const { id: eventId, stdout, stderr } = event.data;
