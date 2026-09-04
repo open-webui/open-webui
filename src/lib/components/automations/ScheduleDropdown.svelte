@@ -104,11 +104,18 @@
 		return `RRULE:${parts.join(';')}`;
 	};
 
+	const dtstartWeekday = (match: RegExpMatchArray | null) =>
+		match
+			? ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][
+					new Date(`${match[1]}-${match[2]}-${match[3]}T00:00`).getDay()
+				]
+			: '';
+
 	export const parseRrule = (s: string) => {
+		const match = s.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 		// Detect ONCE (COUNT=1 with DTSTART)
 		if (/COUNT=1(?!\d)/.test(s)) {
 			frequency = 'ONCE';
-			const match = s.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
 			if (match) {
 				onceDate = `${match[1]}-${match[2]}-${match[3]}`;
 				onceTime = `${match[4]}:${match[5]}`;
@@ -134,10 +141,12 @@
 		}
 		frequency = freq;
 		interval = parseInt(parts.INTERVAL || '1');
-		hour = parseInt(parts.BYHOUR || '9');
-		minute = parseInt(parts.BYMINUTE || '0');
-		selectedDays = parts.BYDAY ? parts.BYDAY.split(',') : [];
-		monthDay = parseInt(parts.BYMONTHDAY || '1');
+		// no clock time in the rule means midnight; the 9 above is the new-automation default
+		hour = parseInt(parts.BYHOUR || match?.[4] || '0');
+		minute = parseInt(parts.BYMINUTE || match?.[5] || '0');
+		const byDay = parts.BYDAY || dtstartWeekday(match);
+		selectedDays = byDay ? byDay.split(',') : [];
+		monthDay = parseInt(parts.BYMONTHDAY || match?.[3] || '1');
 	};
 
 	export const getScheduleLabel = (): string => {
