@@ -658,7 +658,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 };
 
 export const compareVersion = (latest, current) => {
-	return current === '0.0.0'
+	return !latest || current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
 				numeric: true,
