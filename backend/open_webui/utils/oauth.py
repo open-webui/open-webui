@@ -1528,8 +1528,10 @@ class OAuthManager:
             # Keep existing users at their current role unless the provider sent roles.
             role = user.role if user else auth_config.DEFAULT_USER_ROLE
 
-            # Next block extracts the roles from the user data, accepting nested claims of any depth
-            if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
+            # Next block extracts the roles from the user data, accepting nested claims of any depth.
+            # Gating on allowed-roles only — admin-roles is optional. Previously an empty
+            # OAUTH_ADMIN_ROLES silently disabled the entire enforcement block.
+            if oauth_claim and oauth_allowed_roles:
                 claim_data = user_data
                 nested_claims = oauth_claim.split('.')
                 for nested_claim in nested_claims:
@@ -1557,8 +1559,21 @@ class OAuthManager:
             log.debug('Accepted user roles: %s', oauth_allowed_roles)
             log.debug('Accepted admin roles: %s', oauth_admin_roles)
 
-            # If roles are present in the token, they must match; otherwise deny access
-            if oauth_roles:
+            # If a roles claim is configured but the token carries no roles, treat that
+            # the same as "no match" and deny. Previously `if oauth_roles:` let an absent
+            # claim (e.g. Keycloak's User Client Role mapper emits no claim at zero roles)
+            # bypass the gate and hand out DEFAULT_USER_ROLE.
+            if oauth_claim and oauth_allowed_roles:
+                if not oauth_roles:
+                    log.warning(
+                        f'OAuth role management enabled but token carries no roles claim. '
+                        f'User roles: {oauth_roles}, allowed: {oauth_allowed_roles}, admin: {oauth_admin_roles}'
+                    )
+                    raise HTTPException(
+                        status.HTTP_403_FORBIDDEN,
+                        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                    )
+
                 matched = False
                 for allowed_role in oauth_allowed_roles:
                     if allowed_role == '*' or allowed_role in oauth_roles:
