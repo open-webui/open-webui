@@ -104,7 +104,7 @@
 							on:click={enableItems}
 						>
 							<span class="truncate"
-								>{$i18n.t('Enable all ({{count}})', { count: matchedItems.length })}</span
+								>{$i18n.t('Enable all ({{COUNT}})', { COUNT: matchedItems.length })}</span
 							>
 						</button>
 					{/if}

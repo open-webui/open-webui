@@ -275,7 +275,7 @@
 										}}
 									>
 										{#if inputFiles}
-											{$i18n.t('{{count}} document(s) selected.', { count: inputFiles.length })}
+											{$i18n.t('{{COUNT}} document(s) selected.', { COUNT: inputFiles.length })}
 										{:else}
 											{$i18n.t('Click here to select a csv file.')}
 										{/if}
