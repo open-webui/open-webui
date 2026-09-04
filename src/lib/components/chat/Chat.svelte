@@ -982,10 +982,8 @@
 	}
 
 	let settingDefaults = false;
-	const setDefaults = async () => {
-		if (settingDefaults) return;
-		settingDefaults = true;
-
+	let defaultsPromise = Promise.resolve();
+	const applyDefaults = async () => {
 		try {
 			if (!$tools) {
 				tools.set(await getTools(localStorage.token));
@@ -1094,6 +1092,13 @@
 		} finally {
 			settingDefaults = false;
 		}
+	};
+
+	const setDefaults = () => {
+		if (settingDefaults) return defaultsPromise;
+		settingDefaults = true;
+		defaultsPromise = applyDefaults().catch((error) => console.error(error));
+		return defaultsPromise;
 	};
 
 	const showMessage = async (message, scroll = true, save = true) => {
@@ -2867,6 +2872,8 @@
 	//////////////////////////
 
 	const submitPrompt = async (inputContent, inputFiles) => {
+		await defaultsPromise;
+
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -3054,6 +3061,7 @@
 		prompt = '';
 	};
 
+	let awaitingDefaults = false;
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitHandler', userPrompt, $chatId);
 
@@ -3086,6 +3094,15 @@
 		if (modelCommandMatch) {
 			handleModelCommand(modelCommandMatch[1]?.trim() ?? '');
 			return;
+		}
+
+		// Drop a second send that races this wait, since prompt isn't cleared until after it
+		if (awaitingDefaults) return;
+		awaitingDefaults = true;
+		try {
+			await defaultsPromise;
+		} finally {
+			awaitingDefaults = false;
 		}
 
 		if (pendingOAuthTools.length > 0) {
