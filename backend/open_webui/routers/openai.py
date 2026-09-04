@@ -192,8 +192,6 @@ async def get_headers_and_cookies(
         cookies = request.cookies
         token = request.state.token.credentials
     elif auth_type == 'system_oauth':
-        cookies = request.cookies
-
         oauth_token = None
         try:
             if request.cookies.get('oauth_session_id', None):
