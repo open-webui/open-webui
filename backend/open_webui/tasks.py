@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from redis.asyncio import Redis
 
-from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL
+from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL, REDIS_TASK_TTL
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 
 log = logging.getLogger(__name__)
@@ -18,11 +18,12 @@ response_streams: dict[str, dict] = {}
 
 
 REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
-REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
+REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item_active'
 REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
 REDIS_PUBSUB_RECONNECT_INTERVAL = 1.0
 REDIS_PUBSUB_MAX_RECONNECT_INTERVAL = 30.0
+REDIS_TASK_HEARTBEAT_INTERVAL = REDIS_TASK_TTL // 4
 
 
 async def redis_task_command_listener(app):
@@ -66,17 +67,66 @@ async def redis_task_command_listener(app):
         reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
 
 
+async def redis_task_heartbeat_loop(app):
+    """
+    Re-stamp this worker's tasks so only entries left behind by a dead worker age out.
+    """
+    if REDIS_TASK_TTL <= 0:
+        return
+
+    redis: Redis = app.state.redis
+
+    while True:
+        await asyncio.sleep(REDIS_TASK_HEARTBEAT_INTERVAL)
+        try:
+            now = await redis_now(redis)
+            held_task_ids = []
+            pipe = redis.pipeline(transaction=False)
+            for item_id, task_ids in list(item_tasks.items()):
+                held_task_ids.extend(task_ids)
+                if item_id:
+                    key = f'{REDIS_ITEM_TASKS_KEY}:{item_id}'
+                    # xx=True so a task that finishes while this flush is in flight is not re-added.
+                    pipe.zadd(key, {task_id: now for task_id in task_ids}, xx=True)
+                    pipe.zremrangebyscore(key, '-inf', now - REDIS_TASK_TTL)
+                    pipe.expire(key, REDIS_TASK_TTL)
+            await pipe.execute()
+            if held_task_ids:
+                with suppress(Exception):
+                    await redis.hexpire(REDIS_TASKS_KEY, REDIS_TASK_TTL, *held_task_ids)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception('Redis task heartbeat failed')
+
+
 ### ------------------------------
 ### REDIS-ENABLED HANDLERS
 ### ------------------------------
+
+
+async def redis_now(redis: Redis) -> float:
+    """Read the Redis clock, so every worker scores and expires task entries against the same one."""
+    seconds, microseconds = await redis.time()
+    return seconds + microseconds / 1_000_000
 
 
 async def redis_save_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline()
     pipe.hset(REDIS_TASKS_KEY, task_id, item_id or '')
     if item_id:
-        pipe.sadd(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
+        key = f'{REDIS_ITEM_TASKS_KEY}:{item_id}'
+        if REDIS_TASK_TTL > 0:
+            now = await redis_now(redis)
+            pipe.zadd(key, {task_id: now})
+            pipe.zremrangebyscore(key, '-inf', now - REDIS_TASK_TTL)
+            pipe.expire(key, REDIS_TASK_TTL)
+        else:
+            pipe.zadd(key, {task_id: 0})
     await pipe.execute()
+    if REDIS_TASK_TTL > 0:
+        with suppress(Exception):
+            await redis.hexpire(REDIS_TASKS_KEY, REDIS_TASK_TTL, task_id)
 
 
 async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
@@ -84,13 +134,8 @@ async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
     pipe.hdel(REDIS_TASKS_KEY, task_id)
     pipe.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
     if item_id:
-        pipe.srem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
-        await pipe.execute()
-        # Remove the set key entirely if no tasks remain for this item
-        if await redis.scard(f'{REDIS_ITEM_TASKS_KEY}:{item_id}') == 0:
-            await redis.delete(f'{REDIS_ITEM_TASKS_KEY}:{item_id}')
-    else:
-        await pipe.execute()
+        pipe.zrem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
+    await pipe.execute()
 
 
 async def redis_list_tasks(redis: Redis) -> list[str]:
@@ -98,7 +143,7 @@ async def redis_list_tasks(redis: Redis) -> list[str]:
 
 
 async def redis_list_item_tasks(redis: Redis, item_id: str) -> list[str]:
-    return list(await redis.smembers(f'{REDIS_ITEM_TASKS_KEY}:{item_id}'))
+    return list(await redis.zrange(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', 0, -1))
 
 
 async def redis_send_command(redis: Redis, command: dict):
@@ -121,8 +166,8 @@ async def cleanup_task(redis, task_id: str, id=None):
     tasks.pop(task_id, None)  # Remove the task if it exists
     response_streams.pop(task_id, None)
 
-    # If an ID is provided, remove the task from the item_tasks dictionary
-    if id and task_id in item_tasks.get(id, []):
+    # Remove the task from the item_tasks dictionary
+    if task_id in item_tasks.get(id, []):
         item_tasks[id].remove(task_id)
         if not item_tasks[id]:  # If no tasks left for this ID, remove the entry
             item_tasks.pop(id, None)
@@ -234,7 +279,7 @@ async def stop_task(redis, task_id: str):
     Cancel a running task and remove it from the global task list.
     """
     if redis:
-        # Look up the item_id before cleanup so we can remove the set entry too
+        # Look up the item_id before cleanup so we can remove the item tasks entry too
         item_id = await redis.hget(REDIS_TASKS_KEY, task_id)
         # PUBSUB: All instances check if they have this task, and stop if so.
         await redis_send_command(
@@ -244,7 +289,7 @@ async def stop_task(redis, task_id: str):
                 'task_id': task_id,
             },
         )
-        # Always clean Redis directly — hdel/srem are idempotent, safe even
+        # Always clean Redis directly — hdel/zrem are idempotent, safe even
         # if the done_callback on the owning process also fires cleanup.
         await redis_cleanup_task(redis, task_id, item_id or None)
         return {'status': True, 'message': f'Task {task_id} stopped.'}
@@ -278,6 +323,9 @@ async def stop_item_tasks(redis: Redis, item_id: str):
         result = await stop_task(redis, task_id)
         if not result['status']:
             return result  # Return the first failure
+
+    if redis:
+        await redis.zrem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', *task_ids)
 
     return {'status': True, 'message': f'All tasks for item {item_id} stopped.'}
 

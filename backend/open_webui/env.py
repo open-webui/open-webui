@@ -381,6 +381,15 @@ try:
 except ValueError:
     REDIS_RESPONSE_STREAM_TTL = 3600
 
+# Seconds a task entry survives without a heartbeat. 0 disables.
+REDIS_TASK_TTL = os.getenv('REDIS_TASK_TTL', '300')
+try:
+    REDIS_TASK_TTL = int(REDIS_TASK_TTL)
+    if REDIS_TASK_TTL != 0 and REDIS_TASK_TTL < 60:
+        REDIS_TASK_TTL = 300
+except ValueError:
+    REDIS_TASK_TTL = 300
+
 REDIS_SENTINEL_HOSTS = os.getenv('REDIS_SENTINEL_HOSTS', '')
 REDIS_SENTINEL_PORT = os.getenv('REDIS_SENTINEL_PORT', '26379')
 
