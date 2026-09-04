@@ -2049,6 +2049,7 @@ ENABLE_CALENDAR = os.getenv('ENABLE_CALENDAR', 'True').lower() == 'true'
 ENABLE_AUTOMATIONS = os.getenv('ENABLE_AUTOMATIONS', 'True').lower() == 'true'
 
 ENABLE_SUBAGENTS = os.getenv('ENABLE_SUBAGENTS', 'False').lower() == 'true'
+SUBAGENTS_MODEL_ID = os.getenv('SUBAGENTS_MODEL_ID', '')
 SUBAGENTS_BACKGROUND_ENABLED = os.getenv('SUBAGENTS_BACKGROUND_ENABLED', 'False').lower() == 'true'
 SUBAGENTS_MAX_CONCURRENT = int(os.getenv('SUBAGENTS_MAX_CONCURRENT', '20'))
 SUBAGENTS_MAX_ASYNC = int(os.getenv('SUBAGENTS_MAX_ASYNC', '20'))
@@ -3114,6 +3115,7 @@ DEFAULT_CONFIG = {
     'calendar.enable': ENABLE_CALENDAR,
     'automations.enable': ENABLE_AUTOMATIONS,
     'subagents.enable': ENABLE_SUBAGENTS,
+    'subagents.model_id': SUBAGENTS_MODEL_ID,
     'subagents.background_enabled': SUBAGENTS_BACKGROUND_ENABLED,
     'subagents.max_concurrent': SUBAGENTS_MAX_CONCURRENT,
     'subagents.max_async': SUBAGENTS_MAX_ASYNC,
