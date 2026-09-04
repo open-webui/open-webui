@@ -22,7 +22,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import iter_filter_conditions
+from open_webui.retrieval.vector.utils import iter_filter_conditions, process_metadata
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
@@ -136,7 +136,7 @@ class QdrantClient(VectorDBBase):
             PointStruct(
                 id=item['id'],
                 vector=item['vector'],
-                payload={'text': item['text'], 'metadata': item['metadata']},
+                payload={'text': item['text'], 'metadata': process_metadata(item['metadata'])},
             )
             for item in items
         ]

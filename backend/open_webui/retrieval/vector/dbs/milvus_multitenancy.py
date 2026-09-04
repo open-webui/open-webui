@@ -24,6 +24,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
+from open_webui.retrieval.vector.utils import process_metadata
 from pymilvus import DataType
 from pymilvus import MilvusClient as Client
 from pymilvus.exceptions import MilvusException
@@ -191,7 +192,7 @@ class MilvusClient(VectorDBBase):
                     'id': item['id'],
                     'vector': item['vector'],
                     'text': text,
-                    'metadata': item['metadata'],
+                    'metadata': process_metadata(item['metadata']),
                     RESOURCE_ID_FIELD: resource_id,
                 }
             )
