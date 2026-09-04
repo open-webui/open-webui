@@ -72,7 +72,13 @@
 	const checkLocalDBChats = async () => {
 		try {
 			// Check if IndexedDB exists
-			DB = await openDB('Chats', 1);
+			DB = await openDB('Chats', 1, {
+				upgrade: (db, oldVersion, newVersion, tx) => {
+					// Only probing for a legacy database, so undo the implicit creation; nothing awaits tx.done
+					tx.done.catch(() => {});
+					tx.abort();
+				}
+			});
 
 			if (!DB) {
 				return;
