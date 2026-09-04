@@ -50,6 +50,7 @@ known_source_ext = [
     'h',
     'c',
     'cs',
+    'ino',
     'sql',
     'log',
     'ini',
