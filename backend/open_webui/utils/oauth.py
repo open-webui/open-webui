@@ -1662,7 +1662,10 @@ class OAuthManager:
             log.debug('Using creator ID %s for potential group creation.', creator_id)
 
             for group_name in user_oauth_groups:
-                if group_name not in all_group_names:
+                if (
+                    group_name not in all_group_names
+                    and not is_in_blocked_groups(group_name, blocked_groups)
+                ):
                     log.info("Group '%s' not found via OAuth claim. Creating group...", group_name)
                     try:
                         new_group_form = GroupForm(
