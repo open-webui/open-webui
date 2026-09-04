@@ -80,6 +80,11 @@
 			return false;
 		}
 
+		// A single distance cannot be an outlier
+		if (distances.length === 1) {
+			return true;
+		}
+
 		if (
 			(inRange === distances.length - 1 && outOfRange === 1) ||
 			(outOfRange === distances.length - 1 && inRange === 1)
