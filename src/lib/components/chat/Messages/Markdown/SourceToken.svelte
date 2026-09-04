@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LinkPreview } from 'bits-ui';
+	import { Popover } from 'bits-ui';
 	import { decodeString } from '$lib/utils';
 	import Source from './Source.svelte';
 
@@ -45,8 +45,8 @@
 		{@const identifier = token.citationIdentifiers ? token.citationIdentifiers[0] : id - 1}
 		<Source id={identifier} title={sourceIds[id - 1]} {onClick} />
 	{:else}
-		<LinkPreview.Root openDelay={0} bind:open={openPreview}>
-			<LinkPreview.Trigger>
+		<Popover.Root bind:open={openPreview}>
+			<Popover.Trigger>
 				<button
 					aria-label={`${getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))} +${(token?.ids ?? []).length - 1} more sources`}
 					class="text-[0.625rem] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
@@ -59,9 +59,9 @@
 						<span class="dark:text-white/50 text-black/50">+{(token?.ids ?? []).length - 1}</span>
 					</span>
 				</button>
-			</LinkPreview.Trigger>
-			<LinkPreview.Portal>
-				<LinkPreview.Content class="z-[999]" align="start" strategy="fixed" sideOffset={6}>
+			</Popover.Trigger>
+			<Popover.Portal>
+				<Popover.Content class="z-[999]" align="start" strategy="fixed" sideOffset={6}>
 					<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-1 cursor-pointer">
 						{#each token.citationIdentifiers ?? token.ids as identifier}
 							{@const id =
@@ -71,9 +71,9 @@
 							</div>
 						{/each}
 					</div>
-				</LinkPreview.Content>
-			</LinkPreview.Portal>
-		</LinkPreview.Root>
+				</Popover.Content>
+			</Popover.Portal>
+		</Popover.Root>
 	{/if}
 {:else}
 	<span>{token.raw}</span>
