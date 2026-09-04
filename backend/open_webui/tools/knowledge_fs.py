@@ -33,8 +33,11 @@ DEFAULT_TAIL_LINES = 10
 # matched text, so capping the pattern or the line does not bound it.
 MATCH_BUDGET_SECONDS = 2.0
 MAX_REGEX_QUANTIFIER_COUNT = 2_000
-MAX_REGEX_QUANTIFIER_EXPANSION = 100_000
-_COUNTED_QUANTIFIER_RE = re.compile(r'(?<!\\)\{(\d+)(?:,\d*)?\}')
+MAX_REGEX_EXPANSION = 100_000
+_REGEX_SUBPROGRAM_COST = 100
+_SUBPROGRAM_ESCAPES = frozenset('RX')
+_REPEAT_RE = re.compile(r'\{(\d+)(,\d*)?\}|\+')
+_POSIX_CLASS_RE = re.compile(r'\[:\^?\w+:\]')
 
 
 class MatchBudgetExceeded(Exception):
@@ -88,21 +91,109 @@ def normalize_regex(pattern: str) -> str:
     return pattern.replace(r'\|', '|').replace(r'\|', '|')
 
 
-def validate_regex_quantifiers(pattern: str) -> str | None:
-    """Reject counted quantifiers that make regex compilation expand too much."""
-    quantifier_expansion = 1
-    for quantifier in _COUNTED_QUANTIFIER_RE.finditer(pattern):
-        count_text = quantifier.group(1)
-        count = int(count_text) if len(count_text) <= 6 else MAX_REGEX_QUANTIFIER_COUNT + 1
-        if count > MAX_REGEX_QUANTIFIER_COUNT:
-            return f'Regex quantifier counts over {MAX_REGEX_QUANTIFIER_COUNT:g} are not supported'
+def _is_unsupported_group(pattern: str, start: int) -> bool:
+    """Whether the group opening at start is a comment or sets a flag that changes what is built."""
+    if not pattern.startswith('(?', start):
+        return False
+    if pattern.startswith('(?#', start):
+        return True
 
-        # ponytail: conservative expansion catches nested quantifier bombs without mirroring regex syntax.
-        quantifier_expansion *= max(count, 1)
-        if quantifier_expansion > MAX_REGEX_QUANTIFIER_EXPANSION:
-            return 'Regex quantifiers expand too much, lower the counts'
+    index = start + 2
+    while index < len(pattern) and pattern[index].isalnum():
+        if pattern[index] in 'fxV':
+            return True
+        index += 1
 
-    return None
+    return False
+
+
+def _end_of_character_class(pattern: str, start: int) -> int:
+    """Index just past the character class opening at start, or -1 when its end is ambiguous."""
+    index = start + 1
+    if pattern.startswith('^', index):
+        index += 1
+    if pattern.startswith(']', index):
+        index += 1
+
+    while index < len(pattern):
+        if pattern[index] == '\\':
+            index += 2
+        elif pattern.startswith('[:', index):
+            # A [: that names no POSIX class follows rules the walk would have to mirror, so refuse it.
+            posix_class = _POSIX_CLASS_RE.match(pattern, index)
+            if not posix_class:
+                return -1
+            index = posix_class.end()
+        elif pattern[index] == ']':
+            return index + 1
+        else:
+            index += 1
+
+    return len(pattern)
+
+
+def _repeat_copies(repeat: re.Match[str]) -> tuple[int, int]:
+    """The repeat's own count, and the copies it unrolls, which is one more when it keeps a tail."""
+    count_text = repeat.group(1)
+    if count_text is None:
+        return 1, 2
+
+    if len(count_text) > 6:
+        return MAX_REGEX_QUANTIFIER_COUNT + 1, 1
+
+    upper_bound = repeat.group(2)
+    keeps_a_tail = upper_bound is not None and upper_bound[1:] != count_text
+    count = int(count_text)
+
+    return count, max(count + keeps_a_tail, 1)
+
+
+def validate_regex_expansion(pattern: str) -> str | None:
+    """Reject patterns that compile into too large a program."""
+    expansion = 0
+    last_atom_cost = 0
+    group_starts: list[int] = []
+    index = 0
+
+    # A class costs its size, a group costs a sub-program, and a repeat costs the copies it unrolls.
+    while index < len(pattern) and expansion <= MAX_REGEX_EXPANSION:
+        ch = pattern[index]
+        repeat = _REPEAT_RE.match(pattern, index) if ch in '{+' else None
+
+        if repeat:
+            count, repeats = _repeat_copies(repeat)
+            if count > MAX_REGEX_QUANTIFIER_COUNT:
+                return f'Regex quantifier counts over {MAX_REGEX_QUANTIFIER_COUNT:g} are not supported'
+            expansion += last_atom_cost * (repeats - 1)
+            last_atom_cost *= repeats
+            index = repeat.end()
+        elif ch == '\\':
+            last_atom_cost = _REGEX_SUBPROGRAM_COST if pattern[index + 1 : index + 2] in _SUBPROGRAM_ESCAPES else 1
+            expansion += last_atom_cost
+            index += 2
+        elif ch == '[':
+            end_of_class = _end_of_character_class(pattern, index)
+            if end_of_class < 0:
+                return 'Regex [: must name a POSIX class, such as [:alpha:]'
+            last_atom_cost = end_of_class - index
+            expansion += last_atom_cost
+            index = end_of_class
+        elif ch == '(':
+            if _is_unsupported_group(pattern, index):
+                return 'Inline (?f), (?x) and (?V) flags and pattern comments are not supported'
+            group_starts.append(expansion)
+            expansion += _REGEX_SUBPROGRAM_COST
+            last_atom_cost = 0
+            index += 1
+        elif ch == ')' and group_starts:
+            last_atom_cost = expansion - group_starts.pop()
+            index += 1
+        else:
+            expansion += 1
+            last_atom_cost = 1
+            index += 1
+
+    return 'Regex pattern expands too much, simplify it' if expansion > MAX_REGEX_EXPANSION else None
 
 
 def build_matcher(pattern: str, case_insensitive: bool = False, use_regex: bool = False) -> tuple:
@@ -112,12 +203,12 @@ def build_matcher(pattern: str, case_insensitive: bool = False, use_regex: bool 
 
     if use_regex:
         normalized = normalize_regex(pattern)
-        quantifier_error = validate_regex_quantifiers(normalized)
-        if quantifier_error:
-            return None, quantifier_error
+        expansion_error = validate_regex_expansion(normalized)
+        if expansion_error:
+            return None, expansion_error
         try:
-            re_flags = regex.IGNORECASE if case_insensitive else 0
-            compiled = regex.compile(normalized, re_flags)
+            re_flags = regex.VERSION0 | (regex.IGNORECASE if case_insensitive else 0)
+            compiled = regex.compile(normalized, re_flags, cache_pattern=False)
         except regex.error as e:
             return None, f'Invalid regex: {e}'
 
