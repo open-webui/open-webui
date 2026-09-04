@@ -29,7 +29,7 @@
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
-	import LanguageModeSelect from './LanguageModeSelect.svelte';
+	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from './LocalizedPromptSuggestions.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import TerminalSelector from './TerminalSelector.svelte';

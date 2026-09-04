@@ -14,7 +14,7 @@
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import DefaultFeatures from '$lib/components/workspace/Models/DefaultFeatures.svelte';
 	import BuiltinTools from '$lib/components/workspace/Models/BuiltinTools.svelte';
-	import LanguageModeSelect from '$lib/components/workspace/Models/LanguageModeSelect.svelte';
+	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
 
 	export let initHandler = () => {};

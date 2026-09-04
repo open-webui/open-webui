@@ -7,6 +7,7 @@
 	import { getBanners, setBanners } from '$lib/apis/configs';
 	import InterfaceSettings from '$lib/components/common/InterfaceSettings.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
@@ -38,6 +39,7 @@
 	let showUserUiDefaults = false;
 
 	let banners: Banner[] = [];
+	let bannerLocale = '';
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -454,39 +456,40 @@
 				</div>
 
 				<div>
-					<div class="mb-2 flex w-full items-start justify-between gap-4">
-						<div class="min-w-0">
-							<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Banners')}</div>
-							<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-								{$i18n.t('Create announcements shown to users in the app.')}
-							</div>
+					<div class="mb-1 flex min-h-7 w-full items-center justify-between gap-2">
+						<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Banners')}</div>
+						<div class="flex shrink-0 items-center gap-1">
+							{#if banners.length > 0}
+								<LanguageModeSelect bind:value={bannerLocale} className="w-fit" />
+							{/if}
+							<button
+								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+								type="button"
+								aria-label={$i18n.t('Add banner')}
+								on:click={() => {
+									if (banners.length === 0 || banners[banners.length - 1]?.content !== '') {
+										banners = [
+											...banners,
+											{
+												id: uuidv4(),
+												type: '',
+												title: '',
+												content: '',
+												dismissible: true,
+												timestamp: Math.floor(Date.now() / 1000)
+											}
+										];
+									}
+								}}
+							>
+								<Plus />
+							</button>
 						</div>
-
-						<button
-							class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
-							type="button"
-							aria-label={$i18n.t('Add banner')}
-							on:click={() => {
-								if (banners.length === 0 || banners[banners.length - 1]?.content !== '') {
-									banners = [
-										...banners,
-										{
-											id: uuidv4(),
-											type: '',
-											title: '',
-											content: '',
-											dismissible: true,
-											timestamp: Math.floor(Date.now() / 1000)
-										}
-									];
-								}
-							}}
-						>
-							<Plus />
-						</button>
 					</div>
-
-					<Banners bind:banners />
+					<div class="mb-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						{$i18n.t('Create announcements shown to users in the app.')}
+					</div>
+					<Banners bind:banners locale={bannerLocale} />
 				</div>
 			</AdminSettingSection>
 		{/if}

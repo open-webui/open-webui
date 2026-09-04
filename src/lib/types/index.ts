@@ -1,4 +1,5 @@
 export type Banner = {
+	i18n?: Record<string, { content: string }>;
 	id: string;
 	type: string;
 	title?: string;

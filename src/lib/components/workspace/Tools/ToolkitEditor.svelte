@@ -16,6 +16,11 @@
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
+	import LocalizedField from '$lib/components/common/LocalizedField.svelte';
+	import PluginTranslations from '$lib/components/workspace/common/PluginTranslations.svelte';
+	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
+	let locale = '';
 
 	let formElement = null;
 	let loading = false;
@@ -30,6 +35,7 @@
 
 	export let id = '';
 	export let name = '';
+	/** @type {{description: string, i18n?: Record<string, Record<string, string>>, manifest?: {translations?: Record<string, Record<string, string>>}}} */
 	export let meta = {
 		description: ''
 	};
@@ -159,12 +165,17 @@ class Tools:
 `;
 
 	const saveHandler = async () => {
+		if (!name.trim() || !meta.description?.trim()) {
+			locale = '';
+			toast.error($i18n.t('Name and description are required'));
+			return;
+		}
 		loading = true;
 		try {
 			await onSave({
 				id,
 				name,
-				meta,
+				meta: { ...meta, i18n: pruneEmptyLocaleEntries(meta.i18n) },
 				content,
 				access_grants: accessGrants
 			});
@@ -235,15 +246,14 @@ class Tools:
 			<span>{$i18n.t('Back')}</span>
 		</button>
 
-		<div class="flex shrink-0 items-start gap-2 pb-2 px-1">
-			<div class="min-w-0 flex-1">
+		<div class="flex shrink-0 flex-col gap-2 pb-2 px-1 sm:flex-row sm:items-start">
+			<div class="min-w-0 w-full flex-1">
 				<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
-					<input
-						class="w-full bg-transparent text-sm outline-hidden"
-						type="text"
+					<LocalizedField
 						placeholder={$i18n.t('Tool Name')}
-						aria-label={$i18n.t('Tool Name')}
 						bind:value={name}
+						bind:translations={meta.i18n}
+						{locale}
 						required
 					/>
 				</Tooltip>
@@ -276,12 +286,12 @@ class Tools:
 						content={$i18n.t('e.g. Tools for performing various operations')}
 						placement="top-start"
 					>
-						<input
-							class="w-full bg-transparent outline-hidden"
-							type="text"
+						<LocalizedField
 							placeholder={$i18n.t('Tool Description')}
-							aria-label={$i18n.t('Tool Description')}
 							bind:value={meta.description}
+							bind:translations={meta.i18n}
+							{locale}
+							field="description"
 							required
 						/>
 					</Tooltip>
@@ -289,6 +299,10 @@ class Tools:
 			</div>
 
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
+				<LanguageModeSelect
+					bind:value={locale}
+					translatedLocales={Object.keys(pruneEmptyLocaleEntries(meta.i18n))}
+				/>
 				<AccessButton
 					on:click={() => {
 						showAccessControlModal = true;
@@ -297,32 +311,42 @@ class Tools:
 			</div>
 		</div>
 
-		<div class="min-h-0 flex-1 overflow-hidden rounded-lg">
-			<CodeEditor
-				bind:this={codeEditor}
-				value={content}
-				lang="python"
-				{boilerplate}
-				className="text-[0.6875rem]"
-				onChange={(e) => {
-					_content = e;
-					if (!edit) {
-						const fm = extractFrontmatter(e);
-						if (fm.title && !name) {
-							name = formatSkillName(fm.title);
-							id = nameToId(fm.title);
+		<div class="min-h-0 flex-1 overflow-hidden rounded-lg flex flex-col">
+			{#if locale}
+				<PluginTranslations
+					id={edit ? id : ''}
+					kind="tool"
+					{locale}
+					bind:translations={meta.i18n}
+				/>
+			{/if}
+			<div class={locale ? 'hidden' : 'h-full'}>
+				<CodeEditor
+					bind:this={codeEditor}
+					value={content}
+					lang="python"
+					{boilerplate}
+					className="text-[0.6875rem]"
+					onChange={(e) => {
+						_content = e;
+						if (!edit) {
+							const fm = extractFrontmatter(e);
+							if (fm.title && !name) {
+								name = formatSkillName(fm.title);
+								id = nameToId(fm.title);
+							}
+							if (fm.description && !meta.description) {
+								meta = { ...meta, description: fm.description };
+							}
 						}
-						if (fm.description && !meta.description) {
-							meta = { ...meta, description: fm.description };
+					}}
+					onSave={async () => {
+						if (formElement) {
+							formElement.requestSubmit();
 						}
-					}
-				}}
-				onSave={async () => {
-					if (formElement) {
-						formElement.requestSubmit();
-					}
-				}}
-			/>
+					}}
+				/>
+			</div>
 		</div>
 
 		<div class="shrink-0 py-2 text-xs text-gray-500">

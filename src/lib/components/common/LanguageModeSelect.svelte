@@ -3,15 +3,17 @@
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { getContext } from 'svelte';
+	import availableLanguages from '$lib/i18n/locales/languages.json';
 
 	const i18n = getContext<any>('i18n');
 
 	export let value = '';
-	export let languages: { code: string; title: string }[] = [];
+	export let languages: { code: string; title: string }[] = availableLanguages;
 	export let translatedLocales: string[] = [];
 	export let className = '';
+	export let includeDefault = true;
 
-	$: options = languages.filter((language) => language.code !== 'en-US');
+	$: options = languages;
 
 	const statusFor = (code: string) => (translatedLocales.includes(code) ? ' *' : '');
 </script>
@@ -29,7 +31,7 @@
 		selectClassName="min-w-[8.5rem] !ps-8"
 		ariaLabel={$i18n.t('Editing language')}
 	>
-		<option value="">{$i18n.t('Default')}</option>
+		{#if includeDefault}<option value="">{$i18n.t('Default')}</option>{/if}
 		{#each options as language}
 			<option value={language.code}>{language.title}{statusFor(language.code)}</option>
 		{/each}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
@@ -141,6 +142,7 @@
 			const lowerQuery = query.toLowerCase();
 			return (
 				((t.name || '').toLowerCase().includes(lowerQuery) ||
+					resolveLocalizedResource(t, $i18n.language).toLowerCase().includes(lowerQuery) ||
 					(t.id || '').toLowerCase().includes(lowerQuery) ||
 					(t.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
 					(t.user?.email || '').toLowerCase().includes(lowerQuery)) && // Search by user email
@@ -450,7 +452,7 @@
 												<div
 													class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 												>
-													{tool.name}
+													{resolveLocalizedResource(tool, $i18n.language)}
 												</div>
 											</Tooltip>
 
@@ -476,16 +478,16 @@
 										</div>
 									</div>
 
-									{#if tool?.meta?.description}
+									{#if resolveLocalizedResource(tool, $i18n.language, 'description')}
 										<Tooltip
-											content={tool?.meta?.description}
+											content={resolveLocalizedResource(tool, $i18n.language, 'description')}
 											className="min-w-0"
 											placement="top-start"
 										>
 											<div
 												class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
 											>
-												{tool?.meta?.description}
+												{resolveLocalizedResource(tool, $i18n.language, 'description')}
 											</div>
 										</Tooltip>
 									{/if}
@@ -648,11 +650,17 @@
 		}}
 	>
 		<div class=" text-sm text-gray-500 truncate">
-			{$i18n.t('This will delete')} <span class="  font-normal">{selectedTool.name}</span>.
+			{$i18n.t('This will delete')}
+			<span class="  font-normal">{resolveLocalizedResource(selectedTool, $i18n.language)}</span>.
 		</div>
 	</DeleteConfirmDialog>
 
-	<ValvesModal bind:show={showValvesModal} type="tool" id={selectedTool?.id ?? null} />
+	<ValvesModal
+		bind:show={showValvesModal}
+		type="tool"
+		id={selectedTool?.id ?? null}
+		meta={selectedTool?.meta}
+	/>
 	<ManifestModal bind:show={showManifestModal} manifest={selectedTool?.meta?.manifest ?? {}} />
 
 	<ConfirmDialog
