@@ -14,7 +14,7 @@
 		const res = await createNoteHandler(title, content);
 
 		if (res) {
-			goto(`/notes/${res.id}`);
+			goto(`/notes/${res.id}`, { replaceState: true });
 		}
 	});
 </script>
