@@ -1416,8 +1416,9 @@ def convert_to_responses_payload(payload: dict) -> dict:
                         converted_tool['description'] = func['description']
                     if 'parameters' in func:
                         converted_tool['parameters'] = func['parameters']
-                    if 'strict' in func:
-                        converted_tool['strict'] = func['strict']
+                    # Responses defaults function tools to strict, Chat Completions does not,
+                    # so default to False to keep omission semantics for optional properties.
+                    converted_tool['strict'] = func.get('strict', False)
                 converted_tools.append(converted_tool)
             else:
                 # Already in correct format or unknown format, pass through
