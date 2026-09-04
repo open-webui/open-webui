@@ -183,7 +183,7 @@
 	const allSettings: SettingsTab[] = [
 		{
 			id: 'general',
-			title: 'General',
+			title: $i18n.t('General'),
 			keywords: [
 				'advancedparams',
 				'advancedparameters',
@@ -214,7 +214,7 @@
 		},
 		{
 			id: 'interface',
-			title: 'Interface',
+			title: $i18n.t('Interface'),
 			keywords: [
 				'allow user location',
 				'allow voice interruption in call',
@@ -350,7 +350,7 @@
 		},
 		{
 			id: 'notifications',
-			title: 'Notifications',
+			title: $i18n.t('Notifications'),
 			keywords: [
 				'browser notifications',
 				'browsernotifications',
@@ -366,7 +366,7 @@
 		},
 		{
 			id: 'shortcuts',
-			title: 'Keyboard',
+			title: $i18n.t('Keyboard'),
 			keywords: [
 				'commands',
 				'hotkeys',
@@ -381,7 +381,7 @@
 		},
 		{
 			id: 'connections',
-			title: 'Connections',
+			title: $i18n.t('Connections'),
 			keywords: [
 				'addconnection',
 				'add connection',
@@ -394,7 +394,7 @@
 		},
 		{
 			id: 'tools',
-			title: 'Integrations',
+			title: $i18n.t('Integrations'),
 			keywords: [
 				'addconnection',
 				'add connection',
@@ -412,7 +412,7 @@
 
 		{
 			id: 'personalization',
-			title: 'Personalization',
+			title: $i18n.t('Personalization'),
 			keywords: [
 				'account preferences',
 				'account settings',
@@ -434,7 +434,7 @@
 		},
 		{
 			id: 'audio',
-			title: 'Audio',
+			title: $i18n.t('Audio'),
 			keywords: [
 				'audio config',
 				'audio control',
@@ -510,7 +510,7 @@
 		},
 		{
 			id: 'data_controls',
-			title: 'Data Controls',
+			title: $i18n.t('Data Controls'),
 			keywords: [
 				'archive all chats',
 				'archive chats',
@@ -545,7 +545,7 @@
 		},
 		{
 			id: 'usage',
-			title: 'Usage',
+			title: $i18n.t('Usage'),
 			keywords: [
 				'activity',
 				'activity heatmap',
@@ -563,7 +563,7 @@
 		},
 		{
 			id: 'archived_chats',
-			title: 'Archived Chats',
+			title: $i18n.t('Archived Chats'),
 			keywords: [
 				'archive',
 				'archive chat',
@@ -582,7 +582,7 @@
 		},
 		{
 			id: 'account',
-			title: 'Account',
+			title: $i18n.t('Account'),
 			keywords: [
 				'account preferences',
 				'account settings',
@@ -632,7 +632,7 @@
 		},
 		{
 			id: 'about',
-			title: 'About',
+			title: $i18n.t('About'),
 			keywords: [
 				'about app',
 				'about me',
@@ -683,12 +683,12 @@
 	const adminSettings: SettingsTab[] = [
 		{
 			id: 'admin:general',
-			title: 'General',
+			title: $i18n.t('General'),
 			keywords: ['general', 'admin', 'settings', 'version', 'update', 'community', 'channels']
 		},
 		{
 			id: 'admin:authentication',
-			title: 'Authentication',
+			title: $i18n.t('Authentication'),
 			keywords: [
 				'authentication',
 				'auth',
@@ -703,7 +703,7 @@
 		},
 		{
 			id: 'admin:connections',
-			title: 'Connections',
+			title: $i18n.t('Connections'),
 			keywords: [
 				'connections',
 				'ollama',
@@ -716,7 +716,7 @@
 		},
 		{
 			id: 'admin:models',
-			title: 'Models',
+			title: $i18n.t('Models'),
 			keywords: [
 				'models',
 				'pull',
@@ -731,63 +731,63 @@
 		},
 		{
 			id: 'admin:subagents',
-			title: 'Sub-agents',
+			title: $i18n.t('Sub-agents'),
 			keywords: ['sub-agents', 'subagents', 'delegation', 'background', 'agents']
 		},
 		{
 			id: 'admin:interface',
-			title: 'Interface',
+			title: $i18n.t('Interface'),
 			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks', 'prompt suggestions', 'tags']
 		},
 		{
 			id: 'admin:audio',
-			title: 'Audio',
+			title: $i18n.t('Audio'),
 			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper', 'deepgram', 'azure']
 		},
 		{
 			id: 'admin:images',
-			title: 'Images',
+			title: $i18n.t('Images'),
 			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
 		},
 		{
 			id: 'admin:evaluations',
-			title: 'Evaluations',
+			title: $i18n.t('Evaluations'),
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
 		},
 		{
 			id: 'admin:analytics',
-			title: 'Analytics',
+			title: $i18n.t('Analytics'),
 			keywords: ['analytics', 'usage', 'stats', 'dashboard', 'models', 'users', 'messages']
 		},
 		{
 			id: 'admin:integrations',
-			title: 'Integrations',
+			title: $i18n.t('Integrations'),
 			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
 		},
 		{
 			id: 'admin:documents',
-			title: 'Documents',
+			title: $i18n.t('Documents'),
 			keywords: ['documents', 'files', 'rag', 'knowledge', 'upload', 'embedding', 'vector db']
 		},
 		{
 			id: 'admin:web',
-			title: 'Web Search',
+			title: $i18n.t('Web Search'),
 			keywords: ['web search', 'google', 'bing', 'duckduckgo', 'serp', 'searxng', 'tavily', 'exa']
 		},
 		{
 			id: 'admin:code-execution',
-			title: 'Code Execution',
+			title: $i18n.t('Code Execution'),
 			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
 		},
 		{
 			id: 'admin:pipelines',
-			title: 'Pipelines',
+			title: $i18n.t('Pipelines'),
 			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
 		},
 
 		{
 			id: 'admin:db',
-			title: 'Database',
+			title: $i18n.t('Database'),
 			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
 		}
 	];
@@ -1189,7 +1189,7 @@
 							}}
 						>
 							<AdminTabIcon id={adminTabSegment(tab.id)} className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t(tab.title)}</span>
+							<span>{tab.title}</span>
 						</button>
 					{/if}
 				{/each}

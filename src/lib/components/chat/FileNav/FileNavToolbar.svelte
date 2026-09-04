@@ -135,7 +135,9 @@
 		{/if}
 	</div>
 	{#if !writable}
-		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0"> Read-only </span>
+		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0">
+			{$i18n.t('Read-only')}
+		</span>
 	{/if}
 
 	<Tooltip content={$i18n.t('Refresh')}>

@@ -768,7 +768,7 @@
 					>
 						<button
 							type="button"
-							aria-label="Chat Menu"
+							aria-label={$i18n.t('Chat Menu')}
 							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0"
 						>
 							<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />

@@ -205,7 +205,7 @@
 							<span class="capitalize text-black dark:text-white"
 								>{$config?.license_metadata?.type} license</span
 							>
-							registered to
+							{$i18n.t('registered to')}
 							<span class="capitalize text-black dark:text-white"
 								>{$config?.license_metadata?.organization_name}</span
 							>

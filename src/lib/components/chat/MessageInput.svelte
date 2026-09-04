@@ -113,7 +113,7 @@
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	type AskUserPrompt = {
 		show: boolean;
@@ -1780,7 +1780,7 @@
 							<div class="mx-1 rounded-2xl bg-white text-xs dark:bg-gray-900">
 								<div class="flex items-center justify-between px-3 py-1.5">
 									<div class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-										<span>Status</span>
+										<span>{$i18n.t('Status')}</span>
 									</div>
 
 									<button
@@ -1790,14 +1790,14 @@
 											showStatusPanel = false;
 										}}
 									>
-										Close
+										{$i18n.t('Close')}
 									</button>
 								</div>
 
 								<div class="space-y-0.5 px-3 pb-2">
 									<div class="rounded-xl py-0.5 text-gray-600 dark:text-gray-400">
 										<div class="flex min-h-4 items-center gap-3">
-											<span class="min-w-0 flex-1 truncate">Context usage</span>
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Context usage')}</span>
 											<span
 												class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
 											>
@@ -1818,7 +1818,7 @@
 
 									{#if messageQueue.length}
 										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
-											<span class="min-w-0 flex-1 truncate">Queued messages</span>
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Queued messages')}</span>
 											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
 												{messageQueue.length}
 											</span>
@@ -1827,7 +1827,7 @@
 
 									{#if chatTasks.length}
 										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
-											<span class="min-w-0 flex-1 truncate">Tasks</span>
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Tasks')}</span>
 											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
 												{chatTasks.length}
 											</span>
@@ -1835,7 +1835,7 @@
 									{/if}
 
 									<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
-										<span class="min-w-0 flex-1 truncate">Chat ID</span>
+										<span class="min-w-0 flex-1 truncate">{$i18n.t('Chat ID')}</span>
 										{#if chatId}
 											<button
 												type="button"
@@ -1869,7 +1869,7 @@
 									<div class="flex items-center justify-between w-full">
 										<div class="pl-[0.0625rem] flex items-center gap-2 text-sm dark:text-gray-500">
 											<img
-												alt="model profile"
+												alt={$i18n.t('model profile')}
 												class="size-3.5 max-w-[1.75rem] object-cover rounded-full"
 												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${$models.find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
 											/>
@@ -1991,7 +1991,7 @@
 									<button
 										type="button"
 										class="absolute top-2.5 right-3 z-20 p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-										aria-label="Expand input"
+										aria-label={$i18n.t('Expand input')}
 										on:click={() => {
 											showInputModal = true;
 										}}
@@ -2330,7 +2330,7 @@
 												>
 													<button
 														class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
-														aria-label="Available Tools"
+														aria-label={$i18n.t('Available Tools')}
 														type="button"
 														on:click={() => {
 															showTools = !showTools;
@@ -2353,7 +2353,7 @@
 												>
 													<button
 														class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
-														aria-label="Available Skills"
+														aria-label={$i18n.t('Available Skills')}
 														type="button"
 														on:click={() => {
 															showSkills = !showSkills;
@@ -2607,7 +2607,7 @@
 																toast.error($i18n.t('Permission denied when accessing microphone'));
 															}
 														}}
-														aria-label="Voice Input"
+														aria-label={$i18n.t('Voice Input')}
 													>
 														<Mic className="size-[1.125rem]" />
 													</button>

@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { onDestroy, onMount, tick } from 'svelte';
+	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
 	import { clampDocumentTargetPage } from '$lib/utils/documentPreview';
+
+	const i18n: any = getContext('i18n');
 
 	export let slides: string[] = [];
 	export let currentSlide = 0;
@@ -356,7 +358,7 @@
 				type="button"
 				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 pointer-coarse:hidden"
 				on:click={zoomOut}
-				aria-label="Zoom out"
+				aria-label={$i18n.t('Zoom out')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -375,7 +377,7 @@
 				type="button"
 				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
 				on:click={resetView}
-				aria-label="Reset zoom"
+				aria-label={$i18n.t('Reset zoom')}
 			>
 				{Math.round(zoomLevel * 100)}%
 			</button>
@@ -383,7 +385,7 @@
 				type="button"
 				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 pointer-coarse:hidden"
 				on:click={zoomIn}
-				aria-label="Zoom in"
+				aria-label={$i18n.t('Zoom in')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

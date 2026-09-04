@@ -58,7 +58,7 @@
 	import PortPreview from './FileNav/PortPreview.svelte';
 	import XTerminal from './XTerminal.svelte';
 
-	const i18n: any = getContext('i18n');
+	const i18n = getContext('i18n');
 
 	export let overlay = false;
 	export let chatId: string | null = null;
@@ -937,7 +937,9 @@
 				}
 			} catch (e) {
 				console.error('Failed to render Office file:', e);
-				fileContent = `Error previewing file: ${e instanceof Error ? e.message : 'Unknown error'}`;
+				fileContent = $i18n.t('Error previewing file: {{error}}', {
+					error: e instanceof Error ? e.message : $i18n.t('Unknown error')
+				});
 			}
 		} else {
 			fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);

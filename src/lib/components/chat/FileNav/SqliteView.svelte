@@ -2,7 +2,7 @@
 	import { getContext, onDestroy } from 'svelte';
 	import Spinner from '../../common/Spinner.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let data: ArrayBuffer;
 
@@ -46,7 +46,7 @@
 			loading = false;
 		} catch (e) {
 			loading = false;
-			error = e instanceof Error ? e.message : 'Failed to open database';
+			error = e instanceof Error ? e.message : $i18n.t('Failed to open database');
 		}
 	};
 
@@ -82,7 +82,7 @@
 				rows = [];
 			}
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Query failed';
+			error = e instanceof Error ? e.message : $i18n.t('Query failed');
 		}
 	};
 
@@ -99,7 +99,7 @@
 				queryRows = [];
 			}
 		} catch (e) {
-			queryError = e instanceof Error ? e.message : 'Query failed';
+			queryError = e instanceof Error ? e.message : $i18n.t('Query failed');
 			queryColumns = [];
 			queryRows = [];
 		}
@@ -275,7 +275,13 @@
 							/>
 						</svg>
 					</button>
-					<span>{page + 1} / {totalPages} ({totalRows.toLocaleString()} rows)</span>
+					<span>
+						{$i18n.t('{{page}} / {{totalPages}} ({{rows}} rows)', {
+							page: page + 1,
+							totalPages,
+							rows: totalRows.toLocaleString()
+						})}
+					</span>
 					<button
 						aria-label={$i18n.t('Next page')}
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"

@@ -5,7 +5,7 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import {
 		config,
@@ -966,7 +966,7 @@
 											>
 												<img
 													src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
-													alt="modelfile profile"
+													alt={$i18n.t('modelfile profile')}
 													class=" rounded-xl size-7 object-cover"
 													loading="lazy"
 													decoding="async"

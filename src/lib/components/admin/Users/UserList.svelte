@@ -35,7 +35,7 @@
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import UserPreviewModal from '$lib/components/admin/UserPreviewModal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	let page = 1;
 
@@ -166,9 +166,10 @@
 			className="mx-0"
 			banner={{
 				type: 'error',
-				title: 'License Error',
-				content:
+				title: $i18n.t('License Error'),
+				content: $i18n.t(
 					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
+				)
 			}}
 		/>
 	</div>
