@@ -583,6 +583,14 @@ def get_admin_user(user=Depends(get_current_user)):
     return user
 
 
+def require_admin_for_url_idx(user, url_idx: int | None) -> None:
+    if url_idx is not None and user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
 async def create_admin_user(email: str, password: str, name: str = 'Admin'):
     """
     Create an admin user from environment variables.
