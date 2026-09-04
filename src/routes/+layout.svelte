@@ -1237,7 +1237,7 @@
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
-		initI18n(localStorage?.locale);
+		await initI18n(localStorage?.locale, backendConfig?.i18n ?? {});
 		if (!localStorage.locale) {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
@@ -1246,7 +1246,7 @@
 			const lang = backendConfig?.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
-			changeLanguage(lang);
+			await changeLanguage(lang);
 			dayjs.locale(lang);
 		}
 

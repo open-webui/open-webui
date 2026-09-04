@@ -78,7 +78,7 @@ from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
 from open_webui.utils.redis import get_redis_client
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -113,6 +113,7 @@ ADMIN_CONFIG_KEYS = {
     'DEFAULT_USER_ROLE': 'ui.default_user_role',
     'DEFAULT_GROUP_ID': 'ui.default_group_id',
     'DEFAULT_INTERFACE_SETTINGS': 'ui.default_interface_settings',
+    'I18N': 'ui.i18n',
     'JWT_EXPIRES_IN': 'auth.jwt_expiry',
     'ENABLE_COMMUNITY_SHARING': 'ui.enable_community_sharing',
     'ENABLE_MESSAGE_RATING': 'ui.enable_message_rating',
@@ -1216,6 +1217,7 @@ class AdminConfig(BaseModel):
     DEFAULT_USER_ROLE: str
     DEFAULT_GROUP_ID: str
     DEFAULT_INTERFACE_SETTINGS: dict | None = None
+    I18N: dict[str, dict[str, StrictStr]] | None = None
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
@@ -1236,10 +1238,38 @@ class AdminConfig(BaseModel):
     PENDING_USER_OVERLAY_CONTENT: str | None = None
     RESPONSE_WATERMARK: str | None = None
 
+    @field_validator('I18N')
+    @classmethod
+    def validate_i18n(cls, value):
+        if value is None:
+            raise ValueError('I18N must be a dictionary')
+        unsafe_keys = {'__proto__', 'prototype', 'constructor'}
+
+        def placeholders(text):
+            return {match.strip() for match in re.findall(r'\{\{\s*-?\s*([^},]+)(?:,[^}]+)?\s*\}\}', text)}
+
+        cleaned = {}
+        for locale, entries in value.items():
+            if not locale.strip() or locale in unsafe_keys:
+                raise ValueError(f'Invalid language: {locale}')
+            translations = {}
+            for key, text in entries.items():
+                if not key.strip() or key in unsafe_keys:
+                    raise ValueError(f'Invalid translation key: {key}')
+                if text.strip():
+                    if placeholders(key) != placeholders(text):
+                        raise ValueError(f'Interpolation placeholders do not match: {locale}: {key}')
+                    translations[key] = text
+            if translations:
+                cleaned[locale] = translations
+        return cleaned
+
 
 @router.post('/admin/config')
 async def update_admin_config(request: Request, form_data: AdminConfig, user=Depends(get_admin_user)):
     updates = config_updates(form_data.model_dump(), ADMIN_CONFIG_KEYS)
+    if 'I18N' not in form_data.model_fields_set:
+        updates.pop('ui.i18n', None)
     updates['ui.default_interface_settings'] = form_data.DEFAULT_INTERFACE_SETTINGS or {}
     updates['folders.max_file_count'] = int(form_data.FOLDER_MAX_FILE_COUNT) if form_data.FOLDER_MAX_FILE_COUNT else ''
     updates['automations.max_count'] = int(form_data.AUTOMATION_MAX_COUNT) if form_data.AUTOMATION_MAX_COUNT else ''

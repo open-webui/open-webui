@@ -37,7 +37,7 @@
 <div class="flex flex-col gap-1.5" use:init>
 	{#each banners as banner, bannerIdx (banner.id)}
 		<div
-			class="flex items-start gap-1 rounded-lg border border-gray-100/40 bg-transparent px-2 py-1 transition focus-within:border-gray-300 dark:border-gray-850/50 dark:focus-within:border-gray-600"
+			class="flex items-start gap-1 rounded-lg border border-gray-100/40 bg-transparent px-2 py-1 transition focus-within:border-blue-400 dark:border-gray-850/50 dark:focus-within:border-blue-500"
 			id="banner-item-{banner.id}"
 		>
 			<Tooltip content={$i18n.t('Reorder')}>

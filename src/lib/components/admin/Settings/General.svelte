@@ -23,6 +23,9 @@
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import I18nSettings from './I18nSettings.svelte';
+	import { updateI18n } from '$lib/i18n';
+	import { entriesToI18n, i18nToEntries, type I18nEntry } from '$lib/utils/translationDictionary';
 
 	const i18n: any = getContext('i18n');
 
@@ -37,6 +40,8 @@
 	let adminConfig: any = null;
 	let defaultInterfaceSettings: Record<string, any> = {};
 	let showUserUiDefaults = false;
+	let uiI18nEntries: I18nEntry[] = [];
+	let saving = false;
 
 	let banners: Banner[] = [];
 	let bannerLocale = '';
@@ -73,24 +78,37 @@
 	};
 
 	const updateHandler = async () => {
-		adminConfig.DEFAULT_INTERFACE_SETTINGS = defaultInterfaceSettings;
-
-		const res = await updateAdminConfig(localStorage.token, adminConfig);
-
-		await updateBanners();
-
-		await config.set(await getBackendConfig());
-
-		if (res) {
+		if (saving) return;
+		saving = true;
+		try {
+			const cleaned = entriesToI18n(uiI18nEntries);
+			const res = await updateAdminConfig(localStorage.token, {
+				...adminConfig,
+				DEFAULT_INTERFACE_SETTINGS: defaultInterfaceSettings,
+				I18N: cleaned
+			});
+			if (!res) throw new Error($i18n.t('Failed to update settings'));
+			await updateI18n(res.I18N ?? cleaned);
+			await updateBanners();
+			await config.set(await getBackendConfig());
 			saveHandler();
-		} else {
-			toast.error($i18n.t('Failed to update settings'));
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: Array.isArray(error)
+						? error.map((entry) => entry.msg).join('\n')
+						: String(error)
+			);
+		} finally {
+			saving = false;
 		}
 	};
 
 	onMount(async () => {
 		adminConfig = await getAdminConfig(localStorage.token);
 		defaultInterfaceSettings = getDefaultInterfaceSettings();
+		uiI18nEntries = i18nToEntries(adminConfig.I18N ?? {});
 
 		banners = [...$_banners];
 
@@ -396,6 +414,9 @@
 			<Events />
 
 			<AdminSettingSection title={$i18n.t('UI')}>
+				<fieldset id="ui-i18n-settings" disabled={saving} class="min-w-0">
+					<I18nSettings bind:entries={uiI18nEntries} />
+				</fieldset>
 				<div class="shrink-0">
 					<div class="flex items-center justify-between gap-4 py-0.5">
 						<button
@@ -463,7 +484,7 @@
 								<LanguageModeSelect bind:value={bannerLocale} className="w-fit" />
 							{/if}
 							<button
-								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+								class="flex size-6 items-center justify-center text-gray-400 dark:text-gray-600"
 								type="button"
 								aria-label={$i18n.t('Add banner')}
 								on:click={() => {
@@ -499,6 +520,7 @@
 		<button
 			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
+			disabled={saving}
 		>
 			{$i18n.t('Save')}
 		</button>
