@@ -2934,6 +2934,14 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 'loaded_count': len(docs),
             }
         else:
+            # Nothing loaded, so nothing ever reaches the embedding step. Name the loader here and
+            # leave the embedding message below for failures that are actually about embedding.
+            if not any(doc.page_content.strip() for doc in docs):
+                raise HTTPException(
+                    status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.WEB_SEARCH_NO_CONTENT_ERROR,
+                )
+
             # Create a single collection for all documents
             # Bind the ephemeral collection to its owner so filter_accessible_collections can scope it per-user.
             collection_name = f'web-search-{user.id}-{calculate_sha256_string("-".join(form_data.queries))}'[:63]
@@ -2953,7 +2961,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 log.exception(f'Error saving web search results to vector DB: {e}')
                 raise HTTPException(
                     status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail='Failed to embed and store the retrieved web pages. Check the embedding configuration in Admin Settings > Documents.',
+                    detail=ERROR_MESSAGES.WEB_SEARCH_EMBEDDING_ERROR,
                 )
 
             return {

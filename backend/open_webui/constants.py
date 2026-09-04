@@ -99,6 +99,14 @@ class ERROR_MESSAGES(str, Enum):
     INVALID_URL = 'The URL you provided is invalid. Please double-check and try again.'
 
     WEB_SEARCH_ERROR = 'Something went wrong while searching the web.'
+    WEB_SEARCH_NO_CONTENT_ERROR = (
+        'None of the web search results could be loaded. '
+        'Check the web loader configuration in Admin Settings > Web Search.'
+    )
+    WEB_SEARCH_EMBEDDING_ERROR = (
+        'Failed to embed and store the retrieved web pages. '
+        'Check the embedding configuration in Admin Settings > Documents.'
+    )
 
     OLLAMA_API_DISABLED = 'The Ollama API is disabled. Please enable it to use this feature.'
 
