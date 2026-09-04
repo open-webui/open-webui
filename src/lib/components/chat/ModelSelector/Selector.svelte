@@ -48,7 +48,7 @@
 
 	import ModelItem from './ModelItem.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let id = '';
@@ -1296,8 +1296,10 @@
 								>
 									<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
 									<div class="min-w-0 flex-1 truncate">
-										Downloading "{downloadName}"{download?.providerLabel
-											? ` from ${download.providerLabel}`
+										{$i18n.t('Downloading "{{name}}"', {
+											name: downloadName
+										})}{download?.providerLabel
+											? ` ${$i18n.t('from {{provider}}', { provider: download.providerLabel })}`
 											: ''}
 									</div>
 									{#if 'pullProgress' in download}

@@ -9,7 +9,7 @@
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let query = '';
 	export let onSelect = (e) => {};
@@ -142,10 +142,10 @@
 
 	{#each commandItems as item, commandIdx}
 		{#if item.data.id === 'temporary'}
-			<Tooltip content="Toggle temporary chat for this new chat." placement="top">
+			<Tooltip content={$i18n.t('Toggle temporary chat for this new chat.')} placement="top">
 				<button
 					type="button"
-					aria-label="Temporary: toggle temporary chat for this new chat."
+					aria-label={$i18n.t('Temporary: toggle temporary chat for this new chat.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
 						{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
@@ -166,18 +166,21 @@
 						{/if}
 					</span>
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-						<span class="truncate">Temporary</span>
+						<span class="truncate">{$i18n.t('Temporary')}</span>
 						<span class="app-muted text-[0.625rem] truncate shrink-0">
-							{temporaryEnabled ? 'On' : 'Off'}
+							{temporaryEnabled ? $i18n.t('On') : $i18n.t('Off')}
 						</span>
 					</span>
 				</button>
 			</Tooltip>
 		{:else if item.data.id === 'compact'}
-			<Tooltip content="Shorten older messages so this chat can keep going." placement="top">
+			<Tooltip
+				content={$i18n.t('Shorten older messages so this chat can keep going.')}
+				placement="top"
+			>
 				<button
 					type="button"
-					aria-label="Compact: shorten older messages so this chat can keep going."
+					aria-label={$i18n.t('Compact: shorten older messages so this chat can keep going.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
 						{commandIdx === selectedIdx ? 'app-interactive-active' : ''} disabled:opacity-50"
 					disabled={compactDisabled}
@@ -220,20 +223,20 @@
 						{/if}
 					</span>
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-						<span class="truncate">Compact</span>
+						<span class="truncate">{$i18n.t('Compact')}</span>
 						{#if contextHasThreshold}
 							<span class="app-muted text-[0.625rem] truncate shrink-0">
-								{contextCirclePercent}% full
+								{$i18n.t('{{percent}}% full', { percent: contextCirclePercent })}
 							</span>
 						{/if}
 					</span>
 				</button>
 			</Tooltip>
 		{:else if item.data.id === 'fork'}
-			<Tooltip content="Fork the current chat branch into a new chat." placement="top">
+			<Tooltip content={$i18n.t('Fork the current chat branch into a new chat.')} placement="top">
 				<button
 					type="button"
-					aria-label="Fork: fork the current chat branch into a new chat."
+					aria-label={$i18n.t('Fork: fork the current chat branch into a new chat.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
 						{commandIdx === selectedIdx ? 'app-interactive-active' : ''} disabled:opacity-50"
 					disabled={forkDisabled}
@@ -268,16 +271,18 @@
 						</svg>
 					</span>
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-						<span class="truncate">Fork</span>
-						<span class="app-muted text-[0.625rem] truncate shrink-0">Current branch</span>
+						<span class="truncate">{$i18n.t('Fork')}</span>
+						<span class="app-muted text-[0.625rem] truncate shrink-0">
+							{$i18n.t('Current branch')}
+						</span>
 					</span>
 				</button>
 			</Tooltip>
 		{:else if item.data.id === 'status'}
-			<Tooltip content="Check what is running in this chat." placement="top">
+			<Tooltip content={$i18n.t('Check what is running in this chat.')} placement="top">
 				<button
 					type="button"
-					aria-label="Status: check what is running in this chat."
+					aria-label={$i18n.t('Status: check what is running in this chat.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
 						{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
@@ -306,18 +311,18 @@
 						</svg>
 					</span>
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-						<span class="truncate">Status</span>
+						<span class="truncate">{$i18n.t('Status')}</span>
 						<span class="app-muted text-[0.625rem] truncate shrink-0">
-							Check what is running in this chat.
+							{$i18n.t('Check what is running in this chat.')}
 						</span>
 					</span>
 				</button>
 			</Tooltip>
 		{:else if item.data.id === 'model'}
-			<Tooltip content="Show or switch the current model." placement="top">
+			<Tooltip content={$i18n.t('Show or switch the current model.')} placement="top">
 				<button
 					type="button"
-					aria-label="Model: show or switch the current model."
+					aria-label={$i18n.t('Model: show or switch the current model.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
 						{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
@@ -334,16 +339,16 @@
 						<Sparkles className="size-3.5" />
 					</span>
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-						<span class="truncate">Model</span>
+						<span class="truncate">{$i18n.t('Model')}</span>
 						<span class="app-muted text-[0.625rem] truncate shrink-0">/model</span>
 					</span>
 				</button>
 			</Tooltip>
 		{:else if item.data.id === 'settings'}
-			<Tooltip content="Open settings." placement="top">
+			<Tooltip content={$i18n.t('Open settings.')} placement="top">
 				<button
 					type="button"
-					aria-label="Settings: open settings."
+					aria-label={$i18n.t('Settings: open settings.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
 						{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
@@ -360,7 +365,7 @@
 						<Knobs className="size-3.5" />
 					</span>
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-						<span class="truncate">Settings</span>
+						<span class="truncate">{$i18n.t('Settings')}</span>
 						<span class="app-muted text-[0.625rem] truncate shrink-0">/settings</span>
 					</span>
 				</button>

@@ -35,7 +35,7 @@
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import { extractInputVariables } from '$lib/utils';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let onSubmit: Function;
 	export let onBack: null | Function = null;
@@ -622,13 +622,13 @@
 											{#if info.meta.profile_image_url}
 												<img
 													src={info.meta.profile_image_url}
-													alt="model profile"
+													alt={$i18n.t('model profile')}
 													class="size-full object-cover"
 												/>
 											{:else}
 												<img
 													src="{WEBUI_BASE_URL}/static/favicon.png"
-													alt="model profile"
+													alt={$i18n.t('model profile')}
 													class="size-full object-cover"
 												/>
 											{/if}

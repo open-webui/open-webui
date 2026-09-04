@@ -318,7 +318,7 @@
 				</span>
 			{/if}
 			{#if !writable && !renaming}
-				<span class="text-[0.625rem] text-gray-400 shrink-0">Read-only</span>
+				<span class="text-[0.625rem] text-gray-400 shrink-0">{$i18n.t('Read-only')}</span>
 			{/if}
 			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
 				{#if showDate && entry.modified}

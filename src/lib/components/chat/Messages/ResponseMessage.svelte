@@ -1498,9 +1498,9 @@
 									{/each}
 
 									{#if message.done && !readOnly && forkHandler && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))}
-										<Tooltip content="Fork chat" placement="bottom">
+										<Tooltip content={$i18n.t('Fork chat')} placement="bottom">
 											<button
-												aria-label="Fork chat"
+												aria-label={$i18n.t('Fork chat')}
 												class="{isLastMessage || ($settings?.highContrastMode ?? false)
 													? 'visible'
 													: 'hover-reveal'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"

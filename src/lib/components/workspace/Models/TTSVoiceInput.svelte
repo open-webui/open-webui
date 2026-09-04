@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, tick } from 'svelte';
+	import { createEventDispatcher, getContext, tick } from 'svelte';
 
 	type Voice = {
 		id: string;
@@ -16,6 +16,8 @@
 	export let placeholder = '';
 	export let className = 'w-full';
 	export let selectedIds: string[] | null = null;
+
+	const i18n: any = getContext('i18n');
 
 	const dispatch = createEventDispatcher<{
 		select: Voice;
@@ -153,7 +155,9 @@
 						enableVoices();
 					}}
 				>
-					<span class="truncate">Enable all ({matchedVoices.length})</span>
+					<span class="truncate"
+						>{$i18n.t('Enable all ({{count}})', { count: matchedVoices.length })}</span
+					>
 				</button>
 			{/if}
 		{/if}

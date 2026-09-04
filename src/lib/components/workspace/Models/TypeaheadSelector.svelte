@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, tick } from 'svelte';
+	import { createEventDispatcher, getContext, tick } from 'svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
@@ -21,6 +21,8 @@
 	export let className = 'w-full';
 	export let selectedIds: string[] | null = null;
 	export let variant: 'inline' | 'dropdown' = 'inline';
+
+	const i18n: any = getContext('i18n');
 
 	const dispatch = createEventDispatcher<{
 		select: Item;
@@ -101,7 +103,9 @@
 							class="h-[1.6875rem] w-full rounded-xl px-2 text-left text-[0.8125rem] text-gray-700 transition-colors hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
 							on:click={enableItems}
 						>
-							<span class="truncate">Enable all ({matchedItems.length})</span>
+							<span class="truncate"
+								>{$i18n.t('Enable all ({{count}})', { count: matchedItems.length })}</span
+							>
 						</button>
 					{/if}
 

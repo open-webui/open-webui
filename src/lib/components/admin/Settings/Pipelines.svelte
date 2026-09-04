@@ -306,7 +306,7 @@
 								}}
 							>
 								{#if pipelineFiles}
-									{pipelineFiles.length > 0 ? `${pipelineFiles.length}` : ''} pipeline(s) selected
+									{$i18n.t('{{count}} pipeline(s) selected', { count: pipelineFiles.length })}
 								{:else}
 									{$i18n.t('Select a .py file')}
 								{/if}
