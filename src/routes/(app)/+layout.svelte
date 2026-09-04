@@ -69,6 +69,12 @@
 		}
 	};
 
+	// deleteDB() stays blocked as long as a connection is open
+	const deleteLocalDBChats = async () => {
+		DB.close();
+		await deleteDB('Chats');
+	};
+
 	const checkLocalDBChats = async () => {
 		try {
 			// Check if IndexedDB exists
@@ -82,7 +88,7 @@
 			localDBChats = chats.map((item, idx) => chats[chats.length - 1 - idx]);
 
 			if (localDBChats.length === 0) {
-				await deleteDB('Chats');
+				await deleteLocalDBChats();
 			}
 		} catch (error) {
 			// IndexedDB Not Found
@@ -245,9 +251,9 @@
 		}
 
 		clearChatInputStorage();
+		checkLocalDBChats();
 		try {
 			await Promise.all([
-				checkLocalDBChats(),
 				setBanners().catch((e) => console.error('Failed to load banners:', e)),
 				setTools().catch((e) => console.error('Failed to load tools:', e)),
 				setUserSettings(async () => {
@@ -509,7 +515,7 @@
 
 												const tx = DB.transaction('chats', 'readwrite');
 												await Promise.all([tx.store.clear(), tx.done]);
-												await deleteDB('Chats');
+												await deleteLocalDBChats();
 
 												localDBChats = [];
 											}}
