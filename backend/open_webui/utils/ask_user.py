@@ -1,4 +1,3 @@
-import re
 from collections.abc import Callable
 
 from open_webui.utils.json_codec import JSONCodec
@@ -8,11 +7,13 @@ ASK_USER_NAME = 'ask_user'
 
 
 def make_question_id(question: dict, index: int, seen_ids: set[str]) -> str:
-    """Generate a stable ID when a model omits one from a question."""
-    raw_id = question.get('id') or question.get('header') or question.get('question')
-    candidate = re.sub(r'[^A-Za-z0-9_-]+', '-', str(raw_id or '')).strip('-_')[:64]
-    candidate = candidate or f'question-{index + 1}'
-    base = candidate
+    """Return an existing ID or generate a stable, non-content-derived ID."""
+    candidate = str(question.get('id') or '').strip()[:64]
+    if candidate:
+        return candidate
+
+    base = f'question-{index + 1}'
+    candidate = base
     suffix = 2
     while candidate in seen_ids:
         suffix_text = f'-{suffix}'
