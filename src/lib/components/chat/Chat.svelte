@@ -1237,6 +1237,9 @@
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {
 					dismissContextCompactionToast();
+					if (data?.output) {
+						message.output = data.output;
+					}
 					if (event.message_id === history.currentId) {
 						taskIds = null;
 						// Set all response messages to done
