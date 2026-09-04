@@ -23,7 +23,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import iter_filter_conditions
+from open_webui.retrieval.vector.utils import iter_filter_conditions, process_metadata
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import PointStruct
@@ -182,7 +182,7 @@ class QdrantClient(VectorDBBase):
                 vector=item['vector'],
                 payload={
                     'text': item['text'],
-                    'metadata': item['metadata'],
+                    'metadata': process_metadata(item['metadata']),
                     TENANT_ID_FIELD: tenant_id,
                 },
             )
