@@ -80,7 +80,7 @@
 					required
 				/>
 
-				<div class="flex justify-end gap-2 pt-3 bg-gray-50 dark:bg-gray-900/50">
+				<div class="flex justify-end gap-2 pt-3">
 					<button
 						class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 transition rounded-full"
 						type="submit"
