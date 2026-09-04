@@ -207,7 +207,7 @@
 											: 'text-gray-700 hover:text-gray-950 dark:text-gray-300 dark:hover:text-white'}"
 										on:click={() => selectOption(question, option, optionIndex)}
 									>
-										<span class="min-w-0 shrink-0 text-xs">{option.label}</span>
+										<span class="max-w-[50%] text-xs">{option.label}</span>
 										<Tooltip
 											as="span"
 											className="min-w-0 flex-1"
@@ -215,7 +215,7 @@
 											placement="top-start"
 										>
 											<span
-												class="block truncate text-xs leading-relaxed text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
+												class="line-clamp-2 text-xs leading-relaxed text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
 											>
 												{option.description}
 											</span>
