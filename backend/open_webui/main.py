@@ -2575,8 +2575,8 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 
                 return {'current': VERSION, 'latest': latest_version[1:]}
     except Exception as e:
-        log.debug(e)
-        return {'current': VERSION, 'latest': VERSION}
+        log.warning(f'Version update check failed: {e}')
+        return {'current': VERSION, 'latest': None}
 
 
 @app.get('/api/changelog')
