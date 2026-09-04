@@ -3132,13 +3132,12 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
                 params = ast.literal_eval(tool_args)
             except Exception as e:
                 log.debug(e)
-                return {
-                    'tool_call_id': tool_call.get('id', ''),
-                    'content': (
-                        'Error: Tool call arguments could not be parsed. '
-                        'The model generated malformed or incomplete JSON.'
-                    ),
-                }
+                params = None
+    if not isinstance(params, dict):
+        return {
+            'tool_call_id': tool_call.get('id', ''),
+            'content': 'Error: Tool call arguments could not be parsed. The model must generate a valid JSON object.',
+        }
     tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
 
     tool = tools.get(name)
@@ -5633,7 +5632,9 @@ async def streaming_chat_response_handler(response, ctx):
                                     params = ast.literal_eval(tool_args)
                                 except Exception as e:
                                     log.debug(e)
-                                    return None
+                                    params = None
+                        if not isinstance(params, dict):
+                            return None
                         tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
                         return params
 
@@ -5702,8 +5703,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 {
                                     'tool_call_id': tool_call_id,
                                     'content': (
-                                        'Error: Tool call arguments could not be parsed. The model generated '
-                                        f'malformed or incomplete JSON for `{tool_function_name}`. Please try again.'
+                                        'Error: Tool call arguments could not be parsed. The model must generate '
+                                        f'a valid JSON object for `{tool_function_name}`. Please try again.'
                                     ),
                                 }
                             )
