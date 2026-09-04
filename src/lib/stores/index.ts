@@ -332,6 +332,7 @@ type Config = {
 	default_models: string;
 	default_pinned_models?: string | null;
 	default_prompt_suggestions: PromptSuggestion[];
+	default_prompt_suggestions_i18n?: Record<string, { suggestion_prompts: PromptSuggestion[] }>;
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;

@@ -1697,6 +1697,7 @@ if default_prompt_suggestions == []:
     ]
 
 DEFAULT_PROMPT_SUGGESTIONS = default_prompt_suggestions
+DEFAULT_PROMPT_SUGGESTIONS_I18N = {}
 
 try:
     model_order_list = JSONCodec.loads(os.getenv('MODEL_ORDER_LIST', '[]'))
@@ -3096,6 +3097,7 @@ DEFAULT_CONFIG = {
     'ui.default_pinned_models': DEFAULT_PINNED_MODELS,
     'ui.default_interface_settings': DEFAULT_INTERFACE_SETTINGS,
     'ui.prompt_suggestions': DEFAULT_PROMPT_SUGGESTIONS,
+    'ui.prompt_suggestions_i18n': DEFAULT_PROMPT_SUGGESTIONS_I18N,
     'ui.model_order_list': MODEL_ORDER_LIST,
     'models.default_metadata': DEFAULT_MODEL_METADATA,
     'models.default_params': DEFAULT_MODEL_PARAMS,

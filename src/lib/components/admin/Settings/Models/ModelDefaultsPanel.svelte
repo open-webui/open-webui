@@ -8,12 +8,14 @@
 	import { DEFAULT_CAPABILITIES } from '$lib/constants';
 	import { getModelsConfig, setModelsConfig, setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { getBackendConfig } from '$lib/apis';
+	import { getLanguages } from '$lib/i18n';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import DefaultFeatures from '$lib/components/workspace/Models/DefaultFeatures.svelte';
 	import BuiltinTools from '$lib/components/workspace/Models/BuiltinTools.svelte';
-	import PromptSuggestions from '$lib/components/workspace/Models/PromptSuggestions.svelte';
+	import LanguageModeSelect from '$lib/components/workspace/Models/LanguageModeSelect.svelte';
+	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
 
 	export let initHandler = () => {};
 	export let dirty = false;
@@ -32,6 +34,9 @@
 	let defaultParams = {};
 	let builtinTools = {};
 	let promptSuggestions = [];
+	let promptSuggestionsI18n = {};
+	let languages = [];
+	let editingLocale = '';
 
 	$: configuredParams = Object.entries(defaultParams ?? {}).filter(
 		([_, value]) => value !== null && value !== '' && value !== undefined
@@ -40,6 +45,10 @@
 	$: availableFeatures = enabledCapabilities
 		.filter(([key]) => ['web_search', 'code_interpreter', 'image_generation'].includes(key))
 		.map(([key]) => key);
+	$: translatedPromptLocales = Object.entries(promptSuggestionsI18n ?? {})
+		.filter(([_, value]) => Array.isArray(value?.suggestion_prompts))
+		.map(([locale]) => locale);
+	$: editingLocaleLabel = languages.find((language) => language.code === editingLocale)?.title;
 
 	const getSnapshot = () =>
 		JSON.stringify({
@@ -47,7 +56,8 @@
 			defaultFeatureIds,
 			defaultParams: Object.fromEntries(configuredParams),
 			builtinTools,
-			promptSuggestions: promptSuggestions.filter((p) => p.content !== '')
+			promptSuggestions: promptSuggestions.filter((p) => p.content !== ''),
+			promptSuggestionsI18n
 		});
 
 	const updateDirty = async () => {
@@ -74,6 +84,8 @@
 
 		defaultParams = config?.DEFAULT_MODEL_PARAMS ?? {};
 		promptSuggestions = $appConfig?.default_prompt_suggestions ?? [];
+		promptSuggestionsI18n = $appConfig?.default_prompt_suggestions_i18n ?? {};
+		languages = await getLanguages();
 		savedSnapshot = getSnapshot();
 		dirty = false;
 		loading = false;
@@ -104,7 +116,13 @@
 		if (res) {
 			config = res;
 			promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
-			promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
+			const suggestionsRes = await setDefaultPromptSuggestions(
+				localStorage.token,
+				promptSuggestions,
+				promptSuggestionsI18n
+			);
+			promptSuggestions = suggestionsRes?.suggestions ?? promptSuggestions;
+			promptSuggestionsI18n = suggestionsRes?.i18n ?? promptSuggestionsI18n;
 			await appConfig.set(await getBackendConfig());
 			savedSnapshot = getSnapshot();
 			dirty = false;
@@ -236,12 +254,26 @@
 
 					{#if showPromptSuggestions}
 						<div
-							class="max-h-[24rem] overflow-y-auto pb-2 pr-1 scrollbar-hover"
+							class="max-h-[24rem] space-y-2 overflow-y-auto pb-2 pr-1 scrollbar-hover"
 							on:click={updateDirty}
 							on:change={updateDirty}
 							on:input={updateDirty}
 						>
-							<PromptSuggestions bind:promptSuggestions />
+							<LocalizedPromptSuggestions
+								bind:promptSuggestions
+								bind:localizedPromptSuggestions={promptSuggestionsI18n}
+								locale={editingLocale}
+								localeLabel={editingLocaleLabel}
+								onChange={updateDirty}
+							>
+								<LanguageModeSelect
+									slot="language"
+									bind:value={editingLocale}
+									{languages}
+									translatedLocales={translatedPromptLocales}
+									className="w-fit max-w-[10rem]"
+								/>
+							</LocalizedPromptSuggestions>
 						</div>
 					{/if}
 				</div>

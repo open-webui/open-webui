@@ -2261,6 +2261,7 @@ async def get_app_config(request: Request):
         'ui.default_pinned_models',
         'ui.default_interface_settings',
         'ui.prompt_suggestions',
+        'ui.prompt_suggestions_i18n',
         'code_execution.engine',
         'code_interpreter.engine',
         'audio.tts.engine',
@@ -2361,6 +2362,7 @@ async def get_app_config(request: Request):
                 'default_models': config.get('ui.default_models'),
                 'default_pinned_models': config.get('ui.default_pinned_models'),
                 'default_prompt_suggestions': config.get('ui.prompt_suggestions'),
+                'default_prompt_suggestions_i18n': config.get('ui.prompt_suggestions_i18n'),
                 **({'user_count': user_count} if user_count is not None else {}),
                 'code': {
                     'engine': config.get('code_execution.engine'),

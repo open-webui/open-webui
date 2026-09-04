@@ -34,6 +34,10 @@
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
+	import {
+		resolveLocalizedModelDescription,
+		resolveLocalizedModelName
+	} from '$lib/utils/localizedContent';
 	import { getModels } from '$lib/apis';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -288,9 +292,9 @@
 		items.map((item) => {
 			const _item = {
 				...item,
-				modelName: item.model?.name,
+				modelName: resolveLocalizedModelName(item.model, $i18n.language),
 				tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
-				desc: item.model?.info?.meta?.description
+				desc: resolveLocalizedModelDescription(item.model, $i18n.language)
 			};
 			return _item;
 		}),
@@ -306,9 +310,9 @@
 				items.map((item) => {
 					const _item = {
 						...item,
-						modelName: item.model?.name,
+						modelName: resolveLocalizedModelName(item.model, $i18n.language),
 						tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
-						desc: item.model?.info?.meta?.description
+						desc: resolveLocalizedModelDescription(item.model, $i18n.language)
 					};
 					return _item;
 				})

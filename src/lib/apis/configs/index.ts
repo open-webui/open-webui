@@ -742,7 +742,11 @@ export const setSubagentsConfig = async (token: string, config: object) => {
 	return res.json();
 };
 
-export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
+export const setDefaultPromptSuggestions = async (
+	token: string,
+	promptSuggestions: any[],
+	promptSuggestionsI18n: Record<string, any> = {}
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/suggestions`, {
@@ -752,7 +756,8 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			suggestions: promptSuggestions
+			suggestions: promptSuggestions,
+			i18n: promptSuggestionsI18n
 		})
 	})
 		.then(async (res) => {
