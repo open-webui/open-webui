@@ -1,9 +1,24 @@
+import re
 from collections.abc import Callable
 
 from open_webui.utils.json_codec import JSONCodec
 
 
 ASK_USER_NAME = 'ask_user'
+
+
+def make_question_id(question: dict, index: int, seen_ids: set[str]) -> str:
+    """Generate a stable ID when a model omits one from a question."""
+    raw_id = question.get('id') or question.get('header') or question.get('question')
+    candidate = re.sub(r'[^A-Za-z0-9_-]+', '-', str(raw_id or '')).strip('-_')[:64]
+    candidate = candidate or f'question-{index + 1}'
+    base = candidate
+    suffix = 2
+    while candidate in seen_ids:
+        suffix_text = f'-{suffix}'
+        candidate = f'{base[:64 - len(suffix_text)]}{suffix_text}'
+        suffix += 1
+    return candidate
 
 
 def get_ask_user_tool_calls(tool_calls: list[dict]) -> tuple[list[dict], str | None]:
@@ -34,16 +49,14 @@ def normalize_ask_user_request(arguments: dict) -> dict:
         if not isinstance(question, dict):
             raise ValueError('Each question must be an object.')
 
-        question_id = str(question.get('id') or '').strip()[:64]
-        if not question_id:
-            raise ValueError('Each question requires a non-empty id.')
+        question_id = make_question_id(question, index, seen_ids)
         if question_id in seen_ids:
             raise ValueError(f'Duplicate question id: {question_id}')
         seen_ids.add(question_id)
 
         options = question.get('options')
-        if not isinstance(options, list) or not 2 <= len(options) <= 3:
-            raise ValueError('Each question requires 2-3 options.')
+        if not isinstance(options, list) or not 2 <= len(options) <= 4:
+            raise ValueError('Each question requires 2-4 options.')
 
         normalized_options = []
         for option in options:
