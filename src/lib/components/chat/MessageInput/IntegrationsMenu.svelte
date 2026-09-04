@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolveLocalizedResource, resolveLocalizedFunction } from '$lib/utils/localizedContent';
+	import { functions as localizedFunctions } from '$lib/stores';
 	import { getContext, onDestroy, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 
@@ -108,14 +110,22 @@
 
 	const setTools = (toolItems: IntegrationItem[] | null, query = '') => {
 		const q = query.trim().toLowerCase();
-		const items = (toolItems ?? []).reduce<Record<string, IntegrationItem>>((a, tool) => {
-			a[tool.id] = {
-				...tool,
-				name: tool.name,
-				description: tool.meta?.description
-			};
-			return a;
-		}, {});
+		const items = (toolItems ?? [])
+			.filter(
+				(tool) =>
+					!q ||
+					`${tool.name} ${resolveLocalizedResource(tool, $i18n.language)} ${resolveLocalizedResource(tool, $i18n.language, 'description')}`
+						.toLowerCase()
+						.includes(q)
+			)
+			.reduce<Record<string, IntegrationItem>>((a, tool) => {
+				a[tool.id] = {
+					...tool,
+					name: tool.name,
+					description: tool.meta?.description
+				};
+				return a;
+			}, {});
 
 		for (const serverIdx in ($toolServers ?? []) as any[]) {
 			const server = (($toolServers ?? []) as any[])[serverIdx];
@@ -142,7 +152,14 @@
 
 	const setSkills = (skillItems: IntegrationItem[] | null, query = '') => {
 		skills = (skillItems ?? [])
-			.filter((skill) => skill.is_active)
+			.filter(
+				(skill) =>
+					skill.is_active &&
+					(!query.trim() ||
+						`${skill.name} ${resolveLocalizedResource(skill, $i18n.language)} ${resolveLocalizedResource(skill, $i18n.language, 'description')}`
+							.toLowerCase()
+							.includes(query.trim().toLowerCase()))
+			)
 			.reduce<Record<string, IntegrationItem>>((a, skill) => {
 				a[skill.id] = {
 					...skill,
@@ -162,13 +179,6 @@
 		const q = query.trim();
 		searchedToolQuery = query;
 
-		if (q) {
-			const toolItems = await getTools(localStorage.token, q).catch(() => []);
-			if (requestId !== toolRequestId) return;
-			setTools(toolItems, q);
-			return;
-		}
-
 		if ($_tools === null) {
 			await _tools.set(await getTools(localStorage.token));
 		}
@@ -180,13 +190,6 @@
 		const requestId = ++skillRequestId;
 		const q = query.trim();
 		searchedSkillQuery = query;
-
-		if (q) {
-			const skillItems = await getSkills(localStorage.token, q).catch(() => []);
-			if (requestId !== skillRequestId) return;
-			setSkills(skillItems, q);
-			return;
-		}
 
 		if ($_skills === null) {
 			await _skills.set(await getSkills(localStorage.token));
@@ -328,7 +331,15 @@
 
 					{#if toggleFilters && toggleFilters.length > 0}
 						{#each toggleFilters.sort( (a, b) => a.name.localeCompare( b.name, undefined, { sensitivity: 'base' } ) ) as filter, filterIdx (filter.id)}
-							<Tooltip content={filter?.description} placement="top-start">
+							<Tooltip
+								content={resolveLocalizedFunction(
+									filter,
+									$localizedFunctions,
+									$i18n.language,
+									'description'
+								)}
+								placement="top-start"
+							>
 								<button
 									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 									aria-pressed={selectedFilterIds.includes(filter.id)}
@@ -351,7 +362,11 @@
 																? 'dark:invert-[80%]'
 																: ''}"
 															style="fill: currentColor;"
-															alt={filter.name}
+															alt={resolveLocalizedFunction(
+																filter,
+																$localizedFunctions,
+																$i18n.language
+															)}
 														/>
 													</div>
 												{:else}
@@ -359,7 +374,9 @@
 												{/if}
 											</div>
 
-											<div class=" truncate">{filter?.name}</div>
+											<div class=" truncate">
+												{resolveLocalizedFunction(filter, $localizedFunctions, $i18n.language)}
+											</div>
 										</div>
 									</div>
 
@@ -513,13 +530,29 @@
 										{/if}
 										<div class="flex-1 truncate">
 											<div class="flex flex-1 gap-2 items-center">
-												<Tooltip content={tools?.[toolId]?.name ?? ''} placement="top">
+												<Tooltip
+													content={resolveLocalizedResource(
+														tools?.[toolId],
+														$i18n.language,
+														'name'
+													)}
+													placement="top"
+												>
 													<div class="shrink-0">
 														<Wrench />
 													</div>
 												</Tooltip>
-												<Tooltip content={tools?.[toolId]?.description ?? ''} placement="top-start">
-													<div class=" truncate">{tools?.[toolId]?.name}</div>
+												<Tooltip
+													content={resolveLocalizedResource(
+														tools?.[toolId],
+														$i18n.language,
+														'description'
+													)}
+													placement="top-start"
+												>
+													<div class=" truncate">
+														{resolveLocalizedResource(tools?.[toolId], $i18n.language, 'name')}
+													</div>
 												</Tooltip>
 											</div>
 										</div>
@@ -623,16 +656,29 @@
 									>
 										<div class="flex-1 truncate">
 											<div class="flex flex-1 gap-2 items-center">
-												<Tooltip content={skills?.[skillId]?.name ?? ''} placement="top">
+												<Tooltip
+													content={resolveLocalizedResource(
+														skills?.[skillId],
+														$i18n.language,
+														'name'
+													)}
+													placement="top"
+												>
 													<div class="shrink-0">
 														<Cube className="size-3.5" strokeWidth="1.75" />
 													</div>
 												</Tooltip>
 												<Tooltip
-													content={skills?.[skillId]?.description ?? ''}
+													content={resolveLocalizedResource(
+														skills?.[skillId],
+														$i18n.language,
+														'description'
+													)}
 													placement="top-start"
 												>
-													<div class=" truncate">{skills?.[skillId]?.name}</div>
+													<div class=" truncate">
+														{resolveLocalizedResource(skills?.[skillId], $i18n.language, 'name')}
+													</div>
 												</Tooltip>
 											</div>
 										</div>

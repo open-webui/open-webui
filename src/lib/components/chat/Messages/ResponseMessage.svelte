@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
+	import { functions as localizedFunctions } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 
 	import { createEventDispatcher, onDestroy } from 'svelte';
@@ -1469,10 +1471,21 @@
 									{/if}
 
 									{#each model?.actions ?? [] as action}
-										<Tooltip content={action.name} placement="bottom">
+										<Tooltip
+											content={resolveLocalizedFunction(
+												action,
+												$localizedFunctions,
+												$i18n.language
+											)}
+											placement="bottom"
+										>
 											<button
 												type="button"
-												aria-label={action.name}
+												aria-label={resolveLocalizedFunction(
+													action,
+													$localizedFunctions,
+													$i18n.language
+												)}
 												class="{isLastMessage || ($settings?.highContrastMode ?? false)
 													? 'visible'
 													: 'hover-reveal'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
@@ -1488,7 +1501,11 @@
 																? 'dark:invert-[80%]'
 																: ''}"
 															style="fill: currentColor;"
-															alt={action.name}
+															alt={resolveLocalizedFunction(
+																action,
+																$localizedFunctions,
+																$i18n.language
+															)}
 															draggable="false"
 														/>
 													</div>

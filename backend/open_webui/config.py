@@ -2163,6 +2163,7 @@ else:
 
 
 class BannerModel(BaseModel):
+    i18n: dict[str, dict[str, str]] | None = None
     id: str
     type: str
     title: str | None = None

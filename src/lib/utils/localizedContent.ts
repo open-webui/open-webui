@@ -32,6 +32,91 @@ export const resolveLocalizedString = (
 	return fallback ?? '';
 };
 
+export const resolveLocalizedResource = (resource: any, locale: string, field = 'name') => {
+	const meta = resource?.meta;
+	const key = resource?.action_id ? `actions.${resource.action_id}.${field}` : field;
+	return resolveLocalizedString(
+		resource?.[field] ?? meta?.[field] ?? (field === 'name' ? resource?.id : ''),
+		meta?.i18n,
+		locale,
+		key
+	);
+};
+
+export const resolveLocalizedFunction = (
+	item: any,
+	functions: any[] | null,
+	locale: string,
+	field = 'name'
+) => {
+	const owner = (functions ?? [])
+		.filter((fn) => item?.id === fn.id || item?.id?.startsWith(`${fn.id}.`))
+		.sort((a, b) => b.id.length - a.id.length)[0];
+	const key =
+		owner && item.id !== owner.id
+			? `actions.${item.id.slice(owner.id.length + 1)}.${field}`
+			: field;
+	return resolveLocalizedString(item?.[field], owner?.meta?.i18n ?? item?.meta?.i18n, locale, key);
+};
+
+// This is a display-only copy: identifiers, defaults and submitted values stay untouched.
+export const localizeValvesSchema = (
+	schema: any,
+	locale: string,
+	meta: any = {},
+	prefix = 'valves'
+) => {
+	if (!schema) return schema;
+	const translate = (value: string, key: string) =>
+		resolveLocalizedString(value, meta?.i18n, locale, `${prefix}.${key}`);
+	return {
+		...schema,
+		properties: Object.fromEntries(
+			Object.entries(schema.properties ?? {}).map(([key, value]: [string, any]) => [
+				key,
+				{
+					...value,
+					title: translate(value.title ?? key, `${key}.title`),
+					description: translate(value.description ?? '', `${key}.description`),
+					...(Array.isArray(value.input?.options)
+						? {
+								input: {
+									...value.input,
+									options: value.input.options.map((option: any) =>
+										typeof option === 'object'
+											? {
+													...option,
+													label: translate(
+														option.label ?? String(option.value),
+														`${key}.enum.${option.value}`
+													)
+												}
+											: { value: option, label: translate(String(option), `${key}.enum.${option}`) }
+									)
+								}
+							}
+						: {})
+				}
+			])
+		)
+	};
+};
+
+export const valveTranslationSource = (schema: any, prefix: string): Record<string, string> => {
+	const strings: Record<string, string> = {};
+	for (const [key, field] of Object.entries(schema?.properties ?? {}) as [string, any][]) {
+		strings[`${prefix}.${key}.title`] = field.title ?? key;
+		if (field.description) strings[`${prefix}.${key}.description`] = field.description;
+		for (const option of field.enum ?? field.input?.options ?? []) {
+			const value = typeof option === 'object' ? option.value : option;
+			strings[`${prefix}.${key}.enum.${value}`] = String(
+				typeof option === 'object' ? (option.label ?? value) : value
+			);
+		}
+	}
+	return strings;
+};
+
 export const resolveLocalizedModelName = (model: any, locale?: string | null) => {
 	const meta = model?.info?.meta ?? model?.meta;
 	const info = model?.info ?? model;

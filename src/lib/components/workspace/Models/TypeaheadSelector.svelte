@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { createEventDispatcher, getContext, tick } from 'svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
@@ -39,7 +40,12 @@
 		const description = (item.description ?? item.meta?.description ?? '').toLowerCase();
 
 		return (
-			query === '' || id.includes(query) || name.includes(query) || description.includes(query)
+			query === '' ||
+			id.includes(query) ||
+			name.includes(query) ||
+			description.includes(query) ||
+			resolveLocalizedResource(item, $i18n.language).toLowerCase().includes(query) ||
+			resolveLocalizedResource(item, $i18n.language, 'description').toLowerCase().includes(query)
 		);
 	});
 
@@ -123,7 +129,9 @@
 									selectItem(item);
 								}}
 							>
-								<span class="min-w-0 flex-1 truncate">{item.name || item.id}</span>
+								<span class="min-w-0 flex-1 truncate"
+									>{resolveLocalizedResource(item, $i18n.language)}</span
+								>
 								{#if selectedIds !== null && selectedIds.includes(item.id)}
 									<svg
 										class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"

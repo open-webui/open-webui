@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext } from 'svelte';
 	import { skills } from '$lib/stores';
 
@@ -42,12 +43,12 @@
 						<Collapsible buttonClassName="w-full mb-0.5">
 							<div class="truncate">
 								<div class="text-sm font-normal dark:text-gray-100 text-gray-800 truncate">
-									{skill?.name}
+									{resolveLocalizedResource(skill, $i18n.language)}
 								</div>
 
-								{#if skill?.description}
+								{#if resolveLocalizedResource(skill, $i18n.language, 'description')}
 									<div class="text-xs text-gray-500">
-										{skill?.description}
+										{resolveLocalizedResource(skill, $i18n.language, 'description')}
 									</div>
 								{/if}
 							</div>

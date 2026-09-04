@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
+	import { functions as localizedFunctions } from '$lib/stores';
 	import DOMPurify from 'dompurify';
 	import { toast } from 'svelte-sonner';
 
@@ -2373,7 +2375,14 @@
 											{#each selectedFilterIds as filterId (filterId)}
 												{@const filter = toggleFilters.find((f) => f.id === filterId)}
 												{#if filter}
-													<Tooltip content={filter?.name} placement="top">
+													<Tooltip
+														content={resolveLocalizedFunction(
+															filter,
+															$localizedFunctions,
+															$i18n.language
+														)}
+														placement="top"
+													>
 														<button
 															on:click|preventDefault={() => {
 																if (
@@ -2405,7 +2414,11 @@
 																			? 'dark:invert-[80%]'
 																			: ''}"
 																		style="fill: currentColor;"
-																		alt={filter.name}
+																		alt={resolveLocalizedFunction(
+																			filter,
+																			$localizedFunctions,
+																			$i18n.language
+																		)}
 																	/>
 																</div>
 															{:else}
