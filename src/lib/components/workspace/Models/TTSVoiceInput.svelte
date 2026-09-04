@@ -156,7 +156,7 @@
 					}}
 				>
 					<span class="truncate"
-						>{$i18n.t('Enable all ({{count}})', { count: matchedVoices.length })}</span
+						>{$i18n.t('Enable all ({{COUNT}})', { COUNT: matchedVoices.length })}</span
 					>
 				</button>
 			{/if}
