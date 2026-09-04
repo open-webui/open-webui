@@ -8,6 +8,7 @@ from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
 )
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
 from open_webui.functions import get_function_models
 from open_webui.models.access_grants import AccessGrants
@@ -492,7 +493,7 @@ async def check_model_access(user, model, model_info=None, db=None):
         if not await has_base_model_access(
             user.id, model_info, user_role=user.role, user_group_ids=user_group_ids, db=db
         ):
-            raise Exception('Model not found')
+            raise Exception(ERROR_MESSAGES.BASE_MODEL_ACCESS_PROHIBITED)
 
 
 async def get_filtered_models(models, user, db=None):

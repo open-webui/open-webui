@@ -70,6 +70,9 @@ class ERROR_MESSAGES(str, Enum):
     ACCESS_PROHIBITED = (
         'You do not have permission to access this resource. Please contact your administrator for assistance.'
     )
+    BASE_MODEL_ACCESS_PROHIBITED = (
+        'Access to the base model is restricted. Please contact your administrator for assistance.'
+    )
     ACTION_PROHIBITED = 'The requested action has been restricted as a security measure.'
 
     FILE_NOT_SENT = 'FILE_NOT_SENT'

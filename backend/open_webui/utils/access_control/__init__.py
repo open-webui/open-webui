@@ -1,6 +1,7 @@
 from typing import Any
 
 from open_webui.config import DEFAULT_USER_PERMISSIONS
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.access_grants import (
     has_anyone_read_access_grant,
     has_public_read_access_grant,
@@ -385,7 +386,7 @@ async def check_model_access(
 
             # Enforce access on chained base models
             if not await has_base_model_access(user.id, model_info, user_role=user.role, user_group_ids=user_group_ids):
-                raise HTTPException(status_code=403, detail='Model not found')
+                raise HTTPException(status_code=403, detail=ERROR_MESSAGES.BASE_MODEL_ACCESS_PROHIBITED)
     else:
         if user.role != 'admin':
             raise HTTPException(status_code=403, detail='Model not found')
