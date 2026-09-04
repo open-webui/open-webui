@@ -274,7 +274,11 @@ export const AIAutocompletion = Extension.create({
 							// Iterate over all nodes in the document
 							const tr = state.tr;
 							state.doc.descendants((node, pos) => {
-								if (node.type.name === 'paragraph' && node.attrs['data-suggestion']) {
+								if (
+									node.type.name === 'paragraph' &&
+									node.attrs['data-suggestion'] &&
+									node.attrs['data-prompt']
+								) {
 									// Remove suggestion from this paragraph
 									tr.setNodeMarkup(pos, null, {
 										...node.attrs,
