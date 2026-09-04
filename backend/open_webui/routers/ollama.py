@@ -478,13 +478,16 @@ async def get_filtered_models(models, user, db=None):
 
 
 @router.get('/api/tags')
-@router.get('/api/tags/{url_idx}', dependencies=[Depends(get_admin_user)])
+@router.get('/api/tags/{url_idx}')
 async def get_ollama_tags(
     request: Request,
     url_idx: int | None = None,
     user=Depends(get_verified_user),
 ):
     """List Ollama model tags, optionally from a specific backend."""
+    if url_idx is not None and user.role != 'admin':
+        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
     if not await Config.get('ollama.enable'):
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
@@ -541,13 +544,16 @@ async def get_ollama_loaded_models(
 
 
 @router.get('/api/version')
-@router.get('/api/version/{url_idx}', dependencies=[Depends(get_admin_user)])
+@router.get('/api/version/{url_idx}')
 async def get_ollama_versions(
     request: Request,
     user=Depends(get_verified_user),
     url_idx: int | None = None,
 ):
     """Return the lowest Ollama version across all configured backends."""
+    if url_idx is not None and user.role != 'admin':
+        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
     if not await Config.get('ollama.enable'):
         return {'version': False}
 
@@ -1479,7 +1485,7 @@ async def generate_responses(
 
 
 @router.get('/v1/models')
-@router.get('/v1/models/{url_idx}', dependencies=[Depends(get_admin_user)])
+@router.get('/v1/models/{url_idx}')
 async def get_openai_models(
     request: Request,
     url_idx: int | None = None,
@@ -1487,6 +1493,9 @@ async def get_openai_models(
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """List models in the OpenAI-compatible format."""
+    if url_idx is not None and user.role != 'admin':
+        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
     if url_idx is None:
         model_list = await get_all_models(request, user=user)
         raw_models = model_list['models']
