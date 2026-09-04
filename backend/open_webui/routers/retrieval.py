@@ -2588,6 +2588,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
         if config.SERPER_API_KEY:
             return await search_serper(
                 config.SERPER_API_KEY,
+                config.SERPER_API_BASE_URL,
                 query,
                 config.WEB_SEARCH_RESULT_COUNT,
                 config.WEB_SEARCH_DOMAIN_FILTER_LIST,

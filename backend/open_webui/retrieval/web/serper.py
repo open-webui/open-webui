@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 
 async def search_serper(
     api_key: str,
+    api_base_url: str,
     query: str,
     count: int,
     filter_list: list[str] | None = None,
@@ -19,7 +20,8 @@ async def search_serper(
 
     Results are sorted by their position field before truncation.
     """
-    url = 'https://google.serper.dev/search'
+    base_url = (api_base_url or 'https://google.serper.dev').strip().rstrip('/') or 'https://google.serper.dev'
+    url = f'{base_url}/search'
     headers = {'X-API-KEY': api_key, 'Content-Type': 'application/json'}
 
     session = await get_session()

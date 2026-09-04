@@ -1239,6 +1239,8 @@ SERPSTACK_HTTPS = os.getenv('SERPSTACK_HTTPS', 'True').lower() == 'true'
 
 SERPER_API_KEY = os.getenv('SERPER_API_KEY', '')
 
+SERPER_API_BASE_URL = os.getenv('SERPER_API_BASE_URL', 'https://google.serper.dev')
+
 SERPLY_API_KEY = os.getenv('SERPLY_API_KEY', '')
 
 SERPHOUSE_API_KEY = os.getenv('SERPHOUSE_API_KEY', '')
