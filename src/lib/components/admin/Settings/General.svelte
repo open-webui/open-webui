@@ -27,10 +27,10 @@
 
 	export let saveHandler: Function;
 
-	let updateAvailable: boolean | null = false;
+	let updateAvailable: boolean | null = null;
 	let version = {
 		current: WEBUI_VERSION,
-		latest: WEBUI_VERSION
+		latest: ''
 	};
 
 	let adminConfig: any = null;
@@ -47,7 +47,7 @@
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
 				current: WEBUI_VERSION,
-				latest: WEBUI_VERSION
+				latest: null
 			};
 		});
 
@@ -91,6 +91,10 @@
 		defaultInterfaceSettings = getDefaultInterfaceSettings();
 
 		banners = [...$_banners];
+
+		if ($config?.features?.enable_version_update_check) {
+			checkForVersionUpdates();
+		}
 	});
 </script>
 
@@ -112,17 +116,23 @@
 							<Tooltip content={WEBUI_BUILD_HASH}>v{WEBUI_VERSION}</Tooltip>
 
 							{#if $config?.features?.enable_version_update_check}
-								<a
-									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-									target="_blank"
-									class="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-								>
-									{updateAvailable === null
-										? $i18n.t('Checking for updates...')
-										: updateAvailable
-											? `(v${version.latest} ${$i18n.t('available!')})`
-											: $i18n.t('(latest)')}
-								</a>
+								{#if version.latest === null}
+									<span class="text-gray-500 dark:text-gray-500"
+										>{$i18n.t('Could not check for updates')}</span
+									>
+								{:else}
+									<a
+										href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+										target="_blank"
+										class="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+									>
+										{updateAvailable === null
+											? $i18n.t('Checking for updates...')
+											: updateAvailable
+												? `(v${version.latest} ${$i18n.t('available!')})`
+												: $i18n.t('(latest)')}
+									</a>
+								{/if}
 							{/if}
 						</div>
 
