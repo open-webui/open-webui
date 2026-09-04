@@ -40,8 +40,8 @@ def get_ask_user_tool_calls(tool_calls: list[dict]) -> tuple[list[dict], str | N
 
 def normalize_ask_user_request(arguments: dict) -> dict:
     questions = arguments.get('questions')
-    if not isinstance(questions, list) or not 1 <= len(questions) <= 3:
-        raise ValueError('ask_user requires 1-3 questions.')
+    if not isinstance(questions, list) or not 1 <= len(questions) <= 4:
+        raise ValueError('ask_user requires 1-4 questions.')
 
     normalized_questions = []
     seen_ids = set()

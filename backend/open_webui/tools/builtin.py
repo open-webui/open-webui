@@ -525,7 +525,7 @@ async def ask_user(
     Ask the user clarifying questions before continuing.
     Use this when the next step depends on user intent, preference, or a tradeoff that cannot be inferred safely.
 
-    :param questions: 1-3 question objects, each with an optional id, header, question, and 2-4 options. Each option needs label and description. If an id is omitted, one is generated for internal use.
+    :param questions: 1-4 question objects, each with an optional id, header, question, and 2-4 options. Each option needs label and description. If an id is omitted, one is generated for internal use.
     :param allow_other: Whether users may enter a free-form answer instead of choosing one of the options
     :param timeout_ms: How long the browser should keep the prompt open before cancelling it
     :return: JSON with status and answers keyed by question id

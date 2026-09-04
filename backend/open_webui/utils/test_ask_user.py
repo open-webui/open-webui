@@ -57,3 +57,14 @@ class TestNormalizeAskUserRequest(TestCase):
             normalize_ask_user_request(
                 {'questions': [self.question(option_count=5)]}
             )
+
+    def test_accepts_four_questions_and_rejects_five(self):
+        normalized = normalize_ask_user_request(
+            {'questions': [self.question() for _ in range(4)]}
+        )
+        self.assertEqual(len(normalized['questions']), 4)
+
+        with self.assertRaisesRegex(ValueError, 'requires 1-4 questions'):
+            normalize_ask_user_request(
+                {'questions': [self.question() for _ in range(5)]}
+            )
