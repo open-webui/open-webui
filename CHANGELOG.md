@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 🗣️ **Models that speak your language.** A model can now carry a name, a description and prompt suggestions per language, and the workspace editor and the admin defaults let you write them, so the greeting and the starter prompts follow the language the interface is set to, falling back to the plain wording where that language has none. [Commit](https://github.com/open-webui/open-webui/commit/7b6562e3358956ec71eed05352538a646d047734)
 - 🏷️ **Custom file metadata.** Metadata attached to an uploaded file now travels with the pieces that file is split into and arrives with the retrieved sources, the oversized and internal fields left out. [#29499](https://github.com/open-webui/open-webui/pull/29499), [#29486](https://github.com/open-webui/open-webui/issues/29486), [Commit](https://github.com/open-webui/open-webui/commit/894655f66b9563890e63c76090ddecc90a311eb2), [#29502](https://github.com/open-webui/open-webui/pull/29502)
 - 🗑️ **Quick delete for notes and automations.** Holding Shift over a note in the list or grid, or over a row on the automations page, turns its trailing controls into a delete button, removing the entry in one click rather than the three the menu and its confirmation ask for. [#29635](https://github.com/open-webui/open-webui/pull/29635), [#29633](https://github.com/open-webui/open-webui/issues/29633), [#29640](https://github.com/open-webui/open-webui/pull/29640), [#29637](https://github.com/open-webui/open-webui/issues/29637)
 - ⚡ **Searching without holding up the server.** Searching the text of chats and knowledge now runs beside the rest of the server rather than in front of it, so a long search no longer keeps other requests waiting. [#29621](https://github.com/open-webui/open-webui/pull/29621)
@@ -30,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖌️ **Editing an image you uploaded.** An image already held by Open WebUI can now be used with image editing, where fetching its own link back over the network could fail on a private network or without a sign-in. [Commit](https://github.com/open-webui/open-webui/commit/50413f34824ea49d5b94d3a97f3fe4bb2e881e38)
 - 🎨 **A tidier attach webpage dialog.** The row holding the Add button no longer carries a grey band of its own between the address box and the button, matching every other dialog. [#29664](https://github.com/open-webui/open-webui/pull/29664), [#29663](https://github.com/open-webui/open-webui/issues/29663)
 - 🗂️ **Wider translation coverage.** Text that was fixed in English, from the headings grouping the settings pages to labels and messages across the admin pages, the workspace, and notifications, now takes its wording from the interface language. [Commit](https://github.com/open-webui/open-webui/commit/cffd734a1847593bb04c5b5a54d08daf3de0f614), [Commit](https://github.com/open-webui/open-webui/commit/006f95ee595a4d1d63b705c517f1c64cf9ebc676), [Commit](https://github.com/open-webui/open-webui/commit/f677fdbf5074e07216d9bb18d6934f3cfabb5839), [Commit](https://github.com/open-webui/open-webui/commit/237b11c6d944e083445e4ef53f5947b40bb80c6c), [Commit](https://github.com/open-webui/open-webui/commit/8aa25dd3585fe38062d2205231a440db31e330f3)
+
+### Changed
+
+- 🔗 **Default suggestions answer with an object.** Saving the default prompt suggestions now answers with the suggestions and their per-language wording together rather than the bare list it returned before, which anything calling it directly will need to read. [Commit](https://github.com/open-webui/open-webui/commit/7b6562e3358956ec71eed05352538a646d047734)
 
 ## [0.11.3] - 2026-08-31
 
