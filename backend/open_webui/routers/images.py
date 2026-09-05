@@ -919,11 +919,8 @@ async def image_edits(
 
             if data.startswith('http://') or data.startswith('https://'):
                 parsed = urlparse(data)
-                if (
-                    parsed.netloc == urlparse(str(request.base_url)).netloc
-                    and parsed.path.startswith('/api/v1/files/')
-                    and '/content' in parsed.path
-                ):
+                # Fetching /api/v1/files/{id}/content over the network would be unauthenticated.
+                if parsed.path.startswith('/api/v1/files/') and '/content' in parsed.path:
                     return await load_url_image(parsed.path)
 
                 # Validate URL to prevent SSRF attacks against local/private networks.
