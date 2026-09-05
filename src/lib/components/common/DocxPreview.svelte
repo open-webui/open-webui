@@ -116,6 +116,7 @@
 				className: 'docx',
 				ignoreLastRenderedPageBreak: false,
 				inWrapper: true,
+				renderAltChunks: false,
 				renderEndnotes: true,
 				renderFooters: true,
 				renderFootnotes: true,
