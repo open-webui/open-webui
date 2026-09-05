@@ -3506,7 +3506,13 @@ def update_assistant_message_from_stream(assistant_message, raw):
     def append_output_text(item, text):
         parts = item.setdefault('content', [])
         if parts and parts[-1].get('type') == 'output_text':
-            parts[-1]['text'] += text
+            part = parts[-1]
+            buffer = part.get('_text_buffer')
+            if buffer is None:
+                buffer = []
+                part['_text_buffer'] = buffer
+                assistant_message.setdefault('_buffered_parts', []).append(part)
+            buffer.append(text)
         else:
             parts.append({'type': 'output_text', 'text': text})
 
@@ -3524,6 +3530,7 @@ def update_assistant_message_from_stream(assistant_message, raw):
             continue
 
         if data.get('type', '').startswith('response.'):
+            flush_buffered_parts(assistant_message)
             output, meta = handle_responses_streaming_event(data, assistant_message.get('output', []))
             if output:
                 assistant_message['output'] = output
@@ -3581,7 +3588,30 @@ def update_assistant_message_from_stream(assistant_message, raw):
 
                     append_output_text(output[-1], content)
 
-                assistant_message['content'] = assistant_message.get('content', '') + content
+                assistant_message.setdefault('_content_buffer', []).append(content)
+
+
+def join_buffered_text(text, buffer: list):
+    # A stream filter can make a delta any type, and the concatenation this replaces merged non-strings too.
+    if isinstance(text, str) and all(isinstance(chunk, str) for chunk in buffer):
+        return text + ''.join(buffer)
+    for chunk in buffer:
+        text += chunk
+    return text
+
+
+def flush_buffered_parts(assistant_message: dict) -> None:
+    """Write the buffered text back into the output parts holding it."""
+    for part in assistant_message.pop('_buffered_parts', []):
+        part['text'] = join_buffered_text(part['text'], part.pop('_text_buffer'))
+
+
+def finalize_assistant_message(assistant_message: dict) -> None:
+    """Join the text buffered by update_assistant_message_from_stream."""
+    flush_buffered_parts(assistant_message)
+    buffer = assistant_message.pop('_content_buffer', None)
+    if buffer:
+        assistant_message['content'] = join_buffered_text(assistant_message.get('content', ''), buffer)
 
 
 async def get_system_oauth_token(request, user):
@@ -6342,6 +6372,7 @@ async def streaming_chat_response_handler(response, ctx):
                     yield data
 
             if has_api_outlet_filters and assistant_message:
+                finalize_assistant_message(assistant_message)
                 ctx['assistant_message'] = assistant_message
                 await outlet_filter_handler(ctx)
 
