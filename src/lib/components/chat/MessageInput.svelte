@@ -408,6 +408,22 @@
 		chatInputElement?.focus(options);
 	};
 
+	$: {
+		const lastMessage = history?.currentId ? history.messages[history.currentId] : null;
+		const followUp =
+			lastMessage?.role === 'assistant' && lastMessage?.done
+				? (lastMessage?.followUps ?? [])[0]
+				: null;
+
+		if (
+			$config?.features?.enable_autocomplete_generation &&
+			($settings?.promptAutocomplete ?? false) &&
+			($settings?.insertFollowUpPrompt ?? false)
+		) {
+			chatInputElement?.setSuggestion(prompt === '' && followUp ? followUp : '');
+		}
+	}
+
 	export const setText = async (text?: string, cb?: (text: string) => void) => {
 		const chatInput = document.getElementById('chat-input');
 

@@ -607,6 +607,15 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	}
 }
 
+.ProseMirror p.is-editor-empty.ai-autocompletion:first-child::before {
+	content: attr(data-suggestion);
+	color: #a0a0a0;
+}
+
+.ProseMirror p.is-editor-empty.ai-autocompletion:first-child::after {
+	content: none;
+}
+
 .ai-autocompletion::after {
 	color: #a0a0a0;
 

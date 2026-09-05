@@ -520,6 +520,23 @@
 		focus();
 	};
 
+	export const setSuggestion = (text: string) => {
+		if (!editor || !editor.view) return;
+		const { state, dispatch } = editor.view;
+		const node = state.doc.firstChild;
+		if (!node || node.type.name !== 'paragraph' || state.doc.childCount !== 1) return;
+		if (node.textContent !== '') return;
+		if ((node.attrs['data-suggestion'] ?? null) === (text || null)) return;
+		dispatch(
+			state.tr.setNodeMarkup(0, null, {
+				...node.attrs,
+				class: text ? 'ai-autocompletion' : null,
+				'data-prompt': text ? '' : null,
+				'data-suggestion': text || null
+			})
+		);
+	};
+
 	export const insertContent = (content) => {
 		if (!editor || !editor.view) return;
 		const { state, view } = editor;
