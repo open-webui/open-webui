@@ -251,6 +251,7 @@ class Tools:
 				<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 					<LocalizedField
 						placeholder={$i18n.t('Tool Name')}
+						showControls={false}
 						bind:value={name}
 						bind:translations={meta.i18n}
 						{locale}
@@ -288,6 +289,7 @@ class Tools:
 					>
 						<LocalizedField
 							placeholder={$i18n.t('Tool Description')}
+							showControls={false}
 							bind:value={meta.description}
 							bind:translations={meta.i18n}
 							{locale}

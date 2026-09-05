@@ -12,6 +12,7 @@
 	export let rows = 3;
 	export let required = false;
 	export let disabled = false;
+	export let showControls = true;
 	$: translated = translations?.[locale]?.[field] ?? '';
 	$: fallback = resolveLocalizedString(value, translations, locale, field);
 	const update = (next: string) => {
@@ -52,7 +53,7 @@
 			on:input={(e) => update(e.currentTarget.value)}
 		/>
 	{/if}
-	{#if locale}
+	{#if locale && showControls}
 		<div
 			class="mt-1 flex flex-wrap items-center gap-3 text-[0.6875rem] text-gray-400 dark:text-gray-600"
 		>
