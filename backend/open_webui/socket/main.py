@@ -369,6 +369,30 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
         log.debug('Failed to make users %s join room %s: %s', user_ids, room, e)
 
 
+async def leave_room_for_users(room: str, user_ids: list[str]):
+    """Make all sessions of each user leave a specific room, on whichever worker holds them."""
+    if not user_ids:
+        return
+
+    target_user_ids = set(user_ids)
+    session_ids = set()
+    for user_id in target_user_ids:
+        session_ids.update(get_session_ids_from_room(f'user:{user_id}'))
+    for batch in get_session_pool_batches():
+        session_ids.update(sid for sid, entry in batch if entry and entry.get('id') in target_user_ids)
+
+    for sid in session_ids:
+        try:
+            await sio.leave_room(sid, room)
+        except Exception as e:
+            log.debug('Failed to make session %s leave room %s: %s', sid, room, e)
+
+
+def get_note_rooms(note_id: str) -> list[str]:
+    """The rooms a note is broadcast to: its event room and its ydoc collaboration room."""
+    return [f'note:{note_id}', f'doc_note:{note_id}']
+
+
 async def disconnect_user_sessions(user_id: str):
     """Disconnect all Socket.IO sessions belonging to a user.
 
