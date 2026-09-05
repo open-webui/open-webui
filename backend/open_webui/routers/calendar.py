@@ -399,17 +399,10 @@ async def update_calendar(
     request: Request, calendar_id: str, form_data: CalendarUpdateForm, user: UserModel = Depends(get_verified_user)
 ):
     await check_calendar_permission(request, user)
-    cal = await _check_calendar_access(calendar_id, user, 'write')
-
-    # Only owner/admin can change access grants
-    if form_data.access_grants is not None and cal.user_id != user.id and user.role != 'admin':
-        raise HTTPException(status_code=403, detail='Only owner can manage sharing')
+    await _check_calendar_access(calendar_id, user, 'write')
 
     # Strip public/user grants the requesting user is not permitted to assign
-    # (matches the channel/notes/models pattern). The owner-only check above
-    # only restricts WHO can set grants; this filter restricts WHICH grants
-    # they may set, so a non-admin owner cannot make their calendar
-    # publicly readable/writable without the corresponding sharing permission.
+    # (matches the channel/notes/models pattern).
     if form_data.access_grants is not None:
         form_data.access_grants = await filter_allowed_access_grants(
             await Config.get('user.permissions'),
