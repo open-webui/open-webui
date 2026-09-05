@@ -188,6 +188,10 @@ def normalize_access_grants(access_grants: Optional[list]) -> list[dict]:
     return list(deduped.values())
 
 
+def _grant_principals(grants: list[AccessGrantModel]) -> set[tuple[str, str, str]]:
+    return {(grant.principal_type, grant.principal_id, grant.permission) for grant in grants}
+
+
 def has_public_read_access_grant(access_grants: Optional[list]) -> bool:
     """
     Returns True when a direct grant list includes wildcard public-read.
@@ -719,6 +723,54 @@ class AccessGrantsTable:
                 return []
 
             return await Users.get_users_by_user_ids(list(user_ids_with_access), db=db)
+
+    async def _get_read_user_ids_from_grants(
+        self,
+        grants: list[AccessGrantModel],
+        db: Optional[AsyncSession] = None,
+    ) -> set[str]:
+        """Resolve a grant list to the user ids it gives read access to, group and public principals expanded."""
+        from open_webui.models.groups import Groups
+        from open_webui.models.users import Users
+
+        async with get_async_db_context(db) as db:
+            user_ids = set()
+            group_ids = []
+            for grant in grants:
+                if grant.permission != 'read':
+                    continue
+                if grant.principal_type == PRINCIPAL_TYPE_GROUP:
+                    group_ids.append(grant.principal_id)
+                elif grant.principal_type == PRINCIPAL_TYPE_USER and grant.principal_id == WILDCARD_PRINCIPAL_ID:
+                    result = await Users.get_users(filter={'roles': ['!pending']}, db=db)
+                    user_ids.update(user.id for user in result.get('users', []))
+                else:
+                    user_ids.add(grant.principal_id)
+
+            if group_ids:
+                members_by_group = await Groups.get_group_user_ids_by_ids(group_ids, db=db)
+                for members in members_by_group.values():
+                    user_ids.update(members)
+            return user_ids
+
+    async def get_revoked_read_user_ids(
+        self,
+        resource_type: str,
+        resource_id: str,
+        previous_grants: list[AccessGrantModel],
+        db: Optional[AsyncSession] = None,
+    ) -> set[str]:
+        """Get the user ids that had read access under previous_grants and no longer have it."""
+        async with get_async_db_context(db) as db:
+            current_grants = await self.get_grants_by_resource(resource_type, resource_id, db=db)
+            if _grant_principals(previous_grants) == _grant_principals(current_grants):
+                return set()
+            if has_public_read_access_grant(previous_grants) and has_public_read_access_grant(current_grants):
+                return set()
+
+            previous_user_ids = await self._get_read_user_ids_from_grants(previous_grants, db=db)
+            current_user_ids = await self._get_read_user_ids_from_grants(current_grants, db=db)
+            return previous_user_ids - current_user_ids
 
     def has_permission_filter(
         self,

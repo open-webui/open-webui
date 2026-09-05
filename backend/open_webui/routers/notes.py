@@ -11,7 +11,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.chats import ChatForm, ChatResponse, Chats
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
@@ -23,7 +23,7 @@ from open_webui.models.notes import (
     NoteUserResponse,
 )
 from open_webui.models.users import UserResponse, Users
-from open_webui.socket.main import sio
+from open_webui.socket.main import get_note_rooms, leave_room_for_users, sio
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_permission,
@@ -44,6 +44,22 @@ def _truncate_note_data(data: Optional[dict], max_length: int = 1000) -> Optiona
         return data
     md = (data.get('content') or {}).get('md') or ''
     return {'content': {'md': md[:max_length]}}
+
+
+async def _leave_note_rooms_for_revoked_users(
+    note: NoteModel, previous_grants: list[AccessGrantModel], db: AsyncSession
+) -> None:
+    """Drop every user that lost read access on this update out of the note's rooms."""
+    revoked_user_ids = await AccessGrants.get_revoked_read_user_ids('note', note.id, previous_grants, db=db)
+    revoked_user_ids.discard(note.user_id)
+    if not revoked_user_ids:
+        return
+
+    revoked_users = await Users.get_users_by_user_ids(list(revoked_user_ids), db=db)
+    # Admins keep access to every note regardless of grants, so they must stay in the rooms.
+    user_ids = [revoked_user.id for revoked_user in revoked_users if revoked_user.role != 'admin']
+    for room in get_note_rooms(note.id):
+        await leave_room_for_users(room, user_ids)
 
 
 ############################
@@ -563,10 +579,14 @@ async def update_note_by_id(
         db=db,
     )
 
+    previous_grants = await AccessGrants.get_grants_by_resource('note', id, db=db)
+
     try:
         note = await Notes.update_note_by_id(id, form_data, db=db)
         pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
         note.is_pinned = note.id in pinned_note_ids
+
+        await _leave_note_rooms_for_revoked_users(note, previous_grants, db=db)
 
         event_data = note.model_dump()
         if form_data.data is not None:
@@ -642,7 +662,10 @@ async def update_note_access_by_id(
         'sharing.public_notes',
     )
 
+    previous_grants = await AccessGrants.get_grants_by_resource('note', id, db=db)
     await AccessGrants.set_access_grants('note', id, form_data.access_grants, db=db)
+
+    await _leave_note_rooms_for_revoked_users(note, previous_grants, db=db)
 
     note = await Notes.get_note_by_id(id, db=db)
     pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
@@ -749,6 +772,8 @@ async def delete_note_by_id(
             actor=user,
             subject_id=id,
         )
+        for room in get_note_rooms(id):
+            await sio.close_room(room)
         return True
     except Exception as e:
         log.exception(e)
