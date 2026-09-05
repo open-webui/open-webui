@@ -56,7 +56,7 @@
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import PortList from './FileNav/PortList.svelte';
 	import PortPreview from './FileNav/PortPreview.svelte';
-	import XTerminal from './XTerminal.svelte';
+	import TerminalDock from './TerminalDock.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -68,13 +68,7 @@
 	let terminalHeight = 200; // px, default when expanded
 	let isDraggingHandle = false;
 	let containerEl: HTMLElement;
-	let terminalConnected = false;
-	let terminalConnecting = false;
 	let terminalEnabled = true;
-
-	const toggleTerminal = () => {
-		terminalExpanded = !terminalExpanded;
-	};
 
 	const onHandleMouseDown = (e: MouseEvent) => {
 		e.preventDefault();
@@ -2050,42 +2044,14 @@
 					</div>
 				{/if}
 
-				<!-- Toggle header (full-width button) -->
-				<button
-					class="w-full flex items-center gap-2 px-2 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-100"
-					on:click={toggleTerminal}
-				>
-					<Icon name="terminal" size={14} strokeWidth={1.4} class="shrink-0" />
-					<span class="font-normal">{$i18n.t('Terminal')}</span>
-
-					{#if terminalExpanded}
-						<div
-							class="w-1.5 h-1.5 rounded-full transition-colors {terminalConnected
-								? 'bg-emerald-500'
-								: terminalConnecting
-									? 'bg-yellow-500 animate-pulse'
-									: 'bg-gray-400'}"
-						/>
-					{/if}
-
-					<Icon
-						name="chevron-up"
-						size={12}
-						strokeWidth={1.4}
-						class="ml-auto transition-transform {terminalExpanded ? 'rotate-180' : ''}"
+				{#key JSON.stringify([chatId, $selectedTerminalId])}
+					<TerminalDock
+						overlay={overlay || isDraggingHandle}
+						bind:expanded={terminalExpanded}
+						height={terminalHeight}
+						{chatId}
 					/>
-				</button>
-
-				{#if terminalExpanded}
-					<div style="height: {terminalHeight}px" class="min-h-0">
-						<XTerminal
-							overlay={overlay || isDraggingHandle}
-							bind:connected={terminalConnected}
-							bind:connecting={terminalConnecting}
-							{chatId}
-						/>
-					</div>
-				{/if}
+				{/key}
 			</div>
 		{/if}
 

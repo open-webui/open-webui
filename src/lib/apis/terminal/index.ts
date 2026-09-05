@@ -62,6 +62,63 @@ export type TerminalCwd = {
 
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+export type TerminalConnection = {
+	selector: string;
+	baseUrl: string;
+	key: string;
+	system: boolean;
+};
+export type TerminalProcess = {
+	id: string;
+	command: string;
+	status: 'running' | 'done' | 'killed';
+	exit_code: number | null;
+};
+export type TerminalProcessOutput = TerminalProcess & {
+	output: { type: string; data: string }[];
+	next_offset: number;
+	truncated: boolean;
+};
+
+export const resolveTerminalConnection = (
+	selector: string | null,
+	servers: any[],
+	directServers: any[],
+	token: string
+): TerminalConnection | null => {
+	if (!selector) return null;
+	if (servers.some((server) => server.id === selector)) {
+		return {
+			selector,
+			baseUrl: `${WEBUI_API_BASE_URL}/terminals/${encodeURIComponent(selector)}`,
+			key: token,
+			system: true
+		};
+	}
+	const direct = directServers.find((server) => server.url === selector);
+	return direct
+		? { selector, baseUrl: direct.url.replace(/\/$/, ''), key: direct.key ?? '', system: false }
+		: null;
+};
+
+export const terminalRequest = async <T>(
+	connection: TerminalConnection,
+	chatId: string | null,
+	path: string,
+	options: RequestInit = {}
+): Promise<T> => {
+	const response = await fetch(`${connection.baseUrl}${path}`, {
+		...options,
+		headers: {
+			Authorization: `Bearer ${connection.key.trim()}`,
+			...(chatId ? { 'X-Session-Id': chatId } : {}),
+			...options.headers
+		}
+	});
+	if (!response.ok) throw new Error(`Terminal request failed (${response.status})`);
+	return response.json();
+};
+
 const bearerHeaders = (apiKey: string): Record<string, string> => ({
 	Authorization: `Bearer ${apiKey.trim()}`
 });
