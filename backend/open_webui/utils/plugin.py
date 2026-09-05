@@ -309,7 +309,9 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
         # Cleanup by removing the module in case of error
         del sys.modules[module_name]
 
-        await Functions.update_function_by_id(function_id, {'is_active': False})
+        # Do not persist a deactivation: a transient load failure (broken
+        # dependency, partial edit) must fail this request only, so the
+        # Function loads again on the next request once the cause is fixed.
         raise e
     finally:
         os.unlink(temp_file.name)
