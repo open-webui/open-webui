@@ -308,6 +308,13 @@ def tool_result_content(tool_result: Any) -> str:
     return str(tool_result)
 
 
+def append_text(item: dict, key: str, value: str) -> None:
+    text = item[key]
+    item[key] = ''  # dropping the dict's reference lets CPython extend the str in place
+    text += value
+    item[key] = text
+
+
 def merge_streamed_reasoning_details(target: list, details) -> None:
     items = details if isinstance(details, list) else [details]
     for item in items:
@@ -326,7 +333,7 @@ def merge_streamed_reasoning_details(target: list, details) -> None:
 
         for key, value in item.items():
             if key in ('text', 'summary') and isinstance(value, str) and isinstance(existing.get(key), str):
-                existing[key] += value
+                append_text(existing, key, value)
             else:
                 existing[key] = value
 
@@ -3506,7 +3513,7 @@ def update_assistant_message_from_stream(assistant_message, raw):
     def append_output_text(item, text):
         parts = item.setdefault('content', [])
         if parts and parts[-1].get('type') == 'output_text':
-            parts[-1]['text'] += text
+            append_text(parts[-1], 'text', text)
         else:
             parts.append({'type': 'output_text', 'text': text})
 
@@ -3581,7 +3588,8 @@ def update_assistant_message_from_stream(assistant_message, raw):
 
                     append_output_text(output[-1], content)
 
-                assistant_message['content'] = assistant_message.get('content', '') + content
+                assistant_message.setdefault('content', '')
+                append_text(assistant_message, 'content', content)
 
 
 async def get_system_oauth_token(request, user):
@@ -4734,7 +4742,7 @@ async def streaming_chat_response_handler(response, ctx):
                             and isinstance(last_delta_data.get('delta'), str)
                             and isinstance(delta_data.get('delta'), str)
                         ):
-                            last_delta_data['delta'] += delta_data['delta']
+                            append_text(last_delta_data, 'delta', delta_data['delta'])
                             delta_count += 1
                         else:
                             if last_delta_data and (last_delta_type != delta_type or last_delta_key != delta_key):
@@ -5037,8 +5045,10 @@ async def streaming_chat_response_handler(response, ctx):
                                                             str,
                                                         ):
                                                             current_response_tool_call['function']['arguments'] = ''
-                                                        current_response_tool_call['function']['arguments'] += (
-                                                            delta_arguments
+                                                        append_text(
+                                                            current_response_tool_call['function'],
+                                                            'arguments',
+                                                            delta_arguments,
                                                         )
 
                                         # Emit pending tool calls in real-time as Responses events.
@@ -5207,7 +5217,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             # Append to reasoning content
                                             parts = reasoning_item.get('content', [])
                                             if parts and parts[-1].get('type') == 'output_text':
-                                                parts[-1]['text'] += reasoning_content
+                                                append_text(parts[-1], 'text', reasoning_content)
                                             else:
                                                 reasoning_item['content'] = [
                                                     {
@@ -5314,7 +5324,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             elif last_item_type == 'reasoning':
                                                 parts = last_item.get('content', [])
                                                 if parts and parts[-1].get('type') == 'output_text':
-                                                    parts[-1]['text'] += value
+                                                    append_text(parts[-1], 'text', value)
                                                 else:
                                                     last_item['content'] = [
                                                         {
@@ -5326,7 +5336,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 # solution or other _tag_type message
                                                 msg_parts = last_item.get('content', [])
                                                 if msg_parts and msg_parts[-1].get('type') == 'output_text':
-                                                    msg_parts[-1]['text'] += value
+                                                    append_text(msg_parts[-1], 'text', value)
                                                 else:
                                                     last_item['content'] = [
                                                         {
@@ -5354,7 +5364,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             # Append value to last message item's text
                                             msg_parts = output[-1].get('content', [])
                                             if msg_parts and msg_parts[-1].get('type') == 'output_text':
-                                                msg_parts[-1]['text'] += value
+                                                append_text(msg_parts[-1], 'text', value)
                                             else:
                                                 output[-1]['content'] = [
                                                     {
