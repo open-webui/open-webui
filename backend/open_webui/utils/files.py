@@ -74,9 +74,16 @@ async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
             # rebinding DNS answer that passed validate_url cannot reach an internal address.
             async with get_ssrf_safe_session() as session:
                 async with session.get(
-                    url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+                    url,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                    headers={'Accept-Encoding': 'identity'},
                 ) as response:
                     response.raise_for_status()
+                    # Accept-Encoding is only a request; the sender can still compress and pick our decompressed size.
+                    encodings = response.headers.getall('Content-Encoding', ())
+                    if any(encoding.lower() not in ('', 'identity') for encoding in encodings):
+                        return None
                     image_data = bytearray()
                     total = 0
                     async for chunk in response.content.iter_chunked(64 * 1024):
