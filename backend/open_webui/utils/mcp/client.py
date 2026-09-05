@@ -1,7 +1,10 @@
 import asyncio
+import json
 import logging
 from contextlib import AsyncExitStack
 from typing import Optional
+
+from pydantic import ValidationError
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +113,29 @@ class MCPClient:
         if not self.session:
             raise RuntimeError('MCP client is not connected.')
 
-        result = await self.session.call_tool(function_name, function_args)
+        try:
+            result = await self.session.call_tool(function_name, function_args)
+        except ValidationError as e:
+            # Some MCP servers (e.g. memos) return structuredContent as a
+            # bare JSON array instead of an object, which the SDK's
+            # CallToolResult Pydantic model rejects with a dict_type error.
+            # Extract the list from the error and return it as MCP text
+            # content so the existing process_tool_result pipeline can handle it.
+            sc_error = next(
+                (err for err in e.errors()
+                 if err.get('loc') == ('structuredContent',) and err.get('type') == 'dict_type'),
+                None
+            )
+            if sc_error is not None:
+                content_list = sc_error.get('input', [])
+                if isinstance(content_list, list):
+                    log.debug(
+                        'MCP server returned structuredContent as list for tool "%s"; salvaging as text content',
+                        function_name,
+                    )
+                    return [{'type': 'text', 'text': json.dumps(content_list, ensure_ascii=False)}]
+            raise
+
         if not result:
             raise Exception('No result returned from MCP tool call.')
 
