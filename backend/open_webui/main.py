@@ -182,7 +182,9 @@ from open_webui.routers.retrieval import (
     get_rf,
 )
 from open_webui.socket.main import (
+    DIRECT_COMPLETION_RELAY_ENABLED,
     MODELS,
+    direct_completion_listener,
     get_event_emitter,
     get_models_in_use,
     get_user_id_from_session_pool,
@@ -386,6 +388,9 @@ async def lifespan(app: FastAPI):
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
 
+    if DIRECT_COMPLETION_RELAY_ENABLED:
+        app.state.direct_completion_listener = asyncio.create_task(direct_completion_listener())
+
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
 
@@ -471,6 +476,9 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+
+    if hasattr(app.state, 'direct_completion_listener'):
+        app.state.direct_completion_listener.cancel()
 
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
