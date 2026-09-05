@@ -4183,6 +4183,18 @@ async def non_streaming_chat_response_handler(response, ctx):
     return response
 
 
+async def stream_with_error_frame(original_generator):
+    """Raising mid-body truncates the response silently, so report the failure in the stream instead."""
+    try:
+        async for data in original_generator:
+            yield data
+    except Exception as e:
+        log.exception('Chat completion stream failed mid-response: %s', e)
+        # Terminate the event that was cut off, so the error frame is not merged into it.
+        yield f'\n\ndata: {JSONCodec.dumps({"error": {"message": "Chat completion stream failed"}})}\n\n'
+        yield 'data: [DONE]\n\n'
+
+
 async def streaming_chat_response_handler(response, ctx):
     request = ctx['request']
 
@@ -6346,7 +6358,7 @@ async def streaming_chat_response_handler(response, ctx):
                 await outlet_filter_handler(ctx)
 
         return StreamingResponse(
-            stream_wrapper(response.body_iterator, events),
+            stream_with_error_frame(stream_wrapper(response.body_iterator, events)),
             headers=dict(response.headers),
             background=response.background,
         )
