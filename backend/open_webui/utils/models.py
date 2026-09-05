@@ -64,6 +64,19 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     return function_models + openai_models + ollama_models
 
 
+def _strip_ollama_expiry(models_dict: dict[str, dict]) -> dict[str, dict]:
+    """Copy of *models_dict* without the Ollama keep-alive expiry, which moves on use and defeats the write skip."""
+    stripped = {}
+    for model_id, model in models_dict.items():
+        ollama = model.get('ollama')
+        if ollama and 'expires_at' in ollama:
+            stripped_ollama = {key: value for key, value in ollama.items() if key != 'expires_at'}
+            stripped[model_id] = {**model, 'ollama': stripped_ollama}
+        else:
+            stripped[model_id] = model
+    return stripped
+
+
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
     config = await Config.get_many(
         'models.base_models_cache',
@@ -424,7 +437,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     models_dict = {model['id']: model for model in models}
     if isinstance(request.app.state.MODELS, RedisDict):
         try:
-            request.app.state.MODELS.set(models_dict)
+            request.app.state.MODELS.set(_strip_ollama_expiry(models_dict))
         except Exception as e:
             log.warning(f'Failed to update Redis model cache, using in-process cache: {e}')
             request.app.state.MODELS = models_dict
