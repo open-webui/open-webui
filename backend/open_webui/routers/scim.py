@@ -511,13 +511,14 @@ async def get_users(
     count = max(0, min(100, count))
     skip = startIndex - 1
     limit = count
+    provider = get_scim_provider()
 
     # Get users from database
     if filter:
         # Simple filter parsing - supports userName eq, externalId eq
         if 'userName eq' in filter:
             email = filter.split('"')[1]
-            response = await Users.get_scim_users(filter={'email': email}, limit=1, db=db)
+            response = await Users.get_scim_users(provider, filter={'email': email}, limit=1, db=db)
             users_list = response['users']
             total = response['total']
         elif 'externalId eq' in filter:
@@ -527,6 +528,7 @@ async def get_users(
             total = 1 if user else 0
         else:
             response = await Users.get_scim_users(
+                provider,
                 sort={'order_by': 'created_at'},
                 skip=skip,
                 limit=limit,
@@ -536,6 +538,7 @@ async def get_users(
             total = response['total']
     else:
         response = await Users.get_scim_users(
+            provider,
             sort={'order_by': 'created_at'},
             skip=skip,
             limit=limit,
@@ -563,7 +566,7 @@ async def get_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get SCIM User by ID"""
-    user = await Users.get_scim_user_by_id(user_id, db=db)
+    user = await Users.get_scim_user_by_id(user_id, get_scim_provider(), db=db)
     if not user:
         return scim_error(status_code=status.HTTP_404_NOT_FOUND, detail=f'User {user_id} not found')
 
@@ -665,7 +668,7 @@ async def update_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update SCIM User (full update)"""
-    user = await Users.get_scim_user_by_id(user_id, db=db)
+    user = await Users.get_scim_user_by_id(user_id, get_scim_provider(), db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -745,7 +748,7 @@ async def patch_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update SCIM User (partial update)"""
-    user = await Users.get_scim_user_by_id(user_id, db=db)
+    user = await Users.get_scim_user_by_id(user_id, get_scim_provider(), db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -819,11 +822,19 @@ async def delete_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Delete SCIM User"""
-    user = await Users.get_scim_user_by_id(user_id, db=db)
+    user = await Users.get_scim_user_by_id(user_id, get_scim_provider(), db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'User {user_id} not found',
+        )
+
+    # Same guard as update_user: an IdP-driven prune must never remove an admin.
+    # Admin removal goes through the dedicated admin endpoints, not SCIM provisioning.
+    if user.role == 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Admin users cannot be deleted via SCIM',
         )
 
     success = await Users.delete_user_by_id(user_id, db=db)

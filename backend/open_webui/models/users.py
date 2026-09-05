@@ -388,6 +388,7 @@ class UsersTable:
 
     async def get_scim_users(
         self,
+        provider: str,
         filter: dict | None = None,
         sort: dict | None = None,
         skip: int | None = None,
@@ -395,7 +396,15 @@ class UsersTable:
         db: AsyncSession | None = None,
     ) -> dict:
         async with get_async_db_context(db) as session:
-            stmt = select(User).where(or_(User.oauth.cast(String) != 'null', User.scim.cast(String) != 'null'))
+            # Scope the OAuth leg to the configured SCIM provider: matching on the whole
+            # oauth column would also surface accounts linked through an unrelated OAuth
+            # provider that the SCIM identity provider never provisioned or heard of.
+            stmt = select(User).where(
+                or_(
+                    User.oauth[provider]['sub'].as_string().isnot(None),
+                    User.scim.cast(String) != 'null',
+                )
+            )
 
             if filter:
                 user_id = filter.get('id')
@@ -430,12 +439,16 @@ class UsersTable:
     async def get_scim_user_by_id(
         self,
         id: str,
+        provider: str,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
         async with get_async_db_context(db) as session:
             stmt = select(User).where(
                 User.id == id,
-                or_(User.oauth.cast(String) != 'null', User.scim.cast(String) != 'null'),
+                or_(
+                    User.oauth[provider]['sub'].as_string().isnot(None),
+                    User.scim.cast(String) != 'null',
+                ),
             )
             user = (await session.execute(stmt)).scalars().first()
             return UserModel.model_validate(user) if user else None
