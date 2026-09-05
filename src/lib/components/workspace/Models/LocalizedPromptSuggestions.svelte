@@ -62,7 +62,6 @@
 			title={localeLabel}
 			class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] text-gray-400 dark:text-gray-600"
 		>
-			{hasCustomLocalePrompts ? $i18n.t('Translated') : $i18n.t('Using default')}
 			{#if hasCustomLocalePrompts}
 				<button
 					type="button"

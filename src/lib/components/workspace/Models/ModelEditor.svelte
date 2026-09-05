@@ -758,12 +758,7 @@
 										</div>
 
 										{#if editingLocale}
-											<div class="mt-1 flex items-center justify-between gap-3 text-[0.6875rem]">
-												<span class="truncate text-gray-400 dark:text-gray-600">
-													{localizedField('name')
-														? $i18n.t('Translated')
-														: $i18n.t('Using default')}
-												</span>
+											<div class="mt-1 flex items-center justify-end gap-3 text-[0.6875rem]">
 												<div
 													class="flex shrink-0 items-center gap-2 text-gray-500 dark:text-gray-400"
 												>
