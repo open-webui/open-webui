@@ -24,6 +24,7 @@
 
 			if (!model) {
 				goto('/workspace/models');
+				return;
 			}
 
 			if (!model?.write_access) {
