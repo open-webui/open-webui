@@ -19,7 +19,11 @@ from fastapi import (
 from fastapi.responses import RedirectResponse, StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES
+from open_webui.env import (
+    BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_PROFILE_IMAGE_URL_FORWARDING,
+    PROFILE_IMAGE_ALLOWED_MIME_TYPES,
+)
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
@@ -36,7 +40,7 @@ from open_webui.models.models import (
     ModelResponse,
     Models,
 )
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control import filter_allowed_access_grants, has_access, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
@@ -649,18 +653,37 @@ async def get_model_profile_image(
     profile_image_url = None
     updated_at = None
 
+    bypass_access_control = BYPASS_MODEL_ACCESS_CONTROL or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+
     # First, check the database for regular models
     model_meta = await Models.get_model_meta_by_id(id, db=db)
     if model_meta:
-        meta, updated_at = model_meta
-        profile_image_url = (meta or {}).get('profile_image_url')
+        meta, model_user_id, model_updated_at = model_meta
+        # Denied callers get the default image rather than an error, so model ids stay unprobeable.
+        if (
+            bypass_access_control
+            or user.id == model_user_id
+            or await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='model',
+                resource_id=id,
+                permission='read',
+                db=db,
+            )
+        ):
+            profile_image_url = (meta or {}).get('profile_image_url')
+            updated_at = model_updated_at
 
     # Fallback: check arena models stored in config (not in the DB)
     if not profile_image_url:
         arena_models = await Config.get('evaluation.arena.models', []) or []
         for arena_model in arena_models:
             if arena_model.get('id') == id:
-                profile_image_url = arena_model.get('meta', {}).get('profile_image_url')
+                arena_meta = arena_model.get('meta', {})
+                if bypass_access_control or await has_access(
+                    user.id, permission='read', access_grants=arena_meta.get('access_grants', []), db=db
+                ):
+                    profile_image_url = arena_meta.get('profile_image_url')
                 break
 
     if profile_image_url:
