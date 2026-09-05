@@ -13,7 +13,6 @@ from langchain_community.document_loaders import (
     BSHTMLLoader,
     CSVLoader,
     Docx2txtLoader,
-    PyPDFLoader,
     TextLoader,
 )
 from langchain_core.documents import Document
@@ -28,6 +27,7 @@ from open_webui.retrieval.loaders.external_document import ExternalDocumentLoade
 from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
+from open_webui.retrieval.loaders.pdf import PyPDFLoaderWithSafeImages
 from open_webui.utils.headers import get_user_groups_for_custom_headers
 from open_webui.utils.json_codec import JSONCodec
 
@@ -667,7 +667,7 @@ class Loader:
             )
         else:
             if file_ext == 'pdf':
-                loader = PyPDFLoader(
+                loader = PyPDFLoaderWithSafeImages(
                     file_path,
                     extract_images=self.kwargs.get('PDF_EXTRACT_IMAGES'),
                     mode=self.kwargs.get('PDF_LOADER_MODE', 'page'),
