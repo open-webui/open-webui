@@ -127,6 +127,7 @@
 				<Tooltip content={$i18n.t('e.g. Code Review Guidelines')} placement="top-start">
 					<LocalizedField
 						placeholder={$i18n.t('Skill Name')}
+						showControls={false}
 						bind:value={name}
 						bind:translations={meta.i18n}
 						{locale}
@@ -165,6 +166,7 @@
 					>
 						<LocalizedField
 							placeholder={$i18n.t('Skill Description')}
+							showControls={false}
 							bind:value={description}
 							bind:translations={meta.i18n}
 							{locale}
