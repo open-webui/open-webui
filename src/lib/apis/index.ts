@@ -1,5 +1,5 @@
 import { WEBUI_BASE_URL } from '$lib/constants';
-import { convertOpenApiToToolPayload } from '$lib/utils';
+import { convertOpenApiToToolPayload, resolveSchema } from '$lib/utils';
 import { normalizeTags } from '$lib/utils/tags';
 import { getOpenAIModelsDirect } from './openai';
 
@@ -598,10 +598,12 @@ export const executeToolServer = async (
 		const pathParams: Record<string, any> = {};
 		const queryParams: Record<string, any> = {};
 		let bodyParams: any = {};
+		const declaredParamNames = new Set<string>();
 
 		for (const param of mergedParams.values()) {
 			const paramName = param?.name;
 			if (!paramName) continue;
+			declaredParamNames.add(paramName);
 			const paramIn = param?.in;
 			if (params.hasOwnProperty(paramName)) {
 				if (paramIn === 'path') {
@@ -631,7 +633,24 @@ export const executeToolServer = async (
 		if (operation.requestBody && operation.requestBody.content) {
 			const contentType = Object.keys(operation.requestBody.content)[0];
 			if (params !== undefined) {
-				bodyParams = params;
+				const jsonSchema = operation.requestBody.content['application/json']?.schema;
+				const resolvedBodySchema = resolveSchema(jsonSchema, serverData.openapi.components);
+				const isComposedSchema = ['allOf', 'anyOf', 'oneOf'].some(
+					(keyword) => keyword in resolvedBodySchema
+				);
+				const bodyProperties = isComposedSchema ? {} : (resolvedBodySchema.properties ?? {});
+				// Strict servers reject declared parameters in the body, unless the body schema declares them too.
+				if (Object.keys(bodyProperties).length > 0) {
+					bodyParams = Object.fromEntries(
+						Object.entries(params).filter(
+							([key]) =>
+								Object.prototype.hasOwnProperty.call(bodyProperties, key) ||
+								!declaredParamNames.has(key)
+						)
+					);
+				} else {
+					bodyParams = params;
+				}
 			} else {
 				// Optional: Fallback or explicit error if body is expected but not provided
 				throw new Error(`Request body expected for operation '${name}' but none found.`);
