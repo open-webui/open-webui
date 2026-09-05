@@ -1823,15 +1823,32 @@ async def delete_message_by_id(
 
 
 @router.get('/webhooks/{webhook_id}/profile/image')
-async def get_webhook_profile_image(webhook_id: str, user=Depends(get_verified_user)):
+async def get_webhook_profile_image(
+    request: Request,
+    webhook_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     """Get webhook profile image by webhook ID."""
-    webhook = await Channels.get_webhook_by_id(webhook_id)
+    await check_channels_access(request, user)
+    webhook = await Channels.get_webhook_by_id(webhook_id, db=db)
     if not webhook:
         # Return default favicon if webhook not found
         # LICENSE covers this Open WebUI fallback logo.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
         return FileResponse(f'{STATIC_DIR}/favicon.png')
+
+    channel = await Channels.get_channel_by_id(webhook.channel_id, db=db)
+    if not channel:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if channel.type in ['group', 'dm']:
+        if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+    else:
+        if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     if webhook.profile_image_url:
         # Check if it's url or base64
