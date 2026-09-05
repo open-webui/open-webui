@@ -420,9 +420,6 @@ class ChatTable:
         """
         Clean a Chat SQLAlchemy model's title + chat JSON,
         and return True if anything changed.
-
-        The message write paths (upsert/status/delete) rely on this
-        leaving the blob clean and sanitize only the data they add.
         """
         changed = False
 
@@ -1108,11 +1105,16 @@ class ChatTable:
         if messages_map and message_id in messages_map:
             return messages_map[message_id]
 
-        chat = await self.get_chat_by_id(id)
-        if chat is None:
+        # Messages the frontend saved straight into the chat blob have no chat_message row yet.
+        async with get_async_db_context() as session:
+            result = await session.execute(select(Chat.chat[('history', 'messages')]).filter_by(id=id))
+            row = result.one_or_none()
+
+        if row is None:
             return None
 
-        return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
+        messages = row[0] or {}
+        return self._clean_null_bytes(messages.get(message_id, {}))
 
     async def get_message_metadata(
         self,
@@ -1160,7 +1162,6 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                self._sanitize_chat_row(chat_item)
                 chat = chat_item.chat or {}
                 self._repair_chat_current_id(chat)
 
@@ -1168,7 +1169,7 @@ class ChatTable:
                 saved_message = self.upsert_message_to_history(history, message_id, message)
                 chat['history'] = history
                 chat_item.chat = chat  # chat is a fresh dict when the column was empty
-                chat_item.title = chat.get('title', 'New Chat')
+                chat_item.title = self._clean_null_bytes(chat.get('title', 'New Chat'))
                 chat_item.current_message_id = self.get_current_message_id(chat)
                 flag_modified(chat_item, 'chat')
 
@@ -1206,7 +1207,6 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                self._sanitize_chat_row(chat_item)
                 chat = chat_item.chat or {}
                 self._repair_chat_current_id(chat)
 
@@ -1214,7 +1214,7 @@ class ChatTable:
                 deleted_ids = self.delete_message_from_history(history, message_id)
                 if not deleted_ids:
                     chat_item.chat = chat
-                    chat_item.title = chat.get('title', 'New Chat')
+                    chat_item.title = self._clean_null_bytes(chat.get('title', 'New Chat'))
                     chat_item.current_message_id = self.get_current_message_id(chat)
                     flag_modified(chat_item, 'chat')
                     await session.commit()
@@ -1223,7 +1223,7 @@ class ChatTable:
                 messages = history.get('messages') or {}
                 chat['history'] = history
                 chat_item.chat = chat
-                chat_item.title = chat.get('title', 'New Chat')
+                chat_item.title = self._clean_null_bytes(chat.get('title', 'New Chat'))
                 chat_item.current_message_id = self.get_current_message_id(chat)
                 flag_modified(chat_item, 'chat')
                 chat_item.updated_at = int(time.time())
@@ -1253,7 +1253,6 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                self._sanitize_chat_row(chat_item)
                 chat = chat_item.chat or {}
                 self._repair_chat_current_id(chat)
                 history = chat.get('history', {})
@@ -1265,7 +1264,7 @@ class ChatTable:
 
                 chat['history'] = history
                 chat_item.chat = chat
-                chat_item.title = chat.get('title', 'New Chat')
+                chat_item.title = self._clean_null_bytes(chat.get('title', 'New Chat'))
                 chat_item.current_message_id = self.get_current_message_id(chat)
                 flag_modified(chat_item, 'chat')
                 await session.commit()
