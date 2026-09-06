@@ -18,7 +18,6 @@ joserfc==1.7.4
 
 requests==2.34.2
 aiohttp==3.13.5 # do not update to 3.13.3 - broken
-async-timeout
 aiocache
 aiofiles
 starlette-compress==1.7.1
@@ -36,16 +35,12 @@ pycrdt==0.13.1
 redis
 hiredis
 
-APScheduler==3.11.2
-RestrictedPython==8.2
-
 loguru==0.7.3
 asgiref==3.11.1
 
 mcp==1.27.2
 openai
 
-langchain==1.2.10
 langchain-community==0.4.2
 langchain-classic==1.0.7
 langchain-text-splitters==1.1.2
