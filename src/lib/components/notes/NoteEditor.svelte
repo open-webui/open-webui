@@ -10,7 +10,7 @@
 	import { toast } from 'svelte-sonner';
 	import equal from 'fast-deep-equal';
 
-	import { goto } from '$app/navigation';
+	import { goto, onNavigate } from '$app/navigation';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
@@ -205,27 +205,46 @@
 
 	let debounceTimeout: NodeJS.Timeout | null = null;
 
+	const saveHandler = async () => {
+		const res = await updateNoteById(localStorage.token, id, {
+			title: note?.title === '' ? $i18n.t('Untitled') : note.title,
+			data: {
+				files: files
+			},
+			access_grants: note?.access_grants ?? []
+		}).catch((e) => {
+			toast.error(`${e}`);
+		});
+
+		if (res) {
+			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
+		}
+	};
+
 	const changeDebounceHandler = () => {
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
 		}
 
-		debounceTimeout = setTimeout(async () => {
-			const res = await updateNoteById(localStorage.token, id, {
-				title: note?.title === '' ? $i18n.t('Untitled') : note.title,
-				data: {
-					files: files
-				},
-				access_grants: note?.access_grants ?? []
-			}).catch((e) => {
-				toast.error(`${e}`);
-			});
-
-			if (res) {
-				pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
-			}
+		debounceTimeout = setTimeout(() => {
+			debounceTimeout = null;
+			saveHandler();
 		}, 200);
 	};
+
+	onNavigate(() => {
+		if (titleInputFocused) {
+			changeDebounceHandler();
+		}
+
+		if (!debounceTimeout) {
+			return;
+		}
+
+		clearTimeout(debounceTimeout);
+		debounceTimeout = null;
+		return saveHandler();
+	});
 
 	const applyExternalNoteContent = async (_note) => {
 		const incomingContent = _note.data?.content;
