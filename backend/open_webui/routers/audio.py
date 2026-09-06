@@ -46,6 +46,7 @@ from open_webui.env import (
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENV,
+    USE_SLIM,
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
@@ -58,9 +59,10 @@ from open_webui.utils.session_pool import get_session
 from pydantic import BaseModel
 
 # pydub needs stdlib audioop (gone in 3.13); keep requires-python capped < 3.13
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
-from pydub.utils import mediainfo
+if not USE_SLIM:
+    from pydub import AudioSegment
+    from pydub.silence import split_on_silence
+    from pydub.utils import mediainfo
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -213,6 +215,8 @@ def transcode_audio_to_mp3(audio_data: bytes, content_type_header: str, output_p
 
 
 def set_faster_whisper_model(model: str, auto_update: bool = False):
+    if USE_SLIM:
+        raise HTTPException(503, 'Configure an external speech-to-text engine. Local Whisper is unavailable in slim.')
     whisper_model = None
     if model:
         from faster_whisper import WhisperModel
@@ -285,6 +289,12 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
 
 @router.post('/config/update')
 async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)):
+    if USE_SLIM:
+        current = await Config.get_many('audio.stt.engine', 'audio.tts.engine')
+        if form_data.stt.ENGINE == '' and current.get('audio.stt.engine') != '':
+            raise HTTPException(400, 'Local Whisper is unavailable in slim. Select an external speech-to-text engine.')
+        if form_data.tts.ENGINE == 'transformers' and current.get('audio.tts.engine') != 'transformers':
+            raise HTTPException(400, 'Local TTS is unavailable in slim. Select an external text-to-speech engine.')
     await Config.upsert(
         {
             **config_updates(form_data.tts.model_dump(), TTS_CONFIG_KEYS),
@@ -292,7 +302,7 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
         }
     )
 
-    if form_data.stt.ENGINE == '':
+    if form_data.stt.ENGINE == '' and not USE_SLIM:
         request.app.state.faster_whisper_model = await asyncio.to_thread(
             set_faster_whisper_model, form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
         )
@@ -314,6 +324,8 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
 
 
 def load_speech_pipeline(request):
+    if USE_SLIM:
+        raise HTTPException(503, 'Configure an external text-to-speech engine. Local TTS is unavailable in slim.')
     from datasets import load_dataset
     from transformers import pipeline
 
@@ -328,7 +340,9 @@ def load_speech_pipeline(request):
 
 async def _raise_tts_error(exc: Exception, r=None) -> None:
     """Raise a standardised HTTPException from a TTS provider failure."""
-    code = r.status if r is not None else 500
+    if isinstance(exc, HTTPException):
+        raise exc
+    code = r.status if r is not None and r.status >= 400 else 500
     # LICENSE covers this Open WebUI error identifier.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
@@ -351,8 +365,29 @@ async def _write_tts_cache(
     audio: bytes,
     body_path: Path,
     payload: dict,
+    content_type: str = 'audio/mpeg',
 ) -> None:
     """Persist audio + request metadata to the speech cache."""
+    if USE_SLIM:
+        mime_type = content_type.split(';')[0].strip().lower()
+        if mime_type not in {
+            'audio/mpeg',
+            'audio/mp3',
+            'audio/wav',
+            'audio/x-wav',
+            'audio/ogg',
+            'audio/opus',
+            'audio/webm',
+            'audio/flac',
+            'audio/aac',
+            'audio/mp4',
+        }:
+            raise HTTPException(
+                502,
+                f'TTS returned unsupported format {mime_type}. Configure the provider to return MP3, WAV, Ogg, or another browser-playable audio format.',
+            )
+        async with aiofiles.open(file_path.with_suffix('.mime'), 'w') as f:
+            await f.write(content_type)
     async with aiofiles.open(file_path, 'wb') as f:
         await f.write(audio)
     async with aiofiles.open(body_path, 'w') as f:
@@ -388,6 +423,10 @@ async def _tts_openai(request, payload, file_path, file_body_path, user):
 
         audio_data = await r.read()
         content_type = r.headers.get('Content-Type', 'audio/mpeg')
+
+        if USE_SLIM:
+            await _write_tts_cache(file_path, audio_data, file_body_path, payload, content_type)
+            return FileResponse(file_path, media_type=content_type)
 
         if not await asyncio.to_thread(transcode_audio_to_mp3, audio_data, content_type, file_path):
             async with aiofiles.open(file_path, 'wb') as f:
@@ -430,8 +469,9 @@ async def _tts_elevenlabs(request, payload, file_path, file_body_path, user):
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         ) as r:
             r.raise_for_status()
-            await _write_tts_cache(file_path, await r.read(), file_body_path, payload)
-        return FileResponse(file_path)
+            content_type = r.headers.get('Content-Type', 'audio/mpeg')
+            await _write_tts_cache(file_path, await r.read(), file_body_path, payload, content_type)
+        return FileResponse(file_path, media_type=content_type if USE_SLIM else None)
     except Exception as exc:
         log.exception(exc)
         await _raise_tts_error(exc, r)
@@ -465,8 +505,9 @@ async def _tts_azure(request, payload, file_path, file_body_path, user):
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         ) as r:
             r.raise_for_status()
-            await _write_tts_cache(file_path, await r.read(), file_body_path, payload)
-        return FileResponse(file_path)
+            content_type = r.headers.get('Content-Type', 'audio/mpeg')
+            await _write_tts_cache(file_path, await r.read(), file_body_path, payload, content_type)
+        return FileResponse(file_path, media_type=content_type if USE_SLIM else None)
     except Exception as exc:
         log.exception(exc)
         await _raise_tts_error(exc, r)
@@ -474,6 +515,8 @@ async def _tts_azure(request, payload, file_path, file_body_path, user):
 
 async def _tts_transformers(request, payload, file_path, file_body_path, user):
     """Generate speech via the local HuggingFace SpeechT5 pipeline (thread-offloaded)."""
+    if USE_SLIM:
+        raise HTTPException(503, 'Configure an external text-to-speech engine. Local TTS is unavailable in slim.')
     import soundfile as sf
     import torch
 
@@ -558,6 +601,8 @@ _TTS_ENGINES = {
 @router.post('/speech')
 async def speech(request: Request, user=Depends(get_verified_user)):
     engine = await Config.get('audio.tts.engine')
+    if USE_SLIM and engine in ('', 'transformers'):
+        raise HTTPException(503, 'Configure an external text-to-speech engine.')
     if engine == '':
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -572,7 +617,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
     body = await request.body()
     name = hashlib.sha256(
-        body + str(engine).encode('utf-8') + str(await Config.get('audio.tts.model')).encode('utf-8')
+        body
+        + str(engine).encode('utf-8')
+        + str(await Config.get('audio.tts.model')).encode('utf-8')
+        + (b':slim' if USE_SLIM else b'')
     ).hexdigest()
 
     file_path = SPEECH_CACHE_DIR.joinpath(f'{name}.mp3')
@@ -587,7 +635,11 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             subject_id=name,
             data={'engine': engine, 'cached': True},
         )
-        return FileResponse(file_path)
+        content_type = None
+        if USE_SLIM:
+            async with aiofiles.open(file_path.with_suffix('.mime')) as f:
+                content_type = await f.read()
+        return FileResponse(file_path, media_type=content_type)
 
     try:
         payload = JSONCodec.loads(body)
@@ -960,7 +1012,11 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
         session = await get_session()
         if use_chat_completions:
             audio_file_to_use = file_path
-            if is_audio_conversion_required(file_path):
+            if USE_SLIM and Path(filename).suffix.lower() not in ('.mp3', '.wav'):
+                raise HTTPException(
+                    400, 'Mistral chat transcription requires MP3 or WAV in slim; local conversion is unavailable.'
+                )
+            if not BYPASS_PYDUB_PREPROCESSING and is_audio_conversion_required(file_path):
                 log.debug('Converting audio to mp3 for chat completions API')
                 converted_path = await asyncio.to_thread(convert_audio_to_mp3, file_path)
                 if converted_path:

@@ -13,8 +13,6 @@ IF /I "%WEB_LOADER_ENGINE%" == "playwright" (
         playwright install chromium
         playwright install-deps chromium
     )
-
-    python -c "import nltk; nltk.download('punkt_tab')"
 )
 
 SET "KEY_FILE=.webui_secret_key"

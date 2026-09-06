@@ -1,25 +1,5 @@
 /* HTML and Body */
 @font-face {
-	font-family: 'NotoSans';
-	src: url('fonts/NotoSans-Variable.ttf');
-}
-
-@font-face {
-	font-family: 'NotoSansJP';
-	src: url('fonts/NotoSansJP-Variable.ttf');
-}
-
-@font-face {
-	font-family: 'NotoSansKR';
-	src: url('fonts/NotoSansKR-Variable.ttf');
-}
-
-@font-face {
-	font-family: 'NotoSansSC';
-	src: url('fonts/NotoSansSC-Variable.ttf');
-}
-
-@font-face {
 	font-family: 'NotoSansSC-Regular';
 	src: url('fonts/NotoSansSC-Regular.ttf');
 }

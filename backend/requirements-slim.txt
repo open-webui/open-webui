@@ -1,3 +1,7 @@
+# External-services image. Keep shared package pins aligned with requirements.txt.
+# NumPy is used for cosine scoring; pandas is required by the remote Milvus client.
+numpy==2.4.6
+typer==0.25.1
 fastapi==0.136.3
 uvicorn[standard]==0.51.0
 pydantic==2.13.4
@@ -21,7 +25,6 @@ aiocache==0.12.3
 aiofiles==25.1.0
 starlette-compress==1.7.1
 Brotli==1.2.0
-brotlicffi==1.2.0.1
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
@@ -35,6 +38,7 @@ pycrdt==0.13.1
 redis==8.0.1
 hiredis==3.4.0
 
+APScheduler==3.11.2
 pytz==2026.2
 
 loguru==0.7.3
@@ -45,65 +49,41 @@ tiktoken==0.13.0
 mcp==1.27.2
 
 openai==2.29.0
-anthropic==0.86.0
-google-genai==1.66.0
 
 langchain-community==0.4.2
 langchain-classic==1.0.7
 langchain-text-splitters==1.1.2
 
 fake-useragent==2.2.0
-chromadb==1.5.9
+chromadb-client==1.5.9
 weaviate-client==4.20.3
 opensearch-py==3.2.0
 
-transformers==5.5.4
-sentence-transformers==5.5.1
-accelerate==1.13.0
-pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
-einops==0.8.2 
-
 ftfy==6.3.1
 chardet==7.4.3
-pypdf==6.7.5
 fpdf2==2.8.7
-docx2txt==0.9
-python-docx==1.2.0
-python-pptx==1.0.2
-msoffcrypto-tool==6.0.0
-unstructured==0.22.31
 
 Markdown==3.10.2
 beautifulsoup4==4.14.3
 lxml==6.1.1
-pypandoc==1.17
 pandas==3.0.3
-openpyxl==3.1.5
-pyxlsb==1.0.10
-xlrd==2.0.2
 validators==0.35.0
 psutil==7.2.2
-sentencepiece==0.2.1
-soundfile==0.13.1
 
 pillow==12.2.0
-opencv-python-headless==4.13.0.92
-rapidocr==3.9.2
 rank-bm25==0.2.2
-
-onnxruntime==1.26.0
-faster-whisper==1.2.1
 
 black==26.5.1
 youtube-transcript-api==1.2.4
 
-pydub==0.25.1
 ddgs==9.14.4
 
 azure-ai-documentintelligence==1.0.2
 azure-identity==1.25.3
 azure-storage-blob==12.29.0
 azure-search-documents==12.0.0
+
+## Google Cloud storage
 
 googleapis-common-protos==1.75.0
 google-cloud-storage==3.9.0
@@ -123,10 +103,6 @@ playwright==1.60.0 # Caution: version must match docker-compose.playwright.yaml 
 elasticsearch==9.4.1
 pinecone==6.0.2
 oracledb==3.4.2
-
-av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
-
-colbert-ai==0.2.22
 
 ## LDAP
 ldap3==2.9.1

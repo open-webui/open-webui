@@ -58,6 +58,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
+    USE_SLIM,
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db, get_async_session
@@ -82,7 +83,7 @@ from open_webui.retrieval.utils import (
     query_doc_with_hybrid_search,
 )
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import get_vector_db_client
 from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.bing import search_bing
@@ -150,7 +151,7 @@ def get_ef(
     auto_update: bool = RAG_EMBEDDING_MODEL_AUTO_UPDATE,
 ):
     ef = None
-    if embedding_model and engine == '':
+    if embedding_model and engine == '' and not USE_SLIM:
         from sentence_transformers import SentenceTransformer
 
         try:
@@ -178,6 +179,17 @@ def get_rf(
     rf = None
     # Convert timeout string to int or None (system default)
     timeout_value = int(external_reranker_timeout) if external_reranker_timeout else None
+    if reranking_model and engine == 'external':
+        from open_webui.retrieval.models.external import ExternalReranker
+
+        return ExternalReranker(
+            url=external_reranker_url,
+            api_key=external_reranker_api_key,
+            model=reranking_model,
+            timeout=timeout_value,
+        )
+    if USE_SLIM:
+        return None
     if reranking_model:
         if any(model in reranking_model for model in ['jinaai/jina-colbert-v2']):
             try:
@@ -192,55 +204,39 @@ def get_rf(
                 log.error(f'ColBERT: {e}')
                 raise Exception(ERROR_MESSAGES.DEFAULT(e, 'Error loading reranking model'))
         else:
-            if engine == 'external':
-                try:
-                    from open_webui.retrieval.models.external import ExternalReranker
+            import sentence_transformers
+            import torch
 
-                    rf = ExternalReranker(
-                        url=external_reranker_url,
-                        api_key=external_reranker_api_key,
-                        model=reranking_model,
-                        timeout=timeout_value,
-                    )
-                except Exception as e:
-                    log.error(f'ExternalReranking: {e}')
-                    raise Exception(ERROR_MESSAGES.DEFAULT(e, 'Error loading reranking model'))
-            else:
-                import sentence_transformers
-                import torch
+            try:
+                rf = sentence_transformers.CrossEncoder(
+                    get_model_path(reranking_model, auto_update),
+                    device=DEVICE_TYPE,
+                    trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+                    backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
+                    model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
+                    activation_fn=(
+                        torch.nn.Sigmoid() if SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION else None
+                    ),
+                )
+            except Exception as e:
+                log.error(f'CrossEncoder: {e}')
+                raise Exception(ERROR_MESSAGES.DEFAULT(e, 'CrossEncoder error'))
 
-                try:
-                    rf = sentence_transformers.CrossEncoder(
-                        get_model_path(reranking_model, auto_update),
-                        device=DEVICE_TYPE,
-                        trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-                        backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
-                        model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
-                        activation_fn=(
-                            torch.nn.Sigmoid()
-                            if SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION
-                            else None
-                        ),
-                    )
-                except Exception as e:
-                    log.error(f'CrossEncoder: {e}')
-                    raise Exception(ERROR_MESSAGES.DEFAULT(e, 'CrossEncoder error'))
-
-                # Safely adjust pad_token_id if missing as some models do not have this in config
-                try:
-                    model_cfg = getattr(rf, 'model', None)
-                    if model_cfg and hasattr(model_cfg, 'config'):
-                        cfg = model_cfg.config
-                        if getattr(cfg, 'pad_token_id', None) is None:
-                            # Fallback to eos_token_id when available
-                            eos = getattr(cfg, 'eos_token_id', None)
-                            if eos is not None:
-                                cfg.pad_token_id = eos
-                                log.debug('Missing pad_token_id detected; set to eos_token_id=%s', eos)
-                            else:
-                                log.warning('Neither pad_token_id nor eos_token_id present in model config')
-                except Exception as e2:
-                    log.warning(f'Failed to adjust pad_token_id on CrossEncoder: {e2}')
+            # Safely adjust pad_token_id if missing as some models do not have this in config
+            try:
+                model_cfg = getattr(rf, 'model', None)
+                if model_cfg and hasattr(model_cfg, 'config'):
+                    cfg = model_cfg.config
+                    if getattr(cfg, 'pad_token_id', None) is None:
+                        # Fallback to eos_token_id when available
+                        eos = getattr(cfg, 'eos_token_id', None)
+                        if eos is not None:
+                            cfg.pad_token_id = eos
+                            log.debug('Missing pad_token_id detected; set to eos_token_id=%s', eos)
+                        else:
+                            log.warning('Neither pad_token_id nor eos_token_id present in model config')
+            except Exception as e2:
+                log.warning(f'Failed to adjust pad_token_id on CrossEncoder: {e2}')
 
     return rf
 
@@ -535,6 +531,8 @@ async def unload_embedding_model(request: Request):
 
 @router.post('/embedding/update')
 async def update_embedding_config(request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)):
+    if USE_SLIM and form_data.RAG_EMBEDDING_ENGINE == '':
+        raise HTTPException(400, 'Slim requires an external embedding engine (openai, ollama, azure_openai).')
     config = await get_retrieval_config()
     log.info('Updating embedding model: %s to %s', config.RAG_EMBEDDING_MODEL, form_data.RAG_EMBEDDING_MODEL)
     await unload_embedding_model(request)
@@ -952,6 +950,44 @@ class ConfigForm(BaseModel):
 async def update_rag_config(request: Request, form_data: ConfigForm, user=Depends(get_admin_user)):
     # RAG settings
     config = await get_retrieval_config()
+    if USE_SLIM:
+        if form_data.web:
+            web_engine = (
+                form_data.web.WEB_LOADER_ENGINE
+                if form_data.web.WEB_LOADER_ENGINE is not None
+                else config.WEB_LOADER_ENGINE
+            )
+            browser_url = (
+                form_data.web.PLAYWRIGHT_WS_URL
+                if form_data.web.PLAYWRIGHT_WS_URL is not None
+                else config.PLAYWRIGHT_WS_URL
+            )
+            if (
+                web_engine == 'playwright'
+                and not browser_url
+                and (web_engine != config.WEB_LOADER_ENGINE or browser_url != config.PLAYWRIGHT_WS_URL)
+            ):
+                raise HTTPException(400, 'Configure PLAYWRIGHT_WS_URL. Slim requires a remote browser.')
+        if form_data.TEXT_SPLITTER == 'token_transformers' and config.TEXT_SPLITTER != 'token_transformers':
+            raise HTTPException(
+                400, 'Transformers tokenization is unavailable in slim. Use character or token splitting.'
+            )
+        reranker_engine = (
+            form_data.RAG_RERANKING_ENGINE
+            if form_data.RAG_RERANKING_ENGINE is not None
+            else config.RAG_RERANKING_ENGINE
+        )
+        reranker_model = (
+            form_data.RAG_RERANKING_MODEL if form_data.RAG_RERANKING_MODEL is not None else config.RAG_RERANKING_MODEL
+        )
+        if (
+            reranker_engine != 'external'
+            and reranker_model
+            and (reranker_engine != config.RAG_RERANKING_ENGINE or reranker_model != config.RAG_RERANKING_MODEL)
+        ):
+            raise HTTPException(
+                400, 'Slim requires an external reranker, or an empty reranking model for cosine scoring.'
+            )
     config.RAG_TEMPLATE = form_data.RAG_TEMPLATE if form_data.RAG_TEMPLATE is not None else config.RAG_TEMPLATE
     config.TOP_K = form_data.TOP_K if form_data.TOP_K is not None else config.TOP_K
     config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
@@ -1589,6 +1625,8 @@ def merge_docs_to_target_size(
 
 
 def get_transformers_tokenizer(request: Request, config: RetrievalConfig):
+    if USE_SLIM:
+        raise HTTPException(503, 'Transformers tokenization is unavailable in slim. Use character or token splitting.')
     if config.RAG_TOKENIZER_MODEL:
         from transformers import AutoTokenizer
 
@@ -1673,7 +1711,7 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and 'hash' in metadata:
-        result = VECTOR_DB_CLIENT.query(
+        result = get_vector_db_client().query(
             collection_name=collection_name,
             filter={'hash': metadata['hash']},
         )
@@ -1773,11 +1811,11 @@ def save_docs_to_vector_db(
     ]
 
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+        if get_vector_db_client().has_collection(collection_name=collection_name):
             log.info('collection %s already exists', collection_name)
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                get_vector_db_client().delete_collection(collection_name=collection_name)
                 log.info('deleting existing collection %s', collection_name)
             elif add is False:
                 log.info('collection %s already exists, overwrite is False and add is False', collection_name)
@@ -1840,7 +1878,7 @@ def save_docs_to_vector_db(
         ]
 
         log.info('adding to collection %s', collection_name)
-        VECTOR_DB_CLIENT.insert(
+        get_vector_db_client().insert(
             collection_name=collection_name,
             items=items,
         )
@@ -3035,7 +3073,7 @@ async def query_doc_handler(
             query_embedding = await request.app.state.EMBEDDING_FUNCTION(
                 form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
             )
-            # query_doc wraps a blocking VECTOR_DB_CLIENT.search call;
+            # query_doc wraps a blocking get_vector_db_client().search call;
             # offload so the request's event loop stays responsive.
             return await asyncio.to_thread(
                 query_doc,

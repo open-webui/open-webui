@@ -336,6 +336,7 @@ type Config = {
 	default_prompt_suggestions: PromptSuggestion[];
 	default_prompt_suggestions_i18n?: Record<string, { suggestion_prompts: PromptSuggestion[] }>;
 	features: {
+		slim?: boolean;
 		auth: boolean;
 		auth_trusted_header: boolean;
 		enable_api_keys: boolean;

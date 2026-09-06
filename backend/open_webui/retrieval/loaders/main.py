@@ -7,6 +7,7 @@ import zipfile
 
 import ftfy
 import requests
+from fastapi import HTTPException
 from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
@@ -20,6 +21,7 @@ from langchain_core.documents import Document
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     GLOBAL_LOG_LEVEL,
+    USE_SLIM,
     MINERU_MAX_MARKDOWN_BYTES,
     REQUESTS_VERIFY,
 )
@@ -314,7 +316,11 @@ class Loader:
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         loader = self._get_loader(filename, file_content_type, file_path)
         docs = loader.load()
-        return [Document(page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata) for doc in docs]
+        # ftfy's auto mode unescapes entities on every line before the first literal '<', rewriting the document.
+        return [
+            Document(page_content=ftfy.fix_text(doc.page_content, unescape_html=False), metadata=doc.metadata)
+            for doc in docs
+        ]
 
     async def aload(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         """
@@ -667,6 +673,19 @@ class Loader:
                 file_path=file_path,
             )
         else:
+            if USE_SLIM:
+                if file_ext == 'csv':
+                    return CSVLoaderWithSummary(file_path, filename, self._detect_text_encoding(file_path))
+                if file_ext in ['htm', 'html']:
+                    return BSHTMLLoader(file_path, open_encoding=self._detect_text_encoding(file_path))
+                if file_ext in ['txt', 'md', 'markdown', 'rst', 'xml'] or self._is_text_file(
+                    file_ext, file_content_type
+                ):
+                    return TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
+                raise HTTPException(
+                    503,
+                    'This file type requires an external document extractor in slim. Configure one that supports it.',
+                )
             if file_ext == 'pdf':
                 loader = PyPDFLoader(
                     file_path,
