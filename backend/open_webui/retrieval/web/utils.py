@@ -304,6 +304,9 @@ _DROPPED_REQUEST_HEADERS = {'accept-encoding', 'connection', 'content-length', '
 # The clients hand us a decoded body, so the sender's framing no longer describes it.
 _DROPPED_RESPONSE_HEADERS = {'connection', 'content-encoding', 'content-length', 'transfer-encoding'}
 
+# The Playwright loader only reads the page HTML, which none of these feed.
+_DROPPED_RESOURCE_TYPES = {'font', 'image', 'media'}
+
 
 def _forwardable_request_headers(headers: Dict[str, str]) -> Dict[str, str]:
     return {name: value for name, value in headers.items() if name.lower() not in _DROPPED_REQUEST_HEADERS}
@@ -725,6 +728,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 
     def _intercept_navigation_sync(self, route, session):
         req = route.request
+        if req.resource_type in _DROPPED_RESOURCE_TYPES:
+            route.abort()
+            return
 
         hop_cookies: List[Tuple[str, str]] = []
 
@@ -779,6 +785,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 
     async def _intercept_navigation(self, route, session):
         req = route.request
+        if req.resource_type in _DROPPED_RESOURCE_TYPES:
+            await route.abort()
+            return
 
         hop_cookies: List[Tuple[str, str]] = []
 
