@@ -128,7 +128,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc curl jq ca-certificates \
     libmariadb-dev \
-    python3-dev \
     ffmpeg libsm6 libxext6 zstd \
     && rm -rf /var/lib/apt/lists/*
 
