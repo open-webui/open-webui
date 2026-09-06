@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { config } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
@@ -421,6 +422,13 @@
 	}}
 >
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Documents')}</h2>
+	{#if $config?.features?.slim === true}
+		<p class="mb-4 text-xs text-gray-500">
+			{$i18n.t(
+				'Slim requires external services for embeddings, vector storage, and document extraction. Basic text files can be read locally.'
+			)}
+		</p>
+	{/if}
 
 	{#if RAGConfig}
 		<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
@@ -430,7 +438,11 @@
 					description={$i18n.t('Choose how uploaded documents are parsed before indexing.')}
 				>
 					<SettingsSelect bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}>
-						<option value="">{$i18n.t('Default')}</option>
+						<option value=""
+							>{$config?.features?.slim === true
+								? $i18n.t('Basic text only')
+								: $i18n.t('Default')}</option
+						>
 						<option value="external">{$i18n.t('External')}</option>
 						<option value="tika">{$i18n.t('Tika')}</option>
 						<option value="docling">{$i18n.t('Docling')}</option>
@@ -455,7 +467,7 @@
 					/>
 				</AdminSettingField>
 
-				{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
+				{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === '' && $config?.features?.slim !== true}
 					<AdminSettingRow
 						label={$i18n.t('PDF Extract Images (OCR)')}
 						description={$i18n.t('Extract images from PDFs so OCR can process image-only pages.')}
@@ -908,7 +920,7 @@
 						<SettingsSelect bind:value={RAGConfig.TEXT_SPLITTER}>
 							<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 							<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-							<option value="token_transformers">
+							<option value="token_transformers" disabled={$config?.features?.slim === true}>
 								{$i18n.t('Token')} ({$i18n.t('Transformers')})
 							</option>
 						</SettingsSelect>
@@ -1012,7 +1024,9 @@
 								}
 							}}
 						>
-							<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
+							<option value="" disabled={$config?.features?.slim === true}
+								>{$i18n.t('Default (SentenceTransformers)')}</option
+							>
 							<option value="ollama">{$i18n.t('Ollama')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="azure_openai">{$i18n.t('Azure OpenAI')}</option>
@@ -1251,7 +1265,9 @@
 										}
 									}}
 								>
-									<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
+									<option value="" disabled={$config?.features?.slim === true}
+										>{$i18n.t('Default (SentenceTransformers)')}</option
+									>
 									<option value="external">{$i18n.t('External')}</option>
 								</SettingsSelect>
 							</AdminSettingRow>

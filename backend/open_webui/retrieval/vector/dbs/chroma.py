@@ -16,6 +16,8 @@ from open_webui.config import (
     CHROMA_HTTP_SSL,
     CHROMA_TENANT,
 )
+from open_webui.env import USE_SLIM
+from fastapi import HTTPException
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
@@ -29,6 +31,8 @@ log = logging.getLogger(__name__)
 
 class ChromaClient(VectorDBBase):
     def __init__(self):
+        if USE_SLIM and not CHROMA_HTTP_HOST:
+            raise HTTPException(503, 'Configure CHROMA_HTTP_HOST: embedded Chroma is unavailable in slim.')
         settings_dict = {
             'allow_reset': True,
             'anonymized_telemetry': False,
@@ -58,7 +62,7 @@ class ChromaClient(VectorDBBase):
 
     def has_collection(self, collection_name: str) -> bool:
         try:
-            self.client.get_collection(name=collection_name)
+            self.client.get_collection(name=collection_name, embedding_function=None)
             return True
         except NotFoundError:
             return False
@@ -76,7 +80,7 @@ class ChromaClient(VectorDBBase):
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
         try:
-            collection = self.client.get_collection(name=collection_name)
+            collection = self.client.get_collection(name=collection_name, embedding_function=None)
             if collection:
                 result = collection.query(
                     query_embeddings=vectors,
@@ -105,7 +109,7 @@ class ChromaClient(VectorDBBase):
     def query(self, collection_name: str, filter: dict, limit: Optional[int] = None) -> Optional[GetResult]:
         # Query the items from the collection based on the filter.
         try:
-            collection = self.client.get_collection(name=collection_name)
+            collection = self.client.get_collection(name=collection_name, embedding_function=None)
             if collection:
                 result = collection.get(
                     where=filter,
@@ -125,7 +129,7 @@ class ChromaClient(VectorDBBase):
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
-        collection = self.client.get_collection(name=collection_name)
+        collection = self.client.get_collection(name=collection_name, embedding_function=None)
         if collection:
             result = collection.get()
             return GetResult(
@@ -139,7 +143,9 @@ class ChromaClient(VectorDBBase):
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
-        collection = self.client.get_or_create_collection(name=collection_name, metadata={'hnsw:space': 'cosine'})
+        collection = self.client.get_or_create_collection(
+            name=collection_name, metadata={'hnsw:space': 'cosine'}, embedding_function=None
+        )
 
         ids = [item['id'] for item in items]
         documents = [item['text'] for item in items]
@@ -157,7 +163,9 @@ class ChromaClient(VectorDBBase):
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
-        collection = self.client.get_or_create_collection(name=collection_name, metadata={'hnsw:space': 'cosine'})
+        collection = self.client.get_or_create_collection(
+            name=collection_name, metadata={'hnsw:space': 'cosine'}, embedding_function=None
+        )
 
         ids = [item['id'] for item in items]
         documents = [item['text'] for item in items]
@@ -174,7 +182,7 @@ class ChromaClient(VectorDBBase):
     ):
         # Delete the items from the collection based on the ids.
         try:
-            collection = self.client.get_collection(name=collection_name)
+            collection = self.client.get_collection(name=collection_name, embedding_function=None)
             if collection:
                 if ids:
                     collection.delete(ids=ids)
