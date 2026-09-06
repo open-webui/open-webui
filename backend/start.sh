@@ -24,7 +24,6 @@ if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     playwright install chromium
     playwright install-deps chromium
   fi
-  python -c "import nltk; nltk.download('punkt_tab')"
 fi
 
 # ── Secret key setup ─────────────────────────────────────────────────────────
