@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import MPS_INFERENCE_LOCK
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.config import Config
@@ -179,8 +180,9 @@ def _compute_similarities(feedbacks: list[LeaderboardFeedbackData], query: str) 
         return {}
 
     try:
-        tag_embeddings = embedding_model.encode(all_tags)
-        query_embedding = embedding_model.encode([query])[0]
+        with MPS_INFERENCE_LOCK:
+            tag_embeddings = embedding_model.encode(all_tags)
+            query_embedding = embedding_model.encode([query])[0]
     except Exception as e:
         log.error(f'Embedding error: {e}')
         return {}

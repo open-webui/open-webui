@@ -7,7 +7,9 @@ import pkgutil
 import re
 import shutil
 import sys
+import threading
 import traceback
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
@@ -65,6 +67,9 @@ if sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
             DEVICE_TYPE = 'mps'
     except Exception:
         pass
+
+# Torch MPS inference is not thread-safe and a concurrent call kills the whole process.
+MPS_INFERENCE_LOCK = threading.Lock() if DEVICE_TYPE == 'mps' else nullcontext()
 
 ####################################
 # LOGGING

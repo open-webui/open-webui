@@ -5,9 +5,7 @@ import hashlib
 import logging
 import os
 import re
-import threading
 import time
-from contextlib import nullcontext
 from typing import Awaitable, Optional, Union
 from urllib.parse import quote
 
@@ -32,9 +30,9 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     BYPASS_RETRIEVAL_ACCESS_CONTROL,
-    DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
+    MPS_INFERENCE_LOCK,
     OFFLINE_MODE,
 )
 from open_webui.models.access_grants import AccessGrants
@@ -57,9 +55,6 @@ from open_webui.utils.headers import get_json_bearer_headers, include_user_info_
 from open_webui.utils.misc import get_content_from_message, get_message_list
 
 log = logging.getLogger(__name__)
-
-# Torch MPS inference is not thread-safe and a concurrent call kills the whole process.
-_MPS_INFERENCE_LOCK = threading.Lock() if DEVICE_TYPE == 'mps' else nullcontext()
 
 
 from typing import Any
@@ -1124,7 +1119,7 @@ def get_embedding_function(
                 )
 
             def encode():
-                with _MPS_INFERENCE_LOCK:
+                with MPS_INFERENCE_LOCK:
                     return embedding_function.encode(
                         query,
                         batch_size=int(embedding_batch_size),
@@ -1257,7 +1252,7 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
     else:
 
         def predict(query, documents, user=None):
-            with _MPS_INFERENCE_LOCK:
+            with MPS_INFERENCE_LOCK:
                 return reranking_function.predict(
                     [(query, doc.page_content) for doc in documents], batch_size=int(reranking_batch_size)
                 )
