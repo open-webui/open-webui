@@ -10,8 +10,9 @@ from typing import Awaitable, Optional, Union
 from urllib.parse import quote
 
 import aiohttp
+import numpy as np
 import requests
-from huggingface_hub import snapshot_download
+from fastapi import HTTPException
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
     EnsembleRetriever,
@@ -32,7 +33,9 @@ from open_webui.env import (
     BYPASS_RETRIEVAL_ACCESS_CONTROL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
+    MPS_INFERENCE_LOCK,
     OFFLINE_MODE,
+    USE_SLIM,
 )
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
@@ -45,7 +48,7 @@ from open_webui.models.users import UserModel
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.external import retrieve_external_knowledge
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import get_vector_db_client
 from open_webui.retrieval.vector.main import GetResult, SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files, has_access_to_file
@@ -332,7 +335,7 @@ class VectorSearchRetriever(BaseRetriever):
 def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None):
     try:
         log.debug('query_doc:doc %s', collection_name)
-        result = VECTOR_DB_CLIENT.search(
+        result = get_vector_db_client().search(
             collection_name=collection_name,
             vectors=[query_embedding],
             limit=k,
@@ -350,7 +353,7 @@ def query_doc(collection_name: str, query_embedding: list[float], k: int, user: 
 def get_doc(collection_name: str, user: UserModel = None):
     try:
         log.debug('get_doc:doc %s', collection_name)
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        result = get_vector_db_client().get(collection_name=collection_name)
 
         if result:
             log.info('query_doc:result %s %s', result.ids, result.metadatas)
@@ -1109,6 +1112,8 @@ def get_embedding_function(
     if embedding_engine == '':
         # Sentence transformers: CPU-bound sync operation
         async def async_embedding_function(query, prefix=None, user=None):
+            if USE_SLIM:
+                raise HTTPException(503, 'Configure an external embedding engine (openai, ollama, azure_openai).')
             # Deferred so a missing local model degrades RAG instead of crashing boot.
             if embedding_function is None:
                 raise ValueError(
@@ -1116,17 +1121,16 @@ def get_embedding_function(
                     'SentenceTransformer model name, or configure an external '
                     'RAG_EMBEDDING_ENGINE (ollama, openai, azure_openai).'
                 )
-            return await asyncio.to_thread(
-                (
-                    lambda query, prefix=None: embedding_function.encode(
+
+            def encode():
+                with MPS_INFERENCE_LOCK:
+                    return embedding_function.encode(
                         query,
                         batch_size=int(embedding_batch_size),
                         **({'prompt': prefix} if prefix else {}),
                     ).tolist()
-                ),
-                query,
-                prefix,
-            )
+
+            return await asyncio.to_thread(encode)
 
         return async_embedding_function
     elif embedding_engine in ['ollama', 'openai', 'azure_openai']:
@@ -1243,6 +1247,14 @@ async def generate_embeddings(
 
 
 def get_reranking_function(reranking_engine, reranking_model, reranking_function, reranking_batch_size=32):
+    if USE_SLIM and reranking_model and reranking_engine != 'external':
+
+        def unavailable(query, documents, user=None):
+            raise HTTPException(
+                503, 'Configure an external reranker, or clear the reranking model to use cosine scoring.'
+            )
+
+        return unavailable
     if reranking_function is None:
         return None
     if reranking_engine == 'external':
@@ -1250,9 +1262,14 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
             [(query, doc.page_content) for doc in documents], user=user
         )
     else:
-        return lambda query, documents, user=None: reranking_function.predict(
-            [(query, doc.page_content) for doc in documents], batch_size=int(reranking_batch_size)
-        )
+
+        def predict(query, documents, user=None):
+            with MPS_INFERENCE_LOCK:
+                return reranking_function.predict(
+                    [(query, doc.page_content) for doc in documents], batch_size=int(reranking_batch_size)
+                )
+
+        return predict
 
 
 # UUIDs, SHA-256 digests, and prefixed variants thereof all fit [A-Za-z0-9_-].
@@ -1683,6 +1700,8 @@ async def get_sources_from_items(
 
 
 def get_model_path(model: str, update_model: bool = False):
+    from huggingface_hub import snapshot_download
+
     # Construct huggingface_hub kwargs with local_files_only to return the snapshot path
     cache_dir = os.getenv('SENTENCE_TRANSFORMERS_HOME')
 
@@ -1728,6 +1747,17 @@ from langchain_core.callbacks import Callbacks
 from langchain_core.documents import BaseDocumentCompressor, Document
 
 
+def cosine_similarity(query, documents) -> np.ndarray:
+    """Score one query against documents without loading a model runtime."""
+    if len(documents) == 0:
+        return np.array([], dtype=float)
+    query = np.asarray(query, dtype=float).reshape(-1)
+    documents = np.asarray(documents, dtype=float)
+    query = query / max(np.linalg.norm(query), 1e-12)
+    documents = documents / np.maximum(np.linalg.norm(documents, axis=1, keepdims=True), 1e-12)
+    return documents @ query
+
+
 class RerankCompressor(BaseDocumentCompressor):
     embedding_function: Any
     top_n: int
@@ -1763,18 +1793,18 @@ class RerankCompressor(BaseDocumentCompressor):
         query: str,
         callbacks: Callbacks | None = None,
     ) -> Sequence[Document]:
+        if not documents:
+            return []
         reranking = self.reranking_function is not None
 
         scores = None
         if reranking:
             scores = await asyncio.to_thread(self.reranking_function, query, documents)
         else:
-            from sentence_transformers import util as st_util
-
             query_embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
             doc_texts = [doc.page_content for doc in documents]
             document_embedding = await self.embedding_function(doc_texts, RAG_EMBEDDING_CONTENT_PREFIX)
-            scores = st_util.cos_sim(query_embedding, document_embedding)[0]
+            scores = cosine_similarity(query_embedding, document_embedding)
 
         if scores is not None:
             docs_with_scores = list(

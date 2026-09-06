@@ -105,7 +105,7 @@
 					document.body.appendChild(clonedElement);
 
 					// Override content-visibility so html2canvas can capture all messages
-					clonedElement.querySelectorAll('.message-listitem').forEach((el) => {
+					clonedElement.querySelectorAll('.message-virtualized').forEach((el) => {
 						el.style.contentVisibility = 'visible';
 					});
 

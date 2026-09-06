@@ -11,20 +11,19 @@ set -euo pipefail
 # expansion. The two can't be combined inline (`${VAR:-default,,}` makes
 # the default literal `,,`), so we normalise once up front and the simple
 # `${VAR,,}` form stays safe under `set -u` everywhere else.
-: "${WEB_LOADER_ENGINE:=}" "${USE_OLLAMA_DOCKER:=}" "${USE_CUDA_DOCKER:=}"
+: "${USE_SLIM_DOCKER:=}" "${WEB_LOADER_ENGINE:=}" "${USE_OLLAMA_DOCKER:=}" "${USE_CUDA_DOCKER:=}"
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 cd "$SCRIPT_DIR" || exit 1
 
 # ── Playwright browser installation (if configured) ──────────────────────────
 
-if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
+if [[ "${USE_SLIM_DOCKER,,}" != "true" && "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
   if [[ -z "${PLAYWRIGHT_WS_URL:-}" ]]; then
     echo "Installing Playwright Chromium browser..."
     playwright install chromium
     playwright install-deps chromium
   fi
-  python -c "import nltk; nltk.download('punkt_tab')"
 fi
 
 # ── Secret key setup ─────────────────────────────────────────────────────────

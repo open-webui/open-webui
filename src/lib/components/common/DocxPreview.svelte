@@ -28,6 +28,8 @@
 	let zoomLevel = 1;
 	let resizeObserver: ResizeObserver | null = null;
 
+	const SAFE_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
+
 	$: docxScale = Math.max(0.25, fitScale * zoomLevel);
 
 	const clearPreview = () => {
@@ -96,6 +98,24 @@
 		(pages[page - 1] as HTMLElement | undefined)?.scrollIntoView({ block: 'start' });
 	};
 
+	const isSafeLinkTarget = (href: string) => {
+		if (!href.trim()) return false;
+
+		try {
+			return SAFE_LINK_SCHEMES.includes(new URL(href, document.baseURI).protocol);
+		} catch {
+			return false;
+		}
+	};
+
+	const stripUnsafeLinkTargets = () => {
+		containerEl.querySelectorAll('a[href]').forEach((link) => {
+			if (!isSafeLinkTarget(link.getAttribute('href') ?? '')) {
+				link.removeAttribute('href');
+			}
+		});
+	};
+
 	const renderDocx = async (arrayBuffer: ArrayBuffer | null) => {
 		const currentRender = ++renderId;
 		clearPreview();
@@ -116,12 +136,15 @@
 				className: 'docx',
 				ignoreLastRenderedPageBreak: false,
 				inWrapper: true,
+				// the renderer would otherwise inline a document-supplied HTML part into a same-origin frame
+				renderAltChunks: false,
 				renderEndnotes: true,
 				renderFooters: true,
 				renderFootnotes: true,
 				renderHeaders: true,
 				useBase64URL: true
 			});
+			stripUnsafeLinkTargets();
 			await tick();
 			updateFitScale();
 			await scrollToTargetPage();

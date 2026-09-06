@@ -1263,7 +1263,7 @@ class OAuthClientManager:
             if token and not token.get('access_token'):
                 error_desc = token.get('error_description', token.get('error', 'Unknown error'))
                 error_message = f'Token exchange failed: {error_desc}'
-                log.error(f'Invalid token response for client_id {client_id}: {token}')
+                log.error('Invalid token response for client_id %s: %s', client_id, error_desc)
                 token = None
 
             if token:
@@ -1917,7 +1917,7 @@ class OAuthManager:
             if provider == 'feishu' and isinstance(user_data, dict) and 'data' in user_data:
                 user_data = user_data['data']
             if not user_data:
-                log.warning(f'OAuth callback failed, user data is missing: {token}')
+                log.warning('OAuth callback failed for provider %s, user data is missing', provider)
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
             # Extract the "sub" claim, using custom claim if configured

@@ -449,11 +449,13 @@ class ModelsTable:
 
             return ModelListResponse(items=models, total=total)
 
-    async def get_model_meta_by_id(self, id: str, db: AsyncSession | None = None) -> tuple[dict, int | None]:
-        """Return (meta, updated_at) for a model, skipping access grant resolution."""
+    async def get_model_meta_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> tuple[dict, str, int | None] | None:
+        """Return (meta, user_id, updated_at) for a model, skipping access grant resolution."""
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(Model.meta, Model.updated_at).filter_by(id=id))
+                result = await db.execute(select(Model.meta, Model.user_id, Model.updated_at).filter_by(id=id))
                 return result.first()
         except Exception:
             return None
