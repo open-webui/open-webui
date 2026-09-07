@@ -4005,7 +4005,8 @@
 
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
-	const getDraftChatId = () => chatIdProp || null;
+	// chatIdProp is empty for chats started from the home page (URL set via replaceState)
+	const getDraftChatId = () => chatIdProp || $chatId || null;
 
 	const getChatInputDraft = () => ({
 		prompt,
@@ -4618,7 +4619,7 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft(getDraftChatId());
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitHandler(withSelectedText(e.detail));
