@@ -19,6 +19,8 @@ from open_webui.utils.task import (
 
 log = logging.getLogger(__name__)
 
+IMAGE_TOKEN_ESTIMATE = 1000
+
 DEFAULT_CONTEXT_COMPACTION_PROMPT = """### Task:
 Summarize the conversation history that will be compacted out of the active chat context.
 
@@ -431,15 +433,15 @@ def _estimate_messages_tokens(messages: list[dict]) -> int:
                 if not isinstance(item, dict):
                     total += _estimate_tokens(item)
                 elif item.get('type') in {'image', 'image_url'}:
-                    total += 1000
+                    total += IMAGE_TOKEN_ESTIMATE
                 else:
                     total += _estimate_tokens(item.get('text') or item.get('content') or item)
         else:
             total += _estimate_tokens(content)
 
-        total += _estimate_tokens(message.get('output'))
+        total += _estimate_attachment_tokens(message.get('output'))
         total += _estimate_tokens(message.get('tool_calls'))
-        total += _estimate_tokens(message.get('files'))
+        total += _estimate_attachment_tokens(message.get('files'))
     return total
 
 
@@ -457,3 +459,27 @@ def _estimate_tokens(value: Any) -> int:
         return 0
 
     return max(1, len(value) // 4)
+
+
+def _estimate_attachment_tokens(value: Any) -> int:
+    total = _estimate_tokens(value)
+    pending_items = [value]
+    while pending_items:
+        item = pending_items.pop()
+        if isinstance(item, list):
+            pending_items.extend(item)
+        elif isinstance(item, dict):
+            payload = _inline_attachment_payload(item)
+            if payload:
+                # The estimate above already charged this payload's length, which is no guide to its context cost.
+                total += IMAGE_TOKEN_ESTIMATE - len(payload) // 4
+            else:
+                pending_items.extend(item.values())
+    return total
+
+
+def _inline_attachment_payload(item: dict) -> str | None:
+    payload = item.get('url') or item.get('image_url')
+    if not payload and item.get('type') == 'data':
+        payload = item.get('content')
+    return payload if isinstance(payload, str) and payload.startswith('data:') else None
