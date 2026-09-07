@@ -613,6 +613,10 @@
 			showSidebar.set(!$showSidebar);
 		}
 	};
+
+	const openFolderInNewTabHandler = () => {
+		window.open(`/folders/${folderId}`, '_blank');
+	};
 	$: if (!open && chats !== null) {
 		chats = null;
 		chatsPage = 1;
@@ -758,6 +762,16 @@
 				}}
 				role="button"
 				tabindex="0"
+				on:mousedown={(e) => {
+					if (e.button === 1) e.preventDefault();
+				}}
+				on:auxclick={(e) => {
+					if (e.button !== 1) return;
+					if (shouldIgnoreRowClick(e.target)) return;
+					e.preventDefault();
+					e.stopPropagation();
+					openFolderInNewTabHandler();
+				}}
 				on:click={async (e) => {
 					e.stopPropagation();
 					if (shouldIgnoreRowClick(e.target)) return;
