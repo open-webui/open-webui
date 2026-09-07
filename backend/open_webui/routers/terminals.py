@@ -33,6 +33,7 @@ from open_webui.utils.terminals import (
 )
 from starlette.background import BackgroundTask
 from starlette.requests import ClientDisconnect
+from yarl import URL
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +41,8 @@ router = APIRouter()
 
 STREAMING_CONTENT_TYPES = ('application/octet-stream', 'image/', 'application/pdf')
 STRIPPED_RESPONSE_HEADERS = frozenset(('transfer-encoding', 'connection', 'content-encoding', 'content-length'))
+
+UPSTREAM_MANAGEMENT_PATH_PREFIXES = ('api/v1/policies', 'api/v1/status', 'api/v1/terminals')
 
 
 def _sanitize_proxy_path(path: str) -> str | None:
@@ -64,6 +67,8 @@ def _sanitize_proxy_path(path: str) -> str | None:
     # Upstreams that treat '\' as a separator would resolve it, so reject outright.
     if '\\' in decoded:
         return None
+    if any(char in decoded for char in '\t\r\n'):
+        return None
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
     # Remove any leading slashes that would reset the base
@@ -75,6 +80,16 @@ def _sanitize_proxy_path(path: str) -> str | None:
     if had_trailing_slash and cleaned and not cleaned.endswith('/'):
         cleaned += '/'
     return cleaned
+
+
+def _is_upstream_management_url(connection_url: str, target_url: str) -> bool:
+    """Return whether a proxied request URL addresses the terminal server's management API."""
+    base_path = URL(connection_url).path.rstrip('/')
+    target_path = URL(target_url).path
+    return any(
+        target_path == f'{base_path}/{prefix}' or target_path.startswith(f'{base_path}/{prefix}/')
+        for prefix in UPSTREAM_MANAGEMENT_PATH_PREFIXES
+    )
 
 
 @router.get('/')
@@ -129,6 +144,9 @@ async def proxy_terminal(
         return JSONResponse({'error': 'Invalid path'}, status_code=400)
 
     target_url = f'{base_url}/{safe_path}'
+
+    if _is_upstream_management_url(str(connection.get('url') or ''), target_url):
+        return JSONResponse({'error': 'Path not allowed'}, status_code=403)
 
     if request.query_params:
         target_url += f'?{request.query_params}'
@@ -186,6 +204,8 @@ async def proxy_terminal(
             cookies=cookies,
             data=body or None,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            # allow_redirects=False keeps the management-path check authoritative: a 3xx would resend the key.
+            allow_redirects=False,
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
