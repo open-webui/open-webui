@@ -972,6 +972,24 @@ async def apply_source_context_to_messages(
         )
 
 
+async def store_tool_result_image(request, image_url, metadata, user):
+    """Swap a base64 tool image for a stored file so the chat keeps a reference, not the payload."""
+    if not isinstance(image_url, str) or not image_url.startswith('data:'):
+        return image_url
+
+    stored_url = await get_file_url_from_base64(
+        request,
+        image_url,
+        {
+            'chat_id': (metadata or {}).get('chat_id'),
+            'message_id': (metadata or {}).get('message_id'),
+            'session_id': (metadata or {}).get('session_id'),
+        },
+        user,
+    )
+    return stored_url or image_url
+
+
 async def process_tool_result(
     request,
     tool_function_name,
@@ -1399,6 +1417,11 @@ async def chat_completion_tools_handler(
                     )
 
                     if tool_result_files:
+                        for file_item in tool_result_files:
+                            file_item['url'] = await store_tool_result_image(
+                                request, file_item.get('url'), metadata, user
+                            )
+
                         await event_emitter(
                             {
                                 'type': 'files',
@@ -2087,7 +2110,7 @@ async def convert_url_images_to_base64(form_data, user=None):
         new_content = []
 
         for item in content:
-            if not isinstance(item, dict) or item.get('type') != 'image_url':
+            if not isinstance(item, dict) or item.get('type') not in ('image_url', 'input_image'):
                 new_content.append(item)
                 continue
 
@@ -2104,13 +2127,15 @@ async def convert_url_images_to_base64(form_data, user=None):
 
             try:
                 base64_data = await get_image_base64_from_url(image_url, user=user)
-                if base64_data:
+                if base64_data and isinstance(image_url_data, str):
+                    new_content.append({**item, 'image_url': base64_data})
+                elif base64_data:
                     image_url_payload = {'url': base64_data}
                     if isinstance(image_url_data, dict) and image_url_data.get('detail'):
                         image_url_payload['detail'] = image_url_data['detail']
                     new_content.append(
                         {
-                            'type': 'image_url',
+                            'type': item['type'],
                             'image_url': image_url_payload,
                         }
                     )
@@ -3288,7 +3313,8 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
         display_files = []
         for file_item in result.get('files', []):
             if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
-                output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
+                image_url = await store_tool_result_image(request, file_item['url'], metadata, user)
+                output_parts.append({'type': 'input_image', 'image_url': image_url})
             else:
                 display_files.append(file_item)
 
@@ -5863,7 +5889,8 @@ async def streaming_chat_response_handler(response, ctx):
                         for file_item in result.get('files', []):
                             if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
                                 # LLM-only: add as input_image part, not frontend display output.
-                                output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
+                                image_url = await store_tool_result_image(request, file_item['url'], metadata, user)
+                                output_parts.append({'type': 'input_image', 'image_url': image_url})
                             else:
                                 # Frontend display (MCP images, audio, etc.)
                                 display_files.append(file_item)
@@ -6026,6 +6053,8 @@ async def streaming_chat_response_handler(response, ctx):
                                         ],
                                     }
                                 )
+
+                        new_form_data = await convert_url_images_to_base64(new_form_data, user=user)
 
                         if filter_functions:
                             new_form_data, _ = await process_filter_functions(
