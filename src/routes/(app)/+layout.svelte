@@ -452,7 +452,10 @@
 	};
 </script>
 
-<SettingsModal bind:show={$showSettings} />
+{#if $user?.role === 'admin' || ($user?.permissions?.settings?.personal ?? true)}
+	<SettingsModal bind:show={$showSettings} />
+{/if}
+
 <ChangelogModal bind:show={$showChangelog} />
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}

@@ -289,6 +289,7 @@ class FeaturesPermissions(BaseModel):
 
 
 class SettingsPermissions(BaseModel):
+    personal: bool = True
     interface: bool = True
 
 
@@ -503,7 +504,7 @@ async def update_user_settings_by_session_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not await has_permission(
-        user.id, 'settings.interface', await Config.get('user.permissions')
+        user.id, 'settings.personal', await Config.get('user.permissions')
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

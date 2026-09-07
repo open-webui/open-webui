@@ -546,25 +546,27 @@
 				</a>
 			{/if}
 
-			<button
-				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition cursor-pointer select-none"
-				type="button"
-				on:click={async () => {
-					show = false;
+			{#if $user?.role === 'admin' || ($user?.permissions?.settings?.personal ?? true)}
+				<button
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition cursor-pointer select-none"
+					type="button"
+					on:click={async () => {
+						show = false;
 
-					await showSettings.set(true);
+						await showSettings.set(true);
 
-					if ($mobile) {
-						await tick();
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class="self-center">
-					<Settings className="size-3.5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
-			</button>
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class="self-center">
+						<Settings className="size-3.5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Settings')}</div>
+				</button>
+			{/if}
 
 			<button
 				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition cursor-pointer select-none"

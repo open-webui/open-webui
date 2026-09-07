@@ -1175,15 +1175,35 @@
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
 				<div class=" self-center text-xs font-normal">
-					{$i18n.t('Interface Settings Access')}
+					{$i18n.t('Personal Settings Access')}
 				</div>
 				<Switch
-					bind:state={permissions.settings.interface}
-					ariaLabel={$i18n.t('Interface Settings Access')}
+					bind:state={permissions.settings.personal}
+					ariaLabel={$i18n.t('Personal Settings Access')}
 				/>
 			</div>
-			{#if defaultPermissions?.settings?.interface && !permissions.settings.interface}
-				<div>
+
+			{#if permissions.settings.personal}
+				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Interface Settings Access')}
+						</div>
+						<Switch
+							bind:state={permissions.settings.interface}
+							ariaLabel={$i18n.t('Interface Settings Access')}
+						/>
+					</div>
+					{#if defaultPermissions?.settings?.interface && !permissions.settings.interface}
+						<div>
+							<div class="text-xs text-gray-500">
+								{$i18n.t('This is a default user permission and will remain enabled.')}
+							</div>
+						</div>
+					{/if}
+				</div>
+			{:else if defaultPermissions?.settings?.personal}
+				<div class="pb-0.5">
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>

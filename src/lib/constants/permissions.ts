@@ -74,6 +74,7 @@ export const DEFAULT_PERMISSIONS = {
 		webhooks: false
 	},
 	settings: {
+		personal: true,
 		interface: true
 	}
 } as const;
