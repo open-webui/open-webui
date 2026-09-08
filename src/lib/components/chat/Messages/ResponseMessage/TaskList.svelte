@@ -18,11 +18,13 @@
 
 {#if tasks.length > 0 && hasActive}
 	<div
-		class="my-2 rounded-2xl border border-gray-50 dark:border-gray-850 bg-white dark:bg-gray-900"
+		class="my-2 max-h-[50vh] overflow-y-auto rounded-2xl border border-gray-50 bg-white dark:border-gray-850 dark:bg-gray-900"
 		transition:slide={{ duration: 200 }}
 	>
 		<!-- Header -->
-		<div class="flex items-center justify-between px-3.5 py-2">
+		<div
+			class="sticky top-0 z-10 flex items-center justify-between bg-white px-3.5 py-2 dark:bg-gray-900"
+		>
 			<div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
 				<TaskListIcon className="w-3.5 h-3.5" />
 				<span>
@@ -34,9 +36,11 @@
 			</div>
 
 			<button
+				type="button"
 				class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
 				on:click={() => (collapsed = !collapsed)}
 				aria-label={collapsed ? 'Expand' : 'Collapse'}
+				aria-expanded={!collapsed}
 			>
 				{#if collapsed}
 					<ChevronUp className="w-2.5 h-2.5" />
