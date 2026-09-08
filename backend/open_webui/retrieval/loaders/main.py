@@ -218,7 +218,7 @@ class TikaLoader:
         if self.extract_images == True:
             headers['X-Tika-PDFextractInlineImages'] = 'true'
 
-        endpoint_path = 'tika/json/text' if self.server_version == '4' else 'tika/text'
+        endpoint_path = 'tika/json/md' if self.server_version == '4' else 'tika/text'
         content_key = 'tk:content' if self.server_version == '4' else 'X-TIKA:content'
         endpoint = f'{self.url.rstrip("/")}/{endpoint_path}'
 
