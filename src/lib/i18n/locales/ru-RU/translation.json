@@ -3043,7 +3043,7 @@
 	"Use an LLM to improve tables, forms, math, and layout detection.": "Использовать LLM для улучшения распознавания таблиц, форм, математики и макета.",
 	"Use Base64": "Использовать Base64",
 	"Use Chat Completions API": "Использовать Chat Completions API",
-	"Use default": "Использовать значение по умолчанию",
+	"Use default": "По умолчанию",
 	"Use device vibration feedback on supported Android devices.": "Использовать вибрацию устройства на поддерживаемых устройствах Android.",
 	"Use discovered scopes": "Использовать обнаруженные области",
 	"Use groups to organize your users and assign permissions.": "Используйте группы для организации пользователей и назначения прав.",
