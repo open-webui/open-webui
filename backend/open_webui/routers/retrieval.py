@@ -59,6 +59,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     USE_SLIM,
+    USER_AGENT,
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db, get_async_session
@@ -2231,7 +2232,10 @@ async def _fetch_url(url: str, max_size_mb: int | str | None) -> dict:
 
     async with get_ssrf_safe_session() as session:
         async with session.get(
-            url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+            url,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+            headers={"User-Agent": USER_AGENT} if USER_AGENT else None,
         ) as response:
             response.raise_for_status()
 

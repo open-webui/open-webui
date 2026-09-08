@@ -36,6 +36,7 @@ from open_webui.env import (
     MPS_INFERENCE_LOCK,
     OFFLINE_MODE,
     USE_SLIM,
+    USER_AGENT,
 )
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
@@ -268,6 +269,8 @@ def _get_content_from_url_sync(request, url: str, loader_config):
     try:
         # Probe through the connect-time SSRF guard; bare requests.get re-resolves (DNS-rebinding gap).
         session = get_ssrf_safe_requests_session()
+        if USER_AGENT:
+            session.headers.update({"User-Agent": USER_AGENT})
         response = session.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
         response.raise_for_status()
         content_type = response.headers.get('Content-Type', '')
