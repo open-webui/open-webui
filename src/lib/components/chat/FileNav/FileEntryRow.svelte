@@ -162,9 +162,9 @@
 <li class="group" data-file-row>
 	<div
 		class="w-full flex items-center transition-colors duration-75
-			{selected ? 'bg-blue-50 dark:bg-blue-500/10' : 'hover:bg-gray-50/40 dark:hover:bg-white/4'}
+			{selected ? 'bg-gray-100 dark:bg-white/8' : 'hover:bg-gray-50/40 dark:hover:bg-white/4'}
 			{dragOverFolder
-			? 'bg-blue-50 dark:bg-blue-500/10 ring-1 ring-blue-400 dark:ring-blue-500 ring-inset'
+			? 'bg-gray-100 dark:bg-white/8 ring-1 ring-black/15 dark:ring-white/15 ring-inset'
 			: ''}"
 		role="presentation"
 		on:dragover={(e) => {
@@ -284,7 +284,7 @@
 				<div
 					class="size-3.5 shrink-0 rounded border transition-colors flex items-center justify-center
 						{selected
-						? 'bg-blue-500 dark:bg-blue-600 border-blue-500 dark:border-blue-600 text-white'
+						? 'bg-gray-900 border-gray-900 text-white dark:bg-gray-200 dark:border-gray-200 dark:text-gray-900'
 						: 'border-gray-300 dark:border-gray-600'}"
 				>
 					{#if selected}
