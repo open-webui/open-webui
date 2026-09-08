@@ -95,6 +95,7 @@
 	export let id: null | string = null;
 
 	let editor = null;
+	let autoFormat = true;
 	let note = null;
 
 	const newNote = {
@@ -174,6 +175,7 @@
 		(note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
 
 	const init = async () => {
+		autoFormat = true;
 		loading = true;
 		const res = await getNoteById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
@@ -1208,6 +1210,8 @@ ${content}
 								{/if}
 
 								<NoteMenu
+									bind:autoFormat
+									showAutoFormat={note?.write_access ?? false}
 									onUploadFiles={note?.write_access ? uploadNoteFilesHandler : null}
 									onDownload={(type) => {
 										downloadHandler(type);
@@ -1356,105 +1360,108 @@ ${content}
 							</div>
 						{/if}
 
-						<RichTextInput
-							bind:this={inputElement}
-							bind:editor
-							id={`note-${note.id}`}
-							className="input-prose-sm px-0.5 flex-1 min-h-[12rem]"
-							json={true}
-							bind:value={note.data.content.json}
-							html={editorHtml}
-							documentId={`note:${note.id}`}
-							collaboration={true}
-							socket={$socket}
-							user={$user}
-							dragHandle={true}
-							link={true}
-							image={true}
-							{files}
-							placeholder={$i18n.t('Write something...')}
-							editable={versionIdx === null && note?.write_access}
-							onSelectionUpdate={({ editor }) => {
-								const { from, to } = editor.state.selection;
-								const selectedText = editor.state.doc.textBetween(from, to, ' ');
+						{#key autoFormat}
+							<RichTextInput
+								{autoFormat}
+								bind:this={inputElement}
+								bind:editor
+								id={`note-${note.id}`}
+								className="input-prose-sm px-0.5 flex-1 min-h-[12rem]"
+								json={true}
+								bind:value={note.data.content.json}
+								html={editorHtml}
+								documentId={`note:${note.id}`}
+								collaboration={true}
+								socket={$socket}
+								user={$user}
+								dragHandle={true}
+								link={true}
+								image={true}
+								{files}
+								placeholder={$i18n.t('Write something...')}
+								editable={versionIdx === null && note?.write_access}
+								onSelectionUpdate={({ editor }) => {
+									const { from, to } = editor.state.selection;
+									const selectedText = editor.state.doc.textBetween(from, to, ' ');
 
-								if (selectedText.length === 0) {
-									selectedContent = null;
-								} else {
-									selectedContent = {
-										text: selectedText,
-										from: from,
-										to: to
-									};
-								}
-							}}
-							onChange={(content) => {
-								lastLocalContentChangeAt = Date.now();
-								note.data.content.html = content.html;
-								note.data.content.md = content.md;
-
-								if (editor) {
-									wordCount = editor.storage.characterCount.words();
-									charCount = editor.storage.characterCount.characters();
-								}
-							}}
-							fileHandler={true}
-							onFileDrop={(currentEditor, files, pos) => {
-								files.forEach(async (file) => {
-									const fileItem = await inputFileHandler(file).catch((error) => {
-										return null;
-									});
-
-									if (fileItem?.type === 'image') {
-										// If the file is an image, insert it directly
-										currentEditor
-											.chain()
-											.insertContentAt(pos, {
-												type: 'image',
-												attrs: {
-													src: `data://${fileItem.id}`
-												}
-											})
-											.focus()
-											.run();
+									if (selectedText.length === 0) {
+										selectedContent = null;
+									} else {
+										selectedContent = {
+											text: selectedText,
+											from: from,
+											to: to
+										};
 									}
-								});
-							}}
-							onFilePaste={() => {}}
-							on:paste={async (e) => {
-								e = e.detail.event || e;
-								const clipboardData = e.clipboardData || window.clipboardData;
-								console.log('Clipboard data:', clipboardData);
+								}}
+								onChange={(content) => {
+									lastLocalContentChangeAt = Date.now();
+									note.data.content.html = content.html;
+									note.data.content.md = content.md;
 
-								if (clipboardData && clipboardData.items) {
-									console.log('Clipboard data items:', clipboardData.items);
-									for (const item of clipboardData.items) {
-										console.log('Clipboard item:', item);
-										if (item.type.indexOf('image') !== -1) {
-											const blob = item.getAsFile();
-											const fileItem = await inputFileHandler(blob);
+									if (editor) {
+										wordCount = editor.storage.characterCount.words();
+										charCount = editor.storage.characterCount.characters();
+									}
+								}}
+								fileHandler={true}
+								onFileDrop={(currentEditor, files, pos) => {
+									files.forEach(async (file) => {
+										const fileItem = await inputFileHandler(file).catch((error) => {
+											return null;
+										});
 
-											if (editor) {
-												editor
-													?.chain()
-													.insertContentAt(editor.state.selection.$anchor.pos, {
-														type: 'image',
-														attrs: {
-															src: `data://${fileItem.id}` // Use data URI for the image
-														}
-													})
-													.focus()
-													.run();
+										if (fileItem?.type === 'image') {
+											// If the file is an image, insert it directly
+											currentEditor
+												.chain()
+												.insertContentAt(pos, {
+													type: 'image',
+													attrs: {
+														src: `data://${fileItem.id}`
+													}
+												})
+												.focus()
+												.run();
+										}
+									});
+								}}
+								onFilePaste={() => {}}
+								on:paste={async (e) => {
+									e = e.detail.event || e;
+									const clipboardData = e.clipboardData || window.clipboardData;
+									console.log('Clipboard data:', clipboardData);
+
+									if (clipboardData && clipboardData.items) {
+										console.log('Clipboard data items:', clipboardData.items);
+										for (const item of clipboardData.items) {
+											console.log('Clipboard item:', item);
+											if (item.type.indexOf('image') !== -1) {
+												const blob = item.getAsFile();
+												const fileItem = await inputFileHandler(blob);
+
+												if (editor) {
+													editor
+														?.chain()
+														.insertContentAt(editor.state.selection.$anchor.pos, {
+															type: 'image',
+															attrs: {
+																src: `data://${fileItem.id}` // Use data URI for the image
+															}
+														})
+														.focus()
+														.run();
+												}
+											} else if (item?.kind === 'file') {
+												const file = item.getAsFile();
+												await inputFileHandler(file);
+												e.preventDefault();
 											}
-										} else if (item?.kind === 'file') {
-											const file = item.getAsFile();
-											await inputFileHandler(file);
-											e.preventDefault();
 										}
 									}
-								}
-							}}
-						/>
+								}}
+							/>
+						{/key}
 					</div>
 				</div>
 			{/if}

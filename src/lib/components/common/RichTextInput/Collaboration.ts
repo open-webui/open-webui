@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import {
 	ySyncPlugin,
+	ySyncPluginKey,
 	yCursorPlugin,
 	yUndoPlugin,
 	undo,
@@ -11,6 +12,7 @@ import type { Socket } from 'socket.io-client';
 import type { SessionUser } from '$lib/stores';
 import { Editor, Extension } from '@tiptap/core';
 import { keymap } from 'prosemirror-keymap';
+import { Plugin } from 'prosemirror-state';
 import { tick } from 'svelte';
 
 const USER_COLORS = [
@@ -62,6 +64,15 @@ export class SocketIOCollaborationProvider {
 				if (!yXmlFragment) return [];
 
 				const plugins = [
+					new Plugin({
+						filterTransaction: (tr) => {
+							// Preserve literal URLs received from another editor.
+							if (tr.getMeta(ySyncPluginKey)?.isChangeOrigin) {
+								tr.setMeta('preventAutolink', true);
+							}
+							return true;
+						}
+					}),
 					ySyncPlugin(yXmlFragment),
 					yUndoPlugin(),
 					keymap({
