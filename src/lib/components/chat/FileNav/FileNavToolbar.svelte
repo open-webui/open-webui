@@ -18,6 +18,7 @@
 	export let onNewFolder: () => void = () => {};
 	export let onNewFile: () => void = () => {};
 	export let onUploadFiles: (files: File[]) => void = () => {};
+	export let onUploadFolder: (() => void) | null = null;
 	export let onDownloadDir: () => void = () => {};
 	export let onMove: (sources: string[], destFolder: string) => void | Promise<void> = () => {};
 	export let showHidden = false;
@@ -272,6 +273,20 @@
 						<Icon name="upload" size={12} strokeWidth={1.4} />
 						<span>{$i18n.t('Upload')}</span>
 					</button>
+					{#if onUploadFolder}
+						<button
+							type="button"
+							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+							disabled={!writable}
+							on:click={() => {
+								actionsMenuOpen = false;
+								onUploadFolder?.();
+							}}
+						>
+							<Icon name="upload" size={12} strokeWidth={1.4} />
+							<span>{$i18n.t('Upload Folder')}</span>
+						</button>
+					{/if}
 					<button
 						type="button"
 						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"

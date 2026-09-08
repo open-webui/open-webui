@@ -999,6 +999,42 @@
 	};
 
 	// ── Drag-and-drop upload ─────────────────────────────────────────────
+	type UploadEntry = { path: string; file?: File };
+
+	async function readDroppedFiles(data: DataTransfer): Promise<UploadEntry[]> {
+		// Capture all roots before the browser locks the drag data after this event.
+		const items = Array.from(data.items ?? []).filter((item) => item.kind === 'file');
+		const roots = items.map((item) => item.webkitGetAsEntry?.() ?? item.getAsFile());
+		if (!items.length) roots.push(...Array.from(data.files));
+		const entries: UploadEntry[] = [];
+		async function visit(entry: FileSystemEntry | File, parent = ''): Promise<void> {
+			const path = parent + entry.name;
+			if (!('isDirectory' in entry)) {
+				entries.push({ path, file: entry });
+			} else if (entry.isDirectory) {
+				entries.push({ path });
+				const reader = (entry as FileSystemDirectoryEntry).createReader();
+				while (true) {
+					const children = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+						reader.readEntries(resolve, reject)
+					);
+					if (!children.length) break;
+					for (const child of children) await visit(child, `${path}/`);
+				}
+			} else {
+				const file = await new Promise<File>((resolve, reject) =>
+					(entry as FileSystemFileEntry).file(resolve, reject)
+				);
+				entries.push({ path, file });
+			}
+		}
+		for (const root of roots) {
+			if (!root) throw new Error('Unable to read a dropped file or folder.');
+			await visit(root);
+		}
+		return entries;
+	}
+
 	const handleDragOver = (e: DragEvent) => {
 		if (selectedFile) return;
 		if (!currentWritable) return;
@@ -1027,29 +1063,56 @@
 			return;
 		}
 
-		const droppedFiles = Array.from(e.dataTransfer?.files ?? []);
-		if (!droppedFiles.length) return;
-
-		uploading = true;
-		for (const file of droppedFiles) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
-		}
-		uploading = false;
-		invalidateTreeCache(currentPath);
-		await loadDir(currentPath, { preserveTree: true });
+		if (e.dataTransfer && !uploading) await handleUploadEntries(readDroppedFiles(e.dataTransfer));
 	};
 
-	const handleUploadFiles = async (files: File[]) => {
+	const handleUploadEntries = async (input: UploadEntry[] | Promise<UploadEntry[]>) => {
 		const terminal = selectedTerminal;
-		if (!files.length || !terminal || !currentWritable) return;
-
+		if (!terminal || !currentWritable || uploading) return;
+		const destination = currentPath;
+		const sessionId = chatId ?? undefined;
 		uploading = true;
-		for (const file of files) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
+		try {
+			for (const entry of await input) {
+				if (
+					entry.path
+						.split('/')
+						.some((part) => !part || part === '.' || part === '..' || /[\\\0]/.test(part))
+				) {
+					throw new Error(`Invalid upload path: ${entry.path}`);
+				}
+				const path = `${destination.replace(/\/$/, '')}/${entry.path}`;
+				const result = entry.file
+					? await uploadToTerminal(
+							terminal.url,
+							terminal.key,
+							path.slice(0, path.lastIndexOf('/')) || '/',
+							entry.file,
+							sessionId
+						)
+					: await createDirectory(terminal.url, terminal.key, path, sessionId);
+				if (!result) throw new Error(entry.path);
+			}
+		} catch (error) {
+			toast.error(`${$i18n.t('Upload failed')}: ${error instanceof Error ? error.message : error}`);
+		} finally {
+			uploading = false;
+			if (selectedTerminal?.url === terminal.url && (chatId ?? undefined) === sessionId) {
+				invalidateTreeCache(destination);
+				if (currentPath === destination && !selectedFile)
+					await loadDir(destination, { preserveTree: true });
+			}
 		}
-		uploading = false;
-		invalidateTreeCache(currentPath);
-		await loadDir(currentPath, { preserveTree: true });
+	};
+
+	const handleUploadFiles = (files: File[]) =>
+		handleUploadEntries(
+			files.map((file) => ({ path: file.webkitRelativePath || file.name, file }))
+		);
+
+	const openUploadPicker = (folder = false) => {
+		directoryUploadInput.webkitdirectory = folder;
+		directoryUploadInput.click();
 	};
 
 	// ── Folder creation ──────────────────────────────────────────────────
@@ -1519,9 +1582,10 @@
 	>
 		{#if isDragOver && !isSearching}
 			<div
-				class="absolute inset-1 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-400 bg-blue-500/10 dark:border-blue-500 pointer-events-none"
+				class="absolute inset-1 z-10 flex flex-col items-center justify-center gap-2 rounded-lg border border-black/15 bg-white/80 dark:border-white/15 dark:bg-gray-900/80 pointer-events-none"
 			>
-				<span class="text-xs font-medium text-blue-500 dark:text-blue-400">
+				<Icon name="upload" size={20} strokeWidth={1.4} class="text-gray-400 dark:text-gray-500" />
+				<span class="text-xs font-medium text-gray-600 dark:text-gray-300">
 					{$i18n.t('Drop to upload')}
 				</span>
 			</div>
@@ -1552,6 +1616,7 @@
 				onNewFolder={startNewFolder}
 				onNewFile={startNewFile}
 				onUploadFiles={handleUploadFiles}
+				onUploadFolder={() => openUploadPicker(true)}
 				onDownloadDir={() => downloadFile(currentPath)}
 				onMove={handleMovePaths}
 				onSort={toggleSort}
@@ -2115,11 +2180,23 @@
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
-							directoryUploadInput?.click();
+							openUploadPicker();
 						}}
 					>
 						<Icon name="upload" size={12} strokeWidth={1.4} />
 						<span>{$i18n.t('Upload')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!currentWritable}
+						on:click={() => {
+							closeDirectoryMenu();
+							openUploadPicker(true);
+						}}
+					>
+						<Icon name="upload" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('Upload Folder')}</span>
 					</button>
 					<button
 						type="button"
