@@ -1297,34 +1297,19 @@
 		const selectedPath = path ?? entryPath(currentPath, entry);
 		const idx = index ?? visibleEntries.findIndex((row) => row.fullPath === selectedPath);
 		if (idx < 0) return;
-		if (event.shiftKey && lastClickedIndex !== null) {
-			// Range select — replaces current selection with range
-			const start = Math.min(lastClickedIndex, idx);
-			const end = Math.max(lastClickedIndex, idx);
-			const newSet = new Set<string>();
-			for (let i = start; i <= end; i++) {
-				const row = visibleEntries[i];
-				if (row) newSet.add(row.fullPath);
-			}
-			selectedEntries = newSet;
-		} else if (event.metaKey || event.ctrlKey) {
-			// Toggle one
-			if (selectedEntries.has(selectedPath)) {
-				selectedEntries.delete(selectedPath);
-			} else {
-				selectedEntries.add(selectedPath);
-			}
-			selectedEntries = selectedEntries;
-		} else {
-			// In selection mode (touch), toggle
-			if (selectedEntries.has(selectedPath)) {
-				selectedEntries.delete(selectedPath);
-			} else {
-				selectedEntries.add(selectedPath);
-			}
-			selectedEntries = selectedEntries;
+		const next = new Set(selectedEntries);
+		const remove = next.has(selectedPath);
+		const range = event.shiftKey && !remove && lastClickedIndex !== null;
+		const from = range ? Math.min(lastClickedIndex!, idx) : idx;
+		const to = range ? Math.max(lastClickedIndex!, idx) : idx;
+		for (let i = from; i <= to; i++) {
+			const row = visibleEntries[i];
+			if (!row) continue;
+			if (remove) next.delete(row.fullPath);
+			else next.add(row.fullPath);
 		}
-		lastClickedIndex = idx;
+		selectedEntries = next;
+		if (!event.shiftKey || lastClickedIndex === null) lastClickedIndex = idx;
 	};
 
 	const enterSelectionMode = () => {
@@ -1582,10 +1567,10 @@
 	>
 		{#if isDragOver && !isSearching}
 			<div
-				class="absolute inset-1 z-10 flex flex-col items-center justify-center gap-2 rounded-lg border border-black/15 bg-white/80 dark:border-white/15 dark:bg-gray-900/80 pointer-events-none"
+				class="absolute inset-1 z-10 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-black/15 bg-white/80 dark:border-white/15 dark:bg-gray-900/80 pointer-events-none"
 			>
 				<Icon name="upload" size={20} strokeWidth={1.4} class="text-gray-400 dark:text-gray-500" />
-				<span class="text-xs font-medium text-gray-600 dark:text-gray-300">
+				<span class="text-xs font-normal text-gray-600 dark:text-gray-300">
 					{$i18n.t('Drop to upload')}
 				</span>
 			</div>

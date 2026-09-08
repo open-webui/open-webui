@@ -226,6 +226,21 @@
 			<span class="mr-1.5 w-5 shrink-0 self-stretch" style="margin-left: {rowIndent};"></span>
 		{/if}
 
+		{#if selectionMode || selected}
+			<button
+				type="button"
+				role="checkbox"
+				aria-checked={selected}
+				aria-label={$i18n.t('Select {{name}}', { name: entry.name })}
+				class="mr-2 flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {selected
+					? 'bg-gray-900 border-gray-900 text-white dark:bg-gray-200 dark:border-gray-200 dark:text-gray-900'
+					: 'border-gray-300 dark:border-gray-600'}"
+				on:click|stopPropagation={(event) => onSelect(entry, event, entryPath, rowIndex)}
+			>
+				{#if selected}<Icon name="check" size={10} strokeWidth={2} />{/if}
+			</button>
+		{/if}
+
 		<button
 			type="button"
 			class="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-2 text-left"
@@ -279,19 +294,6 @@
 				startRename();
 			}}
 		>
-			{#if selectionMode || selected}
-				<!-- Checkbox indicator -->
-				<div
-					class="size-3.5 shrink-0 rounded border transition-colors flex items-center justify-center
-						{selected
-						? 'bg-gray-900 border-gray-900 text-white dark:bg-gray-200 dark:border-gray-200 dark:text-gray-900'
-						: 'border-gray-300 dark:border-gray-600'}"
-				>
-					{#if selected}
-						<Icon name="check" size={10} strokeWidth={2} />
-					{/if}
-				</div>
-			{/if}
 			<FileTypeIcon name={entry.name} type={entry.type} size={12} />
 			{#if renaming}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
