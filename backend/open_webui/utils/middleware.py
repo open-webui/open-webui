@@ -3480,6 +3480,14 @@ def get_response_data(response):
     return response, response_data
 
 
+def get_provider_sources(response_data):
+    if not isinstance(response_data, dict):
+        return None
+
+    sources = response_data.get('sources')
+    return sources if isinstance(sources, list) else None
+
+
 def merge_events_into_response(response_data, events):
     if events and isinstance(events, list):
         extra_response = {}
@@ -4021,6 +4029,7 @@ async def non_streaming_chat_response_handler(response, ctx):
     response, response_data = get_response_data(response)
     if response_data is None:
         return response
+    provider_sources = get_provider_sources(response_data)
 
     chat_id = metadata.get('chat_id') or ''
     save_to_chat = is_saved_chat_id(chat_id)
@@ -4170,6 +4179,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 'done': True,
                                 'role': 'assistant',
                                 'output': response_output,
+                                **({'sources': provider_sources} if provider_sources is not None else {}),
                                 **({'usage': usage} if usage else {}),
                             },
                         )
@@ -4179,6 +4189,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     ctx['assistant_message'] = {
                         'content': content,
                         'output': response_output,
+                        **({'sources': provider_sources} if provider_sources is not None else {}),
                         **({'usage': usage} if usage else {}),
                     }
                     await outlet_filter_handler(ctx)
@@ -4218,6 +4229,7 @@ async def non_streaming_chat_response_handler(response, ctx):
         ctx['assistant_message'] = {
             **({'content': content} if content else {}),
             **({'output': output} if output else {}),
+            **({'sources': provider_sources} if provider_sources is not None else {}),
             **({'usage': usage} if usage else {}),
         }
         await outlet_filter_handler(ctx)
@@ -4615,6 +4627,7 @@ async def streaming_chat_response_handler(response, ctx):
                 content_parts = []
 
             usage = None
+            provider_sources = None
             last_response_id = None
 
             def full_output():
@@ -4714,6 +4727,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 async def stream_body_handler(response, form_data):
                     nonlocal usage
+                    nonlocal provider_sources
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
@@ -4895,6 +4909,10 @@ async def streaming_chat_response_handler(response, ctx):
                                     form_data=data,
                                     extra_params=filter_extra_params,
                                 )
+
+                            chunk_sources = get_provider_sources(data)
+                            if provider_sources is None and chunk_sources is not None:
+                                provider_sources = chunk_sources
 
                             if data:
                                 if 'event' in data and not getattr(request.state, 'direct', False):
@@ -6290,6 +6308,7 @@ async def streaming_chat_response_handler(response, ctx):
                     'done': True,
                     'output': current_output,
                     'title': title,
+                    **({'sources': provider_sources} if provider_sources is not None else {}),
                     **({'usage': usage} if usage else {}),
                 }
 
@@ -6302,6 +6321,7 @@ async def streaming_chat_response_handler(response, ctx):
                         {
                             'done': True,
                             'output': current_output,
+                            **({'sources': provider_sources} if provider_sources is not None else {}),
                             **({'usage': usage} if usage else {}),
                         },
                     )
@@ -6328,6 +6348,7 @@ async def streaming_chat_response_handler(response, ctx):
                     if continuing
                     else ''.join(content_parts) or get_output_text(current_output),
                     'output': current_output,
+                    **({'sources': provider_sources} if provider_sources is not None else {}),
                     **({'usage': usage} if usage else {}),
                 }
                 await outlet_filter_handler(ctx)
@@ -6354,6 +6375,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {
                                 'done': True,
                                 'output': full_output(),
+                                **({'sources': provider_sources} if provider_sources is not None else {}),
                             },
                         )
                     await clear_response_stream(request.app.state.redis, response_stream_task_id)
