@@ -430,7 +430,11 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
                             if resource_response.status == 200:
                                 resource_metadata = await resource_response.json()
 
-                                resource = resource_metadata.get('resource') or None
+                                resource = resource_metadata.get('resource')
+                                if isinstance(resource, list):
+                                    resource = next((value for value in resource if isinstance(value, str)), None)
+                                elif not isinstance(resource, str):
+                                    resource = None
                                 if resource:
                                     log.debug('Discovered resource indicator: %s', resource)
 
