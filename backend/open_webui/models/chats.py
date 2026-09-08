@@ -1163,7 +1163,7 @@ class ChatTable:
                 saved_message = self.upsert_message_to_history(history, message_id, message)
                 chat['history'] = history
                 chat_item.chat = chat  # chat is a fresh dict when the column was empty
-                chat_item.title = chat.get('title', 'New Chat')
+                chat_item.title = chat.get('title', chat_item.title)
                 chat_item.current_message_id = self.get_current_message_id(chat)
                 flag_modified(chat_item, 'chat')
 
@@ -1209,7 +1209,7 @@ class ChatTable:
                 deleted_ids = self.delete_message_from_history(history, message_id)
                 if not deleted_ids:
                     chat_item.chat = chat
-                    chat_item.title = chat.get('title', 'New Chat')
+                    chat_item.title = chat.get('title', chat_item.title)
                     chat_item.current_message_id = self.get_current_message_id(chat)
                     flag_modified(chat_item, 'chat')
                     await session.commit()
@@ -1218,7 +1218,7 @@ class ChatTable:
                 messages = history.get('messages') or {}
                 chat['history'] = history
                 chat_item.chat = chat
-                chat_item.title = chat.get('title', 'New Chat')
+                chat_item.title = chat.get('title', chat_item.title)
                 chat_item.current_message_id = self.get_current_message_id(chat)
                 flag_modified(chat_item, 'chat')
                 chat_item.updated_at = int(time.time())
@@ -1260,7 +1260,7 @@ class ChatTable:
 
                 chat['history'] = history
                 chat_item.chat = chat
-                chat_item.title = chat.get('title', 'New Chat')
+                chat_item.title = chat.get('title', chat_item.title)
                 chat_item.current_message_id = self.get_current_message_id(chat)
                 flag_modified(chat_item, 'chat')
                 await session.commit()
