@@ -242,28 +242,35 @@ class Config(Base):
         """Insert keys that don't yet exist in the DB.
 
         Called at startup to ensure all known config keys have values.
-        Existing DB values take precedence over defaults.
+        Existing non-null DB values take precedence over defaults. A null row
+        is treated as unset so a newly configured non-null default can take effect.
         """
         async with get_async_db() as db:
-            result = await db.execute(select(Config.key))
-            existing_keys = {row[0] for row in result.all()}
+            result = await db.execute(select(Config))
+            existing_rows = {row.key: row for row in result.scalars().all()}
 
             now = int(time.time())
-            new_count = 0
+            seeded_count = 0
             for key, value in defaults.items():
                 # Skip keys the DB is not authoritative for (e.g. oauth.* while
                 # ENABLE_OAUTH_PERSISTENT_CONFIG is off), matching the read paths.
                 if not Config.persistent_enabled_for(key):
                     continue
-                if key not in existing_keys:
+                row = existing_rows.get(key)
+                if row is None or (row.value is None and value is not None):
                     value = _json_value(value)
-                    db.add(Config(key=key, value=value, updated_at=now))
-                    existing_keys.add(key)
-                    new_count += 1
+                    if row is not None:
+                        row.value = value
+                        row.updated_at = now
+                    else:
+                        row = Config(key=key, value=value, updated_at=now)
+                        db.add(row)
+                        existing_rows[key] = row
+                    seeded_count += 1
 
-            if new_count:
+            if seeded_count:
                 await db.commit()
-                log.info('Seeded %d new config defaults', new_count)
+                log.info('Seeded %d config defaults', seeded_count)
 
     @staticmethod
     async def rename_prefix(old_prefix: str, new_prefix: str) -> None:
