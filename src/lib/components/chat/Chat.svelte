@@ -2209,7 +2209,7 @@
 
 				if (query || eventFiles?.length) {
 					if (query) {
-						messageInput?.setText(query);
+						await messageInput?.setText(query);
 					}
 					await tick();
 					submitHandler(query || '');
@@ -2217,7 +2217,7 @@
 			}
 		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
-			messageInput?.setText(q);
+			await messageInput?.setText(q);
 
 			if (q) {
 				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {

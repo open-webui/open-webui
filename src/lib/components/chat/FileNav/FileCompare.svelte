@@ -121,7 +121,7 @@
 />
 
 <div
-	class="flex h-full min-h-0 flex-col bg-white text-[0.75em] font-normal text-gray-600 dark:bg-black dark:text-gray-400"
+	class="flex h-full min-h-0 flex-col text-[0.75em] font-normal text-gray-600 dark:text-gray-400"
 	aria-label={$i18n.t('Compare')}
 >
 	<div
