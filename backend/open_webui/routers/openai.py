@@ -58,6 +58,7 @@ from open_webui.utils.session_pool import (
 )
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.datastructures import UploadFile
 
 log = logging.getLogger(__name__)
 
@@ -1967,6 +1968,213 @@ async def responses(
     finally:
         if not streaming:
             await cleanup_response(r)
+
+
+async def _resolve_images_backend(request: Request, user: UserModel, model_id: str | None):
+    """
+    Enforce per-model access control and resolve the upstream backend for an
+    OpenAI Images API request, mirroring the chat completions routing:
+    workspace model aliases (base_model_id) are honored, and the provider
+    prefix_id is stripped from the model sent upstream.
+
+    Returns (model_id, url, key, api_config) with model_id remapped/stripped.
+    """
+    # Enforce per-model access control
+    model_info = await Models.get_model_by_id(model_id) if model_id else None
+    await check_model_access(user, model_info, BYPASS_MODEL_ACCESS_CONTROL)
+
+    # Resolve workspace model aliases to their upstream base model
+    if model_info and model_info.base_model_id:
+        model_id = model_info.base_model_id
+
+    idx = 0
+    if model_id:
+        models = request.app.state.OPENAI_MODELS
+        if not models or model_id not in models:
+            await get_all_models(request, user=user)
+            models = request.app.state.OPENAI_MODELS
+        if model_id in models:
+            idx = models[model_id]['urlIdx']
+
+    url, key, api_config = await get_openai_connection(idx)
+
+    if model_id:
+        model_id = strip_provider_model_prefix(model_id, api_config.get('prefix_id'))
+
+    return model_id, url, key, api_config
+
+
+async def _forward_images_request(
+    request: Request,
+    user: UserModel,
+    url: str,
+    key: str,
+    api_config: dict,
+    endpoint: str,
+    data,
+    model_id: str | None,
+    is_streaming_request: bool = False,
+    multipart: bool = False,
+):
+    """
+    Forward an OpenAI Images API request to the resolved upstream backend and
+    relay the response verbatim (JSON passthrough or SSE stream).
+    """
+    r = None
+    streaming = False
+
+    try:
+        headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
+
+        if multipart:
+            # Let aiohttp generate the multipart content type with boundary
+            headers.pop('Content-Type', None)
+
+        if api_config.get('azure') or api_config.get('provider') == 'azure':
+            auth_type = api_config.get('auth_type', 'bearer')
+            if auth_type not in ('azure_ad', 'microsoft_entra_id'):
+                headers['api-key'] = key
+
+            is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+
+            if is_azure_v1:
+                request_url = f'{url.rstrip("/")}/{endpoint}'
+            else:
+                api_version = api_config.get('api_version', '2023-03-15-preview')
+                headers['api-version'] = api_version
+                model = _sanitize_model_for_url(model_id or '')
+                request_url = f'{url}/openai/deployments/{model}/{endpoint}?api-version={api_version}'
+        else:
+            request_url = f'{url}/{endpoint}'
+
+        session = await get_session()
+        r = await session.request(
+            method='POST',
+            url=request_url,
+            data=data,
+            headers=headers,
+            cookies=cookies,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            timeout=get_client_timeout(stream=is_streaming_request),
+        )
+
+        # Check if response is SSE (e.g. gpt-image-1 with stream=true)
+        if 'text/event-stream' in r.headers.get('Content-Type', ''):
+            streaming = True
+            return StreamingResponse(
+                stream_wrapper(r, passthrough=True),
+                status_code=r.status,
+                headers=_clean_proxy_headers(r.headers),
+            )
+        else:
+            try:
+                response_data = await r.json(loads=JSONCodec.loads)
+            except Exception:
+                response_data = await r.text()
+
+            if r.status >= 400:
+                await publish_model_provider_request_failed(
+                    request,
+                    actor=user,
+                    provider='openai-compatible',
+                    base_url=url,
+                    api_key=key,
+                    status=r.status,
+                    requested_model=model_id,
+                    upstream_error=response_data,
+                )
+                if isinstance(response_data, (dict, list)):
+                    return JSONResponse(status_code=r.status, content=response_data)
+                else:
+                    return PlainTextResponse(status_code=r.status, content=response_data)
+
+            return response_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=r.status if r else 500,
+            detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
+        )
+    finally:
+        if not streaming:
+            await cleanup_response(r)
+
+
+@router.post('/images/generations')
+async def images_generations(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
+    """
+    Forward requests to the OpenAI Images API (images/generations) endpoint.
+    Routes to the correct upstream backend based on the model field.
+    """
+    payload = {**form_data}
+
+    model_id, url, key, api_config = await _resolve_images_backend(request, user, payload.get('model'))
+    if model_id:
+        payload['model'] = model_id
+
+    return await _forward_images_request(
+        request,
+        user,
+        url,
+        key,
+        api_config,
+        'images/generations',
+        JSONCodec.dumps(payload),
+        model_id,
+        is_streaming_request=bool(payload.get('stream', False)),
+    )
+
+
+@router.post('/images/edits')
+async def images_edits(
+    request: Request,
+    user=Depends(get_verified_user),
+):
+    """
+    Forward requests to the OpenAI Images API (images/edits) endpoint.
+    Routes to the correct upstream backend based on the model field.
+    The multipart form body is relayed with fields and files preserved.
+    """
+    form = await request.form()
+
+    raw_model = form.get('model')
+    model_id, url, key, api_config = await _resolve_images_backend(
+        request, user, raw_model if isinstance(raw_model, str) and raw_model else None
+    )
+
+    # Rebuild the multipart body, applying any model alias/prefix remapping
+    data = aiohttp.FormData()
+    for field_name, value in form.multi_items():
+        if isinstance(value, UploadFile):
+            data.add_field(
+                field_name,
+                await value.read(),
+                filename=value.filename,
+                content_type=value.content_type,
+            )
+        elif field_name == 'model' and model_id:
+            data.add_field(field_name, model_id)
+        else:
+            data.add_field(field_name, value)
+
+    return await _forward_images_request(
+        request,
+        user,
+        url,
+        key,
+        api_config,
+        'images/edits',
+        data,
+        model_id,
+        multipart=True,
+    )
 
 
 @router.api_route('/{path:path}', methods=['GET', 'POST', 'PUT', 'DELETE'])
