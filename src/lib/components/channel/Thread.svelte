@@ -188,43 +188,45 @@
 			</div>
 		</div>
 
-		<div class="flex-1 min-h-0 w-full overflow-y-auto pt-7" bind:this={messagesContainerElement}>
-			{#if messages !== null}
-				<Messages
-					id={threadId}
-					{channel}
-					{top}
-					{messages}
-					{replyToMessage}
-					thread={true}
-					{onPin}
-					onReply={async (message) => {
-						replyToMessage = message;
+		<div class="flex-1 min-h-0 w-full overflow-y-auto" bind:this={messagesContainerElement}>
+			<div class="pt-7">
+				{#if messages !== null}
+					<Messages
+						id={threadId}
+						{channel}
+						{top}
+						{messages}
+						{replyToMessage}
+						thread={true}
+						{onPin}
+						onReply={async (message) => {
+							replyToMessage = message;
 
-						await tick();
-						chatInputElement?.focus();
-					}}
-					onLoad={async () => {
-						const newMessages = await getChannelThreadMessages(
-							localStorage.token,
-							channel.id,
-							threadId,
-							messages.length
-						);
+							await tick();
+							chatInputElement?.focus();
+						}}
+						onLoad={async () => {
+							const newMessages = await getChannelThreadMessages(
+								localStorage.token,
+								channel.id,
+								threadId,
+								messages.length
+							);
 
-						messages = [...messages, ...newMessages];
+							messages = [...messages, ...newMessages];
 
-						if (newMessages.length < 50) {
-							top = true;
-							return;
-						}
-					}}
-				/>
-			{:else}
-				<div class="w-full flex justify-center pt-5 pb-10">
-					<Spinner />
-				</div>
-			{/if}
+							if (newMessages.length < 50) {
+								top = true;
+								return;
+							}
+						}}
+					/>
+				{:else}
+					<div class="w-full flex justify-center pt-5 pb-10">
+						<Spinner />
+					</div>
+				{/if}
+			</div>
 		</div>
 
 		<div class=" pb-[1rem] px-2.5 w-full">
