@@ -6330,6 +6330,7 @@ async def streaming_chat_response_handler(response, ctx):
                             'done': True,
                             'output': current_output,
                             **({'usage': usage} if usage else {}),
+                            **({'sources': provider_sources} if provider_sources else {}),
                         },
                     )
 
@@ -6381,6 +6382,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {
                                 'done': True,
                                 'output': full_output(),
+                                **({'sources': provider_sources} if provider_sources else {}),
                             },
                         )
                     await clear_response_stream(request.app.state.redis, response_stream_task_id)
