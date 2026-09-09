@@ -98,7 +98,11 @@
 				: (webConfig.LINKUP_SEARCH_PARAMS ?? {});
 
 		const res = await updateRAGConfig(localStorage.token, {
-			web: { ...webConfig, LINKUP_SEARCH_PARAMS: linkupParams }
+			web: {
+				...webConfig,
+				EXA_MAX_CONTENT_LENGTH: webConfig.EXA_MAX_CONTENT_LENGTH ?? null,
+				LINKUP_SEARCH_PARAMS: linkupParams
+			}
 		});
 
 		// Convert arrays back to strings for display
@@ -711,6 +715,24 @@
 									bind:value={webConfig.EXA_API_KEY}
 								/>
 							</div>
+							<AdminSettingField
+								className="mt-1.5"
+								label={$i18n.t('Max Content Length')}
+								forId="exa-max-content-length"
+								description={$i18n.t(
+									'Maximum characters per Exa search result. Leave empty for no limit.'
+								)}
+							>
+								<input
+									id="exa-max-content-length"
+									class={inputClass}
+									type="number"
+									min="1"
+									step="1"
+									placeholder={$i18n.t('No limit')}
+									bind:value={webConfig.EXA_MAX_CONTENT_LENGTH}
+								/>
+							</AdminSettingField>
 						</div>
 					{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity'}
 						<div class="mb-2.5 flex w-full flex-col">

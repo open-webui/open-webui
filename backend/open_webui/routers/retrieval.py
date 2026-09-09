@@ -129,7 +129,7 @@ from open_webui.utils.misc import (
     calculate_sha256_string,
     sanitize_text_for_db,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -297,6 +297,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'ENABLE_WEB_SEARCH_CONFIRMATION': 'web.search.confirmation.enable',
     'WEB_SEARCH_CONFIRMATION_CONTENT': 'web.search.confirmation.content',
     'EXA_API_KEY': 'web.search.exa_api_key',
+    'EXA_MAX_CONTENT_LENGTH': 'web.search.exa_max_content_length',
     'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
     'EXTERNAL_DOCUMENT_LOADER_HEADERS': 'rag.external_document_loader_headers',
     'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
@@ -745,6 +746,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'BING_SEARCH_V7_ENDPOINT': config.BING_SEARCH_V7_ENDPOINT,
             'BING_SEARCH_V7_SUBSCRIPTION_KEY': config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             'EXA_API_KEY': config.EXA_API_KEY,
+            'EXA_MAX_CONTENT_LENGTH': config.EXA_MAX_CONTENT_LENGTH,
             'PERPLEXITY_API_KEY': config.PERPLEXITY_API_KEY,
             'PERPLEXITY_MODEL': config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -824,6 +826,7 @@ class WebConfig(BaseModel):
     BING_SEARCH_V7_ENDPOINT: str | None = None
     BING_SEARCH_V7_SUBSCRIPTION_KEY: str | None = None
     EXA_API_KEY: str | None = None
+    EXA_MAX_CONTENT_LENGTH: int | None = Field(default=None, gt=0, strict=True)
     PERPLEXITY_API_KEY: str | None = None
     PERPLEXITY_MODEL: str | None = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: str | None = None
@@ -1342,6 +1345,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.BING_SEARCH_V7_ENDPOINT = form_data.web.BING_SEARCH_V7_ENDPOINT
         config.BING_SEARCH_V7_SUBSCRIPTION_KEY = form_data.web.BING_SEARCH_V7_SUBSCRIPTION_KEY
         config.EXA_API_KEY = form_data.web.EXA_API_KEY
+        config.EXA_MAX_CONTENT_LENGTH = form_data.web.EXA_MAX_CONTENT_LENGTH
         config.PERPLEXITY_API_KEY = form_data.web.PERPLEXITY_API_KEY
         config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
         config.PERPLEXITY_SEARCH_CONTEXT_USAGE = form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
@@ -1494,6 +1498,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'BING_SEARCH_V7_ENDPOINT': config.BING_SEARCH_V7_ENDPOINT,
             'BING_SEARCH_V7_SUBSCRIPTION_KEY': config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             'EXA_API_KEY': config.EXA_API_KEY,
+            'EXA_MAX_CONTENT_LENGTH': config.EXA_MAX_CONTENT_LENGTH,
             'PERPLEXITY_API_KEY': config.PERPLEXITY_API_KEY,
             'PERPLEXITY_MODEL': config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -2691,6 +2696,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
                 query,
                 config.WEB_SEARCH_RESULT_COUNT,
                 config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                max_content_length=config.EXA_MAX_CONTENT_LENGTH,
             )
         else:
             raise Exception('No EXA_API_KEY found in environment variables')
