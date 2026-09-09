@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from fastapi.responses import JSONResponse
@@ -18,6 +19,43 @@ from open_webui.utils.task import (
 )
 
 log = logging.getLogger(__name__)
+
+# Tool-result images are persisted inline as base64 data URIs; counting them as
+# text (len/4) inflates the context meter and triggers spurious auto-compaction.
+_BASE64_DATA_URI_RE = re.compile(r"data:[^;,]+;base64,[A-Za-z0-9+/=\s]+")
+
+
+def _strip_data_uris(value: Any) -> Any:
+    """Recursively replace inline base64 data URIs with a short placeholder."""
+    if isinstance(value, str):
+        return _BASE64_DATA_URI_RE.sub("data:image;base64,...", value)
+    if isinstance(value, dict):
+        return {key: _strip_data_uris(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_strip_data_uris(item) for item in value]
+    return value
+
+
+def _estimate_files_tokens(files: Any) -> int:
+    """Estimate the token cost of a message's ``files``.
+
+    Data-URI images are charged with the flat image cost used for content images;
+    any remaining inline base64 in other fields is stripped so it is not counted.
+    """
+    if not files:
+        return 0
+    entries = files if isinstance(files, list) else [files]
+    total = 0
+    for entry in entries:
+        if isinstance(entry, dict):
+            payload = entry.get("url") or entry.get("content") or entry.get("data") or ""
+            if entry.get("type") in {"image", "image_url"} or str(payload).startswith("data:image"):
+                total += 1000
+            else:
+                total += _estimate_tokens(_strip_data_uris(entry))
+        else:
+            total += _estimate_tokens(_strip_data_uris(entry))
+    return total
 
 DEFAULT_CONTEXT_COMPACTION_PROMPT = """### Task:
 Summarize the conversation history that will be compacted out of the active chat context.
@@ -439,7 +477,7 @@ def _estimate_messages_tokens(messages: list[dict]) -> int:
 
         total += _estimate_tokens(message.get('output'))
         total += _estimate_tokens(message.get('tool_calls'))
-        total += _estimate_tokens(message.get('files'))
+        total += _estimate_files_tokens(message.get('files'))
     return total
 
 
