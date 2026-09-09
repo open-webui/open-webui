@@ -119,7 +119,7 @@ async def send_request(
         }
 
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
+            headers = include_user_info_headers(headers, user, request=request)
             if metadata and metadata.get('chat_id'):
                 headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
 

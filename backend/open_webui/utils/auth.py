@@ -386,6 +386,7 @@ async def get_current_user(
 
         # Scope-backed, so outer middleware (audit) can reuse the resolved user
         request.state.user = user
+        request.state.auth_type = 'api_key'
         return user
 
     # auth by jwt token
@@ -437,6 +438,7 @@ async def get_current_user(
 
             # Scope-backed, so outer middleware (audit) can reuse the resolved user
             request.state.user = user
+            request.state.auth_type = 'jwt'
             return user
         else:
             raise HTTPException(
