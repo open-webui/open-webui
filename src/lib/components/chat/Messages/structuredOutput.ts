@@ -626,6 +626,11 @@ export function applyResponseStreamEvent(
 			return nextOutput;
 		}
 
+		if (item.type === 'open_webui:code_interpreter') {
+			item.code = appendDelta(item.code ?? '', event.delta);
+			return nextOutput;
+		}
+
 		const key = deltaType === 'output_text' || deltaType === 'reasoning_text' ? 'text' : deltaType;
 		item.content = [...(item.content ?? [])];
 		const part = ensurePart(item.content, event.content_index ?? 0);

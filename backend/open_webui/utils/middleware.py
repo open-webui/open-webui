@@ -5447,6 +5447,8 @@ async def streaming_chat_response_handler(response, ctx):
                                                     }
                                                 ]
 
+                                        pre_tag_item_id = output[-1].get('id')
+
                                         if DETECT_REASONING_TAGS:
                                             output, _ = tag_output_handler(
                                                 'reasoning',
@@ -5487,6 +5489,15 @@ async def streaming_chat_response_handler(response, ctx):
                                             'delta': value,
                                         }
                                         delta_type = delta_event_type
+
+                                        # the raw chunk still carries the tag text: resend the cleaned output instead
+                                        if target_item.get('id') != pre_tag_item_id:
+                                            await flush_pending_delta_data()
+                                            await event_emitter(
+                                                {'type': 'chat:completion', 'data': {'output': full_output()}}
+                                            )
+                                            await save_current_response_stream()
+                                            data = None
 
                                 if delta and data:
                                     await queue_pending_delta_data(data, delta_type)

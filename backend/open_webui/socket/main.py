@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import random
 import sys
@@ -1005,6 +1006,9 @@ async def _make_channel_emitter(request_info):
 
             if not content and not output and not done:
                 return
+
+            if isinstance(output, list):
+                state['output'] = copy.deepcopy(output)
 
             now = time.time()
             if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
