@@ -48,7 +48,10 @@
 
 		<!-- Task list -->
 		{#if !collapsed}
-			<div class="px-3.5 pb-2.5 space-y-0.5" transition:slide={{ duration: 150 }}>
+			<div
+				class="max-h-[25vh] overflow-y-auto px-3.5 pb-2.5 space-y-0.5"
+				transition:slide={{ duration: 150 }}
+			>
 				{#each tasks as task, idx (task.id)}
 					<div class="flex items-start gap-2 py-0.5 text-xs">
 						<span class="flex-shrink-0 mt-0.5 text-gray-400 dark:text-gray-500">
