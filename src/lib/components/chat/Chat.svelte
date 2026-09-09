@@ -2160,13 +2160,13 @@
 				.get('tools')
 				?.split(',')
 				.map((id) => id.trim())
-				.filter((id) => id);
+				.filter((id) => id && ($tools ?? []).find((t) => t.id === id));
 		} else if ($page.url.searchParams.get('tool-ids')) {
 			selectedToolIds = $page.url.searchParams
 				.get('tool-ids')
 				?.split(',')
 				.map((id) => id.trim())
-				.filter((id) => id);
+				.filter((id) => id && ($tools ?? []).find((t) => t.id === id));
 		}
 
 		// Restore tool selection after OAuth redirect
