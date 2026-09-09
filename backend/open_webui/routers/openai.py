@@ -1973,28 +1973,38 @@ async def responses(
 async def _resolve_images_backend(request: Request, user: UserModel, model_id: str | None):
     """
     Enforce per-model access control and resolve the upstream backend for an
-    OpenAI Images API request, mirroring the chat completions routing:
-    workspace model aliases (base_model_id) are honored, and the provider
-    prefix_id is stripped from the model sent upstream.
+    OpenAI Images API request. Mirrors chat completions routing for
+    connection selection (urlIdx) and prefix_id stripping; diverges on
+    base_model_id, which only selects the connection here and is NOT
+    forwarded (see comment in the body).
 
-    Returns (model_id, url, key, api_config) with model_id remapped/stripped.
+    Returns (model_id, url, key, api_config) with model_id stripped of any
+    provider prefix.
     """
-    # Enforce per-model access control
+    # Enforce per-model access control. NOTE: unlike chat completions, a
+    # workspace model's base_model_id is NOT forwarded as the payload model:
+    # for an images-only workspace entry (e.g. id "gpt-image-1.5" based on a
+    # chat model so the connection routing resolves), the base id names a
+    # model the images endpoint does not support. The entry's own id is the
+    # upstream-facing model name; base_model_id only selects the connection.
     model_info = await Models.get_model_by_id(model_id) if model_id else None
     await check_model_access(user, model_info, BYPASS_MODEL_ACCESS_CONTROL)
 
-    # Resolve workspace model aliases to their upstream base model
-    if model_info and model_info.base_model_id:
-        model_id = model_info.base_model_id
-
     idx = 0
     if model_id:
+        route_id = model_id
+        if route_id not in request.app.state.OPENAI_MODELS and model_info and model_info.base_model_id:
+            # alias id absent from the upstream cache: route via the base
+            # model's connection (the forwarded model stays route_id)
+            route_id = model_info.base_model_id
         models = request.app.state.OPENAI_MODELS
-        if not models or model_id not in models:
+        if not models or (route_id not in models and model_id not in models):
             await get_all_models(request, user=user)
             models = request.app.state.OPENAI_MODELS
         if model_id in models:
             idx = models[model_id]['urlIdx']
+        elif route_id in models:
+            idx = models[route_id]['urlIdx']
 
     url, key, api_config = await get_openai_connection(idx)
 
