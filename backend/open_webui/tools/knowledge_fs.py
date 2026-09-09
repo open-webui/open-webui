@@ -587,7 +587,7 @@ async def _kb_ls(args: list[str], flags: set[str], user: dict, model_knowledge: 
         if flat_mode:
             # Flat mode: build full tree (legitimate use)
             tree = await _build_directory_tree(kb_id)
-            for f in tree['files']:
+            for f in _sort_files(tree['files'], flags):
                 lines.append(f'  {f["id"]}  {f["path"]}  {_fmt_size(f)}  {_fmt_date(f)}')
             lines.append('')
             continue
@@ -610,7 +610,7 @@ async def _kb_ls(args: list[str], flags: set[str], user: dict, model_knowledge: 
         # Show files at this level (filter from accessible files)
         accessible = await _get_accessible_files(user, model_knowledge, knowledge_id=kb_id)
         dir_files = [f for f in accessible if f['directory_id'] == target_dir_id]
-        for f in dir_files:
+        for f in _sort_files(dir_files, flags):
             lines.append(f'  {f["id"]}  {f["filename"]}  {_fmt_size(f)}  {_fmt_date(f)}')
 
         if not subdirs and not dir_files:
@@ -619,11 +619,22 @@ async def _kb_ls(args: list[str], flags: set[str], user: dict, model_knowledge: 
 
     if direct_files and not target_kb_id and not dir_path:
         lines.append('Attached Files:')
-        for f in direct_files:
+        for f in _sort_files(direct_files, flags):
             lines.append(f'  {f["id"]}  {f["filename"]}  {_fmt_size(f)}  {_fmt_date(f)}')
         lines.append('')
 
     return '\n'.join(lines).rstrip()
+
+
+def _sort_files(files: list[dict], flags: set[str]) -> list[dict]:
+    """ls-style ordering: by name or path, -t newest first, -S largest first, -r reverses."""
+    if 't' in flags:
+        files = sorted(files, key=lambda f: f.get('updated_at') or 0, reverse=True)
+    elif 'S' in flags:
+        files = sorted(files, key=lambda f: f.get('size') or 0, reverse=True)
+    else:
+        files = sorted(files, key=lambda f: f.get('path') or f['filename'])
+    return files[::-1] if 'r' in flags else files
 
 
 def _fmt_size(f: dict) -> str:
@@ -893,7 +904,7 @@ async def _kb_find(args: list[str], flags: set[str], user: dict, model_knowledge
         return f'No files matching "{pattern}"{scope_str}'
 
     lines = []
-    for f in matched:
+    for f in _sort_files(matched, flags):
         kb_info = f' ({f["knowledge_name"]})' if f.get('knowledge_name') else ''
         lines.append(f'{f["id"]}  {f["filename"]}{kb_info}')
     return '\n'.join(lines)
@@ -1065,7 +1076,7 @@ async def _kb_tree(args: list[str], flags: set[str], user: dict, model_knowledge
         def _render_tree(parent_id, prefix='  '):
             items = []
             subdirs = _get_subdirs(tree, parent_id)
-            files = _get_files_in_dir(tree, parent_id)
+            files = _sort_files(_get_files_in_dir(tree, parent_id), flags)
             entries = [('dir', d) for d in subdirs] + [('file', f) for f in files]
 
             for idx, (etype, entry) in enumerate(entries):
@@ -1090,7 +1101,7 @@ async def _kb_tree(args: list[str], flags: set[str], user: dict, model_knowledge
 
     if direct_files and not dir_scope:
         output.append('Attached Files:')
-        for idx, f in enumerate(direct_files):
+        for idx, f in enumerate(_sort_files(direct_files, flags)):
             connector = '└── ' if idx == len(direct_files) - 1 else '├── '
             output.append(f'  {connector}{f["filename"]}')
         output.append(f'\n  0 directories, {len(direct_files)} files')
@@ -1158,6 +1169,9 @@ async def kb_exec(
       ls                              — list root files and directories
       ls docs/                        — list contents of a directory
       ls -a                           — flat list of all files with full paths
+      ls -t                           — newest modified first
+      ls -S                           — largest first
+      ls -r                           — reverse file order
       tree                            — recursive directory tree view
       tree docs/                      — subtree from a directory
       cat -n <file>                   — read file with line numbers
@@ -1172,6 +1186,7 @@ async def kb_exec(
       grep "text" *.py                — filter by extension
       find "*.md"                     — find files by glob
       find docs/ "*.md"               — find within a directory
+      find -t "*.md", tree -t         — same sort flags as ls
       wc <file>                       — line/word/char counts
       stat <file>                     — file metadata
 
