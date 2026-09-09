@@ -15,11 +15,11 @@ export const disableSingleTilde = {
 			// 2. Check for single-tilde: ~text~
 			const singleMatch = /^~(?=\S)([\s\S]*?\S)~/.exec(src);
 			if (singleMatch) {
-				// return a plain-text token, NOT del
+				// the rest of the span re-lexes as normal inline markdown
 				return {
 					type: 'text',
-					raw: singleMatch[0],
-					text: singleMatch[0] // include both tildes as literal text
+					raw: '~',
+					text: '~'
 				};
 			}
 
