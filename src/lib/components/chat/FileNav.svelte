@@ -50,6 +50,7 @@
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
+	import FileCompare from './FileNav/FileCompare.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import Icon from './FileNav/Icon.svelte';
 	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
@@ -69,6 +70,7 @@
 	let isDraggingHandle = false;
 	let containerEl: HTMLElement;
 	let terminalEnabled = true;
+	let comparePaths: [string, string] | null = null;
 
 	const onHandleMouseDown = (e: MouseEvent) => {
 		e.preventDefault();
@@ -397,6 +399,8 @@
 		const terminalChanged = terminal && terminal.url !== prevTerminalUrl;
 		if (terminalChanged) prevTerminalUrl = terminal.url;
 
+		if (chatChanged || terminalChanged || !terminal) comparePaths = null;
+
 		if (mounted && terminal) {
 			if (chatChanged && chatId && !oldChatId) {
 				// Chat just got created (null → real ID): persist the current
@@ -709,6 +713,7 @@
 	) => {
 		const terminal = selectedTerminal;
 		if (!terminal) return;
+		comparePaths = null;
 		const directory = clampToFileRoot(path);
 		if (options.restoreTree) {
 			restoreTreeState(directory);
@@ -1275,6 +1280,11 @@
 	let selectionMode = false;
 
 	$: selectedCount = selectedEntries.size;
+	$: comparisonEntries = visibleEntries.filter((entry) => selectedEntries.has(entry.fullPath));
+	$: canCompare =
+		selectedCount === 2 &&
+		comparisonEntries.length === 2 &&
+		comparisonEntries.every((entry) => entry.type === 'file');
 	$: selectedEntriesWritable =
 		currentWritable &&
 		[...selectedEntries].every((path) => {
@@ -1370,6 +1380,7 @@
 
 	// Escape to clear selection
 	const handleKeydown = (e: KeyboardEvent) => {
+		if (comparePaths) return;
 		if (e.key === 'Escape' && selectedCount > 0) {
 			e.preventDefault();
 			clearSelection();
@@ -1379,7 +1390,12 @@
 	// Click outside panel to clear selection
 	const handleWindowClick = (e: MouseEvent) => {
 		if (directoryMenu) directoryMenu = null;
-		if (selectedCount > 0 && containerEl && !containerEl.contains(e.target as Node)) {
+		if (
+			!comparePaths &&
+			selectedCount > 0 &&
+			containerEl &&
+			!containerEl.contains(e.target as Node)
+		) {
 			clearSelection();
 		}
 	};
@@ -1478,6 +1494,7 @@
 		const onVisibilityChange = () => {
 			if (
 				document.visibilityState === 'visible' &&
+				!comparePaths &&
 				!selectedFile &&
 				selectedTerminal &&
 				!terminalChatContextPending &&
@@ -1576,7 +1593,7 @@
 			</div>
 		{/if}
 
-		{#if previewPort === null}
+		{#if previewPort === null && !comparePaths}
 			<FileNavToolbar
 				breadcrumbs={buildBreadcrumbs(currentPath)}
 				{selectedFile}
@@ -1766,6 +1783,11 @@
 			{#if selectedCount > 0 && !isSearching}
 				<BulkActionBar
 					count={selectedCount}
+					{canCompare}
+					onCompare={() => {
+						if (canCompare)
+							comparePaths = [comparisonEntries[0].fullPath, comparisonEntries[1].fullPath];
+					}}
 					canDelete={selectedEntriesWritable}
 					onDelete={() => {
 						deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
@@ -1783,16 +1805,24 @@
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
 				closeDirectoryMenu();
-				if (e.target === e.currentTarget && selectedCount > 0) clearSelection();
+				if (!comparePaths && e.target === e.currentTarget && selectedCount > 0) clearSelection();
 			}}
 			on:contextmenu={(e) => {
-				if (selectedFile || previewPort !== null || isSearching) return;
+				if (comparePaths || selectedFile || previewPort !== null || isSearching) return;
 				if ((e.target as HTMLElement)?.closest('[data-file-row]')) return;
 				e.preventDefault();
 				directoryMenu = { x: e.clientX, y: e.clientY };
 			}}
 		>
-			{#if previewPort !== null}
+			{#if comparePaths && selectedTerminal}
+				<FileCompare
+					paths={comparePaths}
+					baseUrl={selectedTerminal.url}
+					apiKey={selectedTerminal.key}
+					{chatId}
+					onBack={() => (comparePaths = null)}
+				/>
+			{:else if previewPort !== null}
 				<PortPreview
 					baseUrl={selectedTerminal?.url ?? ''}
 					port={previewPort}
