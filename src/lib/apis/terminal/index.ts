@@ -428,6 +428,42 @@ export const uploadToTerminal = async (
 	return res;
 };
 
+// ponytail: serialize new uploads in this page; cross-client races need server-side protection.
+let newFileUploadQueue: Promise<void> = Promise.resolve();
+
+export const uploadNewFileToTerminal = async (
+	baseUrl: string,
+	apiKey: string,
+	directory: string,
+	file: File,
+	sessionId?: string
+): Promise<{ path: string; size: number } | null> => {
+	const upload = newFileUploadQueue.then(async () => {
+		const listing = await listFiles(baseUrl, apiKey, directory, sessionId);
+		if (!listing) return null;
+
+		const names = new Set(listing.entries.map((entry) => entry.name));
+		const extensionIndex = file.name.startsWith('.') ? -1 : file.name.lastIndexOf('.');
+		const stem = extensionIndex > 0 ? file.name.slice(0, extensionIndex) : file.name;
+		const extension = extensionIndex > 0 ? file.name.slice(extensionIndex) : '';
+		let name = file.name;
+		for (let suffix = 1; names.has(name); suffix++) {
+			name = `${stem} (${suffix})${extension}`;
+		}
+
+		const uploadFile =
+			name === file.name
+				? file
+				: new File([file], name, { type: file.type, lastModified: file.lastModified });
+		return uploadToTerminal(baseUrl, apiKey, directory, uploadFile, sessionId);
+	});
+	newFileUploadQueue = upload.then(
+		() => undefined,
+		() => undefined
+	);
+	return upload;
+};
+
 export const createDirectory = async (
 	baseUrl: string,
 	apiKey: string,
