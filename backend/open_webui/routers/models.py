@@ -45,7 +45,7 @@ from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.models import get_all_models
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ def _safe_static_redirect_path(url: str) -> str | None:
 
 
 def is_valid_model_id(model_id: str) -> bool:
-    return model_id and len(model_id) <= 256
+    return model_id and len(model_id) <= 256 and not any(char.isspace() for char in model_id)
 
 
 async def _verify_knowledge_file_access(
@@ -878,7 +878,7 @@ async def update_model_by_id(
 
 
 class ModelAccessGrantsForm(BaseModel):
-    id: str
+    id: str = Field(pattern=r'^\S+$')
     name: str | None = None
     access_grants: list[dict]
 

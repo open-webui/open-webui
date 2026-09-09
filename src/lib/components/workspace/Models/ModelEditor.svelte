@@ -283,6 +283,13 @@
 			return;
 		}
 
+		if (/\s/.test(id)) {
+			toast.error($i18n.t('Model ID cannot contain whitespace.'));
+			loading = false;
+
+			return;
+		}
+
 		if (name === '') {
 			toast.error($i18n.t('Model Name is required.'));
 			loading = false;
