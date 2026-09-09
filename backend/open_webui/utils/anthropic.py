@@ -508,8 +508,8 @@ def convert_openai_to_anthropic_response(
             has_thinking = True
             continue
 
-        thinking = block.get('thinking') or block.get('content') or block.get('text')
-        if not thinking:
+        thinking = block.get('thinking') or block.get('content') or block.get('text') or ''
+        if not thinking and not block.get('signature'):
             continue
 
         thinking_block = {'type': 'thinking', 'thinking': thinking}
@@ -717,15 +717,18 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     or message.get('reasoning_content')
                     or message.get('reasoning')
                 )
-                if not reasoning_content:
-                    thinking_blocks = delta.get('thinking_blocks') or message.get('thinking_blocks') or []
-                    for block in thinking_blocks:
-                        if isinstance(block, dict):
+                signature = None
+                thinking_blocks = delta.get('thinking_blocks') or message.get('thinking_blocks') or []
+                for block in thinking_blocks:
+                    if isinstance(block, dict):
+                        signature = block.get('signature')
+                        # Some providers repeat the already streamed thinking text next to the signature
+                        if not reasoning_content and not (signature and thinking_block_open):
                             reasoning_content = block.get('thinking') or block.get('content') or block.get('text')
-                            if reasoning_content:
-                                break
+                        if reasoning_content or signature:
+                            break
 
-                if reasoning_content and not text_block_open and not has_tool_calls:
+                if (reasoning_content or signature) and not text_block_open and not has_tool_calls:
                     if not thinking_block_open:
                         block_start = {
                             'type': 'content_block_start',
@@ -735,12 +738,21 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                         yield f'event: content_block_start\ndata: {JSONCodec.dumps(block_start)}\n\n'.encode()
                         thinking_block_open = True
 
-                    block_delta = {
-                        'type': 'content_block_delta',
-                        'index': current_block_index,
-                        'delta': {'type': 'thinking_delta', 'thinking': reasoning_content},
-                    }
-                    yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
+                    if reasoning_content:
+                        block_delta = {
+                            'type': 'content_block_delta',
+                            'index': current_block_index,
+                            'delta': {'type': 'thinking_delta', 'thinking': reasoning_content},
+                        }
+                        yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
+
+                    if signature:
+                        block_delta = {
+                            'type': 'content_block_delta',
+                            'index': current_block_index,
+                            'delta': {'type': 'signature_delta', 'signature': signature},
+                        }
+                        yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
                 # --- Handle text content ---
                 # Anthropic expects text blocks before tool blocks, so skip
