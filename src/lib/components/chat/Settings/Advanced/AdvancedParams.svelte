@@ -21,6 +21,7 @@
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		compact_token_threshold: null,
 		function_calling: null,
+		reinject_reasoning: true,
 		reasoning_tags: null,
 		seed: null,
 		stop: null,
@@ -271,6 +272,21 @@
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{/if}
 				</button>
+			</div>
+		</Tooltip>
+	</div>
+
+	<div>
+		<Tooltip
+			content={$i18n.t(
+				'Include reasoning from previous assistant turns in subsequent model requests. Disabled by default to prevent reasoning-tag imitation and prompt pollution.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="py-0.5 flex w-full justify-between">
+				<div class="self-center text-xs">{$i18n.t('Reinject Reasoning')}</div>
+				<Switch bind:state={params.reinject_reasoning} />
 			</div>
 		</Tooltip>
 	</div>

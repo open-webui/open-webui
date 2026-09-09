@@ -36,6 +36,7 @@
 		stream_response: null,
 		stream_delta_chunk_size: null,
 		function_calling: null,
+		reinject_reasoning: true,
 		reasoning_tags: null,
 		seed: null,
 		temperature: null,
@@ -85,6 +86,7 @@
 				stream_delta_chunk_size:
 					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
+				reinject_reasoning: params.reinject_reasoning,
 				reasoning_tags: params.reasoning_tags !== null ? params.reasoning_tags : undefined,
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,

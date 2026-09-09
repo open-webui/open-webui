@@ -2152,12 +2152,18 @@ def get_reasoning_format(model: dict) -> str | None:
     """
     Determine how reasoning should be included in reconstructed messages.
 
+    Reasoning replay is disabled by default and can be enabled per model with
+    the ``reinject_reasoning`` model parameter.
+
     Returns:
         'thinking': Ollama expects reasoning in the native thinking field.
-        'think_tags': wrap reasoning in <think> tags inside content.
         'reasoning_content': llama.cpp supports reasoning_content as a top-level field.
         None: skip reasoning (safe default for strict providers).
     """
+    params = model.get('params') or {}
+    if not params.get('reinject_reasoning', True):
+        return None
+
     provider = model.get('provider', '')
     if model.get('owned_by') == 'ollama':
         return 'thinking'
