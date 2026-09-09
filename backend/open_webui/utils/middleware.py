@@ -597,7 +597,11 @@ def handle_responses_streaming_event(
                     idx
                     for idx, existing in enumerate(new_output)
                     if (item.get('id') and existing.get('id') == item.get('id'))
-                    or (item.get('call_id') and existing.get('call_id') == item.get('call_id'))
+                    or (
+                        item.get('call_id')
+                        and existing.get('type') == item.get('type')
+                        and existing.get('call_id') == item.get('call_id')
+                    )
                 ),
                 None,
             )
