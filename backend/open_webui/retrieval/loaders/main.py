@@ -276,9 +276,27 @@ class DoclingLoader:
             )
         if r.ok:
             result = r.json()
+            # Docling returns HTTP 200 even for failed/partial conversions.
+            # Check the top-level "status" field to ensure we only accept
+            # actual successful results.
+            docling_status = result.get('status', '')
+            if docling_status not in ('success', 'partial_success'):
+                errors = result.get('errors', [])
+                error_detail = f' - errors: {errors}' if errors else ''
+                raise Exception(
+                    f'Docling conversion did not succeed '
+                    f'(status={docling_status}){error_detail}'
+                )
+
             document_data = result.get('document', {})
             md_content = document_data.get('md_content', '')
-            text = md_content or '<No text content found>'
+            if not md_content or not md_content.strip():
+                raise Exception(
+                    f'Docling conversion succeeded but returned empty '
+                    f'md_content (status={docling_status})'
+                )
+
+            text = md_content
 
             metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
             if page_break_marker in md_content:
