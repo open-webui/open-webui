@@ -328,10 +328,6 @@
 					console.log('Shortcut triggered: SHOW_SHORTCUTS');
 					event.preventDefault();
 					showSettings.set('shortcuts');
-				} else if (shortcut === Shortcut.CLOSE_MODAL) {
-					console.log('Shortcut triggered: CLOSE_MODAL');
-					event.preventDefault();
-					showSettings.set(false);
 				} else if (shortcut === Shortcut.OPEN_MODEL_SELECTOR) {
 					console.log('Shortcut triggered: OPEN_MODEL_SELECTOR');
 					event.preventDefault();
