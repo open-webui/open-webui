@@ -94,7 +94,7 @@
 							</div>
 						{:else}
 							<div
-								class="max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pb-2"
+								class="max-h-[60vh] overflow-y-auto will-change-transform scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pb-2"
 							>
 								<div class="flex flex-col gap-2 pt-7">
 									{#if pinnedMessages.length === 0}

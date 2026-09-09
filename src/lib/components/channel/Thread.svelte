@@ -188,7 +188,10 @@
 			</div>
 		</div>
 
-		<div class="flex-1 min-h-0 w-full overflow-y-auto" bind:this={messagesContainerElement}>
+		<div
+			class="flex-1 min-h-0 w-full overflow-y-auto will-change-transform"
+			bind:this={messagesContainerElement}
+		>
 			<div class="pt-7">
 				{#if messages !== null}
 					<Messages
