@@ -3642,6 +3642,9 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
+                    response_sources = response_data.get('sources')
+                    if not isinstance(response_sources, list) or not response_sources:
+                        response_sources = None
 
                     if save_to_chat:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -3652,6 +3655,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 'role': 'assistant',
                                 'output': response_output,
                                 **({'usage': usage} if usage else {}),
+                                **({'sources': response_sources} if response_sources else {}),
                             },
                         )
 
@@ -4052,6 +4056,9 @@ async def streaming_chat_response_handler(response, ctx):
             usage = None
             prior_output = []
             last_response_id = None
+            # Provider-supplied citation sources (top-level "sources" on chat
+            # completion chunks/responses). Retained for final DB persistence.
+            provider_sources = None
 
             def full_output():
                 return prior_output + output if prior_output else output
@@ -4135,6 +4142,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
+                    nonlocal provider_sources
 
                     response_tool_calls = []
 
@@ -4336,6 +4344,20 @@ async def streaming_chat_response_handler(response, ctx):
                                     continue
                                 else:
                                     choices = data.get('choices', [])
+
+                                    # Retain provider-supplied sources for frontend
+                                    # display and final message persistence.
+                                    chunk_sources = data.get('sources')
+                                    if isinstance(chunk_sources, list) and chunk_sources:
+                                        provider_sources = chunk_sources
+                                        await event_emitter(
+                                            {
+                                                'type': 'chat:completion',
+                                                'data': {
+                                                    'sources': provider_sources,
+                                                },
+                                            }
+                                        )
 
                                     # Normalize usage data to standard format
                                     raw_usage = data.get('usage', {}) or {}
@@ -5470,6 +5492,7 @@ async def streaming_chat_response_handler(response, ctx):
                     'output': output,
                     'title': title,
                     **({'usage': usage} if usage else {}),
+                    **({'sources': provider_sources} if provider_sources else {}),
                 }
 
                 if save_to_chat:
@@ -5482,13 +5505,18 @@ async def streaming_chat_response_handler(response, ctx):
                                 'done': True,
                                 'output': output,
                                 **({'usage': usage} if usage else {}),
+                                **({'sources': provider_sources} if provider_sources else {}),
                             },
                         )
-                    elif usage:
+                    elif usage or provider_sources:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
-                            {'done': True, 'usage': usage},
+                            {
+                                'done': True,
+                                **({'usage': usage} if usage else {}),
+                                **({'sources': provider_sources} if provider_sources else {}),
+                            },
                         )
                     else:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -5536,13 +5564,17 @@ async def streaming_chat_response_handler(response, ctx):
                                 {
                                     'done': True,
                                     'output': output,
+                                    **({'sources': provider_sources} if provider_sources else {}),
                                 },
                             )
                         else:
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
                                 metadata['message_id'],
-                                {'done': True},
+                                {
+                                    'done': True,
+                                    **({'sources': provider_sources} if provider_sources else {}),
+                                },
                                 touch=False,
                             )
 
