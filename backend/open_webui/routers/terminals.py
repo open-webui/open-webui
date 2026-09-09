@@ -39,7 +39,10 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 STREAMING_CONTENT_TYPES = ('application/octet-stream', 'image/', 'application/pdf')
-STRIPPED_RESPONSE_HEADERS = frozenset(('transfer-encoding', 'connection', 'content-encoding', 'content-length'))
+# Drop the upstream's server and date: uvicorn adds its own and forwarding both duplicates them.
+STRIPPED_RESPONSE_HEADERS = frozenset(
+    ('transfer-encoding', 'connection', 'content-encoding', 'content-length', 'server', 'date')
+)
 
 
 def _sanitize_proxy_path(path: str) -> str | None:
