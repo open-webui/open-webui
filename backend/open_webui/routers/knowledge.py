@@ -1642,13 +1642,9 @@ async def remove_file_from_knowledge_by_id(
 
     # Remove content from the vector database
     try:
-        await ASYNC_VECTOR_DB_CLIENT.delete(
-            collection_name=knowledge.id, filter={'file_id': form_data.file_id}
-        )  # Remove by file_id first
-
-        await ASYNC_VECTOR_DB_CLIENT.delete(
-            collection_name=knowledge.id, filter={'hash': file.hash}
-        )  # Remove by hash as well in case of duplicates
+        await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': form_data.file_id})
+        if file.hash:
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
     except Exception as e:
         log.debug('This was most likely caused by bypassing embedding processing')
         log.debug(e)
@@ -1988,7 +1984,8 @@ async def sync_knowledge_cleanup(
 
         try:
             await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'file_id': file_id})
-            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'hash': file.hash})
+            if file.hash:
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'hash': file.hash})
         except Exception:
             pass
 
@@ -2321,6 +2318,9 @@ async def delete_knowledge_directory(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    # Collect before delete_directory drops the KnowledgeFile rows
+    files = [] if move_files else await Knowledges.get_files_by_id_and_directory_id(id, dir_id, db=db)
+
     success = await Knowledges.delete_directory(
         directory_id=dir_id,
         move_files_to_parent=move_files,
@@ -2331,6 +2331,23 @@ async def delete_knowledge_directory(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to delete directory.',
         )
+
+    for file in files:
+        try:
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'file_id': file.id})
+            if file.hash:
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'hash': file.hash})
+        except Exception as e:
+            log.debug('This was most likely caused by bypassing embedding processing')
+            log.debug(e)
+
+        if (
+            not ENABLE_KNOWLEDGE_FILE_RETENTION
+            and not await Knowledges.get_knowledges_by_file_id(file.id, db=db)
+            and (file.user_id == user.id or user.role == 'admin')
+        ):
+            await delete_file_resource(file, db)
+
     await publish_event(
         request,
         EVENTS.KNOWLEDGE_DIRECTORY_DELETED,
