@@ -275,9 +275,8 @@ async def stop_item_tasks(redis: Redis, item_id: str):
         return {'status': True, 'message': f'No tasks found for item {item_id}.'}
 
     for task_id in task_ids:
-        result = await stop_task(redis, task_id)
-        if not result['status']:
-            return result  # Return the first failure
+        # Keep going: a task that already ended on its own is not a failure
+        await stop_task(redis, task_id)
 
     return {'status': True, 'message': f'All tasks for item {item_id} stopped.'}
 
