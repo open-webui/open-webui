@@ -14,6 +14,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
@@ -50,6 +51,7 @@
 	let pipelineUrls: Record<string, boolean> = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
+	let modelListRefreshing = false;
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
@@ -117,6 +119,19 @@
 			toast.success($i18n.t('Connections settings updated'));
 			await models.set(await getModels());
 			await config.set(await getBackendConfig());
+		}
+	};
+
+	const refreshModelListHandler = async () => {
+		modelListRefreshing = true;
+
+		try {
+			await models.set(await getModels());
+			toast.success($i18n.t('Model list refreshed'));
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			modelListRefreshing = false;
 		}
 	};
 
@@ -373,13 +388,33 @@
 					)}
 					let:labelId
 				>
-					<Switch
-						bind:state={connectionsConfig.ENABLE_BASE_MODELS_CACHE}
-						on:change={async () => {
-							updateConnectionsHandler();
-						}}
-						ariaLabelledbyId={labelId}
-					/>
+					<div class="flex items-center gap-1.5">
+						{#if connectionsConfig.ENABLE_BASE_MODELS_CACHE}
+							<Tooltip content={$i18n.t('Refresh')}>
+								<button
+									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
+									type="button"
+									disabled={modelListRefreshing}
+									on:click={refreshModelListHandler}
+									aria-label={$i18n.t('Refresh')}
+								>
+									{#if modelListRefreshing}
+										<Spinner className="size-3.5" />
+									{:else}
+										<ArrowPath className="size-4" />
+									{/if}
+								</button>
+							</Tooltip>
+						{/if}
+
+						<Switch
+							bind:state={connectionsConfig.ENABLE_BASE_MODELS_CACHE}
+							on:change={async () => {
+								updateConnectionsHandler();
+							}}
+							ariaLabelledbyId={labelId}
+						/>
+					</div>
 				</AdminSettingRow>
 			</AdminSettingSection>
 		{:else}

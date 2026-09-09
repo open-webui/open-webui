@@ -31,7 +31,8 @@ def search_sougou(
         params = JSONCodec.dumps({'Query': query, 'Cnt': 20})
         common_client = CommonClient('tms', '2020-12-29', cred, '', profile=client_profile)
         results = [
-            JSONCodec.loads(page) for page in common_client.call_json('SearchPro', JSONCodec.loads(params))['Response']['Pages']
+            JSONCodec.loads(page)
+            for page in common_client.call_json('SearchPro', JSONCodec.loads(params))['Response']['Pages']
         ]
         sorted_results = sorted(results, key=lambda x: x.get('scour', 0.0), reverse=True)
         if filter_list:

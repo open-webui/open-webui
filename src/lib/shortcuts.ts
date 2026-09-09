@@ -46,6 +46,8 @@ export enum Shortcut {
 	//Message
 	GENERATE_MESSAGE_PAIR = 'generateMessagePair',
 	REGENERATE_RESPONSE = 'regenerateResponse',
+	ALLOW_TOOL_CALL = 'allowToolCall',
+	DENY_TOOL_CALL = 'denyToolCall',
 	COPY_LAST_CODE_BLOCK = 'copyLastCodeBlock',
 	COPY_LAST_RESPONSE = 'copyLastResponse',
 	STOP_GENERATING = 'stopGenerating',
@@ -71,6 +73,8 @@ export const CONFIGURABLE_SHORTCUTS = [
 	Shortcut.FOCUS_INPUT,
 	Shortcut.GENERATE_MESSAGE_PAIR,
 	Shortcut.REGENERATE_RESPONSE,
+	Shortcut.ALLOW_TOOL_CALL,
+	Shortcut.DENY_TOOL_CALL,
 	Shortcut.COPY_LAST_CODE_BLOCK,
 	Shortcut.COPY_LAST_RESPONSE
 ] as const;
@@ -95,6 +99,8 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
 	[Shortcut.FOCUS_INPUT]: 'Shift+Escape',
 	[Shortcut.GENERATE_MESSAGE_PAIR]: 'Cmd+Shift+Enter',
 	[Shortcut.REGENERATE_RESPONSE]: 'Cmd+R',
+	[Shortcut.ALLOW_TOOL_CALL]: 'Cmd+Alt+Enter',
+	[Shortcut.DENY_TOOL_CALL]: 'Cmd+Alt+Backspace',
 	[Shortcut.COPY_LAST_CODE_BLOCK]: 'Cmd+Shift+;',
 	[Shortcut.COPY_LAST_RESPONSE]: 'Cmd+Shift+C'
 };
@@ -332,6 +338,20 @@ export const shortcuts: ShortcutRegistry = {
 		keys: ['mod', 'R'],
 		category: 'Message',
 		configurable: true
+	},
+	[Shortcut.ALLOW_TOOL_CALL]: {
+		name: 'Allow Tool Call',
+		keys: ['mod', 'alt', 'Enter'],
+		category: 'Message',
+		configurable: true,
+		tooltip: 'Only active when a tool call is waiting for approval.'
+	},
+	[Shortcut.DENY_TOOL_CALL]: {
+		name: 'Deny Tool Call',
+		keys: ['mod', 'alt', 'Backspace'],
+		category: 'Message',
+		configurable: true,
+		tooltip: 'Only active when a tool call is waiting for approval.'
 	},
 	[Shortcut.STOP_GENERATING]: {
 		name: 'Stop Generating',

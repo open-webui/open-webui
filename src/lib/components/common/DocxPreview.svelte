@@ -2,6 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import type { Readable } from 'svelte/store';
+	import { clampDocumentTargetPage } from '$lib/utils/documentPreview';
 
 	import Spinner from './Spinner.svelte';
 
@@ -13,6 +14,7 @@
 
 	export let data: ArrayBuffer | null = null;
 	export let className = '';
+	export let targetPage: number | null = null;
 
 	let outerContainer: HTMLDivElement;
 	let containerEl: HTMLDivElement;
@@ -25,6 +27,8 @@
 	let fitScale = 1;
 	let zoomLevel = 1;
 	let resizeObserver: ResizeObserver | null = null;
+
+	const SAFE_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
 
 	$: docxScale = Math.max(0.25, fitScale * zoomLevel);
 
@@ -84,6 +88,34 @@
 		updateFitScale();
 	};
 
+	const scrollToTargetPage = async () => {
+		if (!containerEl) return;
+		const pages = containerEl.querySelectorAll('section.docx');
+		const page = clampDocumentTargetPage(targetPage, pages.length);
+		if (!page) return;
+
+		await tick();
+		(pages[page - 1] as HTMLElement | undefined)?.scrollIntoView({ block: 'start' });
+	};
+
+	const isSafeLinkTarget = (href: string) => {
+		if (!href.trim()) return false;
+
+		try {
+			return SAFE_LINK_SCHEMES.includes(new URL(href, document.baseURI).protocol);
+		} catch {
+			return false;
+		}
+	};
+
+	const stripUnsafeLinkTargets = () => {
+		containerEl.querySelectorAll('a[href]').forEach((link) => {
+			if (!isSafeLinkTarget(link.getAttribute('href') ?? '')) {
+				link.removeAttribute('href');
+			}
+		});
+	};
+
 	const renderDocx = async (arrayBuffer: ArrayBuffer | null) => {
 		const currentRender = ++renderId;
 		clearPreview();
@@ -104,14 +136,18 @@
 				className: 'docx',
 				ignoreLastRenderedPageBreak: false,
 				inWrapper: true,
+				// the renderer would otherwise inline a document-supplied HTML part into a same-origin frame
+				renderAltChunks: false,
 				renderEndnotes: true,
 				renderFooters: true,
 				renderFootnotes: true,
 				renderHeaders: true,
 				useBase64URL: true
 			});
+			stripUnsafeLinkTargets();
 			await tick();
 			updateFitScale();
+			await scrollToTargetPage();
 		} catch (e) {
 			console.error('Error rendering DOCX preview:', e);
 
@@ -129,6 +165,10 @@
 	};
 
 	$: if (mounted) renderDocx(data);
+
+	$: if (!loading && targetPage && !fallbackHtml) {
+		void scrollToTargetPage();
+	}
 
 	onMount(() => {
 		mounted = true;
@@ -188,7 +228,7 @@
 				type="button"
 				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
 				on:click={zoomOut}
-				aria-label="Zoom out"
+				aria-label={$i18n.t('Zoom out')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -207,7 +247,7 @@
 				type="button"
 				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
 				on:click={resetView}
-				aria-label="Reset zoom"
+				aria-label={$i18n.t('Reset zoom')}
 			>
 				{Math.round(zoomLevel * 100)}%
 			</button>
@@ -215,7 +255,7 @@
 				type="button"
 				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
 				on:click={zoomIn}
-				aria-label="Zoom in"
+				aria-label={$i18n.t('Zoom in')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

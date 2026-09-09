@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext } from 'svelte';
 	import { toolServers, tools } from '$lib/stores';
 
@@ -53,7 +54,7 @@
 				</div>
 			{/if}
 
-			<div class="px-5 pb-3 w-full flex flex-col justify-center">
+			<div class="px-3 pb-3 w-full flex flex-col justify-center">
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#each selectedTools as tool}
 						{@const status = authStatus(tool)}
@@ -66,7 +67,7 @@
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-1 min-w-0">
 									<div class="text-sm font-normal dark:text-gray-100 text-gray-800 truncate">
-										{tool?.name}
+										{resolveLocalizedResource(tool, $i18n.language)}
 									</div>
 									{#if status}
 										<span class="text-[0.6875rem] {status.pill} shrink-0">{status.label}</span>
@@ -79,13 +80,13 @@
 										</span>
 									{/if}
 									{#if status}
-										<span class="size-2 rounded-full {status.dot} shrink-0"></span>
+										<span class="size-1.5 rounded-full {status.dot} shrink-0"></span>
 									{/if}
 								</div>
 
-								{#if tool?.meta?.description}
+								{#if resolveLocalizedResource(tool, $i18n.language, 'description')}
 									<div class="text-xs text-gray-500 truncate">
-										{tool?.meta?.description}
+										{resolveLocalizedResource(tool, $i18n.language, 'description')}
 									</div>
 								{/if}
 							</div>

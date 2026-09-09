@@ -112,7 +112,7 @@ def _safe_field(key: str, definition: dict[str, Any]) -> dict[str, Any]:
         'type',
     }
     field = {'key': key}
-    for field_key in allowed_keys:
+    for field_key in sorted(allowed_keys):
         if field_key in definition:
             field[field_key] = definition[field_key]
 

@@ -9,7 +9,7 @@
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
-	import { config, settings, showSettings, user } from '$lib/stores';
+	import { config, pinnedModels, settings, showSettings, user } from '$lib/stores';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
@@ -22,6 +22,8 @@
 	export let deleteModelHandler: Function = () => {};
 
 	export let onClose: Function = () => {};
+
+	const providerSupportsDelete = (provider = '') => provider === 'llama.cpp';
 </script>
 
 <Dropdown
@@ -66,7 +68,7 @@
 					<div class="flex items-center">{$i18n.t('Edit')}</div>
 				</button>
 
-				{#if $user?.role === 'admin' && model?.owned_by === 'ollama'}
+				{#if $user?.role === 'admin' && (model?.owned_by === 'ollama' || providerSupportsDelete(model?.provider))}
 					<button
 						type="button"
 						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
@@ -102,7 +104,7 @@
 
 			<button
 				type="button"
-				aria-pressed={($settings?.pinnedModels ?? []).includes(model?.id)}
+				aria-pressed={$pinnedModels.includes(model?.id)}
 				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 				on:click={(e) => {
 					e.stopPropagation();
@@ -112,14 +114,14 @@
 					show = false;
 				}}
 			>
-				{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
+				{#if $pinnedModels.includes(model?.id)}
 					<PinSlash className="size-3.5" />
 				{:else}
 					<Pin className="size-3.5" />
 				{/if}
 
 				<div class="flex items-center">
-					{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
+					{#if $pinnedModels.includes(model?.id)}
 						{$i18n.t('Hide from Sidebar')}
 					{:else}
 						{$i18n.t('Keep in Sidebar')}

@@ -10,6 +10,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
@@ -48,7 +49,8 @@
 		CONTEXT_COMPACTION_TOKEN_THRESHOLD: 80000,
 		CONTEXT_COMPACTION_TOKEN_CAP: 80000,
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
-		CONTEXT_COMPACTION_PROMPT_TEMPLATE: ''
+		CONTEXT_COMPACTION_PROMPT_TEMPLATE: '',
+		ENABLE_TOOL_PERMISSIONS: false
 	};
 	let showTaskParameters = false;
 
@@ -75,7 +77,8 @@
 						...current,
 						features: {
 							...current.features,
-							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION
+							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION,
+							enable_tool_permissions: chatConfig.ENABLE_TOOL_PERMISSIONS
 						}
 					}
 				: current
@@ -253,6 +256,18 @@
 			</AdminSettingSection>
 
 			<AdminSettingSection title={$i18n.t('Chat')}>
+				<AdminSettingRow
+					label={$i18n.t('Tool Permissions')}
+					description={$i18n.t('Show Full access and Ask for approval in the chat input menu.')}
+					let:labelId
+				>
+					<div slot="label" class="flex items-center gap-2">
+						<span>{$i18n.t('Tool Permissions')}</span>
+						<ExperimentalBadge />
+					</div>
+					<Switch bind:state={chatConfig.ENABLE_TOOL_PERMISSIONS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
 				<AdminSettingRow
 					label={$i18n.t('Context Compaction')}
 					description={$i18n.t(

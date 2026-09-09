@@ -1,38 +1,81 @@
-<script>
-	import { toast } from 'svelte-sonner';
-
-	import { createEventDispatcher, getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
-	const dispatch = createEventDispatcher();
+<script lang="ts">
+	import { getContext, onMount } from 'svelte';
+	const i18n: any = getContext('i18n');
 
 	import { user } from '$lib/stores';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import ManageOllama from './Manage/ManageOllama.svelte';
 	import { getOllamaConfig } from '$lib/apis/ollama';
+	import { getOpenAIConfig } from '$lib/apis/openai';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import ManageMultipleOllama from './Manage/ManageMultipleOllama.svelte';
+	import ManageMultipleProviderModels from './Manage/ManageMultipleProviderModels.svelte';
 
 	export let show = false;
 
-	let selected = null;
-	let ollamaConfig = null;
+	type ProviderConnection = {
+		idx: number;
+		url: string;
+		provider: string;
+		config: Record<string, any>;
+	};
+	const MANAGEMENT_PROVIDERS = new Set(['llama.cpp', 'lmstudio']);
+
+	let selected: '' | 'ollama' | 'provider' | null = null;
+	let ollamaConfig: any = null;
+	let providerConnections: ProviderConnection[] = [];
+
+	$: hasOllamaManagement =
+		ollamaConfig?.ENABLE_OLLAMA_API && (ollamaConfig?.OLLAMA_BASE_URLS ?? []).length > 0;
+	$: hasProviderManagement = providerConnections.length > 0;
 
 	onMount(async () => {
 		if ($user?.role === 'admin') {
+			let openaiConfig: any = null;
 			await Promise.all([
 				(async () => {
 					ollamaConfig = await getOllamaConfig(localStorage.token);
+				})(),
+				(async () => {
+					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})()
 			]);
 
-			if (ollamaConfig) {
+			providerConnections = openaiConfig?.ENABLE_OPENAI_API
+				? (openaiConfig.OPENAI_API_BASE_URLS ?? [])
+						.map((url: string, idx: number) => ({
+							idx,
+							url,
+							provider:
+								(
+									openaiConfig.OPENAI_API_CONFIGS?.[idx] ??
+									openaiConfig.OPENAI_API_CONFIGS?.[String(idx)] ??
+									openaiConfig.OPENAI_API_CONFIGS?.[url] ??
+									{}
+								)?.provider ?? '',
+							config:
+								openaiConfig.OPENAI_API_CONFIGS?.[idx] ??
+								openaiConfig.OPENAI_API_CONFIGS?.[String(idx)] ??
+								openaiConfig.OPENAI_API_CONFIGS?.[url] ??
+								{}
+						}))
+						.filter((connection: ProviderConnection) =>
+							MANAGEMENT_PROVIDERS.has(connection.provider)
+						)
+				: [];
+
+			const hasOllama =
+				ollamaConfig?.ENABLE_OLLAMA_API && (ollamaConfig?.OLLAMA_BASE_URLS ?? []).length > 0;
+			const hasProvider = providerConnections.length > 0;
+
+			if (hasOllama) {
 				selected = 'ollama';
 				return;
 			}
 
-			selected = '';
+			selected = hasProvider ? 'provider' : '';
 		}
 	});
 </script>
@@ -64,8 +107,22 @@
 				{:else if selected !== null}
 					<div class=" flex w-full flex-col">
 						<div class=" px-1.5 py-1">
+							{#if hasOllamaManagement && hasProviderManagement}
+								<div class="mb-2">
+									<SettingsSelect
+										bind:value={selected}
+										className="w-full"
+										placeholder={$i18n.t('Select an engine')}
+									>
+										<option value="ollama">{$i18n.t('Ollama')}</option>
+										<option value="provider">{$i18n.t('Model providers')}</option>
+									</SettingsSelect>
+								</div>
+							{/if}
 							{#if selected === 'ollama'}
 								<ManageMultipleOllama {ollamaConfig} />
+							{:else if selected === 'provider'}
+								<ManageMultipleProviderModels connections={providerConnections} />
 							{/if}
 						</div>
 					</div>

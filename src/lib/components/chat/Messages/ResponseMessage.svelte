@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
+	import { functions as localizedFunctions } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 
 	import { createEventDispatcher, onDestroy } from 'svelte';
@@ -37,6 +39,7 @@
 		removeAllDetails
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 	import equal from 'fast-deep-equal';
 
 	import Name from './Name.svelte';
@@ -121,13 +124,17 @@
 	export let messageId;
 	export let selectedModels = [];
 
-	let message: MessageType = structuredClone(history.messages[messageId]);
+	let messageSource = history.messages[messageId];
+	let message: MessageType = structuredClone(messageSource);
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
-			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
-			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
-			if (
+			// Fast path for the fields that change most often while streaming.
+			// Responses streams update output even when legacy content is unchanged.
+			if (source !== messageSource) {
+				messageSource = source;
+				message = structuredClone(source);
+			} else if (
 				message.content !== source.content ||
 				message.done !== source.done ||
 				message.output?.length !== source.output?.length
@@ -160,6 +167,7 @@
 	export let forkHandler: Function | null = null;
 
 	export let addMessages: Function;
+	export let onToolCallResolved: Function = () => {};
 
 	export let isLastMessage = true;
 	export let readOnly = false;
@@ -176,6 +184,7 @@
 	let showDeleteConfirm = false;
 
 	let model = null;
+	$: localizedModelName = model ? resolveLocalizedModelName(model, $i18n.language) : message.model;
 	$: model = $models.find((m) => m.id === message.model);
 
 	$: statusEntries = message?.statusHistory ?? [...(message?.status ? [message?.status] : [])];
@@ -667,9 +676,9 @@
 		<div class="flex-auto w-0 pl-1 relative">
 			{#if !compactPreview}
 				<Name>
-					<Tooltip content={model?.name ?? message.model} placement="top-start">
+					<Tooltip content={localizedModelName} placement="top-start">
 						<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
-							{model?.name ?? message.model}
+							{localizedModelName}
 						</span>
 					</Tooltip>
 				</Name>
@@ -716,7 +725,7 @@
 										<FullHeightIframe
 											src={embed}
 											allowScripts={true}
-											allowForms={true}
+											allowForms={$settings?.iframeSandboxAllowForms ?? true}
 											allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
 											allowPopups={true}
 										/>
@@ -726,7 +735,12 @@
 						{/if}
 
 						{#if edit === true}
-							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-3 py-3 my-2">
+							<div
+								class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-3 py-3 my-2 {($settings?.highContrastMode ??
+								false)
+									? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500'
+									: ''}"
+							>
 								{#if editedOutput}
 									<!-- Structured output editor (visual + JSON toggle) -->
 									<OutputEditView
@@ -740,7 +754,7 @@
 									<textarea
 										id="message-edit-{message.id}"
 										bind:this={editTextAreaElement}
-										class=" bg-transparent outline-hidden w-full resize-none text-[0.9375rem]"
+										class=" bg-transparent outline-hidden focus-visible:outline-none! w-full resize-none text-[0.9375rem]"
 										bind:value={editedContent}
 										on:input={(e) => {
 											const messagesContainer = document.getElementById('messages-container');
@@ -815,6 +829,8 @@
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
 									id={`${chatId}-${message.id}`}
+									{chatId}
+									messageId={message.id}
 									content={message.content}
 									output={message.output}
 									sources={message.sources}
@@ -826,13 +842,12 @@
 									{compactPreview}
 									{editCodeBlock}
 									{topPadding}
-									done={($settings?.chatFadeStreamingText ?? true)
-										? (message?.done ?? false)
-										: true}
+									done={message?.done ?? false}
 									{model}
 									onTaskClick={async (e) => {
 										console.log(e);
 									}}
+									{onToolCallResolved}
 									onSourceClick={async (id) => {
 										console.log(id);
 
@@ -1456,10 +1471,21 @@
 									{/if}
 
 									{#each model?.actions ?? [] as action}
-										<Tooltip content={action.name} placement="bottom">
+										<Tooltip
+											content={resolveLocalizedFunction(
+												action,
+												$localizedFunctions,
+												$i18n.language
+											)}
+											placement="bottom"
+										>
 											<button
 												type="button"
-												aria-label={action.name}
+												aria-label={resolveLocalizedFunction(
+													action,
+													$localizedFunctions,
+													$i18n.language
+												)}
 												class="{isLastMessage || ($settings?.highContrastMode ?? false)
 													? 'visible'
 													: 'hover-reveal'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
@@ -1475,7 +1501,11 @@
 																? 'dark:invert-[80%]'
 																: ''}"
 															style="fill: currentColor;"
-															alt={action.name}
+															alt={resolveLocalizedFunction(
+																action,
+																$localizedFunctions,
+																$i18n.language
+															)}
 															draggable="false"
 														/>
 													</div>
@@ -1487,9 +1517,9 @@
 									{/each}
 
 									{#if message.done && !readOnly && forkHandler && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))}
-										<Tooltip content="Fork chat" placement="bottom">
+										<Tooltip content={$i18n.t('Fork chat')} placement="bottom">
 											<button
-												aria-label="Fork chat"
+												aria-label={$i18n.t('Fork chat')}
 												class="{isLastMessage || ($settings?.highContrastMode ?? false)
 													? 'visible'
 													: 'hover-reveal'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"

@@ -5,9 +5,16 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
-	import { config, models as _models, settings, showSettings, user } from '$lib/stores';
+	import {
+		config,
+		models as _models,
+		pinnedModels,
+		settings,
+		showSettings,
+		user
+	} from '$lib/stores';
 	import {
 		createNewModel,
 		deleteAllModels,
@@ -81,8 +88,8 @@
 	let defaultModelIdSet = new Set<string>();
 	let defaultPinnedModelIdSet = new Set<string>();
 
-	let workspaceModels: ModelListItem[] = [];
 	let baseModels: ModelListItem[] = [];
+	let allModels: ModelListItem[] = [];
 
 	let filteredModels = [];
 	let selectedModelId = null;
@@ -95,7 +102,7 @@
 	let modelDefaultsPanel = null;
 	let modelDefaultsDirty = false;
 
-	let viewOption = ''; // '' = All, 'enabled', 'disabled', 'visible', 'hidden'
+	let viewOption = '';
 	let tags: string[] = [];
 	let selectedTag = '';
 
@@ -111,6 +118,9 @@
 	};
 
 	const isSharedModel = (model) => (model?.access_grants ?? []).length > 0 && !isPublicModel(model);
+
+	const isPresetModel = (model: any) =>
+		!!(model?.preset || model?.base_model_id || model?.info?.base_model_id);
 
 	const modelAccessLabel = (model) => {
 		if (isPublicModel(model)) {
@@ -141,6 +151,8 @@
 		filteredModels = models
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
 			.filter((m) => {
+				if (viewOption === 'base') return !isPresetModel(m);
+				if (viewOption === 'workspace') return isPresetModel(m);
 				if (viewOption === 'enabled') return m?.is_active ?? true;
 				if (viewOption === 'disabled') return !(m?.is_active ?? true);
 				if (viewOption === 'visible') return !(m?.meta?.hidden ?? false);
@@ -257,19 +269,27 @@
 			selectedTag = '';
 		}
 
-		workspaceModels = await getBaseModels(localStorage.token, selectedTag);
-		baseModels = await getModels(localStorage.token, null, true);
-		const workspaceModelIds = new Set<string>(workspaceModels.map((wm: ModelListItem) => wm.id));
+		baseModels = await getBaseModels(localStorage.token, selectedTag);
+		allModels = await getModels(localStorage.token);
 
-		models = baseModels
-			.filter((m: ModelListItem) => !selectedTag || workspaceModelIds.has(m.id))
+		const providerModels = await getModels(localStorage.token, null, true);
+		const allModelIds = new Set<string>(allModels.map((model: ModelListItem) => model.id));
+		allModels = [
+			...allModels,
+			...providerModels.filter((model: ModelListItem) => !allModelIds.has(model.id))
+		];
+
+		const baseModelIds = new Set<string>(baseModels.map((model: ModelListItem) => model.id));
+
+		models = allModels
+			.filter((m: ModelListItem) => !selectedTag || baseModelIds.has(m.id))
 			.map((m: ModelListItem) => {
-				const workspaceModel = workspaceModels.find((wm: ModelListItem) => wm.id === m.id);
+				const baseModel = baseModels.find((model: ModelListItem) => model.id === m.id);
 
-				if (workspaceModel) {
+				if (baseModel) {
 					return {
 						...m,
-						...workspaceModel
+						...baseModel
 					};
 				} else {
 					return {
@@ -448,9 +468,9 @@
 	}
 
 	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
-		model = { ...model, base_model_id: null, ...overrides };
+		model = { ...model, ...(isPresetModel(model) ? {} : { base_model_id: null }), ...overrides };
 
-		if (workspaceModels.find((m) => m.id === model.id)) {
+		if (baseModels.find((m: ModelListItem) => m.id === model.id) || isPresetModel(model)) {
 			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
 				return null;
 			});
@@ -479,7 +499,7 @@
 	};
 
 	const toggleModelHandler = async (model) => {
-		if (!Object.keys(model).includes('base_model_id')) {
+		if (!Object.keys(model).includes('base_model_id') && !isPresetModel(model)) {
 			await createNewModel(localStorage.token, {
 				id: model.id,
 				name: model.name,
@@ -582,9 +602,19 @@
 	};
 
 	const getFullModel = async (model: any) =>
-		workspaceModels.some((workspaceModel) => workspaceModel.id === model.id)
+		baseModels.some((baseModel) => baseModel.id === model.id) || isPresetModel(model)
 			? ((await getModelById(localStorage.token, model.id).catch(() => null)) ?? model)
 			: model;
+
+	const openModelHandler = async (model: any) => {
+		if (isPresetModel(model)) {
+			showSettings.set(false);
+			await goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
+			return;
+		}
+
+		selectedModelId = model.id;
+	};
 
 	const cloneHandler = async (model) => {
 		model = await getFullModel(model);
@@ -607,15 +637,12 @@
 	};
 
 	const pinModelHandler = async (modelId) => {
-		let pinnedModels = $settings?.pinnedModels ?? [];
-
-		if (pinnedModels.includes(modelId)) {
-			pinnedModels = pinnedModels.filter((id) => id !== modelId);
-		} else {
-			pinnedModels = [...new Set([...pinnedModels, modelId])];
-		}
-
-		settings.set({ ...$settings, pinnedModels: pinnedModels });
+		settings.set({
+			...$settings,
+			pinnedModels: $pinnedModels.includes(modelId)
+				? $pinnedModels.filter((id) => id !== modelId)
+				: [...$pinnedModels, modelId]
+		});
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
@@ -929,11 +956,11 @@
 									class="flex group/item gap-2.5 w-full min-w-0 flex-1 text-left cursor-pointer"
 									type="button"
 									on:click={() => {
-										selectedModelId = model.id;
+										openModelHandler(model);
 									}}
 								>
 									<div class="self-center">
-										<div class="flex bg-white rounded-xl">
+										<div class="flex rounded-xl">
 											<div
 												class="{(model?.is_active ?? true)
 													? ''
@@ -941,7 +968,7 @@
 											>
 												<img
 													src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
-													alt="modelfile profile"
+													alt={$i18n.t('modelfile profile')}
 													class=" rounded-xl size-7 object-cover"
 													loading="lazy"
 													decoding="async"
@@ -1101,7 +1128,7 @@
 										type="button"
 										aria-label={$i18n.t('Edit')}
 										on:click={() => {
-											selectedModelId = model.id;
+											openModelHandler(model);
 										}}
 									>
 										<svg

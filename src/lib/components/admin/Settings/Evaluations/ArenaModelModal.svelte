@@ -14,13 +14,19 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
+	import LocalizedField from '$lib/components/common/LocalizedField.svelte';
 
 	export let show = false;
 	export let edit = false;
 
 	export let model = null;
+	export let onSubmit = async (_model) => true;
 
 	let name = '';
+	let locale = '';
+	let translations = {};
+	let originalMeta = {};
 	let id = '';
 
 	$: if (name) {
@@ -60,7 +66,7 @@
 		selectedModelId = '';
 	};
 
-	const submitHandler = () => {
+	const submitHandler = async () => {
 		loading = true;
 
 		if (!name || !id) {
@@ -72,7 +78,6 @@
 		if (!edit) {
 			if ($models.find((model) => model.name === name)) {
 				loading = false;
-				name = '';
 				toast.error($i18n.t('Model name already exists, please choose a different one'));
 				return;
 			}
@@ -82,6 +87,8 @@
 			id: id,
 			name: name,
 			meta: {
+				...originalMeta,
+				i18n: translations,
 				profile_image_url: profileImageUrl,
 				description: description || null,
 				model_ids: modelIds.length > 0 ? modelIds : null,
@@ -90,8 +97,14 @@
 			}
 		};
 
-		dispatch('submit', model);
-		loading = false;
+		try {
+			if ((await onSubmit(model)) === false) return;
+		} catch (error) {
+			toast.error(String(error));
+			return;
+		} finally {
+			loading = false;
+		}
 		show = false;
 
 		name = '';
@@ -106,6 +119,16 @@
 	};
 
 	const initModel = () => {
+		locale = '';
+		originalMeta = structuredClone(model?.meta ?? {});
+		translations = structuredClone(model?.meta?.i18n ?? {});
+		if (!model) {
+			name = '';
+			id = '';
+			description = '';
+			modelIds = [];
+			accessGrants = [];
+		}
 		if (model) {
 			name = model.name;
 			id = model.id;
@@ -163,6 +186,12 @@
 					}}
 				>
 					<div class="px-1">
+						<div class="flex justify-end mb-3">
+							<LanguageModeSelect
+								bind:value={locale}
+								translatedLocales={Object.keys(translations)}
+							/>
+						</div>
 						<div class="flex justify-center pb-3">
 							<input
 								bind:this={imageInputElement}
@@ -254,12 +283,12 @@
 								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</div>
 
 								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										type="text"
+									<LocalizedField
 										bind:value={name}
+										bind:translations
+										{locale}
+										field="name"
 										placeholder={$i18n.t('Model Name')}
-										autocomplete="off"
 										required
 									/>
 								</div>
@@ -286,12 +315,12 @@
 							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
 
 							<div class="flex-1">
-								<input
-									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-									type="text"
+								<LocalizedField
 									bind:value={description}
+									bind:translations
+									{locale}
+									field="description"
 									placeholder={$i18n.t('Enter description')}
-									autocomplete="off"
 								/>
 							</div>
 						</div>

@@ -17,6 +17,7 @@ from open_webui.config import (
     PGVECTOR_POOL_TIMEOUT,
     PGVECTOR_USE_HALFVEC,
 )
+from open_webui.internal.db import ScopedSession, enable_iam_token_auth
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
@@ -87,8 +88,6 @@ class PgvectorClient(VectorDBBase):
     def __init__(self) -> None:
         # if no pgvector uri, use the existing database connection
         if not PGVECTOR_DB_URL:
-            from open_webui.internal.db import ScopedSession
-
             self.session = ScopedSession
         else:
             if isinstance(PGVECTOR_POOL_SIZE, int):
@@ -107,6 +106,7 @@ class PgvectorClient(VectorDBBase):
             else:
                 engine = create_engine(PGVECTOR_DB_URL, pool_pre_ping=True)
 
+            enable_iam_token_auth(engine)
             SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
             self.session = scoped_session(SessionLocal)
 

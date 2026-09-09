@@ -9,20 +9,18 @@ from open_webui.utils.headers import include_user_info_headers
 
 log = logging.getLogger(__name__)
 
-DEFAULT_MICROSOFT_WEB_IQ_API_BASE_URL = 'https://api.microsoft.ai/v3'
-
 
 def search_microsoft_web_iq(
     api_base_url: str,
     api_key: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
     language: str = 'en',
     user=None,
 ) -> list[SearchResult]:
     try:
-        api_base_url = (api_base_url or DEFAULT_MICROSOFT_WEB_IQ_API_BASE_URL).rstrip('/')
+        api_base_url = api_base_url.rstrip('/')
         headers = {
             'host': urlparse(api_base_url).netloc or 'api.microsoft.ai',
             'x-apikey': api_key,

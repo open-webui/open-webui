@@ -23,7 +23,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.retrieval.vector.utils import iter_filter_conditions, process_metadata
 
 
 def _convert_uuids_to_strings(obj: Any) -> Any:
@@ -52,6 +52,20 @@ def _convert_uuids_to_strings(obj: Any) -> Any:
         return obj
     else:
         return obj
+
+
+def _metadata_filter(filter: Optional[dict]) -> Any:
+    clauses = []
+    for key, op, value in iter_filter_conditions(filter):
+        if op == '$in':
+            clauses.append(
+                weaviate.classes.query.Filter.any_of(
+                    [weaviate.classes.query.Filter.by_property(name=key).equal(item) for item in value]
+                )
+            )
+        else:
+            clauses.append(weaviate.classes.query.Filter.by_property(name=key).equal(value))
+    return weaviate.classes.query.Filter.all_of(clauses) if len(clauses) > 1 else (clauses[0] if clauses else None)
 
 
 class WeaviateClient(VectorDBBase):
@@ -168,6 +182,7 @@ class WeaviateClient(VectorDBBase):
             return None
 
         collection = self.client.collections.get(sane_collection_name)
+        weaviate_filter = _metadata_filter(filter)
 
         result_ids, result_documents, result_metadatas, result_distances = (
             [],
@@ -181,6 +196,7 @@ class WeaviateClient(VectorDBBase):
                 response = collection.query.near_vector(
                     near_vector=vector_embedding,
                     limit=limit,
+                    filters=weaviate_filter,
                     return_metadata=weaviate.classes.query.MetadataQuery(distance=True),
                 )
 

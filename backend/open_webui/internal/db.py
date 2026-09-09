@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import sys
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
@@ -26,6 +27,7 @@ from open_webui.env import (
     DATABASE_URL,
     ENABLE_DB_MIGRATIONS,
     OPEN_WEBUI_DIR,
+    USE_SLIM,
 )
 from open_webui.utils.json_codec import JSONCodec
 from sqlalchemy import Dialect, MetaData, create_engine, event, types
@@ -141,6 +143,17 @@ class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
         return JSONField(length=self.impl.length)
 
 
+if USE_SLIM:
+    if make_url(DATABASE_URL).get_backend_name() not in ('sqlite', 'postgresql', 'postgres'):
+        raise ValueError(
+            'Slim requires SQLite or PostgreSQL for DATABASE_URL. Use the standard image for other databases.'
+        )
+    if DATABASE_ENABLE_IAM_TOKEN_AUTH:
+        raise ValueError(
+            'AWS RDS IAM authentication requires the standard image. Slim supports PostgreSQL database credentials.'
+        )
+
+
 # Normalize SSL params from the URL once; the sync engine needs them
 # reattached in canonical libpq form for psycopg2.
 _url_without_ssl, _ssl_dict = extract_ssl_params_from_url(DATABASE_URL)
@@ -202,6 +215,20 @@ def enable_iam_token_auth(connectable) -> None:
         return
 
     engine = getattr(connectable, 'sync_engine', connectable)
+    url = engine.url
+    auth = _rds_iam_token_auth
+    # The token is bound to one host/port/user pair; leave other databases on their own credentials.
+    if (url.host, url.port or 5432, url.username) != (auth.host, auth.port, auth.username):
+        log.warning(
+            'AWS RDS IAM token auth not applied to %s: the token is issued for %s@%s:%s, '
+            'so this connection uses the password from its own URL',
+            url.render_as_string(hide_password=True),
+            auth.username,
+            auth.host,
+            auth.port,
+        )
+        return
+
     if not event.contains(engine, 'do_connect', _set_iam_token_password):
         event.listen(engine, 'do_connect', _set_iam_token_password)
 
@@ -307,6 +334,45 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
 
     def _apply_sqlite_pragmas(dbapi_connection):
         """Apply all configured SQLite PRAGMAs to a raw DBAPI connection."""
+        # SQLite LIKE folds ASCII only; SQLAlchemy SQLite ILIKE compiles to lower(x) LIKE lower(?).
+        compiled_patterns = {}
+
+        def like(pattern, value, escape=None):
+            if pattern is None or value is None:
+                return None
+
+            pattern = str(pattern).lower()
+            escape = str(escape).lower() if escape is not None else None
+            key = (pattern, escape)
+            compiled = compiled_patterns.get(key)
+            if compiled is False:
+                return False
+            if compiled is None:
+                regex = []
+                escaped = False
+                for char in pattern:
+                    if escape and not escaped and char == escape:
+                        escaped = True
+                        continue
+                    regex.append(
+                        '.*' if not escaped and char == '%' else '.' if not escaped and char == '_' else re.escape(char)
+                    )
+                    escaped = False
+                if escaped:
+                    compiled = False
+                    if len(compiled_patterns) >= 512:
+                        compiled_patterns.clear()
+                    compiled_patterns[key] = compiled
+                    return False
+                compiled = re.compile(''.join(regex), re.DOTALL)
+                if len(compiled_patterns) >= 512:
+                    compiled_patterns.clear()
+                compiled_patterns[key] = compiled
+
+            return compiled.fullmatch(str(value).lower()) is not None
+
+        dbapi_connection.create_function('like', 2, like, deterministic=True)
+        dbapi_connection.create_function('like', 3, like, deterministic=True)
         cursor = dbapi_connection.cursor()
         if DATABASE_ENABLE_SQLITE_WAL:
             cursor.execute('PRAGMA journal_mode=WAL')

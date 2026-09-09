@@ -25,6 +25,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.internal.db import get_async_session
@@ -56,6 +57,7 @@ log = logging.getLogger(__name__)
 # in ZlibError.  See https://github.com/aio-libs/aiohttp/issues/4462.
 _STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
 _MODEL_LIST_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+BASE_MODELS_CACHE_KEY = f'{REDIS_KEY_PREFIX}:models:base'
 
 
 def _clean_proxy_headers(raw_headers) -> dict:
@@ -319,6 +321,9 @@ async def update_config(
     )
 
     await get_all_models.cache.clear()
+    redis = getattr(request.app.state, 'redis', None)
+    if redis is not None:
+        await redis.delete(BASE_MODELS_CACHE_KEY)
     request.app.state.BASE_MODELS = []
     request.app.state.OLLAMA_MODELS = {}
     models = getattr(request.app.state, 'MODELS', None)
@@ -427,6 +432,8 @@ async def get_all_models(request: Request, user: UserModel | None = None):
         for m in response.get('models', []):
             if prefix_id:
                 m['model'] = f'{prefix_id}.{m["model"]}'
+                if m.get('name'):
+                    m['name'] = f'{prefix_id}.{m["name"]}'
             if allowed_tags:
                 m['tags'] = allowed_tags
             if connection_type:
@@ -478,6 +485,9 @@ async def get_ollama_tags(
     user=Depends(get_verified_user),
 ):
     """List Ollama model tags, optionally from a specific backend."""
+    if url_idx is not None and user.role != 'admin':
+        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
     if not await Config.get('ollama.enable'):
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
@@ -541,6 +551,9 @@ async def get_ollama_versions(
     url_idx: int | None = None,
 ):
     """Return the lowest Ollama version across all configured backends."""
+    if url_idx is not None and user.role != 'admin':
+        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
     if not await Config.get('ollama.enable'):
         return {'version': False}
 
@@ -968,12 +981,12 @@ class GenerateCompletionForm(BaseModel):
     model: str
     prompt: str | None = None
     suffix: str | None = None
-    images: list[str | None] = None
+    images: list[str] | None = None
     format: Union[dict, str | None] = None
     options: dict | None = None
     system: str | None = None
     template: str | None = None
-    context: list[int | None] = None
+    context: list[int] | None = None
     stream: bool | None = True
     raw: bool | None = None
     keep_alive: Union[int, str | None] = None
@@ -1024,8 +1037,8 @@ class ChatMessage(BaseModel):
 
     role: str
     content: str | None = None
-    tool_calls: list[dict | None] = None
-    images: list[str | None] = None
+    tool_calls: list[dict] | None = None
+    images: list[str] | None = None
     model_config = ConfigDict(extra='allow')
 
     @validator('content', pre=True)
@@ -1046,14 +1059,14 @@ class GenerateChatCompletionForm(BaseModel):
     template: str | None = None
     stream: bool | None = True
     keep_alive: Union[int, str | None] = None
-    tools: list[dict | None] = None
+    tools: list[dict] | None = None
     model_config = ConfigDict(extra='allow')
 
 
 async def validate_ollama_backend_idx(request: Request, model: str, url_idx: int | None, user) -> None:
     # A caller-supplied url_idx must point to a backend the model is actually
     # served from; the None path is already constrained to that allow-list.
-    if url_idx is None or user is None or getattr(user, 'role', None) == 'admin' or BYPASS_MODEL_ACCESS_CONTROL:
+    if url_idx is None or user is None or getattr(user, 'role', None) == 'admin':
         return
     models = request.app.state.OLLAMA_MODELS
     if not models or model not in models:
@@ -1480,6 +1493,9 @@ async def get_openai_models(
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """List models in the OpenAI-compatible format."""
+    if url_idx is not None and user.role != 'admin':
+        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
     if url_idx is None:
         model_list = await get_all_models(request, user=user)
         raw_models = model_list['models']

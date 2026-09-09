@@ -9,6 +9,7 @@
 	import { getSkills } from '$lib/apis/skills';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModelsDefaults } from '$lib/apis/configs';
+	import { getLanguages } from '$lib/i18n';
 	import { getBaseModelTags, getModelTags } from '$lib/apis/models';
 	import { getVoices } from '$lib/apis/audio';
 
@@ -28,14 +29,17 @@
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
+	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
+	import LocalizedPromptSuggestions from './LocalizedPromptSuggestions.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import TerminalSelector from './TerminalSelector.svelte';
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import { extractInputVariables } from '$lib/utils';
+	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let onSubmit: Function;
 	export let onBack: null | Function = null;
@@ -63,6 +67,8 @@
 
 	let id = '';
 	let name = '';
+	let languages: { code: string; title: string }[] = [];
+	let editingLocale = '';
 
 	let enableDescription = true;
 
@@ -86,6 +92,7 @@
 			// https://docs.openwebui.com/license.
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			description: '',
+			i18n: {},
 			suggestion_prompts: null,
 			tags: []
 		},
@@ -116,6 +123,42 @@
 	let tts = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
 	let voices: { id: string; name?: string }[] = [];
+
+	$: translatedLocales = Object.entries(info?.meta?.i18n ?? {})
+		.filter(([_, value]: [string, any]) => Object.keys(value ?? {}).length > 0)
+		.map(([locale]) => locale);
+	$: editingLocaleLabel = languages.find((language) => language.code === editingLocale)?.title;
+
+	const localizedField = (field: string) => info?.meta?.i18n?.[editingLocale]?.[field] ?? '';
+	const setLocalizedField = (field: string, value: string) => {
+		if (!editingLocale) return;
+
+		info.meta.i18n = {
+			...(info.meta.i18n ?? {}),
+			[editingLocale]: {
+				...(info.meta.i18n?.[editingLocale] ?? {}),
+				[field]: value
+			}
+		};
+		info = info;
+	};
+
+	const clearLocalizedField = (field: string) => {
+		if (!editingLocale || !info.meta.i18n?.[editingLocale]) return;
+
+		const nextLocale = { ...info.meta.i18n[editingLocale] };
+		delete nextLocale[field];
+
+		const nextI18n = { ...(info.meta.i18n ?? {}) };
+		if (Object.keys(nextLocale).length === 0) {
+			delete nextI18n[editingLocale];
+		} else {
+			nextI18n[editingLocale] = nextLocale;
+		}
+
+		info.meta.i18n = nextI18n;
+		info = info;
+	};
 
 	const chatVariableKeyRegex = /^[a-z][a-z0-9_]*$/;
 	const getChatVariablesPreview = (prompt: string) => {
@@ -336,6 +379,11 @@
 			}
 		}
 
+		info.meta.i18n = pruneEmptyLocaleEntries(info.meta.i18n);
+		if (Object.keys(info.meta.i18n).length === 0) {
+			delete info.meta.i18n;
+		}
+
 		if (terminalId) {
 			info.meta.terminalId = terminalId;
 		} else {
@@ -375,6 +423,7 @@
 	};
 
 	onMount(async () => {
+		languages = await getLanguages();
 		await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		if (!$functions) {
@@ -483,6 +532,7 @@
 					)
 				)
 			};
+			info.meta.i18n = info.meta.i18n ?? {};
 
 			console.log(model);
 		}
@@ -607,66 +657,97 @@
 									<!-- LICENSE covers this Open WebUI fallback logo.
 									Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									https://docs.openwebui.com/license. -->
-									<button
-										class="group relative flex size-12 shrink-0 items-center overflow-hidden rounded-xl md:size-14 {info
-											.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
-											? 'bg-transparent'
-											: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
-										type="button"
-										aria-label={$i18n.t('Upload profile image')}
-										on:click={() => {
-											filesInputElement.click();
-										}}
-									>
-										{#if info.meta.profile_image_url}
-											<img
-												src={info.meta.profile_image_url}
-												alt="model profile"
-												class="size-full object-cover"
-											/>
-										{:else}
-											<img
-												src="{WEBUI_BASE_URL}/static/favicon.png"
-												alt="model profile"
-												class="size-full object-cover"
-											/>
-										{/if}
-
-										<div
-											class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+									<div class="group relative size-12 shrink-0 md:size-14">
+										<button
+											class="group relative flex size-full items-center overflow-hidden rounded-xl {info
+												.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
+												? 'bg-transparent'
+												: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
+											type="button"
+											aria-label={$i18n.t('Upload profile image')}
+											on:click={() => {
+												filesInputElement.click();
+											}}
 										>
-											<div class="m-1">
-												<div
-													class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="size-3"
+											{#if info.meta.profile_image_url}
+												<img
+													src={info.meta.profile_image_url}
+													alt={$i18n.t('model profile')}
+													class="size-full object-cover"
+												/>
+											{:else}
+												<img
+													src="{WEBUI_BASE_URL}/static/favicon.png"
+													alt={$i18n.t('model profile')}
+													class="size-full object-cover"
+												/>
+											{/if}
+
+											<div
+												class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+											>
+												<div class="m-1">
+													<div
+														class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
 													>
-														<path
-															fill-rule="evenodd"
-															d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-															clip-rule="evenodd"
-														/>
-													</svg>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="size-3"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</div>
 												</div>
 											</div>
-										</div>
 
-										<div
-											class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
-										></div>
-									</button>
+											<div
+												class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
+											></div>
+										</button>
+
+										{#if info.meta.profile_image_url && info.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`}
+											<button
+												class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-gray-400 opacity-0 transition group-hover:opacity-60 hover:text-gray-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-gray-600 dark:hover:text-gray-400"
+												on:click={() => {
+													info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
+												}}
+												type="button"
+											>
+												{$i18n.t('Reset')}</button
+											>
+										{/if}
+									</div>
 
 									<div class="min-w-0 flex-1">
 										<div class="flex min-w-0 items-center gap-2">
-											<input
-												class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
-												placeholder={$i18n.t('Model Name')}
-												bind:value={name}
-												required
+											{#if editingLocale}
+												<input
+													class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+													placeholder={name || $i18n.t('Model Name')}
+													value={localizedField('name')}
+													on:input={(e) =>
+														setLocalizedField('name', (e.currentTarget as HTMLInputElement).value)}
+												/>
+											{:else}
+												<input
+													class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+													placeholder={$i18n.t('Model Name')}
+													bind:value={name}
+													required
+												/>
+											{/if}
+
+											<LanguageModeSelect
+												bind:value={editingLocale}
+												{languages}
+												{translatedLocales}
+												className="hidden w-fit sm:inline-flex"
 											/>
 
 											<AccessButton
@@ -676,6 +757,23 @@
 											/>
 										</div>
 
+										{#if editingLocale}
+											<div class="mt-1 flex items-center justify-end gap-3 text-[0.6875rem]">
+												<div
+													class="flex shrink-0 items-center gap-2 text-gray-500 dark:text-gray-400"
+												>
+													<button type="button" on:click={() => setLocalizedField('name', name)}>
+														{$i18n.t('Copy default')}
+													</button>
+													{#if localizedField('name')}
+														<button type="button" on:click={() => clearLocalizedField('name')}>
+															{$i18n.t('Use default')}
+														</button>
+													{/if}
+												</div>
+											</div>
+										{/if}
+
 										<input
 											class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
 											placeholder={$i18n.t('Model ID')}
@@ -683,6 +781,14 @@
 											disabled={edit}
 											required
 										/>
+
+										<div class="mt-1 sm:hidden">
+											<LanguageModeSelect
+												bind:value={editingLocale}
+												{languages}
+												{translatedLocales}
+											/>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -709,29 +815,63 @@
 							<div>
 								<div class="mb-1 flex w-full items-center justify-between">
 									<div class="self-center text-xs text-gray-400 dark:text-gray-600">
-										{$i18n.t('Description')}
+										{editingLocale
+											? $i18n.t('Description ({{language}})', {
+													language: editingLocaleLabel || editingLocale
+												})
+											: $i18n.t('Description')}
 									</div>
 
-									<button
-										class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
-										type="button"
-										aria-pressed={enableDescription ? 'true' : 'false'}
-										aria-label={enableDescription
-											? $i18n.t('Custom description enabled')
-											: $i18n.t('Default description enabled')}
-										on:click={() => {
-											enableDescription = !enableDescription;
-										}}
-									>
-										{#if !enableDescription}
-											<span>{$i18n.t('Default')}</span>
-										{:else}
-											<span>{$i18n.t('Custom')}</span>
-										{/if}
-									</button>
+									{#if editingLocale}
+										<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+											<button
+												type="button"
+												on:click={() =>
+													setLocalizedField('description', info.meta.description ?? '')}
+											>
+												{$i18n.t('Copy default')}
+											</button>
+											{#if localizedField('description')}
+												<button type="button" on:click={() => clearLocalizedField('description')}>
+													{$i18n.t('Use default')}
+												</button>
+											{/if}
+										</div>
+									{:else}
+										<button
+											class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+											type="button"
+											aria-pressed={enableDescription ? 'true' : 'false'}
+											aria-label={enableDescription
+												? $i18n.t('Custom description enabled')
+												: $i18n.t('Default description enabled')}
+											on:click={() => {
+												enableDescription = !enableDescription;
+											}}
+										>
+											{#if !enableDescription}
+												<span>{$i18n.t('Default')}</span>
+											{:else}
+												<span>{$i18n.t('Custom')}</span>
+											{/if}
+										</button>
+									{/if}
 								</div>
 
-								{#if enableDescription}
+								{#if editingLocale}
+									<Textarea
+										className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+										placeholder={info.meta.description ||
+											$i18n.t('Add a short description about what this model does')}
+										minSize={32}
+										value={localizedField('description')}
+										onInput={(e) =>
+											setLocalizedField(
+												'description',
+												(e.currentTarget as HTMLTextAreaElement).value
+											)}
+									/>
+								{:else if enableDescription}
 									<Textarea
 										className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 										placeholder={$i18n.t('Add a short description about what this model does')}
@@ -875,26 +1015,35 @@
 									{$i18n.t('Prompts')}
 								</div>
 
-								<button
-									class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
-									type="button"
-									on:click={() => {
-										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '', title: ['', ''] }];
-										} else {
-											info.meta.suggestion_prompts = null;
-										}
-									}}
-								>
-									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span>{$i18n.t('Default')}</span>
-									{:else}
-										<span>{$i18n.t('Custom')}</span>
-									{/if}
-								</button>
+								{#if !editingLocale}
+									<button
+										class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+										type="button"
+										on:click={() => {
+											if ((info?.meta?.suggestion_prompts ?? null) === null) {
+												info.meta.suggestion_prompts = [{ content: '', title: ['', ''] }];
+											} else {
+												info.meta.suggestion_prompts = null;
+											}
+										}}
+									>
+										{#if (info?.meta?.suggestion_prompts ?? null) === null}
+											<span>{$i18n.t('Default')}</span>
+										{:else}
+											<span>{$i18n.t('Custom')}</span>
+										{/if}
+									</button>
+								{/if}
 							</div>
 
-							{#if info?.meta?.suggestion_prompts}
+							{#if editingLocale}
+								<LocalizedPromptSuggestions
+									promptSuggestions={info.meta.suggestion_prompts ?? []}
+									bind:localizedPromptSuggestions={info.meta.i18n}
+									locale={editingLocale}
+									localeLabel={editingLocaleLabel}
+								/>
+							{:else if info?.meta?.suggestion_prompts}
 								<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
 							{/if}
 						</section>

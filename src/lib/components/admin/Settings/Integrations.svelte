@@ -94,7 +94,8 @@
 				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
 				name: t.name,
 				key: localStorage.token,
-				contexts: t.contexts ?? {}
+				contexts: t.contexts ?? {},
+				config: t.config ?? {}
 			}));
 			terminalServers.set([...existingDirectTerminals, ...systemEntries] as any);
 		}

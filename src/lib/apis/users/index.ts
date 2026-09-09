@@ -198,7 +198,8 @@ export const searchUsers = async (
 	query?: string,
 	orderBy?: string,
 	direction?: string,
-	page = 1
+	page = 1,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 	let res = null;
@@ -221,6 +222,7 @@ export const searchUsers = async (
 
 	res = await fetch(`${WEBUI_API_BASE_URL}/users/search?${searchParams.toString()}`, {
 		method: 'GET',
+		signal,
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
@@ -231,6 +233,7 @@ export const searchUsers = async (
 			return res.json();
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			console.error(err);
 			error = err.detail;
 			return null;
@@ -286,7 +289,7 @@ export const getUserSettings = async (token: string, raw = false) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err.detail;
+			error = err?.detail ?? err;
 			return null;
 		});
 

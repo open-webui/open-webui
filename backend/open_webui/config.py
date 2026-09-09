@@ -17,8 +17,10 @@ from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel
 
 from open_webui.env import (
+    USE_SLIM,
     DATA_DIR,
     DATABASE_URL,
+    ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_DB_MIGRATIONS,
     ENV,
     FRONTEND_BUILD_DIR,
@@ -39,7 +41,7 @@ from open_webui.utils.json_codec import JSONCodec
 
 async def seed_registered_defaults():
     await Config.rename_prefix('rag.web', 'web')
-    await Config.repair_flattened_dict_configs()
+    await Config.repair_config_rows()
     await Config.seed_defaults(DEFAULT_CONFIG)
 
 
@@ -73,6 +75,7 @@ def run_migrations():
         command.upgrade(alembic_cfg, 'head')
     except Exception as e:
         log.exception(f'Error running migrations: {e}')
+        raise
 
 
 if ENABLE_DB_MIGRATIONS:
@@ -496,12 +499,12 @@ CODE_INTERPRETER_PYODIDE_PROMPT = """
 # Vector Database
 ####################################
 
-VECTOR_DB = os.getenv('VECTOR_DB', 'chroma')
+VECTOR_DB = os.getenv('VECTOR_DB', 'pgvector' if USE_SLIM else 'chroma')
 
 # Chroma
 CHROMA_DATA_PATH = f'{DATA_DIR}/vector_db'
 
-if VECTOR_DB == 'chroma':
+if VECTOR_DB == 'chroma' and not USE_SLIM:
     import chromadb
 
     CHROMA_TENANT = os.getenv('CHROMA_TENANT', chromadb.DEFAULT_TENANT)
@@ -642,7 +645,7 @@ SSL_ASSERT_FINGERPRINT = os.getenv('SSL_ASSERT_FINGERPRINT', None)
 ELASTICSEARCH_INDEX_PREFIX = os.getenv('ELASTICSEARCH_INDEX_PREFIX', 'open_webui_collections')
 # Pgvector
 PGVECTOR_DB_URL = os.getenv('PGVECTOR_DB_URL', DATABASE_URL)
-if VECTOR_DB == 'pgvector' and not PGVECTOR_DB_URL.startswith('postgres'):
+if not USE_SLIM and VECTOR_DB == 'pgvector' and not PGVECTOR_DB_URL.startswith('postgres'):
     raise ValueError(
         'Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database.'
     )
@@ -803,7 +806,7 @@ ORACLE_DB_POOL_MAX = int(os.getenv('ORACLE_DB_POOL_MAX', 10))
 ORACLE_DB_POOL_INCREMENT = int(os.getenv('ORACLE_DB_POOL_INCREMENT', 1))
 
 
-if VECTOR_DB == 'oracle23ai':
+if not USE_SLIM and VECTOR_DB == 'oracle23ai':
     if not ORACLE_DB_USER or not ORACLE_DB_PASSWORD or not ORACLE_DB_DSN:
         raise ValueError('Oracle23ai requires setting ORACLE_DB_USER, ORACLE_DB_PASSWORD, and ORACLE_DB_DSN.')
     if ORACLE_DB_USE_WALLET and (not ORACLE_WALLET_DIR or not ORACLE_WALLET_PASSWORD):
@@ -924,6 +927,8 @@ EXTERNAL_DOCUMENT_LOADER_HEADERS = external_document_loader_headers
 
 TIKA_SERVER_URL = os.getenv('TIKA_SERVER_URL', 'http://tika:9998')
 
+TIKA_SERVER_VERSION = os.getenv('TIKA_SERVER_VERSION', '3')
+
 DOCLING_SERVER_URL = os.getenv('DOCLING_SERVER_URL', 'http://docling:5001')
 
 DOCLING_API_KEY = os.getenv('DOCLING_API_KEY', '')
@@ -971,6 +976,8 @@ RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
 
 RAG_FILE_MAX_SIZE = int(os.getenv('RAG_FILE_MAX_SIZE')) if os.getenv('RAG_FILE_MAX_SIZE') else None
+
+ENABLE_KNOWLEDGE_FILE_RETENTION = os.getenv('ENABLE_KNOWLEDGE_FILE_RETENTION', 'False').lower() == 'true'
 
 RAG_FILE_CONTENT_SEARCH_MAX_CHARS = int(os.getenv('RAG_FILE_CONTENT_SEARCH_MAX_CHARS', str(64 * 1024 * 1024)))
 
@@ -1106,12 +1113,26 @@ ENABLE_LOCAL_WEB_FETCH = (
 ENABLE_RAG_LOCAL_WEB_FETCH = ENABLE_LOCAL_WEB_FETCH
 
 
+# Operators extend this through WEB_FETCH_FILTER_LIST.
 DEFAULT_WEB_FETCH_FILTER_LIST = [
     '!169.254.169.254',
     '!fd00:ec2::254',
     '!metadata.google.internal',
     '!metadata.azure.com',
     '!100.100.100.200',
+    '!168.63.129.16',  # Azure platform channel, reachable from every Azure VM
+    '!192.88.99.0/24',  # 6to4 relay anycast, deprecated by RFC 7526
+    '!224.0.0.0/4',  # IPv4 multicast
+    '!::ffff:0:0:0/96',  # IPv4-translated (SIIT, RFC 2765), never routed
+    '!64:ff9b:1::/48',  # NAT64 local-use prefix, RFC 8215, not a public destination
+    '!100:0:0:1::/64',  # dummy prefix, RFC 9780
+    '!2001:1::1',  # PCP anycast, RFC 7723, answered by the local network's own edge device
+    '!2001:1::2',  # TURN anycast, RFC 8155, likewise
+    '!2001:20::/28',  # ORCHIDv2, RFC 7343, never routed
+    '!2001:30::/28',  # DRIP, RFC 9374, never routed
+    '!5f00::/16',  # SRv6 SIDs, RFC 9602, internal to one segment routing domain
+    '!fec0::/10',  # IPv6 site-local, deprecated by RFC 3879
+    '!ff00::/8',  # IPv6 multicast
 ]
 
 web_fetch_filter_list = os.getenv('WEB_FETCH_FILTER_LIST', '')
@@ -1250,6 +1271,9 @@ AZURE_AI_SEARCH_ENDPOINT = os.getenv('AZURE_AI_SEARCH_ENDPOINT', '')
 AZURE_AI_SEARCH_INDEX_NAME = os.getenv('AZURE_AI_SEARCH_INDEX_NAME', '')
 
 EXA_API_KEY = os.getenv('EXA_API_KEY', '')
+EXA_MAX_CONTENT_LENGTH = int(os.environ['EXA_MAX_CONTENT_LENGTH']) if os.getenv('EXA_MAX_CONTENT_LENGTH') else None
+if EXA_MAX_CONTENT_LENGTH is not None and EXA_MAX_CONTENT_LENGTH <= 0:
+    raise ValueError('EXA_MAX_CONTENT_LENGTH must be a positive integer or unset')
 
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY', '')
 
@@ -1677,6 +1701,7 @@ if default_prompt_suggestions == []:
     ]
 
 DEFAULT_PROMPT_SUGGESTIONS = default_prompt_suggestions
+DEFAULT_PROMPT_SUGGESTIONS_I18N = {}
 
 try:
     model_order_list = JSONCodec.loads(os.getenv('MODEL_ORDER_LIST', '[]'))
@@ -2085,8 +2110,6 @@ BYPASS_ADMIN_ACCESS_CONTROL = (
     == 'true'
 )
 
-ENABLE_ADMIN_CHAT_ACCESS = os.getenv('ENABLE_ADMIN_CHAT_ACCESS', 'True').lower() == 'true'
-
 ENABLE_ADMIN_ANALYTICS = os.getenv('ENABLE_ADMIN_ANALYTICS', 'True').lower() == 'true'
 
 ENABLE_COMMUNITY_SHARING = os.getenv('ENABLE_COMMUNITY_SHARING', 'True').lower() == 'true'
@@ -2097,6 +2120,7 @@ ENABLE_USER_WEBHOOKS = os.getenv('ENABLE_USER_WEBHOOKS', 'False').lower() == 'tr
 
 # FastAPI / AnyIO settings
 THREAD_POOL_SIZE = os.getenv('THREAD_POOL_SIZE', None)
+THREAD_POOL_THREAD_NAME_PREFIX = os.getenv('THREAD_POOL_THREAD_NAME_PREFIX', '')
 
 if THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):
     try:
@@ -2143,6 +2167,7 @@ else:
 
 
 class BannerModel(BaseModel):
+    i18n: dict[str, dict[str, str]] | None = None
     id: str
     type: str
     title: str | None = None
@@ -2186,6 +2211,8 @@ TASK_MODEL_PARAMS = task_model_params
 CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 
 ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
+
+ENABLE_TOOL_PERMISSIONS = os.getenv('ENABLE_TOOL_PERMISSIONS', 'False').lower() == 'true'
 
 CONTEXT_COMPACTION_TOKEN_THRESHOLD = int(os.getenv('CONTEXT_COMPACTION_TOKEN_THRESHOLD', '80000'))
 
@@ -2874,6 +2901,7 @@ DEFAULT_CONFIG = {
     'rag.external_document_loader_api_key': EXTERNAL_DOCUMENT_LOADER_API_KEY,
     'rag.external_document_loader_headers': EXTERNAL_DOCUMENT_LOADER_HEADERS,
     'rag.tika_server_url': TIKA_SERVER_URL,
+    'rag.tika_server_version': TIKA_SERVER_VERSION,
     'rag.docling_server_url': DOCLING_SERVER_URL,
     'rag.docling_api_key': DOCLING_API_KEY,
     'rag.docling_params': DOCLING_PARAMS,
@@ -2976,6 +3004,7 @@ DEFAULT_CONFIG = {
     'web.search.azure_ai_search_endpoint': AZURE_AI_SEARCH_ENDPOINT,
     'web.search.azure_ai_search_index_name': AZURE_AI_SEARCH_INDEX_NAME,
     'web.search.exa_api_key': EXA_API_KEY,
+    'web.search.exa_max_content_length': EXA_MAX_CONTENT_LENGTH,
     'web.search.perplexity_api_key': PERPLEXITY_API_KEY,
     'web.search.perplexity_model': PERPLEXITY_MODEL,
     'web.search.perplexity_search_context_usage': PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -3073,7 +3102,9 @@ DEFAULT_CONFIG = {
     'ui.default_models': DEFAULT_MODELS,
     'ui.default_pinned_models': DEFAULT_PINNED_MODELS,
     'ui.default_interface_settings': DEFAULT_INTERFACE_SETTINGS,
+    'ui.i18n': {},
     'ui.prompt_suggestions': DEFAULT_PROMPT_SUGGESTIONS,
+    'ui.prompt_suggestions_i18n': DEFAULT_PROMPT_SUGGESTIONS_I18N,
     'ui.model_order_list': MODEL_ORDER_LIST,
     'models.default_metadata': DEFAULT_MODEL_METADATA,
     'models.default_params': DEFAULT_MODEL_PARAMS,
@@ -3119,6 +3150,7 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.token_cap': CONTEXT_COMPACTION_TOKEN_CAP,
     'chat.context_compaction.retention_percentage': CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
+    'chat.tool_permissions.enable': ENABLE_TOOL_PERMISSIONS,
     'task.title.prompt_template': TITLE_GENERATION_PROMPT_TEMPLATE,
     'task.tags.prompt_template': TAGS_GENERATION_PROMPT_TEMPLATE,
     'task.image.prompt_template': IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,

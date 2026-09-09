@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { marked } from 'marked';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	const capabilityLabels = {
 		vision: {
@@ -67,6 +69,11 @@
 
 	export let capabilities: Partial<Record<Capability, boolean>> = {};
 
+	const setCapability = (capability: Capability, checked: boolean) => {
+		capabilities[capability] = checked;
+		capabilities = capabilities;
+	};
+
 	// Hide file_context when file_upload is disabled
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter((cap) => {
 		if (cap === 'file_context' && !capabilities.file_upload) {
@@ -85,14 +92,22 @@
 					ariaLabel={$i18n.t(capabilityLabels[capability].label)}
 					state={capabilities[capability] ? 'checked' : 'unchecked'}
 					on:change={(e) => {
-						capabilities[capability] = e.detail === 'checked';
+						setCapability(capability, e.detail === 'checked');
 					}}
 				/>
-				<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
-					<Tooltip content={marked.parse(capabilityLabels[capability].description)}>
-						<span class="truncate">{$i18n.t(capabilityLabels[capability].label)}</span>
+				<button
+					type="button"
+					class="min-w-0 cursor-pointer text-left text-xs text-gray-600 dark:text-gray-400"
+					on:click={() => setCapability(capability, !capabilities[capability])}
+				>
+					<Tooltip
+						as="span"
+						className="block min-w-0"
+						content={marked.parse(capabilityLabels[capability].description)}
+					>
+						<span class="block truncate">{$i18n.t(capabilityLabels[capability].label)}</span>
 					</Tooltip>
-				</div>
+				</button>
 			</div>
 		{/each}
 	</div>

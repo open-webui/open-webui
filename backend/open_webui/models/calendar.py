@@ -4,10 +4,11 @@ from typing import Optional
 from uuid import uuid4
 
 from open_webui.internal.db import Base, get_async_db_context
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -26,6 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+MIN_CALENDAR_RRULE_INTERVAL_SECONDS = 24 * 60 * 60
 
 
 ####################
@@ -191,6 +193,22 @@ class CalendarEventForm(BaseModel):
     meta: Optional[dict] = None
     attendees: Optional[list[dict]] = None
 
+    @field_validator('rrule')
+    @classmethod
+    def reject_sub_daily_rrule(cls, value: Optional[str]) -> Optional[str]:
+        if value:
+            from open_webui.utils.automations import rrule_interval_seconds
+
+            try:
+                interval = rrule_interval_seconds(value)
+            except ValueError:
+                raise
+            except Exception as e:
+                raise ValueError(ERROR_MESSAGES.AUTOMATION_INVALID_RRULE(e))
+            if interval is not None and interval < MIN_CALENDAR_RRULE_INTERVAL_SECONDS:
+                raise ValueError(ERROR_MESSAGES.CALENDAR_RRULE_TOO_FREQUENT)
+        return value
+
 
 class CalendarEventUpdateForm(BaseModel):
     calendar_id: Optional[str] = None
@@ -206,6 +224,22 @@ class CalendarEventUpdateForm(BaseModel):
     meta: Optional[dict] = None
     is_cancelled: Optional[bool] = None
     attendees: Optional[list[dict]] = None
+
+    @field_validator('rrule')
+    @classmethod
+    def reject_sub_daily_rrule(cls, value: Optional[str]) -> Optional[str]:
+        if value:
+            from open_webui.utils.automations import rrule_interval_seconds
+
+            try:
+                interval = rrule_interval_seconds(value)
+            except ValueError:
+                raise
+            except Exception as e:
+                raise ValueError(ERROR_MESSAGES.AUTOMATION_INVALID_RRULE(e))
+            if interval is not None and interval < MIN_CALENDAR_RRULE_INTERVAL_SECONDS:
+                raise ValueError(ERROR_MESSAGES.CALENDAR_RRULE_TOO_FREQUENT)
+        return value
 
 
 class RSVPForm(BaseModel):
@@ -533,7 +567,8 @@ class CalendarEventTable:
                             & (CalendarEvent.start_at < end)
                             & or_(
                                 CalendarEvent.end_at.is_(None) & (CalendarEvent.start_at >= start),
-                                CalendarEvent.end_at.isnot(None) & (CalendarEvent.end_at > start),
+                                CalendarEvent.end_at.isnot(None)
+                                & ((CalendarEvent.end_at > start) | (CalendarEvent.start_at >= start)),
                             )
                         ),
                         # Recurring: fetch all (expansion in Python)
@@ -734,10 +769,10 @@ class CalendarEventTable:
         events = []
         for event, tz in rows:
             model = CalendarEventModel.model_validate(event)
-            # Determine per-event alert window
-            alert_minutes = None
-            if model.meta and 'alert_minutes' in model.meta:
-                alert_minutes = model.meta['alert_minutes']
+            # meta is user-writable and this poll is shared by every user.
+            alert_minutes = (model.meta or {}).get('alert_minutes')
+            if not isinstance(alert_minutes, (int, float)):
+                alert_minutes = None
 
             if alert_minutes is not None:
                 if alert_minutes < 0:

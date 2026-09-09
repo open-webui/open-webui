@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
+	import { tools, functions } from '$lib/stores';
 	import { addUser } from '$lib/apis/auths';
 
 	import Modal from '../../common/Modal.svelte';
@@ -38,6 +39,9 @@
 	export let type = 'tool';
 	export let id = null;
 	export let userValves = false;
+	export let meta = null;
+	$: resourceMeta =
+		meta ?? (type === 'tool' ? $tools : $functions)?.find((item) => item.id === id)?.meta ?? {};
 
 	let saving = false;
 	let loading = false;
@@ -179,7 +183,7 @@
 				>
 					<div>
 						{#if !loading}
-							<Valves {valvesSpec} bind:valves />
+							<Valves {valvesSpec} bind:valves meta={resourceMeta} {userValves} />
 						{:else}
 							<Spinner className="size-5" />
 						{/if}

@@ -13,7 +13,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.retrieval.vector.utils import metadata_matches_filter, normalize_filter, process_metadata
 
 log = logging.getLogger(__name__)
 
@@ -309,6 +309,7 @@ class S3VectorClient(VectorDBBase):
 
         try:
             log.info("Searching collection '%s' with %s query vectors, limit=%s", collection_name, len(vectors), limit)
+            vector_filter = normalize_filter(filter)
 
             # Initialize result lists
             all_ids = []
@@ -323,15 +324,18 @@ class S3VectorClient(VectorDBBase):
                 # Prepare the query vector in S3 Vector format
                 query_vector_dict = {'float32': [float(x) for x in query_vector]}
 
-                # Call S3 Vector query API
-                response = self.client.query_vectors(
-                    vectorBucketName=self.bucket_name,
-                    indexName=collection_name,
-                    topK=limit,
-                    queryVector=query_vector_dict,
-                    returnMetadata=True,
-                    returnDistance=True,
-                )
+                request_params = {
+                    'vectorBucketName': self.bucket_name,
+                    'indexName': collection_name,
+                    'topK': limit,
+                    'queryVector': query_vector_dict,
+                    'returnMetadata': True,
+                    'returnDistance': True,
+                }
+                if vector_filter:
+                    request_params['filter'] = vector_filter
+
+                response = self.client.query_vectors(**request_params)
 
                 # Process results for this query
                 query_ids = []
@@ -345,6 +349,9 @@ class S3VectorClient(VectorDBBase):
                     vector_id = vector.get('key')
                     vector_metadata = vector.get('metadata', {})
                     vector_distance = vector.get('distance', 0.0)
+
+                    if vector_filter and not metadata_matches_filter(vector_metadata, vector_filter):
+                        continue
 
                     # Extract document text from metadata
                     document_text = ''

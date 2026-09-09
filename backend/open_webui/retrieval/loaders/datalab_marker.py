@@ -65,25 +65,6 @@ class DatalabMarkerLoader:
         }
         return mime_map.get(ext, 'application/octet-stream')
 
-    def check_marker_request_status(self, request_id: str) -> dict:
-        url = f'{self.api_base_url}/{request_id}'
-        headers = {'X-Api-Key': self.api_key}
-        try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            result = response.json()
-            log.info('Marker API status check for request %s: %s', request_id, result)
-            return result
-        except requests.HTTPError as e:
-            log.error(f'Error checking Marker request status: {e}')
-            raise HTTPException(
-                status.HTTP_502_BAD_GATEWAY,
-                detail=f'Failed to check Marker request: {e}',
-            )
-        except ValueError as e:
-            log.error(f'Invalid JSON checking Marker request: {e}')
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f'Invalid JSON: {e}')
-
     def load(self) -> List[Document]:
         filename = os.path.basename(self.file_path)
         mime_type = self._get_mime_type(filename)

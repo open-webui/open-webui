@@ -123,9 +123,9 @@
 	];
 
 	const heatmapModes: Array<{ value: HeatmapMode; label: string }> = [
-		{ value: 'daily', label: 'Daily' },
-		{ value: 'weekly', label: 'Weekly' },
-		{ value: 'cumulative', label: 'Cumulative' }
+		{ value: 'daily', label: $i18n.t('Daily') },
+		{ value: 'weekly', label: $i18n.t('Weekly') },
+		{ value: 'cumulative', label: $i18n.t('Cumulative') }
 	];
 
 	const loadUsage = async () => {

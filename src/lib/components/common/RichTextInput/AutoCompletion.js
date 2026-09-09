@@ -86,6 +86,7 @@ export const AIAutocompletion = Extension.create({
 
 						const newState = view.state;
 						const newSelection = newState.selection;
+						if (currentPos >= newState.doc.content.size) return false;
 						const newNode = newState.doc.nodeAt(currentPos);
 
 						// Check if the node still exists and is still a paragraph

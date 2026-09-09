@@ -79,6 +79,7 @@
 	export let lang = '';
 
 	let codeEditor: EditorView | null = null;
+	let codeEditorContainerElement: HTMLDivElement | undefined = undefined;
 
 	export const focus = () => {
 		codeEditor?.focus();
@@ -121,7 +122,15 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 print("${endTag}")
 `;
 
-			const packages = ['black'];
+			// black's pyodide-lock entry declares no dependencies, so micropip installs none of them
+			const packages = [
+				'black',
+				'click',
+				'mypy_extensions',
+				'pathspec',
+				'platformdirs',
+				'pytokens'
+			];
 
 			function handleMessage(event) {
 				const { id: eventId, stdout, stderr } = event.data;
@@ -249,7 +258,7 @@ print("${endTag}")
 				doc: _value,
 				extensions: extensions
 			}),
-			parent: document.getElementById(`code-textarea-${id}`)
+			parent: codeEditorContainerElement
 		});
 
 		if (isDarkMode) {
@@ -319,4 +328,8 @@ print("${endTag}")
 	});
 </script>
 
-<div id="code-textarea-{id}" class="{className} h-full w-full min-w-0 overflow-hidden" />
+<div
+	bind:this={codeEditorContainerElement}
+	id="code-textarea-{id}"
+	class="{className} h-full w-full min-w-0 overflow-hidden"
+/>

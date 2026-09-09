@@ -613,9 +613,12 @@ async def get_file_process_status(
     id: str,
     stream: bool = Query(False),
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
-    file = await Files.get_file_by_id(id, db=db)
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
+    # Database operations manage their own short-lived sessions internally.
+    # Holding a session here would keep a connection for the entire stream
+    # (up to two hours) and exhaust the connection pool under concurrent load.
+    file = await Files.get_file_by_id(id)
 
     if not file:
         raise HTTPException(
@@ -623,16 +626,13 @@ async def get_file_process_status(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
+    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user):
         if stream:
             MAX_FILE_PROCESSING_DURATION = 3600 * 2
 
             async def event_stream(file_id):
-                # NOTE: We intentionally do NOT capture the request's db session here.
-                # Each poll creates its own short-lived session to avoid holding a
-                # connection for hours. A WebSocket push would be more efficient.
                 for _ in range(MAX_FILE_PROCESSING_DURATION):
-                    file_item = await Files.get_file_by_id(file_id)  # Creates own session
+                    file_item = await Files.get_file_by_id(file_id)
                     if file_item:
                         data = file_item.model_dump().get('data', {})
                         status = data.get('status')

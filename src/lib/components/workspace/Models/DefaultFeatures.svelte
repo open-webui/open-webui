@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { marked } from 'marked';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	const featureLabels = {
 		web_search: {
@@ -21,8 +23,22 @@
 		}
 	};
 
-	export let availableFeatures = ['web_search', 'image_generation', 'code_interpreter'];
-	export let featureIds = [];
+	type Feature = keyof typeof featureLabels;
+
+	export let availableFeatures: string[] = ['web_search', 'image_generation', 'code_interpreter'];
+	export let featureIds: string[] = [];
+
+	const getFeatureLabel = (feature: string) => featureLabels[feature as Feature];
+
+	const setFeature = (feature: string, checked: boolean) => {
+		if (checked) {
+			if (!featureIds.includes(feature)) {
+				featureIds = [...featureIds, feature];
+			}
+		} else {
+			featureIds = featureIds.filter((id) => id !== feature);
+		}
+	};
 </script>
 
 <div>
@@ -31,21 +47,25 @@
 		{#each availableFeatures as feature}
 			<div class="flex min-h-6 items-center gap-2.5">
 				<Checkbox
-					ariaLabel={$i18n.t(featureLabels[feature].label)}
+					ariaLabel={$i18n.t(getFeatureLabel(feature).label)}
 					state={featureIds.includes(feature) ? 'checked' : 'unchecked'}
 					on:change={(e) => {
-						if (e.detail === 'checked') {
-							featureIds = [...featureIds, feature];
-						} else {
-							featureIds = featureIds.filter((id) => id !== feature);
-						}
+						setFeature(feature, e.detail === 'checked');
 					}}
 				/>
-				<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
-					<Tooltip content={marked.parse(featureLabels[feature].description)}>
-						<span class="truncate">{$i18n.t(featureLabels[feature].label)}</span>
+				<button
+					type="button"
+					class="min-w-0 cursor-pointer text-left text-xs text-gray-600 dark:text-gray-400"
+					on:click={() => setFeature(feature, !featureIds.includes(feature))}
+				>
+					<Tooltip
+						as="span"
+						className="block min-w-0"
+						content={marked.parse(getFeatureLabel(feature).description)}
+					>
+						<span class="block truncate">{$i18n.t(getFeatureLabel(feature).label)}</span>
 					</Tooltip>
-				</div>
+				</button>
 			</div>
 		{/each}
 	</div>

@@ -134,41 +134,45 @@
 	const isAdminTab = (tabId: string) => tabId.startsWith('admin:');
 	const adminTabSegment = (tabId: string) => tabId.replace('admin:', '');
 	const adminTabPanelId = (tabId: string) => `tab-${tabId.replace(':', '-')}`;
-	const personalSettingGroups: Record<string, string> = {
-		general: 'Basics',
-		interface: 'Basics',
-		notifications: 'Basics',
-		shortcuts: 'Basics',
-		connections: 'Services',
-		tools: 'Services',
-		personalization: 'Preferences',
-		audio: 'Preferences',
-		data_controls: 'Data',
-		usage: 'Data',
-		archived_chats: 'Data',
-		account: 'Profile',
-		about: 'Profile'
+	let personalSettingGroups: Record<string, string> = {};
+	let adminSettingGroups: Record<string, string> = {};
+
+	$: personalSettingGroups = {
+		general: $i18n.t('Basics'),
+		interface: $i18n.t('Basics'),
+		notifications: $i18n.t('Basics'),
+		shortcuts: $i18n.t('Basics'),
+		connections: $i18n.t('Services'),
+		tools: $i18n.t('Services'),
+		personalization: $i18n.t('Preferences'),
+		audio: $i18n.t('Preferences'),
+		data_controls: $i18n.t('Data'),
+		usage: $i18n.t('Data'),
+		archived_chats: $i18n.t('Data'),
+		account: $i18n.t('Profile'),
+		about: $i18n.t('Profile')
 	};
-	const adminSettingGroups: Record<string, string> = {
-		'admin:general': 'System',
-		'admin:authentication': 'System',
-		'admin:connections': 'AI',
-		'admin:models': 'AI',
-		'admin:subagents': 'AI',
-		'admin:evaluations': 'Quality',
-		'admin:analytics': 'Quality',
-		'admin:integrations': 'Tools',
-		'admin:documents': 'Tools',
-		'admin:web': 'Tools',
-		'admin:code-execution': 'Tools',
-		'admin:pipelines': 'Tools',
-		'admin:interface': 'Experience',
-		'admin:audio': 'Experience',
-		'admin:images': 'Experience',
-		'admin:db': 'Data'
+	$: adminSettingGroups = {
+		'admin:general': $i18n.t('System'),
+		'admin:authentication': $i18n.t('System'),
+		'admin:connections': $i18n.t('AI'),
+		'admin:models': $i18n.t('AI'),
+		'admin:subagents': $i18n.t('AI'),
+		'admin:evaluations': $i18n.t('Quality'),
+		'admin:analytics': $i18n.t('Quality'),
+		'admin:integrations': $i18n.t('Tools'),
+		'admin:documents': $i18n.t('Tools'),
+		'admin:web': $i18n.t('Tools'),
+		'admin:code-execution': $i18n.t('Tools'),
+		'admin:pipelines': $i18n.t('Tools'),
+		'admin:interface': $i18n.t('Experience'),
+		'admin:audio': $i18n.t('Experience'),
+		'admin:images': $i18n.t('Experience'),
+		'admin:db': $i18n.t('Data')
 	};
 	const settingGroupTitle = (tabId: string) =>
-		(isAdminTab(tabId) ? adminSettingGroups[tabId] : personalSettingGroups[tabId]) ?? 'General';
+		(isAdminTab(tabId) ? adminSettingGroups[tabId] : personalSettingGroups[tabId]) ??
+		$i18n.t('General');
 	const shouldShowSettingGroup = (tabIds: string[], index: number) =>
 		index === 0 || settingGroupTitle(tabIds[index]) !== settingGroupTitle(tabIds[index - 1]);
 	const settingGroupHeadingClass = (first: boolean) =>
@@ -179,7 +183,7 @@
 	const allSettings: SettingsTab[] = [
 		{
 			id: 'general',
-			title: 'General',
+			title: $i18n.t('General'),
 			keywords: [
 				'advancedparams',
 				'advancedparameters',
@@ -210,7 +214,7 @@
 		},
 		{
 			id: 'interface',
-			title: 'Interface',
+			title: $i18n.t('Interface'),
 			keywords: [
 				'allow user location',
 				'allow voice interruption in call',
@@ -268,12 +272,16 @@
 				'full width mode',
 				'haptic feedback',
 				'hapticfeedback',
+				'accessibility mode',
+				'accessibilitymode',
 				'high contrast mode',
 				'highcontrastmode',
 				'iframe sandbox allow forms',
 				'iframe sandbox allow same origin',
 				'iframesandboxallowforms',
 				'iframesandboxallowsameorigin',
+				'terminal preview allow same origin',
+				'terminalpreviewallowsameorigin',
 				'imagecompression',
 				'image compression',
 				'imagemaxcompressionsize',
@@ -342,7 +350,7 @@
 		},
 		{
 			id: 'notifications',
-			title: 'Notifications',
+			title: $i18n.t('Notifications'),
 			keywords: [
 				'browser notifications',
 				'browsernotifications',
@@ -358,7 +366,7 @@
 		},
 		{
 			id: 'shortcuts',
-			title: 'Keyboard',
+			title: $i18n.t('Keyboard'),
 			keywords: [
 				'commands',
 				'hotkeys',
@@ -373,7 +381,7 @@
 		},
 		{
 			id: 'connections',
-			title: 'Connections',
+			title: $i18n.t('Connections'),
 			keywords: [
 				'addconnection',
 				'add connection',
@@ -386,7 +394,7 @@
 		},
 		{
 			id: 'tools',
-			title: 'Integrations',
+			title: $i18n.t('Integrations'),
 			keywords: [
 				'addconnection',
 				'add connection',
@@ -404,7 +412,7 @@
 
 		{
 			id: 'personalization',
-			title: 'Personalization',
+			title: $i18n.t('Personalization'),
 			keywords: [
 				'account preferences',
 				'account settings',
@@ -426,7 +434,7 @@
 		},
 		{
 			id: 'audio',
-			title: 'Audio',
+			title: $i18n.t('Audio'),
 			keywords: [
 				'audio config',
 				'audio control',
@@ -502,7 +510,7 @@
 		},
 		{
 			id: 'data_controls',
-			title: 'Data Controls',
+			title: $i18n.t('Data Controls'),
 			keywords: [
 				'archive all chats',
 				'archive chats',
@@ -537,7 +545,7 @@
 		},
 		{
 			id: 'usage',
-			title: 'Usage',
+			title: $i18n.t('Usage'),
 			keywords: [
 				'activity',
 				'activity heatmap',
@@ -555,7 +563,7 @@
 		},
 		{
 			id: 'archived_chats',
-			title: 'Archived Chats',
+			title: $i18n.t('Archived Chats'),
 			keywords: [
 				'archive',
 				'archive chat',
@@ -574,7 +582,7 @@
 		},
 		{
 			id: 'account',
-			title: 'Account',
+			title: $i18n.t('Account'),
 			keywords: [
 				'account preferences',
 				'account settings',
@@ -624,7 +632,7 @@
 		},
 		{
 			id: 'about',
-			title: 'About',
+			title: $i18n.t('About'),
 			keywords: [
 				'about app',
 				'about me',
@@ -675,12 +683,12 @@
 	const adminSettings: SettingsTab[] = [
 		{
 			id: 'admin:general',
-			title: 'General',
+			title: $i18n.t('General'),
 			keywords: ['general', 'admin', 'settings', 'version', 'update', 'community', 'channels']
 		},
 		{
 			id: 'admin:authentication',
-			title: 'Authentication',
+			title: $i18n.t('Authentication'),
 			keywords: [
 				'authentication',
 				'auth',
@@ -695,7 +703,7 @@
 		},
 		{
 			id: 'admin:connections',
-			title: 'Connections',
+			title: $i18n.t('Connections'),
 			keywords: [
 				'connections',
 				'ollama',
@@ -708,7 +716,7 @@
 		},
 		{
 			id: 'admin:models',
-			title: 'Models',
+			title: $i18n.t('Models'),
 			keywords: [
 				'models',
 				'pull',
@@ -723,63 +731,63 @@
 		},
 		{
 			id: 'admin:subagents',
-			title: 'Sub-agents',
+			title: $i18n.t('Sub-agents'),
 			keywords: ['sub-agents', 'subagents', 'delegation', 'background', 'agents']
 		},
 		{
 			id: 'admin:interface',
-			title: 'Interface',
+			title: $i18n.t('Interface'),
 			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks', 'prompt suggestions', 'tags']
 		},
 		{
 			id: 'admin:audio',
-			title: 'Audio',
+			title: $i18n.t('Audio'),
 			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper', 'deepgram', 'azure']
 		},
 		{
 			id: 'admin:images',
-			title: 'Images',
+			title: $i18n.t('Images'),
 			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
 		},
 		{
 			id: 'admin:evaluations',
-			title: 'Evaluations',
+			title: $i18n.t('Evaluations'),
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
 		},
 		{
 			id: 'admin:analytics',
-			title: 'Analytics',
+			title: $i18n.t('Analytics'),
 			keywords: ['analytics', 'usage', 'stats', 'dashboard', 'models', 'users', 'messages']
 		},
 		{
 			id: 'admin:integrations',
-			title: 'Integrations',
+			title: $i18n.t('Integrations'),
 			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
 		},
 		{
 			id: 'admin:documents',
-			title: 'Documents',
+			title: $i18n.t('Documents'),
 			keywords: ['documents', 'files', 'rag', 'knowledge', 'upload', 'embedding', 'vector db']
 		},
 		{
 			id: 'admin:web',
-			title: 'Web Search',
+			title: $i18n.t('Web Search'),
 			keywords: ['web search', 'google', 'bing', 'duckduckgo', 'serp', 'searxng', 'tavily', 'exa']
 		},
 		{
 			id: 'admin:code-execution',
-			title: 'Code Execution',
+			title: $i18n.t('Code Execution'),
 			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
 		},
 		{
 			id: 'admin:pipelines',
-			title: 'Pipelines',
+			title: $i18n.t('Pipelines'),
 			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
 		},
 
 		{
 			id: 'admin:db',
-			title: 'Database',
+			title: $i18n.t('Database'),
 			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
 		}
 	];
@@ -849,15 +857,18 @@
 	};
 
 	const saveSettings = async (updated: Record<string, any>) => {
-		console.log(updated);
-		await settings.set({ ...$settings, ...updated });
-		await models.set(await getModels());
-		const saved = await updateUserSettings(localStorage.token, { ui: $settings });
+		const saved = await updateUserSettings(localStorage.token, {
+			ui: updated
+		}).catch((error) => {
+			toast.error(`${error}`);
+			throw error;
+		});
 		personalUiSettings =
 			saved?.ui && typeof saved.ui === 'object' && !Array.isArray(saved.ui) ? saved.ui : {};
 		await settings.set(
 			mergeUiSettings($config?.ui?.default_interface_settings ?? {}, personalUiSettings)
 		);
+		await models.set(await getModels());
 	};
 
 	const getModels = async () => {
@@ -925,7 +936,7 @@
 <Modal
 	size="full"
 	containerClassName="p-4 sm:p-6 lg:p-8"
-	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(max(54rem,80dvh),calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl"
+	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(max(54rem,80dvh),calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl overflow-hidden"
 	bind:show={modalShow}
 >
 	<nav
@@ -973,7 +984,7 @@
 				{#each filteredPersonalSettings as tabId, index (tabId)}
 					{#if shouldShowSettingGroup(filteredPersonalSettings, index)}
 						<span class={settingGroupHeadingClass(index === 0)}>
-							{$i18n.t(settingGroupTitle(tabId))}
+							{settingGroupTitle(tabId)}
 						</span>
 					{/if}
 
@@ -1165,7 +1176,7 @@
 				{#each filteredAdminSettings as tabId, index (tabId)}
 					{#if shouldShowSettingGroup(filteredAdminSettings, index)}
 						<span class={settingGroupHeadingClass(index === 0)}>
-							{$i18n.t(settingGroupTitle(tabId))}
+							{settingGroupTitle(tabId)}
 						</span>
 					{/if}
 
@@ -1181,7 +1192,7 @@
 							}}
 						>
 							<AdminTabIcon id={adminTabSegment(tab.id)} className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t(tab.title)}</span>
+							<span>{tab.title}</span>
 						</button>
 					{/if}
 				{/each}

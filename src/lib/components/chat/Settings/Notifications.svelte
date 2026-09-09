@@ -28,10 +28,14 @@
 	let events: { event: string; label: string; description?: string }[] = [
 		{
 			event: 'chat.finished',
-			label: 'Chat finished',
-			description: 'A chat run finished successfully.'
+			label: $i18n.t('Chat finished'),
+			description: $i18n.t('A chat run finished successfully.')
 		},
-		{ event: 'chat.failed', label: 'Chat failed', description: 'A chat run failed.' }
+		{
+			event: 'chat.failed',
+			label: $i18n.t('Chat failed'),
+			description: $i18n.t('A chat run failed.')
+		}
 	];
 	let loadingTargets = false;
 	let savingTarget = false;

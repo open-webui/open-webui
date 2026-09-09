@@ -90,7 +90,8 @@
 
 			{#each filteredModels as model (model.id)}
 				<button
-					class="h-[1.6875rem] px-2 rounded-xl w-full text-left text-[0.8125rem] {model_id === model.id
+					class="h-[1.6875rem] px-2 rounded-xl w-full text-left text-[0.8125rem] {model_id ===
+					model.id
 						? 'text-gray-900 dark:text-gray-100'
 						: 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'}"
 					type="button"

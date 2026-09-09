@@ -17,9 +17,11 @@
 		config,
 		mobile,
 		models as _models,
+		pinnedModels,
 		settings,
 		user,
-		workspaceActions
+		workspaceActions,
+		workspaceCounts
 	} from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import {
@@ -37,6 +39,10 @@
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
+	import {
+		resolveLocalizedModelDescription,
+		resolveLocalizedModelName
+	} from '$lib/utils/localizedContent';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
@@ -164,6 +170,7 @@
 			if (res) {
 				models = res.items;
 				total = res.total;
+				workspaceCounts.update((counts) => ({ ...counts, models: total }));
 
 				// get tags
 				tags = await getModelTags(localStorage.token).catch((error) => {
@@ -292,15 +299,12 @@
 	};
 
 	const pinModelHandler = async (modelId) => {
-		let pinnedModels = $settings?.pinnedModels ?? [];
-
-		if (pinnedModels.includes(modelId)) {
-			pinnedModels = pinnedModels.filter((id) => id !== modelId);
-		} else {
-			pinnedModels = [...new Set([...pinnedModels, modelId])];
-		}
-
-		settings.set({ ...$settings, pinnedModels: pinnedModels });
+		settings.set({
+			...$settings,
+			pinnedModels: $pinnedModels.includes(modelId)
+				? $pinnedModels.filter((id) => id !== modelId)
+				: [...$pinnedModels, modelId]
+		});
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
@@ -566,6 +570,7 @@
 						align="end"
 						onChange={async (value) => {
 							localStorage.workspaceViewOption = value;
+							page = 1;
 							await tick();
 						}}
 					/>
@@ -577,6 +582,10 @@
 							items={tags.map((tag) => {
 								return { value: tag, label: tag };
 							})}
+							onChange={async () => {
+								page = 1;
+								await tick();
+							}}
 						/>
 					{/if}
 				</div>
@@ -686,6 +695,7 @@
 
 					<div class="grid gap-y-0.5">
 						{#each models as model (model.id)}
+							{@const localizedModelName = resolveLocalizedModelName(model, $i18n.language)}
 							<div
 								class="group flex min-h-8 w-full items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left {model.write_access
 									? 'cursor-pointer'
@@ -727,17 +737,21 @@
 									<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
 										<div class="flex min-w-0 items-center gap-2 overflow-hidden">
 											<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-												<Tooltip content={model.name} className="min-w-0" placement="top-start">
+												<Tooltip
+													content={localizedModelName}
+													className="min-w-0"
+													placement="top-start"
+												>
 													<a
 														href={`/?model=${encodeURIComponent(model.id)}`}
-														class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+														class="block truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 													>
-														{model.name}
+														{localizedModelName}
 													</a>
 												</Tooltip>
 
 												<div
-													class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500"
+													class="hidden min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500 sm:block"
 												>
 													{model.id}
 												</div>
@@ -757,7 +771,9 @@
 										</div>
 
 										<Tooltip
-											content={(model?.meta?.description ?? '').trim() ||
+											content={(
+												resolveLocalizedModelDescription(model, $i18n.language) ?? ''
+											).trim() ||
 												model.base_model_id ||
 												$i18n.t('No description')}
 											className="min-w-0"
@@ -766,7 +782,7 @@
 											<div
 												class="truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
 											>
-												{(model?.meta?.description ?? '').trim() ||
+												{(resolveLocalizedModelDescription(model, $i18n.language) ?? '').trim() ||
 													model.base_model_id ||
 													$i18n.t('No description')}
 											</div>

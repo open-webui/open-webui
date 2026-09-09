@@ -8,6 +8,7 @@ TERMINAL_CONTEXT_HEADER = 'X-Terminal-Context-Id'
 TERMINAL_CONTEXT_DEFAULT = 'default'
 TERMINAL_CONTEXT_TYPES = {'chat', 'automation'}
 TERMINAL_CONTEXT_ID_SOURCES = {'chat': 'chat_id', 'automation': 'automation_id'}
+TERMINAL_CHAT_UPLOAD_MODES = {'default', 'filesystem'}
 
 
 def is_terminal_orchestrator(connection: dict) -> bool:
@@ -104,3 +105,9 @@ def terminal_contexts(connection: dict) -> dict:
             else:
                 result[context] = {}
     return result
+
+
+def terminal_chat_uploads(connection: dict) -> str:
+    """Return normalized main-chat upload behavior for this connection."""
+    value = (connection.get('config') or {}).get('chat_uploads')
+    return value if value in TERMINAL_CHAT_UPLOAD_MODES else 'default'

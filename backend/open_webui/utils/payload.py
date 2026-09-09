@@ -95,6 +95,7 @@ def apply_params_to_form_data(form_data: dict, model: dict, params: dict | None 
         'compact_token_threshold': int,
         'system': str,
         'note_id': str,
+        'tool_approval_mode': str,
     }
 
     for key in list(params.keys()):
@@ -149,6 +150,7 @@ def remove_open_webui_params(params: dict) -> dict:
         'compact_token_threshold': int,
         'system': str,
         'note_id': str,
+        'tool_approval_mode': str,
     }
 
     for key in list(params.keys()):
@@ -284,6 +286,8 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
         # may be injected by filter inlet functions).
         if 'thinking' in message:
             new_message['thinking'] = message['thinking']
+        elif reasoning_content := (message.get('reasoning_content') or message.get('reasoning')):
+            new_message['thinking'] = reasoning_content
 
         content = message.get('content', [])
         tool_calls = message.get('tool_calls', None)

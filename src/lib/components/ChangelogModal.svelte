@@ -154,7 +154,7 @@
 													class="mt-[0.6em] h-1 w-1 shrink-0 rounded-full bg-gray-300 dark:bg-gray-700"
 												></span>
 												<div
-													class="min-w-0 markdown-prose-sm !max-w-none !text-[0.8125rem] text-gray-600 dark:text-gray-300 [&_*]:!my-0 [&_b]:!font-normal [&_strong]:!font-normal"
+													class="min-w-0 markdown-prose-sm list-none !max-w-none !text-[0.8125rem] text-gray-600 dark:text-gray-300 [&_*]:!my-0 [&_b]:!font-normal [&_strong]:!font-normal"
 												>
 													<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 													{@html DOMPurify.sanitize(entry?.raw)}

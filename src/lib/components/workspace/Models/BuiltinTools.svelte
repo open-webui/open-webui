@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { marked } from 'marked';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	const toolLabels = {
 		time: {
 			label: $i18n.t('Time & Calculation'),
 			description: $i18n.t('Get current time and perform date/time calculations')
+		},
+		user_input: {
+			label: $i18n.t('Ask User'),
+			description: $i18n.t('Pause a response to ask the user a clarifying question')
 		},
 		memory: {
 			label: $i18n.t('Memory'),
@@ -72,6 +78,15 @@
 	const allTools = Object.keys(toolLabels) as Array<keyof typeof toolLabels>;
 
 	export let builtinTools: Record<string, boolean> = {};
+
+	const setBuiltinTool = (tool: keyof typeof toolLabels, checked: boolean) => {
+		if (checked) {
+			delete builtinTools[tool];
+		} else {
+			builtinTools[tool] = false;
+		}
+		builtinTools = builtinTools;
+	};
 </script>
 
 <div>
@@ -83,19 +98,22 @@
 					ariaLabel={$i18n.t(toolLabels[tool].label)}
 					state={builtinTools[tool] !== false ? 'checked' : 'unchecked'}
 					on:change={(e) => {
-						if (e.detail === 'checked') {
-							delete builtinTools[tool];
-						} else {
-							builtinTools[tool] = false;
-						}
-						builtinTools = builtinTools;
+						setBuiltinTool(tool, e.detail === 'checked');
 					}}
 				/>
-				<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
-					<Tooltip content={marked.parse(toolLabels[tool].description)}>
-						<span class="truncate">{$i18n.t(toolLabels[tool].label)}</span>
+				<button
+					type="button"
+					class="min-w-0 cursor-pointer text-left text-xs text-gray-600 dark:text-gray-400"
+					on:click={() => setBuiltinTool(tool, builtinTools[tool] === false)}
+				>
+					<Tooltip
+						as="span"
+						className="block min-w-0"
+						content={marked.parse(toolLabels[tool].description)}
+					>
+						<span class="block truncate">{$i18n.t(toolLabels[tool].label)}</span>
 					</Tooltip>
-				</div>
+				</button>
 			</div>
 		{/each}
 	</div>

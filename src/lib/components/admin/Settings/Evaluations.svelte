@@ -21,13 +21,14 @@
 	let evaluationConfig = null;
 	let showAddModel = false;
 
-	const submitHandler = async () => {
-		evaluationConfig = await updateConfig(localStorage.token, evaluationConfig).catch((err) => {
+	const submitHandler = async (nextConfig = evaluationConfig) => {
+		const result = await updateConfig(localStorage.token, nextConfig).catch((err) => {
 			toast.error(err);
 			return null;
 		});
 
-		if (evaluationConfig) {
+		if (result) {
+			evaluationConfig = result;
 			toast.success($i18n.t('Settings saved successfully!'));
 			models.set(
 				await getModels(
@@ -38,32 +39,23 @@
 				)
 			);
 		}
+		return !!result;
 	};
 
 	const addModelHandler = async (model) => {
-		evaluationConfig.EVALUATION_ARENA_MODELS.push(model);
-		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
-
-		await submitHandler();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
-		);
+		return submitHandler({
+			...evaluationConfig,
+			EVALUATION_ARENA_MODELS: [...evaluationConfig.EVALUATION_ARENA_MODELS, model]
+		});
 	};
 
 	const editModelHandler = async (model, modelIdx) => {
-		evaluationConfig.EVALUATION_ARENA_MODELS[modelIdx] = model;
-		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
-
-		await submitHandler();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+		return submitHandler({
+			...evaluationConfig,
+			EVALUATION_ARENA_MODELS: evaluationConfig.EVALUATION_ARENA_MODELS.map((item, index) =>
+				index === modelIdx ? model : item
 			)
-		);
+		});
 	};
 
 	const deleteModelHandler = async (modelIdx) => {
@@ -90,12 +82,7 @@
 	});
 </script>
 
-<ArenaModelModal
-	bind:show={showAddModel}
-	on:submit={async (e) => {
-		addModelHandler(e.detail);
-	}}
-/>
+<ArenaModelModal bind:show={showAddModel} onSubmit={addModelHandler} />
 
 <form
 	class="flex flex-col h-full justify-between text-sm"
@@ -146,9 +133,7 @@
 							{#each evaluationConfig.EVALUATION_ARENA_MODELS as model, index}
 								<Model
 									{model}
-									on:edit={(e) => {
-										editModelHandler(e.detail, index);
-									}}
+									onEdit={(model) => editModelHandler(model, index)}
 									on:delete={(e) => {
 										deleteModelHandler(index);
 									}}

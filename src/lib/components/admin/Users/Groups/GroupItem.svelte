@@ -20,6 +20,8 @@
 	export let defaultPermissions = {};
 
 	export let setGroups = () => {};
+	/** @type {(group: any) => void} */
+	export let updateGroup = () => {};
 
 	let showEdit = false;
 	$: hasCustomPermissions = Object.keys(group?.permissions ?? {}).length > 0;
@@ -64,6 +66,7 @@
 	tabs={['general', 'permissions', 'users', 'preview']}
 	onSubmit={updateHandler}
 	onDelete={deleteHandler}
+	onMemberChange={updateGroup}
 />
 
 <button

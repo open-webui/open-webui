@@ -3,19 +3,29 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user, config } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import {
+		updateUserProfile,
+		createAPIKey,
+		deleteAPIKey,
+		getAPIKey,
+		getSessionUser
+	} from '$lib/apis/auths';
 	import { getUserVariables, updateUserVariables } from '$lib/apis/users';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
-	import { getGravatarUrl } from '$lib/apis/utils';
-	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { generateInitialsImage } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import UserProfileImage from './Account/UserProfileImage.svelte';
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
@@ -24,7 +34,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let saveHandler: Function;
+	export let saveHandler: () => void | Promise<void>;
 
 	let profileImageUrl = '';
 	let name = '';
@@ -40,6 +50,8 @@
 
 	let APIKey = '';
 	let APIKeyCopied = false;
+	let showAPIKeyMenu = false;
+	let showDeleteAPIKeyConfirm = false;
 	let variableRows: { key: string; value: string }[] = [];
 	let variableModalOpen = false;
 	let variableFormIndex: number | null = null;
@@ -174,6 +186,18 @@
 		}
 	};
 
+	const deleteAPIKeyHandler = async () => {
+		const res = await deleteAPIKey(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return false;
+		});
+
+		if (res) {
+			APIKey = '';
+			toast.success($i18n.t('API Key deleted.'));
+		}
+	};
+
 	onMount(async () => {
 		const user = await getSessionUser(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
@@ -258,7 +282,7 @@
 					bind:value={_gender}
 					className="w-full"
 					ariaLabel={$i18n.t('Gender')}
-					on:change={(e) => {
+					on:change={() => {
 						console.log(_gender);
 
 						if (_gender === 'custom') {
@@ -372,7 +396,7 @@
 									<SensitiveInput variant="settings" value={localStorage.token} readOnly={true} />
 
 									<button
-										class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-gray-300"
+										class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 										aria-label={$i18n.t('Copy Token')}
 										on:click={() => {
 											copyToClipboard(localStorage.token);
@@ -429,7 +453,7 @@
 										<SensitiveInput variant="settings" value={APIKey} readOnly={true} />
 
 										<button
-											class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-gray-300"
+											class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 											aria-label={$i18n.t('Copy API Key')}
 											on:click={() => {
 												copyToClipboard(APIKey);
@@ -473,38 +497,54 @@
 											{/if}
 										</button>
 
-										<Tooltip content={$i18n.t('Create new key')}>
-											<button
-												class="rounded-sm px-1.5 py-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-gray-300"
-												aria-label={$i18n.t('Create new key')}
-												on:click={() => {
-													createAPIKeyHandler();
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													class="size-4"
+										<Dropdown bind:show={showAPIKeyMenu} align="end" sideOffset={4}>
+											<Tooltip content={$i18n.t('More')}>
+												<button
+													type="button"
+													class="rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+													aria-label={$i18n.t('More')}
 												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
+													<EllipsisHorizontal strokeWidth="2" className="size-4" />
+												</button>
+											</Tooltip>
+
+											<div slot="content">
+												<DropdownMenu className="min-w-[10.625rem]">
+													<button
+														type="button"
+														on:click={() => {
+															showAPIKeyMenu = false;
+															createAPIKeyHandler();
+														}}
+													>
+														<Refresh strokeWidth="2" className="size-3.5 scale-90" />
+														<div class="flex items-center">{$i18n.t('Create new key')}</div>
+													</button>
+
+													<hr class="border-gray-50 dark:border-gray-850/30" />
+
+													<button
+														type="button"
+														on:click={() => {
+															showAPIKeyMenu = false;
+															showDeleteAPIKeyConfirm = true;
+														}}
+													>
+														<XMark strokeWidth="2" className="size-3.5" />
+														<div class="flex items-center">{$i18n.t('Delete')}</div>
+													</button>
+												</DropdownMenu>
+											</div>
+										</Dropdown>
 									{:else}
 										<button
-											class={actionButtonClass}
+											class="inline-flex items-center gap-1.5 {actionButtonClass}"
+											type="button"
 											on:click={() => {
 												createAPIKeyHandler();
 											}}
 										>
-											<Plus strokeWidth="2" className=" size-3.5" />
+											<Plus strokeWidth="2" className="size-3.5" />
 
 											{$i18n.t('Create new secret key')}</button
 										>
@@ -533,6 +573,17 @@
 		</button>
 	</div>
 </div>
+
+<ConfirmDialog
+	bind:show={showDeleteAPIKeyConfirm}
+	title={$i18n.t('Delete API Key?')}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={deleteAPIKeyHandler}
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will revoke the current API key.')}
+	</div>
+</ConfirmDialog>
 
 <Modal size="sm" bind:show={variableModalOpen}>
 	<form class="p-4" on:submit|preventDefault={saveVariableForm}>

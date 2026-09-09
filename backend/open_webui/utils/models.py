@@ -3,13 +3,12 @@ import copy
 import logging
 import sys
 
-from aiocache import cached
 from fastapi import Request
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
 )
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
 from open_webui.functions import get_function_models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -21,6 +20,7 @@ from open_webui.models.users import UserModel
 from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.plugin import (
     get_functions_cache,
     get_function_module_from_cache,
@@ -28,6 +28,8 @@ from open_webui.utils.plugin import (
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+BASE_MODELS_CACHE_KEY = f'{REDIS_KEY_PREFIX}:models:base'
 
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
@@ -71,16 +73,35 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         'evaluation.arena.models',
         'models.default_metadata',
     )
-    if (
-        request.app.state.MODELS
-        and request.app.state.BASE_MODELS
-        and (config.get('models.base_models_cache') and not refresh)
-    ):
+    if refresh:
+        await openai.get_all_models.cache.clear()
+        await ollama.get_all_models.cache.clear()
+        redis = getattr(request.app.state, 'redis', None)
+        if redis is not None:
+            await redis.delete(BASE_MODELS_CACHE_KEY)
+        request.app.state.BASE_MODELS = []
+
+    redis = getattr(request.app.state, 'redis', None)
+    use_cache = config.get('models.base_models_cache') and not refresh
+    base_models = None
+
+    if use_cache and redis is not None:
+        cached_base_models = await redis.get(BASE_MODELS_CACHE_KEY)
+        if cached_base_models:
+            base_models = JSONCodec.loads(cached_base_models)
+            request.app.state.BASE_MODELS = base_models
+        else:
+            await openai.get_all_models.cache.clear()
+            await ollama.get_all_models.cache.clear()
+    elif use_cache and request.app.state.MODELS and request.app.state.BASE_MODELS:
         base_models = request.app.state.BASE_MODELS
-    else:
+
+    if base_models is None:
         base_models = await get_all_base_models(request, user=user)
         if base_models:
             request.app.state.BASE_MODELS = base_models
+            if config.get('models.base_models_cache') and redis is not None:
+                await redis.set(BASE_MODELS_CACHE_KEY, JSONCodec.dumps(base_models))
         else:
             base_models = request.app.state.BASE_MODELS
 
@@ -370,6 +391,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             for filter_id in set(model.pop('filter_ids', [])) | global_filter_ids
             if filter_id in enabled_filter_ids
         ]
+        # Set order varies per process, and an unstable order defeats the RedisDict content signature.
+        filter_ids.sort()
 
         model['actions'] = []
         for action_id in action_ids:
@@ -415,7 +438,14 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     log.debug('get_all_models() returned %s models', len(models))
 
-    models_dict = {model['id']: model for model in models}
+    models_dict = {}
+    for model in models:
+        model = model.copy()
+        if model.get('ollama'):
+            # Keep the moving expiry in the API response, outside the registry signature.
+            model['ollama'] = model['ollama'].copy()
+            model['ollama'].pop('expires_at', None)
+        models_dict[model['id']] = model
     if isinstance(request.app.state.MODELS, RedisDict):
         try:
             request.app.state.MODELS.set(models_dict)
@@ -438,12 +468,22 @@ async def check_model_access(user, model, model_info=None, db=None):
             access_grants=access_grants,
             db=db,
         ):
+            log.warning(
+                'Model access denied: user_id=%r model_id=%r reason=arena_read_denied',
+                user.id,
+                model.get('id'),
+            )
             raise Exception('Model not found')
     else:
         # Callers that already fetched the row (chat completion entry) pass it in
         if model_info is None or model_info.id != model.get('id'):
             model_info = await Models.get_model_by_id(model.get('id'), db=db)
         if not model_info:
+            log.warning(
+                'Model access denied: user_id=%r model_id=%r reason=model_unregistered',
+                user.id,
+                model.get('id'),
+            )
             raise Exception('Model not found')
 
         # One group-membership fetch shared by the direct check and every
@@ -463,6 +503,11 @@ async def check_model_access(user, model, model_info=None, db=None):
                 db=db,
             )
         ):
+            log.warning(
+                'Model access denied: user_id=%r model_id=%r reason=model_read_denied',
+                user.id,
+                model_info.id,
+            )
             raise Exception('Model not found')
 
         # Enforce access on chained base models

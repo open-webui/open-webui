@@ -437,7 +437,7 @@
 								<button
 									class="shrink-0 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-600 dark:hover:text-white"
 									type="button"
-									aria-label="verify connection"
+									aria-label={$i18n.t('verify connection')}
 									on:click={async () => {
 										await updateConfigHandler();
 										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
@@ -503,7 +503,7 @@
 								<button
 									class="shrink-0 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-600 dark:hover:text-white"
 									type="button"
-									aria-label="verify connection"
+									aria-label={$i18n.t('verify connection')}
 									on:click={async () => {
 										await updateConfigHandler();
 										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
@@ -801,7 +801,7 @@
 								<button
 									class="shrink-0 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-600 dark:hover:text-white"
 									type="button"
-									aria-label="verify connection"
+									aria-label={$i18n.t('verify connection')}
 									on:click={async () => {
 										await updateConfigHandler();
 										const res = await verifyConfigUrl(localStorage.token).catch((error) => {

@@ -212,6 +212,9 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
         return params
 
+    # Set server-side by utils/chat.py, never by client input. Mirrors the routers.
+    bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
+
     # Copy so the base-model substitution below doesn't leak into the caller's
     # payload, which the tool-call continuation re-submits. Mirrors the routers.
     form_data = {**form_data}
@@ -291,7 +294,8 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         if params:
             system = params.pop('system', None)
             form_data = apply_model_params_to_body_openai(params, form_data)
-            form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
+            if not bypass_system_prompt:
+                form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
 
     pipe_id = get_pipe_id(form_data)
     function_module = await get_function_module_by_id(request, pipe_id)

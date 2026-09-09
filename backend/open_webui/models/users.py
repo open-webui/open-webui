@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import datetime
 import time
-from typing import Optional
+from typing import Literal, Optional
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import throttle
 from open_webui.utils.validate import validate_profile_image_url
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -27,7 +33,6 @@ from sqlalchemy import (
     select,
     update,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
@@ -35,6 +40,97 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Hallowed be the columns defined here, for they hold the
 # daily bread of every session. Let none go hungry.
 ####################
+
+
+class InterfaceTitleSettings(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    auto: bool | None = None
+
+
+class InterfaceImageCompressionSize(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    width: int | float | Literal[''] | None = None
+    height: int | float | Literal[''] | None = None
+
+
+class InterfaceFloatingActionButton(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    id: str
+    label: str
+    input: bool
+    prompt: str
+
+
+class InterfaceSettings(BaseModel):
+    """Fields owned by the Interface settings panel; not the entire user UI dict."""
+
+    model_config = ConfigDict(extra='forbid')
+
+    autoTags: bool | None = None
+    autoFollowUps: bool | None = None
+    highContrastMode: bool | None = None
+    detectArtifacts: bool | None = None
+    responseAutoCopy: bool | None = None
+    showUsername: bool | None = None
+    showUpdateToast: bool | None = None
+    showChangelog: bool | None = None
+    showEmojiInCall: bool | None = None
+    voiceInterruption: bool | None = None
+    displayMultiModelResponsesInTabs: bool | None = None
+    chatFadeStreamingText: bool | None = None
+    richTextInput: bool | None = None
+    showFormattingToolbar: bool | None = None
+    insertPromptAsRichText: bool | None = None
+    promptAutocomplete: bool | None = None
+    insertSuggestionPrompt: bool | None = None
+    keepFollowUpPrompts: bool | None = None
+    insertFollowUpPrompt: bool | None = None
+    regenerateMenu: bool | None = None
+    enableMessageQueue: bool | None = None
+    largeTextAsFile: bool | None = None
+    copyFormatted: bool | None = None
+    collapseCodeBlocks: bool | None = None
+    renderMarkdownInUserMessages: bool | None = None
+    renderMarkdownInAssistantMessages: bool | None = None
+    expandDetails: bool | None = None
+    chatHoverPreview: bool | None = None
+    renderMarkdownInPreviews: bool | None = None
+    chatBubble: bool | None = None
+    widescreenMode: bool | None = None
+    splitLargeChunks: bool | None = None
+    scrollOnBranchChange: bool | None = None
+    scrollOnResponseGeneration: bool | None = None
+    showFilesOnTerminalSelect: bool | None = None
+    temporaryChatByDefault: bool | None = None
+    userLocation: bool | None = None
+    showChatTitleInTab: bool | None = None
+    iframeSandboxAllowScripts: bool | None = None
+    iframeSandboxAllowSameOrigin: bool | None = None
+    iframeSandboxAllowForms: bool | None = None
+    iframeSandboxAllowDownloads: bool | None = None
+    terminalPreviewAllowSameOrigin: bool | None = None
+    stylizedPdfExport: bool | None = None
+    hapticFeedback: bool | None = None
+    ctrlEnterToSend: bool | None = None
+    showFloatingActionButtons: bool | None = None
+    imageCompression: bool | None = None
+    imageCompressionInChannels: bool | None = None
+
+    landingPageMode: Literal['', 'chat'] | None = None
+    chatDirection: Literal['LTR', 'RTL', 'auto'] | None = None
+    terminalFileDisplay: Literal['sidebar', 'inline'] | None = None
+    defaultUploadContext: Literal['full', 'focused'] | None = None
+    webSearch: Literal['always'] | None = None
+    models: list[str] | None = None
+    backgroundImageUrl: str | None = None
+    fontFamily: str | None = None
+    textScale: float | None = None
+    title: InterfaceTitleSettings | None = None
+    imageCompressionSize: InterfaceImageCompressionSize | None = None
+    floatingActionButtons: list[InterfaceFloatingActionButton] | None = None
 
 
 class UserSettings(BaseModel):
@@ -360,16 +456,17 @@ class UsersTable:
         sub: str,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """Look up a user by OAuth provider + subject claim (dialect-aware JSON filter)."""
+        """Look up a user by OAuth provider + subject claim."""
+        sub = str(sub)
         async with get_async_db_context(db) as session:
-            dialect = session.bind.dialect.name
-            query = select(User)
-            if dialect == 'sqlite':
-                oauth_match = User.oauth.contains({provider: {'sub': sub}})
-                query = query.where(oauth_match)
-            elif dialect == 'postgresql':
-                oauth_match = User.oauth[provider].cast(JSONB)['sub'].astext == sub
-                query = query.where(oauth_match)
+            # Subscript, never contains(): on a JSON column contains() degrades to a substring LIKE.
+            sub_expr = User.oauth[provider]['sub'].as_string()
+            query = select(User).where(sub_expr == sub)
+            # SQLite preserves JSON numeric type here; Postgres ->> already compares numeric JSON as text.
+            if session.get_bind().dialect.name == 'sqlite' and sub.isdecimal():
+                sub_int = int(sub)
+                if str(sub_int) == sub and sub_int <= 2**63 - 1:
+                    query = select(User).where(or_(sub_expr == sub, sub_expr == sub_int))
             row = (await session.execute(query)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
@@ -379,27 +476,76 @@ class UsersTable:
         external_id: str,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """Look up a user by SCIM provider + external ID (dialect-aware JSON filter)."""
+        """Look up a user by SCIM provider + external ID."""
         async with get_async_db_context(db) as session:
-            dialect = session.bind.dialect.name
-            query = select(User)
-            if dialect == 'sqlite':
-                scim_match = User.scim.contains({provider: {'external_id': external_id}})
-                query = query.where(scim_match)
-            elif dialect == 'postgresql':
-                scim_match = User.scim[provider].cast(JSONB)['external_id'].astext == external_id
-                query = query.where(scim_match)
+            # Subscript, never contains(): on a JSON column contains() degrades to a substring LIKE.
+            query = select(User).where(User.scim[provider]['external_id'].as_string() == external_id)
             row = (await session.execute(query)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
-    async def get_users(
+    async def get_scim_users(
         self,
         filter: dict | None = None,
+        sort: dict | None = None,
         skip: int | None = None,
         limit: int | None = None,
         db: AsyncSession | None = None,
     ) -> dict:
-        """Paginated user listing with optional filters for role, group, and channel."""
+        async with get_async_db_context(db) as session:
+            stmt = select(User).where(or_(User.oauth.cast(String) != 'null', User.scim.cast(String) != 'null'))
+
+            if filter:
+                user_id = filter.get('id')
+                if user_id:
+                    stmt = stmt.where(User.id == user_id)
+
+                email = filter.get('email')
+                if email:
+                    stmt = stmt.where(func.lower(User.email) == email.lower())
+
+            order_by = sort.get('order_by') if sort else None
+            direction = sort.get('direction') if sort else None
+
+            if order_by == 'created_at':
+                stmt = stmt.order_by(User.created_at.asc() if direction == 'asc' else User.created_at.desc())
+
+            count_result = await session.execute(select(func.count()).select_from(stmt.subquery()))
+            total = count_result.scalar()
+
+            if skip is not None:
+                stmt = stmt.offset(skip)
+            if limit is not None:
+                stmt = stmt.limit(limit)
+
+            result = await session.execute(stmt)
+            users = result.scalars().all()
+            return {
+                'users': [UserModel.model_validate(user) for user in users],
+                'total': total,
+            }
+
+    async def get_scim_user_by_id(
+        self,
+        id: str,
+        db: AsyncSession | None = None,
+    ) -> UserModel | None:
+        async with get_async_db_context(db) as session:
+            stmt = select(User).where(
+                User.id == id,
+                or_(User.oauth.cast(String) != 'null', User.scim.cast(String) != 'null'),
+            )
+            user = (await session.execute(stmt)).scalars().first()
+            return UserModel.model_validate(user) if user else None
+
+    async def get_users(
+        self,
+        filter: dict | None = None,
+        sort: dict | None = None,
+        skip: int | None = None,
+        limit: int | None = None,
+        db: AsyncSession | None = None,
+    ) -> dict:
+        """Paginated user listing with optional filters and sort."""
         async with get_async_db_context(db) as session:
             # Deferred imports to avoid circular dependencies
             from open_webui.models.channels import ChannelMember
@@ -460,64 +606,63 @@ class UsersTable:
                     if exclude_roles:
                         stmt = stmt.filter(~User.role.in_(exclude_roles))
 
-                order_by = filter.get('order_by')
-                direction = filter.get('direction')
+            order_by = sort.get('order_by') if sort else None
+            direction = sort.get('direction') if sort else None
 
-                if order_by and order_by.startswith('group_id:'):
-                    group_id = order_by.split(':', 1)[1]
+            if order_by and order_by.startswith('group_id:'):
+                group_id = order_by.split(':', 1)[1]
 
-                    # Subquery that checks if the user belongs to the group
-                    membership_exists = exists(
-                        select(GroupMember.id).where(
-                            GroupMember.user_id == User.id,
-                            GroupMember.group_id == group_id,
-                        )
+                # Subquery that checks if the user belongs to the group
+                membership_exists = exists(
+                    select(GroupMember.id).where(
+                        GroupMember.user_id == User.id,
+                        GroupMember.group_id == group_id,
                     )
+                )
 
-                    # CASE: user in group → 1, user not in group → 0
-                    group_sort = case((membership_exists, 1), else_=0)
+                # CASE: user in group → 1, user not in group → 0
+                group_sort = case((membership_exists, 1), else_=0)
 
-                    if direction == 'asc':
-                        stmt = stmt.order_by(group_sort.asc(), User.name.asc())
-                    else:
-                        stmt = stmt.order_by(group_sort.desc(), User.name.asc())
+                if direction == 'asc':
+                    stmt = stmt.order_by(group_sort.asc(), User.name.asc())
+                else:
+                    stmt = stmt.order_by(group_sort.desc(), User.name.asc())
 
-                elif order_by == 'name':
-                    if direction == 'asc':
-                        stmt = stmt.order_by(User.name.asc())
-                    else:
-                        stmt = stmt.order_by(User.name.desc())
+            elif order_by == 'name':
+                if direction == 'asc':
+                    stmt = stmt.order_by(User.name.asc())
+                else:
+                    stmt = stmt.order_by(User.name.desc())
 
-                elif order_by == 'email':
-                    if direction == 'asc':
-                        stmt = stmt.order_by(User.email.asc())
-                    else:
-                        stmt = stmt.order_by(User.email.desc())
+            elif order_by == 'email':
+                if direction == 'asc':
+                    stmt = stmt.order_by(User.email.asc())
+                else:
+                    stmt = stmt.order_by(User.email.desc())
 
-                elif order_by == 'created_at':
-                    if direction == 'asc':
-                        stmt = stmt.order_by(User.created_at.asc())
-                    else:
-                        stmt = stmt.order_by(User.created_at.desc())
+            elif order_by == 'created_at':
+                if direction == 'asc':
+                    stmt = stmt.order_by(User.created_at.asc())
+                else:
+                    stmt = stmt.order_by(User.created_at.desc())
 
-                elif order_by == 'last_active_at':
-                    if direction == 'asc':
-                        stmt = stmt.order_by(User.last_active_at.asc())
-                    else:
-                        stmt = stmt.order_by(User.last_active_at.desc())
+            elif order_by == 'last_active_at':
+                if direction == 'asc':
+                    stmt = stmt.order_by(User.last_active_at.asc())
+                else:
+                    stmt = stmt.order_by(User.last_active_at.desc())
 
-                elif order_by == 'updated_at':
-                    if direction == 'asc':
-                        stmt = stmt.order_by(User.updated_at.asc())
-                    else:
-                        stmt = stmt.order_by(User.updated_at.desc())
-                elif order_by == 'role':
-                    if direction == 'asc':
-                        stmt = stmt.order_by(User.role.asc())
-                    else:
-                        stmt = stmt.order_by(User.role.desc())
-
-            else:
+            elif order_by == 'updated_at':
+                if direction == 'asc':
+                    stmt = stmt.order_by(User.updated_at.asc())
+                else:
+                    stmt = stmt.order_by(User.updated_at.desc())
+            elif order_by == 'role':
+                if direction == 'asc':
+                    stmt = stmt.order_by(User.role.asc())
+                else:
+                    stmt = stmt.order_by(User.role.desc())
+            elif not filter:
                 stmt = stmt.order_by(User.created_at.desc())
 
             # Count BEFORE pagination
@@ -636,7 +781,10 @@ class UsersTable:
             if not user:
                 return None
             oauth = dict(user.oauth or {})
-            oauth[provider] = {'sub': sub}
+            provider_oauth = oauth.get(provider)
+            provider_oauth = dict(provider_oauth) if isinstance(provider_oauth, dict) else {}
+            provider_oauth['sub'] = str(sub)
+            oauth[provider] = provider_oauth
             user.oauth = oauth
             await session.commit()
             return UserModel.model_validate(user)
@@ -645,7 +793,7 @@ class UsersTable:
         self,
         id: str,
         provider: str,
-        external_id: str,
+        external_id: str | None,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Update or insert a SCIM provider/external_id pair into the user's scim JSON field."""
@@ -678,7 +826,18 @@ class UsersTable:
             if not user:
                 return None
             user_settings = dict(user.settings or {})
+            updated = dict(updated)
+            ui_settings = updated.pop('ui', None)
             user_settings.update(updated)
+            if ui_settings is not None:
+                # UI updates are field-level patches: omission keeps a value; null resets it.
+                current_ui_settings = dict(user_settings.get('ui') or {})
+                for key, value in ui_settings.items():
+                    if value is None:
+                        current_ui_settings.pop(key, None)
+                    else:
+                        current_ui_settings[key] = value
+                user_settings['ui'] = current_ui_settings
             user.settings = user_settings
             await session.commit()
             return UserModel.model_validate(user)

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { config } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
@@ -122,26 +123,33 @@
 		});
 
 		updateEmbeddingModelLoading = true;
-		const res = await updateEmbeddingConfig(localStorage.token, {
+		const payload: Parameters<typeof updateEmbeddingConfig>[1] = {
 			RAG_EMBEDDING_ENGINE: RAG_EMBEDDING_ENGINE,
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
-			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS,
-			ollama_config: {
+			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS
+		};
+
+		if (RAG_EMBEDDING_ENGINE === 'ollama') {
+			payload.ollama_config = {
 				key: OllamaKey,
 				url: OllamaUrl
-			},
-			openai_config: {
+			};
+		} else if (RAG_EMBEDDING_ENGINE === 'openai') {
+			payload.openai_config = {
 				key: OpenAIKey,
 				url: OpenAIUrl
-			},
-			azure_openai_config: {
+			};
+		} else if (RAG_EMBEDDING_ENGINE === 'azure_openai') {
+			payload.azure_openai_config = {
 				key: AzureOpenAIKey,
 				url: AzureOpenAIUrl,
 				version: AzureOpenAIVersion
-			}
-		}).catch(async (error) => {
+			};
+		}
+
+		const res = await updateEmbeddingConfig(localStorage.token, payload).catch(async (error) => {
 			toast.error(`${error}`);
 			await setEmbeddingConfig();
 			return null;
@@ -274,7 +282,7 @@
 					? JSON.parse(RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS)
 					: {},
 			CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES:
-				RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.trim() === ''
+				RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES === null
 					? undefined
 					: RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.split(',')
 							.map((mimeType: string) => mimeType.trim())
@@ -300,15 +308,15 @@
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
 			RAG_EMBEDDING_CONCURRENT_REQUESTS = embeddingConfig.RAG_EMBEDDING_CONCURRENT_REQUESTS ?? 0;
 
-			OpenAIKey = embeddingConfig.openai_config.key;
-			OpenAIUrl = embeddingConfig.openai_config.url;
+			OpenAIKey = embeddingConfig.openai_config.key ?? '';
+			OpenAIUrl = embeddingConfig.openai_config.url ?? '';
 
-			OllamaKey = embeddingConfig.ollama_config.key;
-			OllamaUrl = embeddingConfig.ollama_config.url;
+			OllamaKey = embeddingConfig.ollama_config.key ?? '';
+			OllamaUrl = embeddingConfig.ollama_config.url ?? '';
 
-			AzureOpenAIKey = embeddingConfig.azure_openai_config.key;
-			AzureOpenAIUrl = embeddingConfig.azure_openai_config.url;
-			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version;
+			AzureOpenAIKey = embeddingConfig.azure_openai_config.key ?? '';
+			AzureOpenAIUrl = embeddingConfig.azure_openai_config.url ?? '';
+			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version ?? '';
 		}
 	};
 	onMount(async () => {
@@ -335,9 +343,8 @@
 				: config.EXTERNAL_DOCUMENT_LOADER_HEADERS;
 
 		config.MINERU_FILE_EXTENSIONS = (config?.MINERU_FILE_EXTENSIONS ?? ['pdf']).join(', ');
-		config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES = (
-			config?.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES ?? []
-		).join(', ');
+		config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES =
+			config?.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES?.join(', ') ?? null;
 		config.RAG_TOKENIZER_MODEL = config?.RAG_TOKENIZER_MODEL ?? '';
 
 		RAGConfig = config;
@@ -415,6 +422,13 @@
 	}}
 >
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Documents')}</h2>
+	{#if $config?.features?.slim === true}
+		<p class="mb-4 text-xs text-gray-500">
+			{$i18n.t(
+				'Slim requires external services for embeddings, vector storage, and document extraction. Basic text files can be read locally.'
+			)}
+		</p>
+	{/if}
 
 	{#if RAGConfig}
 		<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
@@ -424,7 +438,11 @@
 					description={$i18n.t('Choose how uploaded documents are parsed before indexing.')}
 				>
 					<SettingsSelect bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}>
-						<option value="">{$i18n.t('Default')}</option>
+						<option value=""
+							>{$config?.features?.slim === true
+								? $i18n.t('Basic text only')
+								: $i18n.t('Default')}</option
+						>
 						<option value="external">{$i18n.t('External')}</option>
 						<option value="tika">{$i18n.t('Tika')}</option>
 						<option value="docling">{$i18n.t('Docling')}</option>
@@ -449,7 +467,7 @@
 					/>
 				</AdminSettingField>
 
-				{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
+				{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === '' && $config?.features?.slim !== true}
 					<AdminSettingRow
 						label={$i18n.t('PDF Extract Images (OCR)')}
 						description={$i18n.t('Extract images from PDFs so OCR can process image-only pages.')}
@@ -647,16 +665,27 @@
 						{/if}
 					</AdminSettingField>
 				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
-					<AdminSettingField
-						label={$i18n.t('Tika Server URL')}
-						description={$i18n.t('Tika server endpoint used for content extraction.')}
-					>
-						<input
-							class={inputClass}
-							placeholder={$i18n.t('Enter Tika Server URL')}
-							bind:value={RAGConfig.TIKA_SERVER_URL}
-						/>
-					</AdminSettingField>
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+						<AdminSettingField
+							label={$i18n.t('Tika Server URL')}
+							description={$i18n.t('Tika server endpoint used for content extraction.')}
+						>
+							<input
+								class={inputClass}
+								placeholder={$i18n.t('Enter Tika Server URL')}
+								bind:value={RAGConfig.TIKA_SERVER_URL}
+							/>
+						</AdminSettingField>
+						<AdminSettingField
+							label={$i18n.t('Tika Server Version')}
+							description={$i18n.t('Select the Tika server API version.')}
+						>
+							<SettingsSelect bind:value={RAGConfig.TIKA_SERVER_VERSION}>
+								<option value="3">{$i18n.t('Tika 3.x')}</option>
+								<option value="4">{$i18n.t('Tika 4.x')}</option>
+							</SettingsSelect>
+						</AdminSettingField>
+					</div>
 				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
 					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 						<AdminSettingField
@@ -891,7 +920,7 @@
 						<SettingsSelect bind:value={RAGConfig.TEXT_SPLITTER}>
 							<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 							<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-							<option value="token_transformers">
+							<option value="token_transformers" disabled={$config?.features?.slim === true}>
 								{$i18n.t('Token')} ({$i18n.t('Transformers')})
 							</option>
 						</SettingsSelect>
@@ -995,7 +1024,9 @@
 								}
 							}}
 						>
-							<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
+							<option value="" disabled={$config?.features?.slim === true}
+								>{$i18n.t('Default (SentenceTransformers)')}</option
+							>
 							<option value="ollama">{$i18n.t('Ollama')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="azure_openai">{$i18n.t('Azure OpenAI')}</option>
@@ -1234,7 +1265,9 @@
 										}
 									}}
 								>
-									<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
+									<option value="" disabled={$config?.features?.slim === true}
+										>{$i18n.t('Default (SentenceTransformers)')}</option
+									>
 									<option value="external">{$i18n.t('External')}</option>
 								</SettingsSelect>
 							</AdminSettingRow>
