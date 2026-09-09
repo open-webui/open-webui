@@ -2,6 +2,8 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { fade, fly, slide } from 'svelte/transition';
+	import { settings } from '$lib/stores';
+	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 
 	export let show = false;
 	export let className = '';
@@ -12,7 +14,12 @@
 	let mounted = false;
 
 	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape' && isTopModal()) {
+		if (
+			(event.key === 'Escape' ||
+				($settings?.keyboardShortcuts !== false &&
+					matchKeybinding(event) === Shortcut.CLOSE_MODAL)) &&
+			isTopModal()
+		) {
 			console.log('Escape');
 			show = false;
 		}
