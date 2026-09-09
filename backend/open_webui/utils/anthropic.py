@@ -202,8 +202,9 @@ def convert_anthropic_to_openai_payload(
                         )
                     )
                 elif block_type in ('thinking', 'redacted_thinking'):
-                    # Thinking blocks have no OpenAI content-part equivalent
-                    pass
+                    # Unsigned thinking cannot be replayed upstream
+                    if block_type == 'redacted_thinking' or block.get('signature'):
+                        openai_content.append(_copy_cache_control(block, dict(block)))
                 elif block_type == 'image':
                     source = block.get('source', {})
                     if source.get('type') == 'base64':
