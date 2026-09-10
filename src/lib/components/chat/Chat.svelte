@@ -2287,6 +2287,13 @@
 						? chatContent.models
 						: [chatContent.models ?? ''];
 
+				// An empty model list is not evidence that the chat's models are gone.
+				if ($models.length > 0) {
+					selectedModels = selectedModels.filter((modelId) =>
+						$models.map((m) => m.id).includes(modelId)
+					);
+				}
+
 				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
 				}
