@@ -40,6 +40,7 @@ from open_webui.socket.main import (
     emit_to_users,
     enter_room_for_users,
     get_user_ids_from_room,
+    leave_room_for_users,
     sio,
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
@@ -695,6 +696,7 @@ async def remove_members_by_id(
             subject_id=channel.id,
             data={'user_ids': form_data.user_ids},
         )
+
         return deleted
     except Exception as e:
         log.exception(e)
@@ -731,8 +733,19 @@ async def update_channel_by_id(
         'sharing.public_channels',
     )
 
+    previous_grants = []
+    if form_data.access_grants is not None:
+        previous_grants = await AccessGrants.get_grants_by_resource('channel', id, db=db)
+
     try:
         channel = await Channels.update_channel_by_id(id, form_data, db=db)
+
+        # Standard channels take read access from grants; group and dm channels take it from membership.
+        if form_data.access_grants is not None and channel.type not in ['group', 'dm']:
+            revoked_user_ids = await AccessGrants.get_revoked_read_user_ids('channel', id, previous_grants, db=db)
+            revoked_user_ids.discard(channel.user_id)
+            await leave_room_for_users(f'channel:{id}', list(revoked_user_ids))
+
         await publish_event(
             request,
             EVENTS.CHANNEL_UPDATED,
@@ -776,6 +789,7 @@ async def delete_channel_by_id(
             subject_id=id,
             data={'name': channel.name, 'type': channel.type},
         )
+        await sio.close_room(f'channel:{id}')
         return True
     except Exception as e:
         log.exception(e)
