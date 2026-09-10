@@ -317,6 +317,28 @@
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
 	export let autocomplete = false;
+	export let followUpSuggestion = '';
+
+	$: if (editor && !editor.isDestroyed) {
+		const { doc } = editor.state;
+		const node = doc.firstChild;
+		if (node?.type.name === 'paragraph' && !node.attrs['data-prompt']) {
+			const suggestion = doc.childCount === 1 && node.content.size === 0 ? followUpSuggestion : '';
+			if ((node.attrs['data-suggestion'] ?? '') !== suggestion) {
+				editor.view.dispatch(
+					editor.state.tr
+						.setNodeMarkup(0, null, {
+							...node.attrs,
+							class: suggestion ? 'ai-autocompletion' : null,
+							'data-prompt': suggestion ? '' : null,
+							'data-suggestion': suggestion || null
+						})
+						.setMeta('addToHistory', false)
+				);
+			}
+		}
+	}
+
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
@@ -844,11 +866,11 @@
 							})
 						]
 					: []),
-				...(autocomplete
+				...(autocomplete || messageInput
 					? [
 							AIAutocompletion.configure({
 								generateCompletion: async (text) => {
-									if (text.trim().length === 0) {
+									if (!autocomplete || text.trim().length === 0) {
 										return null;
 									}
 

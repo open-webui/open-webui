@@ -2029,6 +2029,11 @@
 													json={true}
 													richText={$settings?.richTextInput ?? true}
 													messageInput={true}
+													followUpSuggestion={!generating &&
+													history?.messages?.[history?.currentId]?.role === 'assistant' &&
+													history?.messages?.[history?.currentId]?.done
+														? (history.messages[history.currentId].followUps?.[0] ?? '')
+														: ''}
 													showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 													floatingMenuPlacement={'top-start'}
 													insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
