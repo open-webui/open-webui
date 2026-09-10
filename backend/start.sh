@@ -28,7 +28,16 @@ fi
 
 # ── Secret key setup ─────────────────────────────────────────────────────────
 
-KEY_FILE="${WEBUI_SECRET_KEY_FILE:-.webui_secret_key}"
+# The script cd's to its own directory, which lives in the image: a key written
+# there is lost on every container recreate and is not writable when the
+# container does not run as root. Fall back to DATA_DIR instead.
+if [[ -n "${WEBUI_SECRET_KEY_FILE:-}" ]]; then
+  KEY_FILE="$WEBUI_SECRET_KEY_FILE"
+elif [[ -f .webui_secret_key && -s .webui_secret_key ]]; then
+  KEY_FILE=".webui_secret_key"
+else
+  KEY_FILE="${DATA_DIR:-./data}/.webui_secret_key"
+fi
 WEBUI_SECRET_KEY_LENGTH="${WEBUI_SECRET_KEY_LENGTH:-24}"
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
@@ -36,17 +45,93 @@ HOST="${HOST:-0.0.0.0}"
 if [[ -z "${WEBUI_SECRET_KEY:-}" && -z "${WEBUI_JWT_SECRET_KEY:-}" ]]; then
   echo "No WEBUI_SECRET_KEY environment variable set, loading from file."
 
-  if [[ ! -f "$KEY_FILE" ]]; then
+  # Regenerate when missing or empty, never when merely unreadable: such a key may
+  # belong to another UID, and it also encrypts OAuth sessions and valves.
+  # A directory at the key path never generates: some filesystems report one as zero
+  # bytes, and both ln and mv would then put the key inside it, leaving live key
+  # material under a name nothing reads. The ladder below reports it instead.
+  if [[ ! -s "$KEY_FILE" && ! -d "$KEY_FILE" ]]; then
     echo "Generating new WEBUI_SECRET_KEY..."
     if ! [[ "$WEBUI_SECRET_KEY_LENGTH" =~ ^[1-9][0-9]*$ ]]; then
       echo "WEBUI_SECRET_KEY_LENGTH must be a positive integer." >&2
       exit 1
     fi
-    head -c "$WEBUI_SECRET_KEY_LENGTH" /dev/random | base64 > "$KEY_FILE"
+
+    # Report an unwritable directory here rather than letting mktemp below fail with
+    # a bare "Permission denied", which is what a volume left owned by an earlier
+    # root-owned run looks like to the non-root uid this whole change is aimed at.
+    KEY_DIR=$(dirname -- "$KEY_FILE")
+    if ! mkdir -p -- "$KEY_DIR" 2>/dev/null || [[ ! -w "$KEY_DIR" ]]; then
+      echo "Cannot write a WEBUI_SECRET_KEY into ${KEY_DIR} as uid $(id -u):$(id -g)." >&2
+      echo "Give that uid write access to it, or set WEBUI_SECRET_KEY or" >&2
+      echo "WEBUI_SECRET_KEY_FILE to somewhere writable instead." >&2
+      exit 1
+    fi
+
+    # DATA_DIR can be a volume shared by several instances, so build the key in a
+    # temporary file next to it and put it in place as a single rename. Without
+    # that, two instances starting together both truncate the same path and one
+    # can read back an empty or half-written key; a crash mid-write leaves a
+    # truncated key that the next boot silently accepts. A symlink sitting on the
+    # path is replaced rather than written through, so a key never lands wherever
+    # it points.
+    (
+      tmp_key=$(mktemp -- "${KEY_FILE}.XXXXXX")
+      # Drop the staging key on the way out, so a kill partway through generation does
+      # not leave live key material in the volume. A container stop signals PID 1 only,
+      # which leaves this subshell to finish and clean up through the EXIT trap; the
+      # signal trap covers a stop that reaches the whole process group instead.
+      trap 'rm -f -- "$tmp_key"' EXIT
+      trap 'rm -f -- "$tmp_key"; exit 143' INT TERM HUP
+      head -c "$WEBUI_SECRET_KEY_LENGTH" /dev/random | base64 >"$tmp_key"
+      # 0640: an OpenShift-style arbitrary UID keeps group 0 and can still read the
+      # key. Set here rather than through the umask, so neither the caller's umask
+      # nor the mode of an empty leftover carries over. The terminator goes before
+      # the mode: BSD chmod stops parsing options at the first operand, so a
+      # trailing "--" would be read as a file name.
+      chmod -- 640 "$tmp_key"
+      # Claim the name with a hard link, so an instance that loses the race adopts
+      # the winner's key instead of replacing it and signing tokens the winner
+      # rejects. An empty file from an earlier crash cannot be linked over, so drop
+      # it and retry; rename only where the filesystem has no hard links.
+      for _ in 1 2 3; do
+        # Linked it, or a peer got there first and its key is the one to use.
+        if ln -- "$tmp_key" "$KEY_FILE" 2>/dev/null || [[ -s "$KEY_FILE" ]]; then
+          break
+        fi
+        # Nothing in the way, so the link itself is unsupported here (some network
+        # volumes): rename below rather than retrying, which would only spin.
+        if [[ ! -e "$KEY_FILE" ]]; then
+          break
+        fi
+        rm -f -- "$KEY_FILE" 2>/dev/null || true
+      done
+      if [[ ! -s "$KEY_FILE" ]]; then
+        mv -- "$tmp_key" "$KEY_FILE"
+      fi
+    )
   fi
 
   echo "Loading WEBUI_SECRET_KEY from ${KEY_FILE}"
-  WEBUI_SECRET_KEY=$(cat "$KEY_FILE")
+
+  # Read first and explain afterwards. Testing the path and then reading it leaves a
+  # gap another instance can act in, and the bare "cat: Permission denied" this
+  # replaces said nothing about what to do next.
+  WEBUI_SECRET_KEY=$(cat -- "$KEY_FILE" 2>/dev/null) || true
+  if [[ -z "$WEBUI_SECRET_KEY" ]]; then
+    if [[ ! -e "$KEY_FILE" && ! -L "$KEY_FILE" ]]; then
+      echo "WEBUI_SECRET_KEY file ${KEY_FILE} vanished while starting; retry." >&2
+    elif [[ ! -f "$KEY_FILE" ]]; then
+      echo "WEBUI_SECRET_KEY file ${KEY_FILE} is not a regular file." >&2
+    elif [[ ! -r "$KEY_FILE" ]]; then
+      echo "WEBUI_SECRET_KEY file ${KEY_FILE} is not readable as uid $(id -u):$(id -g)." >&2
+      echo "Give that uid access to it (a volume written by an earlier root-owned run" >&2
+      echo "needs chown), or set WEBUI_SECRET_KEY or WEBUI_SECRET_KEY_FILE instead." >&2
+    else
+      echo "WEBUI_SECRET_KEY file ${KEY_FILE} holds no key." >&2
+    fi
+    exit 1
+  fi
 fi
 
 # ── Ollama (bundled Docker image) ────────────────────────────────────────────
