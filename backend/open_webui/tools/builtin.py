@@ -28,7 +28,7 @@ from open_webui.models.memories import Memories
 from open_webui.models.messages import Message, Messages
 from open_webui.models.notes import Notes
 from open_webui.models.users import UserModel
-from open_webui.retrieval.utils import get_content_from_url
+from open_webui.retrieval.utils import filter_source_metadata, get_content_from_url
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
     CreateImageForm,
@@ -2600,6 +2600,7 @@ async def query_chat_files(
             for idx, doc in enumerate(documents):
                 metadata = metadatas[idx] if idx < len(metadatas) and isinstance(metadatas[idx], dict) else {}
                 chunk = {
+                    **filter_source_metadata(metadata),
                     'content': doc,
                     'source': metadata.get('source', metadata.get('name', source_info.get('name', 'Unknown'))),
                     'file_id': metadata.get('file_id', source_info.get('id', '')),
@@ -3312,6 +3313,7 @@ async def query_knowledge_files(
 
                 for idx, doc in enumerate(documents):
                     chunk_info = {
+                        **filter_source_metadata(metadatas[idx]),
                         'content': doc,
                         'source': metadatas[idx].get('source', metadatas[idx].get('name', 'Unknown')),
                         'file_id': metadatas[idx].get('file_id', ''),
@@ -3335,6 +3337,7 @@ async def query_knowledge_files(
             for idx, doc in enumerate(documents):
                 metadata = metadatas[idx] if idx < len(metadatas) else {}
                 chunk_info = {
+                    **filter_source_metadata(metadata),
                     'content': doc,
                     'source': metadata.get('source', metadata.get('name', knowledge.name)),
                     'file_id': metadata.get('file_id', f'external-{knowledge.id}'),

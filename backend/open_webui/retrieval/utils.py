@@ -35,6 +35,7 @@ from open_webui.env import (
     ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
     MPS_INFERENCE_LOCK,
     OFFLINE_MODE,
+    RAG_SOURCE_METADATA_KEYS,
     USE_SLIM,
 )
 from open_webui.models.access_grants import AccessGrants
@@ -1346,6 +1347,11 @@ async def filter_accessible_collections(
                 # Not a KB at all — legacy/ephemeral collection, allow
                 validated.add(name)
     return validated
+
+
+def filter_source_metadata(metadata: dict) -> dict:
+    """Keep only the chunk metadata keys the operator allowed the model to see."""
+    return {key: metadata[key] for key in RAG_SOURCE_METADATA_KEYS if metadata.get(key) is not None}
 
 
 async def get_sources_from_items(
