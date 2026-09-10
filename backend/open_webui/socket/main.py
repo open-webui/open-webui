@@ -1019,7 +1019,7 @@ async def _make_channel_emitter(request_info):
             content = get_output_text(state['output'])
 
             now = time.time()
-            if content and (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+            if state['output'] and (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, False, state['output'])
 

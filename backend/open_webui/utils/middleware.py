@@ -4778,6 +4778,14 @@ async def streaming_chat_response_handler(response, ctx):
                                 **response_data,
                                 'output_index': response_data['output_index'] + len(prior_output),
                             }
+                        if prior_output and isinstance(response_data.get('response'), dict):
+                            # response.output is this round only; the response.completed reducer drops earlier rounds
+                            return {
+                                **response_data,
+                                'response': {
+                                    key: value for key, value in response_data['response'].items() if key != 'output'
+                                },
+                            }
                         return response_data
 
                     async def flush_pending_delta_data(threshold: int = 0):
@@ -5595,6 +5603,7 @@ async def streaming_chat_response_handler(response, ctx):
                         if responses_api_tool_calls:
                             tool_calls.append(_split_tool_calls(responses_api_tool_calls))
 
+                output_start = len(prior_output)
                 try:
                     await stream_body_handler(response, form_data)
                 finally:
@@ -5625,6 +5634,27 @@ async def streaming_chat_response_handler(response, ctx):
                     original_system_content = (
                         get_content_from_message(original_system_message) if original_system_message else None
                     )
+
+                async def emit_current_response_output_items():
+                    for output_index, item in enumerate(full_output()[output_start:], start=output_start):
+                        if item.get('type') == 'function_call_output':
+                            # input_image parts are base64 data URIs only for the LLM, via convert_output_to_messages
+                            item = {
+                                **item,
+                                'output': [
+                                    part for part in item.get('output', []) if part.get('type') != 'input_image'
+                                ],
+                            }
+                        await event_emitter(
+                            {
+                                'type': 'response:completion',
+                                'data': {
+                                    'type': 'response.output_item.done',
+                                    'output_index': output_index,
+                                    'item': item,
+                                },
+                            }
+                        )
 
                 while tool_calls and (
                     max_tool_call_iterations is None or tool_call_iterations < max_tool_call_iterations
@@ -5693,14 +5723,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
                         return
 
-                    await event_emitter(
-                        {
-                            'type': 'chat:completion',
-                            'data': {
-                                'output': full_output(),
-                            },
-                        }
-                    )
+                    await emit_current_response_output_items()
 
                     tools = metadata.get('tools', {})
 
@@ -5955,25 +5978,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                         tool_call_sources.clear()
 
-                    # Strip input_image parts (large base64 data URIs) from the
-                    # output sent to the frontend — they're only for LLM consumption
-                    # via convert_output_to_messages.
-                    frontend_output = []
-                    for item in full_output():
-                        if item.get('type') == 'function_call_output':
-                            parts = item.get('output', [])
-                            if any(p.get('type') == 'input_image' for p in parts):
-                                item = {**item, 'output': [p for p in parts if p.get('type') != 'input_image']}
-                        frontend_output.append(item)
-
-                    await event_emitter(
-                        {
-                            'type': 'chat:completion',
-                            'data': {
-                                'output': frontend_output,
-                            },
-                        }
-                    )
+                    await emit_current_response_output_items()
 
                     try:
                         new_form_data = {
@@ -6070,6 +6075,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
                                     prior_output.pop()
                             output = []
+                            output_start = len(prior_output)
                             await stream_body_handler(res, new_form_data)
                             output = full_output()
                             prior_output = []
