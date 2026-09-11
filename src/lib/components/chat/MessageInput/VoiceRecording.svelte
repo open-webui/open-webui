@@ -6,6 +6,7 @@
 
 	import { transcribeAudio } from '$lib/apis/audio';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Mic from '$lib/components/icons/Mic.svelte';
 
 	import dayjs from 'dayjs';
 	import LocalizedFormat from 'dayjs/plugin/localizedFormat';
@@ -468,6 +469,14 @@
 		: 'bg-indigo-300/10 dark:bg-indigo-500/10 '} rounded-full flex justify-between {className}"
 >
 	<div class="flex items-center mr-1">
+		<div
+			class="flex items-center justify-center rounded-full p-1.5 {loading
+				? 'text-gray-500 dark:text-gray-400'
+				: 'text-indigo-600 dark:text-indigo-300'}"
+			aria-hidden="true"
+		>
+			<Mic className="size-4" />
+		</div>
 		<button
 			type="button"
 			class="p-1.5
