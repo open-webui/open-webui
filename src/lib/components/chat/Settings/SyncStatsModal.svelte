@@ -6,6 +6,7 @@
 	import { exportChatStats, exportSingleChatStats, downloadChatStats } from '$lib/apis/chats';
 	import { getVersion } from '$lib/apis';
 	import { settings } from '$lib/stores';
+	import { COMMUNITY_ORIGINS } from '$lib/constants';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -19,6 +20,10 @@
 
 	// Listen for verify:chat messages from opener
 	const handleMessage = async (event: MessageEvent) => {
+		if (!COMMUNITY_ORIGINS.includes(event.origin)) {
+			return;
+		}
+
 		// Community sends: { type: 'verify:chat', data: { id: ... } }
 		const chatId = event.data?.data?.id ?? event.data?.id;
 		if (event.data?.type === 'verify:chat' && chatId) {
@@ -32,7 +37,7 @@
 							chatId: chatId,
 							requestId: event.data.requestId ?? null
 						},
-						'*'
+						event.origin
 					);
 				}
 			} catch (err: any) {
@@ -45,7 +50,7 @@
 							chatId: chatId,
 							requestId: event.data.requestId ?? null
 						},
-						'*'
+						event.origin
 					);
 				}
 			}
@@ -89,7 +94,10 @@
 	// Helper to send postMessage to opener
 	const postToOpener = (message: object) => {
 		if (window.opener) {
-			window.opener.postMessage({ ...message, requestId: eventData?.requestId ?? null }, '*');
+			const payload = { ...message, requestId: eventData?.requestId ?? null };
+			for (const origin of COMMUNITY_ORIGINS) {
+				window.opener.postMessage(payload, origin);
+			}
 		}
 	};
 

@@ -62,7 +62,7 @@
 		removeTerminalConnection
 	} from '$lib/utils/connections';
 
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { COMMUNITY_ORIGINS, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import {
 		bestMatchingLanguage,
 		cleanText,
@@ -1049,11 +1049,7 @@
 	};
 
 	const windowMessageEventHandler = async (event) => {
-		if (
-			!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
-				event.origin
-			)
-		) {
+		if (!COMMUNITY_ORIGINS.includes(event.origin)) {
 			return;
 		}
 
