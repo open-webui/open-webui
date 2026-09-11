@@ -477,6 +477,14 @@ def _is_same_origin(url: str, base_url: str) -> bool:
     )
 
 
+def _headers_for_url(headers: dict[str, str], url: str, base_url: str) -> dict[str, str] | None:
+    """Send the configured backend's headers only to URLs on its own origin."""
+    if not _is_same_origin(url, base_url):
+        log.debug('Withholding headers for cross-origin image host: %s', urlparse(url).hostname)
+        return None
+    return {k: v for k, v in headers.items() if k != 'Content-Type'}
+
+
 async def get_image_data(data: str, headers=None, trusted_base_url: str | None = None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
@@ -668,7 +676,7 @@ async def image_generations(
                 if image_url := image.get('url', None):
                     image_data, content_type = await get_image_data(
                         image_url,
-                        {k: v for k, v in headers.items() if k != 'Content-Type'},
+                        _headers_for_url(headers, image_url, image_config.IMAGES_OPENAI_API_BASE_URL),
                     )
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
@@ -1047,7 +1055,7 @@ async def image_edits(
                 if image_url := image.get('url', None):
                     image_data, content_type = await get_image_data(
                         image_url,
-                        {k: v for k, v in headers.items() if k != 'Content-Type'},
+                        _headers_for_url(headers, image_url, image_config.IMAGES_EDIT_OPENAI_API_BASE_URL),
                     )
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
