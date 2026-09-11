@@ -1994,8 +1994,14 @@ async def chat_completion_files_handler(
 
     files = [item for item in (body.get('metadata', {}).get('files', None) or []) if item.get('type') != 'filesystem']
     if files:
-        # Check if all files are in full context mode
-        all_full_context = all(item.get('context') == 'full' for item in files)
+        # Check if all files are in full context mode, or the global bypass flag
+        # is on (which forces full-context injection regardless of per-item flags —
+        # see retrieval/utils.py's get_sources_from_items). Skipping query
+        # generation only when it will actually be used avoids wasting an LLM call.
+        bypass_embedding_and_retrieval = await Config.get('rag.bypass_embedding_and_retrieval')
+        all_full_context = bypass_embedding_and_retrieval or all(
+            item.get('context') == 'full' for item in files
+        )
 
         queries = []
         if not all_full_context:
