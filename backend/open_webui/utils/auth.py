@@ -248,20 +248,32 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
+# This runs on every authenticated request, so a line per failure floods the log.
+# Track the state instead: one when it breaks, one when it recovers.
+_revocation_check_failing = False
+
+
 async def is_valid_token(decoded, redis=None) -> bool:
     """
     Check whether a JWT has been revoked. Two mechanisms:
     1. Per-token (jti) — used by user-initiated sign-out (known jti).
     2. Per-user (revoked_at) — used by password changes and OIDC back-channel
        logout when individual jti values are unknown; rejects tokens with iat <= revoked_at.
+
+    Fails open. It sits in front of every authenticated request and the store only ever
+    holds revocations, so an unreachable store reads as "not revoked". A revoked token
+    living a little longer beats locking everyone out.
     """
-    if redis:
+    global _revocation_check_failing
+
+    if not redis:
+        return True
+
+    try:
         # Per-token revocation
         jti = decoded.get('jti')
-        if jti:
-            revoked = await redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
-            if revoked:
-                return False
+        if jti and await redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked'):
+            return False
 
         # Per-user revocation (password change, OIDC back-channel logout)
         user_id = decoded.get('id')
@@ -276,6 +288,15 @@ async def is_valid_token(decoded, redis=None) -> bool:
                         return False
                 except (ValueError, TypeError):
                     pass
+    except Exception as e:
+        if not _revocation_check_failing:
+            _revocation_check_failing = True
+            log.warning('Revocation check failed (%s); accepting tokens until it recovers', e)
+        return True
+
+    if _revocation_check_failing:
+        _revocation_check_failing = False
+        log.warning('Revocation check recovered')
 
     return True
 
