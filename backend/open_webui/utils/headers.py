@@ -141,10 +141,12 @@ def parse_custom_headers(
         '{{FILE_CONTENT_TYPE}}': metadata.get('file_content_type', '') or '',
         '{{TASK}}': metadata.get('task', '') or '',
         '{{USER_ID}}': (user.id if user else '') or '',
-        '{{USER_NAME}}': (user.name.strip() if user else '') or '',
+        '{{USER_NAME}}': quote(user.name.strip(), safe=' ') if user else '',
         '{{USER_EMAIL}}': (user.email.strip() if user else '') or '',
         '{{USER_ROLE}}': (user.role if user else '') or '',
-        '{{USER_GROUPS}}': ','.join(group.name.strip() for group in user_groups) if user_groups else '',
+        '{{USER_GROUPS}}': ','.join(quote(group.name.strip(), safe=' ') for group in user_groups)
+        if user_groups
+        else '',
         '{{USER_GROUP_IDS}}': ','.join(group.id for group in user_groups) if user_groups else '',
         '{{USER_AGENT}}': user_agent,
         '{{AUTH_TYPE}}': getattr(getattr(request, 'state', None), 'auth_type', None) or '',
