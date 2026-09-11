@@ -2290,7 +2290,13 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
     return ids
 
 
-SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[a-z0-9_-]+(?:\|([^>]*))?|/[a-z0-9_-]+\|([^>]*))>')
+# Skill mentions always carry a mandatory pipe-separated visible label:
+#   <$skillId|label>  or  </skillId|label>
+# The pipe+label is NOT optional for $-prefixed mentions — requiring it prevents
+# false-positive matches on angle-bracket constructs like Perl's <$fh> or shell
+# redirect syntax, which do not contain a '|' separator.
+# See: https://github.com/open-webui/open-webui/issues/29910
+SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[a-z0-9_-]+\|([^>]*)|/[a-z0-9_-]+\|([^>]*))>')
 
 
 def strip_skill_mentions(messages: list[dict]) -> None:
