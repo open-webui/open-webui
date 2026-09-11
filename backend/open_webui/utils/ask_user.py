@@ -24,8 +24,8 @@ def get_ask_user_tool_calls(tool_calls: list[dict]) -> tuple[list[dict], str | N
 
 def normalize_ask_user_request(arguments: dict) -> dict:
     questions = arguments.get('questions')
-    if not isinstance(questions, list) or not 1 <= len(questions) <= 3:
-        raise ValueError('ask_user requires 1-3 questions.')
+    if not isinstance(questions, list) or not len(questions) >= 1:
+        raise ValueError('ask_user requires at least one question.')
 
     normalized_questions = []
     seen_ids = set()
@@ -42,8 +42,8 @@ def normalize_ask_user_request(arguments: dict) -> dict:
         seen_ids.add(question_id)
 
         options = question.get('options')
-        if not isinstance(options, list) or not 2 <= len(options) <= 3:
-            raise ValueError('Each question requires 2-3 options.')
+        if not isinstance(options, list) or not len(options) >= 1:
+            raise ValueError('Each question requires at least one option.')
 
         normalized_options = []
         for option in options:
