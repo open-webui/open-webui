@@ -166,7 +166,7 @@ async def list_task_ids_by_item_id(redis, id):
     """
     if redis:
         return await redis_list_item_tasks(redis, id)
-    return item_tasks.get(id, [])
+    return list(item_tasks.get(id, []))
 
 
 async def save_response_stream(
