@@ -402,7 +402,7 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
         return form_data
 
     memory_context = f'{MEMORY_CONTEXT_OPEN}\n{rendered}\n{MEMORY_CONTEXT_CLOSE}'
-    form_data['messages'] = add_or_update_system_message(memory_context, messages, append=True)
+    form_data['messages'] = add_or_update_system_message(memory_context, messages)
     return form_data
 
 
