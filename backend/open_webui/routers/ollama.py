@@ -70,6 +70,8 @@ async def send_get_request(
     url: str,
     key: str | None = None,
     user: UserModel | None = None,
+    api_config: dict | None = None,
+    request: Request | None = None,
 ):
     """Issue a GET request to an Ollama backend and return JSON, or *None* on failure."""
     try:
@@ -81,6 +83,8 @@ async def send_get_request(
             headers['Authorization'] = f'Bearer {key}'
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
+        if api_config and api_config.get('headers'):
+            headers.update(await get_custom_headers(api_config['headers'], user, request=request))
 
         async with session.get(
             url,
@@ -248,10 +252,12 @@ async def get_status() -> dict:
 class ConnectionVerificationForm(BaseModel):
     url: str
     key: str | None = None
+    config: dict | None = None
 
 
 @router.post('/verify')
 async def verify_connection(
+    request: Request,
     form_data: ConnectionVerificationForm,
     user=Depends(get_admin_user),
 ):
@@ -263,6 +269,9 @@ async def verify_connection(
             headers['Authorization'] = f'Bearer {form_data.key}'
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
+        api_config = form_data.config or {}
+        if api_config.get('headers'):
+            headers.update(await get_custom_headers(api_config['headers'], user, request=request))
 
         async with session.get(
             f'{form_data.url}/api/version',
@@ -403,9 +412,13 @@ async def get_all_models(request: Request, user: UserModel | None = None):
     for idx, url in enumerate(base_urls):
         api_config = resolve_api_config(api_configs, idx, url)
         if not api_config:
-            tasks.append(send_get_request(f'{url}/api/tags', user=user))
+            tasks.append(send_get_request(f'{url}/api/tags', user=user, request=request))
         elif api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/tags', api_config.get('key'), user=user))
+            tasks.append(
+                send_get_request(
+                    f'{url}/api/tags', api_config.get('key'), user=user, api_config=api_config, request=request
+                )
+            )
         else:
             tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
@@ -496,8 +509,11 @@ async def get_ollama_tags(
         result = await get_all_models(request, user=user)
     else:
         url = (await Config.get('ollama.base_urls', []))[url_idx]
-        key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
-        result = await send_request(f'{url}/api/tags', 'GET', key=key, user=user)
+        api_configs = await Config.get('ollama.api_configs', {})
+        api_config = resolve_api_config(api_configs, url_idx, url)
+        result = await send_request(
+            f'{url}/api/tags', 'GET', key=get_api_key(url_idx, url, api_configs), user=user, api_config=api_config
+        )
 
     if user.role == 'user' and not BYPASS_MODEL_ACCESS_CONTROL:
         result['models'] = await get_filtered_models(result, user)
@@ -524,9 +540,13 @@ async def get_ollama_loaded_models(
             continue
         api_config = resolve_api_config(api_configs, idx, url)
         if not api_config:
-            tasks.append(send_get_request(f'{url}/api/ps', user=user))
+            tasks.append(send_get_request(f'{url}/api/ps', user=user, request=request))
         elif api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/ps', api_config.get('key'), user=user))
+            tasks.append(
+                send_get_request(
+                    f'{url}/api/ps', api_config.get('key'), user=user, api_config=api_config, request=request
+                )
+            )
         else:
             tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
@@ -560,17 +580,31 @@ async def get_ollama_versions(
 
     if url_idx is not None:
         url = (await Config.get('ollama.base_urls', []))[url_idx]
-        return await send_request(f'{url}/api/version', 'GET')
+        api_configs = await Config.get('ollama.api_configs', {})
+        api_config = resolve_api_config(api_configs, url_idx, url)
+        return await send_request(
+            f'{url}/api/version',
+            'GET',
+            key=get_api_key(url_idx, url, api_configs),
+            user=user,
+            api_config=api_config,
+        )
 
     # Fan-out to every enabled backend
     tasks = []
+    api_configs = await Config.get('ollama.api_configs', {})
     for idx, url in enumerate(await Config.get('ollama.base_urls', [])):
-        api_config = (await Config.get('ollama.api_configs', {})).get(
-            str(idx),
-            (await Config.get('ollama.api_configs', {})).get(url, {}),
-        )
+        api_config = resolve_api_config(api_configs, idx, url)
         if api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/version', api_config.get('key')))
+            tasks.append(
+                send_get_request(
+                    f'{url}/api/version',
+                    api_config.get('key'),
+                    user=user,
+                    api_config=api_config,
+                    request=request,
+                )
+            )
 
     raw = await asyncio.gather(*tasks)
     valid = [r for r in raw if r is not None]
