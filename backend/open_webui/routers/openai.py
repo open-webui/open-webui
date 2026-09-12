@@ -78,12 +78,18 @@ log = logging.getLogger(__name__)
 _STRIP_PROXY_HEADERS = frozenset({'content-encoding', 'content-length', 'transfer-encoding', 'server', 'date'})
 _MODEL_LIST_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
 _UNSUPPORTED_OPENAI_MODEL_KEYWORDS = ('babbage', 'dall-e', 'davinci', 'embedding', 'tts', 'whisper')
+_STRIP_MODEL_KEYS = frozenset({'action_ids', 'arena', 'filter_ids', 'info', 'pipe', 'preset'})
 BASE_MODELS_CACHE_KEY = f'{REDIS_KEY_PREFIX}:models:base'
 
 
 def _clean_proxy_headers(raw_headers) -> dict:
     """Return a copy of *raw_headers* without the encoding, server and date headers."""
     return {k: v for k, v in raw_headers.items() if k.lower() not in _STRIP_PROXY_HEADERS}
+
+
+def _clean_model_keys(model: dict) -> dict:
+    """Return a copy of *model* without the keys Open WebUI assigns itself."""
+    return {k: v for k, v in model.items() if k not in _STRIP_MODEL_KEYS}
 
 
 async def send_get_request(
@@ -833,7 +839,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                     if model_id and model_id not in models:
                         provider = model.get('provider', '')
                         merged = {
-                            **model,
+                            **_clean_model_keys(model),
                             'name': model.get('name', model_id),
                             'owned_by': 'openai',
                             'openai': model,
