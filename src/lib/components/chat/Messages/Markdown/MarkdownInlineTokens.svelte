@@ -9,6 +9,7 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { skills } from '$lib/stores';
 	import { copyToClipboard, safeLinkUrl, unescapeHtml } from '$lib/utils';
 
 	import Image from '$lib/components/common/Image.svelte';
@@ -128,7 +129,11 @@
 			}}
 		></iframe>
 	{:else if token.type === 'mention'}
-		<MentionToken {token} />
+		{#if token.triggerChar === '$' && !$skills?.some((skill) => skill.id === token.id && skill.is_active)}
+			{token.raw}
+		{:else}
+			<MentionToken {token} />
+		{/if}
 	{:else if token.type === 'footnote'}
 		{@html DOMPurify.sanitize(
 			`<sup class="footnote-ref footnote-ref-text">${token.escapedText}</sup>`

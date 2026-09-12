@@ -69,7 +69,7 @@ export const models: Writable<Model[]> = writable([]);
 
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
-export const skills = writable(null);
+export const skills: Writable<null | any[]> = writable(null);
 export const functions = writable(null);
 
 export type WorkspaceSection = 'models' | 'knowledge' | 'prompts' | 'skills' | 'tools';

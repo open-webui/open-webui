@@ -2,6 +2,7 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import equal from 'fast-deep-equal';
+	import { skills } from '$lib/stores';
 
 	marked.use({
 		breaks: true,
@@ -522,9 +523,15 @@
 					// Now replace the escaped mention patterns back into real spans
 					const withMentions = escaped.replace(
 						/&lt;([@#$])([^|&\s]+)(?:\|([^&]*?))?&gt;|&lt;\/([\w.\-:/]+)\|([^&]*?)&gt;/g,
-						(_, ch, id, label, slashSkillId, slashSkillLabel) => {
+						(match, ch, id, label, slashSkillId, slashSkillLabel) => {
 							const mentionChar = ch || '$';
 							const mentionId = id || slashSkillId;
+							if (
+								mentionChar === '$' &&
+								!$skills?.some((skill) => skill.id === mentionId && skill.is_active)
+							) {
+								return match;
+							}
 							const display = (label || slashSkillLabel)?.length
 								? label || slashSkillLabel
 								: mentionId;
