@@ -62,6 +62,8 @@ IMAGE_FILE_EXTENSIONS = {
     'image/mpo': '.jpg',
     'image/png': '.png',
     'image/webp': '.webp',
+    'image/gif': '.gif',
+    'image/bmp': '.bmp',
 }
 
 IMAGE_CONFIG_KEYS = {
@@ -120,7 +122,7 @@ def normalize_openai_edit_image_data_url(data_url: str) -> str:
         return data_url
 
     header, encoded = data_url.split(',', 1)
-    mime_type = header.split(';')[0].lstrip('data:').lower()
+    mime_type = header.split(';')[0].removeprefix('data:').lower()
     if mime_type not in {'image/jpeg', 'image/jpg', 'image/mpo'}:
         return data_url
 
@@ -156,7 +158,7 @@ def normalize_openai_edit_image_data_url(data_url: str) -> str:
 
 def get_image_file_item(base64_string, param_name='image'):
     header, encoded = base64_string.split(',', 1)
-    mime_type = header.split(';')[0].lstrip('data:') or 'image/png'
+    mime_type = header.split(';')[0].removeprefix('data:') or 'image/png'
     image_data = base64.b64decode(encoded)
     extension = IMAGE_FILE_EXTENSIONS.get(mime_type.lower()) or mimetypes.guess_extension(mime_type) or '.png'
     return (
@@ -477,6 +479,34 @@ def _is_same_origin(url: str, base_url: str) -> bool:
     )
 
 
+def sniff_image_mime(data: bytes) -> str:
+    """Sniff the MIME type of image data by checking magic bytes with PIL fallback."""
+    if data.startswith(b'\xff\xd8\xff'):
+        return 'image/jpeg'
+    if data.startswith(b'\x89PNG\r\n\x1a\n') or data.startswith(b'\x89PNG'):
+        return 'image/png'
+    if data.startswith(b'RIFF') and len(data) >= 12 and data[8:12] == b'WEBP':
+        return 'image/webp'
+    if data.startswith(b'GIF87a') or data.startswith(b'GIF89a'):
+        return 'image/gif'
+    if data.startswith(b'BM'):
+        return 'image/bmp'
+    if data.startswith(b'II*\x00') or data.startswith(b'MM\x00*'):
+        return 'image/tiff'
+
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            if img.format:
+                fmt = img.format.lower()
+                if fmt in ('jpeg', 'jpg'):
+                    return 'image/jpeg'
+                return f'image/{fmt}'
+    except Exception:
+        pass
+
+    return 'image/png'
+
+
 async def get_image_data(data: str, headers=None, trusted_base_url: str | None = None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
@@ -507,11 +537,13 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
         else:
             if ',' in data:
                 header, encoded = data.split(',', 1)
-                mime_type = header.split(';')[0].lstrip('data:')
+                mime_type = header.split(';')[0].removeprefix('data:').strip().lower()
                 img_data = base64.b64decode(encoded)
+                if not mime_type or mime_type in {'application/octet-stream', 'image/octet-stream'}:
+                    mime_type = sniff_image_mime(img_data)
             else:
-                mime_type = 'image/png'
                 img_data = base64.b64decode(data)
+                mime_type = sniff_image_mime(img_data)
             return img_data, mime_type
     except Exception as e:
         log.exception(f'Error loading image data: {e}')
@@ -521,7 +553,7 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
 async def upload_image(request, image_data, content_type, metadata, user, db=None):
     if image_data is None or content_type is None:
         raise ValueError('Failed to retrieve image data from the generation backend')
-    image_format = mimetypes.guess_extension(content_type)
+    image_format = IMAGE_FILE_EXTENSIONS.get(content_type.lower()) or mimetypes.guess_extension(content_type) or '.png'
     file = UploadFile(
         file=io.BytesIO(image_data),
         filename=f'generated-image{image_format}',  # will be converted to a unique ID on upload_file
