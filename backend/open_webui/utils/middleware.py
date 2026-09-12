@@ -3177,6 +3177,11 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
                         'The model generated malformed or incomplete JSON.'
                     ),
                 }
+    if not isinstance(params, dict):
+        return {
+            'tool_call_id': tool_call.get('id', ''),
+            'content': 'Error: Tool call arguments must be a JSON object.',
+        }
     tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
 
     tool = tools.get(name)
@@ -5742,12 +5747,23 @@ async def streaming_chat_response_handler(response, ctx):
                                 except Exception as e:
                                     log.debug(e)
                                     return None
+                        if not isinstance(params, dict):
+                            raise ValueError('Tool call arguments must be a JSON object.')
                         tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
                         return params
 
                     async def execute_tool_call(tool_call):
                         name = tool_call.get('function', {}).get('name', '')
-                        params = parse_tool_params(tool_call)
+                        try:
+                            params = parse_tool_params(tool_call)
+                        except ValueError:
+                            return (
+                                {},
+                                f'Error: Tool call arguments for `{name}` must be a JSON object. Please try again.',
+                                None,
+                                None,
+                                False,
+                            )
                         if params is None:
                             return {}, None, None, None, False
                         tool = tools.get(name)
