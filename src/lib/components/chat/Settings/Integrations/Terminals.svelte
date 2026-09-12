@@ -57,13 +57,20 @@
 />
 
 <div>
-	<div class="flex justify-between items-center mb-2">
-		<div class="flex items-center gap-2">
-			<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Open Terminal')}</div>
+	<div class="flex justify-between items-start gap-3 mb-3">
+		<div class="min-w-0">
+			<h3 id="terminal-connections-heading" class="text-xs text-gray-600 dark:text-gray-400">
+				{$i18n.t('Open Terminal')}
+			</h3>
+			<p class="mt-1 text-[0.6875rem] leading-relaxed text-gray-400 dark:text-gray-600">
+				{$i18n.t(
+					'Connect to Open Terminal instances to browse files and use them as always-on tools. Only one can be active at a time.'
+				)}
+			</p>
 		</div>
 		<Tooltip content={$i18n.t('Add Connection')}>
 			<button
-				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+				class="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 				on:click={() => (showAddModal = true)}
 				type="button"
 				aria-label={$i18n.t('Add Connection')}
@@ -86,8 +93,14 @@
 	</div>
 
 	{#if servers.length === 0}
-		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		<div class="text-[0.6875rem] leading-relaxed text-gray-400 dark:text-gray-600">
 			{$i18n.t('No terminal connections configured.')}
 		</div>
 	{/if}
+	<a
+		class="mt-2 inline-block text-[0.6875rem] text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-700 dark:text-gray-500 dark:decoration-gray-700 dark:hover:text-gray-300"
+		href="https://github.com/open-webui/open-terminal"
+		target="_blank"
+		rel="noopener noreferrer">{$i18n.t('Learn more about Open Terminal')} ↗</a
+	>
 </div>
