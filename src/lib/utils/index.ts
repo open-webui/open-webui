@@ -981,6 +981,20 @@ export const isValidHttpUrl = (string: string) => {
 	return url.protocol === 'http:' || url.protocol === 'https:';
 };
 
+const SAFE_LINK_PROTOCOLS = ['http:', 'https:', 'mailto:', 'tel:'];
+
+export const safeLinkUrl = (url: string): string | undefined => {
+	let protocol;
+	try {
+		protocol = new URL(url).protocol;
+	} catch (_) {
+		// No scheme to parse, so the browser resolves it against our own origin.
+		return url;
+	}
+
+	return SAFE_LINK_PROTOCOLS.includes(protocol) ? url : undefined;
+};
+
 export const isYoutubeUrl = (url: string) => {
 	return (
 		url.startsWith('https://www.youtube.com') ||
