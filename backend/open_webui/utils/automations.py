@@ -20,12 +20,14 @@ import logging
 import os
 import random
 import time
+from collections import Counter
 from datetime import datetime, timedelta
+from itertools import takewhile
 from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from dateutil.rrule import HOURLY, MINUTELY, SECONDLY, rruleset, rrulestr
+from dateutil.rrule import HOURLY, MINUTELY, MONTHLY, SECONDLY, WEEKLY, YEARLY, rrule, rruleset, rrulestr
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.constants import ERROR_MESSAGES
@@ -71,6 +73,47 @@ def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
         return None
 
 
+_NO_OCCURRENCES = rrule(YEARLY, dtstart=datetime(2000, 1, 1), count=0)
+
+
+def _can_ever_fire(rule: rrule) -> bool:
+    """False only when no date can satisfy the rule, which dateutil reports after walking to year 9999."""
+    plain_weekdays = () if rule._bynweekday else rule._byweekday
+    # Passing every weekday keeps dateutil from filling in DTSTART's own month and day as filters.
+    probe = rrule(
+        YEARLY,
+        dtstart=rule._dtstart,
+        wkst=rule._wkst,
+        bymonth=rule._bymonth,
+        bymonthday=(rule._bymonthday + rule._bynmonthday) or None,
+        byyearday=rule._byyearday,
+        byweekno=rule._byweekno,
+        byeaster=rule._byeaster,
+        byweekday=plain_weekdays or tuple(range(7)),
+    )
+    first_match = probe.after(rule._dtstart, inc=True)
+    if first_match is None:
+        return False
+    if not rule._bysetpos:
+        return True
+
+    hour_count = len(rule._byhour or (0,))
+    minute_count = len(rule._byminute or (0,))
+    second_count = len(rule._bysecond or (0,))
+    times_per_period = {SECONDLY: 1, MINUTELY: second_count, HOURLY: minute_count * second_count}.get(
+        rule._freq, hour_count * minute_count * second_count
+    )
+    days_per_period = {YEARLY: 366, MONTHLY: 31, WEEKLY: 7}.get(rule._freq, 1)
+    if rule._freq == YEARLY:
+        last_year = first_match.year + 40
+        sampled = takewhile(lambda match: match.year <= last_year, probe.xafter(first_match, inc=True))
+        per_year = Counter(match.year for match in sampled)
+        per_year.pop(first_match.year, None)
+        days_per_period = max(per_year.values(), default=days_per_period)
+    # dateutil skips out-of-range positions, so the rule still fires as long as one of them lands.
+    return not all(abs(pos) > days_per_period * times_per_period for pos in rule._bysetpos)
+
+
 def _parse_rule(s: str, now: Optional[datetime] = None):
     """Parse RRULE with clock-aligned DTSTART for sub-daily frequencies.
 
@@ -87,6 +130,11 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
         raise ValueError('only one RRULE is supported per recurrence rule')
 
     rule = rules[0]
+    if not _can_ever_fire(rule):
+        if not isinstance(parsed, rruleset):
+            return _NO_OCCURRENCES
+        rules[0] = _NO_OCCURRENCES
+        return parsed
     start = rule._dtstart.replace(tzinfo=None)
     anchor = now or datetime.now()
     lines = s.splitlines()
