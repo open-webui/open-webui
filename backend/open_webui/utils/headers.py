@@ -1,5 +1,6 @@
 import logging
 import time
+from string import punctuation
 from typing import Any, Optional
 from urllib.parse import quote
 
@@ -156,6 +157,7 @@ def parse_custom_headers(
             value = str(value)
         for token, val in template_vars.items():
             value = value.replace(token, val)
-        parsed_headers[key] = value
+        # Encode Unicode and controls after substitution; preserve ASCII header syntax and existing escapes.
+        parsed_headers[key] = quote(value, safe=punctuation + ' \t')
 
     return parsed_headers
