@@ -33,12 +33,14 @@ from open_webui.utils.terminals import (
 )
 from starlette.background import BackgroundTask
 from starlette.requests import ClientDisconnect
+from yarl import URL
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
 
 STREAMING_CONTENT_TYPES = ('application/octet-stream', 'image/', 'application/pdf')
+ADMIN_API_PATHS = ('api/v1/policies', 'api/v1/status', 'api/v1/terminals')
 # Drop the upstream's server and date: uvicorn adds its own and forwarding both duplicates them.
 STRIPPED_RESPONSE_HEADERS = frozenset(
     ('transfer-encoding', 'connection', 'content-encoding', 'content-length', 'server', 'date')
@@ -65,7 +67,8 @@ def _sanitize_proxy_path(path: str) -> str | None:
         return None
     # posixpath splits on '/' only, so 'a/..\..\b' survives normpath as one component.
     # Upstreams that treat '\' as a separator would resolve it, so reject outright.
-    if '\\' in decoded:
+    # URL parsers also remove tabs/newlines, which can turn '.\t.' into '..'.
+    if any(char in decoded for char in '\\\t\r\n'):
         return None
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
@@ -133,6 +136,15 @@ async def proxy_terminal(
 
     target_url = f'{base_url}/{safe_path}'
 
+    # Check the path aiohttp will send, relative to the configured server root.
+    base_path = URL(str(connection.get('url') or '')).path.rstrip('/')
+    target_path = URL(target_url).path
+    if any(
+        target_path == f'{base_path}/{prefix}' or target_path.startswith(f'{base_path}/{prefix}/')
+        for prefix in ADMIN_API_PATHS
+    ):
+        return JSONResponse({'error': 'Path not allowed'}, status_code=403)
+
     if request.query_params:
         target_url += f'?{request.query_params}'
 
@@ -189,6 +201,7 @@ async def proxy_terminal(
             cookies=cookies,
             data=body or None,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            allow_redirects=False,
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
