@@ -724,9 +724,9 @@
 					props: {
 						decorations: (state) => {
 							const { selection } = state;
-							const { focused } = this.editor;
+							const { isFocused } = this.editor;
 
-							if (focused || selection.empty) {
+							if (isFocused || selection.empty) {
 								return null;
 							}
 
@@ -830,7 +830,7 @@
 				...(messageInput ? [PromptItalic] : []),
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
-				SelectionDecoration,
+				...(messageInput ? [] : [SelectionDecoration]),
 
 				...(richText
 					? [
