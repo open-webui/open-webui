@@ -18,6 +18,7 @@
 	import {
 		createNewModel,
 		deleteAllModels,
+		exportModels,
 		getBaseModelTags,
 		getBaseModels,
 		getModelById,
@@ -273,10 +274,13 @@
 		allModels = await getModels(localStorage.token);
 
 		const providerModels = await getModels(localStorage.token, null, true);
+		const presetModels = await exportModels(localStorage.token);
 		const allModelIds = new Set<string>(allModels.map((model: ModelListItem) => model.id));
 		allModels = [
 			...allModels,
-			...providerModels.filter((model: ModelListItem) => !allModelIds.has(model.id))
+			...[...providerModels, ...presetModels].filter(
+				(model: ModelListItem) => !allModelIds.has(model.id)
+			)
 		];
 
 		const baseModelIds = new Set<string>(baseModels.map((model: ModelListItem) => model.id));
@@ -297,7 +301,7 @@
 						id: m.id,
 						name: m.name,
 
-						is_active: true
+						is_active: m.is_active ?? true
 					};
 				}
 			});
