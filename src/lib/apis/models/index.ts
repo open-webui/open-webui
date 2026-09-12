@@ -149,6 +149,18 @@ export const importModels = async (token: string, models: object[]) => {
 	return res;
 };
 
+export const getAllModels = async (token: string = '') => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/all`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
 export const getBaseModels = async (token: string = '', tag: string = '') => {
 	let error = null;
 
