@@ -5,6 +5,7 @@ import logging
 import random
 import sys
 import time
+from contextlib import suppress
 from typing import Any
 
 import pycrdt as Y
@@ -37,17 +38,23 @@ from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
-from open_webui.tasks import create_task, stop_item_tasks
+from open_webui.tasks import (
+    REDIS_PUBSUB_MAX_RECONNECT_INTERVAL,
+    REDIS_PUBSUB_RECONNECT_INTERVAL,
+    create_task,
+    stop_item_tasks,
+)
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.json_codec import SOCKETIO_JSON
+from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
     get_sentinels_from_env,
 )
+from redis.exceptions import RedisError
 from socketio.packet import Packet
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -188,6 +195,13 @@ YDOC_MANAGER = YdocManager(
     redis=REDIS,
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
+
+REDIS_DIRECT_COMPLETION_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
+
+DIRECT_COMPLETION_RELAY_ENABLED = WEBSOCKET_MANAGER == 'redis'
+
+DIRECT_COMPLETION_QUEUES: dict[str, asyncio.Queue] = {}
+DIRECT_COMPLETION_PUBLISH_LOCK = asyncio.Lock()
 
 
 def get_session_pool_batches():
@@ -941,6 +955,78 @@ async def disconnect(sid, reason=None):
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")
+
+
+async def direct_completion_listener() -> None:
+    """Hand every relayed chunk to the queue of the direct completion it belongs to."""
+    reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+    while True:
+        pubsub = None
+        try:
+            # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+            await REDIS.initialize()
+
+            pubsub = REDIS.pubsub()
+            await pubsub.subscribe(REDIS_DIRECT_COMPLETION_CHANNEL)
+            reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                chunk = JSONCodec.loads(message['data'])
+                queue = DIRECT_COMPLETION_QUEUES.get(chunk['channel'])
+                if queue is not None:
+                    await queue.put(chunk['data'])
+            log.warning('Direct completion relay listener stopped. Retrying.')
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception('Direct completion relay listener failed. Retrying.')
+        finally:
+            if pubsub:
+                with suppress(Exception):
+                    await pubsub.aclose()
+
+        await asyncio.sleep(reconnect_interval)
+        reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
+
+
+def open_direct_completion_queue(channel: str) -> asyncio.Queue:
+    """Open the queue receiving the client's chunk emits for one direct completion."""
+    queue = asyncio.Queue()
+    DIRECT_COMPLETION_QUEUES[channel] = queue
+    return queue
+
+
+def close_direct_completion_queue(channel: str) -> None:
+    DIRECT_COMPLETION_QUEUES.pop(channel, None)
+
+
+async def publish_direct_completion_chunk(channel: str, data: Any) -> None:
+    """Publish one chunk to the relay channel."""
+    async with DIRECT_COMPLETION_PUBLISH_LOCK:
+        await REDIS.publish(REDIS_DIRECT_COMPLETION_CHANNEL, dumps_bytes({'channel': channel, 'data': data}))
+
+
+@sio.on('*')
+async def handle_direct_completion_chunk(event: Any, sid: str, *args: Any) -> None:
+    """Intake for the chunks a browser streams back for its own direct completion."""
+    if not isinstance(event, str) or event.count(':') != 2 or not args:
+        return
+
+    user = await get_socket_session_user(sid)
+    if not user or user.get('id') != event.split(':', 1)[0]:
+        return
+
+    queue = DIRECT_COMPLETION_QUEUES.get(event)
+    if queue is not None:
+        await queue.put(args[0])
+    elif DIRECT_COMPLETION_RELAY_ENABLED:
+        try:
+            await publish_direct_completion_chunk(event, args[0])
+        except RedisError as e:
+            log.debug('Failed to relay direct completion chunk on %s: %s', event, e)
 
 
 async def _make_channel_emitter(request_info):
