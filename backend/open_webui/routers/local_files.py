@@ -254,6 +254,16 @@ async def local_import(
 
             # --- Step 3: Process (extract text, chunk, embed) ---
             try:
+                # Step 3a: Extract + embed WITHOUT collection_name
+                # This triggers the actual file reading / text extraction path
+                await process_file(
+                    request,
+                    ProcessFileForm(file_id=file_id),
+                    user=user,
+                    db=db,
+                )
+
+                # Step 3b: Add to KB collection (reuses the chunks from 3a)
                 await process_file(
                     request,
                     ProcessFileForm(
