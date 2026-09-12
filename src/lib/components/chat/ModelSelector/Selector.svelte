@@ -229,6 +229,9 @@
 		) {
 			return;
 		}
+		// Prevent the dismissing click from propagating to elements underneath the dropdown
+		e.preventDefault();
+		e.stopPropagation();
 		show = false;
 		document.getElementById(`model-selector-${id}-button`)?.blur();
 	};
@@ -1016,6 +1019,15 @@
 	</button>
 
 	{#if show}
+		<!-- Backdrop scrim to absorb outside clicks and prevent click-through to underlying elements -->
+		<div
+			use:portal
+			style="position: fixed; inset: 0; z-index: 9998;"
+			on:pointerdown|stopPropagation|preventDefault={() => {
+				show = false;
+				document.getElementById(`model-selector-${id}-button`)?.blur();
+			}}
+		/>
 		<div
 			use:portal
 			bind:this={contentElement}
