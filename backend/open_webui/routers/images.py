@@ -435,6 +435,12 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     models,
                 )
             )
+    except (aiohttp.ClientConnectionError, TimeoutError) as e:
+        log.error('Failed to list image generation models: %s', str(e) or type(e).__name__)
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Failed to retrieve image generation models'),
+        )
     except Exception as e:
         log.exception(f'Failed to list image generation models: {e}')
         raise HTTPException(
