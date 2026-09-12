@@ -22,7 +22,7 @@
 
 		<Tooltip content={$i18n.t('Home')} placement="right">
 			<button
-				aria-label={$i18n.t('Home')}
+				aria-label={$i18n.t('Navigate to home')}
 				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
 				on:click={() => {
 					selected = 'home';
@@ -54,7 +54,7 @@
 			</div>
 		{/if}
 		<button
-			aria-label={$i18n.t('Chat')}
+			aria-label={$i18n.t('Navigate to chat list')}
 			class=" cursor-pointer bg-transparent"
 			on:click={() => {
 				selected = '';
