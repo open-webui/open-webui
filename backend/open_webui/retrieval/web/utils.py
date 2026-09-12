@@ -130,7 +130,7 @@ def _assert_addresses_allowed(addresses: Sequence[str]) -> None:
 
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
-        if isinstance(validators.url(url), validators.ValidationError):
+        if isinstance(validators.url(url, simple_host=ENABLE_LOCAL_WEB_FETCH), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         # Reject parser-confusing chars: urlparse and requests/aiohttp split
