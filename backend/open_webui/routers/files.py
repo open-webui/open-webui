@@ -125,6 +125,19 @@ def _media_supported_for_extraction(
     return bool(content_extraction_engine and _matches_configured_mime_type(supported, content_type))
 
 
+async def _resolve_knowledge_directory_id(knowledge_id: str, directory_id: str | None, db) -> str | None:
+    """Drop a client-supplied directory_id that does not name a directory of this knowledge base."""
+    if not directory_id:
+        return None
+
+    directory = await Knowledges.get_directory_by_id(directory_id, db=db)
+    if directory and directory.knowledge_id == knowledge_id:
+        return directory_id
+
+    log.warning('Ignoring directory %s: not a directory of knowledge %s', directory_id, knowledge_id)
+    return None
+
+
 async def process_uploaded_file(
     request,
     file,
@@ -218,6 +231,10 @@ async def process_uploaded_file(
                             db=db_session,
                         )
                     )
+                    directory_id = await _resolve_knowledge_directory_id(
+                        knowledge_id, file_metadata.get('directory_id'), db_session
+                    )
+
                     if not can_write:
                         log.warning(
                             f'Refusing to auto-link file {file_item.id} to knowledge '
@@ -237,7 +254,7 @@ async def process_uploaded_file(
                             knowledge_id=knowledge_id,
                             file_id=file_item.id,
                             user_id=user.id,
-                            directory_id=file_metadata.get('directory_id'),
+                            directory_id=directory_id,
                             db=db_session,
                         )
                         if not knowledge_file:
