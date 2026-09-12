@@ -1102,13 +1102,12 @@ async def model_response_handler(request, channel, message, user, db=None):
                 # Resolve model config (same path automations use)
                 from open_webui.utils.automations import _resolve_model_defaults
 
-                tool_ids, features, filter_ids, _ = await _resolve_model_defaults(request.app, model_id)
-
                 # Build full form_data — same shape as frontend POST.
                 # The channel: prefix routes pipeline events to the
                 # channel emitter in socket/main.py instead of the
                 # default chat emitter.
                 form_data = {
+                    **await _resolve_model_defaults(request.app, model_id),
                     'model': model_id,
                     'messages': [
                         system_message,
@@ -1122,12 +1121,6 @@ async def model_response_handler(request, channel, message, user, db=None):
                 }
                 if files:
                     form_data['files'] = files
-                if tool_ids:
-                    form_data['tool_ids'] = tool_ids
-                if features:
-                    form_data['features'] = features
-                if filter_ids:
-                    form_data['filter_ids'] = filter_ids
 
                 # Call the full chat completion pipeline — streaming,
                 # tools, filters, RAG — everything. The pipeline runs as
