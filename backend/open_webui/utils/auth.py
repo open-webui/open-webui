@@ -8,6 +8,8 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta
+from threading import Lock
+from time import monotonic
 from typing import Optional, Union
 
 import bcrypt
@@ -249,6 +251,28 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
+class RateLimitFilter(logging.Filter):
+    """Limit a logger to one record per interval per process."""
+
+    def __init__(self, interval=60):
+        super().__init__()
+        self.interval = interval
+        self.next_allowed = float('-inf')
+        self.lock = Lock()
+
+    def filter(self, record):
+        with self.lock:
+            now = monotonic()
+            if now < self.next_allowed:
+                return False
+            self.next_allowed = now + self.interval
+        return True
+
+
+revocation_log = logging.getLogger(f'{__name__}.revocation')
+revocation_log.addFilter(RateLimitFilter())
+
+
 async def is_valid_token(decoded, redis=None) -> bool:
     """
     Check whether a JWT has been revoked. Two mechanisms:
@@ -283,7 +307,7 @@ async def is_valid_token(decoded, redis=None) -> bool:
                 except (ValueError, TypeError):
                     pass
     except RedisError as e:
-        log.warning('Revocation check failed; accepting token: %s', e)
+        revocation_log.warning('Revocation check failed; accepting token: %s', e)
 
     return True
 
