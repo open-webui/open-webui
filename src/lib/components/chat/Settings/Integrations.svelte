@@ -149,6 +149,11 @@
 						{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
 					</div>
 					<div class={helpTextClass}>
+						{$i18n.t(
+							'Connections managed through the Admin Panel are recommended for everyday use. Direct connections provide convenient access to your own endpoints, but rely on your browser session to keep requests running, making them better suited to testing and temporary use.'
+						)}
+					</div>
+					<div class={helpTextClass}>
 						<!-- LICENSE covers this Open WebUI wordmark.
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							https://docs.openwebui.com/license. -->

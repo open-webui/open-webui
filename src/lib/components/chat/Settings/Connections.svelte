@@ -125,6 +125,12 @@
 				</div>
 
 				<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					{$i18n.t(
+						'Connections managed through the Admin Panel are recommended for everyday use. Direct connections provide convenient access to your own endpoints, but rely on your browser session to keep requests running, making them better suited to testing and temporary use.'
+					)}
+				</div>
+
+				<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 					<!-- LICENSE covers this Open WebUI wordmark.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
