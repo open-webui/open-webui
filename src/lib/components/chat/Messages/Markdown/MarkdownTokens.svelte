@@ -1,0 +1,640 @@
+<script lang="ts">
+	import { decode } from 'html-entities';
+	import { onMount, getContext } from 'svelte';
+	const i18n = getContext('i18n');
+
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
+	import { marked, type Token } from 'marked';
+	import { copyToClipboard, unescapeHtml } from '$lib/utils';
+	import { resolveChatMessageToolCall } from '$lib/apis/chats';
+
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { settings } from '$lib/stores';
+	import { toast } from 'svelte-sonner';
+
+	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
+	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
+	import KatexRenderer from './KatexRenderer.svelte';
+	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
+	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
+	import ConsecutiveDetailsGroup from './ConsecutiveDetailsGroup.svelte';
+
+	import HtmlToken from './HTMLToken.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import ColonFenceBlock from './ColonFenceBlock.svelte';
+
+	export let id: string;
+	export let chatId = '';
+	export let messageId = '';
+	export let tokens: Token[];
+	export let top = true;
+	export let attributes = {};
+	export let sourceIds = [];
+
+	export let done = true;
+
+	export let save = false;
+	export let preview = false;
+	export let compactPreview = false;
+
+	export let paragraphTag = 'p';
+
+	export let editCodeBlock = true;
+	export let topPadding = false;
+	export let allowEmbeds = true;
+
+	export let onSave: Function = () => {};
+	export let onUpdate: Function = () => {};
+	export let onPreview: Function = () => {};
+
+	export let onTaskClick: Function = () => {};
+	export let onSourceClick: Function = () => {};
+	export let onToolCallResolved: Function = () => {};
+
+	const headerComponent = (depth: number) => {
+		return 'h' + depth;
+	};
+
+	const GROUPABLE_DETAIL_TYPES = new Set(['tool_calls', 'reasoning', 'code_interpreter']);
+
+	const isGroupableDetailToken = (token: Token & { attributes?: { type?: string } }) => {
+		return token?.type === 'details' && GROUPABLE_DETAIL_TYPES.has(token?.attributes?.type ?? '');
+	};
+
+	const getDisplayTokens = (tokenList: Token[] = []) => {
+		const displayTokens = [];
+		let detailGroup = [];
+
+		const flushDetailGroup = () => {
+			if (detailGroup.length > 1) {
+				displayTokens.push({
+					type: 'detail_group',
+					items: [...detailGroup]
+				});
+			} else if (detailGroup.length === 1) {
+				displayTokens.push(detailGroup[0]);
+			}
+
+			detailGroup = [];
+		};
+
+		for (const token of tokenList) {
+			if (isGroupableDetailToken(token)) {
+				detailGroup.push(token);
+			} else {
+				flushDetailGroup();
+				displayTokens.push(token);
+			}
+		}
+
+		flushDetailGroup();
+
+		return displayTokens;
+	};
+
+	const getDetailTextContent = (token) => {
+		return decode(token?.text || '')
+			.replace(/<summary>.*?<\/summary>/gi, '')
+			.trim();
+	};
+
+	let resolvingCallId = '';
+
+	const resolveToolCall = async (callId: string, approved: boolean) => {
+		if (!chatId || !messageId || !callId || resolvingCallId) {
+			return;
+		}
+
+		resolvingCallId = callId;
+		try {
+			const res = await resolveChatMessageToolCall(
+				localStorage.token,
+				chatId,
+				messageId,
+				callId,
+				approved ? 'approve' : 'reject'
+			);
+			onToolCallResolved(res);
+		} catch (err) {
+			toast.error(String(err));
+		} finally {
+			resolvingCallId = '';
+		}
+	};
+
+	$: detailButtonClassName = `py-0.5 ${
+		compactPreview ? 'text-xs' : 'text-[0.9375rem]'
+	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
+
+	$: displayTokens = getDisplayTokens(tokens);
+	$: singlePlainBlock =
+		displayTokens.length === 1 &&
+		(displayTokens[0]?.type === 'paragraph' || displayTokens[0]?.type === 'text');
+
+	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
+		console.log('Exporting table to CSV');
+
+		// Extract header row text, decode HTML entities, and escape for CSV.
+		const header = token.header.map(
+			(headerCell) => `"${decode(headerCell.text).replace(/"/g, '""')}"`
+		);
+
+		// Create an array for rows that will hold the mapped cell text.
+		const rows = token.rows.map((row) =>
+			row.map((cell) => {
+				// Map tokens into a single text
+				const cellContent = cell.tokens.map((token) => token.text).join('');
+				// Decode HTML entities and escape double quotes, wrap in double quotes
+				return `"${decode(cellContent).replace(/"/g, '""')}"`;
+			})
+		);
+
+		// Combine header and rows
+		const csvData = [header, ...rows];
+
+		// Join the rows using commas (,) as the separator and rows using newline (\n).
+		const csvContent = csvData.map((row) => row.join(',')).join('\n');
+
+		// Log rows and CSV content to ensure everything is correct.
+		console.log(csvData);
+		console.log(csvContent);
+
+		// To handle Unicode characters, you need to prefix the data with a BOM:
+		const bom = '\uFEFF'; // BOM for UTF-8
+
+		// Create a new Blob prefixed with the BOM to ensure proper Unicode encoding.
+		const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=UTF-8' });
+
+		// Use FileSaver.js's saveAs function to save the generated CSV file.
+		saveAs(blob, `table-${id}-${tokenIdx}.csv`);
+	};
+</script>
+
+<!-- {JSON.stringify(tokens)} -->
+{#each displayTokens as token, tokenIdx (tokenIdx)}
+	{#if token.type === 'hr'}
+		<hr class="border-gray-50 dark:border-gray-850/30" />
+	{:else if token.type === 'heading'}
+		<svelte:element this={headerComponent(token.depth)} dir="auto">
+			<MarkdownInlineTokens
+				id={`${id}-${tokenIdx}-h`}
+				tokens={token.tokens}
+				{done}
+				{sourceIds}
+				{onSourceClick}
+			/>
+		</svelte:element>
+	{:else if token.type === 'code'}
+		{#if token.raw.includes('```')}
+			<CodeBlock
+				id={`${id}-${tokenIdx}`}
+				collapsed={$settings?.collapseCodeBlocks ?? false}
+				{token}
+				lang={token?.lang ?? ''}
+				code={token?.text ?? ''}
+				{attributes}
+				{save}
+				{preview}
+				edit={editCodeBlock}
+				stickyButtonsClassName={topPadding ? 'top-10' : 'top-0'}
+				onSave={(value) => {
+					onSave({
+						raw: token.raw,
+						oldContent: token.text,
+						newContent: value
+					});
+				}}
+				{onUpdate}
+				{onPreview}
+			/>
+		{:else}
+			{token.text}
+		{/if}
+	{:else if token.type === 'table'}
+		<div class="relative w-full group mb-2">
+			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
+				<table
+					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					dir="auto"
+				>
+					<thead class="text-xs text-gray-700 uppercase dark:text-gray-400 border-none">
+						<tr class="">
+							{#each token.header as header, headerIdx}
+								<th
+									scope="col"
+									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
+									style={token.align[headerIdx] ? `text-align: ${token.align[headerIdx]}` : ''}
+								>
+									<div class="gap-1.5 text-start">
+										<div class="shrink-0 break-normal">
+											<MarkdownInlineTokens
+												id={`${id}-${tokenIdx}-header-${headerIdx}`}
+												tokens={header.tokens}
+												{done}
+												{sourceIds}
+												{onSourceClick}
+											/>
+										</div>
+									</div>
+								</th>
+							{/each}
+						</tr>
+					</thead>
+					<tbody>
+						{#each token.rows as row, rowIdx}
+							<tr class="text-xs">
+								{#each row ?? [] as cell, cellIdx}
+									<td
+										class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -
+											1 ===
+										rowIdx
+											? ''
+											: 'border-b border-gray-50! dark:border-gray-850!'}"
+										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
+									>
+										<div class="break-normal">
+											<MarkdownInlineTokens
+												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
+												tokens={cell.tokens}
+												{done}
+												{sourceIds}
+												{onSourceClick}
+											/>
+										</div>
+									</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+
+			<div class=" absolute top-1 right-1.5 z-20 hover-reveal flex gap-0.5">
+				<Tooltip content={$i18n.t('Copy')}>
+					<button
+						class="p-1 rounded-lg bg-transparent transition"
+						on:click={(e) => {
+							e.stopPropagation();
+							copyToClipboard(token.raw.trim(), null, $settings?.copyFormatted ?? false);
+						}}
+					>
+						<Clipboard className=" size-3.5" strokeWidth="1.5" />
+					</button>
+				</Tooltip>
+
+				<Tooltip content={$i18n.t('Export to CSV')}>
+					<button
+						class="p-1 rounded-lg bg-transparent transition"
+						on:click={(e) => {
+							e.stopPropagation();
+							exportTableToCSVHandler(token, tokenIdx);
+						}}
+					>
+						<Download className=" size-3.5" strokeWidth="1.5" />
+					</button>
+				</Tooltip>
+			</div>
+		</div>
+	{:else if token.type === 'blockquote'}
+		{@const alert = alertComponent(token)}
+		{#if alert}
+			<AlertRenderer {token} {alert} />
+		{:else}
+			<blockquote dir="auto">
+				<svelte:self
+					id={`${id}-${tokenIdx}`}
+					{chatId}
+					{messageId}
+					tokens={token.tokens}
+					{done}
+					{save}
+					{preview}
+					{compactPreview}
+					{editCodeBlock}
+					{onTaskClick}
+					{sourceIds}
+					{onSourceClick}
+					{onToolCallResolved}
+				/>
+			</blockquote>
+		{/if}
+	{:else if token.type === 'list'}
+		{#if token.ordered}
+			<ol start={token.start || 1} dir="auto">
+				{#each token.items as item, itemIdx}
+					<li class="text-start">
+						{#if item?.task}
+							<input
+								class=" translate-y-[1px] -translate-x-1 flex-shrink-0"
+								type="checkbox"
+								checked={item.checked}
+								on:change={(e) => {
+									onTaskClick({
+										id: id,
+										token: token,
+										tokenIdx: tokenIdx,
+										item: item,
+										itemIdx: itemIdx,
+										checked: e.target.checked
+									});
+								}}
+							/>
+						{/if}
+
+						<svelte:self
+							id={`${id}-${tokenIdx}-${itemIdx}`}
+							{chatId}
+							{messageId}
+							tokens={item.tokens}
+							top={token.loose}
+							{done}
+							{save}
+							{preview}
+							{compactPreview}
+							{editCodeBlock}
+							{onTaskClick}
+							{sourceIds}
+							{onSourceClick}
+						/>
+					</li>
+				{/each}
+			</ol>
+		{:else}
+			<ul dir="auto" class="">
+				{#each token.items as item, itemIdx}
+					<li class="text-start {item?.task ? 'flex -translate-x-6.5 gap-3 ' : ''}">
+						{#if item?.task}
+							<input
+								class="flex-shrink-0"
+								type="checkbox"
+								checked={item.checked}
+								on:change={(e) => {
+									onTaskClick({
+										id: id,
+										token: token,
+										tokenIdx: tokenIdx,
+										item: item,
+										itemIdx: itemIdx,
+										checked: e.target.checked
+									});
+								}}
+							/>
+
+							<div>
+								<svelte:self
+									id={`${id}-${tokenIdx}-${itemIdx}`}
+									{chatId}
+									{messageId}
+									tokens={item.tokens}
+									top={token.loose}
+									{done}
+									{save}
+									{preview}
+									{compactPreview}
+									{editCodeBlock}
+									{onTaskClick}
+									{sourceIds}
+									{onSourceClick}
+								/>
+							</div>
+						{:else}
+							<svelte:self
+								id={`${id}-${tokenIdx}-${itemIdx}`}
+								{chatId}
+								{messageId}
+								tokens={item.tokens}
+								top={token.loose}
+								{done}
+								{save}
+								{preview}
+								{compactPreview}
+								{editCodeBlock}
+								{onTaskClick}
+								{sourceIds}
+								{onSourceClick}
+							/>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	{:else if token.type === 'detail_group'}
+		<ConsecutiveDetailsGroup
+			id={`${id}-${tokenIdx}-detail-group`}
+			tokens={token.items}
+			messageDone={done}
+			{compactPreview}
+			{allowEmbeds}
+			resolvable={!!chatId && !!messageId && save}
+			{resolvingCallId}
+			onResolve={resolveToolCall}
+		>
+			<div slot="content">
+				{#each token.items as detailToken, detailIdx}
+					{@const textContent = getDetailTextContent(detailToken)}
+
+					{#if detailToken?.attributes?.type === 'tool_calls'}
+						<ToolCallDisplay
+							id={`${id}-${tokenIdx}-${detailIdx}-tc`}
+							attributes={detailToken.attributes}
+							resultContent={getDetailTextContent(detailToken)}
+							grouped={true}
+							resolvable={!!chatId && !!messageId && save}
+							resolving={resolvingCallId === detailToken.attributes?.id}
+							onResolve={(approved) => resolveToolCall(detailToken.attributes?.id ?? '', approved)}
+							open={$settings?.expandDetails ?? false}
+							className="w-full"
+							buttonClassName={detailButtonClassName}
+						/>
+					{:else if textContent.length > 0}
+						<Collapsible
+							title={detailToken.summary}
+							open={$settings?.expandDetails ?? false}
+							attributes={detailToken?.attributes}
+							messageDone={done}
+							className="w-full"
+							buttonClassName={detailButtonClassName}
+							dir="auto"
+						>
+							<div class="mb-1.5" slot="content">
+								<svelte:self
+									id={`${id}-${tokenIdx}-${detailIdx}-d`}
+									{chatId}
+									{messageId}
+									tokens={marked.lexer(decode(detailToken.text))}
+									attributes={detailToken?.attributes}
+									{done}
+									{save}
+									{preview}
+									{compactPreview}
+									{editCodeBlock}
+									{onTaskClick}
+									{sourceIds}
+									{onSourceClick}
+								/>
+							</div>
+						</Collapsible>
+					{:else}
+						<Collapsible
+							title={detailToken.summary}
+							open={false}
+							disabled={true}
+							attributes={detailToken?.attributes}
+							messageDone={done}
+							className="w-full"
+							buttonClassName={detailButtonClassName}
+							dir="auto"
+						/>
+					{/if}
+				{/each}
+			</div>
+		</ConsecutiveDetailsGroup>
+	{:else if token.type === 'details'}
+		{@const textContent = getDetailTextContent(token)}
+
+		{#if token?.attributes?.type === 'tool_calls'}
+			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
+			<ToolCallDisplay
+				id={`${id}-${tokenIdx}-tc`}
+				attributes={token.attributes}
+				resultContent={getDetailTextContent(token)}
+				resolvable={!!chatId && !!messageId && save}
+				resolving={resolvingCallId === token.attributes?.id}
+				onResolve={(approved) => resolveToolCall(token.attributes?.id ?? '', approved)}
+				open={$settings?.expandDetails ?? false}
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
+			/>
+		{:else if textContent.length > 0}
+			<Collapsible
+				title={token.summary}
+				open={$settings?.expandDetails ?? false}
+				attributes={token?.attributes}
+				messageDone={done}
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
+				dir="auto"
+			>
+				<div class=" mb-1.5" slot="content">
+					<svelte:self
+						id={`${id}-${tokenIdx}-d`}
+						{chatId}
+						{messageId}
+						tokens={marked.lexer(decode(token.text))}
+						attributes={token?.attributes}
+						{done}
+						{save}
+						{preview}
+						{compactPreview}
+						{editCodeBlock}
+						{onTaskClick}
+						{sourceIds}
+						{onSourceClick}
+					/>
+				</div>
+			</Collapsible>
+		{:else}
+			<Collapsible
+				title={token.summary}
+				open={false}
+				disabled={true}
+				attributes={token?.attributes}
+				messageDone={done}
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
+				dir="auto"
+			/>
+		{/if}
+	{:else if token.type === 'html'}
+		<HtmlToken {id} {token} {onSourceClick} />
+	{:else if token.type === 'iframe'}
+		<iframe
+			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
+			title={token.fileId}
+			width="100%"
+			frameborder="0"
+			on:load={(e) => {
+				try {
+					e.currentTarget.style.height =
+						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+				} catch {}
+			}}
+		></iframe>
+	{:else if token.type === 'paragraph'}
+		{#if paragraphTag == 'span'}
+			<span dir="auto">
+				<MarkdownInlineTokens
+					id={`${id}-${tokenIdx}-p`}
+					tokens={token.tokens ?? []}
+					{done}
+					{sourceIds}
+					{onSourceClick}
+				/>
+			</span>
+		{:else}
+			<p dir="auto" class={singlePlainBlock ? '!my-0' : ''}>
+				<MarkdownInlineTokens
+					id={`${id}-${tokenIdx}-p`}
+					tokens={token.tokens ?? []}
+					{done}
+					{sourceIds}
+					{onSourceClick}
+				/>
+			</p>
+		{/if}
+	{:else if token.type === 'text'}
+		{#if top}
+			<p class={singlePlainBlock ? '!my-0' : ''}>
+				{#if token.tokens}
+					<MarkdownInlineTokens
+						id={`${id}-${tokenIdx}-t`}
+						tokens={token.tokens}
+						{done}
+						{sourceIds}
+						{onSourceClick}
+					/>
+				{:else}
+					{unescapeHtml(token.text)}
+				{/if}
+			</p>
+		{:else if token.tokens}
+			<MarkdownInlineTokens
+				id={`${id}-${tokenIdx}-p`}
+				tokens={token.tokens ?? []}
+				{done}
+				{sourceIds}
+				{onSourceClick}
+			/>
+		{:else}
+			{unescapeHtml(token.text)}
+		{/if}
+	{:else if token.type === 'inlineKatex'}
+		{#if token.text}
+			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
+		{/if}
+	{:else if token.type === 'blockKatex'}
+		{#if token.text}
+			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
+		{/if}
+	{:else if token.type === 'colonFence'}
+		<ColonFenceBlock
+			id={`${id}-${tokenIdx}`}
+			{token}
+			{tokenIdx}
+			{done}
+			{editCodeBlock}
+			{sourceIds}
+			{onTaskClick}
+			{onSourceClick}
+		/>
+	{:else if token.type === 'space'}
+		<!-- skip -->
+	{:else}
+		{console.log('Unknown token', token)}
+	{/if}
+{/each}

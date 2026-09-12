@@ -1,0 +1,184 @@
+<script lang="ts">
+	import { toast } from 'svelte-sonner';
+	import { models, settings, user, config } from '$lib/stores';
+	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+	import { getModels } from '$lib/apis';
+	import { getConfig, updateConfig } from '$lib/apis/evaluations';
+
+	import Switch from '$lib/components/common/Switch.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import Model from './Evaluations/Model.svelte';
+	import ArenaModelModal from './Evaluations/ArenaModelModal.svelte';
+	import AdminSettingRow from './AdminSettingRow.svelte';
+	import AdminSettingSection from './AdminSettingSection.svelte';
+
+	const i18n: any = getContext('i18n');
+
+	let evaluationConfig = null;
+	let showAddModel = false;
+
+	const submitHandler = async () => {
+		evaluationConfig = await updateConfig(localStorage.token, evaluationConfig).catch((err) => {
+			toast.error(err);
+			return null;
+		});
+
+		if (evaluationConfig) {
+			toast.success($i18n.t('Settings saved successfully!'));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null
+				)
+			);
+		}
+	};
+
+	const addModelHandler = async (model) => {
+		evaluationConfig.EVALUATION_ARENA_MODELS.push(model);
+		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
+
+		await submitHandler();
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+			)
+		);
+	};
+
+	const editModelHandler = async (model, modelIdx) => {
+		evaluationConfig.EVALUATION_ARENA_MODELS[modelIdx] = model;
+		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
+
+		await submitHandler();
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+			)
+		);
+	};
+
+	const deleteModelHandler = async (modelIdx) => {
+		evaluationConfig.EVALUATION_ARENA_MODELS = evaluationConfig.EVALUATION_ARENA_MODELS.filter(
+			(m, mIdx) => mIdx !== modelIdx
+		);
+
+		await submitHandler();
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
+	};
+
+	onMount(async () => {
+		if ($user?.role === 'admin') {
+			evaluationConfig = await getConfig(localStorage.token).catch((err) => {
+				toast.error(err);
+				return null;
+			});
+		}
+	});
+</script>
+
+<ArenaModelModal
+	bind:show={showAddModel}
+	on:submit={async (e) => {
+		addModelHandler(e.detail);
+	}}
+/>
+
+<form
+	class="flex flex-col h-full justify-between text-sm"
+	on:submit|preventDefault={() => {
+		submitHandler();
+		dispatch('save');
+	}}
+>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Evaluations')}</h2>
+
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
+		{#if evaluationConfig !== null}
+			<AdminSettingSection first>
+				<AdminSettingRow
+					label={$i18n.t('Arena Models')}
+					description={$i18n.t('Message rating should be enabled to use this feature')}
+					let:labelId
+				>
+					<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
+						<Switch
+							bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
+							ariaLabelledbyId={labelId}
+						/>
+					</Tooltip>
+				</AdminSettingRow>
+			</AdminSettingSection>
+
+			{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
+				<AdminSettingSection title={$i18n.t('Models')}>
+					<div class="mb-2 flex items-center justify-between">
+						<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Arena Models')}</div>
+
+						<Tooltip content={$i18n.t('Add Arena Model')}>
+							<button
+								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+								type="button"
+								on:click={() => {
+									showAddModel = true;
+								}}
+							>
+								<Plus />
+							</button>
+						</Tooltip>
+					</div>
+
+					<div class="flex flex-col gap-2">
+						{#if (evaluationConfig?.EVALUATION_ARENA_MODELS ?? []).length > 0}
+							{#each evaluationConfig.EVALUATION_ARENA_MODELS as model, index}
+								<Model
+									{model}
+									on:edit={(e) => {
+										editModelHandler(e.detail, index);
+									}}
+									on:delete={(e) => {
+										deleteModelHandler(index);
+									}}
+								/>
+							{/each}
+						{:else}
+							<div class="text-center text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								{$i18n.t(
+									`Using the default arena model with all models. Click the plus button to add custom models.`
+								)}
+							</div>
+						{/if}
+					</div>
+				</AdminSettingSection>
+			{/if}
+		{:else}
+			<div class="flex h-full justify-center">
+				<div class="my-auto">
+					<Spinner className="size-6" />
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class="flex justify-end pt-6 text-sm font-normal">
+		<button
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			type="submit"
+		>
+			{$i18n.t('Save')}
+		</button>
+	</div>
+</form>

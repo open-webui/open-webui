@@ -1,0 +1,131 @@
+<script lang="ts">
+	import { getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { getLogoutRedirectUrl, updateUserPassword, userSignOut } from '$lib/apis/auths';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+
+	const i18n = getContext('i18n');
+
+	let show = false;
+	let currentPassword = '';
+	let newPassword = '';
+	let newPasswordConfirm = '';
+	const actionButtonClass =
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+
+	const updatePasswordHandler = async () => {
+		if (newPassword === newPasswordConfirm) {
+			const res = await updateUserPassword(localStorage.token, currentPassword, newPassword).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				// This session is no longer trusted once the password it was issued under changes
+				toast.success($i18n.t('Password updated. Please sign in again.'));
+
+				const signOutRes = await userSignOut().catch((error) => {
+					console.error(error);
+					return null;
+				});
+
+				localStorage.removeItem('token');
+				location.href = getLogoutRedirectUrl(signOutRes?.redirect_url);
+			}
+
+			currentPassword = '';
+			newPassword = '';
+			newPasswordConfirm = '';
+		} else {
+			toast.error(
+				$i18n.t("The passwords you entered don't quite match. Please double-check and try again.")
+			);
+			newPassword = '';
+			newPasswordConfirm = '';
+		}
+	};
+</script>
+
+<form
+	class="flex flex-col text-sm"
+	on:submit|preventDefault={() => {
+		updatePasswordHandler();
+	}}
+>
+	<div class="flex items-center justify-between gap-2.5">
+		<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Change Password')}</div>
+		<button
+			class={actionButtonClass}
+			type="button"
+			on:click={() => {
+				show = !show;
+			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
+		>
+	</div>
+	<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		{$i18n.t('Update the password used for email and password sign-in.')}
+	</p>
+
+	{#if show}
+		<div class="py-2.5 space-y-2.5">
+			<div class="flex flex-col w-full">
+				<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
+					{$i18n.t('Current Password')}
+				</div>
+
+				<div class="flex-1">
+					<SensitiveInput
+						variant="settings"
+						type="password"
+						bind:value={currentPassword}
+						placeholder={$i18n.t('Enter your current password')}
+						autocomplete="current-password"
+						required
+					/>
+				</div>
+			</div>
+
+			<div class="flex flex-col w-full">
+				<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
+					{$i18n.t('New Password')}
+				</div>
+
+				<div class="flex-1">
+					<SensitiveInput
+						variant="settings"
+						type="password"
+						bind:value={newPassword}
+						placeholder={$i18n.t('Enter your new password')}
+						autocomplete="new-password"
+						required
+					/>
+				</div>
+			</div>
+
+			<div class="flex flex-col w-full">
+				<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
+					{$i18n.t('Confirm Password')}
+				</div>
+
+				<div class="flex-1">
+					<SensitiveInput
+						variant="settings"
+						type="password"
+						bind:value={newPasswordConfirm}
+						placeholder={$i18n.t('Confirm your new password')}
+						autocomplete="off"
+						required
+					/>
+				</div>
+			</div>
+		</div>
+
+		<div class="flex justify-end">
+			<button class={actionButtonClass}>
+				{$i18n.t('Update password')}
+			</button>
+		</div>
+	{/if}
+</form>

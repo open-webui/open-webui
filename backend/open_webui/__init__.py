@@ -1,0 +1,114 @@
+import base64
+import os
+import random
+import sys
+from pathlib import Path
+from typing import Annotated
+
+import typer
+import uvicorn
+
+app = typer.Typer()
+
+KEY_FILE = Path.cwd() / '.webui_secret_key'
+DEFAULT_SECRET_KEY_LENGTH = 24
+
+
+def version_callback(value: bool) -> None:
+    if value:
+        from open_webui.env import VERSION
+
+        # LICENSE covers this Open WebUI CLI identifier.
+        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+        # https://docs.openwebui.com/license.
+        typer.echo(f'Open WebUI version: {VERSION}')
+        raise typer.Exit()
+
+
+@app.command()
+def main(
+    version: Annotated[bool | None, typer.Option('--version', callback=version_callback)] = None,
+):
+    pass
+
+
+@app.command()
+def serve(
+    host: str = '0.0.0.0',
+    port: int = 8080,
+):
+    os.environ['FROM_INIT_PY'] = 'true'
+    if os.getenv('WEBUI_SECRET_KEY') is None:
+        typer.echo('Loading WEBUI_SECRET_KEY from file, not provided as an environment variable.')
+        if not KEY_FILE.exists():
+            key_length = int(os.getenv('WEBUI_SECRET_KEY_LENGTH', DEFAULT_SECRET_KEY_LENGTH))
+            if key_length < 1:
+                raise ValueError('WEBUI_SECRET_KEY_LENGTH must be a positive integer')
+            typer.echo(f'Generating a new secret key and saving it to {KEY_FILE}')
+            KEY_FILE.write_bytes(base64.b64encode(random.randbytes(key_length)))
+        typer.echo(f'Loading WEBUI_SECRET_KEY from {KEY_FILE}')
+        os.environ['WEBUI_SECRET_KEY'] = KEY_FILE.read_text()
+
+    if os.getenv('USE_CUDA_DOCKER', 'false') == 'true':
+        typer.echo('CUDA is enabled, appending LD_LIBRARY_PATH to include torch/cudnn & cublas libraries.')
+        LD_LIBRARY_PATH = os.getenv('LD_LIBRARY_PATH', '').split(':')
+        os.environ['LD_LIBRARY_PATH'] = ':'.join(
+            LD_LIBRARY_PATH
+            + [
+                '/usr/local/lib/python3.11/site-packages/torch/lib',
+                '/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib',
+            ]
+        )
+        try:
+            import torch
+
+            assert torch.cuda.is_available(), 'CUDA not available'
+            typer.echo('CUDA seems to be working')
+        except Exception as e:
+            typer.echo(
+                'Error when testing CUDA but USE_CUDA_DOCKER is true. '
+                'Resetting USE_CUDA_DOCKER to false and removing '
+                f'LD_LIBRARY_PATH modifications: {e}'
+            )
+            os.environ['USE_CUDA_DOCKER'] = 'false'
+            os.environ['LD_LIBRARY_PATH'] = ':'.join(LD_LIBRARY_PATH)
+
+    import open_webui.main  # noqa: F401
+    from open_webui.env import UVICORN_WORKERS, UVICORN_WS_PER_MESSAGE_DEFLATE
+
+    # On Windows, uvicorn's default loop factory hardcodes ProactorEventLoop,
+    # which is incompatible with psycopg v3 async.  Setting loop='none' lets
+    # asyncio.run() respect the WindowsSelectorEventLoopPolicy set in db.py.
+    loop = 'none' if sys.platform == 'win32' else 'auto'
+
+    uvicorn.run(
+        'open_webui.main:app',
+        host=host,
+        port=port,
+        forwarded_allow_ips='*',
+        workers=UVICORN_WORKERS,
+        ws_per_message_deflate=UVICORN_WS_PER_MESSAGE_DEFLATE,
+        loop=loop,
+    )
+
+
+@app.command()
+def dev(
+    host: str = '0.0.0.0',
+    port: int = 8080,
+    reload: bool = True,
+):
+    from open_webui.env import UVICORN_WS_PER_MESSAGE_DEFLATE
+
+    uvicorn.run(
+        'open_webui.main:app',
+        host=host,
+        port=port,
+        reload=reload,
+        forwarded_allow_ips='*',
+        ws_per_message_deflate=UVICORN_WS_PER_MESSAGE_DEFLATE,
+    )
+
+
+if __name__ == '__main__':
+    app()

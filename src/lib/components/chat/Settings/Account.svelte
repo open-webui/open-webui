@@ -1,0 +1,651 @@
+<script lang="ts">
+	import { toast } from 'svelte-sonner';
+	import { onMount, getContext } from 'svelte';
+
+	import { user, config } from '$lib/stores';
+	import {
+		updateUserProfile,
+		createAPIKey,
+		deleteAPIKey,
+		getAPIKey,
+		getSessionUser
+	} from '$lib/apis/auths';
+	import { getUserVariables, updateUserVariables } from '$lib/apis/users';
+
+	import UpdatePassword from './Account/UpdatePassword.svelte';
+	import { generateInitialsImage } from '$lib/utils';
+	import { copyToClipboard } from '$lib/utils';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import UserProfileImage from './Account/UserProfileImage.svelte';
+	import UserSettingField from './UserSettingField.svelte';
+	import UserSettingRow from './UserSettingRow.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import UserSettingSection from './UserSettingSection.svelte';
+
+	const i18n = getContext('i18n');
+
+	export let saveHandler: () => void | Promise<void>;
+
+	let profileImageUrl = '';
+	let name = '';
+	let bio = '';
+
+	let _gender = '';
+	let gender = '';
+	let dateOfBirth = '';
+
+	let showAPIKeys = false;
+
+	let JWTTokenCopied = false;
+
+	let APIKey = '';
+	let APIKeyCopied = false;
+	let showAPIKeyMenu = false;
+	let showDeleteAPIKeyConfirm = false;
+	let variableRows: { key: string; value: string }[] = [];
+	let variableModalOpen = false;
+	let variableFormIndex: number | null = null;
+	let variableFormKey = '';
+	let variableFormValue = '';
+
+	const textareaClass =
+		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const inputClass =
+		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const variableValueClass =
+		'w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const actionButtonClass =
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+	const variableRowClass = 'flex w-full items-center gap-1.5';
+	const variableKeyRegex = /^[a-z][a-z0-9_]*$/;
+
+	const setVariableRows = (variables = {}) => {
+		variableRows = Object.entries(variables).map(([key, value]) => ({
+			key,
+			value: String(value ?? '')
+		}));
+	};
+
+	const openVariableModal = (idx: number | null = null) => {
+		const row = idx === null ? null : variableRows[idx];
+		variableFormIndex = idx;
+		variableFormKey = row?.key ?? '';
+		variableFormValue = row?.value ?? '';
+		variableModalOpen = true;
+	};
+
+	const removeVariable = (idx: number) => {
+		variableRows = variableRows.filter((_, rowIdx) => rowIdx !== idx);
+	};
+
+	const saveVariableForm = () => {
+		const key = variableFormKey.trim();
+
+		if (!variableKeyRegex.test(key)) {
+			toast.error($i18n.t('Variable keys must use lowercase snake case.'));
+			return;
+		}
+		if (variableRows.some((row, idx) => idx !== variableFormIndex && row.key === key)) {
+			toast.error($i18n.t('Variable keys must be unique.'));
+			return;
+		}
+
+		const row = { key, value: variableFormValue ?? '' };
+		variableRows =
+			variableFormIndex === null
+				? [...variableRows, row]
+				: variableRows.map((current, idx) => (idx === variableFormIndex ? row : current));
+		variableModalOpen = false;
+	};
+
+	const deleteVariableForm = () => {
+		if (variableFormIndex !== null) {
+			removeVariable(variableFormIndex);
+		}
+		variableModalOpen = false;
+	};
+
+	const getVariablesPayload = () => {
+		const variables: Record<string, string> = {};
+		for (const row of variableRows) {
+			const key = row.key.trim();
+			if (!key && !row.value) {
+				continue;
+			}
+			if (!variableKeyRegex.test(key)) {
+				throw $i18n.t('Variable keys must use lowercase snake case.');
+			}
+			if (Object.prototype.hasOwnProperty.call(variables, key)) {
+				throw $i18n.t('Variable keys must be unique.');
+			}
+			variables[key] = row.value ?? '';
+		}
+		return variables;
+	};
+
+	const submitHandler = async () => {
+		let variables: Record<string, string>;
+		try {
+			variables = getVariablesPayload();
+		} catch (error) {
+			toast.error(`${error}`);
+			return false;
+		}
+
+		if (name !== $user?.name) {
+			if (profileImageUrl === generateInitialsImage($user?.name) || profileImageUrl === '') {
+				profileImageUrl = generateInitialsImage(name);
+			}
+		}
+
+		const updatedUser = await updateUserProfile(localStorage.token, {
+			name: name,
+			profile_image_url: profileImageUrl,
+			bio: bio ? bio : null,
+			gender: gender ? gender : null,
+			date_of_birth: dateOfBirth ? dateOfBirth : null
+		}).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		const variablesRes = await updateUserVariables(localStorage.token, variables).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (updatedUser && variablesRes) {
+			setVariableRows(variablesRes.variables ?? {});
+			// Get Session User Info
+			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			await user.set(sessionUser);
+			return true;
+		}
+		return false;
+	};
+
+	const createAPIKeyHandler = async () => {
+		APIKey = await createAPIKey(localStorage.token);
+		if (APIKey) {
+			toast.success($i18n.t('API Key created.'));
+		} else {
+			toast.error($i18n.t('Failed to create API Key.'));
+		}
+	};
+
+	const deleteAPIKeyHandler = async () => {
+		const res = await deleteAPIKey(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return false;
+		});
+
+		if (res) {
+			APIKey = '';
+			toast.success($i18n.t('API Key deleted.'));
+		}
+	};
+
+	onMount(async () => {
+		const user = await getSessionUser(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (user) {
+			name = user?.name ?? '';
+			profileImageUrl = user?.profile_image_url ?? '';
+			bio = user?.bio ?? '';
+
+			_gender = user?.gender ?? '';
+			gender = _gender;
+
+			dateOfBirth = user?.date_of_birth ?? '';
+		}
+
+		const userVariables = await getUserVariables(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		setVariableRows(userVariables?.variables ?? {});
+
+		// Only fetch API key if the feature is enabled and user has permission
+		if (
+			user &&
+			($config?.features?.enable_api_keys ?? true) &&
+			(user?.role === 'admin' || (user?.permissions?.features?.api_keys ?? false))
+		) {
+			APIKey = await getAPIKey(localStorage.token).catch((error) => {
+				console.log(error);
+				return '';
+			});
+		}
+	});
+</script>
+
+<div id="tab-account" class="flex h-full flex-col text-sm">
+	<div class="flex-1 min-h-0 w-full overflow-y-auto scrollbar-hover pr-1.5">
+		<h2 class="mb-4 text-sm font-medium text-gray-900 dark:text-white">{$i18n.t('Account')}</h2>
+
+		<UserSettingSection title={$i18n.t('Profile')} first>
+			<UserProfileImage
+				bind:profileImageUrl
+				user={$user}
+				variant="account"
+				displayName={$user?.name}
+			/>
+
+			<UserSettingField
+				label={$i18n.t('Name')}
+				description={$i18n.t('Set the display name shown across your account.')}
+			>
+				<input
+					class={inputClass}
+					type="text"
+					bind:value={name}
+					aria-label={$i18n.t('Name')}
+					required
+					placeholder={$i18n.t('Enter your name')}
+				/>
+			</UserSettingField>
+
+			<UserSettingField
+				label={$i18n.t('Bio')}
+				description={$i18n.t('Add optional profile context visible where profiles are shown.')}
+			>
+				<Textarea
+					className={textareaClass}
+					minSize={60}
+					bind:value={bio}
+					ariaLabel={$i18n.t('Bio')}
+					placeholder={$i18n.t('Share your background and interests')}
+				/>
+			</UserSettingField>
+
+			<UserSettingField
+				label={$i18n.t('Gender')}
+				description={$i18n.t('Choose the gender value stored on your profile.')}
+			>
+				<SettingsSelect
+					bind:value={_gender}
+					className="w-full"
+					ariaLabel={$i18n.t('Gender')}
+					on:change={() => {
+						console.log(_gender);
+
+						if (_gender === 'custom') {
+							// Handle custom gender input
+							gender = '';
+						} else {
+							gender = _gender;
+						}
+					}}
+				>
+					<option value="" selected>{$i18n.t('Prefer not to say')}</option>
+					<option value="male">{$i18n.t('Male')}</option>
+					<option value="female">{$i18n.t('Female')}</option>
+					<option value="custom">{$i18n.t('Custom')}</option>
+				</SettingsSelect>
+
+				{#if _gender === 'custom'}
+					<input
+						class="mt-1 {inputClass}"
+						type="text"
+						required
+						aria-label={$i18n.t('Custom Gender')}
+						placeholder={$i18n.t('Enter your gender')}
+						bind:value={gender}
+					/>
+				{/if}
+			</UserSettingField>
+
+			<UserSettingField
+				label={$i18n.t('Birth Date')}
+				description={$i18n.t('Set the birth date saved with your profile.')}
+			>
+				<input
+					class="{inputClass} dark:scheme-dark"
+					type="date"
+					aria-label={$i18n.t('Birth Date')}
+					bind:value={dateOfBirth}
+					required
+				/>
+			</UserSettingField>
+		</UserSettingSection>
+
+		<section class="mt-4 w-full">
+			<div
+				class="mb-0.5 flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-400"
+			>
+				<div class="flex min-w-0 items-center gap-1.5">
+					{$i18n.t('User Variables')}
+					<span class="text-gray-400 dark:text-gray-600">{variableRows.length}</span>
+				</div>
+				<button class={actionButtonClass} type="button" on:click={() => openVariableModal()}>
+					{$i18n.t('Add')}
+				</button>
+			</div>
+			<div class="flex flex-col gap-1 py-1">
+				{#each variableRows as row, idx}
+					<div class={variableRowClass}>
+						<div class="min-w-0 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
+							{row.key || $i18n.t('key_name')}
+						</div>
+						<div class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-500">
+							{row.value || $i18n.t('Empty')}
+						</div>
+						<button class={actionButtonClass} type="button" on:click={() => openVariableModal(idx)}>
+							{$i18n.t('Edit')}
+						</button>
+					</div>
+				{/each}
+
+				{#if variableRows.length === 0}
+					<div class="text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('No user variables configured.')}
+					</div>
+				{/if}
+			</div>
+
+			<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				{$i18n.t('Use these in model system prompts as {{example}}.', {
+					example: '{{user.variables.key_name}}'
+				})}
+			</div>
+		</section>
+
+		{#if $config?.features.enable_login_form && $config?.features.enable_password_change_form}
+			<UserSettingSection title={$i18n.t('Password')}>
+				<UpdatePassword />
+			</UserSettingSection>
+		{/if}
+
+		{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
+			<UserSettingSection title={$i18n.t('API keys')}>
+				<UserSettingRow description={$i18n.t('Show or hide sensitive account secrets.')}>
+					<span slot="label">{$i18n.t('Secrets')}</span>
+					<button
+						class={actionButtonClass}
+						type="button"
+						on:click={() => {
+							showAPIKeys = !showAPIKeys;
+						}}>{showAPIKeys ? $i18n.t('Hide') : $i18n.t('Show')}</button
+					>
+				</UserSettingRow>
+
+				{#if showAPIKeys}
+					<div class="flex flex-col gap-2.5">
+						{#if $user?.role === 'admin'}
+							<UserSettingField
+								label={$i18n.t('JWT Token')}
+								description={$i18n.t('Copy the current session token for authenticated requests.')}
+							>
+								<div class="flex">
+									<SensitiveInput variant="settings" value={localStorage.token} readOnly={true} />
+
+									<button
+										class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+										aria-label={$i18n.t('Copy Token')}
+										on:click={() => {
+											copyToClipboard(localStorage.token);
+											JWTTokenCopied = true;
+											setTimeout(() => {
+												JWTTokenCopied = false;
+											}, 2000);
+										}}
+									>
+										{#if JWTTokenCopied}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										{:else}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+													clip-rule="evenodd"
+												/>
+												<path
+													fill-rule="evenodd"
+													d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										{/if}
+									</button>
+								</div>
+							</UserSettingField>
+						{/if}
+
+						{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
+							<UserSettingField
+								label={$i18n.t('API Key')}
+								description={$i18n.t('Create, copy, or rotate your API key.')}
+							>
+								<div class="flex">
+									{#if APIKey}
+										<SensitiveInput variant="settings" value={APIKey} readOnly={true} />
+
+										<button
+											class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+											aria-label={$i18n.t('Copy API Key')}
+											on:click={() => {
+												copyToClipboard(APIKey);
+												APIKeyCopied = true;
+												setTimeout(() => {
+													APIKeyCopied = false;
+												}, 2000);
+											}}
+										>
+											{#if APIKeyCopied}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+														clip-rule="evenodd"
+													/>
+													<path
+														fill-rule="evenodd"
+														d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{/if}
+										</button>
+
+										<Dropdown bind:show={showAPIKeyMenu} align="end" sideOffset={4}>
+											<Tooltip content={$i18n.t('More')}>
+												<button
+													type="button"
+													class="rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+													aria-label={$i18n.t('More')}
+												>
+													<EllipsisHorizontal strokeWidth="2" className="size-4" />
+												</button>
+											</Tooltip>
+
+											<div slot="content">
+												<DropdownMenu className="min-w-[10.625rem]">
+													<button
+														type="button"
+														on:click={() => {
+															showAPIKeyMenu = false;
+															createAPIKeyHandler();
+														}}
+													>
+														<Refresh strokeWidth="2" className="size-3.5 scale-90" />
+														<div class="flex items-center">{$i18n.t('Create new key')}</div>
+													</button>
+
+													<hr class="border-gray-50 dark:border-gray-850/30" />
+
+													<button
+														type="button"
+														on:click={() => {
+															showAPIKeyMenu = false;
+															showDeleteAPIKeyConfirm = true;
+														}}
+													>
+														<XMark strokeWidth="2" className="size-3.5" />
+														<div class="flex items-center">{$i18n.t('Delete')}</div>
+													</button>
+												</DropdownMenu>
+											</div>
+										</Dropdown>
+									{:else}
+										<button
+											class="inline-flex items-center gap-1.5 {actionButtonClass}"
+											type="button"
+											on:click={() => {
+												createAPIKeyHandler();
+											}}
+										>
+											<Plus strokeWidth="2" className="size-3.5" />
+
+											{$i18n.t('Create new secret key')}</button
+										>
+									{/if}
+								</div>
+							</UserSettingField>
+						{/if}
+					</div>
+				{/if}
+			</UserSettingSection>
+		{/if}
+	</div>
+
+	<div class="shrink-0 flex w-full justify-end pt-3 text-sm font-normal">
+		<button
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			on:click={async () => {
+				const res = await submitHandler();
+
+				if (res) {
+					saveHandler();
+				}
+			}}
+		>
+			{$i18n.t('Save')}
+		</button>
+	</div>
+</div>
+
+<ConfirmDialog
+	bind:show={showDeleteAPIKeyConfirm}
+	title={$i18n.t('Delete API Key?')}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={deleteAPIKeyHandler}
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will revoke the current API key.')}
+	</div>
+</ConfirmDialog>
+
+<Modal size="sm" bind:show={variableModalOpen}>
+	<form class="p-4" on:submit|preventDefault={saveVariableForm}>
+		<h2 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+			{variableFormIndex === null ? $i18n.t('Add User Variable') : $i18n.t('Edit User Variable')}
+		</h2>
+
+		<div class="mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Key')}
+		</div>
+		<input
+			class={inputClass}
+			type="text"
+			bind:value={variableFormKey}
+			aria-label={$i18n.t('Variable key')}
+			placeholder={$i18n.t('key_name')}
+			autocomplete="off"
+			spellcheck="false"
+		/>
+
+		<div class="mb-1 mt-3 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Value')}
+		</div>
+		<Textarea
+			className={variableValueClass}
+			rows="6"
+			minSize={132}
+			bind:value={variableFormValue}
+			ariaLabel={$i18n.t('Variable value')}
+			placeholder={$i18n.t('Value')}
+		/>
+
+		<div class="mt-4 flex items-center justify-between gap-2">
+			<div>
+				{#if variableFormIndex !== null}
+					<button
+						class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+						type="button"
+						on:click={deleteVariableForm}
+					>
+						{$i18n.t('Delete')}
+					</button>
+				{/if}
+			</div>
+
+			<div class="flex items-center gap-3">
+				<button
+					class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+					type="button"
+					on:click={() => {
+						variableModalOpen = false;
+					}}
+				>
+					{$i18n.t('Cancel')}
+				</button>
+				<button
+					class="rounded-full bg-black px-3.5 py-1.5 text-sm font-normal text-white transition hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+					type="submit"
+				>
+					{$i18n.t('Done')}
+				</button>
+			</div>
+		</div>
+	</form>
+</Modal>

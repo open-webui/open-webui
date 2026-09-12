@@ -1,0 +1,1767 @@
+import { WEBUI_BASE_URL } from '$lib/constants';
+import { convertOpenApiToToolPayload } from '$lib/utils';
+import { normalizeTags } from '$lib/utils/tags';
+import { getOpenAIModelsDirect } from './openai';
+
+const TOOL_SERVER_FETCH_TIMEOUT = 10000;
+
+// Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
+// and non-operation path-item fields (summary, description, servers, parameters).
+const OPENAPI_HTTP_METHODS = new Set([
+	'get',
+	'put',
+	'post',
+	'delete',
+	'options',
+	'head',
+	'patch',
+	'trace'
+]);
+
+// Every request sent from here is a petition. May it reach
+// the one for whom it was intended, and return answered.
+export const getModels = async (
+	token: string = '',
+	connections: object | null = null,
+	base: boolean = false,
+	refresh: boolean = false
+) => {
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
+	let error = null;
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	let models = res?.data ?? [];
+
+	if (connections && !base) {
+		let localModels = [];
+
+		if (connections) {
+			const OPENAI_API_BASE_URLS = connections.OPENAI_API_BASE_URLS;
+			const OPENAI_API_KEYS = connections.OPENAI_API_KEYS;
+			const OPENAI_API_CONFIGS = connections.OPENAI_API_CONFIGS;
+
+			const requests = [];
+			for (const idx in OPENAI_API_BASE_URLS) {
+				const url = OPENAI_API_BASE_URLS[idx];
+
+				if (idx.toString() in OPENAI_API_CONFIGS) {
+					const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
+
+					const enable = apiConfig?.enable ?? true;
+					const modelIds = apiConfig?.model_ids ?? [];
+
+					if (enable) {
+						if (modelIds.length > 0) {
+							const modelList = {
+								object: 'list',
+								data: modelIds.map((modelId) => ({
+									id: modelId,
+									name: modelId,
+									owned_by: 'openai',
+									openai: { id: modelId },
+									urlIdx: idx
+								}))
+							};
+
+							requests.push(
+								(async () => {
+									return modelList;
+								})()
+							);
+						} else {
+							requests.push(
+								(async () => {
+									return await getOpenAIModelsDirect(url, OPENAI_API_KEYS[idx])
+										.then((res) => {
+											return res;
+										})
+										.catch((err) => {
+											return {
+												object: 'list',
+												data: [],
+												urlIdx: idx
+											};
+										});
+								})()
+							);
+						}
+					} else {
+						requests.push(
+							(async () => {
+								return {
+									object: 'list',
+									data: [],
+									urlIdx: idx
+								};
+							})()
+						);
+					}
+				}
+			}
+
+			const responses = await Promise.all(requests);
+
+			for (const idx in responses) {
+				const response = responses[idx];
+				const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
+
+				let models = Array.isArray(response) ? response : (response?.data ?? []);
+				models = models.map((model) => ({ ...model, openai: { id: model.id }, urlIdx: idx }));
+
+				const prefixId = apiConfig.prefix_id;
+				if (prefixId) {
+					for (const model of models) {
+						model.id = `${prefixId}.${model.id}`;
+					}
+				}
+
+				const tags = normalizeTags(apiConfig.tags);
+				if (tags.length > 0) {
+					for (const model of models) {
+						model.tags = tags;
+					}
+				}
+
+				localModels = localModels.concat(models);
+			}
+		}
+
+		models = models.concat(
+			localModels.map((model) => ({
+				...model,
+				name: model?.name ?? model?.id,
+				direct: true
+			}))
+		);
+
+		// Remove duplicates
+		const modelsMap = {};
+		for (const model of models) {
+			const existing = modelsMap[model.id];
+			modelsMap[model.id] = existing
+				? {
+						...existing,
+						...model,
+						info: existing.info ?? model.info
+					}
+				: model;
+		}
+
+		models = Object.values(modelsMap);
+	}
+
+	return models;
+};
+
+export const unloadModel = async (token: string, model: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/models/unload`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({ model })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+type ChatCompletedForm = {
+	model: string;
+	messages: Record<string, unknown>[];
+	chat_id: string;
+	session_id: string | undefined;
+	id: string;
+	filter_ids?: string[];
+	model_item?: unknown;
+};
+
+export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/chat/completed`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+type ChatActionForm = {
+	model: string;
+	messages: string[];
+	chat_id: string;
+};
+
+export const chatAction = async (token: string, action_id: string, body: ChatActionForm) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/chat/actions/${action_id}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const stopTask = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/stop/${id}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const stopTasksByChatId = async (token: string, chat_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chat_id)}/stop`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chat_id)}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getToolServerData = async (token: string, url: string) => {
+	let error = null;
+
+	const res = await fetch(`${url}`, {
+		signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			// Check if URL ends with .yaml or .yml to determine format
+			if (url.toLowerCase().endsWith('.yaml') || url.toLowerCase().endsWith('.yml')) {
+				if (!res.ok) throw await res.text();
+				const [text, { parse }] = await Promise.all([res.text(), import('yaml')]);
+				return parse(text);
+			} else {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			}
+		})
+		.catch((err) => {
+			console.error(err);
+			if (err?.name === 'TimeoutError') {
+				error = `Connection to ${url} timed out`;
+			} else if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	console.log(res);
+	return res;
+};
+
+export const getToolServersData = async (servers: object[]) => {
+	return (
+		await Promise.all(
+			servers
+				.filter((server) => server?.config?.enable)
+				.map(async (server) => {
+					let error = null;
+
+					let toolServerToken = null;
+
+					const auth_type = server?.auth_type ?? 'bearer';
+					if (auth_type === 'bearer') {
+						toolServerToken = server?.key;
+					} else if (auth_type === 'none') {
+						// No authentication
+					} else if (auth_type === 'session') {
+						toolServerToken = localStorage.token;
+					}
+
+					let res = null;
+					const specType = server?.spec_type ?? 'url';
+
+					if (specType === 'url') {
+						res = await getToolServerData(
+							toolServerToken,
+							(server?.path ?? '').includes('://')
+								? server?.path
+								: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
+						).catch((err) => {
+							error = err;
+							return null;
+						});
+					} else if ((specType === 'json' && server?.spec) ?? null) {
+						try {
+							res = JSON.parse(server?.spec);
+						} catch (e) {
+							error = 'Failed to parse JSON spec';
+						}
+					}
+
+					if (res) {
+						if (!res.paths) {
+							return {
+								error: 'Invalid OpenAPI spec',
+								url: server?.url
+							};
+						}
+
+						const { openapi, info, specs } = {
+							openapi: res,
+							info: res.info,
+							specs: convertOpenApiToToolPayload(res)
+						};
+
+						const result: Record<string, any> = {
+							url: server?.url,
+							openapi: openapi,
+							info: info,
+							specs: specs
+						};
+
+						// Fetch system prompt if the server supports it
+						try {
+							const baseUrl = (server?.url ?? '').replace(/\/$/, '');
+							const configRes = await fetch(`${baseUrl}/api/config`, {
+								signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT)
+							});
+							if (configRes.ok) {
+								const config = await configRes.json();
+								if (config?.features?.system) {
+									const headers: Record<string, string> = {};
+									if (toolServerToken) {
+										headers['Authorization'] = `Bearer ${toolServerToken}`;
+									}
+									const systemRes = await fetch(`${baseUrl}/system`, {
+										signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
+										headers
+									});
+									if (systemRes.ok) {
+										const systemData = await systemRes.json();
+										if (systemData?.prompt) {
+											result.system_prompt = systemData.prompt;
+										}
+									}
+								}
+							}
+						} catch (e) {
+							// Server doesn't support /system — that's fine
+						}
+
+						return result;
+					} else if (error) {
+						return {
+							error,
+							url: server?.url
+						};
+					} else {
+						return null;
+					}
+				})
+		)
+	).filter((server) => server);
+};
+
+export const executeToolServer = async (
+	token: string,
+	url: string,
+	name: string,
+	params: Record<string, any>,
+	serverData: { openapi: any; info: any; specs: any },
+	sessionId?: string
+) => {
+	let error = null;
+
+	try {
+		// Find the matching operationId in the OpenAPI spec (only valid HTTP methods)
+		const matchingRoute = Object.entries(serverData.openapi.paths).find(([_, methods]) =>
+			Object.entries(methods as any).some(
+				([method, operation]: any) =>
+					OPENAPI_HTTP_METHODS.has(method) &&
+					operation &&
+					typeof operation === 'object' &&
+					operation.operationId === name
+			)
+		);
+
+		if (!matchingRoute) {
+			throw new Error(`No matching route found for operationId: ${name}`);
+		}
+
+		const [routePath, methods] = matchingRoute;
+
+		const methodEntry = Object.entries(methods as any).find(
+			([method, operation]: any) =>
+				OPENAPI_HTTP_METHODS.has(method) &&
+				operation &&
+				typeof operation === 'object' &&
+				operation.operationId === name
+		);
+
+		if (!methodEntry) {
+			throw new Error(`No matching method found for operationId: ${name}`);
+		}
+
+		const [httpMethod, operation]: [string, any] = methodEntry;
+
+		// Merge path-level and operation-level parameters.
+		// Operation-level params override path-level params with the same (name, in).
+		const pathLevelParams: any[] = Array.isArray((methods as any).parameters)
+			? (methods as any).parameters
+			: [];
+		const opParams: any[] = Array.isArray(operation.parameters) ? operation.parameters : [];
+		const mergedParams = new Map();
+		for (const param of pathLevelParams) {
+			if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+		}
+		for (const param of opParams) {
+			if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+		}
+
+		// Split parameters by type
+		const pathParams: Record<string, any> = {};
+		const queryParams: Record<string, any> = {};
+		let bodyParams: any = {};
+
+		for (const param of mergedParams.values()) {
+			const paramName = param?.name;
+			if (!paramName) continue;
+			const paramIn = param?.in;
+			if (params.hasOwnProperty(paramName)) {
+				if (paramIn === 'path') {
+					pathParams[paramName] = params[paramName];
+				} else if (paramIn === 'query') {
+					queryParams[paramName] = params[paramName];
+				}
+			}
+		}
+
+		let finalUrl = `${url}${routePath}`;
+
+		// Replace path parameters (`{param}`)
+		Object.entries(pathParams).forEach(([key, value]) => {
+			finalUrl = finalUrl.replace(new RegExp(`{${key}}`, 'g'), encodeURIComponent(value));
+		});
+
+		// Append query parameters to URL if any
+		if (Object.keys(queryParams).length > 0) {
+			const queryString = new URLSearchParams(
+				Object.entries(queryParams).map(([k, v]) => [k, String(v)])
+			).toString();
+			finalUrl += `?${queryString}`;
+		}
+
+		// Handle requestBody composite
+		if (operation.requestBody && operation.requestBody.content) {
+			const contentType = Object.keys(operation.requestBody.content)[0];
+			if (params !== undefined) {
+				bodyParams = params;
+			} else {
+				// Optional: Fallback or explicit error if body is expected but not provided
+				throw new Error(`Request body expected for operation '${name}' but none found.`);
+			}
+		}
+
+		// Prepare headers and request options
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		};
+		if (sessionId) headers['X-Session-Id'] = sessionId;
+
+		const requestOptions: RequestInit = {
+			method: httpMethod.toUpperCase(),
+			headers
+		};
+
+		if (
+			['post', 'put', 'patch', 'delete'].includes(httpMethod.toLowerCase()) &&
+			operation.requestBody
+		) {
+			requestOptions.body = JSON.stringify(bodyParams);
+		}
+
+		const res = await fetch(finalUrl, requestOptions);
+		if (!res.ok) {
+			const resText = await res.text();
+			throw new Error(`HTTP error! Status: ${res.status}. Message: ${resText}`);
+		}
+
+		// make a clone of res and extract headers
+		const responseHeaders = {};
+		res.headers.forEach((value, key) => {
+			responseHeaders[key] = value;
+		});
+
+		let responseData;
+		const contentType = res.headers.get('Content-Type')?.split(';')[0]?.trim() ?? '';
+
+		try {
+			responseData = await res.clone().json();
+		} catch {
+			if (contentType.startsWith('text/') || !contentType) {
+				responseData = await res.text();
+			} else {
+				const buf = await res.arrayBuffer();
+				const bytes = new Uint8Array(buf);
+				let binary = '';
+				for (let i = 0; i < bytes.length; i++) {
+					binary += String.fromCharCode(bytes[i]);
+				}
+				const b64 = btoa(binary);
+				responseData = `data:${contentType};base64,${b64}`;
+			}
+		}
+		return [responseData, responseHeaders];
+	} catch (err: any) {
+		error = err.message;
+		console.error('API Request Error:', error);
+		return [{ error }, null];
+	}
+};
+
+export const getTaskConfig = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateTaskConfig = async (token: string, config: object) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/config/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(config)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const generateTitle = async (
+	token: string = '',
+	model: string,
+	messages: object[],
+	chat_id?: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/title/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: messages,
+			...(chat_id && { chat_id: chat_id })
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	try {
+		// Step 1: Safely extract the response string
+		const response = res?.choices[0]?.message?.content ?? '';
+
+		// Step 2: Attempt to fix common JSON format issues like single quotes
+		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
+
+		// Step 3: Find the relevant JSON block within the response
+		const jsonStartIndex = sanitizedResponse.indexOf('{');
+		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
+
+		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+
+			// Step 5: Parse the JSON block
+			const parsed = JSON.parse(jsonResponse);
+
+			// Step 6: If there's a "tags" key, return the tags array; otherwise, return an empty array
+			if (parsed && parsed.title) {
+				return parsed.title;
+			} else {
+				return null;
+			}
+		}
+
+		// If no valid JSON block found, return an empty array
+		return null;
+	} catch (e) {
+		// Catch and safely return empty array on any parsing errors
+		console.error('Failed to parse response: ', e);
+		return null;
+	}
+};
+
+export const generateTags = async (
+	token: string = '',
+	model: string,
+	messages: string,
+	chat_id?: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/tags/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: messages,
+			...(chat_id && { chat_id: chat_id })
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	try {
+		// Step 1: Safely extract the response string
+		const response = res?.choices[0]?.message?.content ?? '';
+
+		// Step 2: Attempt to fix common JSON format issues like single quotes
+		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
+
+		// Step 3: Find the relevant JSON block within the response
+		const jsonStartIndex = sanitizedResponse.indexOf('{');
+		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
+
+		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+
+			// Step 5: Parse the JSON block
+			const parsed = JSON.parse(jsonResponse);
+
+			// Step 6: If there's a "tags" key, return the tags array; otherwise, return an empty array
+			if (parsed && parsed.tags) {
+				return Array.isArray(parsed.tags) ? parsed.tags : [];
+			} else {
+				return [];
+			}
+		}
+
+		// If no valid JSON block found, return an empty array
+		return [];
+	} catch (e) {
+		// Catch and safely return empty array on any parsing errors
+		console.error('Failed to parse response: ', e);
+		return [];
+	}
+};
+
+export const generateEmoji = async (
+	token: string = '',
+	model: string,
+	prompt: string,
+	chat_id?: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/emoji/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: prompt,
+			...(chat_id && { chat_id: chat_id })
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	const response = res?.choices[0]?.message?.content?.replace(/["']/g, '') ?? null;
+
+	if (response) {
+		if (/\p{Extended_Pictographic}/u.test(response)) {
+			return response.match(/\p{Extended_Pictographic}/gu)[0];
+		}
+	}
+
+	return null;
+};
+
+export const generateQueries = async (
+	token: string = '',
+	model: string,
+	messages: object[],
+	prompt: string,
+	type: string = 'web_search',
+	chat_id?: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/queries/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: messages,
+			prompt: prompt,
+			type: type,
+			...(chat_id && { chat_id: chat_id })
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	// Step 1: Safely extract the response string
+	const response = res?.choices[0]?.message?.content ?? '';
+
+	try {
+		const jsonStartIndex = response.indexOf('{');
+		const jsonEndIndex = response.lastIndexOf('}');
+
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
+
+			// Step 5: Parse the JSON block
+			const parsed = JSON.parse(jsonResponse);
+
+			// Step 6: If there's a "queries" key, return the queries array; otherwise, return an empty array
+			if (parsed && parsed.queries) {
+				return Array.isArray(parsed.queries) ? parsed.queries : [];
+			} else {
+				return [];
+			}
+		}
+
+		// If no valid JSON block found, return response as is
+		return [response];
+	} catch (e) {
+		// Catch and safely return empty array on any parsing errors
+		console.error('Failed to parse response: ', e);
+		return [response];
+	}
+};
+
+export const generateAutoCompletion = async (
+	token: string = '',
+	model: string,
+	prompt: string,
+	messages?: object[],
+	type: string = 'search query',
+	chat_id?: string
+) => {
+	const controller = new AbortController();
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/auto/completions`, {
+		signal: controller.signal,
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: prompt,
+			...(messages && { messages: messages }),
+			type: type,
+			stream: false,
+			...(chat_id && { chat_id: chat_id })
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	const response = res?.choices[0]?.message?.content ?? '';
+
+	try {
+		const jsonStartIndex = response.indexOf('{');
+		const jsonEndIndex = response.lastIndexOf('}');
+
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
+
+			// Step 5: Parse the JSON block
+			const parsed = JSON.parse(jsonResponse);
+
+			// Step 6: If there's a "queries" key, return the queries array; otherwise, return an empty array
+			if (parsed && parsed.text) {
+				return parsed.text;
+			} else {
+				return '';
+			}
+		}
+
+		// If no valid JSON block found, return response as is
+		return response;
+	} catch (e) {
+		// Catch and safely return empty array on any parsing errors
+		console.error('Failed to parse response: ', e);
+		return response;
+	}
+};
+
+export const generateMoACompletion = async (
+	token: string = '',
+	model: string,
+	prompt: string,
+	responses: string[]
+) => {
+	const controller = new AbortController();
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/moa/completions`, {
+		signal: controller.signal,
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: prompt,
+			responses: responses,
+			stream: true
+		})
+	}).catch((err) => {
+		console.error(err);
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return [res, controller];
+};
+
+export const getPipelinesList = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/list`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	const pipelines = res?.data ?? [];
+	return pipelines;
+};
+
+export const uploadPipeline = async (token: string, file: File, urlIdx: string) => {
+	let error = null;
+
+	// Create a new FormData object to handle the file upload
+	const formData = new FormData();
+	formData.append('file', file);
+	formData.append('urlIdx', urlIdx);
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/upload`, {
+		method: 'POST',
+		headers: {
+			...(token && { authorization: `Bearer ${token}` })
+			// 'Content-Type': 'multipart/form-data' is not needed as Fetch API will set it automatically
+		},
+		body: formData
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const downloadPipeline = async (token: string, url: string, urlIdx: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/add`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			url: url,
+			urlIdx: urlIdx
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const deletePipeline = async (token: string, id: string, urlIdx: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/delete`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			id: id,
+			urlIdx: urlIdx
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getPipelines = async (token: string, urlIdx?: string) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (urlIdx !== undefined) {
+		searchParams.append('urlIdx', urlIdx);
+	}
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/pipelines/?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	const pipelines = res?.data ?? [];
+	return pipelines;
+};
+
+export const getPipelineValves = async (token: string, pipeline_id: string, urlIdx: string) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (urlIdx !== undefined) {
+		searchParams.append('urlIdx', urlIdx);
+	}
+
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getPipelineValvesSpec = async (token: string, pipeline_id: string, urlIdx: string) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (urlIdx !== undefined) {
+		searchParams.append('urlIdx', urlIdx);
+	}
+
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves/spec?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updatePipelineValves = async (
+	token: string = '',
+	pipeline_id: string,
+	valves: object,
+	urlIdx: string
+) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (urlIdx !== undefined) {
+		searchParams.append('urlIdx', urlIdx);
+	}
+
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves/update?${searchParams.toString()}`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			},
+			body: JSON.stringify(valves)
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getUsage = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/usage`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getBackendConfig = async () => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
+		method: 'GET',
+		credentials: 'include',
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		// When a forward-auth proxy (e.g. Authentik/Traefik) intercepts the
+		// request and redirects to an external login page, the browser blocks
+		// the cross-origin redirect for fetch() and throws a TypeError.
+		// Detect this by re-fetching with redirect:"manual" — if the server
+		// responded with a redirect, the probe returns an opaque redirect
+		// response instead of throwing, confirming the backend is alive but
+		// an auth proxy is intercepting.
+		if (error instanceof TypeError) {
+			try {
+				const probeRes = await fetch(`${WEBUI_BASE_URL}/api/config`, {
+					method: 'GET',
+					credentials: 'include',
+					redirect: 'manual',
+					headers: { 'Content-Type': 'application/json' }
+				});
+				if (
+					probeRes.type === 'opaqueredirect' ||
+					(probeRes.status >= 300 && probeRes.status < 400)
+				) {
+					throw { authRedirect: true };
+				}
+			} catch (probeErr: any) {
+				if (probeErr?.authRedirect) throw probeErr;
+				// Probe also failed — genuine network/backend issue
+			}
+		}
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChangelog = async () => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/changelog`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getVersion = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/version`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getVersionUpdates = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/version/updates`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export type EventCatalogItem = {
+	event: string;
+	description: string;
+	message: string;
+};
+
+export type EventWebhookTarget = {
+	type: 'user' | 'group';
+	id: string;
+};
+
+export type EventWebhook = {
+	id: string;
+	name: string;
+	url: string;
+	enabled: boolean;
+	events: string[];
+	targets: EventWebhookTarget[] | null;
+	created_at?: number;
+	updated_at?: number;
+};
+
+export const getEvents = async (
+	token: string
+): Promise<{ schema: string; events: EventCatalogItem[] }> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/events`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getEventWebhooks = async (token: string): Promise<EventWebhook[]> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/events/webhooks`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const createEventWebhook = async (
+	token: string,
+	webhook: Partial<EventWebhook>
+): Promise<EventWebhook> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/events/webhooks`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(webhook)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateEventWebhook = async (
+	token: string,
+	id: string,
+	webhook: Partial<EventWebhook>
+): Promise<EventWebhook> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/events/webhooks/${id}`, {
+		method: 'PUT',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(webhook)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const deleteEventWebhook = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/events/webhooks/${id}`, {
+		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export interface ModelConfig {
+	id: string;
+	name: string;
+	meta: ModelMeta;
+	base_model_id?: string;
+	params: ModelParams;
+}
+
+export interface ModelMeta {
+	toolIds: never[];
+	description?: string;
+	hidden?: boolean;
+	capabilities?: object;
+	profile_image_url?: string;
+}
+
+export interface ModelParams {}

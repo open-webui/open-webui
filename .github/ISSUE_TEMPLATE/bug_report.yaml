@@ -1,0 +1,136 @@
+name: Bug Report
+description: Tell us what broke in Open WebUI.
+title: 'issue: '
+labels: ['bug', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Bug Report
+
+        Use this for real, reproducible bugs. A clear issue is the most useful contribution: include the affected workflow, the expected result, the actual result, and the details needed for someone else to reproduce it.
+
+        Before submitting, search open and closed [Issues](https://github.com/open-webui/open-webui/issues) and [Discussions](https://github.com/open-webui/open-webui/discussions). The issue may already be reported or fixed on `dev`.
+
+        Please do not open a code pull request for this report unless a maintainer asks for one, or the change is only i18n/localization. If you want to share code as reference, include it here as a local diff or patch. Actionable reproduction details are the most useful next step.
+
+        Security vulnerabilities must not be reported publicly. Use the [GitHub security page](https://github.com/open-webui/open-webui/security) instead.
+
+  - type: checkboxes
+    id: issue-check
+    attributes:
+      label: Before Submitting
+      options:
+        - label: I searched open and closed issues and discussions for an existing report.
+          required: true
+        - label: I checked whether this is already fixed on the `dev` branch or latest source.
+          required: true
+        - label: I understand that maintainers want a well-written issue before any code pull request.
+          required: true
+        - label: I am using the latest available version of Open WebUI for my install method.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+
+  - type: dropdown
+    id: installation-method
+    attributes:
+      label: Installation Method
+      description: How did you install Open WebUI?
+      options:
+        - Docker
+        - Pip Install
+        - Git Clone
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: open-webui-version
+    attributes:
+      label: Open WebUI Version
+      description: Specify the version, commit, or image tag.
+      placeholder: v0.11.0, dev commit SHA, or Docker tag
+    validations:
+      required: true
+
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: Specify the OS and version.
+      placeholder: Windows 11, macOS Tahoe, Ubuntu 26.04, Debian 13
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: If the bug appears in the browser, include browser and version.
+      placeholder: Chrome 151.0, Firefox 153.0.3
+    validations:
+      required: false
+
+  - type: input
+    id: ollama-version
+    attributes:
+      label: Ollama Version
+      description: Include this if Ollama is involved.
+      placeholder: v0.32.5
+    validations:
+      required: false
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is wrong, in a few sentences?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to Reproduce
+      description: Include the exact commands, settings, URLs, model/provider setup, and user actions needed to hit the bug.
+      placeholder: |
+        1. Start Open WebUI with ...
+        2. Configure ...
+        3. Open ...
+        4. Click ...
+        5. See ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs-screenshots
+    attributes:
+      label: Logs, Screenshots, and Config
+      description: Include relevant browser console logs, server/container logs, screenshots, and configuration. If something does not apply, say so.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Anything else that might help us understand the report.
+    validations:
+      required: false

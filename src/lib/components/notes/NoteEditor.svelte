@@ -1,0 +1,1512 @@
+<script lang="ts">
+	import { getContext, onDestroy, onMount, tick } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
+	const i18n = getContext('i18n');
+
+	import { marked } from 'marked';
+	import { toast } from 'svelte-sonner';
+	import equal from 'fast-deep-equal';
+
+	import { goto } from '$app/navigation';
+
+	import dayjs from '$lib/dayjs';
+	import calendar from 'dayjs/plugin/calendar';
+	import duration from 'dayjs/plugin/duration';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+
+	dayjs.extend(calendar);
+	dayjs.extend(duration);
+	dayjs.extend(relativeTime);
+
+	import { compressImage, copyToClipboard, convertHeicToJpeg } from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { getFileById, uploadFile } from '$lib/apis/files';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+
+	import {
+		config,
+		mobile,
+		models,
+		settings,
+		showSidebar,
+		socket,
+		user,
+		WEBUI_NAME,
+		pinnedNotes
+	} from '$lib/stores';
+
+	import { downloadPdf } from './utils';
+
+	import Chat from '$lib/components/chat/Chat.svelte';
+
+	import NotePanel from '$lib/components/notes/NotePanel.svelte';
+	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
+
+	async function loadLocale(locales) {
+		for (const locale of locales) {
+			try {
+				dayjs.locale(locale);
+				break; // Stop after successfully loading the first available locale
+			} catch (error) {
+				console.error(`Could not load locale '${locale}':`, error);
+			}
+		}
+	}
+
+	// Assuming $i18n.languages is an array of language codes
+	$: loadLocale($i18n.languages);
+
+	import {
+		deleteNoteById,
+		createNoteChatById,
+		getNoteById,
+		getNoteChatById,
+		getNoteChatsById,
+		updateNoteById,
+		updateNoteAccessGrants,
+		toggleNotePinnedStatusById,
+		getPinnedNoteList
+	} from '$lib/apis/notes';
+	import { deleteChatById } from '$lib/apis/chats';
+
+	import RichTextInput from '../common/RichTextInput.svelte';
+	import FileItem from '../common/FileItem.svelte';
+	import Spinner from '../common/Spinner.svelte';
+	import Mic from '../icons/Mic.svelte';
+	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+
+	import AccessButton from '../common/AccessButton.svelte';
+
+	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
+	import RecordMenu from './RecordMenu.svelte';
+	import NoteMenu from './Notes/NoteMenu.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import ArrowUturnLeft from '../icons/ArrowUturnLeft.svelte';
+	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
+	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
+
+	export let id: null | string = null;
+
+	let editor = null;
+	let note = null;
+
+	const newNote = {
+		title: '',
+		data: {
+			content: {
+				json: null,
+				html: '',
+				md: ''
+			},
+			versions: [],
+			files: null
+		},
+		// pages: [], // TODO: Implement pages for notes to allow users to create multiple pages in a note
+		meta: null,
+		access_grants: []
+	};
+
+	const hasPublicReadGrant = (grants) =>
+		Array.isArray(grants) &&
+		grants.some(
+			(grant) =>
+				grant?.principal_type === 'user' &&
+				grant?.principal_id === '*' &&
+				grant?.permission === 'read'
+		);
+
+	let files = [];
+
+	let wordCount = 0;
+	let charCount = 0;
+
+	let versionIdx = null;
+	let selectedModelId = null;
+
+	let recording = false;
+	let displayMediaRecord = false;
+
+	let showNoteChat = false;
+	let noteChatId = null;
+	let noteChatLoading = false;
+	let noteChats = [];
+	let noteChatDraftKey = '';
+	let noteChatCreating = false;
+
+	let selectedContent = null;
+	let noteAttachmentFiles = [];
+	let noteChatSuggestedPrompts = [];
+	let pendingNoteEvent = null;
+	let pendingNoteEventTimer = null;
+	let lastLocalContentChangeAt = 0;
+	$: noteAttachmentFiles = (files ?? []).filter(
+		(file) => file?.type !== 'image' && !(file?.content_type ?? '').startsWith('image/')
+	);
+	$: noteChatSuggestedPrompts = [
+		$i18n.t('Enhance this note and update it.'),
+		$i18n.t('Summarize this note.'),
+		$i18n.t('Extract action items from this note.'),
+		$i18n.t('Rewrite the selected text.')
+	];
+
+	let showDeleteConfirm = false;
+	let showAccessControlModal = false;
+
+	let ignoreBlur = false;
+	let titleInputFocused = false;
+	let titleGenerating = false;
+
+	let dragged = false;
+	let loading = false;
+
+	let inputElement = null;
+
+	// Computed HTML for editor: fall back to markdown if HTML is missing
+	$: editorHtml =
+		note?.data?.content?.html ||
+		(note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
+
+	const init = async () => {
+		loading = true;
+		const res = await getNoteById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			note = res;
+			if (!Array.isArray(note?.access_grants)) {
+				note.access_grants = [];
+			}
+			files = res.data.files || [];
+
+			$socket?.emit('join-note', {
+				note_id: id,
+				auth: {
+					token: localStorage.token
+				}
+			});
+			$socket?.off('events:note', noteEventHandler);
+			$socket?.on('events:note', noteEventHandler);
+		} else {
+			goto('/');
+			return;
+		}
+
+		loading = false;
+	};
+
+	let debounceTimeout: NodeJS.Timeout | null = null;
+
+	const changeDebounceHandler = () => {
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+		}
+
+		debounceTimeout = setTimeout(async () => {
+			const res = await updateNoteById(localStorage.token, id, {
+				title: note?.title === '' ? $i18n.t('Untitled') : note.title,
+				data: {
+					files: files
+				},
+				access_grants: note?.access_grants ?? []
+			}).catch((e) => {
+				toast.error(`${e}`);
+			});
+
+			if (res) {
+				pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
+			}
+		}, 200);
+	};
+
+	const applyExternalNoteContent = async (_note) => {
+		const incomingContent = _note.data?.content;
+		const contentLength = incomingContent?.md?.length ?? incomingContent?.html?.length ?? 0;
+
+		console.info('[note-chat] external note event apply requested', {
+			noteId: _note.id,
+			eventUpdatedAt: _note.updated_at,
+			currentUpdatedAt: note?.updated_at,
+			editorPresent: !!editor,
+			contentLength
+		});
+
+		if (_note.updated_at && note?.updated_at && _note.updated_at < note.updated_at) {
+			console.info('[note-chat] external note event skipped', {
+				noteId: _note.id,
+				reason: 'stale',
+				eventUpdatedAt: _note.updated_at,
+				currentUpdatedAt: note.updated_at,
+				contentLength
+			});
+			return false;
+		}
+
+		const elapsed = Date.now() - lastLocalContentChangeAt;
+		if (elapsed < 800) {
+			pendingNoteEvent = _note;
+			if (pendingNoteEventTimer) {
+				clearTimeout(pendingNoteEventTimer);
+			}
+			pendingNoteEventTimer = setTimeout(async () => {
+				const event = pendingNoteEvent;
+				pendingNoteEvent = null;
+				if (event) {
+					await applyExternalNoteContent(event);
+				}
+			}, 850 - elapsed);
+
+			console.info('[note-chat] external note event deferred', {
+				noteId: _note.id,
+				reason: 'local-edit-settling',
+				eventUpdatedAt: _note.updated_at,
+				contentLength
+			});
+			return false;
+		}
+
+		note.data.content = {
+			...note.data.content,
+			...incomingContent
+		};
+		if (_note.updated_at) {
+			note.updated_at = _note.updated_at;
+		}
+
+		if (!editor) {
+			console.info('[note-chat] external note event applied', {
+				noteId: _note.id,
+				reason: 'no-editor',
+				eventUpdatedAt: _note.updated_at,
+				contentLength
+			});
+			return true;
+		}
+
+		const selection = editor.state.selection;
+		editor.commands.setContent(incomingContent.html || marked.parse(incomingContent.md ?? ''));
+		await tick();
+
+		const docSize = editor.state.doc.content.size;
+		const from = Math.min(selection.from, docSize);
+		const to = Math.min(selection.to, docSize);
+		if (from < to) {
+			editor.commands.setTextSelection({ from, to });
+			const text = editor.state.doc.textBetween(from, to, ' ');
+			selectedContent = text ? { text, from, to } : null;
+		} else {
+			selectedContent = null;
+		}
+
+		console.info('[note-chat] external note event applied', {
+			noteId: _note.id,
+			reason: 'content',
+			eventUpdatedAt: _note.updated_at,
+			contentLength
+		});
+		return true;
+	};
+
+	$: if (id) {
+		init();
+	}
+
+	function areContentsEqual(a, b) {
+		return equal(a, b);
+	}
+
+	function insertNoteVersion(note) {
+		const current = {
+			json: note.data.content.json,
+			html: note.data.content.html,
+			md: note.data.content.md
+		};
+		const lastVersion = note.data.versions?.at(-1);
+
+		if (!lastVersion || !areContentsEqual(lastVersion, current)) {
+			note.data.versions = (note.data.versions ?? []).concat(current);
+			return true;
+		}
+		return false;
+	}
+
+	const generateTitleHandler = async () => {
+		const content = note.data.content.md;
+		const DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = `### Task:
+Generate a concise title summarizing the content in the content's primary language.
+### Guidelines:
+- The title should clearly represent the main theme or subject of the content.
+- Keep it short: 2-4 words is best.
+- Do not use emojis, quotation marks, or special formatting.
+- Write the title in the content's primary language.
+- Prioritize accuracy over creativity.
+- Your entire response must consist solely of the JSON object, without any introductory or concluding text.
+- The output must be a single, raw JSON object, without any markdown code fences or other encapsulating text.
+- Ensure no conversational text, affirmations, or explanations precede or follow the raw JSON output, as this will cause direct parsing failure.
+### Output:
+JSON format: { "title": "your concise title here" }
+### Examples:
+- { "title": "Stock Trends" },
+- { "title": "Chocolate Chip Cookies" },
+- { "title": "Music Streaming" },
+- { "title": "Remote Work" }
+### Content:
+<content>
+${content}
+</content>`;
+
+		const oldTitle = JSON.parse(JSON.stringify(note.title));
+		note.title = '';
+		titleGenerating = true;
+
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				model: selectedModelId,
+				stream: false,
+				messages: [
+					{
+						role: 'user',
+						content: DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
+					}
+				]
+			},
+			`${WEBUI_BASE_URL}/api`
+		);
+		if (res) {
+			// Step 1: Safely extract the response string
+			const response = res?.choices[0]?.message?.content ?? '';
+
+			try {
+				const jsonStartIndex = response.indexOf('{');
+				const jsonEndIndex = response.lastIndexOf('}');
+
+				if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+					const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
+					const parsed = JSON.parse(jsonResponse);
+
+					if (parsed && parsed.title) {
+						note.title = parsed.title.trim();
+					}
+				}
+			} catch (e) {
+				console.error('Error parsing JSON response:', e);
+				toast.error($i18n.t('Failed to generate title'));
+			}
+		}
+
+		if (!note.title) {
+			note.title = oldTitle;
+		}
+
+		titleGenerating = false;
+		await tick();
+		changeDebounceHandler();
+	};
+
+	function setContentByVersion(versionIdx) {
+		if (!note.data.versions?.length) return;
+		let idx = versionIdx;
+
+		if (idx === null) idx = note.data.versions.length - 1; // latest
+		const v = note.data.versions[idx];
+
+		note.data.content.json = v.json;
+		note.data.content.html = v.html;
+		note.data.content.md = v.md;
+
+		if (versionIdx === null) {
+			const lastVersion = note.data.versions.at(-1);
+			const currentContent = note.data.content;
+
+			if (areContentsEqual(lastVersion, currentContent)) {
+				// remove the last version
+				note.data.versions = note.data.versions.slice(0, -1);
+			}
+		}
+	}
+
+	// Navigation
+	function versionNavigateHandler(direction) {
+		if (!note.data.versions || note.data.versions.length === 0) return;
+
+		if (versionIdx === null) {
+			// Get latest snapshots
+			const lastVersion = note.data.versions.at(-1);
+			const currentContent = note.data.content;
+
+			if (!areContentsEqual(lastVersion, currentContent)) {
+				// If the current content is different from the last version, insert a new version
+				insertNoteVersion(note);
+				versionIdx = note.data.versions.length - 1;
+			} else {
+				versionIdx = note.data.versions.length;
+			}
+		}
+
+		if (direction === 'prev') {
+			if (versionIdx > 0) versionIdx -= 1;
+		} else if (direction === 'next') {
+			if (versionIdx < note.data.versions.length - 1) versionIdx += 1;
+			else versionIdx = null; // Reset to latest
+
+			if (versionIdx === note.data.versions.length - 1) {
+				// If we reach the latest version, reset to null
+				versionIdx = null;
+			}
+		}
+
+		setContentByVersion(versionIdx);
+	}
+
+	const uploadFileHandler = async (file) => {
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			collection_name: '',
+			status: 'uploading',
+			size: file.size,
+			error: '',
+			itemId: tempItemId
+		};
+
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
+
+		files = [...files, fileItem];
+
+		try {
+			// If the file is an audio file, provide the language for STT.
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
+			// During the file upload, file content is automatically extracted.
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+
+			if (uploadedFile) {
+				console.log('File upload completed:', uploadedFile);
+
+				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
+					toast.warning(uploadedFile.error);
+				}
+
+				fileItem.status = 'uploaded';
+				fileItem.file = await getFileById(localStorage.token, uploadedFile.id).catch((e) => {
+					toast.error(`${e}`);
+					return null;
+				});
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name =
+					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+
+				fileItem.url = `${uploadedFile.id}`;
+
+				files = files;
+			} else {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+			files = files.filter((item) => item?.itemId !== tempItemId);
+		}
+
+		if (files.length > 0) {
+			note.data.files = files;
+		} else {
+			note.data.files = null;
+		}
+
+		if (editor) {
+			editor.storage.files = files;
+		}
+
+		changeDebounceHandler();
+
+		return fileItem;
+	};
+
+	const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+		// Quick shortcut so we don’t do unnecessary work.
+		const settingsCompression = settings?.imageCompression ?? false;
+		const configWidth = config?.file?.image_compression?.width ?? null;
+		const configHeight = config?.file?.image_compression?.height ?? null;
+
+		// If neither settings nor config wants compression, return original URL.
+		if (!settingsCompression && !configWidth && !configHeight) {
+			return imageUrl;
+		}
+
+		// Default to null (no compression unless set)
+		let width = null;
+		let height = null;
+
+		// If user/settings want compression, pick their preferred size.
+		if (settingsCompression) {
+			width = settings?.imageCompressionSize?.width ?? null;
+			height = settings?.imageCompressionSize?.height ?? null;
+		}
+
+		// Apply config limits as an upper bound if any
+		if (configWidth && (width === null || width > configWidth)) {
+			width = configWidth;
+		}
+		if (configHeight && (height === null || height > configHeight)) {
+			height = configHeight;
+		}
+
+		// Do the compression if required
+		if (width || height) {
+			return await compressImage(imageUrl, width, height);
+		}
+		return imageUrl;
+	};
+
+	const inputFileHandler = async (file) => {
+		console.log('Processing file:', {
+			name: file.name,
+			type: file.type,
+			size: file.size,
+			extension: file.name.split('.').at(-1)
+		});
+
+		if (
+			($config?.file?.max_size ?? null) !== null &&
+			file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+		) {
+			console.log('File exceeds max size limit:', {
+				fileSize: file.size,
+				maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+			});
+			toast.error(
+				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+					maxSize: $config?.file?.max_size
+				})
+			);
+			return;
+		}
+
+		if (file['type'].startsWith('image/')) {
+			const uploadImagePromise = new Promise(async (resolve, reject) => {
+				let reader = new FileReader();
+				reader.onload = async (event) => {
+					try {
+						let imageUrl = event.target.result;
+						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+
+						const fileId = uuidv4();
+						const fileItem = {
+							id: fileId,
+							type: 'image',
+							url: `${imageUrl}`
+						};
+						files = [...files, fileItem];
+						note.data.files = files;
+						if (editor) {
+							editor.storage.files = files;
+						}
+
+						changeDebounceHandler();
+						resolve(fileItem);
+					} catch (err) {
+						reject(err);
+					}
+				};
+
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+			});
+
+			return await uploadImagePromise;
+		} else {
+			return await uploadFileHandler(file);
+		}
+	};
+
+	const inputFilesHandler = async (inputFiles) => {
+		console.log('Input files handler called with:', inputFiles);
+		inputFiles.forEach(async (file) => {
+			await inputFileHandler(file);
+		});
+	};
+
+	const uploadNoteFilesHandler = () => {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.multiple = true;
+		input.click();
+
+		input.onchange = async () => {
+			const inputFiles = Array.from(input.files ?? []);
+			if (inputFiles.length > 0) {
+				await inputFilesHandler(inputFiles);
+			}
+		};
+	};
+
+	const openNoteChat = async () => {
+		console.info('[note-chat] open requested', {
+			noteId: note?.id,
+			alreadyLoading: noteChatLoading,
+			currentChatId: noteChatId,
+			sidebarOpen: showNoteChat
+		});
+		if (!note?.id || noteChatLoading) return;
+
+		noteChatLoading = true;
+		const chat = await getNoteChatById(localStorage.token, note.id).catch((error) => {
+			console.error('[note-chat] open failed', { noteId: note?.id, error });
+			toast.error(`${error}`);
+			return null;
+		});
+		const chats = chat
+			? await getNoteChatsById(localStorage.token, note.id).catch((error) => {
+					console.error('[note-chat] history failed', { noteId: note?.id, error });
+					return null;
+				})
+			: null;
+		noteChatLoading = false;
+
+		if (chat?.id) {
+			console.info('[note-chat] open resolved', {
+				noteId: note.id,
+				chatId: chat.id,
+				title: chat.title,
+				hasChatPayload: !!chat.chat
+			});
+			noteChatId = chat.id;
+			noteChats = chats ?? [chat];
+			showNoteChat = true;
+		} else {
+			console.warn('[note-chat] open returned no chat id', { noteId: note.id, chat });
+		}
+	};
+
+	const createNoteChat = async () => {
+		if (!note?.id || noteChatLoading) return;
+
+		noteChatId = null;
+		noteChatDraftKey = `${Date.now()}`;
+		showNoteChat = true;
+	};
+
+	const createNoteChatOnFirstMessage = async () => {
+		if (!note?.id || noteChatCreating) return null;
+
+		noteChatCreating = true;
+		try {
+			const chat = await createNoteChatById(localStorage.token, note.id).catch((error) => {
+				console.error('[note-chat] create failed', { noteId: note?.id, error });
+				toast.error(`${error}`);
+				return null;
+			});
+			const chats = chat
+				? await getNoteChatsById(localStorage.token, note.id).catch((error) => {
+						console.error('[note-chat] history failed', { noteId: note?.id, error });
+						return null;
+					})
+				: null;
+
+			if (chat?.id) {
+				noteChats = chats ?? [chat, ...noteChats.filter((item) => item.id !== chat.id)];
+				showNoteChat = true;
+			}
+
+			return chat;
+		} finally {
+			noteChatCreating = false;
+		}
+	};
+
+	const deleteNoteChat = async (chatId) => {
+		if (!note?.id || !chatId) return;
+
+		const deleted = await deleteChatById(localStorage.token, chatId).catch((error) => {
+			console.error('[note-chat] delete failed', { noteId: note?.id, chatId, error });
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (!deleted) return;
+
+		let chats =
+			(await getNoteChatsById(localStorage.token, note.id).catch((error) => {
+				console.error('[note-chat] history failed', { noteId: note?.id, error });
+				return null;
+			})) ?? [];
+
+		if (noteChatId === chatId) {
+			let nextChat = chats[0];
+			if (!nextChat) {
+				nextChat = await getNoteChatById(localStorage.token, note.id).catch((error) => {
+					console.error('[note-chat] recreate failed after delete', { noteId: note?.id, error });
+					toast.error(`${error}`);
+					return null;
+				});
+				chats = nextChat ? [nextChat] : [];
+			}
+			noteChatId = nextChat?.id ?? null;
+		}
+
+		noteChats = chats;
+	};
+
+	const downloadHandler = async (type) => {
+		console.log('downloadHandler', type);
+		if (type === 'txt') {
+			const blob = new Blob([note.data.content.md], { type: 'text/plain' });
+			saveAs(blob, `${note.title}.txt`);
+		} else if (type === 'md') {
+			const blob = new Blob([note.data.content.md], { type: 'text/markdown' });
+			saveAs(blob, `${note.title}.md`);
+		} else if (type === 'pdf') {
+			try {
+				await downloadPdf(note);
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+		}
+	};
+
+	const deleteNoteHandler = async (id) => {
+		const res = await deleteNoteById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
+			toast.success($i18n.t('Note deleted successfully'));
+			goto('/notes');
+		} else {
+			toast.error($i18n.t('Failed to delete note'));
+		}
+	};
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+
+		if (
+			e.dataTransfer?.types?.includes('text/plain') ||
+			e.dataTransfer?.types?.includes('text/html')
+		) {
+			dragged = false;
+			return;
+		}
+
+		// Check if the dragged item is a file or image
+		if (e.dataTransfer?.types?.includes('Files') && e.dataTransfer?.items) {
+			const items = Array.from(e.dataTransfer.items);
+			const hasFiles = items.some((item) => item.kind === 'file');
+			const hasImages = items.some((item) => item.type.startsWith('image/'));
+
+			if (hasFiles && !hasImages) {
+				dragged = true;
+			} else {
+				dragged = false;
+			}
+		} else {
+			dragged = false;
+		}
+	};
+
+	const onDragLeave = () => {
+		dragged = false;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
+
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
+			}
+		}
+
+		dragged = false;
+	};
+
+	const insertHandler = (content) => {
+		insertNoteVersion(note);
+		inputElement?.insertContent(content);
+	};
+
+	const noteEventHandler = async (_note) => {
+		console.log('noteEventHandler', _note);
+		if (_note.id !== id) return;
+
+		if (_note.updated_at && note?.updated_at && _note.updated_at < note.updated_at) {
+			console.info('[note-chat] external note event skipped', {
+				noteId: _note.id,
+				reason: 'stale-event',
+				eventUpdatedAt: _note.updated_at,
+				currentUpdatedAt: note.updated_at,
+				contentLength: _note.data?.content?.md?.length ?? _note.data?.content?.html?.length ?? 0
+			});
+			return;
+		}
+
+		if (_note.access_grants && _note.access_grants !== note.access_grants) {
+			note.access_grants = _note.access_grants;
+		}
+
+		if (_note.data && 'files' in _note.data) {
+			files = _note.data.files ?? [];
+			note.data.files = files.length > 0 ? files : null;
+		}
+
+		if (_note.data?.content) {
+			await applyExternalNoteContent(_note);
+		}
+
+		if (_note.title && _note.title) {
+			note.title = _note.title;
+		}
+
+		if (_note.updated_at) {
+			note.updated_at = _note.updated_at;
+		}
+
+		if (editor) {
+			editor.storage.files = files;
+		}
+		await tick();
+
+		for (const file of files) {
+			if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) {
+				const e = new CustomEvent('data', { files: files });
+
+				const img = document.getElementById(`image:${file.id}`);
+				if (img) {
+					img.dispatchEvent(e);
+				}
+			}
+		}
+	};
+
+	onMount(async () => {
+		await tick();
+
+		if ($settings?.models) {
+			selectedModelId = $settings?.models[0];
+		} else if ($config?.default_models) {
+			selectedModelId = $config?.default_models.split(',')[0];
+		} else {
+			selectedModelId = '';
+		}
+
+		if (selectedModelId) {
+			const model = $models
+				.filter((model) => model.id === selectedModelId && !(model?.info?.meta?.hidden ?? false))
+				.find((model) => model.id === selectedModelId);
+
+			if (!model) {
+				selectedModelId = '';
+			}
+		}
+
+		if (!selectedModelId) {
+			selectedModelId =
+				$models.filter((model) => !(model?.info?.meta?.hidden ?? false)).at(0)?.id || '';
+		}
+
+		const dropzoneElement = document.getElementById('note-editor');
+
+		// dropzoneElement?.addEventListener('dragover', onDragOver);
+		// dropzoneElement?.addEventListener('drop', onDrop);
+		// dropzoneElement?.addEventListener('dragleave', onDragLeave);
+	});
+
+	onDestroy(() => {
+		console.log('destroy');
+		$socket?.off('events:note', noteEventHandler);
+		if (pendingNoteEventTimer) {
+			clearTimeout(pendingNoteEventTimer);
+		}
+
+		const dropzoneElement = document.getElementById('note-editor');
+
+		if (dropzoneElement) {
+			// dropzoneElement?.removeEventListener('dragover', onDragOver);
+			// dropzoneElement?.removeEventListener('drop', onDrop);
+			// dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+		}
+	});
+</script>
+
+<svelte:head>
+	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
+	<title>
+		{note?.title
+			? `${note?.title.length > 30 ? `${note?.title.slice(0, 30)}...` : note?.title} / ${$WEBUI_NAME}`
+			: `${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
+
+{#if note}
+	<AccessControlModal
+		bind:show={showAccessControlModal}
+		bind:accessGrants={note.access_grants}
+		accessRoles={['read', 'write']}
+		share={$user?.permissions?.sharing?.notes || $user?.role === 'admin'}
+		sharePublic={$user?.permissions?.sharing?.public_notes || $user?.role === 'admin'}
+		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
+		onChange={async () => {
+			if (id) {
+				try {
+					await updateNoteAccessGrants(localStorage.token, id, note.access_grants ?? []);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					toast.error(`${error}`);
+				}
+			}
+		}}
+	/>
+{/if}
+
+<FilesOverlay show={dragged} />
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete note?')}
+	on:confirm={() => {
+		deleteNoteHandler(note.id);
+		showDeleteConfirm = false;
+	}}
+>
+	<div class=" text-sm text-gray-500">
+		{$i18n.t('This will delete')} <span class="  font-normal">{note.title}</span>.
+	</div>
+</DeleteConfirmDialog>
+
+<div class="w-full h-full flex">
+	<div class="h-full flex flex-col min-w-0 flex-1 relative">
+		<div class="relative flex-1 w-full h-full flex justify-center pt-2" id="note-editor">
+			{#if loading}
+				<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
+					<div class="m-auto">
+						<Spinner className="size-5" />
+					</div>
+				</div>
+			{:else}
+				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
+					<div class="shrink-0 w-full flex justify-between items-center px-3">
+						<div class="w-full min-w-0 flex items-center">
+							{#if $mobile}
+								<Tooltip
+									content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+								>
+									<button
+										id="sidebar-toggle-button"
+										class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+										aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+										type="button"
+										on:click={() => {
+											showSidebar.set(!$showSidebar);
+										}}
+									>
+										<div class=" self-center p-1.5">
+											<Sidebar className="size-4" />
+										</div>
+									</button>
+								</Tooltip>
+							{/if}
+
+							<input
+								class="w-full text-sm font-normal bg-transparent outline-hidden {$mobile
+									? 'ml-1'
+									: ''}"
+								type="text"
+								bind:value={note.title}
+								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
+								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
+									titleGenerating}
+								required
+								on:focus={() => {
+									titleInputFocused = true;
+								}}
+								on:blur={(e) => {
+									// check if target is generate button
+									if (ignoreBlur) {
+										ignoreBlur = false;
+										return;
+									}
+
+									titleInputFocused = false;
+									changeDebounceHandler();
+								}}
+							/>
+
+							{#if titleInputFocused && !titleGenerating}
+								<div
+									class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px] pl-2 pr-0.5"
+								>
+									<Tooltip content={$i18n.t('Generate')}>
+										<button
+											class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+											id="generate-title-button"
+											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
+												titleGenerating}
+											on:mouseenter={() => {
+												ignoreBlur = true;
+											}}
+											on:click={(e) => {
+												e.preventDefault();
+												e.stopImmediatePropagation();
+												e.stopPropagation();
+
+												generateTitleHandler();
+												titleInputFocused = false;
+											}}
+										>
+											<Sparkles strokeWidth="1.5" />
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
+
+							<div class="flex items-center gap-0.5 shrink-0">
+								{#if note?.write_access}
+									{#if editor}
+										<div>
+											<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
+												<button
+													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													on:click={() => {
+														editor.chain().focus().undo().run();
+														// versionNavigateHandler('prev');
+													}}
+													disabled={!editor.can().undo()}
+												>
+													<ArrowUturnLeft className="size-4" />
+												</button>
+
+												<button
+													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													on:click={() => {
+														editor.chain().focus().redo().run();
+														// versionNavigateHandler('next');
+													}}
+													disabled={!editor.can().redo()}
+												>
+													<ArrowUturnRight className="size-4" />
+												</button>
+											</div>
+										</div>
+									{/if}
+								{/if}
+
+								<Tooltip content={$i18n.t('Chat')} placement="top">
+									<button
+										type="button"
+										class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+										aria-label={$i18n.t('Chat')}
+										on:click={openNoteChat}
+									>
+										<ChatBubbleOval className="size-4" strokeWidth="1.8" />
+									</button>
+								</Tooltip>
+
+								{#if note?.write_access}
+									<RecordMenu
+										onRecord={async () => {
+											displayMediaRecord = false;
+
+											try {
+												let stream = await navigator.mediaDevices
+													.getUserMedia({ audio: true })
+													.catch(function (err) {
+														toast.error(
+															$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+																error: err
+															})
+														);
+														return null;
+													});
+
+												if (stream) {
+													recording = true;
+													const tracks = stream.getTracks();
+													tracks.forEach((track) => track.stop());
+												}
+												stream = null;
+											} catch {
+												toast.error($i18n.t('Permission denied when accessing microphone'));
+											}
+										}}
+										onCaptureAudio={async () => {
+											displayMediaRecord = true;
+
+											recording = true;
+										}}
+										onUpload={async () => {
+											const input = document.createElement('input');
+											input.type = 'file';
+											input.accept = 'audio/*';
+											input.multiple = false;
+											input.click();
+
+											input.onchange = async (e) => {
+												const files = e.target.files;
+
+												if (files && files.length > 0) {
+													await uploadFileHandler(files[0]);
+												}
+											};
+										}}
+									>
+										<Tooltip content={$i18n.t('Record')} placement="top">
+											<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
+												<Mic className="size-4" />
+											</div>
+										</Tooltip>
+									</RecordMenu>
+								{/if}
+
+								<NoteMenu
+									onUploadFiles={note?.write_access ? uploadNoteFilesHandler : null}
+									onDownload={(type) => {
+										downloadHandler(type);
+									}}
+									onCopyLink={async () => {
+										const baseUrl = window.location.origin;
+										const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+										if (res) {
+											toast.success($i18n.t('Copied link to clipboard'));
+										} else {
+											toast.error($i18n.t('Failed to copy link'));
+										}
+									}}
+									onCopyToClipboard={async () => {
+										const res = await copyToClipboard(
+											note.data.content.md,
+											note.data.content.html,
+											true
+										).catch((error) => {
+											toast.error(`${error}`);
+											return null;
+										});
+
+										if (res) {
+											toast.success($i18n.t('Copied to clipboard'));
+										}
+									}}
+									onDelete={() => {
+										showDeleteConfirm = true;
+									}}
+									isPinned={$pinnedNotes.some((n) => n.id === note.id)}
+									onPin={async () => {
+										await toggleNotePinnedStatusById(localStorage.token, note.id);
+										note = await getNoteById(localStorage.token, note.id);
+										pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
+									}}
+								>
+									<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
+										<EllipsisHorizontal className="size-5" />
+									</div>
+								</NoteMenu>
+
+								{#if note?.write_access}
+									<div class="ml-1.5">
+										<AccessButton
+											on:click={() => {
+												showAccessControlModal = true;
+											}}
+											disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
+										/>
+									</div>
+								{:else}
+									<div class="shrink-0 text-xs text-gray-500 px-2 py-1">
+										{$i18n.t('Read-Only Access')}
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+
+					<div class="  px-1.5">
+						<div
+							class=" flex w-full bg-transparent overflow-x-auto scrollbar-none"
+							on:wheel={(e) => {
+								if (e.deltaY !== 0) {
+									e.preventDefault();
+									e.currentTarget.scrollLeft += e.deltaY;
+								}
+							}}
+						>
+							<div
+								class="flex gap-0.5 items-center text-xs font-normal text-gray-500 dark:text-gray-500 w-fit"
+							>
+								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
+									<!-- check for same date, yesterday, last week, and other -->
+
+									{#if dayjs(note.created_at / 1000000).isSame(dayjs(), 'day')}
+										<span
+											>{dayjs(note.created_at / 1000000).format($i18n.t('[Today at] h:mm A'))}</span
+										>
+									{:else if dayjs(note.created_at / 1000000).isSame(dayjs().subtract(1, 'day'), 'day')}
+										<span
+											>{dayjs(note.created_at / 1000000).format(
+												$i18n.t('[Yesterday at] h:mm A')
+											)}</span
+										>
+									{:else if dayjs(note.created_at / 1000000).isSame(dayjs().subtract(1, 'week'), 'week')}
+										<span
+											>{dayjs(note.created_at / 1000000).format(
+												$i18n.t('[Last] dddd [at] h:mm A')
+											)}</span
+										>
+									{:else}
+										<span>{dayjs(note.created_at / 1000000).format($i18n.t('DD/MM/YYYY'))}</span>
+									{/if}
+								</button>
+
+								{#if editor}
+									<div class="flex items-center gap-1 px-1 min-w-fit">
+										<div>
+											{$i18n.t('{{COUNT}} words', {
+												COUNT: wordCount
+											})}
+										</div>
+										<div>
+											{$i18n.t('{{COUNT}} characters', {
+												COUNT: charCount
+											})}
+										</div>
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+
+					<div
+						class=" flex-1 w-full h-full overflow-auto px-3 relative flex flex-col"
+						id="note-content-container"
+					>
+						{#if noteAttachmentFiles.length > 0}
+							<div class="shrink-0 flex flex-wrap gap-1.5 px-0.5 pt-1.5 pb-2">
+								{#each noteAttachmentFiles as file, fileIdx (file?.id ?? file?.itemId ?? file?.url ?? fileIdx)}
+									<FileItem
+										item={file}
+										name={file.name}
+										type={file.type}
+										size={file?.size}
+										loading={file.status === 'uploading'}
+										dismissible={versionIdx === null && note?.write_access}
+										edit={true}
+										small={true}
+										modal={['file', 'collection'].includes(file?.type)}
+										className="w-56 max-w-full"
+										colorClassName="bg-gray-50/60 dark:bg-white/[0.03] border border-gray-100/80 dark:border-white/5"
+										on:dismiss={() => {
+											files = files.filter((item) => item !== file);
+											note.data.files = files.length > 0 ? files : null;
+											if (editor) {
+												editor.storage.files = files;
+											}
+											changeDebounceHandler();
+										}}
+									/>
+								{/each}
+							</div>
+						{/if}
+
+						<RichTextInput
+							bind:this={inputElement}
+							bind:editor
+							id={`note-${note.id}`}
+							className="input-prose-sm px-0.5 flex-1 min-h-[12rem]"
+							json={true}
+							bind:value={note.data.content.json}
+							html={editorHtml}
+							documentId={`note:${note.id}`}
+							collaboration={true}
+							socket={$socket}
+							user={$user}
+							dragHandle={true}
+							link={true}
+							image={true}
+							{files}
+							placeholder={$i18n.t('Write something...')}
+							editable={versionIdx === null && note?.write_access}
+							onSelectionUpdate={({ editor }) => {
+								const { from, to } = editor.state.selection;
+								const selectedText = editor.state.doc.textBetween(from, to, ' ');
+
+								if (selectedText.length === 0) {
+									selectedContent = null;
+								} else {
+									selectedContent = {
+										text: selectedText,
+										from: from,
+										to: to
+									};
+								}
+							}}
+							onChange={(content) => {
+								lastLocalContentChangeAt = Date.now();
+								note.data.content.html = content.html;
+								note.data.content.md = content.md;
+
+								if (editor) {
+									wordCount = editor.storage.characterCount.words();
+									charCount = editor.storage.characterCount.characters();
+								}
+							}}
+							fileHandler={true}
+							onFileDrop={(currentEditor, files, pos) => {
+								files.forEach(async (file) => {
+									const fileItem = await inputFileHandler(file).catch((error) => {
+										return null;
+									});
+
+									if (fileItem?.type === 'image') {
+										// If the file is an image, insert it directly
+										currentEditor
+											.chain()
+											.insertContentAt(pos, {
+												type: 'image',
+												attrs: {
+													src: `data://${fileItem.id}`
+												}
+											})
+											.focus()
+											.run();
+									}
+								});
+							}}
+							onFilePaste={() => {}}
+							on:paste={async (e) => {
+								e = e.detail.event || e;
+								const clipboardData = e.clipboardData || window.clipboardData;
+								console.log('Clipboard data:', clipboardData);
+
+								if (clipboardData && clipboardData.items) {
+									console.log('Clipboard data items:', clipboardData.items);
+									for (const item of clipboardData.items) {
+										console.log('Clipboard item:', item);
+										if (item.type.indexOf('image') !== -1) {
+											const blob = item.getAsFile();
+											const fileItem = await inputFileHandler(blob);
+
+											if (editor) {
+												editor
+													?.chain()
+													.insertContentAt(editor.state.selection.$anchor.pos, {
+														type: 'image',
+														attrs: {
+															src: `data://${fileItem.id}` // Use data URI for the image
+														}
+													})
+													.focus()
+													.run();
+											}
+										} else if (item?.kind === 'file') {
+											const file = item.getAsFile();
+											await inputFileHandler(file);
+											e.preventDefault();
+										}
+									}
+								}
+							}}
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+		{#if recording}
+			<div class="absolute z-50 bottom-0 right-0 p-3.5 flex select-none">
+				<div class="flex-1 w-full">
+					<VoiceRecording
+						bind:recording
+						className="p-1 w-full max-w-full"
+						transcribe={false}
+						displayMedia={displayMediaRecord}
+						echoCancellation={false}
+						noiseSuppression={false}
+						onCancel={() => {
+							recording = false;
+							displayMediaRecord = false;
+						}}
+						onConfirm={(data) => {
+							if (data?.file) {
+								uploadFileHandler(data?.file);
+							}
+
+							recording = false;
+							displayMediaRecord = false;
+						}}
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+	<NotePanel bind:show={showNoteChat}>
+		{#if noteChatLoading}
+			<div class="flex h-full items-center justify-center">
+				<Spinner className="size-5" />
+			</div>
+		{:else if noteChatId || noteChatDraftKey}
+			<Chat
+				embedded={true}
+				chatIdProp={noteChatId ?? ''}
+				embeddedChats={noteChats}
+				embeddedDraftKey={noteChatDraftKey}
+				suggestedPrompts={noteChatSuggestedPrompts}
+				selectedText={selectedContent?.text ?? ''}
+				onInsertToNote={insertHandler}
+				onNewEmbeddedChat={createNoteChat}
+				onCreateEmbeddedChat={createNoteChatOnFirstMessage}
+				onSelectEmbeddedChat={(chatId) => {
+					if (!chatId || chatId === noteChatId) return;
+					noteChatId = chatId;
+					noteChatDraftKey = '';
+				}}
+				onDeleteEmbeddedChat={deleteNoteChat}
+				onEmbeddedChatTitle={(chatId, title) => {
+					noteChats = noteChats.map((chat) =>
+						chat.id === chatId
+							? {
+									...chat,
+									title,
+									chat: {
+										...(chat.chat ?? {}),
+										title
+									}
+								}
+							: chat
+					);
+				}}
+				onCloseEmbedded={() => {
+					showNoteChat = false;
+				}}
+			/>
+		{/if}
+	</NotePanel>
+</div>

@@ -1,0 +1,224 @@
+<script lang="ts">
+	import { createEventDispatcher, getContext, tick } from 'svelte';
+	import { toast } from 'svelte-sonner';
+
+	import Modal from '$lib/components/common/Modal.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+
+	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
+	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
+	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
+	import { getFolders } from '$lib/apis/folders';
+	import { getChannels } from '$lib/apis/channels';
+	import { channels, folders } from '$lib/stores';
+
+	import {
+		createAutomation,
+		updateAutomationById,
+		type AutomationForm,
+		type AutomationResponse
+	} from '$lib/apis/automations';
+
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
+
+	export let show = false;
+	export let automation: AutomationResponse | null = null;
+	export let cloneFrom: AutomationResponse | null = null;
+
+	let name = '';
+	let prompt = '';
+	let model_id = '';
+	let folder_id = '';
+	let target_type: 'chat' | 'channel' = 'chat';
+	let channel_id = '';
+	let is_active = true;
+
+	let loading = false;
+	let foldersLoaded = false;
+	let channelsLoaded = false;
+
+	// Schedule dropdown ref
+	let scheduleDropdown: ScheduleDropdown;
+
+	const submitHandler = async () => {
+		if (!name.trim() || !prompt.trim() || !model_id.trim()) {
+			toast.error($i18n.t('Name, prompt, and model are required'));
+			return;
+		}
+		if (target_type === 'channel' && !channel_id) {
+			toast.error($i18n.t('Channel is required'));
+			return;
+		}
+		if (scheduleDropdown?.frequency === 'ONCE') {
+			const scheduled = new Date(`${scheduleDropdown.onceDate}T${scheduleDropdown.onceTime}`);
+			if (scheduled <= new Date()) {
+				toast.error($i18n.t('Scheduled time must be in the future'));
+				return;
+			}
+		}
+		loading = true;
+		try {
+			const form: AutomationForm = {
+				name: name.trim(),
+				folder_id: target_type === 'channel' ? null : folder_id || null,
+				data: {
+					prompt: prompt.trim(),
+					model_id: model_id.trim(),
+					rrule: scheduleDropdown.buildRrule(),
+					target: target_type === 'channel' ? { type: 'channel', channel_id } : { type: 'chat' }
+				},
+				is_active
+			};
+
+			if (automation) {
+				await updateAutomationById(localStorage.token, automation.id, form);
+				toast.success($i18n.t('Automation updated'));
+				show = false;
+				dispatch('save', { id: automation.id });
+			} else {
+				const created = await createAutomation(localStorage.token, form);
+				toast.success($i18n.t('Automation created'));
+				show = false;
+				dispatch('save', { id: created?.id });
+			}
+		} catch (e: any) {
+			toast.error(e?.detail ?? `${e}` ?? 'Failed to save');
+		} finally {
+			loading = false;
+		}
+	};
+
+	const init = async () => {
+		await tick();
+		if (!foldersLoaded && ($folders ?? []).length === 0) {
+			const res = await getFolders(localStorage.token).catch(() => null);
+			if (res) folders.set(res);
+			foldersLoaded = true;
+		}
+		if (!channelsLoaded && ($channels ?? []).length === 0) {
+			const res = await getChannels(localStorage.token).catch(() => null);
+			if (res) channels.set(res);
+			channelsLoaded = true;
+		}
+
+		if (automation) {
+			name = automation.name;
+			prompt = automation.data.prompt;
+			model_id = automation.data.model_id;
+			folder_id = automation.folder_id ?? '';
+			target_type = automation.data.target?.type === 'channel' ? 'channel' : 'chat';
+			channel_id = automation.data.target?.channel_id ?? '';
+			is_active = automation.is_active;
+			if (scheduleDropdown) {
+				scheduleDropdown.parseRrule(automation.data.rrule);
+			}
+		} else if (cloneFrom) {
+			name = cloneFrom.name;
+			prompt = cloneFrom.data.prompt;
+			model_id = cloneFrom.data.model_id;
+			folder_id = ($folders ?? []).some((folder) => folder.id === cloneFrom.folder_id)
+				? (cloneFrom.folder_id ?? '')
+				: '';
+			target_type = cloneFrom.data.target?.type === 'channel' ? 'channel' : 'chat';
+			channel_id = ($channels ?? []).some(
+				(channel) => channel.id === cloneFrom.data.target?.channel_id
+			)
+				? (cloneFrom.data.target?.channel_id ?? '')
+				: '';
+			is_active = true;
+			if (scheduleDropdown) {
+				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
+			}
+		} else {
+			name = '';
+			prompt = '';
+			model_id = '';
+			folder_id = '';
+			target_type = 'chat';
+			channel_id = '';
+			is_active = true;
+		}
+	};
+
+	$: if (show) {
+		init();
+	}
+</script>
+
+<Modal size="md" bind:show>
+	<div>
+		<!-- Header -->
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+			<input
+				class="w-full text-sm font-medium bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				type="text"
+				bind:value={name}
+				placeholder={$i18n.t('Automation title')}
+			/>
+			<button
+				class="self-center shrink-0 ml-2"
+				aria-label={$i18n.t('Close')}
+				on:click={() => (show = false)}
+			>
+				<XMark className="size-4" />
+			</button>
+		</div>
+
+		<!-- Prompt -->
+		<div class="px-5 pb-2">
+			<div class="mb-1 text-xs text-gray-500">{$i18n.t('Instructions')}</div>
+			<textarea
+				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[12rem]"
+				bind:value={prompt}
+				rows={8}
+				placeholder={$i18n.t('Enter prompt here.')}
+			/>
+		</div>
+
+		<!-- Bottom toolbar -->
+		<div
+			class="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 pb-3.5 pt-1 gap-2"
+		>
+			<div class="flex items-center gap-0.5 flex-wrap min-w-0 sm:flex-1">
+				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
+
+				<ModelDropdown bind:model_id side="top" align="start" />
+
+				<DestinationDropdown
+					bind:target_type
+					bind:channel_id
+					bind:folder_id
+					folders={$folders}
+					channels={$channels}
+					side="top"
+					align="start"
+				/>
+			</div>
+
+			<div class="flex items-center justify-end gap-2 shrink-0">
+				<button
+					class="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition"
+					type="button"
+					on:click={() => (show = false)}
+				>
+					{$i18n.t('Cancel')}
+				</button>
+				<button
+					class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 {loading
+						? 'cursor-not-allowed'
+						: ''}"
+					on:click={submitHandler}
+					type="button"
+					disabled={loading}
+				>
+					{automation ? $i18n.t('Save') : $i18n.t('Create')}
+					{#if loading}
+						<span class="shrink-0"><Spinner /></span>
+					{/if}
+				</button>
+			</div>
+		</div>
+	</div>
+</Modal>

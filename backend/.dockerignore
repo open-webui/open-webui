@@ -1,0 +1,14 @@
+__pycache__
+.env
+_old
+uploads
+.ipynb_checkpoints
+*.db
+_test
+!/data
+/data/*
+!/data/litellm
+/data/litellm/*
+!data/litellm/config.yaml
+
+!data/config.json

@@ -1,0 +1,996 @@
+<script>
+	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
+
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
+
+	import DOMPurify from 'dompurify';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+
+	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
+
+	import {
+		deleteFolderById,
+		updateFolderIsExpandedById,
+		updateFolderById,
+		updateFolderParentIdById,
+		getFolderById,
+		createNewFolder,
+		getSharedFolderChats,
+		markFolderChatsReadById
+	} from '$lib/apis/folders';
+	import {
+		getChatById,
+		getChatsByFolderId,
+		getChatListByFolderId,
+		updateChatFolderIdById,
+		importChats
+	} from '$lib/apis/chats';
+
+	import ChevronDown from './icons/ChevronDown.svelte';
+	import ChevronRight from './icons/ChevronRight.svelte';
+	import Collapsible from '../../common/Collapsible.svelte';
+	import DragGhost from '$lib/components/common/DragGhost.svelte';
+
+	import FolderIcon from './icons/Folder.svelte';
+	import MoreHorizontal from './icons/MoreHorizontal.svelte';
+
+	import ChatItem from './ChatItem.svelte';
+	import FolderMenu from './Folders/FolderMenu.svelte';
+	import FolderShareModal from './Folders/FolderShareModal.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import FolderModal from './Folders/FolderModal.svelte';
+	import Emoji from '$lib/components/common/Emoji.svelte';
+
+	export let folderRegistry = {};
+	export let open = false;
+
+	export let folders;
+	export let folderId;
+	export let shiftKey = false;
+
+	export let className = '';
+
+	export let deleteFolderContents = true;
+
+	export let parentDragged = false;
+
+	export let onDelete = () => {};
+	export let onItemMove = () => {};
+	export let onFolderUnreadCounts = () => {};
+
+	let folderElement;
+
+	let showFolderModal = false;
+	let showShareModal = false;
+	let edit = false;
+
+	let showCreateSubFolderModal = false;
+	let createSubFolderParentId = null;
+
+	let draggedOver = false;
+	let dragged = false;
+
+	let clickTimer = null;
+
+	let name = '';
+
+	const formatUnreadCount = (count) =>
+		new Intl.NumberFormat(undefined, {
+			notation: 'compact',
+			compactDisplay: 'short'
+		}).format(count);
+
+	const isUnreadChat = (chat) =>
+		!(chat.active ?? false) &&
+		(chat.last_read_at == null ||
+			(typeof chat.updated_at === 'number' &&
+				typeof chat.last_read_at === 'number' &&
+				chat.updated_at > chat.last_read_at));
+
+	const sortFolderChats = (items) =>
+		[...items].sort(
+			(a, b) =>
+				Number(isUnreadChat(b)) - Number(isUnreadChat(a)) ||
+				Number(b.updated_at ?? 0) - Number(a.updated_at ?? 0)
+		);
+
+	const mergeFolderChats = (items, nextItems) => {
+		const merged = [...items];
+		const indexById = new Map(merged.map((chat, index) => [chat.id, index]));
+
+		for (const chat of nextItems) {
+			if (!chat?.id) {
+				continue;
+			}
+
+			const index = indexById.get(chat.id);
+			if (index === undefined) {
+				indexById.set(chat.id, merged.length);
+				merged.push(chat);
+			} else {
+				merged[index] = { ...merged[index], ...chat };
+			}
+		}
+
+		return sortFolderChats(merged);
+	};
+
+	const applyReadState = (data) => {
+		if (data?.folder_unread_counts) {
+			onFolderUnreadCounts(data.folder_unread_counts);
+		}
+
+		if (typeof data?.last_read_at === 'number') {
+			folderRegistry[folderId]?.setChatReadAt?.(data.chat_id, data.last_read_at);
+		}
+	};
+
+	const markAllReadHandler = async () => {
+		const res = await markFolderChatsReadById(localStorage.token, folderId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return;
+
+		if (res.folder_unread_counts) {
+			onFolderUnreadCounts(res.folder_unread_counts);
+		}
+
+		for (const readFolderId of res.folder_ids ?? []) {
+			if (readFolderId !== folderId) {
+				folderRegistry[readFolderId]?.setFolderItems?.();
+			}
+		}
+
+		if (chats) {
+			chats = sortFolderChats(
+				chats.map((chat) =>
+					!chat.user_id || chat.user_id === $user?.id
+						? { ...chat, last_read_at: chat.updated_at }
+						: chat
+				)
+			);
+		}
+	};
+
+	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
+
+	const onDragOver = (e) => {
+		e.stopPropagation();
+		if (dragged || parentDragged || !isWritable) {
+			return;
+		}
+		e.preventDefault();
+		draggedOver = true;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (dragged || parentDragged || !isWritable) {
+			return;
+		}
+
+		if (folderElement.contains(e.target)) {
+			console.log('Dropped on the Button');
+
+			if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+				// Iterate over all items in the DataTransferItemList use functional programming
+				for (const item of Array.from(e.dataTransfer.items)) {
+					// If dropped items aren't files, reject them
+					if (item.kind === 'file') {
+						const file = item.getAsFile();
+						if (file && file.type === 'application/json') {
+							console.log('Dropped file is a JSON file!');
+
+							// Read the JSON file with FileReader
+							const reader = new FileReader();
+							reader.onload = async function (event) {
+								try {
+									const fileContent = JSON.parse(event.target.result);
+									open = true;
+									dispatch('import', {
+										folderId: folderId,
+										items: fileContent
+									});
+								} catch (error) {
+									console.error('Error parsing JSON file:', error);
+								}
+							};
+
+							// Start reading the file
+							reader.readAsText(file);
+						} else {
+							console.error('Only JSON file types are supported.');
+						}
+
+						console.log(file);
+					} else {
+						// Handle the drag-and-drop data for folders or chats (same as before)
+						const dataTransfer = e.dataTransfer.getData('text/plain');
+
+						try {
+							const data = JSON.parse(dataTransfer);
+							console.log(data);
+
+							const { type, id, item } = data;
+
+							if (type === 'folder') {
+								open = true;
+								if (id === folderId) {
+									return;
+								}
+								// Move the folder
+								const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
+									(error) => {
+										toast.error(`${error}`);
+										return null;
+									}
+								);
+
+								if (res) {
+									dispatch('update');
+								}
+							} else if (type === 'chat') {
+								open = true;
+
+								let chat = await getChatById(localStorage.token, id).catch((error) => {
+									return null;
+								});
+								if (!chat && item) {
+									if (!($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))) {
+										toast.error($i18n.t('Access prohibited'));
+										return;
+									}
+
+									chat = await importChats(localStorage.token, [
+										{
+											chat: item.chat,
+											meta: item?.meta ?? {},
+											pinned: false,
+											folder_id: null,
+											created_at: item?.created_at ?? null,
+											updated_at: item?.updated_at ?? null
+										}
+									]).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+								}
+
+								if (chat) {
+									// Move the chat
+									const res = await updateChatFolderIdById(
+										localStorage.token,
+										chat.id,
+										folderId
+									).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+
+									onItemMove({
+										originFolderId: chat.folder_id,
+										targetFolderId: folderId,
+										e
+									});
+
+									if (res) {
+										dispatch('update');
+									}
+								}
+							}
+						} catch (error) {
+							console.log('Error parsing dataTransfer:', error);
+						}
+
+						// Only process the first non-file item; all share the same
+						// text/plain payload, so continuing would duplicate the move.
+						break;
+					}
+				}
+			}
+
+			setFolderItems();
+			draggedOver = false;
+		}
+	};
+
+	const onDragLeave = (e) => {
+		e.preventDefault();
+		if (dragged || parentDragged || !isWritable) {
+			return;
+		}
+
+		draggedOver = false;
+	};
+
+	const dragImage = new Image();
+	dragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+	let x;
+	let y;
+
+	const onDragStart = (event) => {
+		event.stopPropagation();
+		event.dataTransfer.setDragImage(dragImage, 0, 0);
+
+		// Set the data to be transferred
+		event.dataTransfer.setData(
+			'text/plain',
+			JSON.stringify({
+				type: 'folder',
+				id: folderId
+			})
+		);
+		event.dataTransfer.setData('application/x-open-webui-drag', '');
+
+		dragged = true;
+		folderElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
+	};
+
+	const onDrag = (event) => {
+		event.stopPropagation();
+
+		x = event.clientX;
+		y = event.clientY;
+	};
+
+	const onDragEnd = (event) => {
+		event.stopPropagation();
+
+		folderElement.style.opacity = '1'; // Reset visual cue after drag
+		dragged = false;
+	};
+
+	onMount(async () => {
+		open = folders[folderId].is_expanded;
+		folderRegistry[folderId] = {
+			setFolderItems,
+			upsertChat: (chat) => {
+				if (chat.folder_id && chat.folder_id !== folderId) {
+					return;
+				}
+
+				pendingUpsertChats = mergeFolderChats(pendingUpsertChats, [chat]);
+				if (open || chats) {
+					chats = mergeFolderChats(chats ?? [], [chat]);
+				}
+			},
+			setChatActive: (chatId, active) => {
+				if (chats) {
+					let found = false;
+					chats = sortFolderChats(
+						chats.map((chat) => {
+							if (chat.id !== chatId) {
+								return chat;
+							}
+							found = true;
+							return { ...chat, active };
+						})
+					);
+					return found;
+				}
+				return false;
+			},
+			setChatReadAt: (chatId, lastReadAt) => {
+				if (chats) {
+					let found = false;
+					chats = sortFolderChats(
+						chats.map((chat) => {
+							if (chat.id !== chatId) {
+								return chat;
+							}
+							found = true;
+							return { ...chat, last_read_at: lastReadAt };
+						})
+					);
+					return found;
+				}
+				return false;
+			},
+			setAllChatsRead: () => {
+				if (chats) {
+					chats = sortFolderChats(
+						chats.map((chat) =>
+							!chat.user_id || chat.user_id === $user?.id
+								? { ...chat, last_read_at: chat.updated_at }
+								: chat
+						)
+					);
+				}
+			}
+		};
+		if (folderElement) {
+			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.addEventListener('drop', onDrop);
+			folderElement.addEventListener('dragleave', onDragLeave);
+
+			// Event listener for when dragging starts
+			folderElement.addEventListener('dragstart', onDragStart);
+			// Event listener for when dragging occurs (optional)
+			folderElement.addEventListener('drag', onDrag);
+			// Event listener for when dragging ends
+			folderElement.addEventListener('dragend', onDragEnd);
+		}
+
+		if (folders[folderId]?.new) {
+			delete folders[folderId].new;
+			await tick();
+			renameHandler();
+		}
+	});
+
+	onDestroy(() => {
+		delete folderRegistry[folderId];
+
+		if (folderElement) {
+			folderElement.removeEventListener('dragover', onDragOver);
+			folderElement.removeEventListener('drop', onDrop);
+			folderElement.removeEventListener('dragleave', onDragLeave);
+
+			folderElement.removeEventListener('dragstart', onDragStart);
+			folderElement.removeEventListener('drag', onDrag);
+			folderElement.removeEventListener('dragend', onDragEnd);
+		}
+	});
+
+	let showDeleteConfirm = false;
+
+	const deleteHandler = async () => {
+		const res = await deleteFolderById(localStorage.token, folderId, deleteFolderContents).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+
+		if (res) {
+			toast.success($i18n.t('Folder deleted successfully'));
+			onDelete(folderId);
+		}
+	};
+
+	const updateHandler = async ({ name, meta, data }) => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		const currentName = folders[folderId].name;
+
+		name = name.trim();
+		folders[folderId].name = name;
+
+		const res = await updateFolderById(localStorage.token, folderId, {
+			name,
+			...(meta ? { meta } : {}),
+			...(data ? { data } : {})
+		}).catch((error) => {
+			toast.error(`${error}`);
+
+			folders[folderId].name = currentName;
+			return null;
+		});
+
+		if (res) {
+			folders[folderId].name = name;
+			if (data) {
+				folders[folderId].data = data;
+			}
+
+			// toast.success($i18n.t('Folder name updated successfully'));
+			toast.success($i18n.t('Folder updated successfully'));
+
+			if ($selectedFolder?.id === folderId) {
+				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
+
+				if (folder) {
+					await selectedFolder.set(folder);
+				}
+			}
+			dispatch('update');
+		}
+	};
+
+	const isExpandedUpdateHandler = async () => {
+		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+	};
+
+	let isExpandedUpdateTimeout;
+
+	const isExpandedUpdateDebounceHandler = () => {
+		clearTimeout(isExpandedUpdateTimeout);
+		isExpandedUpdateTimeout = setTimeout(() => {
+			isExpandedUpdateHandler();
+		}, 500);
+	};
+
+	const SIDEBAR_CHATS_PAGE_SIZE = 10;
+	/** @type {any[] | null} */
+	let chats = null;
+	let chatsPage = 1;
+	let hasMoreChats = false;
+	let chatsLoading = false;
+	let queuedReload = false;
+	let pendingUpsertChats = [];
+
+	export const setFolderItems = async (append = false) => {
+		if (open && chatsLoading) {
+			if (!append) {
+				queuedReload = true;
+			}
+			return;
+		}
+
+		if (open) {
+			chatsLoading = true;
+		}
+
+		await tick();
+		if (open) {
+			// Always use getSharedFolderChats so owners also see chats
+			// created by users who have write access to this folder.
+			const nextPage = append ? chatsPage + 1 : 1;
+			try {
+				const res = await getSharedFolderChats(localStorage.token, folderId, {
+					page: nextPage
+				});
+				const nextChats = res?.chats ?? [];
+				const merged = append ? mergeFolderChats(chats ?? [], nextChats) : nextChats;
+				chats = mergeFolderChats(merged, pendingUpsertChats);
+				pendingUpsertChats = pendingUpsertChats.filter(
+					(pendingChat) => !nextChats.some((chat) => chat.id === pendingChat.id)
+				);
+				chatsPage = nextPage;
+				hasMoreChats = res?.has_more ?? nextChats.length === SIDEBAR_CHATS_PAGE_SIZE;
+			} catch (error) {
+				// Fallback to regular API
+				const fallback = await getChatListByFolderId(localStorage.token, folderId, nextPage).catch(
+					(error) => {
+						toast.error(`${error}`);
+						return [];
+					}
+				);
+				const fallbackChats = fallback ?? [];
+				const merged = append ? mergeFolderChats(chats ?? [], fallbackChats) : fallbackChats;
+				chats = mergeFolderChats(merged, pendingUpsertChats);
+				pendingUpsertChats = pendingUpsertChats.filter(
+					(pendingChat) => !fallbackChats.some((chat) => chat.id === pendingChat.id)
+				);
+				chatsPage = nextPage;
+				hasMoreChats = (fallback?.length ?? 0) === SIDEBAR_CHATS_PAGE_SIZE;
+			} finally {
+				chatsLoading = false;
+				if (queuedReload) {
+					queuedReload = false;
+					setFolderItems();
+				}
+			}
+		} else if (!open) {
+			chats = null;
+			chatsPage = 1;
+			hasMoreChats = false;
+			queuedReload = false;
+		}
+	};
+
+	$: if (open && chats === null && !chatsLoading) {
+		setFolderItems();
+	}
+
+	const shouldIgnoreRowClick = (target) => {
+		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
+	};
+
+	const openFolderHandler = async () => {
+		const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (folder) {
+			await selectedFolder.set({ ...folders[folderId], ...folder });
+		}
+
+		await goto(`/folders/${folderId}`);
+
+		if ($mobile) {
+			showSidebar.set(!$showSidebar);
+		}
+	};
+	$: if (!open && chats !== null) {
+		chats = null;
+		chatsPage = 1;
+		hasMoreChats = false;
+	}
+
+	const renameHandler = async () => {
+		console.log('Edit');
+		await tick();
+		name = folders[folderId].name;
+		edit = true;
+
+		await tick();
+		await tick();
+
+		const input = document.getElementById(`folder-${folderId}-input`);
+		if (input) {
+			input.focus();
+			input.select();
+		}
+	};
+
+	const exportHandler = async () => {
+		const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!chats) {
+			return;
+		}
+
+		const blob = new Blob([JSON.stringify(chats)], {
+			type: 'application/json'
+		});
+
+		saveAs(blob, `folder-${folders[folderId].name}-export-${Date.now()}.json`);
+	};
+
+	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		name = name.trim();
+
+		const res = await createNewFolder(localStorage.token, {
+			name,
+			data,
+			meta,
+			parent_id
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Folder created successfully'));
+			dispatch('update');
+		}
+	};
+</script>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete folder?')}
+	on:confirm={() => {
+		deleteHandler();
+	}}
+>
+	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
+		<!-- {$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
+				NAME: folders[folderId].name
+			})} -->
+
+		{$i18n.t(`Are you sure you want to delete "{{NAME}}"?`, {
+			NAME: folders[folderId].name
+		})}
+	</div>
+
+	<div class="flex items-center gap-1.5">
+		<input type="checkbox" bind:checked={deleteFolderContents} />
+
+		<div class="text-xs text-gray-500">
+			{$i18n.t('Delete all contents inside this folder')}
+		</div>
+	</div>
+</DeleteConfirmDialog>
+
+<FolderModal bind:show={showFolderModal} edit={true} {folderId} onSubmit={updateHandler} />
+
+<FolderModal
+	bind:show={showCreateSubFolderModal}
+	parentId={createSubFolderParentId}
+	onSubmit={createSubFolderHandler}
+/>
+
+<FolderShareModal bind:show={showShareModal} folder={folders[folderId]} />
+
+{#if dragged && x && y}
+	<DragGhost {x} {y}>
+		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
+			<div class="flex items-center gap-1">
+				<FolderIcon className="size-3.5" strokeWidth="1.5" />
+				<div class=" text-xs text-white line-clamp-1">
+					{folders[folderId].name}
+				</div>
+			</div>
+		</div>
+	</DragGhost>
+{/if}
+
+<div bind:this={folderElement} class="relative {className}" draggable={!folders[folderId]?.shared}>
+	{#if draggedOver}
+		<div
+			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+		></div>
+	{/if}
+
+	<Collapsible
+		bind:open
+		className="w-full"
+		buttonClassName="w-full"
+		onChange={(state) => {
+			dispatch('open', state);
+		}}
+	>
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div class="w-full group">
+			<div
+				id="folder-{folderId}-button"
+				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
+				folderId
+					? 'bg-gray-100/80 dark:bg-gray-850/50 selected'
+					: ''}"
+				on:dblclick={(e) => {
+					if (!isWritable) return;
+					if (clickTimer) {
+						clearTimeout(clickTimer); // cancel the single-click action
+						clickTimer = null;
+					}
+					renameHandler();
+				}}
+				role="button"
+				tabindex="0"
+				on:click={async (e) => {
+					e.stopPropagation();
+					if (shouldIgnoreRowClick(e.target)) return;
+					if (clickTimer) {
+						clearTimeout(clickTimer);
+						clickTimer = null;
+					}
+
+					clickTimer = setTimeout(async () => {
+						await openFolderHandler();
+						clickTimer = null;
+					}, 100); // 100ms delay (typical double-click threshold)
+				}}
+				on:keydown={(e) => {
+					if (e.currentTarget !== e.target) return;
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						openFolderHandler();
+					}
+				}}
+			>
+				<button
+					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg"
+					on:click={(e) => {
+						e.stopPropagation();
+						e.stopImmediatePropagation();
+						open = !open;
+						isExpandedUpdateDebounceHandler();
+					}}
+				>
+					{#if folders[folderId]?.meta?.icon}
+						<div class="flex group-hover:hidden transition-all">
+							<Emoji className="size-3.5" shortCode={folders[folderId].meta.icon} />
+						</div>
+
+						<div class="hidden group-hover:flex transition-all p-[0.0625rem]">
+							{#if open}
+								<ChevronDown className=" size-3" strokeWidth="1.5" />
+							{:else}
+								<ChevronRight className=" size-3" strokeWidth="1.5" />
+							{/if}
+						</div>
+					{:else}
+						<div class="flex group-hover:hidden transition-all">
+							<FolderIcon className="size-3.5" strokeWidth="1.5" />
+						</div>
+
+						<div class="hidden group-hover:flex transition-all p-[0.0625rem]">
+							{#if open}
+								<ChevronDown className=" size-3" strokeWidth="1.5" />
+							{:else}
+								<ChevronRight className=" size-3" strokeWidth="1.5" />
+							{/if}
+						</div>
+					{/if}
+				</button>
+
+				<div class="translate-y-[0.5px] flex min-w-0 flex-1 items-center gap-1.5 pr-6 text-start">
+					{#if edit}
+						<input
+							id="folder-{folderId}-input"
+							type="text"
+							bind:value={name}
+							on:blur={() => {
+								console.log('Blur');
+								updateHandler({ name });
+								edit = false;
+							}}
+							on:click={(e) => {
+								// Prevent accidental collapse toggling when clicking inside input
+								e.stopPropagation();
+							}}
+							on:mousedown={(e) => {
+								// Prevent accidental collapse toggling when clicking inside input
+								e.stopPropagation();
+							}}
+							on:keydown={(e) => {
+								if (e.key === 'Enter') {
+									updateHandler({ name });
+									edit = false;
+								}
+							}}
+							class="w-full h-full bg-transparent outline-hidden"
+						/>
+					{:else}
+						<div class="min-w-0 truncate">
+							{folders[folderId].name}
+						</div>
+
+						{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
+							<div
+								class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
+								title={$i18n.t('Unread')}
+							>
+								{formatUnreadCount(folders[folderId].unread_count)}
+							</div>
+						{/if}
+					{/if}
+				</div>
+
+				{#if isWritable}
+					<button
+						class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-gray-300"
+					>
+						<FolderMenu
+							onEdit={() => {
+								showFolderModal = true;
+							}}
+							onShare={() => {
+								showShareModal = true;
+							}}
+							onDelete={() => {
+								showDeleteConfirm = true;
+							}}
+							onExport={() => {
+								exportHandler();
+							}}
+							onCreateSubFolder={() => {
+								createSubFolderParentId = folderId;
+								showCreateSubFolderModal = true;
+							}}
+							onMarkAllRead={markAllReadHandler}
+						>
+							<div
+								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0 touch-auto"
+							>
+								<MoreHorizontal className="size-3.5" strokeWidth="2" />
+							</div>
+						</FolderMenu>
+					</button>
+				{/if}
+			</div>
+		</div>
+
+		<div slot="content" class="w-full">
+			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || chats !== null || hasMoreChats || chatsLoading}
+				<div
+					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+				>
+					{#if folders[folderId]?.childrenIds}
+						{@const children = folders[folderId]?.childrenIds
+							.map((id) => folders[id])
+							.sort((a, b) =>
+								a.name.localeCompare(b.name, undefined, {
+									numeric: true,
+									sensitivity: 'base'
+								})
+							)}
+
+						{#each children as childFolder (`${folderId}-${childFolder.id}`)}
+							<svelte:self
+								bind:folderRegistry
+								{folders}
+								folderId={childFolder.id}
+								{shiftKey}
+								parentDragged={dragged}
+								{onItemMove}
+								{onDelete}
+								{onFolderUnreadCounts}
+								on:import={(e) => {
+									dispatch('import', e.detail);
+								}}
+								on:update={(e) => {
+									dispatch('update', e.detail);
+								}}
+								on:change={(e) => {
+									dispatch('change', e.detail);
+								}}
+							/>
+						{/each}
+					{/if}
+
+					{#if chats === null && chatsLoading}
+						<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+							<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
+							<span
+								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+							></span>
+							<span
+								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+							></span>
+						</div>
+					{/if}
+
+					{#if chats !== null && chats.length === 0 && !chatsLoading}
+						<div class="px-2 py-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							{$i18n.t('No chats')}
+						</div>
+					{/if}
+
+					{#each chats ?? [] as chat (chat.id)}
+						<ChatItem
+							id={chat.id}
+							title={chat.title}
+							createdAt={chat.created_at}
+							updatedAt={chat.updated_at}
+							lastReadAt={chat.last_read_at}
+							active={chat.active ?? false}
+							ownerName={folders[folderId]?.shared ? (chat.owner_name ?? null) : null}
+							ownerUserId={folders[folderId]?.shared && chat.owner_name ? chat.user_id : null}
+							readonly={chat.user_id !== $user?.id}
+							{shiftKey}
+							onReadStateChange={applyReadState}
+							on:change={(e) => {
+								dispatch('change', e.detail);
+							}}
+						/>
+					{/each}
+
+					{#if hasMoreChats}
+						<button
+							class="w-full px-2 py-0.5 text-left text-[0.6875rem] text-gray-400 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-600 dark:hover:text-gray-300"
+							disabled={chatsLoading}
+							on:click={() => setFolderItems(true)}
+						>
+							{#if chatsLoading}
+								<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+									<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"
+									></span>
+									<span
+										class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+									></span>
+									<span
+										class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+									></span>
+								</div>
+							{:else}
+								{$i18n.t('Show more')}
+							{/if}
+						</button>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</Collapsible>
+</div>

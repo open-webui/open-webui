@@ -1,0 +1,73 @@
+name: Feature Request
+description: Describe what you would like Open WebUI to support.
+title: 'feat: '
+labels: ['triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Feature Request
+
+        Describe the requested behavior, the problem it solves, and any examples, mockups, screenshots, or workflows that clarify the request. A clear issue or discussion is the most useful contribution.
+
+        Search open and closed [Issues](https://github.com/open-webui/open-webui/issues) and [Discussions](https://github.com/open-webui/open-webui/discussions) before submitting. If the request needs broad product, UX, architecture, compatibility, or maintenance discussion, please start in [Discussions](https://github.com/open-webui/open-webui/discussions) so the community can weigh in.
+
+        Please do not open a code pull request for this request unless a maintainer asks for one, or the change is only i18n/localization. If you want to share code as reference, include it here as a local diff or patch. Clear product context is the most useful next step.
+
+        Security vulnerabilities must not be reported publicly. Use the [GitHub security page](https://github.com/open-webui/open-webui/security) instead.
+
+  - type: checkboxes
+    id: existing-request
+    attributes:
+      label: Before Submitting
+      options:
+        - label: I searched open and closed issues and discussions for an existing request.
+          required: true
+        - label: I checked whether this already exists on the `dev` branch or latest source.
+          required: true
+        - label: I understand that maintainers want a well-written issue or discussion before any code pull request.
+          required: true
+        - label: This request is not a security vulnerability.
+          required: true
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Problem
+      description: What is missing, frustrating, confusing, or unnecessarily hard today?
+      placeholder: "I'm trying to..., but..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-behavior
+    attributes:
+      label: Desired Behavior
+      description: What would you like to happen instead?
+      placeholder: "I would like Open WebUI to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-it-matters
+    attributes:
+      label: Why This Matters
+      description: Who benefits, and what workflow does this unlock or improve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or References
+      description: Add mockups, screenshots, links, prompts, workflows, or examples from other tools.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives-considered
+    attributes:
+      label: Alternatives or Workarounds
+      description: What have you tried instead, if anything?
+    validations:
+      required: false

@@ -1,0 +1,361 @@
+import logging
+import time
+from typing import Optional
+
+from open_webui.internal.db import Base, get_async_db_context
+from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.models.groups import Groups
+from open_webui.models.users import User, UserModel, UserResponse, Users
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+log = logging.getLogger(__name__)
+
+####################
+# Skills DB Schema
+####################
+
+
+class Skill(Base):
+    __tablename__ = 'skill'
+
+    id = Column(String, primary_key=True, unique=True)
+    user_id = Column(String)
+    name = Column(Text, unique=True)
+    description = Column(Text, nullable=True)
+    content = Column(Text)
+    meta = Column(JSON)
+    is_active = Column(Boolean, default=True)
+
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
+
+
+class SkillMeta(BaseModel):
+    tags: Optional[list[str]] = []
+
+
+class SkillModel(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    description: Optional[str] = None
+    content: str
+    meta: SkillMeta
+    is_active: bool = True
+    access_grants: list[AccessGrantModel] = Field(default_factory=list)
+
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+####################
+# Forms
+####################
+
+
+class SkillUserModel(SkillModel):
+    user: Optional[UserResponse] = None
+
+
+class SkillResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    description: Optional[str] = None
+    meta: SkillMeta
+    is_active: bool = True
+    access_grants: list[AccessGrantModel] = Field(default_factory=list)
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+
+
+class SkillUserResponse(SkillResponse):
+    user: Optional[UserResponse] = None
+
+    model_config = ConfigDict(extra='allow')
+
+
+class SkillAccessResponse(SkillUserResponse):
+    write_access: Optional[bool] = False
+
+
+class SkillForm(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    content: str
+    meta: SkillMeta = SkillMeta()
+    is_active: bool = True
+    access_grants: Optional[list[dict]] = None
+
+
+class SkillListResponse(BaseModel):
+    items: list[SkillUserResponse] = []
+    total: int = 0
+
+
+class SkillAccessListResponse(BaseModel):
+    items: list[SkillAccessResponse] = []
+    total: int = 0
+
+
+class SkillsTable:
+    async def _get_access_grants(self, skill_id: str, db: Optional[AsyncSession] = None) -> list[AccessGrantModel]:
+        return await AccessGrants.get_grants_by_resource('skill', skill_id, db=db)
+
+    async def _to_skill_model(
+        self,
+        skill: Skill,
+        access_grants: Optional[list[AccessGrantModel]] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> SkillModel:
+        skill_model = SkillModel.model_validate(skill)
+        skill_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(skill_model.id, db=db)
+        )
+        return skill_model
+
+    async def insert_new_skill(
+        self,
+        user_id: str,
+        form_data: SkillForm,
+        db: Optional[AsyncSession] = None,
+    ) -> Optional[SkillModel]:
+        async with get_async_db_context(db) as db:
+            try:
+                result = Skill(
+                    **{
+                        **form_data.model_dump(exclude={'access_grants'}),
+                        'user_id': user_id,
+                        'updated_at': int(time.time()),
+                        'created_at': int(time.time()),
+                    }
+                )
+                db.add(result)
+                await db.commit()
+                await AccessGrants.set_access_grants('skill', result.id, form_data.access_grants, db=db)
+                if result:
+                    return await self._to_skill_model(result, db=db)
+                else:
+                    return None
+            except Exception as e:
+                log.exception(f'Error creating a new skill: {e}')
+                return None
+
+    async def get_skill_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[SkillModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                skill = await db.get(Skill, id)
+                return await self._to_skill_model(skill, db=db) if skill else None
+        except Exception:
+            return None
+
+    async def get_skill_by_name(self, name: str, db: Optional[AsyncSession] = None) -> Optional[SkillModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(Skill).filter_by(name=name))
+                skill = result.scalars().first()
+                return await self._to_skill_model(skill, db=db) if skill else None
+        except Exception:
+            return None
+
+    async def get_skills(
+        self,
+        user_id: str | None = None,
+        ids: list[str] | None = None,
+        db: AsyncSession | None = None,
+    ) -> list[SkillUserModel]:
+        async with get_async_db_context(db) as db:
+            stmt = select(Skill).order_by(Skill.updated_at.desc())
+
+            if ids is not None:
+                stmt = stmt.filter(Skill.id.in_(ids))
+
+            if user_id is not None:
+                user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
+                stmt = AccessGrants.has_permission_filter(
+                    db=db,
+                    query=stmt,
+                    DocumentModel=Skill,
+                    filter={'user_id': user_id, 'group_ids': user_group_ids},
+                    resource_type='skill',
+                    permission='read',
+                )
+
+            result = await db.execute(stmt)
+            all_skills = result.scalars().all()
+
+            user_ids = list(set(skill.user_id for skill in all_skills))
+            skill_ids = [skill.id for skill in all_skills]
+
+            users = await Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
+            users_dict = {user.id: user for user in users}
+            grants_map = await AccessGrants.get_grants_by_resources('skill', skill_ids, db=db)
+
+            skills = []
+            for skill in all_skills:
+                user = users_dict.get(skill.user_id)
+                skills.append(
+                    SkillUserModel.model_validate(
+                        {
+                            **(
+                                await self._to_skill_model(
+                                    skill,
+                                    access_grants=grants_map.get(skill.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
+                            'user': user.model_dump() if user else None,
+                        }
+                    )
+                )
+            return skills
+
+    async def search_skills(
+        self,
+        user_id: str,
+        filter: dict = {},
+        skip: int = 0,
+        limit: int = 30,
+        db: Optional[AsyncSession] = None,
+    ) -> SkillListResponse:
+        try:
+            async with get_async_db_context(db) as db:
+                # Join with User table for user filtering
+                stmt = select(Skill, User).outerjoin(User, User.id == Skill.user_id)
+
+                if filter:
+                    query_key = filter.get('query')
+                    if query_key:
+                        stmt = stmt.filter(
+                            or_(
+                                Skill.name.ilike(f'%{query_key}%'),
+                                Skill.description.ilike(f'%{query_key}%'),
+                                Skill.id.ilike(f'%{query_key}%'),
+                                User.name.ilike(f'%{query_key}%'),
+                                User.email.ilike(f'%{query_key}%'),
+                            )
+                        )
+
+                    view_option = filter.get('view_option')
+                    if view_option == 'created':
+                        stmt = stmt.filter(Skill.user_id == user_id)
+                    elif view_option == 'shared':
+                        stmt = stmt.filter(Skill.user_id != user_id)
+
+                    # Apply access grant filtering
+                    stmt = AccessGrants.has_permission_filter(
+                        db=db,
+                        query=stmt,
+                        DocumentModel=Skill,
+                        filter=filter,
+                        resource_type='skill',
+                        permission='read',
+                    )
+
+                order_by = filter.get('order_by')
+                direction = filter.get('direction')
+
+                if order_by == 'name':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.name.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.name.desc())
+                elif order_by == 'created_at':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.created_at.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.created_at.desc())
+                elif order_by == 'updated_at':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.updated_at.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.updated_at.desc())
+                else:
+                    stmt = stmt.order_by(Skill.updated_at.desc())
+
+                # Count BEFORE pagination
+                count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+                total = count_result.scalar()
+
+                if skip:
+                    stmt = stmt.offset(skip)
+                if limit:
+                    stmt = stmt.limit(limit)
+
+                result = await db.execute(stmt)
+                items = result.all()
+
+                skill_ids = [skill.id for skill, _ in items]
+                grants_map = await AccessGrants.get_grants_by_resources('skill', skill_ids, db=db)
+
+                skills = []
+                for skill, user in items:
+                    skills.append(
+                        SkillUserResponse(
+                            **(
+                                await self._to_skill_model(
+                                    skill,
+                                    access_grants=grants_map.get(skill.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
+                            user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
+                        )
+                    )
+
+                return SkillListResponse(items=skills, total=total)
+        except Exception as e:
+            log.exception(f'Error searching skills: {e}')
+            return SkillListResponse(items=[], total=0)
+
+    async def update_skill_by_id(
+        self, id: str, updated: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[SkillModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                access_grants = updated.pop('access_grants', None)
+                await db.execute(update(Skill).filter_by(id=id).values(**updated, updated_at=int(time.time())))
+                await db.commit()
+                if access_grants is not None:
+                    await AccessGrants.set_access_grants('skill', id, access_grants, db=db)
+
+                # populate_existing: the Core update above bypasses any identity-map copy
+                skill = await db.get(Skill, id, populate_existing=True)
+                return await self._to_skill_model(skill, db=db)
+        except Exception:
+            return None
+
+    async def toggle_skill_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[SkillModel]:
+        async with get_async_db_context(db) as db:
+            try:
+                result = await db.execute(select(Skill).filter_by(id=id))
+                skill = result.scalars().first()
+                if not skill:
+                    return None
+
+                skill.is_active = not skill.is_active
+                skill.updated_at = int(time.time())
+                await db.commit()
+
+                return await self._to_skill_model(skill, db=db)
+            except Exception:
+                return None
+
+    async def delete_skill_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+        try:
+            async with get_async_db_context(db) as db:
+                await AccessGrants.revoke_all_access('skill', id, db=db)
+                await db.execute(delete(Skill).filter_by(id=id))
+                await db.commit()
+
+                return True
+        except Exception:
+            return False
+
+
+Skills = SkillsTable()

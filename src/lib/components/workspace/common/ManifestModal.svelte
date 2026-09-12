@@ -1,0 +1,99 @@
+<script lang="ts">
+	import { toast } from 'svelte-sonner';
+	import { createEventDispatcher } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+
+	import Modal from '../../common/Modal.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
+
+	export let show = false;
+	export let manifest = {};
+</script>
+
+<Modal size="sm" bind:show>
+	<div>
+		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class=" text-sm font-medium self-center">{$i18n.t('Show your support!')}</div>
+			<button
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				on:click={() => {
+					show = false;
+				}}
+			>
+				<XMark className={'size-4'} />
+			</button>
+		</div>
+
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
+				<form
+					class="flex flex-col w-full"
+					on:submit|preventDefault={() => {
+						show = false;
+					}}
+				>
+					<div class="px-1 text-sm">
+						<div class="my-2">
+							{$i18n.t(
+								'The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.'
+							)}
+						</div>
+
+						<div class="my-2">
+							<!-- LICENSE covers this Open WebUI wordmark.
+							Do not alter, remove, obscure, or replace it except as LICENSE permits:
+							https://docs.openwebui.com/license. -->
+							{$i18n.t(
+								'Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.'
+							)}
+						</div>
+
+						<hr class="dark:border-gray-800 my-3" />
+						<div class="my-2">
+							{$i18n.t('Support this plugin:')}
+							<a
+								href={manifest.funding_url}
+								target="_blank"
+								class="underline text-blue-400 hover:text-blue-300">{manifest.funding_url}</a
+							>
+						</div>
+					</div>
+
+					<div class="flex justify-end pt-3 text-sm font-normal">
+						<button
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							type="submit"
+						>
+							{$i18n.t('Done')}
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</Modal>
+
+<style>
+	input::-webkit-outer-spin-button,
+	input::-webkit-inner-spin-button {
+		/* display: none; <- Crashes Chrome on hover */
+		-webkit-appearance: none;
+		margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+	}
+
+	.tabs::-webkit-scrollbar {
+		display: none; /* for Chrome, Safari and Opera */
+	}
+
+	.tabs {
+		-ms-overflow-style: none; /* IE and Edge */
+		scrollbar-width: none; /* Firefox */
+	}
+
+	input[type='number'] {
+		-moz-appearance: textfield; /* Firefox */
+	}
+</style>

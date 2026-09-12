@@ -1,0 +1,49 @@
+# TypeScript
+*.ts text eol=lf
+*.tsx text eol=lf
+
+# JavaScript
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# Svelte
+*.svelte text eol=lf
+
+# HTML/CSS
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.less text eol=lf
+
+# Config files and JSON
+*.json text eol=lf
+*.jsonc text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Markdown & docs
+*.md text eol=lf
+*.mdx text eol=lf
+*.txt text eol=lf
+
+# Git-related
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+# Prettier and other dotfiles
+.prettierrc text eol=lf
+.prettierignore text eol=lf
+.eslintrc text eol=lf
+.eslintignore text eol=lf
+.stylelintrc text eol=lf
+.editorconfig text eol=lf
+
+# Misc
+*.env text eol=lf
+*.lock text eol=lf

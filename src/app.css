@@ -1,0 +1,1003 @@
+@reference "./tailwind.css";
+
+@font-face {
+	font-family: 'Inter';
+	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Vazirmatn';
+	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
+	font-display: swap;
+}
+
+/* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
+:root {
+	--app-text-scale: 1;
+}
+
+html {
+	word-break: break-word;
+	/* font-size scales the entire document via the same UI control */
+	font-size: calc(1rem * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item {
+	/* sidebar item sizing scales for the chat list entries */
+	min-height: calc(32px * var(--app-text-scale, 1));
+	padding-inline: calc(11px * var(--app-text-scale, 1));
+	padding-block: calc(6px * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item div[dir='auto'] {
+	/* chat title line height follows the text scale */
+	height: calc(20px * var(--app-text-scale, 1));
+	line-height: calc(20px * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item input {
+	/* editing state input height is kept in sync */
+	min-height: calc(20px * var(--app-text-scale, 1));
+}
+
+code {
+	/* white-space-collapse: preserve !important; */
+	overflow-x: auto;
+	width: auto;
+}
+
+.editor-selection {
+	background: rgba(180, 213, 255, 0.5);
+	border-radius: 2px;
+}
+
+.app-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-icon-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-interactive-active {
+	@apply bg-gray-50/40 dark:bg-gray-800/40;
+}
+
+/* visibility:hidden is not focusable, so a keyboard user could never reveal these */
+.hover-reveal {
+	@apply opacity-0 pointer-events-none;
+}
+
+.group:hover .hover-reveal,
+.group:focus-within .hover-reveal {
+	@apply opacity-100 pointer-events-auto;
+}
+
+.marked a {
+	@apply underline;
+}
+
+math {
+	margin-top: 1rem;
+}
+
+.hljs {
+	@apply rounded-lg;
+}
+
+input::placeholder {
+	direction: auto;
+}
+
+textarea::placeholder {
+	direction: auto;
+}
+
+textarea {
+	color-scheme: light;
+}
+
+.dark textarea {
+	color-scheme: dark;
+}
+
+textarea::-webkit-resizer,
+textarea::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+.input-prose {
+	@apply prose dark:prose-invert !text-[0.9375rem] prose-headings:font-medium prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
+}
+
+.input-prose-sm {
+	@apply prose dark:prose-invert prose-headings:font-medium prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
+}
+
+.markdown-prose {
+	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.9375rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-medium prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:my-3 prose-blockquote:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
+}
+
+.markdown-prose-sm {
+	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-medium prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+}
+
+.markdown-prose-xs {
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-medium prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+}
+
+.markdown a {
+	@apply underline;
+}
+
+.drag-region {
+	-webkit-app-region: drag;
+}
+
+.drag-region a,
+.drag-region button {
+	-webkit-app-region: no-drag;
+}
+
+.no-drag-region {
+	-webkit-app-region: no-drag;
+}
+
+li p {
+	display: inline;
+}
+
+::-webkit-scrollbar-thumb {
+	--tw-border-opacity: 1;
+	background-color: rgba(215, 215, 215, 0.6);
+	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+	border-radius: 9999px;
+	border-width: 1px;
+}
+
+/* Dark theme scrollbar styles */
+.dark ::-webkit-scrollbar-thumb {
+	background-color: rgba(67, 67, 67, 0.6); /* Darker color for dark theme */
+	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
+}
+
+::-webkit-scrollbar {
+	height: 0.45rem;
+	width: 0.45rem;
+}
+
+::-webkit-scrollbar-track {
+	background-color: transparent;
+	border-radius: 9999px;
+}
+
+select {
+	color-scheme: light;
+	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+	background-position: right 0rem center;
+	background-repeat: no-repeat;
+	background-size: 1.5em 1.5em;
+	-webkit-print-color-adjust: exact;
+	print-color-adjust: exact;
+	/* padding-right: 2.5rem; */
+	/* for Firefox */
+	-moz-appearance: none;
+	/* for Chrome */
+	-webkit-appearance: none;
+}
+
+.dark select {
+	color-scheme: dark;
+}
+
+.dark select:not([class*='bg-transparent']) {
+	@apply bg-gray-900 text-gray-300;
+}
+
+.dark select option {
+	@apply bg-gray-850 text-white;
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: 100% 0;
+	}
+	100% {
+		background-position: -100% 0;
+	}
+}
+
+.shimmer {
+	background: linear-gradient(
+		110deg,
+		#b4b4b4 0%,
+		#b4b4b4 43%,
+		#e8e8e8 50%,
+		#b4b4b4 57%,
+		#b4b4b4 100%
+	);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 1.5s cubic-bezier(0.7, 0, 1, 0.4) infinite;
+	color: #b4b4b4;
+}
+
+:global(.dark) .shimmer {
+	background: linear-gradient(
+		110deg,
+		#9a9a9a 0%,
+		#9a9a9a 43%,
+		#5e5e5e 50%,
+		#9a9a9a 57%,
+		#9a9a9a 100%
+	);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 1.5s cubic-bezier(0.7, 0, 1, 0.4) infinite;
+	color: #9a9a9a;
+}
+
+@keyframes smoothFadeIn {
+	0% {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.status-description {
+	animation: smoothFadeIn 0.2s forwards;
+}
+
+@keyframes fade-in-token {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.fade-in-token {
+	animation: fade-in-token 100ms ease-out;
+}
+
+.katex-mathml {
+	display: none;
+}
+
+/* Hide leaked Mermaid temp containers if render cleanup misses.
+   Use visibility:hidden (not display:none) so mermaid can still
+   measure the SVG layout before extracting its HTML. */
+body > div[id^='dmermaid-'],
+body > iframe[id^='imermaid-'] {
+	position: fixed !important;
+	visibility: hidden !important;
+	height: 0 !important;
+	overflow: hidden !important;
+}
+
+.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+.scrollbar-hidden::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.scrollbar-hidden::-webkit-scrollbar-corner {
+	display: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+	display: none; /* for Chrome, Safari and Opera */
+}
+
+.scrollbar-none::-webkit-scrollbar-corner {
+	display: none;
+}
+
+.scrollbar-none {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+	/* display: none; <- Crashes Chrome on hover */
+	-webkit-appearance: none;
+	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+}
+
+input[type='number'] {
+	-moz-appearance: textfield; /* Firefox */
+}
+
+.katex-display {
+	@apply overflow-y-hidden overflow-x-auto max-w-full;
+}
+
+.katex-display::-webkit-scrollbar {
+	height: 0.4rem;
+	width: 0.4rem;
+}
+
+.katex-display:active::-webkit-scrollbar-thumb,
+.katex-display:focus::-webkit-scrollbar-thumb,
+.katex-display:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+.katex-display::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.katex-display::-webkit-scrollbar-corner {
+	display: none;
+}
+
+.cm-editor {
+	height: 100%;
+	width: 100%;
+}
+
+.cm-scroller:active::-webkit-scrollbar-thumb,
+.cm-scroller:focus::-webkit-scrollbar-thumb,
+.cm-scroller:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.cm-scroller::-webkit-scrollbar-corner {
+	display: none;
+}
+
+.cm-editor.cm-focused {
+	outline: none;
+}
+
+.cm-gutters {
+	@apply !bg-white dark:!bg-black !border-none;
+}
+
+.cm-editor {
+	@apply bg-white dark:bg-black;
+}
+
+.tippy-box[data-theme~='dark'] {
+	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+}
+
+.password {
+	-webkit-text-security: disc;
+}
+
+.codespan {
+	padding: 0.15rem 0.3rem;
+	font-size: 0.85em;
+	@apply font-mono rounded-md text-gray-800 bg-gray-100 dark:text-gray-200 dark:bg-gray-800 mx-0.5;
+}
+
+.svelte-flow {
+	background-color: transparent !important;
+}
+
+.svelte-flow__edge > path {
+	stroke-width: 0.5;
+}
+
+.svelte-flow__edge.animated > path {
+	stroke-width: 2;
+	@apply stroke-gray-600 dark:stroke-gray-500;
+}
+
+.bg-gray-950-90 {
+	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+}
+
+.ProseMirror {
+	@apply h-full min-h-fit max-h-full whitespace-pre-wrap;
+}
+
+.ProseMirror:focus {
+	outline: none;
+}
+
+:focus-visible:not(.ProseMirror):not([contenteditable='true']):not(input):not(textarea),
+.focus-ring:focus-visible {
+	outline: 2px solid theme(--color-blue-500);
+	outline-offset: -2px;
+}
+
+html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):focus-visible {
+	outline: 2px solid theme(--color-blue-500);
+	outline-offset: -2px;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+	content: attr(data-placeholder);
+	float: left;
+	/* Below color is from tailwind, and has the proper contrast
+	text-gray-600 from: https://tailwindcss.com/docs/color */
+	color: #676767;
+	pointer-events: none;
+
+	@apply line-clamp-1 absolute;
+}
+
+/* #676767 is 3.17:1 on the dark canvas; the light value already passes. */
+html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
+	color: var(--color-gray-500);
+}
+
+.tiptap ul[data-type='taskList'] {
+	list-style: none;
+	margin-left: 0;
+	padding: 0;
+
+	li {
+		align-items: start;
+		display: flex;
+
+		> label {
+			flex: 0 0 auto;
+			margin-right: 0.5rem;
+			margin-top: 0.2rem;
+			user-select: none;
+			display: flex;
+		}
+
+		> div {
+			flex: 1 1 auto;
+
+			align-items: center;
+		}
+	}
+
+	/* checked data-checked="true" */
+
+	li[data-checked='true'] {
+		> div {
+			opacity: 0.5;
+			text-decoration: line-through;
+		}
+	}
+
+	input[type='checkbox'] {
+		cursor: pointer;
+	}
+
+	ul[data-type='taskList'] {
+		margin: 0;
+	}
+
+	/* Reset nested regular ul elements to default styling */
+	ul:not([data-type='taskList']) {
+		list-style: disc;
+		padding-left: 1rem;
+
+		li {
+			align-items: initial;
+			display: list-item;
+
+			label {
+				flex: initial;
+				margin-right: initial;
+				margin-top: initial;
+				user-select: initial;
+				display: initial;
+			}
+
+			div {
+				flex: initial;
+				align-items: initial;
+			}
+		}
+	}
+}
+
+.mention {
+	border-radius: 0.4rem;
+	box-decoration-break: clone;
+	padding: 0.1rem 0.3rem;
+	@apply text-sky-800 dark:text-sky-200 bg-sky-300/15 dark:bg-sky-500/15;
+}
+
+.mention::after {
+	content: '\200B';
+}
+
+.tiptap .suggestion {
+	border-radius: 0.4rem;
+	box-decoration-break: clone;
+	padding: 0.1rem 0.3rem;
+	@apply text-sky-800 dark:text-sky-200 bg-sky-300/15 dark:bg-sky-500/15;
+}
+
+.tiptap .suggestion::after {
+	content: '\200B';
+}
+
+.tiptap .suggestion.is-empty::after {
+	content: '\00A0';
+	border-bottom: 1px dotted rgba(31, 41, 55, 0.12);
+}
+
+.input-prose .tiptap ul[data-type='taskList'] {
+	list-style: none;
+	margin-left: 0;
+	padding: 0;
+
+	li {
+		align-items: start;
+		display: flex;
+
+		> label {
+			flex: 0 0 auto;
+			margin-right: 0.5rem;
+			margin-top: 0.4rem;
+			user-select: none;
+			display: flex;
+		}
+
+		> div {
+			flex: 1 1 auto;
+
+			align-items: center;
+		}
+	}
+
+	/* checked data-checked="true" */
+
+	li[data-checked='true'] {
+		> div {
+			opacity: 0.5;
+			text-decoration: line-through;
+		}
+	}
+
+	input[type='checkbox'] {
+		cursor: pointer;
+	}
+
+	ul[data-type='taskList'] {
+		margin: 0;
+	}
+
+	/* Reset nested regular ul elements to default styling */
+	ul:not([data-type='taskList']) {
+		list-style: disc;
+		padding-left: 1rem;
+
+		li {
+			align-items: initial;
+			display: list-item;
+
+			label {
+				flex: initial;
+				margin-right: initial;
+				margin-top: initial;
+				user-select: initial;
+				display: initial;
+			}
+
+			div {
+				flex: initial;
+				align-items: initial;
+			}
+		}
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	.ProseMirror p.is-editor-empty:first-child::before {
+		color: #757575;
+	}
+}
+
+.ai-autocompletion::after {
+	color: #a0a0a0;
+
+	content: attr(data-suggestion);
+	pointer-events: none;
+}
+
+.tiptap pre > code {
+	border-radius: 0.4rem;
+	font-size: 0.85rem;
+	padding: 0.25em 0.3em;
+
+	@apply dark:bg-gray-800 bg-gray-50;
+}
+
+.tiptap pre {
+	border-radius: 0.5rem;
+	font-family: 'JetBrainsMono', monospace;
+	margin: 1.5rem 0;
+	padding: 0.75rem 1rem;
+
+	@apply dark:bg-gray-800 bg-gray-50;
+}
+
+.tiptap p code {
+	padding: 0.15rem 0.3rem;
+	font-size: 0.85em;
+	@apply font-mono rounded-md text-gray-800 bg-gray-50 dark:text-gray-200 dark:bg-gray-800 mx-0.5;
+}
+
+/* Code styling */
+.hljs-comment,
+.hljs-quote {
+	color: #616161;
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attribute,
+.hljs-tag,
+.hljs-regexp,
+.hljs-link,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+	color: #f98181;
+}
+
+.hljs-number,
+.hljs-meta,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params {
+	color: #fbbc88;
+}
+
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet {
+	color: #b9f18d;
+}
+
+.hljs-title,
+.hljs-section {
+	color: #faf594;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #70cff8;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: 700;
+}
+
+/* Table styling for tiptap editors */
+.tiptap table {
+	@apply w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full;
+}
+
+.tiptap thead {
+	@apply text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none;
+}
+
+.tiptap th,
+.tiptap td {
+	@apply px-3 py-1.5 border border-gray-100/30 dark:border-gray-850/30;
+}
+
+.tiptap th {
+	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-normal uppercase bg-gray-50 dark:bg-gray-850;
+}
+
+.tiptap td {
+	@apply text-gray-900 dark:text-white w-max;
+}
+
+.tiptap tr {
+	@apply dark:border-gray-850 text-xs;
+}
+
+.tippy-box[data-theme~='transparent'] {
+	@apply bg-transparent p-0 m-0;
+}
+
+/* this is a rough fix for the first cursor position when the first paragraph is empty */
+.ProseMirror > .ProseMirror-yjs-cursor:first-child {
+	margin-top: 1rem;
+}
+/* This gives the remote user caret. The colors are automatically overwritten*/
+.ProseMirror-yjs-cursor {
+	position: relative;
+	margin-left: -1px;
+	margin-right: -1px;
+	border-left: 1px solid black;
+	border-right: 1px solid black;
+	border-color: orange;
+	word-break: normal;
+	pointer-events: none;
+}
+/* This renders the username above the caret */
+.ProseMirror-yjs-cursor > div {
+	position: absolute;
+	top: -1.05em;
+	left: -1px;
+	font-size: 0.8125rem;
+	background-color: rgb(250, 129, 0);
+	user-select: none;
+	color: white;
+	padding-left: 0.125rem;
+	padding-right: 0.125rem;
+	white-space: nowrap;
+}
+
+body {
+	background: #fff;
+	color: #000;
+}
+
+.dark body {
+	background: #171717;
+	color: #eee;
+}
+
+/* Position the handle relative to each LI */
+.pm-li--with-handle {
+	position: relative;
+	margin-left: 0.75rem; /* make space for the handle */
+}
+
+.tiptap ul[data-type='taskList'] .pm-list-drag-handle {
+	margin-left: 0px;
+}
+
+/* The drag handle itself */
+.pm-list-drag-handle {
+	position: absolute;
+	left: -2.25rem; /* pull into the left gutter */
+	top: 1px;
+	width: 1.125rem;
+	height: 1.125rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.75rem;
+	line-height: 1;
+	border-radius: 0.25rem;
+	cursor: grab;
+	user-select: none;
+	opacity: 0.35;
+	transition:
+		opacity 120ms ease,
+		background 120ms ease;
+}
+
+.tiptap ul[data-type='taskList'] .pm-list-drag-handle {
+	left: -1rem; /* pull into the left gutter more to avoid the checkbox */
+}
+
+.pm-list-drag-handle:active {
+	cursor: grabbing;
+}
+.pm-li--with-handle:hover > .pm-list-drag-handle {
+	opacity: 1;
+}
+.pm-list-drag-handle:hover {
+	background: rgba(0, 0, 0, 0.06);
+}
+
+:root {
+	--pm-accent: color-mix(in oklab, Highlight 70%, transparent);
+	--pm-fill-target: color-mix(in oklab, Highlight 26%, transparent);
+	--pm-fill-ancestor: color-mix(in oklab, Highlight 16%, transparent);
+}
+
+.pm-li-drop-before,
+.pm-li-drop-after,
+.pm-li-drop-into,
+.pm-li-drop-outdent {
+	position: relative;
+}
+
+/* BEFORE/AFTER lines */
+.pm-li-drop-before::before,
+.pm-li-drop-after::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 3px;
+	background: var(--pm-accent);
+	pointer-events: none;
+}
+.pm-li-drop-before::before {
+	top: -2px;
+}
+.pm-li-drop-after::after {
+	bottom: -2px;
+}
+
+.pm-li-drop-before,
+.pm-li-drop-after,
+.pm-li-drop-into,
+.pm-li-drop-outdent {
+	background: var(--pm-fill-target);
+	border-radius: 6px;
+}
+
+.pm-li-drop-outdent::before {
+	content: '';
+	position: absolute;
+	inset-block: 0;
+	inset-inline-start: 0;
+	width: 3px;
+	background: color-mix(in oklab, Highlight 35%, transparent);
+}
+
+.pm-li--with-handle:has(.pm-li-drop-before),
+.pm-li--with-handle:has(.pm-li-drop-after),
+.pm-li--with-handle:has(.pm-li-drop-into),
+.pm-li--with-handle:has(.pm-li-drop-outdent) {
+	background: var(--pm-fill-ancestor);
+	border-radius: 6px;
+}
+
+.pm-li-drop-before,
+.pm-li-drop-after,
+.pm-li-drop-into,
+.pm-li-drop-outdent {
+	position: relative;
+	z-index: 0;
+}
+
+#note-content-container .ProseMirror {
+	padding-bottom: 2rem; /* space for the bottom toolbar */
+}
+
+/* Accessibility Mode: placeholders bottom out at 1.58:1 (WCAG 1.4.3 wants 4.5:1). */
+@layer utilities {
+	html.high-contrast:not(.dark) :is(input, textarea)::placeholder {
+		color: var(--color-gray-700);
+	}
+
+	html.high-contrast.dark :is(input, textarea)::placeholder {
+		color: var(--color-gray-300);
+	}
+}
+
+/* Accessibility Mode: muted text fails WCAG 1.4.3 (2.07:1 light, 3.12:1 dark).
+   :where() keeps these at low specificity so hover variants still win. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) .text-gray-400 {
+		color: var(--color-gray-700);
+	}
+
+	html:where(.high-contrast).dark
+		:is(.dark\:text-gray-400, .dark\:text-gray-500, .dark\:text-gray-600) {
+		color: var(--color-gray-300);
+	}
+
+	html:where(.high-contrast).dark
+		:is(
+			.dark\:hover\:text-gray-100:hover,
+			.dark\:hover\:text-gray-200:hover,
+			.dark\:hover\:text-gray-300:hover,
+			.dark\:hover\:text-gray-400:hover
+		) {
+		color: #fff;
+	}
+
+	/* Elements that hover to a lighter grey than the new resting colour. */
+	html:where(.high-contrast):not(:where(.dark))
+		:is(
+			.hover\:text-gray-500:hover,
+			.hover\:text-gray-600:hover,
+			.hover\:text-gray-700:hover,
+			.hover\:text-gray-800:hover
+		) {
+		color: var(--color-gray-900);
+	}
+}
+
+/* Accessibility Mode: gray-500 muted text is 2.77:1 in light (WCAG 1.4.3 wants 4.5:1).
+   The utility stays in the layer so hover variants still outrank it; the classes below
+   are unlayered, so their override has to be too. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) :is(.text-gray-500, .text-gray-600) {
+		color: var(--color-gray-700);
+	}
+}
+
+html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table) {
+	color: var(--color-gray-700);
+}
+
+html.high-contrast.dark :is(.app-muted, .app-icon-muted, .tiptap table) {
+	color: var(--color-gray-300);
+}
+
+html.high-contrast:not(.dark)
+	:is(
+		#sidebar .hover\:bg-gray-100:hover,
+		#sidebar .group:hover .group-hover\:bg-gray-100,
+		.app-dropdown-menu :is(button, a):hover
+	) {
+	background-color: var(--color-gray-200) !important;
+}
+
+html.high-contrast.dark
+	:is(
+		#sidebar .dark\:hover\:bg-gray-900:hover,
+		#sidebar .group:hover .dark\:group-hover\:bg-gray-900,
+		.app-dropdown-menu :is(button, a):hover
+	) {
+	background-color: var(--color-gray-800) !important;
+}
+
+/* Accessibility Mode: the lightest muted pair, 1.58:1 in light and 2.14:1 in dark.
+   text-gray-400/70 is an icon colour, so 1.4.11 governs it, and 2.07:1 misses that too. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) :is(.text-gray-300, .text-gray-400\/70) {
+		color: var(--color-gray-700);
+	}
+
+	html:where(.high-contrast).dark :is(.dark\:text-gray-700, .dark\:text-gray-800) {
+		color: var(--color-gray-300);
+	}
+
+	/* Hover states that land lighter than the new resting colour. */
+	html:where(.high-contrast):not(:where(.dark))
+		:is(
+			.hover\:text-gray-500:hover,
+			.hover\:text-gray-600:hover,
+			.hover\:text-gray-700:hover,
+			.hover\:text-gray-800:hover
+		) {
+		color: var(--color-gray-900);
+	}
+
+	html:where(.high-contrast):not(:where(.dark))
+		.group:hover
+		:is(.group-hover\:text-gray-500, .group-hover\:text-gray-600, .group-hover\:text-gray-700) {
+		color: var(--color-gray-900);
+	}
+
+	html:where(.high-contrast).dark
+		.group:hover
+		:is(
+			.dark\:group-hover\:text-gray-200,
+			.dark\:group-hover\:text-gray-300,
+			.dark\:group-hover\:text-gray-400
+		) {
+		color: #fff;
+	}
+}
+
+/* Autocompletion ghost text is 2.65:1 in light; the dark canvas already passes. */
+html.high-contrast:not(.dark) .ai-autocompletion::after {
+	color: var(--color-gray-700);
+}
+
+/* The shimmer gradient is 2.10:1 in light, and clipping it to the text leaves no
+   solid colour to raise; render it as flat text instead. */
+html.high-contrast:not(.dark) .shimmer {
+	background: none;
+	color: var(--color-gray-800);
+	-webkit-text-fill-color: var(--color-gray-800);
+}

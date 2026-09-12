@@ -1,0 +1,506 @@
+import logging
+import re
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
+from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
+from open_webui.models.groups import Groups
+from open_webui.models.skills import (
+    SkillAccessListResponse,
+    SkillAccessResponse,
+    SkillForm,
+    SkillModel,
+    SkillResponse,
+    Skills,
+    SkillUserResponse,
+)
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+log = logging.getLogger(__name__)
+
+PAGE_ITEM_COUNT = 30
+
+router = APIRouter()
+
+
+############################
+# GetSkills
+############################
+
+
+@router.get('/', response_model=list[SkillUserResponse])
+async def get_skills(
+    request: Request,
+    query: Optional[str] = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
+        skills = await Skills.get_skills(db=db)
+    else:
+        skills = await Skills.get_skills(db=db, user_id=user.id)
+
+    if query:
+        q = query.casefold()
+        skills = [skill for skill in skills if q in (skill.name or '').casefold()]
+
+    return skills
+
+
+############################
+# GetSkillList
+############################
+
+
+@router.get('/list', response_model=SkillAccessListResponse)
+async def get_skill_list(
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    limit = PAGE_ITEM_COUNT
+
+    page = max(1, page)
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter['query'] = query
+    if view_option:
+        filter['view_option'] = view_option
+    if order_by:
+        filter['order_by'] = order_by
+    if direction:
+        filter['direction'] = direction
+
+    is_bypass_admin = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+
+    if not is_bypass_admin:
+        filter['group_ids'] = user_group_ids
+        filter['user_id'] = user.id
+
+    result = await Skills.search_skills(user.id, filter=filter, skip=skip, limit=limit, db=db)
+
+    writable_skill_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id=user.id,
+        resource_type='skill',
+        resource_ids=[skill.id for skill in result.items],
+        permission='write',
+        user_group_ids=user_group_ids,
+        db=db,
+    )
+
+    return SkillAccessListResponse(
+        items=[
+            SkillAccessResponse(
+                **skill.model_dump(),
+                write_access=(is_bypass_admin or user.id == skill.user_id or skill.id in writable_skill_ids),
+            )
+            for skill in result.items
+        ],
+        total=result.total,
+    )
+
+
+############################
+# ExportSkills
+############################
+
+
+@router.get('/export', response_model=list[SkillModel])
+async def export_skills(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not await has_permission(
+        user.id,
+        'workspace.skills_export',
+        await Config.get('user.permissions'),
+        db=db,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
+        return await Skills.get_skills(db=db)
+    else:
+        return await Skills.get_skills(db=db, user_id=user.id)
+
+
+############################
+# CreateNewSkill
+############################
+
+
+@router.post('/create', response_model=Optional[SkillResponse])
+async def create_new_skill(
+    request: Request,
+    form_data: SkillForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not (
+        await has_permission(user.id, 'workspace.skills', await Config.get('user.permissions'), db=db)
+        or await has_permission(user.id, 'workspace.skills_import', await Config.get('user.permissions'), db=db)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    form_data.id = form_data.id.lower().replace(' ', '-')
+
+    # The id goes into /id/{id}/... paths, so anything outside the slug charset is unreachable once stored.
+    if not re.fullmatch(r'[a-z0-9_-]+', form_data.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Invalid skill ID'),
+        )
+
+    existing = await Skills.get_skill_by_id(form_data.id, db=db)
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ID_TAKEN,
+        )
+
+    # Strip public/user grants the requesting user is not permitted to assign
+    # (matches the channel/notes/calendar pattern). Without this, a user with
+    # workspace.skills permission could attach principal_id='*' read/write
+    # grants in the create payload, bypassing the sharing.public_skills gate
+    # that the dedicated /access/update endpoint already enforces.
+    form_data.access_grants = await filter_allowed_access_grants(
+        await Config.get('user.permissions'),
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_skills',
+    )
+
+    try:
+        skill = await Skills.insert_new_skill(user.id, form_data, db=db)
+        if skill:
+            await publish_event(
+                request,
+                EVENTS.SKILL_CREATED,
+                actor=user,
+                subject_id=skill.id,
+                data={'name': skill.name},
+            )
+            return skill
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Error creating skill'),
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f'Failed to create skill: {e}')
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error creating skill'),
+        )
+
+
+############################
+# GetSkillById
+############################
+
+
+@router.get('/id/{id}', response_model=Optional[SkillAccessResponse])
+async def get_skill_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    skill = await Skills.get_skill_by_id(id, db=db)
+
+    if skill:
+        if (
+            user.role == 'admin'
+            or skill.user_id == user.id
+            or await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='skill',
+                resource_id=skill.id,
+                permission='read',
+                db=db,
+            )
+        ):
+            return SkillAccessResponse(
+                **skill.model_dump(),
+                write_access=(
+                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == skill.user_id
+                    or await AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type='skill',
+                        resource_id=skill.id,
+                        permission='write',
+                        db=db,
+                    )
+                ),
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# UpdateSkillById
+############################
+
+
+@router.post('/id/{id}/update', response_model=Optional[SkillModel])
+async def update_skill_by_id(
+    request: Request,
+    id: str,
+    form_data: SkillForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    skill = await Skills.get_skill_by_id(id, db=db)
+    if not skill:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        skill.user_id != user.id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='skill',
+            resource_id=skill.id,
+            permission='write',
+            db=db,
+        )
+        and user.role != 'admin'
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    # Strip public/user grants the requesting user is not permitted to assign
+    # (matches the channel/notes/calendar pattern). The access check above only
+    # restricts WHO can write to the skill; this filter restricts WHICH grants
+    # they may set, so a non-admin owner cannot make their own skill publicly
+    # readable/writable without sharing.public_skills permission.
+    form_data.access_grants = await filter_allowed_access_grants(
+        await Config.get('user.permissions'),
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_skills',
+    )
+
+    try:
+        updated = {
+            **form_data.model_dump(exclude={'id'}),
+        }
+
+        skill = await Skills.update_skill_by_id(id, updated, db=db)
+
+        if skill:
+            await publish_event(
+                request,
+                EVENTS.SKILL_UPDATED,
+                actor=user,
+                subject_id=skill.id,
+                data={'name': skill.name},
+            )
+            return skill
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Error updating skill'),
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error updating skill'),
+        )
+
+
+############################
+# UpdateSkillAccessById
+############################
+
+
+class SkillAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post('/id/{id}/access/update', response_model=Optional[SkillModel])
+async def update_skill_access_by_id(
+    request: Request,
+    id: str,
+    form_data: SkillAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    skill = await Skills.get_skill_by_id(id, db=db)
+    if not skill:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        skill.user_id != user.id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='skill',
+            resource_id=skill.id,
+            permission='write',
+            db=db,
+        )
+        and user.role != 'admin'
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    form_data.access_grants = await filter_allowed_access_grants(
+        await Config.get('user.permissions'),
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_skills',
+    )
+
+    await AccessGrants.set_access_grants('skill', id, form_data.access_grants, db=db)
+
+    skill = await Skills.get_skill_by_id(id, db=db)
+    await publish_event(
+        request,
+        EVENTS.SKILL_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'access_updated': True, 'name': skill.name if skill else None},
+    )
+    return skill
+
+
+############################
+# ToggleSkillById
+############################
+
+
+@router.post('/id/{id}/toggle', response_model=Optional[SkillModel])
+async def toggle_skill_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    skill = await Skills.get_skill_by_id(id, db=db)
+    if skill:
+        if (
+            user.role == 'admin'
+            or skill.user_id == user.id
+            or await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='skill',
+                resource_id=skill.id,
+                permission='write',
+                db=db,
+            )
+        ):
+            skill = await Skills.toggle_skill_by_id(id, db=db)
+
+            if skill:
+                await publish_event(
+                    request,
+                    EVENTS.SKILL_ENABLED if skill.is_active else EVENTS.SKILL_DISABLED,
+                    actor=user,
+                    subject_id=skill.id,
+                    data={'name': skill.name},
+                )
+                return skill
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT('Error toggling skill'),
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# DeleteSkillById
+############################
+
+
+@router.delete('/id/{id}/delete', response_model=bool)
+async def delete_skill_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    skill = await Skills.get_skill_by_id(id, db=db)
+    if not skill:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        skill.user_id != user.id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='skill',
+            resource_id=skill.id,
+            permission='write',
+            db=db,
+        )
+        and user.role != 'admin'
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    result = await Skills.delete_skill_by_id(id, db=db)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.SKILL_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'name': skill.name},
+        )
+    return result
