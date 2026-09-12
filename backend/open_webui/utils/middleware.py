@@ -2263,14 +2263,16 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
     return ids
 
 
-SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[a-z0-9_-]+(?:\|([^>]*))?|/[a-z0-9_-]+\|([^>]*))>')
+SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$([a-z0-9_-]+)(?:\|([^>]*))?|/([a-z0-9_-]+)\|([^>]*))>')
 
 
-def strip_skill_mentions(messages: list[dict]) -> None:
+def strip_skill_mentions(messages: list[dict], skill_ids: set[str]) -> None:
     """Replace <$skillId|label> and </skillId|label> mention tags with the label in-place."""
 
     def label(match):
-        return match.group(1) or match.group(2) or ''
+        if (match.group(1) or match.group(3)) not in skill_ids:
+            return match.group(0)
+        return match.group(2) or match.group(4) or ''
 
     for message in messages:
         content = message.get('content')
@@ -2709,6 +2711,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         | mentioned_skill_ids
     )
     available_skills = []
+    accessible_skills = {}
     view_skill_ids = []
     chat = None
     if is_saved_chat_id(metadata.get('chat_id')):
@@ -2777,7 +2780,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
 
     # Strip <$skillId|label> mention tags so the model doesn't see raw markup.
-    strip_skill_mentions(form_data.get('messages', []))
+    strip_skill_mentions(form_data.get('messages', []), set(accessible_skills))
 
     prompt = get_last_user_message(form_data['messages'])
 
