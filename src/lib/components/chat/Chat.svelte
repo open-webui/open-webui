@@ -981,10 +981,11 @@
 		selectedTerminalId.set(null);
 	}
 
-	let settingDefaults = false;
+	let settingDefaults = null;
 	const setDefaults = async () => {
-		if (settingDefaults) return;
-		settingDefaults = true;
+		if (settingDefaults) return settingDefaults;
+		let done;
+		settingDefaults = new Promise((resolve) => (done = resolve));
 
 		try {
 			if (!$tools) {
@@ -1092,7 +1093,8 @@
 				}
 			}
 		} finally {
-			settingDefaults = false;
+			settingDefaults = null;
+			done();
 		}
 	};
 
