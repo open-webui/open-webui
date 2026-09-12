@@ -89,8 +89,17 @@ class MCPClient:
         if not self.session:
             raise RuntimeError('MCP client is not connected.')
 
-        result = await self.session.list_tools()
-        tools = result.tools
+        # The MCP spec allows tools/list responses to be paginated via
+        # nextCursor. Follow the cursor until the server omits it so every
+        # page of tools is discovered, not just the first one.
+        tools = []
+        cursor = None
+        while True:
+            result = await self.session.list_tools(cursor)
+            tools.extend(result.tools)
+            cursor = result.nextCursor
+            if not cursor:
+                break
 
         tool_specs = []
         for tool in tools:
