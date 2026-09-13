@@ -355,6 +355,35 @@
 							<option value="channel">{$i18n.t('Channel')}</option>
 						</SettingsSelect>
 					</AdminSettingRow>
+					<AdminSettingRow
+						label={$i18n.t('Model Context Mode')}
+						description={$i18n.t('Choose how much channel history a mentioned model can see.')}
+						labelClassName="text-gray-500 dark:text-gray-500"
+						let:labelId
+					>
+						<SettingsSelect
+							bind:value={adminConfig.CHANNEL_MODEL_CONTEXT_MODE}
+							aria-labelledby={labelId}
+						>
+							<option value="thread">{$i18n.t('Thread')}</option>
+							<option value="channel">{$i18n.t('Channel')}</option>
+						</SettingsSelect>
+					</AdminSettingRow>
+					{#if adminConfig.CHANNEL_MODEL_CONTEXT_MODE === 'channel'}
+						<AdminSettingField
+							label={$i18n.t('Model Context Limit')}
+							description={$i18n.t('How many recent channel messages a mentioned model can see.')}
+						>
+							<input
+								class={inputClass}
+								type="number"
+								min="1"
+								max="500"
+								placeholder={$i18n.t('Defaults to 50')}
+								bind:value={adminConfig.CHANNEL_MODEL_CONTEXT_LIMIT}
+							/>
+						</AdminSettingField>
+					{/if}
 				{/if}
 				<AdminSettingRow
 					label={$i18n.t('Calendar')}

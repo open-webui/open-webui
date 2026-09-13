@@ -125,6 +125,8 @@ ADMIN_CONFIG_KEYS = {
     'ENABLE_AUTOMATIONS': 'automations.enable',
     'ENABLE_CHANNELS': 'channels.enable',
     'CHANNEL_MODEL_RESPONSE_MODE': 'channels.model_response_mode',
+    'CHANNEL_MODEL_CONTEXT_MODE': 'channels.model_context_mode',
+    'CHANNEL_MODEL_CONTEXT_LIMIT': 'channels.model_context_limit',
     'ENABLE_CALENDAR': 'calendar.enable',
     'ENABLE_MEMORIES': 'memories.enable',
     'ENABLE_MEMORY_SYSTEM_CONTEXT': 'memories.system_context.enable',
@@ -1230,6 +1232,8 @@ class AdminConfig(BaseModel):
     ENABLE_AUTOMATIONS: bool
     ENABLE_CHANNELS: bool
     CHANNEL_MODEL_RESPONSE_MODE: str = 'thread'
+    CHANNEL_MODEL_CONTEXT_MODE: str = 'thread'
+    CHANNEL_MODEL_CONTEXT_LIMIT: int = 50
     ENABLE_CALENDAR: bool
     ENABLE_MEMORIES: bool
     ENABLE_MEMORY_SYSTEM_CONTEXT: bool
@@ -1286,6 +1290,14 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
 
     if form_data.CHANNEL_MODEL_RESPONSE_MODE not in ['thread', 'channel']:
         updates.pop('channels.model_response_mode', None)
+
+    if form_data.CHANNEL_MODEL_CONTEXT_MODE not in ['thread', 'channel']:
+        updates.pop('channels.model_context_mode', None)
+
+    if not isinstance(form_data.CHANNEL_MODEL_CONTEXT_LIMIT, int) or not (
+        1 <= form_data.CHANNEL_MODEL_CONTEXT_LIMIT <= 500
+    ):
+        updates.pop('channels.model_context_limit', None)
 
     pattern = r'^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$'
 

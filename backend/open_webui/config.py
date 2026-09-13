@@ -2048,6 +2048,13 @@ ENABLE_CHANNELS = os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true'
 
 CHANNEL_MODEL_RESPONSE_MODE = os.getenv('CHANNEL_MODEL_RESPONSE_MODE', 'thread')
 
+# How much channel conversation context mentioned models receive:
+# 'thread' = only the mention's thread (default), 'channel' = the last
+# CHANNEL_MODEL_CONTEXT_LIMIT messages of the whole channel.
+CHANNEL_MODEL_CONTEXT_MODE = os.getenv('CHANNEL_MODEL_CONTEXT_MODE', 'thread')
+
+CHANNEL_MODEL_CONTEXT_LIMIT = int(os.getenv('CHANNEL_MODEL_CONTEXT_LIMIT', '50'))
+
 ENABLE_CALENDAR = os.getenv('ENABLE_CALENDAR', 'True').lower() == 'true'
 
 ENABLE_AUTOMATIONS = os.getenv('ENABLE_AUTOMATIONS', 'True').lower() == 'true'
@@ -3118,6 +3125,8 @@ DEFAULT_CONFIG = {
     'folders.max_file_count': FOLDER_MAX_FILE_COUNT,
     'channels.enable': ENABLE_CHANNELS,
     'channels.model_response_mode': CHANNEL_MODEL_RESPONSE_MODE,
+    'channels.model_context_mode': CHANNEL_MODEL_CONTEXT_MODE,
+    'channels.model_context_limit': CHANNEL_MODEL_CONTEXT_LIMIT,
     'calendar.enable': ENABLE_CALENDAR,
     'automations.enable': ENABLE_AUTOMATIONS,
     'subagents.enable': ENABLE_SUBAGENTS,

@@ -9,7 +9,7 @@ from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, STATIC_DIR
-from open_webui.internal.db import get_async_session
+from open_webui.internal.db import get_async_session, get_async_db_context
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
 from open_webui.models.config import Config
 from open_webui.models.channels import (
@@ -23,6 +23,7 @@ from open_webui.models.channels import (
 )
 from open_webui.models.groups import Groups
 from open_webui.models.messages import (
+    Message,
     MessageForm,
     MessageModel,
     MessageResponse,
@@ -51,11 +52,24 @@ from open_webui.utils.models import (
     get_filtered_models,
 )
 from pydantic import BaseModel, field_validator
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+async def get_recent_channel_messages(channel_id: str, limit: int, db=None) -> list:
+    """Last `limit` messages in a channel, any thread depth, chronological order."""
+    async with get_async_db_context(db) as session:
+        result = await session.execute(
+            select(Message)
+            .filter_by(channel_id=channel_id)
+            .order_by(Message.created_at.desc(), Message.id.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())[::-1]
 
 
 async def channel_has_access(
@@ -1005,13 +1019,34 @@ async def model_response_handler(request, channel, message, user, db=None):
         if model:
             try:
                 # reverse to get in chronological order
-                thread_messages = (
-                    await Messages.get_messages_by_parent_id(
+                # How much conversation context a mentioned model gets:
+                #   'thread'  = only the thread the mention lives in (default)
+                #   'channel' = the last N messages of the whole channel
+                context_mode = await Config.get('channels.model_context_mode', 'thread')
+
+                thread_messages = []
+                if message.parent_id:
+                    # mention inside a thread: keep the thread context
+                    thread_messages = (
+                        await Messages.get_messages_by_parent_id(
+                            channel.id,
+                            message.parent_id,
+                            db=db,
+                        )
+                    )[::-1]
+
+                if context_mode == 'channel':
+                    channel_context = await get_recent_channel_messages(
                         channel.id,
-                        message.parent_id if message.parent_id else message.id,
+                        await Config.get('channels.model_context_limit', 50),
                         db=db,
                     )
-                )[::-1]
+                    if thread_messages:
+                        # merge thread + channel context, dedupe, keep chronological order
+                        by_id = {m.id: m for m in [*thread_messages, *channel_context]}
+                        thread_messages = sorted(by_id.values(), key=lambda m: m.created_at)
+                    else:
+                        thread_messages = channel_context
                 response_parent_id = (
                     message.parent_id
                     if message.parent_id
@@ -1071,15 +1106,26 @@ async def model_response_handler(request, channel, message, user, db=None):
                             files.append(file)
 
                 thread_history_string = '\n\n'.join(thread_history)
-                system_message = {
-                    'role': 'system',
-                    'content': f'You are {model.get("name", model_id)}, participating in a threaded conversation. Be concise and conversational.'
-                    + (
-                        f"Here's the thread history:\n\n\n{thread_history_string}\n\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
-                        if thread_history
-                        else ''
-                    ),
-                }
+                if context_mode == 'channel':
+                    system_message = {
+                        'role': 'system',
+                        'content': f'You are {model.get("name", model_id)}, participating in the channel conversation. Be concise and conversational.'
+                        + (
+                            f"Here are the most recent messages in the channel, in order:\n\n\n{thread_history_string}\n\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
+                            if thread_history
+                            else ''
+                        ),
+                    }
+                else:
+                    system_message = {
+                        'role': 'system',
+                        'content': f'You are {model.get("name", model_id)}, participating in a threaded conversation. Be concise and conversational.'
+                        + (
+                            f"Here's the thread history:\n\n\n{thread_history_string}\n\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
+                            if thread_history
+                            else ''
+                        ),
+                    }
 
                 content = f'{user.name if user else "User"}: {message_content}'
                 if images:
