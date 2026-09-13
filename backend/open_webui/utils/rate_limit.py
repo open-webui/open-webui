@@ -2,6 +2,7 @@ import time
 from typing import Dict, Optional
 
 from open_webui.env import REDIS_KEY_PREFIX
+from redis.asyncio import Redis
 
 
 class RateLimiter:
@@ -15,20 +16,17 @@ class RateLimiter:
 
     def __init__(
         self,
-        redis_client,
         limit: int,
         window: int,
         bucket_size: int = 60,
         enabled: bool = True,
     ):
         """
-        :param redis_client: Redis client instance or None
         :param limit: Max allowed events in the window
         :param window: Time window in seconds
         :param bucket_size: Bucket resolution
         :param enabled: Turn on/off rate limiting globally
         """
-        self.r = redis_client
         self.limit = limit
         self.window = window
         self.bucket_size = bucket_size
@@ -41,10 +39,7 @@ class RateLimiter:
     def _current_bucket(self) -> int:
         return int(time.time()) // self.bucket_size
 
-    def _redis_available(self) -> bool:
-        return self.r is not None
-
-    def is_limited(self, key: str) -> bool:
+    async def is_limited(self, redis: Redis | None, key: str) -> bool:
         """
         Main rate-limit check.
         Gracefully handles missing or failing Redis.
@@ -52,50 +47,50 @@ class RateLimiter:
         if not self.enabled:
             return False
 
-        if self._redis_available():
+        if redis is not None:
             try:
-                return self._is_limited_redis(key)
+                return await self._is_limited_redis(redis, key)
             except Exception:
                 return self._is_limited_memory(key)
         else:
             return self._is_limited_memory(key)
 
-    def get_count(self, key: str) -> int:
+    async def get_count(self, redis: Redis | None, key: str) -> int:
         if not self.enabled:
             return 0
 
-        if self._redis_available():
+        if redis is not None:
             try:
-                return self._get_count_redis(key)
+                return await self._get_count_redis(redis, key)
             except Exception:
                 return self._get_count_memory(key)
         else:
             return self._get_count_memory(key)
 
-    def remaining(self, key: str) -> int:
-        used = self.get_count(key)
+    async def remaining(self, redis: Redis | None, key: str) -> int:
+        used = await self.get_count(redis, key)
         return max(0, self.limit - used)
 
-    def _is_limited_redis(self, key: str) -> bool:
+    async def _is_limited_redis(self, redis: Redis, key: str) -> bool:
         now_bucket = self._current_bucket()
         bucket_key = self._bucket_key(key, now_bucket)
 
-        attempts = self.r.incr(bucket_key)
+        attempts = await redis.incr(bucket_key)
         if attempts == 1:
-            self.r.expire(bucket_key, self.window + self.bucket_size)
+            await redis.expire(bucket_key, self.window + self.bucket_size)
 
         # Collect buckets
         buckets = [self._bucket_key(key, now_bucket - i) for i in range(self.num_buckets + 1)]
 
-        counts = self.r.mget(buckets)
+        counts = await redis.mget(buckets)
         total = sum(int(c) for c in counts if c)
 
         return total > self.limit
 
-    def _get_count_redis(self, key: str) -> int:
+    async def _get_count_redis(self, redis: Redis, key: str) -> int:
         now_bucket = self._current_bucket()
         buckets = [self._bucket_key(key, now_bucket - i) for i in range(self.num_buckets + 1)]
-        counts = self.r.mget(buckets)
+        counts = await redis.mget(buckets)
         return sum(int(c) for c in counts if c)
 
     def _is_limited_memory(self, key: str) -> bool:
