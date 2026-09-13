@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.11, <3.13.0"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'win32'",
@@ -1958,28 +1958,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-community"
-version = "0.4.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "httpx-sse" },
-    { name = "langchain-classic" },
-    { name = "langchain-core" },
-    { name = "langsmith" },
-    { name = "numpy" },
-    { name = "pydantic-settings" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "sqlalchemy" },
-    { name = "tenacity" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ea/0c/e3aca1f2b1c5b95f8b87cb2b6e81a6f20d538c07a128419dc01cef0617b6/langchain_community-0.4.2.tar.gz", hash = "sha256:a99308160d53d7e9b5965ee665e5173709914338210089fd5788ad724432c21e", size = 33268708, upload-time = "2026-05-22T19:42:59.374Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/39/5d97e42a3e95dc2a6d71b2f902a3fae71786131e11d01bddb604accb0ebe/langchain_community-0.4.2-py3-none-any.whl", hash = "sha256:84dd8c5122532394d5b6849a5fc9995ef28e4f77227daeb09f24b3d942e9e466", size = 2364406, upload-time = "2026-05-22T19:42:57.103Z" },
-]
-
-[[package]]
 name = "langchain-core"
 version = "1.4.8"
 source = { registry = "https://pypi.org/simple" }
@@ -2784,7 +2762,7 @@ dependencies = [
     { name = "itsdangerous" },
     { name = "joserfc" },
     { name = "langchain-classic" },
-    { name = "langchain-community" },
+    { name = "langchain-core" },
     { name = "langchain-text-splitters" },
     { name = "ldap3" },
     { name = "loguru" },
@@ -2910,7 +2888,7 @@ requires-dist = [
     { name = "itsdangerous", specifier = "==2.2.0" },
     { name = "joserfc", specifier = "==1.7.4" },
     { name = "langchain-classic", specifier = "==1.0.7" },
-    { name = "langchain-community", specifier = "==0.4.2" },
+    { name = "langchain-core", specifier = "==1.4.8" },
     { name = "langchain-text-splitters", specifier = "==1.1.2" },
     { name = "ldap3", specifier = "==2.9.1" },
     { name = "loguru", specifier = "==0.7.3" },

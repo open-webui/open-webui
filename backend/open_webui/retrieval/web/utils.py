@@ -8,6 +8,7 @@ import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
+from importlib import import_module
 from typing import (
     Any,
     AsyncIterator,
@@ -31,8 +32,7 @@ import validators
 from requests.adapters import HTTPAdapter
 from fastapi import HTTPException
 from fastapi.concurrency import run_in_threadpool
-from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
-from langchain_community.document_loaders.base import BaseLoader
+from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
 from open_webui.config import (
     ENABLE_LOCAL_WEB_FETCH,
@@ -648,7 +648,7 @@ class SafeMicrosoftWebIQLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 raise e
 
 
-class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessingMixin):
+class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
 
     Attributes:
@@ -684,6 +684,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 503, 'Playwright is unavailable in slim. Use basic HTTP fetching or an external web loader.'
             )
 
+        for package in ('playwright', 'unstructured'):
+            import_module(package)
+
         proxy_server = proxy.get('server') if proxy else None
         if trust_env and not proxy_server:
             env_proxies = urllib.request.getproxies()
@@ -694,20 +697,23 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 else:
                     proxy = {'server': env_proxy_server}
 
-        # We'll set headless to False if using playwright_ws_url since it's handled by the remote browser
-        super().__init__(
-            urls=web_paths,
-            continue_on_failure=continue_on_failure,
-            headless=headless if playwright_ws_url is None else False,
-            remove_selectors=remove_selectors,
-            proxy=proxy,
-        )
+        self.urls = web_paths
+        self.continue_on_failure = continue_on_failure
+        self.headless = headless if playwright_ws_url is None else False
+        self.remove_selectors = remove_selectors or []
+        self.proxy = proxy
         self.verify_ssl = verify_ssl
         self.requests_per_second = requests_per_second
         self.last_request_time = None
         self.playwright_ws_url = playwright_ws_url
         self.trust_env = trust_env
         self.playwright_timeout = playwright_timeout
+
+    @staticmethod
+    def _extract_html(html):
+        from unstructured.partition.html import partition_html
+
+        return '\n\n'.join(str(element) for element in partition_html(text=html))
 
     def _request_timeout(self) -> float:
         # per-hop budget, since page.goto's timeout cannot reach into our own fetch and 0 disables
@@ -867,7 +873,11 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                             if response is None:
                                 raise ValueError(f'page.goto() returned None for url {url}')
 
-                            text = self.evaluator.evaluate(page, browser, response)
+                            for selector in self.remove_selectors:
+                                for element in page.locator(selector).all():
+                                    if element.is_visible():
+                                        element.evaluate('element => element.remove()')
+                            text = self._extract_html(page.content())
                             page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}
                             yield Document(page_content=text, metadata=metadata)
@@ -903,7 +913,11 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                             if response is None:
                                 raise ValueError(f'page.goto() returned None for url {url}')
 
-                            text = await self.evaluator.evaluate_async(page, browser, response)
+                            for selector in self.remove_selectors:
+                                for element in await page.locator(selector).all():
+                                    if await element.is_visible():
+                                        await element.evaluate('element => element.remove()')
+                            text = await asyncio.to_thread(self._extract_html, await page.content())
                             await page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}
                             yield Document(page_content=text, metadata=metadata)
@@ -914,42 +928,58 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                         raise e
 
 
-class SafeWebBaseLoader(WebBaseLoader):
-    """WebBaseLoader with enhanced error handling for URLs."""
+class SafeWebBaseLoader(BaseLoader):
+    """Fetch pages with connect-time address checks and bounded concurrency."""
 
-    def __init__(self, trust_env: bool = False, *args, **kwargs):
-        """Initialize SafeWebBaseLoader
-        Args:
-            trust_env (bool, optional): set to True if using proxy to make web requests, for example
-                using http(s)_proxy environment variables. Defaults to False.
-        """
-        # lxml parses scraped pages far faster than the html.parser default
-        kwargs.setdefault('default_parser', 'lxml')
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        web_paths,
+        verify_ssl=True,
+        trust_env=False,
+        requests_per_second=2,
+        continue_on_failure=False,
+        requests_kwargs=None,
+        raise_for_status=False,
+        default_parser='lxml',
+        bs_kwargs=None,
+        bs_get_text_kwargs=None,
+    ):
+        self.web_paths = list(web_paths)
         self.trust_env = trust_env
-
-        # Propagate USER_AGENT env var so that both the sync _scrape() and
-        # async _fetch() paths present a real UA instead of python-requests/2.x
-        # which gets blocked by Cloudflare, Wikipedia, and similar bot-detection.
-        # _fetch() forwards self.session.headers to the aiohttp session, so
-        # setting it here covers both code-paths.
-        if USER_AGENT:
-            self.session.headers['User-Agent'] = USER_AGENT
-
-        # Prevent redirect-based SSRF on the synchronous _scrape() path.
-        # validate_url() is called once on the originally-submitted URL, but the
-        # parent WebBaseLoader's _scrape() invokes self.session.get(url, **self.requests_kwargs)
-        # which by default follows redirects. Without the override below, an attacker
-        # can submit a public URL that 302-redirects to an internal address (RFC1918,
-        # 127.0.0.1, 169.254.169.254, etc.) and the redirected target is fetched without
-        # re-validation. Matches the policy enforced on the async _fetch() path below.
-        self.requests_kwargs = {
-            **(self.requests_kwargs or {}),
-            'allow_redirects': AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+        self.requests_per_second = requests_per_second
+        self.continue_on_failure = continue_on_failure
+        self.requests_kwargs = {**(requests_kwargs or {}), 'allow_redirects': AIOHTTP_CLIENT_ALLOW_REDIRECTS}
+        self.raise_for_status = raise_for_status
+        self.default_parser = default_parser
+        self.bs_kwargs = bs_kwargs or {}
+        self.bs_get_text_kwargs = bs_get_text_kwargs or {}
+        # Preserve the synchronous loader's environment-proxy behavior.
+        self.session = get_ssrf_safe_requests_session()
+        self.session.verify = verify_ssl
+        self.session.headers = {
+            'User-Agent': USER_AGENT or 'DefaultLangchainUserAgent',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Referer': 'https://www.google.com/',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
         }
 
-        self.session.mount('http://', _SSRFSafeAdapter())
-        self.session.mount('https://', _SSRFSafeAdapter())
+    async def fetch_all(self, urls):
+        semaphore = asyncio.Semaphore(self.requests_per_second)
+
+        async def fetch(url):
+            async with semaphore:
+                try:
+                    return await self._fetch(url)
+                except Exception as e:
+                    if not self.continue_on_failure:
+                        raise
+                    log.warning('Error fetching %s: %s', url, e)
+                    return ''
+
+        return await asyncio.gather(*(fetch(url) for url in urls))
 
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
         connector = _SSRFSafeConnector()
@@ -965,10 +995,10 @@ class SafeWebBaseLoader(WebBaseLoader):
                     else:
                         kwargs['ssl'] = AIOHTTP_CLIENT_SESSION_SSL
 
-                    async with session.get(
-                        url,
-                        **(self.requests_kwargs | kwargs),
-                    ) as response:
+                    options = self.requests_kwargs | kwargs
+                    if isinstance(options.get('timeout'), (int, float)):
+                        options['timeout'] = aiohttp.ClientTimeout(total=options['timeout'])
+                    async with session.get(url, **options) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
                         return await response.text()
@@ -980,38 +1010,24 @@ class SafeWebBaseLoader(WebBaseLoader):
                         await asyncio.sleep(cooldown * backoff**i)
         raise ValueError('retry count exceeded')
 
-    def _unpack_fetch_results(self, results: Any, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
-        """Unpack fetch results into BeautifulSoup objects."""
-        from bs4 import BeautifulSoup
-
-        final_results = []
-        for i, result in enumerate(results):
-            url = urls[i]
-            url_parser = parser
-            if url_parser is None:
-                url_parser = 'xml' if url.endswith('.xml') else self.default_parser
-                self._check_parser(url_parser)
-            final_results.append(BeautifulSoup(result, url_parser, **self.bs_kwargs))
-        return final_results
-
     def lazy_load(self) -> Iterator[Document]:
         """Lazy load text from the url(s) in web_path with error handling."""
         for path in self.web_paths:
             try:
-                soup = self._scrape(path, bs_kwargs=self.bs_kwargs)
-                text = soup.get_text(**self.bs_get_text_kwargs)
-
-                # Build metadata
-                metadata = extract_metadata(soup, path)
-
-                yield Document(page_content=text, metadata=metadata)
+                with self.session.get(path, **self.requests_kwargs) as response:
+                    if self.raise_for_status:
+                        response.raise_for_status()
+                    response.encoding = response.apparent_encoding
+                    yield self._document_from_html(response.text, path)
             except Exception as e:
-                # Log the error and continue with the next URL
                 log.exception(f'Error loading {path}: {e}')
 
     def _document_from_html(self, html: str, url: str) -> Document:
         """Build one Document."""
-        soup = self._unpack_fetch_results([html], [url])[0]
+        from bs4 import BeautifulSoup
+
+        parser = 'xml' if url.endswith('.xml') else self.default_parser
+        soup = BeautifulSoup(html, parser, **self.bs_kwargs)
         return Document(
             page_content=soup.get_text(**self.bs_get_text_kwargs),
             metadata=extract_metadata(soup, url),

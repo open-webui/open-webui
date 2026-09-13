@@ -47,7 +47,7 @@ mcp==1.27.2
 openai==2.29.0
 anthropic==0.86.0
 
-langchain-community==0.4.2
+langchain-core==1.4.8
 langchain-classic==1.0.7
 langchain-text-splitters==1.1.2
 

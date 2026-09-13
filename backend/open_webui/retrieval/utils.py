@@ -17,7 +17,6 @@ from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
     EnsembleRetriever,
 )
-from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from open_webui.config import (
     RAG_EMBEDDING_CONTENT_PREFIX,
@@ -63,6 +62,15 @@ from typing import Any
 
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
+
+
+class BM25Retriever(BaseRetriever):
+    docs: list[Document]
+    vectorizer: Any
+    k: int
+
+    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun) -> list[Document]:
+        return self.vectorizer.get_top_n(query.split(), self.docs, n=self.k)
 
 
 def is_youtube_url(url: str) -> bool:
@@ -544,11 +552,13 @@ async def query_doc_with_hybrid_search(
 
         bm25_texts = get_enriched_texts(collection_result) if enable_enriched_texts else original_texts
 
-        bm25_retriever = BM25Retriever.from_texts(
-            texts=bm25_texts,
-            metadatas=bm25_metadatas,
+        from rank_bm25 import BM25Okapi
+
+        bm25_retriever = BM25Retriever(
+            docs=[Document(page_content=text, metadata=meta) for text, meta in zip(bm25_texts, bm25_metadatas)],
+            vectorizer=BM25Okapi([text.split() for text in bm25_texts]),
+            k=k,
         )
-        bm25_retriever.k = k
 
         vector_search_retriever = VectorSearchRetriever(
             collection_name=collection_name,
