@@ -658,7 +658,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 };
 
 export const compareVersion = (latest, current) => {
-	return current === '0.0.0'
+	return !latest || current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
 				numeric: true,
@@ -979,6 +979,20 @@ export const isValidHttpUrl = (string: string) => {
 	}
 
 	return url.protocol === 'http:' || url.protocol === 'https:';
+};
+
+const SAFE_LINK_PROTOCOLS = ['http:', 'https:', 'mailto:', 'tel:'];
+
+export const safeLinkUrl = (url: string): string | undefined => {
+	let protocol;
+	try {
+		protocol = new URL(url).protocol;
+	} catch (_) {
+		// No scheme to parse, so the browser resolves it against our own origin.
+		return url;
+	}
+
+	return SAFE_LINK_PROTOCOLS.includes(protocol) ? url : undefined;
 };
 
 export const isYoutubeUrl = (url: string) => {
@@ -1464,7 +1478,11 @@ export const getLineCount = (text) => {
 };
 
 // Helper function to recursively resolve OpenAPI schema into JSON schema format
-function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
+export function resolveSchema(
+	schemaRef,
+	components,
+	resolvedSchemas = new Set()
+): Record<string, any> {
 	if (!schemaRef) return {};
 
 	if (schemaRef['$ref']) {

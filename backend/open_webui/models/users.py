@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import datetime
 import time
-from typing import Optional
+from typing import Literal, Optional
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import throttle
 from open_webui.utils.validate import validate_profile_image_url
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -34,6 +40,97 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Hallowed be the columns defined here, for they hold the
 # daily bread of every session. Let none go hungry.
 ####################
+
+
+class InterfaceTitleSettings(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    auto: bool | None = None
+
+
+class InterfaceImageCompressionSize(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    width: int | float | Literal[''] | None = None
+    height: int | float | Literal[''] | None = None
+
+
+class InterfaceFloatingActionButton(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    id: str
+    label: str
+    input: bool
+    prompt: str
+
+
+class InterfaceSettings(BaseModel):
+    """Fields owned by the Interface settings panel; not the entire user UI dict."""
+
+    model_config = ConfigDict(extra='forbid')
+
+    autoTags: bool | None = None
+    autoFollowUps: bool | None = None
+    highContrastMode: bool | None = None
+    detectArtifacts: bool | None = None
+    responseAutoCopy: bool | None = None
+    showUsername: bool | None = None
+    showUpdateToast: bool | None = None
+    showChangelog: bool | None = None
+    showEmojiInCall: bool | None = None
+    voiceInterruption: bool | None = None
+    displayMultiModelResponsesInTabs: bool | None = None
+    chatFadeStreamingText: bool | None = None
+    richTextInput: bool | None = None
+    showFormattingToolbar: bool | None = None
+    insertPromptAsRichText: bool | None = None
+    promptAutocomplete: bool | None = None
+    insertSuggestionPrompt: bool | None = None
+    keepFollowUpPrompts: bool | None = None
+    insertFollowUpPrompt: bool | None = None
+    regenerateMenu: bool | None = None
+    enableMessageQueue: bool | None = None
+    largeTextAsFile: bool | None = None
+    copyFormatted: bool | None = None
+    collapseCodeBlocks: bool | None = None
+    renderMarkdownInUserMessages: bool | None = None
+    renderMarkdownInAssistantMessages: bool | None = None
+    expandDetails: bool | None = None
+    chatHoverPreview: bool | None = None
+    renderMarkdownInPreviews: bool | None = None
+    chatBubble: bool | None = None
+    widescreenMode: bool | None = None
+    splitLargeChunks: bool | None = None
+    scrollOnBranchChange: bool | None = None
+    scrollOnResponseGeneration: bool | None = None
+    showFilesOnTerminalSelect: bool | None = None
+    temporaryChatByDefault: bool | None = None
+    userLocation: bool | None = None
+    showChatTitleInTab: bool | None = None
+    iframeSandboxAllowScripts: bool | None = None
+    iframeSandboxAllowSameOrigin: bool | None = None
+    iframeSandboxAllowForms: bool | None = None
+    iframeSandboxAllowDownloads: bool | None = None
+    terminalPreviewAllowSameOrigin: bool | None = None
+    stylizedPdfExport: bool | None = None
+    hapticFeedback: bool | None = None
+    ctrlEnterToSend: bool | None = None
+    showFloatingActionButtons: bool | None = None
+    imageCompression: bool | None = None
+    imageCompressionInChannels: bool | None = None
+
+    landingPageMode: Literal['', 'chat'] | None = None
+    chatDirection: Literal['LTR', 'RTL', 'auto'] | None = None
+    terminalFileDisplay: Literal['sidebar', 'inline'] | None = None
+    defaultUploadContext: Literal['full', 'focused'] | None = None
+    webSearch: Literal['always'] | None = None
+    models: list[str] | None = None
+    backgroundImageUrl: str | None = None
+    fontFamily: str | None = None
+    textScale: float | None = None
+    title: InterfaceTitleSettings | None = None
+    imageCompressionSize: InterfaceImageCompressionSize | None = None
+    floatingActionButtons: list[InterfaceFloatingActionButton] | None = None
 
 
 class UserSettings(BaseModel):
@@ -729,7 +826,18 @@ class UsersTable:
             if not user:
                 return None
             user_settings = dict(user.settings or {})
+            updated = dict(updated)
+            ui_settings = updated.pop('ui', None)
             user_settings.update(updated)
+            if ui_settings is not None:
+                # UI updates are field-level patches: omission keeps a value; null resets it.
+                current_ui_settings = dict(user_settings.get('ui') or {})
+                for key, value in ui_settings.items():
+                    if value is None:
+                        current_ui_settings.pop(key, None)
+                    else:
+                        current_ui_settings[key] = value
+                user_settings['ui'] = current_ui_settings
             user.settings = user_settings
             await session.commit()
             return UserModel.model_validate(user)

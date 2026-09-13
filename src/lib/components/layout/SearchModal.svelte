@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SearchInput from './Sidebar/SearchInput.svelte';
@@ -534,7 +534,7 @@
 						{
 							label: $i18n.t('Create a new note'),
 							onClick: async () => {
-								await goto(`/notes?content=${query}`);
+								await goto(`/notes/new?content=${encodeURIComponent(query)}`);
 								show = false;
 								onClose();
 							},
@@ -845,7 +845,7 @@
 												}}
 											>
 												<button
-													aria-label="Chat Menu"
+													aria-label={$i18n.t('Chat Menu')}
 													class="self-center dark:hover:text-white transition"
 												>
 													<svg

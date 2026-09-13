@@ -7,6 +7,7 @@
 	import { getBanners, setBanners } from '$lib/apis/configs';
 	import InterfaceSettings from '$lib/components/common/InterfaceSettings.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
@@ -22,22 +23,28 @@
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import I18nSettings from './I18nSettings.svelte';
+	import { updateI18n } from '$lib/i18n';
+	import { entriesToI18n, i18nToEntries, type I18nEntry } from '$lib/utils/translationDictionary';
 
 	const i18n: any = getContext('i18n');
 
 	export let saveHandler: Function;
 
-	let updateAvailable: boolean | null = false;
+	let updateAvailable: boolean | null = null;
 	let version = {
 		current: WEBUI_VERSION,
-		latest: WEBUI_VERSION
+		latest: ''
 	};
 
 	let adminConfig: any = null;
 	let defaultInterfaceSettings: Record<string, any> = {};
 	let showUserUiDefaults = false;
+	let uiI18nEntries: I18nEntry[] = [];
+	let saving = false;
 
 	let banners: Banner[] = [];
+	let bannerLocale = '';
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -47,7 +54,7 @@
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
 				current: WEBUI_VERSION,
-				latest: WEBUI_VERSION
+				latest: null
 			};
 		});
 
@@ -71,26 +78,43 @@
 	};
 
 	const updateHandler = async () => {
-		adminConfig.DEFAULT_INTERFACE_SETTINGS = defaultInterfaceSettings;
-
-		const res = await updateAdminConfig(localStorage.token, adminConfig);
-
-		await updateBanners();
-
-		await config.set(await getBackendConfig());
-
-		if (res) {
+		if (saving) return;
+		saving = true;
+		try {
+			const cleaned = entriesToI18n(uiI18nEntries);
+			const res = await updateAdminConfig(localStorage.token, {
+				...adminConfig,
+				DEFAULT_INTERFACE_SETTINGS: defaultInterfaceSettings,
+				I18N: cleaned
+			});
+			if (!res) throw new Error($i18n.t('Failed to update settings'));
+			await updateI18n(res.I18N ?? cleaned);
+			await updateBanners();
+			await config.set(await getBackendConfig());
 			saveHandler();
-		} else {
-			toast.error($i18n.t('Failed to update settings'));
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: Array.isArray(error)
+						? error.map((entry) => entry.msg).join('\n')
+						: String(error)
+			);
+		} finally {
+			saving = false;
 		}
 	};
 
 	onMount(async () => {
 		adminConfig = await getAdminConfig(localStorage.token);
 		defaultInterfaceSettings = getDefaultInterfaceSettings();
+		uiI18nEntries = i18nToEntries(adminConfig.I18N ?? {});
 
 		banners = [...$_banners];
+
+		if ($config?.features?.enable_version_update_check) {
+			checkForVersionUpdates();
+		}
 	});
 </script>
 
@@ -112,17 +136,23 @@
 							<Tooltip content={WEBUI_BUILD_HASH}>v{WEBUI_VERSION}</Tooltip>
 
 							{#if $config?.features?.enable_version_update_check}
-								<a
-									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-									target="_blank"
-									class="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-								>
-									{updateAvailable === null
-										? $i18n.t('Checking for updates...')
-										: updateAvailable
-											? `(v${version.latest} ${$i18n.t('available!')})`
-											: $i18n.t('(latest)')}
-								</a>
+								{#if version.latest === null}
+									<span class="text-gray-500 dark:text-gray-500"
+										>{$i18n.t('Could not check for updates')}</span
+									>
+								{:else}
+									<a
+										href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+										target="_blank"
+										class="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+									>
+										{updateAvailable === null
+											? $i18n.t('Checking for updates...')
+											: updateAvailable
+												? `(v${version.latest} ${$i18n.t('available!')})`
+												: $i18n.t('(latest)')}
+									</a>
+								{/if}
 							{/if}
 						</div>
 
@@ -205,7 +235,7 @@
 							<span class="capitalize text-black dark:text-white"
 								>{$config?.license_metadata?.type} license</span
 							>
-							registered to
+							{$i18n.t('registered to')}
 							<span class="capitalize text-black dark:text-white"
 								>{$config?.license_metadata?.organization_name}</span
 							>
@@ -384,6 +414,9 @@
 			<Events />
 
 			<AdminSettingSection title={$i18n.t('UI')}>
+				<fieldset id="ui-i18n-settings" disabled={saving} class="min-w-0">
+					<I18nSettings bind:entries={uiI18nEntries} />
+				</fieldset>
 				<div class="shrink-0">
 					<div class="flex items-center justify-between gap-4 py-0.5">
 						<button
@@ -444,39 +477,40 @@
 				</div>
 
 				<div>
-					<div class="mb-2 flex w-full items-start justify-between gap-4">
-						<div class="min-w-0">
-							<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Banners')}</div>
-							<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-								{$i18n.t('Create announcements shown to users in the app.')}
-							</div>
+					<div class="mb-1 flex min-h-7 w-full items-center justify-between gap-2">
+						<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Banners')}</div>
+						<div class="flex shrink-0 items-center gap-1">
+							{#if banners.length > 0}
+								<LanguageModeSelect bind:value={bannerLocale} className="w-fit" />
+							{/if}
+							<button
+								class="flex size-6 items-center justify-center text-gray-400 dark:text-gray-600"
+								type="button"
+								aria-label={$i18n.t('Add banner')}
+								on:click={() => {
+									if (banners.length === 0 || banners[banners.length - 1]?.content !== '') {
+										banners = [
+											...banners,
+											{
+												id: uuidv4(),
+												type: '',
+												title: '',
+												content: '',
+												dismissible: true,
+												timestamp: Math.floor(Date.now() / 1000)
+											}
+										];
+									}
+								}}
+							>
+								<Plus />
+							</button>
 						</div>
-
-						<button
-							class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
-							type="button"
-							aria-label={$i18n.t('Add banner')}
-							on:click={() => {
-								if (banners.length === 0 || banners[banners.length - 1]?.content !== '') {
-									banners = [
-										...banners,
-										{
-											id: uuidv4(),
-											type: '',
-											title: '',
-											content: '',
-											dismissible: true,
-											timestamp: Math.floor(Date.now() / 1000)
-										}
-									];
-								}
-							}}
-						>
-							<Plus />
-						</button>
 					</div>
-
-					<Banners bind:banners />
+					<div class="mb-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						{$i18n.t('Create announcements shown to users in the app.')}
+					</div>
+					<Banners bind:banners locale={bannerLocale} />
 				</div>
 			</AdminSettingSection>
 		{/if}
@@ -486,6 +520,7 @@
 		<button
 			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
+			disabled={saving}
 		>
 			{$i18n.t('Save')}
 		</button>

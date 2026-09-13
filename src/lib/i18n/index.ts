@@ -3,6 +3,32 @@ import resourcesToBackend from 'i18next-resources-to-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import type { i18n as i18nType } from 'i18next';
 import { writable } from 'svelte/store';
+import type { I18nOverrides } from '$lib/utils/translationDictionary';
+
+let overrides: I18nOverrides = {};
+
+export const loadBundledResource = async (language: string): Promise<Record<string, string>> =>
+	(await import(`./locales/${language}/translation.json`)).default;
+
+const loadResource = async (language: string) => ({
+	...(await loadBundledResource(language)),
+	...overrides[language]
+});
+
+export const updateI18n = async (value: I18nOverrides = {}) => {
+	overrides = value;
+	const resources = await Promise.all(
+		Object.keys(i18next.store?.data ?? {}).map(async (language) => ({
+			language,
+			resource: await loadResource(language)
+		}))
+	);
+	for (const { language, resource } of resources) {
+		i18next.removeResourceBundle(language, 'translation');
+		i18next.addResourceBundle(language, 'translation', resource);
+	}
+	i18n.set(i18next);
+};
 
 const createI18nStore = (i18n: i18nType) => {
 	const i18nWritable = writable(i18n);
@@ -40,16 +66,14 @@ const createIsLoadingStore = (i18n: i18nType) => {
 	return isLoading;
 };
 
-export const initI18n = (defaultLocale?: string | undefined) => {
+export const initI18n = (defaultLocale?: string, value: I18nOverrides = {}) => {
+	overrides = value;
 	const detectionOrder = defaultLocale
 		? ['querystring', 'localStorage']
 		: ['querystring', 'localStorage', 'navigator'];
 	const fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-US'];
 
-	const loadResource = (language: string, namespace: string) =>
-		import(`./locales/${language}/${namespace}.json`);
-
-	i18next
+	return i18next
 		.use(resourcesToBackend(loadResource))
 		.use(LanguageDetector)
 		.init({
@@ -83,7 +107,7 @@ export const getLanguages = async () => {
 };
 export const changeLanguage = (lang: string) => {
 	document.documentElement.setAttribute('lang', lang);
-	i18next.changeLanguage(lang);
+	return i18next.changeLanguage(lang);
 };
 
 export default i18n;

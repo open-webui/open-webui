@@ -931,7 +931,7 @@
 					{/if}
 
 					{#if chats === null && chatsLoading}
-						<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+						<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
 							<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
 							<span
 								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
@@ -974,7 +974,7 @@
 							on:click={() => setFolderItems(true)}
 						>
 							{#if chatsLoading}
-								<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+								<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
 									<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"
 									></span>
 									<span

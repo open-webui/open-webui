@@ -5,6 +5,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
@@ -34,6 +35,7 @@
 	let name = '';
 	let id = '';
 	let auth_type = 'bearer';
+	let forwardCookies = false;
 	let path = '/openapi.json';
 	let enabled = false;
 	let chatUploads: 'default' | 'filesystem' = 'default';
@@ -73,6 +75,7 @@
 	};
 
 	const init = () => {
+		forwardCookies = connection?.forward_cookies ?? false;
 		if (connection) {
 			id = connection?.id ?? '';
 			url = connection.url;
@@ -125,6 +128,7 @@
 			key = '';
 			name = '';
 			auth_type = 'bearer';
+			forwardCookies = false;
 			path = '/openapi.json';
 			enabled = false;
 			chatUploads = 'default';
@@ -393,6 +397,7 @@
 			name,
 			path,
 			auth_type,
+			...(!direct ? { forward_cookies: forwardCookies } : {}),
 			enabled: enabled,
 			config: connectionConfig,
 			// Policy fields
@@ -874,6 +879,24 @@
 						</div>
 
 						{#if showAdvanced}
+							{#if !direct}
+								<div class="flex items-center justify-between gap-3 mt-2">
+									<div>
+										<label for="forward-cookies" class="text-xs text-gray-500">
+											{$i18n.t('Forward cookies')}
+										</label>
+										<p class="text-xs text-gray-500">
+											{$i18n.t('Forward cookies from your Open WebUI request to this server.')}
+										</p>
+									</div>
+									<Switch
+										id="forward-cookies"
+										ariaLabel={$i18n.t('Forward cookies')}
+										bind:state={forwardCookies}
+									/>
+								</div>
+							{/if}
+
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between items-center mb-0.5">

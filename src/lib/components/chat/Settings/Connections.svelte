@@ -9,7 +9,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Connection from './Connections/Connection.svelte';
-	import UserSettingSection from './UserSettingSection.svelte';
 
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 
@@ -75,17 +74,22 @@
 >
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Connections')}</h2>
 
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
+	<div class="flex flex-1 min-h-0 flex-col overflow-y-auto scrollbar-hover pr-1.5">
 		{#if config !== null}
-			<UserSettingSection title={$i18n.t('Manage Direct Connections')} first>
-				<div class="flex items-center justify-between gap-2.5">
-					<div class="min-w-0 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-						{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
+			<section class="space-y-3" aria-labelledby="direct-connections-heading">
+				<div class="flex items-start justify-between gap-3">
+					<div class="min-w-0">
+						<h3 id="direct-connections-heading" class="text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('Direct Connections')}
+						</h3>
+						<p class="mt-1 text-[0.6875rem] leading-relaxed text-gray-400 dark:text-gray-600">
+							{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
+						</p>
 					</div>
 
 					<Tooltip content={$i18n.t(`Add Connection`)}>
 						<button
-							class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							class="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 							aria-label={$i18n.t('Add Connection')}
 							on:click={() => {
 								showConnectionModal = true;
@@ -123,16 +127,27 @@
 						/>
 					{/each}
 				</div>
+			</section>
 
-				<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-					<!-- LICENSE covers this Open WebUI wordmark.
+			<div class="mt-6">
+				<div
+					class="space-y-3 border-t border-gray-100/50 pt-4 text-[0.6875rem] leading-relaxed text-gray-400 dark:border-white/[0.04] dark:text-gray-600"
+				>
+					<p>
+						{$i18n.t(
+							'Connections managed through the Admin Panel are recommended for everyday use. Direct connections provide convenient access to your own endpoints, but rely on your browser session to keep requests running, making them better suited to testing and temporary use.'
+						)}
+					</p>
+					<p>
+						<!-- LICENSE covers this Open WebUI wordmark.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
-					{$i18n.t(
-						'CORS must be properly configured by the provider to allow requests from Open WebUI.'
-					)}
+						{$i18n.t(
+							'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+						)}
+					</p>
 				</div>
-			</UserSettingSection>
+			</div>
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">

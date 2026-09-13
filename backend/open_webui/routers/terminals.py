@@ -33,13 +33,18 @@ from open_webui.utils.terminals import (
 )
 from starlette.background import BackgroundTask
 from starlette.requests import ClientDisconnect
+from yarl import URL
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
 
 STREAMING_CONTENT_TYPES = ('application/octet-stream', 'image/', 'application/pdf')
-STRIPPED_RESPONSE_HEADERS = frozenset(('transfer-encoding', 'connection', 'content-encoding', 'content-length'))
+ADMIN_API_PATHS = ('api/v1/policies', 'api/v1/status', 'api/v1/terminals')
+# Drop the upstream's server and date: uvicorn adds its own and forwarding both duplicates them.
+STRIPPED_RESPONSE_HEADERS = frozenset(
+    ('transfer-encoding', 'connection', 'content-encoding', 'content-length', 'server', 'date')
+)
 
 
 def _sanitize_proxy_path(path: str) -> str | None:
@@ -62,7 +67,8 @@ def _sanitize_proxy_path(path: str) -> str | None:
         return None
     # posixpath splits on '/' only, so 'a/..\..\b' survives normpath as one component.
     # Upstreams that treat '\' as a separator would resolve it, so reject outright.
-    if '\\' in decoded:
+    # URL parsers also remove tabs/newlines, which can turn '.\t.' into '..'.
+    if any(char in decoded for char in '\\\t\r\n'):
         return None
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
@@ -130,6 +136,15 @@ async def proxy_terminal(
 
     target_url = f'{base_url}/{safe_path}'
 
+    # Check the path aiohttp will send, relative to the configured server root.
+    base_path = URL(str(connection.get('url') or '')).path.rstrip('/')
+    target_path = URL(target_url).path
+    if any(
+        target_path == f'{base_path}/{prefix}' or target_path.startswith(f'{base_path}/{prefix}/')
+        for prefix in ADMIN_API_PATHS
+    ):
+        return JSONResponse({'error': 'Path not allowed'}, status_code=403)
+
     if request.query_params:
         target_url += f'?{request.query_params}'
 
@@ -145,16 +160,14 @@ async def proxy_terminal(
             return JSONResponse({'error': 'A saved chat is required for this terminal'}, status_code=409)
         if context_id:
             headers[TERMINAL_CONTEXT_HEADER] = context_id
-    cookies = {}
+    cookies = getattr(request, 'cookies', {}) if connection.get('forward_cookies', False) else {}
     auth_type = connection.get('auth_type', 'bearer')
 
     if auth_type == 'bearer':
         headers.update(bearer_auth_header(connection.get('key', '')))
     elif auth_type == 'session':
-        cookies = request.cookies
         headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
-        cookies = request.cookies
         # Resolve the token server-side from the caller's OAuth session; never trust a client header.
         oauth_token = None
         try:
@@ -188,6 +201,7 @@ async def proxy_terminal(
             cookies=cookies,
             data=body or None,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            allow_redirects=False,
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
@@ -326,7 +340,7 @@ async def ws_terminal(
     # For orchestrator-backed servers, pass user_id
     upstream_params['user_id'] = user.id
     context_id = terminal_context_id(connection, {'chat_id': chat_id}, 'chat')
-    upstream_headers = {}
+    upstream_headers = {'X-User-Id': user.id, 'X-Session-Id': chat_id}
     if terminal_context_config(connection, 'chat').get('context_id') == 'chat_id' and not context_id:
         await ws.close(code=4003, reason='A saved chat is required for this terminal')
         return
@@ -362,6 +376,8 @@ async def ws_terminal(
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': key}))
             elif auth_type == 'session' and is_terminal_orchestrator(connection):
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': token}))
+            else:
+                await upstream.send_str(_json.dumps({'type': 'auth', 'token': ''}))
 
             await publish_event(
                 app,

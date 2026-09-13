@@ -50,15 +50,16 @@
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
+	import FileCompare from './FileNav/FileCompare.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import Icon from './FileNav/Icon.svelte';
 	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import PortList from './FileNav/PortList.svelte';
 	import PortPreview from './FileNav/PortPreview.svelte';
-	import XTerminal from './XTerminal.svelte';
+	import TerminalDock from './TerminalDock.svelte';
 
-	const i18n: any = getContext('i18n');
+	const i18n = getContext('i18n');
 
 	export let overlay = false;
 	export let chatId: string | null = null;
@@ -68,13 +69,8 @@
 	let terminalHeight = 200; // px, default when expanded
 	let isDraggingHandle = false;
 	let containerEl: HTMLElement;
-	let terminalConnected = false;
-	let terminalConnecting = false;
 	let terminalEnabled = true;
-
-	const toggleTerminal = () => {
-		terminalExpanded = !terminalExpanded;
-	};
+	let comparePaths: [string, string] | null = null;
 
 	const onHandleMouseDown = (e: MouseEvent) => {
 		e.preventDefault();
@@ -403,6 +399,8 @@
 		const terminalChanged = terminal && terminal.url !== prevTerminalUrl;
 		if (terminalChanged) prevTerminalUrl = terminal.url;
 
+		if (chatChanged || terminalChanged || !terminal) comparePaths = null;
+
 		if (mounted && terminal) {
 			if (chatChanged && chatId && !oldChatId) {
 				// Chat just got created (null → real ID): persist the current
@@ -715,6 +713,7 @@
 	) => {
 		const terminal = selectedTerminal;
 		if (!terminal) return;
+		comparePaths = null;
 		const directory = clampToFileRoot(path);
 		if (options.restoreTree) {
 			restoreTreeState(directory);
@@ -937,7 +936,9 @@
 				}
 			} catch (e) {
 				console.error('Failed to render Office file:', e);
-				fileContent = `Error previewing file: ${e instanceof Error ? e.message : 'Unknown error'}`;
+				fileContent = $i18n.t('Error previewing file: {{error}}', {
+					error: e instanceof Error ? e.message : $i18n.t('Unknown error')
+				});
 			}
 		} else {
 			fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);
@@ -1003,6 +1004,42 @@
 	};
 
 	// ── Drag-and-drop upload ─────────────────────────────────────────────
+	type UploadEntry = { path: string; file?: File };
+
+	async function readDroppedFiles(data: DataTransfer): Promise<UploadEntry[]> {
+		// Capture all roots before the browser locks the drag data after this event.
+		const items = Array.from(data.items ?? []).filter((item) => item.kind === 'file');
+		const roots = items.map((item) => item.webkitGetAsEntry?.() ?? item.getAsFile());
+		if (!items.length) roots.push(...Array.from(data.files));
+		const entries: UploadEntry[] = [];
+		async function visit(entry: FileSystemEntry | File, parent = ''): Promise<void> {
+			const path = parent + entry.name;
+			if (!('isDirectory' in entry)) {
+				entries.push({ path, file: entry });
+			} else if (entry.isDirectory) {
+				entries.push({ path });
+				const reader = (entry as FileSystemDirectoryEntry).createReader();
+				while (true) {
+					const children = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+						reader.readEntries(resolve, reject)
+					);
+					if (!children.length) break;
+					for (const child of children) await visit(child, `${path}/`);
+				}
+			} else {
+				const file = await new Promise<File>((resolve, reject) =>
+					(entry as FileSystemFileEntry).file(resolve, reject)
+				);
+				entries.push({ path, file });
+			}
+		}
+		for (const root of roots) {
+			if (!root) throw new Error('Unable to read a dropped file or folder.');
+			await visit(root);
+		}
+		return entries;
+	}
+
 	const handleDragOver = (e: DragEvent) => {
 		if (selectedFile) return;
 		if (!currentWritable) return;
@@ -1031,29 +1068,56 @@
 			return;
 		}
 
-		const droppedFiles = Array.from(e.dataTransfer?.files ?? []);
-		if (!droppedFiles.length) return;
-
-		uploading = true;
-		for (const file of droppedFiles) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
-		}
-		uploading = false;
-		invalidateTreeCache(currentPath);
-		await loadDir(currentPath, { preserveTree: true });
+		if (e.dataTransfer && !uploading) await handleUploadEntries(readDroppedFiles(e.dataTransfer));
 	};
 
-	const handleUploadFiles = async (files: File[]) => {
+	const handleUploadEntries = async (input: UploadEntry[] | Promise<UploadEntry[]>) => {
 		const terminal = selectedTerminal;
-		if (!files.length || !terminal || !currentWritable) return;
-
+		if (!terminal || !currentWritable || uploading) return;
+		const destination = currentPath;
+		const sessionId = chatId ?? undefined;
 		uploading = true;
-		for (const file of files) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
+		try {
+			for (const entry of await input) {
+				if (
+					entry.path
+						.split('/')
+						.some((part) => !part || part === '.' || part === '..' || /[\\\0]/.test(part))
+				) {
+					throw new Error(`Invalid upload path: ${entry.path}`);
+				}
+				const path = `${destination.replace(/\/$/, '')}/${entry.path}`;
+				const result = entry.file
+					? await uploadToTerminal(
+							terminal.url,
+							terminal.key,
+							path.slice(0, path.lastIndexOf('/')) || '/',
+							entry.file,
+							sessionId
+						)
+					: await createDirectory(terminal.url, terminal.key, path, sessionId);
+				if (!result) throw new Error(entry.path);
+			}
+		} catch (error) {
+			toast.error(`${$i18n.t('Upload failed')}: ${error instanceof Error ? error.message : error}`);
+		} finally {
+			uploading = false;
+			if (selectedTerminal?.url === terminal.url && (chatId ?? undefined) === sessionId) {
+				invalidateTreeCache(destination);
+				if (currentPath === destination && !selectedFile)
+					await loadDir(destination, { preserveTree: true });
+			}
 		}
-		uploading = false;
-		invalidateTreeCache(currentPath);
-		await loadDir(currentPath, { preserveTree: true });
+	};
+
+	const handleUploadFiles = (files: File[]) =>
+		handleUploadEntries(
+			files.map((file) => ({ path: file.webkitRelativePath || file.name, file }))
+		);
+
+	const openUploadPicker = (folder = false) => {
+		directoryUploadInput.webkitdirectory = folder;
+		directoryUploadInput.click();
 	};
 
 	// ── Folder creation ──────────────────────────────────────────────────
@@ -1216,6 +1280,11 @@
 	let selectionMode = false;
 
 	$: selectedCount = selectedEntries.size;
+	$: comparisonEntries = visibleEntries.filter((entry) => selectedEntries.has(entry.fullPath));
+	$: canCompare =
+		selectedCount === 2 &&
+		comparisonEntries.length === 2 &&
+		comparisonEntries.every((entry) => entry.type === 'file');
 	$: selectedEntriesWritable =
 		currentWritable &&
 		[...selectedEntries].every((path) => {
@@ -1238,34 +1307,19 @@
 		const selectedPath = path ?? entryPath(currentPath, entry);
 		const idx = index ?? visibleEntries.findIndex((row) => row.fullPath === selectedPath);
 		if (idx < 0) return;
-		if (event.shiftKey && lastClickedIndex !== null) {
-			// Range select — replaces current selection with range
-			const start = Math.min(lastClickedIndex, idx);
-			const end = Math.max(lastClickedIndex, idx);
-			const newSet = new Set<string>();
-			for (let i = start; i <= end; i++) {
-				const row = visibleEntries[i];
-				if (row) newSet.add(row.fullPath);
-			}
-			selectedEntries = newSet;
-		} else if (event.metaKey || event.ctrlKey) {
-			// Toggle one
-			if (selectedEntries.has(selectedPath)) {
-				selectedEntries.delete(selectedPath);
-			} else {
-				selectedEntries.add(selectedPath);
-			}
-			selectedEntries = selectedEntries;
-		} else {
-			// In selection mode (touch), toggle
-			if (selectedEntries.has(selectedPath)) {
-				selectedEntries.delete(selectedPath);
-			} else {
-				selectedEntries.add(selectedPath);
-			}
-			selectedEntries = selectedEntries;
+		const next = new Set(selectedEntries);
+		const remove = next.has(selectedPath);
+		const range = event.shiftKey && !remove && lastClickedIndex !== null;
+		const from = range ? Math.min(lastClickedIndex!, idx) : idx;
+		const to = range ? Math.max(lastClickedIndex!, idx) : idx;
+		for (let i = from; i <= to; i++) {
+			const row = visibleEntries[i];
+			if (!row) continue;
+			if (remove) next.delete(row.fullPath);
+			else next.add(row.fullPath);
 		}
-		lastClickedIndex = idx;
+		selectedEntries = next;
+		if (!event.shiftKey || lastClickedIndex === null) lastClickedIndex = idx;
 	};
 
 	const enterSelectionMode = () => {
@@ -1326,6 +1380,7 @@
 
 	// Escape to clear selection
 	const handleKeydown = (e: KeyboardEvent) => {
+		if (comparePaths) return;
 		if (e.key === 'Escape' && selectedCount > 0) {
 			e.preventDefault();
 			clearSelection();
@@ -1335,7 +1390,12 @@
 	// Click outside panel to clear selection
 	const handleWindowClick = (e: MouseEvent) => {
 		if (directoryMenu) directoryMenu = null;
-		if (selectedCount > 0 && containerEl && !containerEl.contains(e.target as Node)) {
+		if (
+			!comparePaths &&
+			selectedCount > 0 &&
+			containerEl &&
+			!containerEl.contains(e.target as Node)
+		) {
 			clearSelection();
 		}
 	};
@@ -1434,6 +1494,7 @@
 		const onVisibilityChange = () => {
 			if (
 				document.visibilityState === 'visible' &&
+				!comparePaths &&
 				!selectedFile &&
 				selectedTerminal &&
 				!terminalChatContextPending &&
@@ -1523,15 +1584,16 @@
 	>
 		{#if isDragOver && !isSearching}
 			<div
-				class="absolute inset-1 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-400 bg-blue-500/10 dark:border-blue-500 pointer-events-none"
+				class="absolute inset-1 z-10 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-black/15 bg-white/80 dark:border-white/15 dark:bg-gray-900/80 pointer-events-none"
 			>
-				<span class="text-xs font-medium text-blue-500 dark:text-blue-400">
+				<Icon name="upload" size={20} strokeWidth={1.4} class="text-gray-400 dark:text-gray-500" />
+				<span class="text-xs font-normal text-gray-600 dark:text-gray-300">
 					{$i18n.t('Drop to upload')}
 				</span>
 			</div>
 		{/if}
 
-		{#if previewPort === null}
+		{#if previewPort === null && !comparePaths}
 			<FileNavToolbar
 				breadcrumbs={buildBreadcrumbs(currentPath)}
 				{selectedFile}
@@ -1556,6 +1618,7 @@
 				onNewFolder={startNewFolder}
 				onNewFile={startNewFile}
 				onUploadFiles={handleUploadFiles}
+				onUploadFolder={() => openUploadPicker(true)}
 				onDownloadDir={() => downloadFile(currentPath)}
 				onMove={handleMovePaths}
 				onSort={toggleSort}
@@ -1720,6 +1783,11 @@
 			{#if selectedCount > 0 && !isSearching}
 				<BulkActionBar
 					count={selectedCount}
+					{canCompare}
+					onCompare={() => {
+						if (canCompare)
+							comparePaths = [comparisonEntries[0].fullPath, comparisonEntries[1].fullPath];
+					}}
 					canDelete={selectedEntriesWritable}
 					onDelete={() => {
 						deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
@@ -1737,16 +1805,24 @@
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
 				closeDirectoryMenu();
-				if (e.target === e.currentTarget && selectedCount > 0) clearSelection();
+				if (!comparePaths && e.target === e.currentTarget && selectedCount > 0) clearSelection();
 			}}
 			on:contextmenu={(e) => {
-				if (selectedFile || previewPort !== null || isSearching) return;
+				if (comparePaths || selectedFile || previewPort !== null || isSearching) return;
 				if ((e.target as HTMLElement)?.closest('[data-file-row]')) return;
 				e.preventDefault();
 				directoryMenu = { x: e.clientX, y: e.clientY };
 			}}
 		>
-			{#if previewPort !== null}
+			{#if comparePaths && selectedTerminal}
+				<FileCompare
+					paths={comparePaths}
+					baseUrl={selectedTerminal.url}
+					apiKey={selectedTerminal.key}
+					{chatId}
+					onBack={() => (comparePaths = null)}
+				/>
+			{:else if previewPort !== null}
 				<PortPreview
 					baseUrl={selectedTerminal?.url ?? ''}
 					port={previewPort}
@@ -2048,42 +2124,14 @@
 					</div>
 				{/if}
 
-				<!-- Toggle header (full-width button) -->
-				<button
-					class="w-full flex items-center gap-2 px-2 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-100"
-					on:click={toggleTerminal}
-				>
-					<Icon name="terminal" size={14} strokeWidth={1.4} class="shrink-0" />
-					<span class="font-normal">{$i18n.t('Terminal')}</span>
-
-					{#if terminalExpanded}
-						<div
-							class="w-1.5 h-1.5 rounded-full transition-colors {terminalConnected
-								? 'bg-emerald-500'
-								: terminalConnecting
-									? 'bg-yellow-500 animate-pulse'
-									: 'bg-gray-400'}"
-						/>
-					{/if}
-
-					<Icon
-						name="chevron-up"
-						size={12}
-						strokeWidth={1.4}
-						class="ml-auto transition-transform {terminalExpanded ? 'rotate-180' : ''}"
+				{#key JSON.stringify([chatId, $selectedTerminalId])}
+					<TerminalDock
+						overlay={overlay || isDraggingHandle}
+						bind:expanded={terminalExpanded}
+						height={terminalHeight}
+						{chatId}
 					/>
-				</button>
-
-				{#if terminalExpanded}
-					<div style="height: {terminalHeight}px" class="min-h-0">
-						<XTerminal
-							overlay={overlay || isDraggingHandle}
-							bind:connected={terminalConnected}
-							bind:connecting={terminalConnecting}
-							{chatId}
-						/>
-					</div>
-				{/if}
+				{/key}
 			</div>
 		{/if}
 
@@ -2147,11 +2195,23 @@
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
-							directoryUploadInput?.click();
+							openUploadPicker();
 						}}
 					>
 						<Icon name="upload" size={12} strokeWidth={1.4} />
 						<span>{$i18n.t('Upload')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!currentWritable}
+						on:click={() => {
+							closeDirectoryMenu();
+							openUploadPicker(true);
+						}}
+					>
+						<Icon name="upload" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('Upload Folder')}</span>
 					</button>
 					<button
 						type="button"

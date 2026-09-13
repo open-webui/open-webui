@@ -400,9 +400,6 @@ def get_citation_source_from_tool_result(
 
     Returns a list of sources (usually one, but query_knowledge_files/query_chat_files may return multiple).
     """
-    _EXPECTS_LIST = {'search_web', 'query_knowledge_files', 'query_chat_files'}
-    _EXPECTS_DICT = {'view_knowledge_file', 'view_file'}
-
     try:
         try:
             tool_result = JSONCodec.loads(tool_result)
@@ -411,41 +408,10 @@ def get_citation_source_from_tool_result(
         if isinstance(tool_result, dict) and 'error' in tool_result:
             return []
 
-        # Validate tool_result type based on what the branch expects
-        if tool_name in _EXPECTS_LIST and not isinstance(tool_result, list):
-            return []
-        elif tool_name in _EXPECTS_DICT and not isinstance(tool_result, dict):
-            return []
+        if tool_name in ('view_knowledge_file', 'view_file'):
+            if not isinstance(tool_result, dict):
+                return []
 
-        if tool_name == 'search_web':
-            # Parse JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
-            results = tool_result
-            documents = []
-            metadata = []
-
-            for result in results:
-                title = result.get('title', '')
-                link = result.get('link', '')
-                snippet = result.get('snippet', '')
-
-                documents.append(f'{title}\n{snippet}')
-                metadata.append(
-                    {
-                        'source': link,
-                        'name': title,
-                        'url': link,
-                    }
-                )
-
-            return [
-                {
-                    'source': {'name': 'search_web', 'id': 'search_web'},
-                    'document': documents,
-                    'metadata': metadata,
-                }
-            ]
-
-        elif tool_name in ('view_knowledge_file', 'view_file'):
             file_data = tool_result
             filename = file_data.get('filename', 'Unknown File')
             file_id = file_data.get('id', '')
@@ -490,6 +456,9 @@ def get_citation_source_from_tool_result(
             ]
 
         elif tool_name in ('query_knowledge_files', 'query_chat_files'):
+            if not isinstance(tool_result, list):
+                return []
+
             chunks = tool_result
 
             # Group chunks by source for better citation display
@@ -628,7 +597,11 @@ def handle_responses_streaming_event(
                     idx
                     for idx, existing in enumerate(new_output)
                     if (item.get('id') and existing.get('id') == item.get('id'))
-                    or (item.get('call_id') and existing.get('call_id') == item.get('call_id'))
+                    or (
+                        item.get('call_id')
+                        and existing.get('type') == item.get('type')
+                        and existing.get('call_id') == item.get('call_id')
+                    )
                 ),
                 None,
             )
@@ -1003,6 +976,25 @@ async def apply_source_context_to_messages(
         )
 
 
+BASE64_IMAGE_DATA_URI_RE = re.compile(r'data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}', re.IGNORECASE)
+
+
+def extract_base64_images(value: Any, files: list) -> Any:
+    """Move base64 image data URIs out of a tool result so they do not reach the model as text."""
+    if isinstance(value, str):
+        if BASE64_IMAGE_DATA_URI_RE.fullmatch(value):
+            files.append({'type': 'image', 'url': value})
+            return '[image]'
+        return value
+    if isinstance(value, dict):
+        return {key: extract_base64_images(item, files) for key, item in value.items()}
+    if isinstance(value, list):
+        return [extract_base64_images(item, files) for item in value]
+    if isinstance(value, tuple):
+        return tuple(extract_base64_images(item, files) for item in value)
+    return value
+
+
 async def process_tool_result(
     request,
     tool_function_name,
@@ -1188,8 +1180,9 @@ async def process_tool_result(
                             tool_response.append(resource.get('uri'))
             tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
         else:  # OpenAPI
-            for item in tool_result:
-                if isinstance(item, str) and item.startswith('data:'):
+            # Images are left to extract_base64_images below, which attaches them so the model can see them.
+            for item in list(tool_result):
+                if isinstance(item, str) and item.startswith('data:') and not BASE64_IMAGE_DATA_URI_RE.fullmatch(item):
                     tool_result_files.append(
                         {
                             'type': 'data',
@@ -1197,6 +1190,8 @@ async def process_tool_result(
                         }
                     )
                     tool_result.remove(item)
+
+    tool_result = extract_base64_images(tool_result, tool_result_files)
 
     if isinstance(tool_result, list):
         tool_result = {'results': tool_result}
@@ -2267,7 +2262,7 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     return sanitized
 
 
-# Ids are validated as [a-z0-9_-]+ on create; matching that keeps ordinary "<$..." text intact.
+# Match candidate mentions using the same ID characters allowed on skill creation.
 SKILL_MENTION_RE = re.compile(r'<(?:\$([a-z0-9_-]+)(?:\|[^>]*)?|/([a-z0-9_-]+)\|[^>]*)>')
 
 
@@ -2290,25 +2285,27 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
     return ids
 
 
-SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[a-z0-9_-]+(?:\|([^>]*))?|/[a-z0-9_-]+\|([^>]*))>')
+SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$([a-z0-9_-]+)(?:\|([^>]*))?|/([a-z0-9_-]+)\|([^>]*))>')
 
 
-def strip_skill_mentions(messages: list[dict]) -> None:
-    """Replace <$skillId|label> and </skillId|label> mention tags with the label in-place."""
+def strip_skill_mentions(messages: list[dict], skill_ids: set[str]) -> None:
+    """Replace mentions of resolved skills with their label, preserving all other text."""
 
     def label(match):
-        return match.group(1) or match.group(2) or ''
+        if (match.group(1) or match.group(3)) not in skill_ids:
+            return match.group(0)
+        return match.group(2) or match.group(4) or ''
 
     for message in messages:
         content = message.get('content')
         if isinstance(content, str) and SKILL_MENTION_STRIP_RE.search(content):
-            message['content'] = SKILL_MENTION_STRIP_RE.sub(label, content).strip()
+            message['content'] = SKILL_MENTION_STRIP_RE.sub(label, content)
         elif isinstance(content, list):
             for part in content:
                 if isinstance(part, dict) and part.get('type') == 'text':
                     text = part.get('text', '')
                     if SKILL_MENTION_STRIP_RE.search(text):
-                        part['text'] = SKILL_MENTION_STRIP_RE.sub(label, text).strip()
+                        part['text'] = SKILL_MENTION_STRIP_RE.sub(label, text)
 
 
 async def connect_mcp_server(
@@ -2803,8 +2800,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 append=True,
             )
 
-    # Strip <$skillId|label> mention tags so the model doesn't see raw markup.
-    strip_skill_mentions(form_data.get('messages', []))
+    # Strip only resolved skill mentions; ordinary text such as Perl's <$fh> stays intact.
+    strip_skill_mentions(form_data.get('messages', []), {s.id for s in available_skills})
 
     prompt = get_last_user_message(form_data['messages'])
 
@@ -3137,6 +3134,15 @@ async def get_event_emitter_and_caller(metadata):
 
 async def build_chat_response_context(request, form_data, user, model, metadata, tasks, events):
     event_emitter, event_caller = await get_event_emitter_and_caller(metadata)
+    assistant_message = None
+    if metadata.get('assistant_message_id'):
+        # Preserve the original output before request conversion strips it from temporary chats.
+        if is_saved_chat_id(metadata.get('chat_id')):
+            assistant_message = await Chats.get_message_by_id_and_message_id(
+                metadata['chat_id'], metadata['assistant_message_id']
+            )
+        elif form_data.get('messages') and form_data['messages'][-1].get('role') == 'assistant':
+            assistant_message = form_data['messages'][-1]
     return {
         'request': request,
         'form_data': form_data,
@@ -3147,6 +3153,7 @@ async def build_chat_response_context(request, form_data, user, model, metadata,
         'events': events,
         'event_emitter': event_emitter,
         'event_caller': event_caller,
+        'assistant_message': copy.deepcopy(assistant_message),
     }
 
 
@@ -3170,6 +3177,11 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
                         'The model generated malformed or incomplete JSON.'
                     ),
                 }
+    if not isinstance(params, dict):
+        return {
+            'tool_call_id': tool_call.get('id', ''),
+            'content': 'Error: Tool call arguments must be a JSON object.',
+        }
     tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
 
     tool = tools.get(name)
@@ -4045,6 +4057,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
     chat_id = metadata.get('chat_id') or ''
     save_to_chat = is_saved_chat_id(chat_id)
+    continuing = bool(metadata.get('assistant_message_id'))
 
     if event_emitter:
         try:
@@ -4088,21 +4101,24 @@ async def non_streaming_chat_response_handler(response, ctx):
             response_output = response_data.get('output')
             content = choices[0].get('message', {}).get('content') if choices else ''
 
-            if choices and (content or response_output):
-                if content or response_output:
-                    await event_emitter(
-                        {
-                            'type': 'chat:completion',
-                            'data': response_data,
-                        }
-                    )
+            if (continuing and 'error' not in response_data) or (
+                not continuing and choices and (content or response_output)
+            ):
+                if content or response_output or continuing:
+                    if not continuing:
+                        await event_emitter(
+                            {
+                                'type': 'chat:completion',
+                                'data': response_data,
+                            }
+                        )
 
                     title = await Chats.get_chat_title_by_id(metadata['chat_id']) if save_to_chat else ''
 
                     # Use output from backend if provided (OR-compliant backends),
                     # otherwise generate from response content
                     if not response_output:
-                        choice_message = choices[0].get('message', {})
+                        choice_message = choices[0].get('message', {}) if choices else {}
                         reasoning_content = choice_message.get('reasoning_content') or choice_message.get('reasoning')
                         reasoning_details = get_reasoning_details(choice_message)
                         response_output = []
@@ -4134,10 +4150,41 @@ async def non_streaming_chat_response_handler(response, ctx):
                             }
                         )
 
+                    if continuing:
+                        message = ctx.get('assistant_message') or {}
+                        previous = message.get('output') or []
+                        if not previous and message.get('content'):
+                            previous = [
+                                {
+                                    'type': 'message',
+                                    'id': message.get('id') or output_id('msg'),
+                                    'role': 'assistant',
+                                    'content': [{'type': 'output_text', 'text': message['content']}],
+                                }
+                            ]
+                        response_output = list(response_output)
+                        if (
+                            previous
+                            and response_output
+                            and previous[-1].get('type') == response_output[0].get('type') == 'message'
+                            and previous[-1].get('role', 'assistant') == 'assistant'
+                            and response_output[0].get('role', 'assistant') == 'assistant'
+                        ):
+                            response_output[0] = {
+                                **previous[-1],
+                                **response_output[0],
+                                'id': previous[-1].get('id'),
+                                'content': [*previous[-1].get('content', []), *response_output[0].get('content', [])],
+                            }
+                            previous = previous[:-1]
+                        response_output = previous + response_output
+                        content = get_output_text(response_output)
+
                     await event_emitter(
                         {
                             'type': 'chat:completion',
                             'data': {
+                                **(response_data if continuing else {}),
                                 'done': True,
                                 'output': response_output,
                                 'title': title,
@@ -4229,6 +4276,7 @@ async def streaming_chat_response_handler(response, ctx):
     event_caller = ctx['event_caller']
     chat_id = metadata.get('chat_id') or ''
     save_to_chat = is_saved_chat_id(chat_id)
+    continuing = bool(metadata.get('assistant_message_id'))
 
     extra_params = {
         '__event_emitter__': event_emitter,
@@ -4539,9 +4587,13 @@ async def streaming_chat_response_handler(response, ctx):
                 return output, end_flag
 
             message = (
-                await Chats.get_message_by_id_and_message_id(metadata['chat_id'], metadata['message_id'])
-                if save_to_chat
-                else None
+                ctx.get('assistant_message')
+                if continuing
+                else (
+                    await Chats.get_message_by_id_and_message_id(metadata['chat_id'], metadata['message_id'])
+                    if save_to_chat
+                    else None
+                )
             )
 
             tool_calls = []
@@ -4569,7 +4621,7 @@ async def streaming_chat_response_handler(response, ctx):
                     and prior_output[-1].get('status') == 'in_progress'
                 ):
                     msg_parts = prior_output[-1].get('content', [])
-                    if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
+                    if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '')):
                         prior_output.pop()
                 output = []
                 content_parts = []
@@ -4590,10 +4642,33 @@ async def streaming_chat_response_handler(response, ctx):
                 else:
                     output = []
 
+            if continuing and not prior_output:
+                # Keep the prefix separate from provider output indices and tool follow-up messages.
+                prior_output, output = output, []
+                content_parts = []
+
             usage = None
             last_response_id = None
 
             def full_output():
+                if (
+                    continuing
+                    and prior_output
+                    and output
+                    and prior_output[-1].get('type') == output[0].get('type') == 'message'
+                    and prior_output[-1].get('role', 'assistant') == 'assistant'
+                    and output[0].get('role', 'assistant') == 'assistant'
+                ):
+                    return [
+                        *prior_output[:-1],
+                        {
+                            **prior_output[-1],
+                            **output[0],
+                            'id': prior_output[-1].get('id'),
+                            'content': [*prior_output[-1].get('content', []), *output[0].get('content', [])],
+                        },
+                        *output[1:],
+                    ]
                 return prior_output + output if prior_output else output
 
             def get_message_error_content(error):
@@ -4708,7 +4783,9 @@ async def streaming_chat_response_handler(response, ctx):
                             response_stream_task_id,
                             chat_id,
                             metadata.get('message_id'),
-                            joined_content or get_output_text(current_stream_output),
+                            get_output_text(current_stream_output)
+                            if continuing
+                            else joined_content or get_output_text(current_stream_output),
                             current_stream_output,
                         )
 
@@ -4741,8 +4818,10 @@ async def streaming_chat_response_handler(response, ctx):
                         if delta_count >= threshold and last_delta_data:
                             await event_emitter(
                                 {
-                                    'type': 'response:completion',
-                                    'data': last_delta_data,
+                                    'type': 'chat:completion' if continuing else 'response:completion',
+                                    'data': {'output': full_output(), 'type': last_delta_data.get('type')}
+                                    if continuing
+                                    else last_delta_data,
                                 }
                             )
                             await save_current_response_stream()
@@ -4791,8 +4870,10 @@ async def streaming_chat_response_handler(response, ctx):
                         await flush_pending_delta_data()
                         await event_emitter(
                             {
-                                'type': 'response:completion',
-                                'data': get_response_completion_event_data(response_data),
+                                'type': 'chat:completion' if continuing else 'response:completion',
+                                'data': {'output': full_output()}
+                                if continuing
+                                else get_response_completion_event_data(response_data),
                             }
                         )
                         await save_current_response_stream(stream_output)
@@ -5039,7 +5120,8 @@ async def streaming_chat_response_handler(response, ctx):
                                                 if current_response_tool_call is None:
                                                     # Add the new tool call
                                                     delta_tool_call.setdefault('function', {})
-                                                    delta_tool_call['function'].setdefault('name', '')
+                                                    if delta_tool_call['function'].get('name') is None:
+                                                        delta_tool_call['function']['name'] = ''
                                                     delta_tool_call['id'] = delta_tool_call.get('id') or output_id('fc')
                                                     delta_arguments = delta_tool_call['function'].get('arguments')
                                                     if not isinstance(delta_arguments, str):
@@ -5457,7 +5539,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                     if output:
                         # Clean up the last message item
-                        if output[-1].get('type') == 'message':
+                        if output[-1].get('type') == 'message' and not continuing:
                             parts = output[-1].get('content', [])
                             if parts and parts[-1].get('type') == 'output_text':
                                 parts[-1]['text'] = parts[-1]['text'].strip()
@@ -5665,12 +5747,23 @@ async def streaming_chat_response_handler(response, ctx):
                                 except Exception as e:
                                     log.debug(e)
                                     return None
+                        if not isinstance(params, dict):
+                            raise ValueError('Tool call arguments must be a JSON object.')
                         tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
                         return params
 
                     async def execute_tool_call(tool_call):
                         name = tool_call.get('function', {}).get('name', '')
-                        params = parse_tool_params(tool_call)
+                        try:
+                            params = parse_tool_params(tool_call)
+                        except ValueError:
+                            return (
+                                {},
+                                f'Error: Tool call arguments for `{name}` must be a JSON object. Please try again.',
+                                None,
+                                None,
+                                False,
+                            )
                         if params is None:
                             return {}, None, None, None, False
                         tool = tools.get(name)
@@ -5772,7 +5865,6 @@ async def streaming_chat_response_handler(response, ctx):
                             citations_enabled
                             and tool_function_name
                             in [
-                                'search_web',
                                 'fetch_url',
                                 'view_file',
                                 'view_knowledge_file',
@@ -6019,7 +6111,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     prior_output.pop()
                             output = []
                             await stream_body_handler(res, new_form_data)
-                            output[:0] = prior_output
+                            output = full_output()
                             prior_output = []
                         elif getattr(res, 'status_code', 200) >= 400:
                             await emit_message_error(get_message_error_content(get_response_error_detail(res)))
@@ -6260,7 +6352,12 @@ async def streaming_chat_response_handler(response, ctx):
 
                 await clear_response_stream(request.app.state.redis, response_stream_task_id)
                 await publish_chat_finished_event(
-                    request, user, metadata, title, ''.join(content_parts), current_output
+                    request,
+                    user,
+                    metadata,
+                    title,
+                    get_output_text(current_output) if continuing else ''.join(content_parts),
+                    current_output,
                 )
 
                 await event_emitter(
@@ -6271,7 +6368,9 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 ctx['assistant_message'] = {
-                    'content': ''.join(content_parts) or get_output_text(current_output),
+                    'content': get_output_text(current_output)
+                    if continuing
+                    else ''.join(content_parts) or get_output_text(current_output),
                     'output': current_output,
                     **({'usage': usage} if usage else {}),
                 }
@@ -6291,14 +6390,30 @@ async def streaming_chat_response_handler(response, ctx):
                         pass
 
                 async def save_cancelled_state():
-                    await event_emitter({'type': 'chat:tasks:cancel'})
+                    cancelled_output = full_output()
+                    result_call_ids = {
+                        item.get('call_id')
+                        for item in cancelled_output
+                        if item.get('type') == 'function_call_output' and item.get('call_id')
+                    }
+                    for item in cancelled_output:
+                        # A tool call is stamped completed when its arguments finish, before the tool runs
+                        is_running_tool_call = (
+                            item.get('type') == 'function_call'
+                            and item.get('status') == 'completed'
+                            and (item.get('call_id') or item.get('id')) not in result_call_ids
+                        )
+                        if item.get('status') == 'in_progress' or is_running_tool_call:
+                            item['status'] = 'incomplete'
+
+                    await event_emitter({'type': 'chat:tasks:cancel', 'data': {'output': cancelled_output}})
                     if save_to_chat:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {
                                 'done': True,
-                                'output': full_output(),
+                                'output': cancelled_output,
                             },
                         )
                     await clear_response_stream(request.app.state.redis, response_stream_task_id)
@@ -6320,62 +6435,68 @@ async def streaming_chat_response_handler(response, ctx):
             def wrap_item(item):
                 return f'data: {item}\n\n'
 
-            assistant_message = {}
-            filter_context = FilterContext()
-            has_api_outlet_filters = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
-            if ENABLE_API_OUTLET_FILTERS and not has_api_outlet_filters:
-                try:
-                    model_id = model.get('id') if isinstance(model, dict) else model
-                    has_api_outlet_filters = bool(
-                        (isinstance(model, dict) and 'pipeline' in model)
-                        or get_sorted_filters(model_id, request.app.state.MODELS)
+            try:
+                assistant_message = {}
+                filter_context = FilterContext()
+                has_api_outlet_filters = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
+                if ENABLE_API_OUTLET_FILTERS and not has_api_outlet_filters:
+                    try:
+                        model_id = model.get('id') if isinstance(model, dict) else model
+                        has_api_outlet_filters = bool(
+                            (isinstance(model, dict) and 'pipeline' in model)
+                            or get_sorted_filters(model_id, request.app.state.MODELS)
+                        )
+                    except Exception:
+                        has_api_outlet_filters = True
+
+                for event in events:
+                    event, _ = await process_filter_functions(
+                        request=request,
+                        filter_context=filter_context,
+                        filter_functions=filter_functions,
+                        filter_type='stream',
+                        form_data=event,
+                        extra_params=extra_params,
                     )
-                except Exception:
-                    has_api_outlet_filters = True
 
-            for event in events:
-                event, _ = await process_filter_functions(
-                    request=request,
-                    filter_context=filter_context,
-                    filter_functions=filter_functions,
-                    filter_type='stream',
-                    form_data=event,
-                    extra_params=extra_params,
-                )
+                    if event:
+                        yield wrap_item(JSONCodec.dumps(event))
 
-                if event:
-                    yield wrap_item(JSONCodec.dumps(event))
+                async for data in original_generator:
+                    if filter_functions:
+                        line = data.decode('utf-8', 'replace') if isinstance(data, bytes) else data
+                        if isinstance(line, str) and line.startswith('data:'):
+                            payload = line.removeprefix('data:').strip()
+                            if payload and payload != '[DONE]':
+                                try:
+                                    event = JSONCodec.loads(payload)
+                                except JSONCodec.JSONDecodeError:
+                                    event = None
 
-            async for data in original_generator:
-                if filter_functions:
-                    line = data.decode('utf-8', 'replace') if isinstance(data, bytes) else data
-                    if isinstance(line, str) and line.startswith('data:'):
-                        payload = line.removeprefix('data:').strip()
-                        if payload and payload != '[DONE]':
-                            try:
-                                event = JSONCodec.loads(payload)
-                            except JSONCodec.JSONDecodeError:
-                                event = None
+                                if isinstance(event, dict):
+                                    event, _ = await process_filter_functions(
+                                        request=request,
+                                        filter_context=filter_context,
+                                        filter_functions=filter_functions,
+                                        filter_type='stream',
+                                        form_data=event,
+                                        extra_params=extra_params,
+                                    )
+                                    data = wrap_item(JSONCodec.dumps(event)) if event else None
 
-                            if isinstance(event, dict):
-                                event, _ = await process_filter_functions(
-                                    request=request,
-                                    filter_context=filter_context,
-                                    filter_functions=filter_functions,
-                                    filter_type='stream',
-                                    form_data=event,
-                                    extra_params=extra_params,
-                                )
-                                data = wrap_item(JSONCodec.dumps(event)) if event else None
+                    if data:
+                        if has_api_outlet_filters:
+                            update_assistant_message_from_stream(assistant_message, data)
+                        yield data
 
-                if data:
-                    if has_api_outlet_filters:
-                        update_assistant_message_from_stream(assistant_message, data)
-                    yield data
-
-            if has_api_outlet_filters and assistant_message:
-                ctx['assistant_message'] = assistant_message
-                await outlet_filter_handler(ctx)
+                if has_api_outlet_filters and assistant_message:
+                    ctx['assistant_message'] = assistant_message
+                    await outlet_filter_handler(ctx)
+            except Exception as e:
+                log.exception('Chat completion stream failed mid-response: %s', e)
+                # Separate the error frame from any unfinished upstream event.
+                yield f'\n\ndata: {JSONCodec.dumps({"error": {"message": "Chat completion stream failed"}})}\n\n'
+                yield 'data: [DONE]\n\n'
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),

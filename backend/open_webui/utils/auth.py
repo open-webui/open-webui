@@ -8,6 +8,8 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta
+from threading import Lock
+from time import monotonic
 from typing import Optional, Union
 
 import bcrypt
@@ -42,6 +44,7 @@ from open_webui.utils.access_control import has_permission
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import parse_duration
 from pytz import UTC
+from redis.exceptions import RedisError
 
 log = logging.getLogger(__name__)
 
@@ -248,14 +251,41 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
+class RateLimitFilter(logging.Filter):
+    """Limit a logger to one record per interval per process."""
+
+    def __init__(self, interval=60):
+        super().__init__()
+        self.interval = interval
+        self.next_allowed = float('-inf')
+        self.lock = Lock()
+
+    def filter(self, record):
+        with self.lock:
+            now = monotonic()
+            if now < self.next_allowed:
+                return False
+            self.next_allowed = now + self.interval
+        return True
+
+
+revocation_log = logging.getLogger(f'{__name__}.revocation')
+revocation_log.addFilter(RateLimitFilter())
+
+
 async def is_valid_token(decoded, redis=None) -> bool:
     """
     Check whether a JWT has been revoked. Two mechanisms:
     1. Per-token (jti) — used by user-initiated sign-out (known jti).
     2. Per-user (revoked_at) — used by password changes and OIDC back-channel
        logout when individual jti values are unknown; rejects tokens with iat <= revoked_at.
+
+    Fail open on Redis errors to preserve availability; revoked tokens may be accepted.
     """
-    if redis:
+    if not redis:
+        return True
+
+    try:
         # Per-token revocation
         jti = decoded.get('jti')
         if jti:
@@ -276,6 +306,8 @@ async def is_valid_token(decoded, redis=None) -> bool:
                         return False
                 except (ValueError, TypeError):
                     pass
+    except RedisError as e:
+        revocation_log.warning('Revocation check failed; accepting token: %s', e)
 
     return True
 
@@ -386,6 +418,7 @@ async def get_current_user(
 
         # Scope-backed, so outer middleware (audit) can reuse the resolved user
         request.state.user = user
+        request.state.auth_type = 'api_key'
         return user
 
     # auth by jwt token
@@ -437,6 +470,7 @@ async def get_current_user(
 
             # Scope-backed, so outer middleware (audit) can reuse the resolved user
             request.state.user = user
+            request.state.auth_type = 'jwt'
             return user
         else:
             raise HTTPException(

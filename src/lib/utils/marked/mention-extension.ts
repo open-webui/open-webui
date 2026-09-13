@@ -1,4 +1,7 @@
 // mention-extension.ts
+import { get } from 'svelte/store';
+import { skills } from '$lib/stores';
+
 type MentionOptions = {
 	triggerChar?: string; // default "@"
 	className?: string; // default "mention"
@@ -20,6 +23,9 @@ function mentionStart(src: string) {
 
 function mentionRenderer(token: any, options: MentionOptions = {}) {
 	const trigger = options.triggerChar ?? '@';
+	if (trigger === '$' && !get(skills)?.some((skill) => skill.id === token.id && skill.is_active)) {
+		return escapeHtml(token.raw);
+	}
 	const cls = options.className ?? 'mention';
 	const extra = options.extraAttrs ?? {};
 
@@ -40,7 +46,7 @@ export function mentionExtension(opts: MentionOptions = {}) {
 	// Compile the regex once when the extension is created, not on every tokenizer call.
 	// mentionStart fires on every '<' in the document, making the tokenizer a hot path.
 	const trigger = opts.triggerChar ?? '@';
-	const re = new RegExp(`^<\\${trigger}([\\w.\\-:/]+)(?:\\|([^>]*))?>`);
+	const re = new RegExp(`^<\\${trigger}([^|>\\s]+)(?:\\|([^>]*))?>`);
 	const snapshot: MentionOptions = {
 		triggerChar: trigger,
 		className: opts.className,

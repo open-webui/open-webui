@@ -19,6 +19,7 @@
 
 html {
 	word-break: break-word;
+	font-variant-ligatures: no-contextual;
 	/* font-size scales the entire document via the same UI control */
 	font-size: calc(1rem * var(--app-text-scale, 1));
 }
@@ -606,6 +607,15 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	}
 }
 
+.ProseMirror p.is-editor-empty.ai-autocompletion:first-child::before {
+	content: attr(data-suggestion);
+	color: #a0a0a0;
+}
+
+.ProseMirror p.is-editor-empty.ai-autocompletion:first-child::after {
+	content: none;
+}
+
 .ai-autocompletion::after {
 	color: #a0a0a0;
 
@@ -715,7 +725,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 .tippy-box[data-theme~='transparent'] {
-	@apply bg-transparent p-0 m-0;
+	@apply bg-transparent p-0 m-0 text-inherit;
 }
 
 /* this is a rough fix for the first cursor position when the first paragraph is empty */
@@ -936,7 +946,8 @@ html.high-contrast:not(.dark)
 	:is(
 		#sidebar .hover\:bg-gray-100:hover,
 		#sidebar .group:hover .group-hover\:bg-gray-100,
-		.app-dropdown-menu :is(button, a):hover
+		.app-dropdown-menu :is(button, a):not(.user-menu-row *):hover,
+		.app-dropdown-menu .user-menu-row:hover
 	) {
 	background-color: var(--color-gray-200) !important;
 }
@@ -945,7 +956,8 @@ html.high-contrast.dark
 	:is(
 		#sidebar .dark\:hover\:bg-gray-900:hover,
 		#sidebar .group:hover .dark\:group-hover\:bg-gray-900,
-		.app-dropdown-menu :is(button, a):hover
+		.app-dropdown-menu :is(button, a):not(.user-menu-row *):hover,
+		.app-dropdown-menu .user-menu-row:hover
 	) {
 	background-color: var(--color-gray-800) !important;
 }

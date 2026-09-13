@@ -166,7 +166,7 @@ async def list_task_ids_by_item_id(redis, id):
     """
     if redis:
         return await redis_list_item_tasks(redis, id)
-    return item_tasks.get(id, [])
+    return list(item_tasks.get(id, []))
 
 
 async def save_response_stream(
@@ -274,10 +274,10 @@ async def stop_item_tasks(redis: Redis, item_id: str):
     if not task_ids:
         return {'status': True, 'message': f'No tasks found for item {item_id}.'}
 
-    for task_id in task_ids:
-        result = await stop_task(redis, task_id)
-        if not result['status']:
-            return result  # Return the first failure
+    # Cleanup mutates the local task list while cancellation is awaited.
+    for task_id in list(task_ids):
+        # A task that already finished needs no stopping; continue with the rest.
+        await stop_task(redis, task_id)
 
     return {'status': True, 'message': f'All tasks for item {item_id} stopped.'}
 

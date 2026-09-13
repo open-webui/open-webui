@@ -3,6 +3,7 @@
 
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { v4 as uuidv4 } from 'uuid';
 
 	import {
@@ -46,6 +47,11 @@
 
 	$: if (id) {
 		initHandler();
+	}
+
+	$: if (channel && $page.url.searchParams.get('thread')) {
+		threadId = $page.url.searchParams.get('thread');
+		window.history.replaceState(history.state, '', `/channels/${id}`);
 	}
 
 	const scrollToBottom = () => {

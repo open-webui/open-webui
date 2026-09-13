@@ -537,7 +537,6 @@
 									id={renderedMessageId}
 									output={messageOutput}
 									done={message?.meta?.done ?? false}
-									editCodeBlock={false}
 								/>
 							{:else if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
 								<Skeleton />
