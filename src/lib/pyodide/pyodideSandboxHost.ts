@@ -134,7 +134,14 @@ const sandboxScript = String.raw`
 		let result = null;
 		if (files && files.length > 0) upload(files);
 		try {
-			if (code.includes('matplotlib')) await patchMatplotlib();
+			if (code.includes('matplotlib')) {
+				// Patch only when matplotlib is importable; otherwise the missing
+				// package must be catchable by the user's own code
+				const matplotlibAvailable = await pyodide.runPythonAsync(
+					'import importlib.util\nimportlib.util.find_spec("matplotlib") is not None'
+				);
+				if (matplotlibAvailable) await patchMatplotlib();
+			}
 			result = clean(await pyodide.runPythonAsync(code));
 		} catch (error) {
 			stderr = error && error.message ? error.message : String(error);

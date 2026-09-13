@@ -192,8 +192,14 @@ async function executeCode(
 	try {
 		// check if matplotlib is imported in the code
 		if (code.includes('matplotlib')) {
-			// Override plt.show() to return base64 image
-			await self.pyodide.runPythonAsync(`import base64
+			// Apply the patch only when matplotlib is importable; otherwise the
+			// missing package must be catchable by the user's own code
+			const matplotlibAvailable = await self.pyodide.runPythonAsync(
+				'import importlib.util\nimportlib.util.find_spec("matplotlib") is not None'
+			);
+			if (matplotlibAvailable) {
+				// Override plt.show() to return base64 image
+				await self.pyodide.runPythonAsync(`import base64
 import os
 from io import BytesIO
 
@@ -217,6 +223,7 @@ def show(*, block=None):
 	print(f"data:image/png;base64,{img_str}")
 
 matplotlib.pyplot.show = show`);
+			}
 		}
 
 		self.result = await self.pyodide.runPythonAsync(code);
