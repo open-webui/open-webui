@@ -140,10 +140,11 @@ async def create_task(redis, coroutine, id=None, task_id=None):
     tasks[task_id] = task
 
     # If an ID is provided, associate the task with that ID
-    if item_tasks.get(id):
-        item_tasks[id].append(task_id)
-    else:
-        item_tasks[id] = [task_id]
+    if id:
+        if item_tasks.get(id):
+            item_tasks[id].append(task_id)
+        else:
+            item_tasks[id] = [task_id]
 
     if redis:
         await redis_save_task(redis, task_id, id)
