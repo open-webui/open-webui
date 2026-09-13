@@ -77,7 +77,6 @@ from open_webui.utils.auth import (
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
-from open_webui.utils.redis import get_redis_client
 from pydantic import BaseModel, StrictStr, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,12 +87,11 @@ log = logging.getLogger(__name__)
 
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
-signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+signin_rate_limiter = RateLimiter(limit=5 * 3, window=60 * 3)
 # Best-effort throttle only: there is no caller identity before the provider answers,
 # and deployments may derive request.client from proxy headers.
 token_exchange_rate_limiter = (
     RateLimiter(
-        redis_client=get_redis_client(),
         limit=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT,
         window=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW,
     )
@@ -816,7 +814,7 @@ async def signin(
                 db=db,
             )
     else:
-        if signin_rate_limiter.is_limited(form_data.email.lower()):
+        if await signin_rate_limiter.is_limited(request.app.state.redis, form_data.email.lower()):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
@@ -1637,8 +1635,8 @@ async def token_exchange(
             detail='Token exchange is disabled',
         )
 
-    if token_exchange_rate_limiter and token_exchange_rate_limiter.is_limited(
-        request.client.host if request.client else 'unknown'
+    if token_exchange_rate_limiter and await token_exchange_rate_limiter.is_limited(
+        request.app.state.redis, request.client.host if request.client else 'unknown'
     ):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
