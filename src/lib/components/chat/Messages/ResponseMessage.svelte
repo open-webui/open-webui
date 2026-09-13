@@ -715,7 +715,7 @@
 							</div>
 						{/if}
 
-						{#if message?.embeds && message.embeds.length > 0}
+						{#if !readOnly && message?.embeds && message.embeds.length > 0}
 							<div
 								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
 								id={`${message.id}-embeds-container`}
@@ -843,6 +843,7 @@
 									{editCodeBlock}
 									{topPadding}
 									done={message?.done ?? false}
+									allowEmbeds={!readOnly}
 									{model}
 									onTaskClick={async (e) => {
 										console.log(e);
