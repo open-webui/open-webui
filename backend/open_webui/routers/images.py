@@ -477,6 +477,24 @@ def _is_same_origin(url: str, base_url: str) -> bool:
     )
 
 
+def _detect_image_mime_type(data: bytes) -> str:
+    """Detect image MIME type from magic bytes. Falls back to image/png."""
+    if len(data) >= 4:
+        if data[:3] == b'\xff\xd8\xff':
+            return 'image/jpeg'
+        if data[:4] == b'\x89PNG':
+            return 'image/png'
+        if data[:4] == b'RIFF' and len(data) >= 12 and data[8:12] == b'WEBP':
+            return 'image/webp'
+        if data[:4] == b'GIF8':
+            return 'image/gif'
+    if len(data) >= 4 and data[:4] == b'\x00\x00\x00\x1c' and b'ftypavif' in data[:32]:
+        return 'image/avif'
+    if len(data) >= 4 and data[:4] == b'\x00\x00\x00\x20' and b'ftypheic' in data[:32]:
+        return 'image/heic'
+    return 'image/png'
+
+
 async def get_image_data(data: str, headers=None, trusted_base_url: str | None = None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
@@ -510,8 +528,8 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
                 mime_type = header.split(';')[0].lstrip('data:')
                 img_data = base64.b64decode(encoded)
             else:
-                mime_type = 'image/png'
                 img_data = base64.b64decode(data)
+                mime_type = _detect_image_mime_type(img_data)
             return img_data, mime_type
     except Exception as e:
         log.exception(f'Error loading image data: {e}')
