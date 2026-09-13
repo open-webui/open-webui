@@ -854,6 +854,12 @@ async def read_memory_path(
             ),
             user,
         )
+        # Slim the memories in the result to avoid leaking model config
+        if isinstance(result, dict) and 'memories' in result:
+            result = {
+                **result,
+                'memories': [_slim_memory_result({'memory': m})['memory'] for m in result['memories']],
+            }
         return JSONCodec.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'read_memory_path error: {e}')
@@ -958,6 +964,25 @@ async def add_memory(
         return JSONCodec.dumps({'error': str(e)})
 
 
+def _slim_memory_result(result: dict) -> dict:
+    """Strip large metadata (model config, avatars) from memory results.
+
+    Only keeps the essential fields that the LLM needs to see.
+    """
+    memory = result.get('memory')
+    if isinstance(memory, dict):
+        return {
+            **result,
+            'memory': {
+                'id': memory.get('id'),
+                'type': memory.get('type'),
+                'path': memory.get('path'),
+                'content': memory.get('content'),
+            },
+        }
+    return result
+
+
 async def update_memory(
     operations: list[dict],
     __request__: Request = None,
@@ -993,7 +1018,7 @@ async def update_memory(
             UpdateMemoriesForm(operations=operations),
             user,
         )
-        return JSONCodec.dumps(operation_results, ensure_ascii=False)
+        return JSONCodec.dumps([_slim_memory_result(r) for r in operation_results], ensure_ascii=False)
     except Exception as e:
         log.exception(f'update_memory error: {e}')
         return JSONCodec.dumps({'error': str(e)})

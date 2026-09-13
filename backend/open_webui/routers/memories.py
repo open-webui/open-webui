@@ -244,11 +244,12 @@ async def update_memories(
     source = form_data.source or 'tool'
     for operation in operations:
         if operation.get('action') in {'add', 'replace', 'move'}:
+            model_data = metadata.get('model')
             operation['meta'] = {
                 'created_by': source,
                 'chat_id': metadata.get('chat_id'),
                 'message_id': metadata.get('message_id'),
-                'model': metadata.get('model'),
+                'model': (model_data or {}).get('id') if isinstance(model_data, dict) else model_data,
             }
 
     try:
