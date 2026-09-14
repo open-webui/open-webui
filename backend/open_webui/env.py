@@ -1042,6 +1042,10 @@ ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
 )
 ENABLE_API_OUTLET_FILTERS = os.getenv('ENABLE_API_OUTLET_FILTERS', 'True').lower() == 'true'
 
+# Opt in to CPython's in-place string append optimization for streamed responses.
+# Disabled by default: allocation failure in the fast path can erase accumulated text.
+ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND = os.getenv('ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND', 'False').lower() == 'true'
+
 # When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
 # fallback when both mimetypes.guess_type() and file.meta.content_type fail to
 # determine the content type. This can help on minimal container images (e.g.
