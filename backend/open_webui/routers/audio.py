@@ -31,6 +31,7 @@ from open_webui.config import (
     ELEVENLABS_API_BASE_URL,
     WHISPER_COMPUTE_TYPE,
     WHISPER_LANGUAGE,
+    WHISPER_LANGUAGES,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
     WHISPER_MULTILINGUAL,
@@ -674,13 +675,37 @@ async def _transcribe_whisper(request, file_path, languages, file_dir, id):
         )
 
     model = request.app.state.faster_whisper_model
+    forced_language = languages[0]
 
     def _run():
+        language = forced_language
+        if language is None and WHISPER_LANGUAGES:
+            # Score only the configured candidate languages instead of
+            # Whisper's full ~99-language set. This reuses the same features
+            # transcribe() would otherwise compute internally for its own
+            # (unrestricted) detection pass, so it adds one cheap encoder
+            # pass rather than a second full decode.
+            from faster_whisper.audio import decode_audio
+
+            audio = decode_audio(file_path, sampling_rate=model.feature_extractor.sampling_rate)
+            _, _, all_language_probs = model.detect_language(audio=audio)
+            candidates = [
+                (lang, prob) for lang, prob in all_language_probs if lang in WHISPER_LANGUAGES
+            ]
+            if candidates:
+                language, probability = max(candidates, key=lambda item: item[1])
+                log.info(
+                    "Restricted language detection to %s: picked '%s' with probability %f",
+                    WHISPER_LANGUAGES,
+                    language,
+                    probability,
+                )
+
         segments, info = model.transcribe(
             file_path,
             beam_size=5,
             vad_filter=WHISPER_VAD_FILTER,
-            language=languages[0],
+            language=language,
             multilingual=WHISPER_MULTILINGUAL,
         )
         log.info("Detected language '%s' with probability %f", info.language, info.language_probability)

@@ -1560,6 +1560,17 @@ WHISPER_MULTILINGUAL = os.getenv('WHISPER_MULTILINGUAL', 'False').lower() == 'tr
 
 WHISPER_LANGUAGE = os.getenv('WHISPER_LANGUAGE', '').lower() or None
 
+# Restrict automatic language detection to a fixed set of candidate languages
+# (e.g. "en,hu"), instead of scoring against Whisper's full ~99-language set.
+# Useful for bilingual/multilingual users whose languages get mis-detected as
+# an unrelated language when only a short utterance is available for
+# detection. Ignored when WHISPER_LANGUAGE forces a single language.
+WHISPER_LANGUAGES = [
+    lang.strip().lower()
+    for lang in os.getenv('WHISPER_LANGUAGES', '').split(',')
+    if lang.strip()
+] or None
+
 # Add Deepgram configuration
 DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY', '')
 
