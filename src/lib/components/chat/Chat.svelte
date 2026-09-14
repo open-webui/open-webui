@@ -2747,6 +2747,13 @@
 
 		history.messages[message.id] = message;
 		history = history;
+
+		// Keep the viewport pinned to the bottom while the response streams.
+		// This path is the per-chunk driver for Responses-API models
+		// (e.g. reasoning models via external OpenAI-API / vLLM); without it
+		// auto-scroll only fires once at chat completion and the view freezes
+		// mid-stream (see issue #29317, introduced in a1579a01f "refac").
+		scheduleResponseScrollToBottom();
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
