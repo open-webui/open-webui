@@ -40,15 +40,23 @@
 		const res = await updateModelById(localStorage.token, modelInfo.id, modelInfo);
 
 		if (res) {
-			await models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-				)
-			);
-			toast.success($i18n.t('Model updated successfully'));
-			await goto('/workspace/models');
+			try {
+				await models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
+					)
+				);
+				toast.success($i18n.t('Model updated successfully'));
+				await goto('/workspace/models');
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+			return true;
 		}
+		return false;
 	};
 </script>
 
