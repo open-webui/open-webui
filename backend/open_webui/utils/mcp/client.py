@@ -56,6 +56,32 @@ def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=False)
 
 
+
+MCP_TOOLS_LIST_MAX_PAGES = 100
+
+
+async def collect_mcp_tools(session, max_pages: int = MCP_TOOLS_LIST_MAX_PAGES):
+    """Follow ``tools/list`` pagination until the server omits ``nextCursor``."""
+    tools = []
+    cursor = None
+    seen_cursors: set[str] = set()
+
+    for _ in range(max_pages):
+        result = await session.list_tools(cursor=cursor)
+        page_tools = getattr(result, 'tools', None) or []
+        tools.extend(page_tools)
+
+        next_cursor = getattr(result, 'nextCursor', None)
+        if next_cursor is None:
+            next_cursor = getattr(result, 'next_cursor', None)
+        if not next_cursor or next_cursor in seen_cursors:
+            break
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+
+    return tools
+
+
 class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
@@ -89,14 +115,7 @@ class MCPClient:
         if not self.session:
             raise RuntimeError('MCP client is not connected.')
 
-        tools = []
-        cursor = None
-        while True:
-            result = await self.session.list_tools(cursor=cursor)
-            tools.extend(result.tools)
-            cursor = result.nextCursor
-            if cursor is None:
-                break
+        tools = await collect_mcp_tools(self.session)
 
         tool_specs = []
         for tool in tools:
