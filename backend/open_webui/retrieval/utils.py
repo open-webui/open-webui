@@ -341,21 +341,17 @@ class VectorSearchRetriever(BaseRetriever):
 
 
 def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None):
-    try:
-        log.debug('query_doc:doc %s', collection_name)
-        result = get_vector_db_client().search(
-            collection_name=collection_name,
-            vectors=[query_embedding],
-            limit=k,
-        )
+    log.debug('query_doc:doc %s', collection_name)
+    result = get_vector_db_client().search(
+        collection_name=collection_name,
+        vectors=[query_embedding],
+        limit=k,
+    )
 
-        if result:
-            log.info('query_doc:result %s %s', result.ids, result.metadatas)
+    if result:
+        log.info('query_doc:result %s %s', result.ids, result.metadatas)
 
-        return result
-    except Exception as e:
-        log.exception(f'Error querying doc {collection_name} with limit {k}: {e}')
-        raise e
+    return result
 
 
 def get_doc(collection_name: str, user: UserModel = None):
@@ -506,124 +502,116 @@ async def query_doc_with_hybrid_search(
     enable_enriched_texts: bool = False,
     native_hybrid_search: bool = True,
 ) -> dict:
-    try:
-        if native_hybrid_search and not enable_enriched_texts:
-            native_result = await query_doc_with_native_hybrid_search(
-                collection_name=collection_name,
-                query=query,
-                embedding_function=embedding_function,
-                k=k,
-                reranking_function=reranking_function,
-                k_reranker=k_reranker,
-                r=r,
-                hybrid_bm25_weight=hybrid_bm25_weight,
-            )
-            if native_result is not None:
-                return native_result
-
-        if collection_result is None:
-            collection_result = await ASYNC_VECTOR_DB_CLIENT.get(collection_name=collection_name)
-
-        # First check if collection_result has the required attributes
-        if (
-            not collection_result
-            or not hasattr(collection_result, 'documents')
-            or not hasattr(collection_result, 'metadatas')
-        ):
-            log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
-            return {'documents': [], 'metadatas': [], 'distances': []}
-
-        # Now safely check the documents content after confirming attributes exist
-        if (
-            not collection_result.documents
-            or len(collection_result.documents) == 0
-            or not collection_result.documents[0]
-        ):
-            log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
-            return {'documents': [], 'metadatas': [], 'distances': []}
-
-        log.debug('query_doc_with_hybrid_search:doc %s', collection_name)
-
-        original_texts = collection_result.documents[0]
-        bm25_metadatas = [
-            {**meta, CHUNK_HASH_KEY: _content_hash(original_texts[idx])}
-            for idx, meta in enumerate(collection_result.metadatas[0])
-        ]
-
-        bm25_texts = get_enriched_texts(collection_result) if enable_enriched_texts else original_texts
-
-        from rank_bm25 import BM25Okapi
-
-        bm25_retriever = BM25Retriever(
-            docs=[Document(page_content=text, metadata=meta) for text, meta in zip(bm25_texts, bm25_metadatas)],
-            vectorizer=BM25Okapi([text.split() for text in bm25_texts]),
-            k=k,
-        )
-
-        vector_search_retriever = VectorSearchRetriever(
+    if native_hybrid_search and not enable_enriched_texts:
+        native_result = await query_doc_with_native_hybrid_search(
             collection_name=collection_name,
+            query=query,
             embedding_function=embedding_function,
-            top_k=k,
-        )
-
-        # Use CHUNK_HASH_KEY for dedup so enriched BM25 texts don't defeat RRF
-        if hybrid_bm25_weight <= 0:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[vector_search_retriever],
-                weights=[1.0],
-                id_key=CHUNK_HASH_KEY,
-            )
-        elif hybrid_bm25_weight >= 1:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever],
-                weights=[1.0],
-                id_key=CHUNK_HASH_KEY,
-            )
-        else:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever, vector_search_retriever],
-                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
-                id_key=CHUNK_HASH_KEY,
-            )
-
-        compressor = RerankCompressor(
-            embedding_function=embedding_function,
-            top_n=k_reranker,
+            k=k,
             reranking_function=reranking_function,
-            r_score=r,
+            k_reranker=k_reranker,
+            r=r,
+            hybrid_bm25_weight=hybrid_bm25_weight,
+        )
+        if native_result is not None:
+            return native_result
+
+    if collection_result is None:
+        collection_result = await ASYNC_VECTOR_DB_CLIENT.get(collection_name=collection_name)
+
+    # First check if collection_result has the required attributes
+    if (
+        not collection_result
+        or not hasattr(collection_result, 'documents')
+        or not hasattr(collection_result, 'metadatas')
+    ):
+        log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
+        return {'documents': [], 'metadatas': [], 'distances': []}
+
+    # Now safely check the documents content after confirming attributes exist
+    if not collection_result.documents or len(collection_result.documents) == 0 or not collection_result.documents[0]:
+        log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
+        return {'documents': [], 'metadatas': [], 'distances': []}
+
+    log.debug('query_doc_with_hybrid_search:doc %s', collection_name)
+
+    original_texts = collection_result.documents[0]
+    bm25_metadatas = [
+        {**meta, CHUNK_HASH_KEY: _content_hash(original_texts[idx])}
+        for idx, meta in enumerate(collection_result.metadatas[0])
+    ]
+
+    bm25_texts = get_enriched_texts(collection_result) if enable_enriched_texts else original_texts
+
+    from rank_bm25 import BM25Okapi
+
+    bm25_retriever = BM25Retriever(
+        docs=[Document(page_content=text, metadata=meta) for text, meta in zip(bm25_texts, bm25_metadatas)],
+        vectorizer=BM25Okapi([text.split() for text in bm25_texts]),
+        k=k,
+    )
+
+    vector_search_retriever = VectorSearchRetriever(
+        collection_name=collection_name,
+        embedding_function=embedding_function,
+        top_k=k,
+    )
+
+    # Use CHUNK_HASH_KEY for dedup so enriched BM25 texts don't defeat RRF
+    if hybrid_bm25_weight <= 0:
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[vector_search_retriever],
+            weights=[1.0],
+            id_key=CHUNK_HASH_KEY,
+        )
+    elif hybrid_bm25_weight >= 1:
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever],
+            weights=[1.0],
+            id_key=CHUNK_HASH_KEY,
+        )
+    else:
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever, vector_search_retriever],
+            weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
+            id_key=CHUNK_HASH_KEY,
         )
 
-        compression_retriever = ContextualCompressionRetriever(
-            base_compressor=compressor, base_retriever=ensemble_retriever
-        )
+    compressor = RerankCompressor(
+        embedding_function=embedding_function,
+        top_n=k_reranker,
+        reranking_function=reranking_function,
+        r_score=r,
+    )
 
-        result = await compression_retriever.ainvoke(query)
+    compression_retriever = ContextualCompressionRetriever(
+        base_compressor=compressor, base_retriever=ensemble_retriever
+    )
 
-        distances = [d.metadata.get('score') for d in result]
-        documents = [d.page_content for d in result]
-        metadatas = [d.metadata for d in result]
+    result = await compression_retriever.ainvoke(query)
 
-        # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
-        if k < k_reranker:
-            sorted_items = sorted(zip(distances, documents, metadatas), key=lambda x: x[0], reverse=True)
-            sorted_items = sorted_items[:k]
+    distances = [d.metadata.get('score') for d in result]
+    documents = [d.page_content for d in result]
+    metadatas = [d.metadata for d in result]
 
-            if sorted_items:
-                distances, documents, metadatas = map(list, zip(*sorted_items))
-            else:
-                distances, documents, metadatas = [], [], []
+    # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
+    if k < k_reranker:
+        sorted_items = sorted(zip(distances, documents, metadatas), key=lambda x: x[0], reverse=True)
+        sorted_items = sorted_items[:k]
 
-        result = {
-            'distances': [distances],
-            'documents': [documents],
-            'metadatas': [metadatas],
-        }
+        if sorted_items:
+            distances, documents, metadatas = map(list, zip(*sorted_items))
+        else:
+            distances, documents, metadatas = [], [], []
 
-        log.info('query_doc_with_hybrid_search:result %s %s', result['metadatas'], result['distances'])
-        return result
-    except Exception as e:
-        log.exception(f'Error querying doc {collection_name} with hybrid search: {e}')
-        raise e
+    result = {
+        'distances': [distances],
+        'documents': [documents],
+        'metadatas': [metadatas],
+    }
+
+    log.info('query_doc_with_hybrid_search:result %s %s', result['metadatas'], result['distances'])
+    return result
 
 
 def merge_get_results(get_results: list[dict]) -> dict:
@@ -744,7 +732,8 @@ async def query_collection(
             log.debug('Hybrid search failed, falling back to vector search: %s', e)
 
     results = []
-    error = False
+    last_error = None
+    failed_collection_names = set()
 
     def process_query_collection(collection_name, query_embedding):
         try:
@@ -755,11 +744,10 @@ async def query_collection(
                     query_embedding=query_embedding,
                 )
                 if result is not None:
-                    return result.model_dump(), None
-            return None, None
+                    return result.model_dump(), None, collection_name
+            return None, None, collection_name
         except Exception as e:
-            log.exception(f'Error when querying the collection: {e}')
-            return None, e
+            return None, e, collection_name
 
     # Sanitize: filter out None/empty queries to prevent embedding crashes
     # (e.g. when get_last_user_message returns None)
@@ -780,14 +768,20 @@ async def query_collection(
         ]
     )
 
-    for result, err in task_results:
+    for result, err, collection_name in task_results:
         if err is not None:
-            error = True
+            last_error = err
+            failed_collection_names.add(collection_name)
         elif result is not None:
             results.append(result)
 
-    if error and not results:
-        log.warning('All collection queries failed. No results returned.')
+    if failed_collection_names:
+        log.error(
+            'query_collection: %s collection(s) had failing queries: %s',
+            len(failed_collection_names),
+            ', '.join(sorted(failed_collection_names)),
+            exc_info=last_error,
+        )
 
     return merge_and_sort_query_results(results, k=k)
 
@@ -804,7 +798,8 @@ async def query_collection_with_hybrid_search(
     enable_enriched_texts: bool = False,
 ) -> dict:
     results = []
-    error = False
+    last_error = None
+    failed_collection_names = set()
 
     if not enable_enriched_texts:
 
@@ -863,10 +858,9 @@ async def query_collection_with_hybrid_search(
                 enable_enriched_texts=enable_enriched_texts,
                 native_hybrid_search=False,
             )
-            return result, None
+            return result, None, collection_name
         except Exception as e:
-            log.exception(f'Error when querying the collection with hybrid_search: {e}')
-            return None, e
+            return None, e, collection_name
 
     # Prepare tasks for all collections and queries
     # Avoid running any tasks for collections that failed to fetch data (have assigned None)
@@ -880,13 +874,22 @@ async def query_collection_with_hybrid_search(
     # Run all queries in parallel using asyncio.gather
     task_results = await asyncio.gather(*[process_query(collection_name, query) for collection_name, query in tasks])
 
-    for result, err in task_results:
+    for result, err, collection_name in task_results:
         if err is not None:
-            error = True
+            last_error = err
+            failed_collection_names.add(collection_name)
         elif result is not None:
             results.append(result)
 
-    if error and not results:
+    if failed_collection_names:
+        log.error(
+            'query_collection_with_hybrid_search: %s collection(s) had failing queries: %s',
+            len(failed_collection_names),
+            ', '.join(sorted(failed_collection_names)),
+            exc_info=last_error,
+        )
+
+    if failed_collection_names and not results:
         raise Exception('Hybrid search failed for all collections. Using Non-hybrid search as fallback.')
 
     return merge_and_sort_query_results(results, k=k)
