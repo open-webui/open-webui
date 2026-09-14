@@ -174,6 +174,12 @@
 			(history.currentId && history.messages[history.currentId]?.done != true) ||
 			generating);
 	$: canCompact = !!history?.currentId;
+	$: hasChatContent = history?.currentId
+		? createMessagesList(history, history.currentId).some(
+				(message) =>
+					!!message?.content || !!message?.tool_calls || !!message?.files || !!message?.models
+			)
+		: false;
 	$: canToggleTemporary =
 		!embedded &&
 		!chatId &&
@@ -576,6 +582,12 @@
 		} else {
 			window.history.replaceState(null, '', location.pathname);
 		}
+	};
+
+	const createSkillHandler = async () => {
+		prompt = '/skills:create';
+		await tick();
+		dispatch('submit', prompt);
 	};
 
 	const insertTextAtCursor = async (text: string) => {
@@ -1418,7 +1430,17 @@
 						return;
 					}
 
-					if (['compact', 'fork', 'status', 'model', 'settings', 'temporary'].includes(props?.id)) {
+					if (
+						[
+							'compact',
+							'fork',
+							'status',
+							'model',
+							'settings',
+							'temporary',
+							'skills:create'
+						].includes(props?.id)
+					) {
 						editor.chain().focus().deleteRange(range).run();
 						return;
 					}
@@ -1445,6 +1467,7 @@
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
+					hasChatContent: hasChatContent,
 					temporaryEnabled: () => $temporaryChatEnabled === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
@@ -1453,6 +1476,7 @@
 					onModel: () => modelSelector?.open(),
 					onSettings: () => showSettings.set(true),
 					onTemporary: temporaryHandler,
+					onCreateSkill: createSkillHandler,
 					onSelect: (e) => {
 						const { type, data } = e;
 

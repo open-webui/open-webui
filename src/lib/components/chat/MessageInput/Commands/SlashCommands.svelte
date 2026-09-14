@@ -20,6 +20,7 @@
 	import ChatBubbleDottedChecked from '$lib/components/icons/ChatBubbleDottedChecked.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
 	import Knobs from '$lib/components/icons/Knobs.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
 	const i18n: any = getContext('i18n');
@@ -33,6 +34,7 @@
 	export let forkDisabled = false;
 	export let canTemporary = false;
 	export let temporaryEnabled = false;
+	export let hasChatContent = false;
 	export let contextPercent = 0;
 	export let contextHasThreshold = false;
 
@@ -66,6 +68,9 @@
 			: []),
 		...('settings'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'settings' } }]
+			: []),
+		...(hasChatContent && $selectedTerminalId && 'skills:create'.startsWith(query.toLowerCase())
+			? [{ type: 'command', data: { id: 'skills:create' } }]
 			: [])
 	];
 
@@ -372,6 +377,35 @@
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
 						<span class="truncate">{$i18n.t('Model')}</span>
 						<span class="app-muted text-[0.625rem] truncate shrink-0">/model</span>
+					</span>
+				</button>
+			</Tooltip>
+		{:else if item.data.id === 'skills:create'}
+			<Tooltip
+				content={$i18n.t('Create a reusable terminal skill from this chat.')}
+				placement="top"
+			>
+				<button
+					type="button"
+					aria-label={$i18n.t('Create skill: create a reusable terminal skill from this chat.')}
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
+						{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
+					on:mousedown={(e) => e.preventDefault()}
+					on:click={() => {
+						onSelect(item);
+					}}
+					on:mouseenter={() => {
+						selectedIdx = commandIdx;
+					}}
+					on:focus={() => {}}
+					data-selected={commandIdx === selectedIdx}
+				>
+					<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
+						<Plus className="size-3.5" />
+					</span>
+					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+						<span class="truncate">{$i18n.t('Create skill')}</span>
+						<span class="app-muted text-[0.625rem] truncate shrink-0">/skills:create</span>
 					</span>
 				</button>
 			</Tooltip>
