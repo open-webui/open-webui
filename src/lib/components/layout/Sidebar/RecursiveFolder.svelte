@@ -758,6 +758,19 @@
 				}}
 				role="button"
 				tabindex="0"
+				on:mousedown={(e) => {
+					// Prevent the browser's middle-click autoscroll from engaging
+					if (e.button === 1) e.preventDefault();
+				}}
+				on:auxclick={(e) => {
+					// Middle-click opens the folder in a new tab, matching the
+					// behavior of chats and models in the sidebar
+					if (e.button !== 1) return;
+					if (shouldIgnoreRowClick(e.target)) return;
+					e.preventDefault();
+					e.stopPropagation();
+					window.open(`/folders/${folderId}`, '_blank');
+				}}
 				on:click={async (e) => {
 					e.stopPropagation();
 					if (shouldIgnoreRowClick(e.target)) return;
