@@ -3,6 +3,18 @@
 	import { getContext, onDestroy } from 'svelte';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getSkillItems } from '$lib/apis/skills';
+	import {
+		listTerminalSkills,
+		resolveTerminalConnection,
+		type TerminalSkill
+	} from '$lib/apis/terminal';
+	import {
+		chatId,
+		selectedTerminalId,
+		settings,
+		terminalServers,
+		terminalSkills
+	} from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChatBubbleDotted from '$lib/components/icons/ChatBubbleDotted.svelte';
 	import ChatBubbleDottedChecked from '$lib/components/icons/ChatBubbleDottedChecked.svelte';
@@ -84,17 +96,33 @@
 		clearTimeout(searchDebounceTimer);
 	});
 
+	const getTerminalItems = async (query = ''): Promise<TerminalSkill[]> => {
+		const connection = resolveTerminalConnection(
+			$selectedTerminalId,
+			$terminalServers ?? [],
+			$settings?.terminalServers ?? [],
+			localStorage.token
+		);
+		const items = await listTerminalSkills(connection, $chatId || null).catch(() => []);
+		terminalSkills.set(items);
+		const q = query.trim().toLowerCase();
+		return q
+			? items.filter((skill) => `${skill.name} ${skill.description}`.toLowerCase().includes(q))
+			: items;
+	};
+
 	const getItems = async () => {
-		const [promptRes, skillRes] = await Promise.all([
+		const [promptRes, skillRes, terminalItems] = await Promise.all([
 			getPrompts(localStorage.token).catch(() => null),
-			getSkillItems(localStorage.token, query).catch(() => null)
+			getSkillItems(localStorage.token, query).catch(() => null),
+			getTerminalItems(query)
 		]);
 
 		if (promptRes) {
 			prompts = promptRes;
 		}
 
-		skills = skillRes?.items ?? [];
+		skills = [...(skillRes?.items ?? []), ...terminalItems];
 	};
 
 	export const selectUp = () => {
@@ -447,7 +475,7 @@
 						{resolveLocalizedResource(skill, $i18n.language)}
 					</div>
 					<div class="ml-2 max-w-24 shrink-0 truncate text-xs text-gray-500 dark:text-gray-400">
-						{skill.id}
+						{skill.source === 'terminal' ? $i18n.t('Terminal') : skill.id}
 					</div>
 				</div>
 			</button>

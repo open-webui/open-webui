@@ -60,6 +60,18 @@ export type TerminalCwd = {
 	root?: TerminalFileRoot;
 };
 
+export type TerminalSkill = {
+	id: string;
+	name: string;
+	description: string;
+	is_active: boolean;
+	source: 'terminal';
+	terminal_path: string;
+	terminal_scope: 'global';
+	terminal_selector: string;
+	terminal_name?: string;
+};
+
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export type TerminalConnection = {
@@ -123,7 +135,7 @@ const bearerHeaders = (apiKey: string): Record<string, string> => ({
 	Authorization: `Bearer ${apiKey.trim()}`
 });
 
-const joinTerminalPath = (base: string, child: string) => {
+export const joinTerminalPath = (base: string, child: string) => {
 	if (!child) return base;
 	if (child.startsWith('/') || /^[A-Za-z]:[\\/]/.test(child)) return child;
 	return `${base.replace(/[\\/]+$/, '')}/${child.replace(/^[\\/]+/, '')}`;
@@ -328,6 +340,29 @@ export const readFile = async (
 	// Binary image files: endpoint returns raw bytes (handled above)
 	const json = await res.json().catch(() => null);
 	return json?.content ?? null;
+};
+
+export const listTerminalSkills = async (
+	connection: TerminalConnection | null,
+	chatId?: string | null
+): Promise<TerminalSkill[]> => {
+	if (!connection) return [];
+
+	const skills = await terminalRequest<TerminalSkill[]>(
+		connection,
+		chatId ?? null,
+		'/skills'
+	).catch(() => []);
+
+	return (Array.isArray(skills) ? skills : []).map((skill) => ({
+		...skill,
+		is_active: true,
+		source: 'terminal',
+		terminal_path: skill.terminal_path ?? (skill as any).location ?? '',
+		terminal_scope: skill.terminal_scope ?? (skill as any).scope ?? 'global',
+		terminal_selector: connection.selector,
+		terminal_name: connection.selector
+	}));
 };
 
 export const downloadFileBlob = async (

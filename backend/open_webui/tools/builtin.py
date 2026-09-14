@@ -10,6 +10,7 @@ import asyncio
 import logging
 import time
 from typing import Literal, Optional
+from urllib.parse import unquote
 
 from fastapi import HTTPException, Request
 
@@ -3468,6 +3469,7 @@ async def view_skill(
     id: str,
     __request__: Request = None,
     __user__: dict = None,
+    __metadata__: dict = None,
 ) -> str:
     """
     Load the full instructions of a skill by its id from the available skills manifest.
@@ -3483,6 +3485,16 @@ async def view_skill(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
+        terminal_skill_prefix = 'terminal:'
+        if isinstance(id, str) and id.startswith(terminal_skill_prefix):
+            from open_webui.utils.terminals import get_terminal_skill
+
+            skill_name = unquote(id.removeprefix(terminal_skill_prefix))
+            skill = await get_terminal_skill(__request__, __user__, __metadata__ or {}, skill_name)
+            if not skill:
+                return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
+            return JSONCodec.dumps(skill, ensure_ascii=False)
+
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.skills import Skills
 

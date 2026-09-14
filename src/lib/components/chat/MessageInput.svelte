@@ -32,6 +32,7 @@
 		showCallOverlay,
 		tools,
 		skills,
+		terminalSkills,
 		toolServers,
 		terminalServers,
 		user as _user,
@@ -803,7 +804,9 @@
 	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
 
 	let showSkillsButton = false;
-	$: showSkillsButton = ($skills ?? []).some((skill) => skill.is_active);
+	$: showSkillsButton =
+		($skills ?? []).some((skill) => skill.is_active) ||
+		($terminalSkills ?? []).some((skill) => skill.is_active);
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =

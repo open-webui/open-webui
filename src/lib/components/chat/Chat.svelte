@@ -36,6 +36,7 @@
 		artifactContents,
 		tools,
 		skills,
+		terminalSkills,
 		toolServers,
 		terminalServers,
 		functions,
@@ -979,6 +980,13 @@
 		!isTerminalAvailable($selectedTerminalId)
 	) {
 		selectedTerminalId.set(null);
+	}
+
+	let lastTerminalSkillSelector: string | null = null;
+	$: if ($selectedTerminalId !== lastTerminalSkillSelector) {
+		selectedSkillIds = selectedSkillIds.filter((id) => !id.startsWith('terminal:'));
+		terminalSkills.set([]);
+		lastTerminalSkillSelector = $selectedTerminalId;
 	}
 
 	let settingDefaults = false;
@@ -2752,11 +2760,15 @@
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
 
-        // Store raw OR-aligned output items from backend
+		// Store raw OR-aligned output items from backend
 		if (output) {
 			message.output = output;
 			message.content = getOutputText(output);
-			if (data.type === 'response.output_text.delta' && navigator.vibrate && $settings?.hapticFeedback) {
+			if (
+				data.type === 'response.output_text.delta' &&
+				navigator.vibrate &&
+				$settings?.hapticFeedback
+			) {
 				navigator.vibrate(5);
 			}
 			dispatchCallOverlayAudio(message);
@@ -3565,11 +3577,7 @@
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
-				terminal_id:
-					terminalEnabled &&
-					($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId)
-						? $selectedTerminalId
-						: undefined,
+				terminal_id: terminalEnabled && $selectedTerminalId ? $selectedTerminalId : undefined,
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)

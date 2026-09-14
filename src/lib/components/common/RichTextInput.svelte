@@ -2,7 +2,7 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import equal from 'fast-deep-equal';
-	import { skills } from '$lib/stores';
+	import { skills, terminalSkills } from '$lib/stores';
 
 	marked.use({
 		breaks: true,
@@ -528,7 +528,9 @@
 							const mentionId = id || slashSkillId;
 							if (
 								mentionChar === '$' &&
-								!$skills?.some((skill) => skill.id === mentionId && skill.is_active)
+								![...($skills ?? []), ...($terminalSkills ?? [])].some(
+									(skill) => skill.id === mentionId && skill.is_active
+								)
 							) {
 								return match;
 							}
