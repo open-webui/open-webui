@@ -625,6 +625,7 @@ class KnowledgeTable:
                         db=db,
                     ),
                     breadcrumbs=await self.get_directory_breadcrumbs(
+                        knowledge_id,
                         filter.get('directory_id') if filter else None,
                         db=db,
                     ),
@@ -908,6 +909,7 @@ class KnowledgeTable:
 
     async def get_directory_breadcrumbs(
         self,
+        knowledge_id: str,
         directory_id: Optional[str],
         db: Optional[AsyncSession] = None,
     ) -> list[KnowledgeDirectoryModel]:
@@ -922,7 +924,10 @@ class KnowledgeTable:
 
             while current_id and current_id not in seen:
                 seen.add(current_id)
-                result = await db.execute(select(KnowledgeDirectory).filter_by(id=current_id))
+                # Scoped by knowledge base so a caller-supplied id cannot walk another one's tree.
+                result = await db.execute(
+                    select(KnowledgeDirectory).filter_by(id=current_id, knowledge_id=knowledge_id)
+                )
                 directory = result.scalars().first()
                 if not directory:
                     break
