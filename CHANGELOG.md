@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.11.4] - 2026-09-13
+## [0.11.4] - 2026-09-14
 
 ### Added
 
@@ -83,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚧 **A terminal server's own administration stays out of reach.** Requests passed through to a terminal server are now refused where they aim at that server's administrative endpoints, are not followed on to somewhere else, and are turned away where the path carries characters a parser would rewrite. [Commit](https://github.com/open-webui/open-webui/commit/51bb8cb142f72503e861eeee25ae4dc73c26c36b)
 - ⛔ **A malformed tool call is answered, not fatal.** Where a model asked for a tool with arguments that were not an object at all, a bare list or string, the reply stopped there; the model is now told what was wrong with the call and can try again. [Commit](https://github.com/open-webui/open-webui/commit/fed94c9f5af8a59660425d52df09e15fbedb25bc)
 - 📡 **A reply that breaks mid-stream says so.** Where something failed part way through streaming an answer out of `/api/chat/completions`, the stream simply stopped, leaving a client waiting on an answer that would never finish; it now closes with an error and a proper end of stream. [Commit](https://github.com/open-webui/open-webui/commit/c0fb36c9b833a85a3a7364e195cf54f3d6c7a787)
+- 📭 **A page with nothing to read says so.** Adding a web address to a knowledge base that came back without any text failed with a bare "Error uploading file" and, where the upload itself was refused, left the row sitting in the list; the reason now reaches you as it was given, and the row is taken away. [Commit](https://github.com/open-webui/open-webui/commit/6786ae1797eadaad7464a147213790e2d272822b)
 - 🧯 **Reading a web page leaves the log alone.** Fetching a page through the browser-driven loader filled the log with tracebacks where the page closed while it was still pulling pieces of itself, as sites behind Cloudflare and similar do; those requests are now let go of before the page closes. [#29325](https://github.com/open-webui/open-webui/pull/29325), [#28869](https://github.com/open-webui/open-webui/issues/28869)
 - 📤 **Exporting tools stops at what you may edit.** Exporting all tools at once returned every tool the account could see, the source of a tool shared for reading included; it now returns only the tools it may edit, matching the single-tool export and the way models already export. [#29310](https://github.com/open-webui/open-webui/pull/29310)
 - 🔐 **Model pictures follow model access.** The picture belonging to a model is now shown only to people who can see that model, where anyone signed in could fetch it and tell an existing model from an unknown one by which picture came back. [#29700](https://github.com/open-webui/open-webui/pull/29700)
