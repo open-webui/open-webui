@@ -128,6 +128,11 @@ from open_webui.utils.payload import apply_params_to_form_data, apply_system_pro
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
 from open_webui.utils.sanitize import sanitize_code
+from open_webui.utils.skills import (
+    apply_skills_create_prompt,
+    extract_skill_ids_from_messages,
+    has_prior_real_chat_content,
+    strip_skill_mentions,
 )
 from open_webui.utils.task import (
     get_task_model_id,
@@ -313,6 +318,19 @@ def tool_result_content(tool_result: Any) -> str:
 
 def append_to_text_field(item: dict, key: str, value: str) -> None:
     # Default: keep the existing field intact until concatenation succeeds.
+    # Non-string values and str subclasses also use this path to preserve errors.
+    if not ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND or type(item[key]) is not str or type(value) is not str:
+        item[key] += value
+        return
+
+    # Opt-in: dropping the dict's reference lets CPython extend an unshared str
+    # in place. An allocation failure can leave the field empty.
+    text = item[key]
+    item[key] = ''
+    text += value
+    item[key] = text
+
+
 def merge_streamed_reasoning_details(target: list, details) -> None:
     items = details if isinstance(details, list) else [details]
     for item in items:
@@ -331,7 +349,7 @@ def merge_streamed_reasoning_details(target: list, details) -> None:
 
         for key, value in item.items():
             if key in ('text', 'summary') and isinstance(value, str) and isinstance(existing.get(key), str):
-                existing[key] += value
+                append_to_text_field(existing, key, value)
             else:
                 existing[key] = value
 
@@ -2298,51 +2316,6 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     return sanitized
 
 
-# Match DB skill IDs and terminal skill IDs created by the $ picker.
-SKILL_ID_RE = r'(?:[a-z0-9_-]+|terminal:[^|>\s]+)'
-SKILL_MENTION_RE = re.compile(rf'<(?:\$({SKILL_ID_RE})(?:\|[^>]*)?|/({SKILL_ID_RE})\|[^>]*)>')
-
-
-def _get_text_parts(message: dict) -> list[str]:
-    """Return all text segments from a message's content."""
-    content = message.get('content')
-    if isinstance(content, str):
-        return [content]
-    if isinstance(content, list):
-        return [p.get('text', '') for p in content if isinstance(p, dict) and p.get('type') == 'text']
-    return []
-
-
-def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
-    """Extract skill IDs from <$skillId|label> and </skillId|label> mention tags."""
-    ids: set[str] = set()
-    for message in messages:
-        for text in _get_text_parts(message):
-            ids.update(m.group(1) or m.group(2) for m in SKILL_MENTION_RE.finditer(text))
-    return ids
-
-
-SKILL_MENTION_STRIP_RE = re.compile(rf'<(?:\$({SKILL_ID_RE})(?:\|([^>]*))?|/({SKILL_ID_RE})\|([^>]*))>')
-
-
-def strip_skill_mentions(messages: list[dict], skill_ids: set[str]) -> None:
-    """Replace mentions of resolved skills with their label, preserving all other text."""
-
-    def label(match):
-        if (match.group(1) or match.group(3)) not in skill_ids:
-            return match.group(0)
-        return match.group(2) or match.group(4) or ''
-
-    for message in messages:
-        content = message.get('content')
-        if isinstance(content, str) and SKILL_MENTION_STRIP_RE.search(content):
-            message['content'] = SKILL_MENTION_STRIP_RE.sub(label, content)
-        elif isinstance(content, list):
-            for part in content:
-                if isinstance(part, dict) and part.get('type') == 'text':
-                    text = part.get('text', '')
-                    if SKILL_MENTION_STRIP_RE.search(text):
-                        part['text'] = SKILL_MENTION_STRIP_RE.sub(label, text)
 
 
 async def connect_mcp_server(
@@ -2758,6 +2731,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     files = form_data.pop('files', None)
     form_data.pop('folder_id', None)
     metadata['terminal_id'] = terminal_id
+    skill_authoring_allowed = bool(terminal_id) and has_prior_real_chat_content(form_data.get('messages', []))
+    skill_create_denial_reason = 'empty_chat' if terminal_id else 'disabled'
+    apply_skills_create_prompt(
+        form_data.get('messages', []),
+        allowed=skill_authoring_allowed,
+        denial_reason=skill_create_denial_reason,
+    )
 
     # If the original caller provided tools, use them as-is (skip resolution).
     # Otherwise, save any tools that filter inlets added for merging later.
@@ -3650,7 +3630,7 @@ def update_assistant_message_from_stream(assistant_message, raw):
     def append_output_text(item, text):
         parts = item.setdefault('content', [])
         if parts and parts[-1].get('type') == 'output_text':
-            parts[-1]['text'] += text
+            append_to_text_field(parts[-1], 'text', text)
         else:
             parts.append({'type': 'output_text', 'text': text})
 
@@ -3725,7 +3705,10 @@ def update_assistant_message_from_stream(assistant_message, raw):
 
                     append_output_text(output[-1], content)
 
-                assistant_message['content'] = assistant_message.get('content', '') + content
+                if 'content' in assistant_message:
+                    append_to_text_field(assistant_message, 'content', content)
+                else:
+                    assistant_message['content'] = '' + content
 
 
 async def get_system_oauth_token(request, user):
@@ -4945,7 +4928,7 @@ async def streaming_chat_response_handler(response, ctx):
                             and isinstance(last_delta_data.get('delta'), str)
                             and isinstance(delta_data.get('delta'), str)
                         ):
-                            last_delta_data['delta'] += delta_data['delta']
+                            append_to_text_field(last_delta_data, 'delta', delta_data['delta'])
                             delta_count += 1
                         else:
                             if last_delta_data and (last_delta_type != delta_type or last_delta_key != delta_key):
@@ -5251,8 +5234,10 @@ async def streaming_chat_response_handler(response, ctx):
                                                             str,
                                                         ):
                                                             current_response_tool_call['function']['arguments'] = ''
-                                                        current_response_tool_call['function']['arguments'] += (
-                                                            delta_arguments
+                                                        append_to_text_field(
+                                                            current_response_tool_call['function'],
+                                                            'arguments',
+                                                            delta_arguments,
                                                         )
 
                                         # Emit pending tool calls in real-time as Responses events.
@@ -5421,7 +5406,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             # Append to reasoning content
                                             parts = reasoning_item.get('content', [])
                                             if parts and parts[-1].get('type') == 'output_text':
-                                                parts[-1]['text'] += reasoning_content
+                                                append_to_text_field(parts[-1], 'text', reasoning_content)
                                             else:
                                                 reasoning_item['content'] = [
                                                     {
@@ -5528,7 +5513,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             elif last_item_type == 'reasoning':
                                                 parts = last_item.get('content', [])
                                                 if parts and parts[-1].get('type') == 'output_text':
-                                                    parts[-1]['text'] += value
+                                                    append_to_text_field(parts[-1], 'text', value)
                                                 else:
                                                     last_item['content'] = [
                                                         {
@@ -5540,7 +5525,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 # solution or other _tag_type message
                                                 msg_parts = last_item.get('content', [])
                                                 if msg_parts and msg_parts[-1].get('type') == 'output_text':
-                                                    msg_parts[-1]['text'] += value
+                                                    append_to_text_field(msg_parts[-1], 'text', value)
                                                 else:
                                                     last_item['content'] = [
                                                         {
@@ -5568,7 +5553,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             # Append value to last message item's text
                                             msg_parts = output[-1].get('content', [])
                                             if msg_parts and msg_parts[-1].get('type') == 'output_text':
-                                                msg_parts[-1]['text'] += value
+                                                append_to_text_field(msg_parts[-1], 'text', value)
                                             else:
                                                 output[-1]['content'] = [
                                                     {
