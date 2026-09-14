@@ -33,6 +33,7 @@ from open_webui.routers.files import get_file_content_by_id, upload_file_handler
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.image_mime import detect_image_mime_type
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
     ComfyUIEditImageForm,
@@ -510,8 +511,8 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
                 mime_type = header.split(';')[0].lstrip('data:')
                 img_data = base64.b64decode(encoded)
             else:
-                mime_type = 'image/png'
                 img_data = base64.b64decode(data)
+                mime_type = detect_image_mime_type(img_data)
             return img_data, mime_type
     except Exception as e:
         log.exception(f'Error loading image data: {e}')
