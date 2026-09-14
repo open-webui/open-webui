@@ -1095,8 +1095,10 @@ class SocketSessionEventSink:
         if subject.get('type') != 'user' or not subject.get('id'):
             return
 
+        from open_webui.routers.terminals import recheck_terminal_sessions
         from open_webui.socket.main import disconnect_user_sessions
 
+        recheck_terminal_sessions(str(subject['id']))
         await disconnect_user_sessions(str(subject['id']))
 
 
