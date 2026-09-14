@@ -2808,8 +2808,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         import aiohttp
         from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
         from open_webui.models.skills import Skills as SkillsModel
-        from open_webui.utils.skills import format_terminal_skill_context, format_terminal_skill_manifest_entry
-        from open_webui.utils.terminals import get_terminal_request_info, get_terminal_skill
+        from open_webui.utils.terminals import (
+            format_terminal_skill_context,
+            format_terminal_skill_manifest_entry,
+            get_terminal_request_info,
+            get_terminal_skill,
+        )
 
         terminal_skill_prefix = 'terminal:'
         db_skill_ids = [sid for sid in skill_ids if not sid.startswith(terminal_skill_prefix)]
