@@ -17,10 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-# Track invalid profile_image_url values we've already warned about so we
-# don't flood the logs on every DB read (the validator fires per-row).
-_warned_profile_urls: set[str] = set()
-
 
 def normalize_model_tags(tags: Any) -> list[dict[str, str]]:
     if not isinstance(tags, list):
@@ -94,12 +90,6 @@ class ModelMeta(BaseModel):
         try:
             return validate_profile_image_url(v)
         except ValueError:
-            if v not in _warned_profile_urls:
-                _warned_profile_urls.add(v)
-                log.warning(
-                    'Clearing invalid profile_image_url stored in DB (likely a legacy SVG data-URI): %.80s…',
-                    v,
-                )
             return None
 
     @field_validator('knowledge', mode='before')
