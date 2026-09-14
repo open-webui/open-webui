@@ -839,7 +839,8 @@ class AccessGrantsTable:
     ):
         """
         Filter for items where user has read BUT NOT write access.
-        Public items are NOT considered read_only.
+        A public (user:*) read grant counts as read access, so publicly shared
+        read-only items are listed rather than being reachable only by direct link.
 
         Note: This method builds SQLAlchemy expressions and does NOT perform I/O itself,
         so it remains synchronous. The caller is responsible for executing the query
@@ -850,7 +851,6 @@ class AccessGrantsTable:
 
         from sqlalchemy import exists as sa_exists
 
-        # Has read grant (not public)
         read_grant_exists = (
             select(AccessGrant.id)
             .where(
@@ -858,6 +858,10 @@ class AccessGrantsTable:
                 AccessGrant.resource_id == DocumentModel.id,
                 AccessGrant.permission == 'read',
                 or_(
+                    and_(
+                        AccessGrant.principal_type == 'user',
+                        AccessGrant.principal_id == '*',
+                    ),
                     *(
                         [
                             and_(
@@ -884,7 +888,6 @@ class AccessGrantsTable:
             .exists()
         )
 
-        # Does NOT have write grant
         write_grant_exists = (
             select(AccessGrant.id)
             .where(
@@ -892,6 +895,10 @@ class AccessGrantsTable:
                 AccessGrant.resource_id == DocumentModel.id,
                 AccessGrant.permission == 'write',
                 or_(
+                    and_(
+                        AccessGrant.principal_type == 'user',
+                        AccessGrant.principal_id == '*',
+                    ),
                     *(
                         [
                             and_(
@@ -918,21 +925,7 @@ class AccessGrantsTable:
             .exists()
         )
 
-        # Is NOT public
-        public_grant_exists = (
-            select(AccessGrant.id)
-            .where(
-                AccessGrant.resource_type == resource_type,
-                AccessGrant.resource_id == DocumentModel.id,
-                AccessGrant.permission == 'read',
-                AccessGrant.principal_type == 'user',
-                AccessGrant.principal_id == '*',
-            )
-            .correlate(DocumentModel)
-            .exists()
-        )
-
-        conditions = [read_grant_exists, ~write_grant_exists, ~public_grant_exists]
+        conditions = [read_grant_exists, ~write_grant_exists]
 
         # Not owner
         if user_id:

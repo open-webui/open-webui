@@ -72,7 +72,7 @@ if [[ -n "${SPACE_ID:-}" ]]; then
   if [[ -n "${ADMIN_USER_EMAIL:-}" && -n "${ADMIN_USER_PASSWORD:-}" ]]; then
     echo "Creating admin user for Space..."
     WEBUI_SECRET_KEY="${WEBUI_SECRET_KEY:-}" \
-      uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" &
+      uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" --ws-per-message-deflate "${UVICORN_WS_PER_MESSAGE_DEFLATE:-true}" &
     webui_pid=$!
 
     echo "Waiting for server to become healthy..."
@@ -102,7 +102,7 @@ UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 if [[ "$#" -gt 0 ]]; then
   ARGS=("$@")
 else
-  ARGS=(--workers "$UVICORN_WORKERS")
+  ARGS=(--workers "$UVICORN_WORKERS" --ws-per-message-deflate "${UVICORN_WS_PER_MESSAGE_DEFLATE:-true}")
 fi
 
 exec env WEBUI_SECRET_KEY="${WEBUI_SECRET_KEY:-}" \

@@ -13,7 +13,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import get_custom_headers
+from open_webui.utils.headers import bearer_auth_header, get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
@@ -27,7 +27,6 @@ from open_webui.utils.oauth import (
     resolve_oauth_client_info,
 )
 from open_webui.utils.tools import (
-    bearer_auth_header,
     get_tool_server_data,
     get_tool_server_url,
     set_terminal_servers,
@@ -202,7 +201,7 @@ async def register_oauth_client(
             'oauth_client_info': encrypt_data(oauth_client_info.model_dump(mode='json')),
         }
     except Exception as e:
-        log.debug(f'Failed to register OAuth client: {e}')
+        log.debug('Failed to register OAuth client: %s', e)
         raise HTTPException(
             status_code=400,
             detail=f'Failed to register OAuth client: {e}',
@@ -279,7 +278,11 @@ async def set_tool_servers_config(
                         OAuthClientInformationFull(**oauth_client_info),
                     )
                 except Exception as e:
-                    log.debug(f'Failed to add OAuth client for MCP tool server: {e}')
+                    log.debug(
+                        'Failed to add OAuth client for MCP tool server %s: %s',
+                        server_id,
+                        f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
+                    )
                     continue
 
     await publish_event(
@@ -390,7 +393,7 @@ async def verify_terminal_server_connection(
                 pass
 
     except Exception as e:
-        log.debug(f'Failed to connect to the terminal server: {e}')
+        log.debug('Failed to connect to the terminal server: %s', e)
 
     raise HTTPException(status_code=400, detail='Failed to connect to the terminal server')
 
@@ -454,7 +457,7 @@ async def put_terminal_server_policy(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Failed to access policy on terminal server: {e}')
+        log.debug('Failed to access policy on terminal server: %s', e)
         raise HTTPException(status_code=400, detail='Failed to access policy on terminal server')
 
 
@@ -491,7 +494,7 @@ async def put_terminal_server_lifecycle(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Failed to access lifecycle on terminal server: {e}')
+        log.debug('Failed to access lifecycle on terminal server: %s', e)
         raise HTTPException(status_code=400, detail='Failed to access lifecycle on terminal server')
 
 
@@ -538,7 +541,7 @@ async def refresh_terminal_server_terminals(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Failed to refresh terminals: {e}')
+        log.debug('Failed to refresh terminals: %s', e)
         raise HTTPException(status_code=400, detail='Failed to refresh terminals')
 
 
@@ -557,7 +560,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                 )
                 discovery_urls = await get_discovery_urls(oauth_server_url)
                 for discovery_url in discovery_urls:
-                    log.debug(f'Trying to fetch OAuth 2.1 discovery document from {discovery_url}')
+                    log.debug('Trying to fetch OAuth 2.1 discovery document from %s', discovery_url)
                     async with aiohttp.ClientSession(
                         trust_env=True,
                         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
@@ -575,7 +578,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                                         'oauth_server_metadata': oauth_server_metadata.model_dump(mode='json'),
                                     }
                                 except Exception as e:
-                                    log.info(f'Failed to parse OAuth 2.1 discovery document: {e}')
+                                    log.info('Failed to parse OAuth 2.1 discovery document: %s', e)
                                     raise HTTPException(
                                         status_code=400,
                                         detail=f'Failed to parse OAuth 2.1 discovery document from {discovery_url}',
@@ -624,7 +627,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                         'specs': specs,
                     }
                 except Exception as e:
-                    log.debug(f'Failed to create MCP client: {e}')
+                    log.debug('Failed to create MCP client: %s', e)
                     raise HTTPException(
                         status_code=400,
                         detail=f'Failed to create MCP client',
@@ -667,7 +670,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
     except HTTPException as e:
         raise e
     except Exception as e:
-        log.debug(f'Failed to connect to the tool server: {e}')
+        log.debug('Failed to connect to the tool server: %s', e)
         raise HTTPException(
             status_code=400,
             detail=f'Failed to connect to the tool server',
@@ -728,7 +731,7 @@ async def set_code_execution_config(
 class ModelsConfigForm(BaseModel):
     DEFAULT_MODELS: str | None
     DEFAULT_PINNED_MODELS: str | None
-    MODEL_ORDER_LIST: list[str | None]
+    MODEL_ORDER_LIST: list[str] | None
     DEFAULT_MODEL_METADATA: dict | None = None
     DEFAULT_MODEL_PARAMS: dict | None = None
 

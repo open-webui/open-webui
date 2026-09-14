@@ -9,6 +9,7 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import MemoryModal from './Personalization/MemoryModal.svelte';
 	import { deleteMemoriesByUserId, deleteMemoryById, getMemories } from '$lib/apis/memories';
 	import { toast } from 'svelte-sonner';
@@ -121,19 +122,10 @@
 					)
 					.replace($i18n.t('Manage'), $i18n.t('Add Memory'))}
 			>
-				<Tooltip
-					slot="label"
-					content={$i18n.t(
-						'This is an experimental feature, it may not function as expected and is subject to change at any time.'
-					)}
-				>
-					<div class="flex items-center gap-2">
-						{$i18n.t('Memory')}
-						<span class="text-[0.625rem] uppercase text-gray-400 dark:text-gray-600"
-							>{$i18n.t('Experimental')}</span
-						>
-					</div>
-				</Tooltip>
+				<div slot="label" class="flex items-center gap-2">
+					{$i18n.t('Memory')}
+					<ExperimentalBadge />
+				</div>
 
 				<Switch
 					bind:state={enableMemory}
@@ -201,7 +193,7 @@
 								</Tooltip>
 
 								<div slot="content">
-									<DropdownMenu className="w-[170px] shadow-sm">
+									<DropdownMenu className="w-[10.625rem] shadow-sm">
 										<button
 											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
 											type="button"

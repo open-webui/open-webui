@@ -171,14 +171,14 @@
 			<div class="mb-0.5 px-3 pt-2 pb-1.5">
 				<input
 					type="text"
-					class="w-full text-[13px] bg-transparent outline-hidden"
+					class="w-full text-[0.8125rem] bg-transparent outline-hidden"
 					placeholder={$i18n.t('Search all emojis')}
 					bind:value={search}
 				/>
 			</div>
 
 			<!-- Virtualized Emoji List -->
-			<div class="w-full flex justify-start h-96 overflow-y-auto px-2.5 pb-2.5 text-[13px]">
+			<div class="w-full flex justify-start h-96 overflow-y-auto px-2.5 pb-2.5 text-[0.8125rem]">
 				{#if emojiRows.length === 0}
 					<div class="text-center text-xs text-gray-500 dark:text-gray-400">
 						{$i18n.t('No results')}

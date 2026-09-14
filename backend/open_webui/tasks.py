@@ -1,42 +1,69 @@
 # tasks.py
 import asyncio
-import json
 import logging
+from contextlib import suppress
 from uuid import uuid4
 
 from redis.asyncio import Redis
 
-from open_webui.env import REDIS_KEY_PREFIX
+from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL
+from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 
 log = logging.getLogger(__name__)
 
 # A dictionary to keep track of active tasks
 tasks: dict[str, asyncio.Task] = {}
 item_tasks = {}
+response_streams: dict[str, dict] = {}
 
 
 REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
+REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
+REDIS_PUBSUB_RECONNECT_INTERVAL = 1.0
+REDIS_PUBSUB_MAX_RECONNECT_INTERVAL = 30.0
 
 
 async def redis_task_command_listener(app):
     redis: Redis = app.state.redis
-    pubsub = redis.pubsub()
-    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+    reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
 
-    async for message in pubsub.listen():
-        if message['type'] != 'message':
-            continue
+    while True:
+        pubsub = None
         try:
-            command = json.loads(message['data'])
-            if command.get('action') == 'stop':
-                task_id = command.get('task_id')
-                local_task = tasks.get(task_id)
-                if local_task:
-                    local_task.cancel()
+            # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+            await redis.initialize()
+
+            pubsub = redis.pubsub()
+            await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+            reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                try:
+                    command = JSONCodec.loads(message['data'])
+                    if command.get('action') != 'stop':
+                        continue
+
+                    local_task = tasks.get(command.get('task_id'))
+                    if local_task:
+                        local_task.cancel()
+                except Exception as e:
+                    log.exception(f'Error handling distributed task command: {e}')
+            log.warning('Redis task command listener stopped. Retrying.')
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
-            log.exception(f'Error handling distributed task command: {e}')
+            log.exception(f'Redis task command listener failed. Retrying: {e}')
+        finally:
+            if pubsub:
+                with suppress(Exception):
+                    await pubsub.aclose()
+
+        await asyncio.sleep(reconnect_interval)
+        reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
 
 
 ### ------------------------------
@@ -55,6 +82,7 @@ async def redis_save_task(redis: Redis, task_id: str, item_id: str | None):
 async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline()
     pipe.hdel(REDIS_TASKS_KEY, task_id)
+    pipe.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
     if item_id:
         pipe.srem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
         await pipe.execute()
@@ -74,7 +102,7 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> list[str]:
 
 
 async def redis_send_command(redis: Redis, command: dict):
-    command_json = json.dumps(command)
+    command_json = dumps_bytes(command)
     # RedisCluster doesn't expose publish() directly, but the
     # PUBLISH command broadcasts across all cluster nodes server-side.
     if hasattr(redis, 'nodes_manager'):
@@ -91,6 +119,7 @@ async def cleanup_task(redis, task_id: str, id=None):
         await redis_cleanup_task(redis, task_id, id)
 
     tasks.pop(task_id, None)  # Remove the task if it exists
+    response_streams.pop(task_id, None)
 
     # If an ID is provided, remove the task from the item_tasks dictionary
     if id and task_id in item_tasks.get(id, []):
@@ -138,6 +167,66 @@ async def list_task_ids_by_item_id(redis, id):
     if redis:
         return await redis_list_item_tasks(redis, id)
     return item_tasks.get(id, [])
+
+
+async def save_response_stream(
+    redis,
+    task_id: str | None,
+    chat_id: str | None,
+    message_id: str | None,
+    content: str,
+    output: list,
+):
+    if not task_id or not chat_id or not message_id:
+        return
+
+    data = {
+        'chat_id': chat_id,
+        'message_id': message_id,
+        'content': content,
+        'output': output,
+    }
+
+    if redis:
+        await redis.hset(REDIS_RESPONSE_STREAMS_KEY, task_id, dumps_bytes(data))
+        if REDIS_RESPONSE_STREAM_TTL > 0:
+            with suppress(Exception):
+                await redis.hexpire(REDIS_RESPONSE_STREAMS_KEY, REDIS_RESPONSE_STREAM_TTL, task_id)
+    else:
+        response_streams[task_id] = data
+
+
+async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
+    task_ids = await list_task_ids_by_item_id(redis, chat_id)
+    if not task_ids:
+        return []
+
+    if redis:
+        values = await redis.hmget(REDIS_RESPONSE_STREAMS_KEY, task_ids)
+        streams = []
+        for value in values:
+            if not value:
+                continue
+            try:
+                data = JSONCodec.loads(value)
+            except Exception:
+                continue
+            if data.get('chat_id') == chat_id:
+                streams.append(data)
+        return streams
+
+    return [
+        stream for task_id in task_ids if (stream := response_streams.get(task_id)) and stream.get('chat_id') == chat_id
+    ]
+
+
+async def clear_response_stream(redis, task_id: str | None):
+    if not task_id:
+        return
+    if redis:
+        await redis.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
+    else:
+        response_streams.pop(task_id, None)
 
 
 async def stop_task(redis, task_id: str):

@@ -172,7 +172,7 @@
 				</button>
 
 				<div slot="content">
-					<DropdownMenu className="min-w-[140px] z-[9999999]">
+					<DropdownMenu className="min-w-[8.75rem] z-[9999999]">
 						<button
 							type="button"
 							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"

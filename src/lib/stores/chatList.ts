@@ -61,10 +61,7 @@ export const refreshChatList = async (
 	return { accepted: true, allLoaded };
 };
 
-// The sidebar's folders keep their chat lists in local component state, refreshed
-// through a registry of per-folder callbacks that only the sidebar can reach.
-// Handlers registered here let other components (e.g. the open chat's menu)
-// request that refresh without a reference to the sidebar.
+// The sidebar owns folder state. This bridge lets other components refresh it.
 type FolderRefreshHandler = (folderId?: string | null, chat?: ChatListItem | null) => unknown;
 const folderRefreshHandlers = new Set<FolderRefreshHandler>();
 

@@ -5,8 +5,9 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, user, config, folders } from '$lib/stores';
+	import { WEBUI_NAME, user, config, channels, folders } from '$lib/stores';
 	import { getFolders } from '$lib/apis/folders';
+	import { getChannels } from '$lib/apis/channels';
 
 	import {
 		createAutomation,
@@ -67,6 +68,7 @@
 	let importFiles: FileList | null = null;
 	let automationsImportInputElement: HTMLInputElement;
 	let foldersLoaded = false;
+	let channelsLoaded = false;
 
 	const syncHeader = () => {
 		automationsLayout?.setHeader({
@@ -151,6 +153,13 @@
 		foldersLoaded = true;
 	};
 
+	const ensureChannels = async () => {
+		if (channelsLoaded || ($channels ?? []).length > 0) return;
+		const res = await getChannels(localStorage.token).catch(() => null);
+		if (res) channels.set(res);
+		channelsLoaded = true;
+	};
+
 	const toggleHandler = async (automation: AutomationResponse) => {
 		const res = await toggleAutomationById(localStorage.token, automation.id).catch((err) => {
 			toast.error(`${err}`);
@@ -162,19 +171,21 @@
 	};
 
 	const bulkToggleHandler = async (enable: boolean) => {
-		const targets = (automations ?? []).filter((a) => a.is_active !== enable);
-		if (targets.length === 0) return;
+		const allAutomations = await getAllAutomations(query, statusFilter).catch((err) => {
+			toast.error(`${err}`);
+			return null;
+		});
+		if (!allAutomations) return;
 
-		// Optimistic UI update via map for proper Svelte reactivity
-		automations = (automations ?? []).map((a) =>
-			targets.some((t) => t.id === a.id) ? { ...a, is_active: enable } : a
-		);
+		const targets = allAutomations.filter((a) => a.is_active !== enable);
+		if (targets.length === 0) return;
 
 		try {
 			await Promise.all(targets.map((a) => toggleAutomationById(localStorage.token, a.id)));
+			if (statusFilter !== 'all') page = 1;
+			await getAutomationList();
 		} catch (err) {
 			toast.error(`${err}`);
-			// Refresh from server to restore consistent state
 			await getAutomationList();
 		}
 	};
@@ -216,13 +227,23 @@
 			: $i18n.t('Never');
 	};
 
-	const getAllAutomations = async () => {
+	const formatDestination = (automation: AutomationResponse): string => {
+		if (automation.data.target?.type === 'channel') {
+			const channel = ($channels ?? []).find(
+				(channel) => channel.id === automation.data.target?.channel_id
+			);
+			return channel?.name ? `#${channel.name}` : $i18n.t('Channel');
+		}
+		return automation.folder_id ? $i18n.t('Folder') : $i18n.t('New chat');
+	};
+
+	const getAllAutomations = async (query: string | null = null, status = 'all') => {
 		let currentPage = 1;
 		let allAutomations: AutomationResponse[] = [];
 		let totalAutomations = 0;
 
 		do {
-			const res = await getAutomationItems(localStorage.token, null, 'all', currentPage);
+			const res = await getAutomationItems(localStorage.token, query, status, currentPage);
 			const pageItems = res?.items ?? [];
 			totalAutomations = res?.total ?? pageItems.length;
 			allAutomations = [...allAutomations, ...pageItems];
@@ -286,7 +307,7 @@
 
 	const formatRRule = (rrule: string): string => {
 		// Detect one-time schedule (ONCE)
-		if (rrule.includes('COUNT=1')) {
+		if (/COUNT=1(?!\d)/.test(rrule)) {
 			const match = rrule.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
 			if (match) {
 				const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`);
@@ -296,6 +317,9 @@
 		}
 		const parts: Record<string, string> = {};
 		rrule
+			.split(/\s+/)
+			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
+			.join('')
 			.replace('RRULE:', '')
 			.split(';')
 			.forEach((p) => {
@@ -341,6 +365,7 @@
 
 		loaded = true;
 		syncHeader();
+		ensureChannels();
 
 		return () => {
 			clearTimeout(searchDebounceTimer);
@@ -353,6 +378,9 @@
 </script>
 
 <svelte:head>
+	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
 	<title>{$i18n.t('Automations')} / {$WEBUI_NAME}</title>
 </svelte:head>
 
@@ -458,7 +486,7 @@
 							onChange={() => {
 								page = 1;
 							}}
-							triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition dark:text-gray-200"
+							triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-gray-700 transition dark:text-gray-200"
 						>
 							<svelte:fragment slot="trigger" let:selectedLabel>
 								<span
@@ -480,7 +508,7 @@
 						<Dropdown align="end">
 							<Tooltip content={$i18n.t('Actions')}>
 								<button
-									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition dark:text-gray-200"
+									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-gray-700 transition dark:text-gray-200"
 									type="button"
 								>
 									<span>{$i18n.t('Actions')}</span>
@@ -489,9 +517,9 @@
 							</Tooltip>
 
 							<div slot="content">
-								<DropdownMenu className="w-[170px] shadow-sm">
+								<DropdownMenu className="w-[10.625rem] shadow-sm">
 									<button
-										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px]"
+										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem]"
 										type="button"
 										on:click={() => bulkToggleHandler(true)}
 									>
@@ -499,7 +527,7 @@
 										{$i18n.t('Enable All')}
 									</button>
 									<button
-										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px]"
+										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem]"
 										type="button"
 										on:click={() => bulkToggleHandler(false)}
 									>
@@ -554,7 +582,7 @@
 										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 											<Tooltip content={automation.name} className="min-w-0" placement="top-start">
 												<div
-													class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+													class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 												>
 													{automation.name}
 												</div>
@@ -566,7 +594,7 @@
 													: $i18n.t('Never')}
 											>
 												<div
-													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 												>
 													{formatLastRun(automation)}
 												</div>
@@ -577,11 +605,14 @@
 							</div>
 
 							<div
-								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								class="hidden max-w-56 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
-								<Tooltip content={formatRRule(automation.data.rrule)} className="min-w-0">
+								<Tooltip
+									content={`${formatRRule(automation.data.rrule)} · ${formatDestination(automation)}`}
+									className="min-w-0"
+								>
 									<div class="truncate">
-										{formatRRule(automation.data.rrule)}
+										{formatRRule(automation.data.rrule)} · {formatDestination(automation)}
 									</div>
 								</Tooltip>
 							</div>

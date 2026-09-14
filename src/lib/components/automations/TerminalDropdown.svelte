@@ -51,13 +51,13 @@
 			slot="content"
 			class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 min-w-56 max-w-56 p-0.5"
 		>
-			<div class="px-2 text-[11px] text-gray-500 py-0.5">
+			<div class="px-2 text-[0.6875rem] text-gray-500 py-0.5">
 				{$i18n.t('Terminal')}
 			</div>
 
 			{#each terminalServers as server (server.id)}
 				<button
-					class="flex w-full h-[1.6875rem] justify-between gap-2 items-center px-2 text-[13px] cursor-pointer rounded-xl {terminalServerId ===
+					class="flex w-full h-[1.6875rem] justify-between gap-2 items-center px-2 text-[0.8125rem] cursor-pointer rounded-xl {terminalServerId ===
 					server.id
 						? 'text-gray-900 dark:text-gray-100'
 						: 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'}"
@@ -98,7 +98,7 @@
 
 			{#if terminalServerId}
 				<div class="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
-					<div class="px-2 py-0.5 text-[11px] text-gray-500">
+					<div class="px-2 py-0.5 text-[0.6875rem] text-gray-500">
 						{$i18n.t('Working Directory')}
 					</div>
 					<div class="px-2">
@@ -106,7 +106,7 @@
 							type="text"
 							bind:value={terminalCwd}
 							placeholder="/home/user/project"
-							class="w-full bg-transparent outline-hidden text-[13px] py-1 placeholder:text-gray-400 dark:placeholder:text-gray-600"
+							class="w-full bg-transparent outline-hidden text-[0.8125rem] py-1 placeholder:text-gray-400 dark:placeholder:text-gray-600"
 							on:click={(e) => e.stopPropagation()}
 							on:input={onChange}
 						/>

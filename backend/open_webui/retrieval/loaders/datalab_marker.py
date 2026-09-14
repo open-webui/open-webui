@@ -7,6 +7,7 @@ from typing import List, Optional
 import requests
 from fastapi import HTTPException, status
 from langchain_core.documents import Document
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
@@ -64,25 +65,6 @@ class DatalabMarkerLoader:
         }
         return mime_map.get(ext, 'application/octet-stream')
 
-    def check_marker_request_status(self, request_id: str) -> dict:
-        url = f'{self.api_base_url}/{request_id}'
-        headers = {'X-Api-Key': self.api_key}
-        try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            result = response.json()
-            log.info(f'Marker API status check for request {request_id}: {result}')
-            return result
-        except requests.HTTPError as e:
-            log.error(f'Error checking Marker request status: {e}')
-            raise HTTPException(
-                status.HTTP_502_BAD_GATEWAY,
-                detail=f'Failed to check Marker request: {e}',
-            )
-        except ValueError as e:
-            log.error(f'Invalid JSON checking Marker request: {e}')
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f'Invalid JSON: {e}')
-
     def load(self) -> List[Document]:
         filename = os.path.basename(self.file_path)
         mime_type = self._get_mime_type(filename)
@@ -103,7 +85,10 @@ class DatalabMarkerLoader:
             form_data['additional_config'] = self.additional_config
 
         log.info(
-            f"Datalab Marker POST request parameters: {{'filename': '{filename}', 'mime_type': '{mime_type}', **{form_data}}}"
+            "Datalab Marker POST request parameters: {'filename': '%s', 'mime_type': '%s', **%s}",
+            filename,
+            mime_type,
+            form_data,
         )
 
         try:
@@ -167,7 +152,7 @@ class DatalabMarkerLoader:
                             'total_cost',
                         )
                     }
-                    log.info(f'Marker processing completed successfully: {json.dumps(summary, indent=2)}')
+                    log.info('Marker processing completed successfully: %s', json.dumps(summary, indent=2))
                     break
 
                 if status_val == 'failed' or success_val is False:
@@ -234,7 +219,7 @@ class DatalabMarkerLoader:
         try:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(full_text)
-            log.info(f'Saved Marker output to: {output_path}')
+            log.info('Saved Marker output to: %s', output_path)
         except Exception as e:
             log.warning(f'Failed to write marker output to disk: {e}')
 
@@ -249,11 +234,11 @@ class DatalabMarkerLoader:
         images = final_result.get('images', {})
         if images:
             metadata['image_count'] = len(images)
-            metadata['images'] = json.dumps(list(images.keys()))
+            metadata['images'] = JSONCodec.dumps(list(images.keys()))
 
         for k, v in metadata.items():
             if isinstance(v, (dict, list)):
-                metadata[k] = json.dumps(v)
+                metadata[k] = JSONCodec.dumps(v)
             elif v is None:
                 metadata[k] = ''
 

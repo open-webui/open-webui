@@ -62,7 +62,7 @@
 		removeTerminalConnection
 	} from '$lib/utils/connections';
 
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import {
 		bestMatchingLanguage,
 		cleanText,
@@ -213,13 +213,15 @@
 				}
 			}
 
-			// Send heartbeat every 30 seconds
-			heartbeatInterval = setInterval(() => {
-				if (_socket.connected) {
-					console.log('Sending heartbeat');
-					_socket.emit('heartbeat', {});
-				}
-			}, 30000);
+			heartbeatInterval = setInterval(
+				() => {
+					if (_socket.connected) {
+						console.log('Sending heartbeat');
+						_socket.emit('heartbeat', {});
+					}
+				},
+				($config?.features?.websocket_heartbeat_interval ?? 30) * 1000
+			);
 
 			if (deploymentId !== null) {
 				WEBUI_DEPLOYMENT_ID.set(deploymentId);
@@ -264,6 +266,10 @@
 			if (heartbeatInterval) {
 				clearInterval(heartbeatInterval);
 				heartbeatInterval = null;
+			}
+
+			if (reason === 'io server disconnect') {
+				_socket.connect();
 			}
 
 			if (details) {
@@ -455,8 +461,52 @@
 		return { toolServer, toolServerData, token };
 	};
 
+	const isDirectTerminalServer = (serverUrl) =>
+		!!serverUrl &&
+		(($settings?.terminalServers ?? []).some((server) => server.url === serverUrl) ||
+			($terminalServers ?? []).some((server) => !server.id && server.url === serverUrl));
+
+	const terminalFileResult = (result, params, serverUrl, chatId) => {
+		const path = result?.path ?? params?.path;
+		const name =
+			result?.name ??
+			String(path ?? '')
+				.split('/')
+				.filter(Boolean)
+				.at(-1) ??
+			'file';
+		const contentType = result?.content_type ?? result?.mime_type ?? 'application/octet-stream';
+
+		return {
+			...(result ?? {}),
+			type: 'file',
+			source: 'open_terminal',
+			displayed: true,
+			terminal_selector: serverUrl,
+			terminal_url: serverUrl,
+			session_id: chatId,
+			path,
+			full_path: result?.full_path ?? path,
+			name,
+			mime_type: contentType,
+			content_type: contentType,
+			page: result?.page ?? params?.page
+		};
+	};
+
 	const executeTool = async (data, cb, chatId) => {
 		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
+		const defaultInline =
+			data?.name === 'display_file' &&
+			data?.params?.path &&
+			data?.params?.inline === undefined &&
+			$settings?.terminalFileDisplay === 'inline' &&
+			isDirectTerminalServer(data.server?.url);
+		const params = defaultInline ? { ...data.params, inline: true } : data?.params;
+		const serverParams = data?.name === 'display_file' && params ? { ...params } : params;
+		if (serverParams && data?.name === 'display_file') {
+			delete serverParams.page;
+		}
 
 		console.log('executeTool', data, toolServer);
 
@@ -465,25 +515,38 @@
 				token,
 				toolServer.url,
 				data?.name,
-				data?.params,
+				serverParams,
 				toolServerData,
 				chatId
 			);
 
 			console.log('executeToolServer', res);
+			const result = Array.isArray(res) ? res[0] : res;
+			const inlineDisplayFile =
+				data?.name === 'display_file' && params?.path && params?.inline === true;
+			const output =
+				inlineDisplayFile && result?.exists !== false
+					? Array.isArray(res)
+						? [terminalFileResult(result, params, toolServer.url, chatId)]
+						: terminalFileResult(result, params, toolServer.url, chatId)
+					: res;
 
-			if (data?.name === 'display_file' && data?.params?.path) {
-				if (res?.exists !== false) {
-					displayFileHandler(data.params.path, { showControls, showFileNavPath });
+			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile) {
+				if (result?.exists !== false) {
+					displayFileHandler(
+						params.path,
+						{ showControls, showFileNavPath },
+						{ page: params?.page }
+					);
 				}
 			}
 
-			if (['write_file'].includes(data?.name) && data?.params?.path) {
-				showFileNavDir.set(res?.path ?? data.params.path);
+			if (['write_file'].includes(data?.name) && params?.path) {
+				showFileNavDir.set(result?.path ?? params.path);
 			}
 
 			if (cb) {
-				cb(structuredClone(res));
+				cb(structuredClone(output));
 			}
 		} else {
 			if (cb) {
@@ -542,6 +605,9 @@
 				if ($settings?.notificationEnabled ?? false) {
 					new Notification(`${data.title} / Open WebUI`, {
 						body: timeStr,
+						// LICENSE covers this Open WebUI notification identifier.
+						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+						// https://docs.openwebui.com/license.
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 				}
@@ -677,6 +743,9 @@
 						if ($settings?.notificationEnabled ?? false) {
 							new Notification(`${displayTitle} / Open WebUI`, {
 								body: contentPreview,
+								// LICENSE covers this Open WebUI notification identifier.
+								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+								// https://docs.openwebui.com/license.
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
 						}
@@ -782,6 +851,9 @@
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
+						// LICENSE covers this Open WebUI notification identifier.
+						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+						// https://docs.openwebui.com/license.
 						new Notification(`${title} / Open WebUI`, {
 							body: data?.content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
@@ -1181,6 +1253,10 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
+			// LICENSE covers this Open WebUI branding surface, including name, logo,
+			// visual, textual, symbolic identifiers, metadata, and surrounding UI.
+			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+			// https://docs.openwebui.com/license.
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
@@ -1293,6 +1369,10 @@
 </script>
 
 <svelte:head>
+	<!-- LICENSE covers this Open WebUI branding surface, including name, logo,
+	visual, textual, symbolic identifiers, metadata, and surrounding UI.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
 	<title>{$WEBUI_NAME}</title>
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 

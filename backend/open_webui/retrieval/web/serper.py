@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 import logging
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.session_pool import get_session
 
 log = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ async def search_serper(
     api_key: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
 ) -> list[SearchResult]:
     """Query the serper.dev Google Search API and return normalised results.
 
@@ -23,7 +23,7 @@ async def search_serper(
     headers = {'X-API-KEY': api_key, 'Content-Type': 'application/json'}
 
     session = await get_session()
-    async with session.post(url, headers=headers, data=json.dumps({'q': query})) as response:
+    async with session.post(url, headers=headers, data=JSONCodec.dumps({'q': query})) as response:
         response.raise_for_status()
         payload = await response.json()
 

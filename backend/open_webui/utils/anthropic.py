@@ -1,4 +1,3 @@
-import json
 import logging
 
 import aiohttp
@@ -9,8 +8,11 @@ from open_webui.env import (
 )
 from open_webui.models.users import UserModel
 from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
+
+ANTHROPIC_VERSION = '2023-06-01'
 
 ANTHROPIC_CONVERTED_REQUEST_PARAMS = {
     'model',
@@ -48,7 +50,7 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             headers = {
                 'x-api-key': key,
-                'anthropic-version': '2023-06-01',
+                'anthropic-version': ANTHROPIC_VERSION,
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS and user:
@@ -235,7 +237,7 @@ def convert_anthropic_to_openai_payload(
                             'function': {
                                 'name': block.get('name', ''),
                                 'arguments': (
-                                    json.dumps(block.get('input', {}))
+                                    JSONCodec.dumps(block.get('input', {}))
                                     if isinstance(block.get('input'), dict)
                                     else str(block.get('input', '{}'))
                                 ),
@@ -531,8 +533,8 @@ def convert_openai_to_anthropic_response(
     for tool_call in tool_calls:
         function = tool_call.get('function', {})
         try:
-            tool_input = json.loads(function.get('arguments', '{}'))
-        except (json.JSONDecodeError, TypeError):
+            tool_input = JSONCodec.loads(function.get('arguments', '{}'))
+        except (JSONCodec.JSONDecodeError, TypeError):
             tool_input = {}
         content.append(
             {
@@ -643,7 +645,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
             'usage': {'input_tokens': input_tokens or 0, 'output_tokens': 0},
         },
     }
-    yield f'event: message_start\ndata: {json.dumps(message_start)}\n\n'.encode()
+    yield f'event: message_start\ndata: {JSONCodec.dumps(message_start)}\n\n'.encode()
 
     try:
         async for chunk in openai_stream_generator:
@@ -663,8 +665,8 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     continue
 
                 try:
-                    data = json.loads(data_string)
-                except (json.JSONDecodeError, TypeError):
+                    data = JSONCodec.loads(data_string)
+                except (JSONCodec.JSONDecodeError, TypeError):
                     continue
 
                 usage_data = data.get('usage')
@@ -730,7 +732,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                             'index': current_block_index,
                             'content_block': {'type': 'thinking', 'thinking': ''},
                         }
-                        yield f'event: content_block_start\ndata: {json.dumps(block_start)}\n\n'.encode()
+                        yield f'event: content_block_start\ndata: {JSONCodec.dumps(block_start)}\n\n'.encode()
                         thinking_block_open = True
 
                     block_delta = {
@@ -738,7 +740,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                         'index': current_block_index,
                         'delta': {'type': 'thinking_delta', 'thinking': reasoning_content},
                     }
-                    yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
+                    yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
                 # --- Handle text content ---
                 # Anthropic expects text blocks before tool blocks, so skip
@@ -750,7 +752,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                             'type': 'content_block_stop',
                             'index': current_block_index,
                         }
-                        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+                        yield f'event: content_block_stop\ndata: {JSONCodec.dumps(block_stop)}\n\n'.encode()
                         thinking_block_open = False
                         current_block_index += 1
 
@@ -760,7 +762,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                             'index': current_block_index,
                             'content_block': {'type': 'text', 'text': ''},
                         }
-                        yield f'event: content_block_start\ndata: {json.dumps(block_start)}\n\n'.encode()
+                        yield f'event: content_block_start\ndata: {JSONCodec.dumps(block_start)}\n\n'.encode()
                         text_block_open = True
 
                     block_delta = {
@@ -768,7 +770,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                         'index': current_block_index,
                         'delta': {'type': 'text_delta', 'text': content},
                     }
-                    yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
+                    yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
                 # --- Handle tool calls ---
                 # Some providers put tool_calls on the final message object
@@ -784,7 +786,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                             'type': 'content_block_stop',
                             'index': current_block_index,
                         }
-                        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+                        yield f'event: content_block_stop\ndata: {JSONCodec.dumps(block_stop)}\n\n'.encode()
                         thinking_block_open = False
                         current_block_index += 1
 
@@ -793,7 +795,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                             'type': 'content_block_stop',
                             'index': current_block_index,
                         }
-                        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+                        yield f'event: content_block_stop\ndata: {JSONCodec.dumps(block_stop)}\n\n'.encode()
                         text_block_open = False
                         current_block_index += 1
 
@@ -856,7 +858,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                                     'input': {},
                                 },
                             }
-                            yield f'event: content_block_start\ndata: {json.dumps(block_start)}\n\n'.encode()
+                            yield f'event: content_block_start\ndata: {JSONCodec.dumps(block_start)}\n\n'.encode()
                             current_block_index += 1
 
                         # Buffer arguments and emit as input_json_delta
@@ -872,19 +874,23 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                                         'partial_json': arguments_chunk,
                                     },
                                 }
-                                yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
+                                yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
                             # Close the block once arguments form complete JSON
-                            if tool['started'] and not tool['stopped']:
+                            if (
+                                tool['started']
+                                and not tool['stopped']
+                                and (tool['arguments'].rstrip()[-1:] == '}' or tool['arguments'].lstrip()[:1] != '{')
+                            ):
                                 try:
-                                    json.loads(tool['arguments'])
+                                    JSONCodec.loads(tool['arguments'])
                                     tool['stopped'] = True
                                     block_stop = {
                                         'type': 'content_block_stop',
                                         'index': tool['block_index'],
                                     }
-                                    yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
-                                except (json.JSONDecodeError, ValueError):
+                                    yield f'event: content_block_stop\ndata: {JSONCodec.dumps(block_stop)}\n\n'.encode()
+                                except (JSONCodec.JSONDecodeError, ValueError):
                                     pass
 
                 # --- Handle finish reason ---
@@ -902,7 +908,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     # Close any open thinking block
     if thinking_block_open:
         block_stop = {'type': 'content_block_stop', 'index': current_block_index}
-        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+        yield f'event: content_block_stop\ndata: {JSONCodec.dumps(block_stop)}\n\n'.encode()
         current_block_index += 1
 
     # Flush any tools that buffered arguments but never emitted a block
@@ -921,7 +927,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     'input': {},
                 },
             }
-            yield f'event: content_block_start\ndata: {json.dumps(block_start)}\n\n'.encode()
+            yield f'event: content_block_start\ndata: {JSONCodec.dumps(block_start)}\n\n'.encode()
             current_block_index += 1
 
             if tool['arguments']:
@@ -933,18 +939,18 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                         'partial_json': tool['arguments'],
                     },
                 }
-                yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
+                yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
     # Close any open text block
     if text_block_open:
         block_stop = {'type': 'content_block_stop', 'index': current_block_index}
-        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+        yield f'event: content_block_stop\ndata: {JSONCodec.dumps(block_stop)}\n\n'.encode()
 
     # Close any tool call blocks that are still open
     for tool in tracked_tool_calls.values():
         if tool['started'] and not tool['stopped']:
             block_stop = {'type': 'content_block_stop', 'index': tool['block_index']}
-            yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+            yield f'event: content_block_stop\ndata: {JSONCodec.dumps(block_stop)}\n\n'.encode()
 
     # Emit message_delta with stop reason
     usage = {'output_tokens': output_tokens}
@@ -969,7 +975,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
         },
         'usage': usage,
     }
-    yield f'event: message_delta\ndata: {json.dumps(message_delta)}\n\n'.encode()
+    yield f'event: message_delta\ndata: {JSONCodec.dumps(message_delta)}\n\n'.encode()
 
     # Emit message_stop
-    yield f'event: message_stop\ndata: {json.dumps({"type": "message_stop"})}\n\n'.encode()
+    yield f'event: message_stop\ndata: {JSONCodec.dumps({"type": "message_stop"})}\n\n'.encode()

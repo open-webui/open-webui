@@ -20,6 +20,19 @@ log = logging.getLogger(__name__)
 USER_GROUPS_PLACEHOLDERS = ('{{USER_GROUPS}}', '{{USER_GROUP_IDS}}')
 
 
+def normalize_bearer_token(token: Any) -> str:
+    return token.strip() if isinstance(token, str) else token or ''
+
+
+def bearer_auth_header(token: Any) -> dict[str, str]:
+    token = normalize_bearer_token(token)
+    return {'Authorization': f'Bearer {token}'} if token else {}
+
+
+def get_json_bearer_headers(token: Any = '') -> dict[str, str]:
+    return {'Content-Type': 'application/json', **bearer_auth_header(token)}
+
+
 def _mint_forward_user_jwt(user: Any) -> str:
     now = int(time.time())
     payload = {

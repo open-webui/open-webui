@@ -3,6 +3,40 @@ export type FileEntry = {
 	type: 'file' | 'directory';
 	size?: number;
 	modified?: number;
+	writable?: boolean;
+};
+
+export type TerminalFileList = {
+	entries: FileEntry[];
+	writable?: boolean;
+};
+
+export type TerminalFileSearchResult = FileEntry & {
+	path: string;
+};
+
+export type TerminalFileSearchResponse = {
+	results: TerminalFileSearchResult[];
+};
+
+export type TerminalContentMatch = {
+	line: number;
+	column: number;
+	text: string;
+};
+
+export type TerminalFileMatch = {
+	path: string;
+	relative_path: string;
+	name: string;
+	type: 'file' | 'directory';
+	name_match: boolean;
+	content_matches: TerminalContentMatch[];
+};
+
+export type TerminalFileMatchesResponse = {
+	results: TerminalFileMatch[];
+	next_offset: number | null;
 };
 
 export type ListeningPort = {
@@ -32,10 +66,30 @@ const bearerHeaders = (apiKey: string): Record<string, string> => ({
 	Authorization: `Bearer ${apiKey.trim()}`
 });
 
+const joinTerminalPath = (base: string, child: string) => {
+	if (!child) return base;
+	if (child.startsWith('/') || /^[A-Za-z]:[\\/]/.test(child)) return child;
+	return `${base.replace(/[\\/]+$/, '')}/${child.replace(/^[\\/]+/, '')}`;
+};
+
+const basename = (path: string) =>
+	path.replace(/\\/g, '/').split('/').filter(Boolean).at(-1) ?? path;
+
+const hasHiddenPathPart = (path: string) =>
+	path
+		.replace(/\\/g, '/')
+		.split('/')
+		.some((part) => part.startsWith('.'));
+
 export type TerminalServer = {
 	id: string;
 	url: string;
 	name: string;
+	contexts?: Record<string, false | { context_id?: string }>;
+	config?: {
+		chat_uploads?: 'default' | 'filesystem';
+		[key: string]: unknown;
+	};
 };
 
 export const getTerminalServers = async (token: string): Promise<TerminalServer[]> => {
@@ -84,7 +138,7 @@ export const listFiles = async (
 	apiKey: string,
 	path: string = '/',
 	sessionId?: string
-): Promise<FileEntry[] | null> => {
+): Promise<TerminalFileList | null> => {
 	// The endpoint uses `directory` as the query param name
 	const url = `${baseUrl.replace(/\/$/, '')}/files/list?directory=${encodeURIComponent(path)}`;
 	const headers: Record<string, string> = bearerHeaders(apiKey);
@@ -98,7 +152,97 @@ export const listFiles = async (
 			console.error('open-terminal listFiles error:', err);
 			return null;
 		});
-	return res?.entries ?? null;
+	return res?.entries ? { entries: res.entries, writable: res.writable } : null;
+};
+
+export const searchFiles = async (
+	baseUrl: string,
+	apiKey: string,
+	query: string,
+	path: string = '.',
+	limit: number = 20,
+	type: 'file' | 'directory' | 'any' = 'any',
+	sessionId?: string,
+	showHidden: boolean = false
+): Promise<TerminalFileSearchResponse | null> => {
+	const headers: Record<string, string> = bearerHeaders(apiKey);
+	if (sessionId) headers['X-Session-Id'] = sessionId;
+
+	const searchParams = new URLSearchParams({
+		query,
+		path,
+		limit: String(limit),
+		type,
+		show_hidden: String(showHidden)
+	});
+	const base = baseUrl.replace(/\/$/, '');
+	const searchRes = await fetch(`${base}/files/search?${searchParams.toString()}`, {
+		headers
+	}).catch(() => null);
+
+	if (searchRes?.ok) {
+		const json = await searchRes.json().catch(() => null);
+		if (Array.isArray(json?.results)) return { results: json.results };
+	}
+
+	const globParams = new URLSearchParams({
+		pattern: query.trim() ? `*${query.trim()}*` : '*',
+		path,
+		type,
+		max_results: String(limit)
+	});
+	const globRes = await fetch(`${base}/files/glob?${globParams.toString()}`, {
+		headers
+	}).catch((err) => {
+		console.error('open-terminal searchFiles error:', err);
+		return null;
+	});
+	if (!globRes?.ok) return null;
+
+	const json = await globRes.json().catch(() => null);
+	const root = json?.path ?? path;
+	return {
+		results: (json?.matches ?? [])
+			.filter((item: FileEntry & { path: string }) => showHidden || !hasHiddenPathPart(item.path))
+			.map((item: FileEntry & { path: string }) => ({
+				path: joinTerminalPath(root, item.path),
+				name: basename(item.path),
+				type: item.type,
+				size: item.size,
+				modified: item.modified
+			}))
+	};
+};
+
+export const getFileMatches = async (
+	baseUrl: string,
+	apiKey: string,
+	query: string,
+	path: string = '.',
+	showHidden: boolean = false,
+	offset: number = 0,
+	sessionId?: string,
+	signal?: AbortSignal
+): Promise<TerminalFileMatchesResponse | null> => {
+	const headers: Record<string, string> = bearerHeaders(apiKey);
+	if (sessionId) headers['X-Session-Id'] = sessionId;
+
+	const params = new URLSearchParams({
+		query,
+		path,
+		show_hidden: String(showHidden),
+		offset: String(offset)
+	});
+	const res = await fetch(`${baseUrl.replace(/\/$/, '')}/files/matches?${params.toString()}`, {
+		headers,
+		signal
+	}).catch((err) => {
+		if (err?.name !== 'AbortError') console.error('open-terminal getFileMatches error:', err);
+		return null;
+	});
+	if (!res?.ok) return null;
+	const json = await res.json().catch(() => null);
+	return Array.isArray(json?.results) ? json : null;
 };
 
 export const readFile = async (
@@ -143,6 +287,29 @@ export const downloadFileBlob = async (
 	if (!res || !res.ok) return null;
 
 	const filename = path.split('/').pop() ?? 'file';
+	const blob = await res.blob().catch(() => null);
+	if (!blob) return null;
+	return { blob, filename };
+};
+
+export const downloadFilePreview = async (
+	baseUrl: string,
+	apiKey: string,
+	path: string,
+	sessionId?: string
+): Promise<{ blob: Blob; filename: string } | null> => {
+	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}&preview=true`;
+	const headers: Record<string, string> = bearerHeaders(apiKey);
+	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const res = await fetch(url, { headers }).catch(() => null);
+
+	if (!res) return null;
+	if (!res.ok) return null;
+
+	const contentType = res.headers.get('content-type') ?? '';
+	const filename = path.split('/').pop() ?? 'file';
+	if (!contentType.includes('application/pdf')) return null;
+
 	const blob = await res.blob().catch(() => null);
 	if (!blob) return null;
 	return { blob, filename };

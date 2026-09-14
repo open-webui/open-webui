@@ -2,7 +2,7 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from open_webui.config import (
     OPENSEARCH_CERT_VERIFY,
@@ -17,9 +17,15 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.retrieval.vector.utils import iter_filter_conditions, process_metadata
 from opensearchpy import OpenSearch
 from opensearchpy.helpers import bulk
+
+
+def _metadata_filter(key: str, op: str, value: Any) -> dict:
+    if op == '$in':
+        return {'terms': {f'metadata.{key}.keyword': value}}
+    return {'term': {f'metadata.{key}.keyword': value}}
 
 
 class OpenSearchClient(VectorDBBase):
@@ -121,6 +127,8 @@ class OpenSearchClient(VectorDBBase):
         filter: Optional[dict] = None,
         limit: int = 10,
     ) -> Optional[SearchResult]:
+        filter_clauses = [_metadata_filter(key, op, value) for key, op, value in iter_filter_conditions(filter)]
+
         try:
             if not self.has_collection(collection_name):
                 return None
@@ -130,7 +138,7 @@ class OpenSearchClient(VectorDBBase):
                 '_source': ['text', 'metadata'],
                 'query': {
                     'script_score': {
-                        'query': {'match_all': {}},
+                        'query': {'bool': {'filter': filter_clauses}} if filter_clauses else {'match_all': {}},
                         'script': {
                             'source': '(cosineSimilarity(params.query_value, doc[params.field]) + 1.0) / 2.0',
                             'params': {

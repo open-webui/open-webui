@@ -15,10 +15,17 @@
 	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 	import { deleteModelById } from '$lib/apis/models';
 	import { unloadModel } from '$lib/apis';
+	import {
+		downloadProviderModel,
+		getErrorMessage,
+		getOpenAIConfig,
+		getProviderModelDownloadStatus
+	} from '$lib/apis/openai';
 
 	import {
 		user,
 		MODEL_DOWNLOAD_POOL,
+		mobile,
 		models,
 		temporaryChatEnabled,
 		settings,
@@ -31,6 +38,7 @@
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -173,18 +181,41 @@
 		schedulePositionUpdate();
 	};
 
+	const focusSearchInput = () => {
+		if (!$mobile) {
+			document.getElementById('model-search-input')?.focus();
+		}
+	};
+	const focusChatInput = () => {
+		if (!$mobile) {
+			document.getElementById('chat-input')?.focus();
+		}
+	};
+
 	const toggleOpen = async () => {
 		show = !show;
 		if (show) {
 			searchValue = '';
 			listScrollTop = 0;
+			if (!selectionOnly) {
+				setOllamaVersion();
+				setProviderDownloadConnections();
+			}
 			resetView();
 			updatePosition();
 			await tick();
 			updatePosition();
-			window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+			for (const delay of [0, 50, 150]) {
+				window.setTimeout(focusSearchInput, delay);
+			}
 		} else {
 			document.getElementById(`model-selector-${id}-button`)?.blur();
+		}
+	};
+
+	export const open = async () => {
+		if (!show) {
+			await toggleOpen();
 		}
 	};
 
@@ -232,7 +263,26 @@
 	let modelFilterItems = [];
 
 	let ollamaVersion = null;
+	let providerDownloadConnections = [];
 	let selectedModelIdx = 0;
+
+	const MANAGEMENT_PROVIDERS = new Set(['llama.cpp', 'lmstudio']);
+
+	const normalizeProvider = (provider = '') => {
+		const value = provider.trim().toLowerCase();
+		if (value === 'lm studio' || value === 'lm-studio') return 'lmstudio';
+		return value;
+	};
+
+	const getProviderLabel = (provider = '') => {
+		const normalizedProvider = normalizeProvider(provider);
+		if (normalizedProvider === 'lmstudio') return $i18n.t('LM Studio');
+		if (normalizedProvider === 'llama.cpp') return $i18n.t('llama.cpp');
+		return provider;
+	};
+
+	const getProviderPoolKey = (connection, model: string) =>
+		`${connection.provider}:${connection.idx}:${model}`;
 
 	const fuse = new Fuse(
 		items.map((item) => {
@@ -318,6 +368,45 @@
 						}
 					})
 	).filter((item) => includeHidden || !(item.model?.info?.meta?.hidden ?? false));
+
+	$: sanitizedSearchValue = searchValue.trim();
+	$: downloadTargets =
+		!selectionOnly && sanitizedSearchValue && $user?.role === 'admin'
+			? [
+					...(ollamaVersion
+						? [
+								{
+									id: 'ollama',
+									label: $i18n.t('Ollama'),
+									poolKey: sanitizedSearchValue,
+									download: $MODEL_DOWNLOAD_POOL[sanitizedSearchValue],
+									actionLabel: $i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
+										searchValue: searchValue
+									}),
+									type: 'ollama'
+								}
+							]
+						: []),
+					...providerDownloadConnections.map((connection) => {
+						const poolKey = getProviderPoolKey(connection, sanitizedSearchValue);
+						return {
+							...connection,
+							id: `${connection.provider}:${connection.idx}`,
+							label: getProviderLabel(connection.provider),
+							poolKey,
+							download: $MODEL_DOWNLOAD_POOL[poolKey],
+							actionLabel: $i18n.t(`Download "{{searchValue}}" from {{provider}}`, {
+								searchValue: searchValue,
+								provider: getProviderLabel(connection.provider)
+							}),
+							type: 'provider'
+						};
+					})
+				]
+			: [];
+	$: activeDownloadKeys = new Set(
+		downloadTargets.filter((target) => target.download).map((target) => target.poolKey)
+	);
 
 	$: if (
 		selectedTag !== undefined ||
@@ -416,11 +505,13 @@
 			values = [item.value];
 			value = item.value;
 			show = false;
+			window.setTimeout(focusChatInput, 0);
 			return;
 		}
 
 		value = item.value;
 		show = false;
+		window.setTimeout(focusChatInput, 0);
 	};
 
 	const setDefaultHandler = async () => {
@@ -465,6 +556,7 @@
 					...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
 					abortController: controller,
 					reader,
+					model: sanitizedModelTag,
 					done: false
 				}
 			});
@@ -524,7 +616,7 @@
 						error = error.message;
 					}
 
-					toast.error(`${error}`);
+					toast.error(getErrorMessage(error));
 					// opts.callback({ success: false, error, modelName: opts.modelName });
 					break;
 				}
@@ -559,6 +651,166 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 	};
 
+	const downloadProviderModelHandler = async (connection) => {
+		const model = sanitizedSearchValue;
+		const poolKey = getProviderPoolKey(connection, model);
+
+		if ($MODEL_DOWNLOAD_POOL[poolKey]) {
+			toast.error(
+				$i18n.t(`Model '{{modelTag}}' is already in queue for downloading.`, {
+					modelTag: model
+				})
+			);
+			return;
+		}
+		if (Object.keys($MODEL_DOWNLOAD_POOL).length === 3) {
+			toast.error(
+				$i18n.t('Maximum of 3 models can be downloaded simultaneously. Please try again later.')
+			);
+			return;
+		}
+
+		const controller = new AbortController();
+		MODEL_DOWNLOAD_POOL.set({
+			...$MODEL_DOWNLOAD_POOL,
+			[poolKey]: {
+				abortController: controller,
+				model,
+				providerLabel: getProviderLabel(connection.provider),
+				done: false
+			}
+		});
+
+		try {
+			const res = await downloadProviderModel(
+				localStorage.token,
+				connection.idx,
+				model,
+				controller.signal
+			);
+			const jobId = res?.job_id;
+
+			if (res?.status) {
+				MODEL_DOWNLOAD_POOL.set({
+					...$MODEL_DOWNLOAD_POOL,
+					[poolKey]: {
+						...$MODEL_DOWNLOAD_POOL[poolKey],
+						digest: res.status,
+						done: ['completed', 'already_downloaded'].includes(res.status)
+					}
+				});
+			}
+
+			if (jobId) {
+				while (!controller.signal.aborted) {
+					await new Promise((resolve) => setTimeout(resolve, 1500));
+					if (controller.signal.aborted) break;
+
+					const status = await getProviderModelDownloadStatus(
+						localStorage.token,
+						connection.idx,
+						jobId,
+						controller.signal
+					);
+					const total = status?.total_size_bytes ?? 0;
+					const downloaded = status?.downloaded_bytes ?? 0;
+					const pullProgress = total ? Math.round((downloaded / total) * 1000) / 10 : undefined;
+
+					MODEL_DOWNLOAD_POOL.set({
+						...$MODEL_DOWNLOAD_POOL,
+						[poolKey]: {
+							...$MODEL_DOWNLOAD_POOL[poolKey],
+							...(pullProgress !== undefined ? { pullProgress } : {}),
+							digest: status?.status ?? ''
+						}
+					});
+
+					if (status?.status === 'completed') {
+						MODEL_DOWNLOAD_POOL.set({
+							...$MODEL_DOWNLOAD_POOL,
+							[poolKey]: {
+								...$MODEL_DOWNLOAD_POOL[poolKey],
+								pullProgress: 100,
+								done: true
+							}
+						});
+						break;
+					}
+					if (status?.status === 'failed') {
+						throw status?.error ?? 'Download failed';
+					}
+				}
+			} else if (!$MODEL_DOWNLOAD_POOL[poolKey]?.done) {
+				MODEL_DOWNLOAD_POOL.set({
+					...$MODEL_DOWNLOAD_POOL,
+					[poolKey]: {
+						...$MODEL_DOWNLOAD_POOL[poolKey],
+						pullProgress: 100,
+						done: true
+					}
+				});
+			}
+
+			if ($MODEL_DOWNLOAD_POOL[poolKey]?.done) {
+				toast.success(
+					$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {
+						modelName: model
+					})
+				);
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
+			}
+		} catch (error) {
+			if (!controller.signal.aborted) {
+				toast.error(getErrorMessage(error));
+			}
+		}
+
+		delete $MODEL_DOWNLOAD_POOL[poolKey];
+		MODEL_DOWNLOAD_POOL.set({
+			...$MODEL_DOWNLOAD_POOL
+		});
+	};
+
+	const downloadModelHandler = (target) => {
+		if (target.type === 'ollama') {
+			pullModelHandler();
+			return;
+		}
+
+		downloadProviderModelHandler(target);
+	};
+
+	const setProviderDownloadConnections = async () => {
+		if ($user?.role !== 'admin') {
+			providerDownloadConnections = [];
+			return;
+		}
+
+		const openaiConfig = await getOpenAIConfig(localStorage.token).catch(() => null);
+		providerDownloadConnections = openaiConfig?.ENABLE_OPENAI_API
+			? (openaiConfig.OPENAI_API_BASE_URLS ?? [])
+					.map((url: string, idx: number) => {
+						const config =
+							openaiConfig.OPENAI_API_CONFIGS?.[idx] ??
+							openaiConfig.OPENAI_API_CONFIGS?.[String(idx)] ??
+							openaiConfig.OPENAI_API_CONFIGS?.[url] ??
+							{};
+
+						return {
+							idx,
+							url,
+							provider: normalizeProvider(config?.provider ?? '')
+						};
+					})
+					.filter((connection) => MANAGEMENT_PROVIDERS.has(connection.provider))
+			: [];
+	};
+
 	onMount(() => {
 		if (items) {
 			tags = items
@@ -582,12 +834,8 @@
 		};
 	});
 
-	$: if (show && !selectionOnly) {
-		setOllamaVersion();
-	}
-
 	const cancelModelPullHandler = async (model: string) => {
-		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
+		const { reader, abortController, providerLabel } = $MODEL_DOWNLOAD_POOL[model];
 		if (abortController) {
 			abortController.abort();
 		}
@@ -599,6 +847,17 @@
 			});
 			await deleteModel(localStorage.token, model);
 			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
+		} else {
+			const displayModel = $MODEL_DOWNLOAD_POOL[model]?.model ?? model;
+			delete $MODEL_DOWNLOAD_POOL[model];
+			MODEL_DOWNLOAD_POOL.set({
+				...$MODEL_DOWNLOAD_POOL
+			});
+			toast.success(
+				$i18n.t('{{model}} download has been canceled', {
+					model: providerLabel ? `${displayModel} (${providerLabel})` : displayModel
+				})
+			);
 		}
 	};
 
@@ -724,7 +983,7 @@
 <div class="relative w-full">
 	<button
 		bind:this={triggerElement}
-		class="relative w-full {($settings?.highContrastMode ?? false)
+		class="focus-ring relative w-full {($settings?.highContrastMode ?? false)
 			? ''
 			: 'outline-hidden focus:outline-hidden'}"
 		aria-label={selectedModel
@@ -777,17 +1036,27 @@
 							<input
 								id="model-search-input"
 								bind:value={searchValue}
-								class="w-full bg-transparent text-[13px] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+								class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
 								placeholder={searchPlaceholder}
 								autocomplete="off"
 								aria-label={$i18n.t('Search In Models')}
 								on:keydown={(e) => {
-									if (e.code === 'Enter' && filteredItems.length > 0) {
-										selectItem(filteredItems[selectedModelIdx], selectedModelIdx);
+									if (e.code === 'Enter') {
+										if (selectedModelIdx >= filteredItems.length) {
+											const target = downloadTargets[selectedModelIdx - filteredItems.length];
+											if (target && !target.download) {
+												downloadModelHandler(target);
+											}
+										} else if (filteredItems[selectedModelIdx]) {
+											selectItem(filteredItems[selectedModelIdx], selectedModelIdx);
+										}
 										return; // dont need to scroll on selection
 									} else if (e.code === 'ArrowDown') {
 										e.stopPropagation();
-										selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
+										selectedModelIdx = Math.min(
+											selectedModelIdx + 1,
+											Math.max(filteredItems.length - 1 + downloadTargets.length, 0)
+										);
 									} else if (e.code === 'ArrowUp') {
 										e.stopPropagation();
 										selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
@@ -811,9 +1080,13 @@
 										<Tooltip content={$i18n.t('Compare')}>
 											<button
 												type="button"
-												class="flex size-[1.375rem] shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {compareEnabled
-													? 'bg-gray-50 text-gray-700 hover:bg-gray-50 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/60'
-													: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
+												class="focus-ring flex size-[1.375rem] shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {compareEnabled
+													? ($settings?.highContrastMode ?? false)
+														? 'bg-gray-200 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-800'
+														: 'bg-gray-50 text-gray-700 hover:bg-gray-50 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/60'
+													: ($settings?.highContrastMode ?? false)
+														? 'text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+														: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
 												aria-label={$i18n.t('Compare')}
 												aria-pressed={compareEnabled}
 												on:click={() => {
@@ -831,8 +1104,14 @@
 											placeholder={$i18n.t('All')}
 											align="end"
 											items={modelFilterItems}
-											triggerClass="relative flex h-[1.375rem] max-w-32 items-center gap-0.5 rounded-xl bg-transparent px-1.5 text-[11px] font-normal text-gray-400 transition-colors duration-100 hover:bg-gray-50/40 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800/40 dark:hover:text-gray-300"
-											itemClass="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] capitalize hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
+											triggerClass="relative flex h-[1.375rem] max-w-32 items-center gap-0.5 rounded-xl bg-transparent px-1.5 text-[0.6875rem] font-normal transition-colors duration-100 {($settings?.highContrastMode ??
+											false)
+												? 'text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+												: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
+											itemClass="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] capitalize {($settings?.highContrastMode ??
+											false)
+												? 'hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+												: 'hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
 											contentClass="min-w-36 model-selector-child-menu"
 											onChange={setModelFilter}
 										/>
@@ -853,12 +1132,12 @@
 									>
 										{$i18n.t('No models available')}
 									</div>
-									<div class="w-full text-[11px] leading-3.5 text-gray-500 dark:text-gray-400">
+									<div class="w-full text-[0.6875rem] leading-3.5 text-gray-500 dark:text-gray-400">
 										{$i18n.t('Connect to an AI provider to start chatting')}
 									</div>
 									<button
 										type="button"
-										class="mt-3 rounded-lg px-0 py-1 text-[11px] font-normal leading-none text-gray-600 underline-offset-2 transition-colors duration-100 hover:text-gray-800 hover:underline focus:outline-hidden focus:underline dark:text-gray-300 dark:hover:text-gray-100"
+										class="focus-ring mt-3 rounded-lg px-0 py-1 text-[0.6875rem] font-normal leading-none text-gray-600 underline-offset-2 transition-colors duration-100 hover:text-gray-800 hover:underline focus:outline-hidden focus:underline dark:text-gray-300 dark:hover:text-gray-100"
 										on:click={() => {
 											show = false;
 											showSettings.set('admin:connections');
@@ -869,7 +1148,9 @@
 								</div>
 							{:else}
 								<div class="">
-									<div class="block px-2 py-1 text-[13px] text-gray-700 dark:text-gray-100">
+									<div
+										class="flex min-h-8 items-center rounded-xl px-2 text-[0.8125rem] text-gray-700 dark:text-gray-100"
+									>
 										{$i18n.t('No results found')}
 									</div>
 								</div>
@@ -878,7 +1159,7 @@
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<div
 								class="min-h-0 flex-1 overflow-y-auto"
-								style="max-height: 288px;"
+								style="max-height: 18rem;"
 								role="listbox"
 								aria-label={$i18n.t('Available models')}
 								bind:this={listContainer}
@@ -910,69 +1191,45 @@
 							</div>
 						{/if}
 
-						{#if !selectionOnly && !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
-							<Tooltip
-								content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
-									searchValue: searchValue
-								})}
-								placement="top-start"
-							>
-								<button
-									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center rounded-xl px-2 text-[13px] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40"
-									on:click={() => {
-										pullModelHandler();
-									}}
+						{#each downloadTargets as target, targetIndex (target.id)}
+							{#if target.download}
+								<Tooltip
+									content={target.download?.digest && target.download.digest !== 'downloading'
+										? target.download.digest
+										: searchValue}
+									placement="top-start"
 								>
-									<div class=" truncate">
-										{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
-											searchValue: searchValue
-										})}
-									</div>
-								</button>
-							</Tooltip>
-						{/if}
-
-						{#each selectionOnly ? [] : Object.keys($MODEL_DOWNLOAD_POOL) as model}
-							<div
-								class="flex min-h-[1.6875rem] w-full cursor-pointer select-none justify-between rounded-xl px-2 text-[13px] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100"
-							>
-								<div class="flex">
-									<div class="mr-2.5 translate-y-0.5">
-										<Spinner />
-									</div>
-
-									<div class="flex flex-col self-start">
-										<div class="flex gap-1">
-											<div class="line-clamp-1">
-												Downloading "{model}"
-											</div>
-
-											<div class="shrink-0">
-												{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
-													? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
-													: ''}
-											</div>
+									<div
+										role="option"
+										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
+										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
+										class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {selectedModelIdx ===
+										filteredItems.length + targetIndex
+											? ($settings?.highContrastMode ?? false)
+												? 'bg-gray-200 dark:bg-gray-800'
+												: 'bg-gray-50/70 dark:bg-gray-800/60'
+											: ''}"
+									>
+										<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
+										<div class="min-w-0 flex-1 truncate">
+											{$i18n.t('Downloading "{{searchValue}}"', { searchValue: searchValue })}
 										</div>
-
-										{#if 'digest' in $MODEL_DOWNLOAD_POOL[model] && $MODEL_DOWNLOAD_POOL[model].digest}
-											<div class="-mt-1 h-fit text-[0.7rem] dark:text-gray-500 line-clamp-1">
-												{$MODEL_DOWNLOAD_POOL[model].digest}
+										{#if 'pullProgress' in target.download}
+											<div
+												class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
+											>
+												{target.download.pullProgress}%
 											</div>
 										{/if}
-									</div>
-								</div>
-
-								<div class="mr-2 ml-1 translate-y-0.5">
-									<Tooltip content={$i18n.t('Cancel')}>
 										<button
-											class="text-gray-800 dark:text-gray-100"
-											aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
-											on:click={() => {
-												cancelModelPullHandler(model);
+											class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+											aria-label={$i18n.t('Cancel download of {{model}}', { model: searchValue })}
+											on:click|stopPropagation={() => {
+												cancelModelPullHandler(target.poolKey);
 											}}
 										>
 											<svg
-												class="w-4 h-4 text-gray-800 dark:text-white"
+												class="size-2.5"
 												aria-hidden="true"
 												xmlns="http://www.w3.org/2000/svg"
 												width="24"
@@ -984,14 +1241,99 @@
 													stroke="currentColor"
 													stroke-linecap="round"
 													stroke-linejoin="round"
-													stroke-width="2"
+													stroke-width="2.5"
 													d="M6 18 17.94 6M18 18 6.06 6"
 												/>
 											</svg>
 										</button>
-									</Tooltip>
+									</div>
+								</Tooltip>
+							{:else}
+								<Tooltip content={target.actionLabel} placement="top-start">
+									<button
+										type="button"
+										role="option"
+										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
+										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
+										class="focus-ring flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {($settings?.highContrastMode ??
+										false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'} {selectedModelIdx ===
+										filteredItems.length + targetIndex
+											? ($settings?.highContrastMode ?? false)
+												? 'bg-gray-200 dark:bg-gray-800'
+												: 'bg-gray-50/70 dark:bg-gray-800/60'
+											: ''}"
+										on:click={() => {
+											downloadModelHandler(target);
+										}}
+									>
+										<Download className="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+										<div class="min-w-0 flex-1 truncate">
+											{$i18n.t('Download "{{searchValue}}"', { searchValue: searchValue })}
+										</div>
+										<div
+											class="shrink-0 truncate text-[0.6875rem] text-gray-500 dark:text-gray-400"
+										>
+											{target.label}
+										</div>
+									</button>
+								</Tooltip>
+							{/if}
+						{/each}
+
+						{#each selectionOnly ? [] : Object.keys($MODEL_DOWNLOAD_POOL).filter((model) => !activeDownloadKeys.has(model)) as model}
+							{@const download = $MODEL_DOWNLOAD_POOL[model]}
+							{@const downloadName = download?.model ?? model}
+							<Tooltip
+								content={download?.digest && download.digest !== 'downloading'
+									? download.digest
+									: downloadName}
+								placement="top-start"
+							>
+								<div
+									class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100"
+								>
+									<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
+									<div class="min-w-0 flex-1 truncate">
+										Downloading "{downloadName}"{download?.providerLabel
+											? ` from ${download.providerLabel}`
+											: ''}
+									</div>
+									{#if 'pullProgress' in download}
+										<div
+											class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
+										>
+											{download.pullProgress}%
+										</div>
+									{/if}
+									<button
+										class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+										aria-label={$i18n.t('Cancel download of {{model}}', { model: downloadName })}
+										on:click|stopPropagation={() => {
+											cancelModelPullHandler(model);
+										}}
+									>
+										<svg
+											class="size-2.5"
+											aria-hidden="true"
+											xmlns="http://www.w3.org/2000/svg"
+											width="24"
+											height="24"
+											fill="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke="currentColor"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2.5"
+												d="M6 18 17.94 6M18 18 6.06 6"
+											/>
+										</svg>
+									</button>
 								</div>
-							</div>
+							</Tooltip>
 						{/each}
 					</div>
 
@@ -999,7 +1341,7 @@
 						<div class="flex shrink-0 items-center justify-end px-2 py-1 leading-none">
 							<button
 								type="button"
-								class="text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
+								class="focus-ring text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
 								on:click|stopPropagation={setDefaultHandler}
 							>
 								{$i18n.t('Set as default')}

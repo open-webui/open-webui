@@ -97,7 +97,7 @@ class TagTable:
             async with get_async_db_context(db) as db:
                 id = name.replace(' ', '_').lower()
                 result = await db.execute(delete(Tag).filter_by(id=id, user_id=user_id))
-                log.debug(f'res: {result.rowcount}')
+                log.debug('res: %s', result.rowcount)
                 await db.commit()
                 return True
         except Exception as e:

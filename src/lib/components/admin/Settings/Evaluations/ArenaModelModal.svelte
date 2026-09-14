@@ -37,6 +37,9 @@
 		}
 	};
 
+	// LICENSE covers this Open WebUI fallback logo.
+	// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	// https://docs.openwebui.com/license.
 	let profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 	let description = '';
 
@@ -51,10 +54,10 @@
 	let showDeleteConfirmDialog = false;
 
 	const addModelHandler = () => {
-		if (selectedModelId) {
+		if (selectedModelId && !modelIds.includes(selectedModelId)) {
 			modelIds = [...modelIds, selectedModelId];
-			selectedModelId = '';
 		}
+		selectedModelId = '';
 	};
 
 	const submitHandler = () => {
@@ -93,6 +96,9 @@
 
 		name = '';
 		id = '';
+		// LICENSE covers this Open WebUI fallback logo.
+		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		// https://docs.openwebui.com/license.
 		profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 		description = '';
 		modelIds = [];
@@ -105,7 +111,7 @@
 			id = model.id;
 			profileImageUrl = model.meta.profile_image_url;
 			description = model.meta.description;
-			modelIds = model.meta.model_ids || [];
+			modelIds = [...new Set(model.meta.model_ids || [])];
 			filterMode = model.meta?.filter_mode ?? 'include';
 			accessGrants = model.meta.access_grants ?? [];
 		}
@@ -356,7 +362,7 @@
 								bind:value={selectedModelId}
 							>
 								<option value="">{$i18n.t('Select a model')}</option>
-								{#each $models.filter((m) => m?.owned_by !== 'arena') as model}
+								{#each $models.filter((m) => m?.owned_by !== 'arena' && !modelIds.includes(m?.id)) as model}
 									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 								{/each}
 							</select>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { models, settings, user } from '$lib/stores';
+	import { models, pinnedModels, settings, user } from '$lib/stores';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
@@ -18,6 +18,9 @@
 	export let align: 'start' | 'end' = 'start';
 
 	let compareModels = selectedModels.length > 1;
+	let selector;
+
+	export const open = () => selector?.open();
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -32,15 +35,12 @@
 	};
 
 	const pinModelHandler = async (modelId) => {
-		let pinnedModels = $settings?.pinnedModels ?? [];
-
-		if (pinnedModels.includes(modelId)) {
-			pinnedModels = pinnedModels.filter((id) => id !== modelId);
-		} else {
-			pinnedModels = [...new Set([...pinnedModels, modelId])];
-		}
-
-		settings.set({ ...$settings, pinnedModels: pinnedModels });
+		settings.set({
+			...$settings,
+			pinnedModels: $pinnedModels.includes(modelId)
+				? $pinnedModels.filter((id) => id !== modelId)
+				: [...$pinnedModels, modelId]
+		});
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
@@ -64,6 +64,7 @@
 		<div class="min-w-0 max-w-full overflow-hidden">
 			<div class="min-w-0 max-w-full">
 				<Selector
+					bind:this={selector}
 					id="model"
 					placeholder={$i18n.t('Select a model')}
 					items={$models.map((model) => ({

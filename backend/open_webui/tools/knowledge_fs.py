@@ -8,7 +8,6 @@ Re-exported through builtin.py for consistent imports.
 """
 
 import contextvars
-import json
 import logging
 import re
 import shlex
@@ -33,6 +32,9 @@ DEFAULT_TAIL_LINES = 10
 # Matching time allowed per tool call. Backtracking cost is exponential in the length of the
 # matched text, so capping the pattern or the line does not bound it.
 MATCH_BUDGET_SECONDS = 2.0
+MAX_REGEX_QUANTIFIER_COUNT = 2_000
+MAX_REGEX_QUANTIFIER_EXPANSION = 100_000
+_COUNTED_QUANTIFIER_RE = re.compile(r'(?<!\\)\{(\d+)(?:,\d*)?\}')
 
 
 class MatchBudgetExceeded(Exception):
@@ -85,6 +87,23 @@ def normalize_regex(pattern: str) -> str:
     return pattern.replace('\\|', '|').replace('\|', '|')
 
 
+def validate_regex_quantifiers(pattern: str) -> str | None:
+    """Reject counted quantifiers that make regex compilation expand too much."""
+    quantifier_expansion = 1
+    for quantifier in _COUNTED_QUANTIFIER_RE.finditer(pattern):
+        count_text = quantifier.group(1)
+        count = int(count_text) if len(count_text) <= 6 else MAX_REGEX_QUANTIFIER_COUNT + 1
+        if count > MAX_REGEX_QUANTIFIER_COUNT:
+            return f'Regex quantifier counts over {MAX_REGEX_QUANTIFIER_COUNT:g} are not supported'
+
+        # ponytail: conservative expansion catches nested quantifier bombs without mirroring regex syntax.
+        quantifier_expansion *= max(count, 1)
+        if quantifier_expansion > MAX_REGEX_QUANTIFIER_EXPANSION:
+            return 'Regex quantifiers expand too much, lower the counts'
+
+    return None
+
+
 def build_matcher(pattern: str, case_insensitive: bool = False, use_regex: bool = False) -> tuple:
     """Build a matcher function. Returns (match_fn, error_str_or_None)."""
     if not use_regex and is_regex_pattern(pattern):
@@ -92,6 +111,9 @@ def build_matcher(pattern: str, case_insensitive: bool = False, use_regex: bool 
 
     if use_regex:
         normalized = normalize_regex(pattern)
+        quantifier_error = validate_regex_quantifiers(normalized)
+        if quantifier_error:
+            return None, quantifier_error
         try:
             re_flags = regex.IGNORECASE if case_insensitive else 0
             compiled = regex.compile(normalized, re_flags)

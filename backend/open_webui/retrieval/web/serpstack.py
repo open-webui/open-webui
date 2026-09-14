@@ -12,7 +12,7 @@ async def search_serpstack(
     api_key: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
     https_enabled: bool = True,
 ) -> list[SearchResult]:
     """Query the serpstack.com API and return normalised results.

@@ -9,6 +9,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import DatabaseSettings from '$lib/components/icons/DatabaseSettings.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -754,6 +755,9 @@
 								</div>
 
 								<div class="text-xs text-gray-500 mt-1">
+									<!-- LICENSE covers this Open WebUI wordmark.
+										Do not alter, remove, obscure, or replace it except as LICENSE permits:
+										https://docs.openwebui.com/license. -->
 									{$i18n.t(
 										'External vectors must be generated with the same embedding model configured in Open WebUI.'
 									)}
@@ -794,11 +798,7 @@
 	<div class="mb-2 flex items-center justify-between">
 		<div class="flex items-center gap-2 leading-none text-gray-600 dark:text-gray-400">
 			<div>{$i18n.t('External Knowledge Sources')}</div>
-			<span
-				class="inline-flex items-center text-[0.625rem] font-normal uppercase leading-none text-gray-400 dark:text-gray-600"
-			>
-				{$i18n.t('Experimental')}
-			</span>
+			<ExperimentalBadge />
 		</div>
 
 		<Tooltip content={$i18n.t('Add Connection')}>

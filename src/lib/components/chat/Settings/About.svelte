@@ -52,6 +52,9 @@
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('About')}</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
+		<!-- LICENSE covers this Open WebUI About identifier.
+		Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		https://docs.openwebui.com/license. -->
 		<UserSettingSection title={`${$WEBUI_NAME} ${$i18n.t('Version')}`} first>
 			<UserSettingRow
 				description={$i18n.t('View the installed version and check release updates.')}
@@ -109,6 +112,9 @@
 
 		<UserSettingSection title={$i18n.t('Community')}>
 			{#if $config?.license_metadata}
+				<!-- LICENSE covers this Open WebUI license attribution.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
 				<div class="text-xs text-gray-600 dark:text-gray-400">
 					{#if !$WEBUI_NAME.includes('Open WebUI')}
 						<span>{$WEBUI_NAME}</span> -
@@ -144,6 +150,9 @@
 			</div>
 
 			<div class="text-xs text-gray-400 dark:text-gray-500">
+				<!-- LICENSE covers this Open WebUI copyright attribution.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
 				Copyright (c) {new Date().getFullYear()}
 				<a href="https://openwebui.com" target="_blank" class="underline">Open WebUI Inc.</a>
 				<a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"

@@ -94,7 +94,7 @@
 							</div>
 						{:else}
 							<div
-								class="flex flex-col gap-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent py-2"
+								class="flex flex-col gap-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pt-7 pb-2"
 							>
 								{#if pinnedMessages.length === 0}
 									<div class=" text-center text-xs text-gray-500 dark:text-gray-400 py-6">
@@ -103,6 +103,7 @@
 								{:else}
 									{#each pinnedMessages as message, messageIdx (message.id)}
 										<Message
+											id="pinned"
 											className="rounded-xl px-2"
 											{message}
 											{channel}

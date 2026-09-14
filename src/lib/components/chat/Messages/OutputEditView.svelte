@@ -138,7 +138,7 @@
 
 	function getMessageText(item: any): string {
 		return (item.content ?? [])
-			.filter((p: any) => p.type === 'output_text' || 'text' in p)
+			.filter((p: any) => p && (p.type === 'output_text' || 'text' in p))
 			.map((p: any) => p.text ?? '')
 			.join('\n');
 	}
@@ -146,7 +146,9 @@
 	function updateMessageText(idx: number, text: string) {
 		const next = [...output];
 		const item = { ...next[idx] };
-		const parts = (item.content ?? []).filter((p: any) => p.type === 'output_text' || 'text' in p);
+		const parts = (item.content ?? []).filter(
+			(p: any) => p && (p.type === 'output_text' || 'text' in p)
+		);
 		item.content = [{ ...(parts[0] ?? { type: 'output_text' }), text }];
 		next[idx] = item;
 		output = next;
@@ -155,7 +157,7 @@
 
 	function getReasoningText(item: any): string {
 		return (item.summary ?? item.content ?? [])
-			.filter((p: any) => 'text' in p)
+			.filter((p: any) => p && 'text' in p)
 			.map((p: any) => p.text ?? '')
 			.join('');
 	}
@@ -259,7 +261,7 @@
 					<!-- Role label -->
 					<div class="flex items-start pt-1.5">
 						<div
-							class="text-[11px] font-normal uppercase tracking-wide min-w-[4.5rem] text-gray-400 dark:text-gray-500"
+							class="text-[0.6875rem] font-normal uppercase tracking-wide min-w-[4.5rem] text-gray-400 dark:text-gray-500"
 						>
 							{getItemLabel(di)}
 						</div>
@@ -270,7 +272,7 @@
 						{#if di.type === 'message'}
 							<textarea
 								use:fitContent
-								class="w-full bg-transparent outline-hidden resize-none overflow-hidden text-[0.9375rem] p-1.5 rounded-lg"
+								class="w-full bg-transparent outline-hidden focus-visible:outline-none! resize-none overflow-hidden text-[0.9375rem] p-1.5 rounded-lg"
 								value={getMessageText(di.item)}
 								on:input={(e) => {
 									updateMessageText(di.indices[0], e.target.value);
@@ -282,7 +284,7 @@
 						{:else if di.type === 'reasoning'}
 							<textarea
 								use:fitContent
-								class="w-full bg-transparent outline-hidden resize-none overflow-hidden text-[0.9375rem] text-gray-500 dark:text-gray-400 p-1.5 rounded-lg"
+								class="w-full bg-transparent outline-hidden focus-visible:outline-none! resize-none overflow-hidden text-[0.9375rem] text-gray-500 dark:text-gray-400 p-1.5 rounded-lg"
 								value={getReasoningText(di.item)}
 								on:input={(e) => {
 									updateReasoningText(di.indices[0], e.target.value);
@@ -335,8 +337,8 @@
 					<!-- Delete -->
 					<div class="pt-1.5">
 						<button
+							class="hover-reveal p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
 							aria-label={$i18n.t('Delete')}
-							class="invisible group-hover:visible p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
 							on:click={() => deleteIndices(di.indices)}
 						>
 							<svg

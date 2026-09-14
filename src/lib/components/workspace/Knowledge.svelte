@@ -10,7 +10,7 @@
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { WEBUI_NAME, user, workspaceActions } from '$lib/stores';
+	import { WEBUI_NAME, user, workspaceActions, workspaceCounts } from '$lib/stores';
 	import {
 		deleteKnowledgeById,
 		searchKnowledgeBases,
@@ -153,6 +153,7 @@
 		if (res) {
 			console.log(res);
 			total = res.total;
+			workspaceCounts.update((counts) => ({ ...counts, knowledge: total }));
 			const pageItems: KnowledgeListItem[] = res.items ?? [];
 
 			if ((pageItems ?? []).length === 0) {
@@ -271,6 +272,11 @@
 		viewOption = localStorage?.workspaceViewOption || '';
 		sourceOption = localStorage?.workspaceKnowledgeSourceOption || '';
 		loaded = true;
+		await tick();
+
+		if (items === null && !itemsLoading) {
+			await init();
+		}
 
 		if (showCreateOnMount) {
 			showCreateModal = true;
@@ -279,6 +285,9 @@
 </script>
 
 <svelte:head>
+	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
 	<title>
 		{$i18n.t('Knowledge')} / {$WEBUI_NAME}
 	</title>
@@ -438,7 +447,7 @@
 													placement="top-start"
 												>
 													<div
-														class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+														class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 													>
 														{item.name}
 													</div>
@@ -458,7 +467,7 @@
 
 												<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
 													<div
-														class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+														class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 													>
 														{dayjs(item.updated_at * 1000).fromNow()}
 													</div>
@@ -479,7 +488,7 @@
 								</div>
 
 								<div
-									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 								>
 									<Tooltip
 										content={item?.user?.email ?? $i18n.t('Deleted User')}

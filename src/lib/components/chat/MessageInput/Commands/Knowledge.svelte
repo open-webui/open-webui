@@ -142,7 +142,7 @@
 {#if filteredItems.length > 0 || query.startsWith('http')}
 	{#each filteredItems as item, idx}
 		{#if idx === 0 || item?.type !== items[idx - 1]?.type}
-			<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+			<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 				{#if item?.type === 'folder'}
 					{$i18n.t('Folders')}
 				{:else if item?.type === 'collection'}
@@ -155,7 +155,7 @@
 
 		{#if !['youtube', 'web'].includes(item.type)}
 			<button
-				class="flex h-[1.6875rem] w-full items-center justify-between rounded-xl px-2 text-left text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {idx ===
+				class="flex h-[1.6875rem] w-full items-center justify-between rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {idx ===
 				selectedIdx
 					? 'bg-gray-50/40 dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button'
 					: ''}"
@@ -204,7 +204,7 @@
 
 	{#if isYoutubeUrl(query)}
 		<button
-			class="flex h-[1.6875rem] w-full items-center rounded-xl bg-gray-50/40 px-2 text-left text-[13px] dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button"
+			class="flex h-[1.6875rem] w-full items-center rounded-xl bg-gray-50/40 px-2 text-left text-[0.8125rem] dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button"
 			type="button"
 			data-selected={selectedIdx === filteredItems.findIndex((i) => i.type === 'youtube')}
 			on:click={() => {
@@ -232,7 +232,7 @@
 		</button>
 	{:else if query.startsWith('http')}
 		<button
-			class="flex h-[1.6875rem] w-full items-center rounded-xl bg-gray-50/40 px-2 text-left text-[13px] dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button"
+			class="flex h-[1.6875rem] w-full items-center rounded-xl bg-gray-50/40 px-2 text-left text-[0.8125rem] dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button"
 			type="button"
 			data-selected={selectedIdx === filteredItems.findIndex((i) => i.type === 'web')}
 			on:click={() => {

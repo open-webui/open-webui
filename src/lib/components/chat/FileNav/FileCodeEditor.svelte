@@ -12,12 +12,19 @@
 	export let value = '';
 	export let filePath: string | null = null;
 	export let onSave: ((content: string) => Promise<void>) | null = null;
+	export let searchTarget: {
+		line: number;
+		column: number;
+		length: number;
+		requestId: number;
+	} | null = null;
 
 	let container: HTMLDivElement;
 	let editor: EditorView | null = null;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
 	let internalValue = '';
+	let lastSearchTargetRequestId = 0;
 
 	/** Return the current editor content */
 	export const getValue = (): string => {
@@ -35,6 +42,20 @@
 
 	export const focus = () => {
 		editor?.focus();
+	};
+
+	const revealSearchTarget = () => {
+		if (!editor || !searchTarget || searchTarget.requestId === lastSearchTargetRequestId) return;
+		lastSearchTargetRequestId = searchTarget.requestId;
+		const lineNumber = Math.min(Math.max(searchTarget.line, 1), editor.state.doc.lines);
+		const line = editor.state.doc.line(lineNumber);
+		const from = line.from + Math.min(Math.max(searchTarget.column - 1, 0), line.length);
+		const to = Math.min(from + Math.max(searchTarget.length, 1), line.to);
+		editor.dispatch({
+			selection: { anchor: from, head: to },
+			effects: EditorView.scrollIntoView(from, { y: 'center' })
+		});
+		editor.focus();
 	};
 
 	const detectLanguage = async (path: string | null) => {
@@ -59,6 +80,10 @@
 	// React to filePath changes for language detection
 	$: if (editor && filePath) {
 		detectLanguage(filePath);
+	}
+
+	$: if (editor && searchTarget) {
+		revealSearchTarget();
 	}
 
 	onMount(() => {
@@ -105,6 +130,7 @@
 		});
 
 		detectLanguage(filePath);
+		revealSearchTarget();
 
 		// Watch dark mode
 		const observer = new MutationObserver(() => {

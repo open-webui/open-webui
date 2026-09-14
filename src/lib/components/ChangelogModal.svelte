@@ -93,6 +93,9 @@
 			class="flex shrink-0 items-start justify-between gap-4 px-4 pb-2.5 pt-3.5 dark:text-white text-black"
 		>
 			<div class="min-w-0">
+				<!-- LICENSE covers this Open WebUI release identifier.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
 				<h2 class="m-0 truncate text-base font-normal">
 					{$i18n.t("What's New in")}
 					{$WEBUI_NAME}
@@ -151,7 +154,7 @@
 													class="mt-[0.6em] h-1 w-1 shrink-0 rounded-full bg-gray-300 dark:bg-gray-700"
 												></span>
 												<div
-													class="min-w-0 markdown-prose-sm !max-w-none !text-[0.8125rem] text-gray-600 dark:text-gray-300 [&_*]:!my-0 [&_b]:!font-normal [&_strong]:!font-normal"
+													class="min-w-0 markdown-prose-sm list-none !max-w-none !text-[0.8125rem] text-gray-600 dark:text-gray-300 [&_*]:!my-0 [&_b]:!font-normal [&_strong]:!font-normal"
 												>
 													<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 													{@html DOMPurify.sanitize(entry?.raw)}

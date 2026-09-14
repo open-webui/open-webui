@@ -88,7 +88,9 @@
 			: period === 'year' || period === 'all'
 				? 'M/D/YY'
 				: 'M/D'}
-		<div class="absolute inset-x-0 bottom-0 flex justify-between px-0.5 text-[10px] text-gray-400">
+		<div
+			class="absolute inset-x-0 bottom-0 flex justify-between px-0.5 text-[0.625rem] text-gray-400"
+		>
 			{#each Array(labelCount) as _, i}
 				{@const idx = i === labelCount - 1 ? data.length - 1 : Math.min(i * step, data.length - 1)}
 				{#if data[idx]}
@@ -102,13 +104,13 @@
 	{#if hovered}
 		{@const total = Object.values(hovered.models || {}).reduce((a, b) => a + b, 0)}
 		<div
-			class="pointer-events-none absolute top-1 text-[11px]"
+			class="pointer-events-none absolute top-1 text-[0.6875rem]"
 			style="left:{Math.min(Math.max((mouseX / w) * 100, 8), 92)}%"
 		>
 			<div
-				class="min-w-[140px] -translate-x-1/2 rounded border border-gray-100 bg-white px-2.5 py-1.5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+				class="min-w-[8.75rem] -translate-x-1/2 rounded border border-gray-100 bg-white px-2.5 py-1.5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
 			>
-				<div class="mb-1.5 text-[10px] text-gray-400">
+				<div class="mb-1.5 text-[0.625rem] text-gray-400">
 					{#if hovered.date?.includes(':')}
 						{dayjs(hovered.date).format('MMM D, h A')}
 					{:else}

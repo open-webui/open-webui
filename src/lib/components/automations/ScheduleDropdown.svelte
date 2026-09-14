@@ -106,7 +106,7 @@
 
 	export const parseRrule = (s: string) => {
 		// Detect ONCE (COUNT=1 with DTSTART)
-		if (s.includes('COUNT=1')) {
+		if (/COUNT=1(?!\d)/.test(s)) {
 			frequency = 'ONCE';
 			const match = s.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
 			if (match) {
@@ -116,7 +116,10 @@
 			return;
 		}
 		const parts: Record<string, string> = {};
-		s.replace('RRULE:', '')
+		s.split(/\s+/)
+			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
+			.join('')
+			.replace('RRULE:', '')
 			.split(';')
 			.forEach((p) => {
 				const [k, v] = p.split('=');
@@ -125,6 +128,7 @@
 		const freq = parts.FREQ || 'DAILY';
 		if (!['HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY'].includes(freq)) {
 			frequency = 'CUSTOM';
+			prevFrequency = 'CUSTOM';
 			customRrule = s;
 			return;
 		}
@@ -194,13 +198,13 @@
 		slot="content"
 		class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-0.5"
 	>
-		<div class="px-2 text-[11px] text-gray-500 pt-0.5">
+		<div class="px-2 text-[0.6875rem] text-gray-500 pt-0.5">
 			{$i18n.t('Schedule')}
 		</div>
 
 		<div class="px-1.5 py-0.5">
 			<select
-				class="w-full h-[1.6875rem] bg-transparent rounded-xl text-[13px] px-1.5 outline-hidden"
+				class="w-full h-[1.6875rem] bg-transparent rounded-xl text-[0.8125rem] px-1.5 outline-hidden"
 				bind:value={frequency}
 				on:click={(e) => e.stopPropagation()}
 				on:change={onChange}
@@ -217,13 +221,13 @@
 					type="text"
 					bind:value={customRrule}
 					placeholder="RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
-					class="w-full bg-transparent outline-hidden text-[13px] placeholder:text-gray-400 dark:placeholder:text-gray-600"
+					class="w-full bg-transparent outline-hidden text-[0.8125rem] placeholder:text-gray-400 dark:placeholder:text-gray-600"
 					on:click={(e) => e.stopPropagation()}
 					on:input={onChange}
 				/>
 			</div>
 		{:else if frequency !== 'HOURLY'}
-			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-[13px]">
+			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-[0.8125rem]">
 				{#if frequency === 'ONCE'}
 					<div class="flex items-center gap-1.5">
 						<input

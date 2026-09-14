@@ -117,7 +117,7 @@
 			</a>
 		</div>
 
-		<div class="flex-1 mt-1 lg:mt-0 px-[16px] lg:pr-[16px] lg:pl-0 overflow-y-scroll">
+		<div class="flex-1 mt-1 lg:mt-0 px-[1rem] lg:pr-[1rem] lg:pl-0 overflow-y-scroll">
 			{#if selectedTab === 'leaderboard'}
 				<Leaderboard />
 			{:else if selectedTab === 'feedback'}

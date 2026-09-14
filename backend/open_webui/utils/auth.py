@@ -4,7 +4,6 @@ import asyncio
 import base64
 import hashlib
 import hmac
-import json
 import logging
 import os
 import uuid
@@ -40,6 +39,8 @@ from open_webui.models.auths import Auths
 from open_webui.models.config import Config
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.misc import parse_duration
 from pytz import UTC
 
 log = logging.getLogger(__name__)
@@ -86,11 +87,17 @@ def get_license_data(app, key):
     def data_handler(data):
         for k, v in data.items():
             if k == 'resources':
+                # LICENSE covers these Open WebUI branding assets.
+                # Do not alter, remove, obscure, or replace them except as LICENSE permits:
+                # https://docs.openwebui.com/license.
                 for p, c in v.items():
                     globals().get('override_static', lambda a, b: None)(p, c)
             elif k == 'count':
                 setattr(app.state, 'USER_COUNT', v)
             elif k == 'name':
+                # LICENSE covers this Open WebUI product name.
+                # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                # https://docs.openwebui.com/license.
                 setattr(app.state, 'WEBUI_NAME', v)
             elif k == 'metadata':
                 setattr(app.state, 'LICENSE_METADATA', v)
@@ -137,13 +144,13 @@ def get_license_data(app, key):
             ln, lt = nt(lb)
 
             aesgcm = AESGCM(kb)
-            p = json.loads(aesgcm.decrypt(ln, lt, None))
+            p = JSONCodec.loads(aesgcm.decrypt(ln, lt, None))
             pk.verify(base64.b64decode(p['s']), p['p'].encode())
 
             pb = base64.b64decode(p['p'])
             pn, pt = nt(pb)
 
-            data = json.loads(aesgcm.decrypt(pn, pt, None).decode())
+            data = JSONCodec.loads(aesgcm.decrypt(pn, pt, None).decode())
 
             exp = data.get('exp')
             if exp:
@@ -245,8 +252,8 @@ async def is_valid_token(decoded, redis=None) -> bool:
     """
     Check whether a JWT has been revoked. Two mechanisms:
     1. Per-token (jti) — used by user-initiated sign-out (known jti).
-    2. Per-user (revoked_at) — used by OIDC back-channel logout when
-       individual jti values are unknown; rejects tokens with iat <= revoked_at.
+    2. Per-user (revoked_at) — used by password changes and OIDC back-channel
+       logout when individual jti values are unknown; rejects tokens with iat <= revoked_at.
     """
     if redis:
         # Per-token revocation
@@ -256,7 +263,7 @@ async def is_valid_token(decoded, redis=None) -> bool:
             if revoked:
                 return False
 
-        # Per-user revocation (OIDC back-channel logout)
+        # Per-user revocation (password change, OIDC back-channel logout)
         user_id = decoded.get('id')
         if user_id:
             revoked_at = await redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
@@ -295,6 +302,27 @@ async def invalidate_token(request, token):
                     '1',
                     ex=ttl,
                 )
+
+
+async def revoke_user_tokens(request, user_id: str):
+    """Reject every token already issued to a user. Requires Redis."""
+    redis = request.app.state.redis
+
+    if not redis:
+        log.warning(
+            'Cannot revoke tokens for user %s: Redis is not configured, existing sessions stay valid until expiry.',
+            user_id,
+        )
+        return
+
+    # The marker has to outlive every token it revokes, so it never expires when tokens do not
+    expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
+
+    await redis.set(
+        f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at',
+        str(int(datetime.now(UTC).timestamp())),
+        ex=int(expires_delta.total_seconds()) if expires_delta else None,
+    )
 
 
 def extract_token_from_auth_header(auth_header: str):
@@ -513,6 +541,39 @@ async def get_verified_user_by_token(token: str, redis=None):
     return user
 
 
+async def get_verified_user_by_id(user_id: str | None):
+    if not user_id:
+        return None
+
+    user = await Users.get_user_by_id(user_id)
+    if user is None or user.role not in VERIFIED_USER_ROLES:
+        return None
+
+    return user
+
+
+async def get_optional_verified_user_from_request(request: Request):
+    token = None
+    auth_token = get_http_authorization_cred(request.headers.get('Authorization'))
+    if auth_token:
+        token = auth_token.credentials
+    if token is None:
+        token = request.cookies.get('token')
+    if token is None and getattr(request.state, 'token', None):
+        token = request.state.token.credentials
+    if not token:
+        return None
+
+    try:
+        if token.startswith('sk-'):
+            user = await get_current_user_by_api_key(request, token)
+            return user if user.role in VERIFIED_USER_ROLES else None
+
+        return await get_verified_user_by_token(token, getattr(request.app.state, 'redis', None))
+    except HTTPException:
+        return None
+
+
 def get_admin_user(user=Depends(get_current_user)):
     if user.role != 'admin':
         raise HTTPException(
@@ -536,7 +597,7 @@ async def create_admin_user(email: str, password: str, name: str = 'Admin'):
         log.debug('Users already exist, skipping admin creation')
         return None
 
-    log.info(f'Creating admin account from environment variables: {email}')
+    log.info('Creating admin account from environment variables: %s', email)
     try:
         hashed = await get_password_hash(password)
         user = await Auths.insert_new_auth(
@@ -546,7 +607,7 @@ async def create_admin_user(email: str, password: str, name: str = 'Admin'):
             role='admin',
         )
         if user:
-            log.info(f'Admin account created successfully: {email}')
+            log.info('Admin account created successfully: %s', email)
             return user
         else:
             log.error('Failed to create admin account from environment variables')

@@ -10,6 +10,8 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
+	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
@@ -22,6 +24,7 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		TASK_MODEL_PARAMS: {},
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
@@ -46,12 +49,26 @@
 		CONTEXT_COMPACTION_TOKEN_THRESHOLD: 80000,
 		CONTEXT_COMPACTION_TOKEN_CAP: 80000,
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
-		CONTEXT_COMPACTION_PROMPT_TEMPLATE: ''
+		CONTEXT_COMPACTION_PROMPT_TEMPLATE: '',
+		ENABLE_TOOL_PERMISSIONS: false
 	};
+	let showTaskParameters = false;
+
+	const configuredParams = (params: Record<string, any> = {}) =>
+		Object.fromEntries(
+			Object.entries(params).filter(
+				([_, value]) => value !== null && value !== '' && value !== undefined
+			)
+		);
 
 	const updateInterfaceHandler = async () => {
+		const taskConfigPayload = {
+			...taskConfig,
+			TASK_MODEL_PARAMS: configuredParams(taskConfig.TASK_MODEL_PARAMS)
+		};
+
 		[taskConfig, chatConfig] = await Promise.all([
-			updateTaskConfig(localStorage.token, taskConfig),
+			updateTaskConfig(localStorage.token, taskConfigPayload),
 			updateChatConfig(localStorage.token, chatConfig)
 		]);
 		appConfig.update((current) =>
@@ -60,7 +77,8 @@
 						...current,
 						features: {
 							...current.features,
-							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION
+							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION,
+							enable_tool_permissions: chatConfig.ENABLE_TOOL_PERMISSIONS
 						}
 					}
 				: current
@@ -104,6 +122,7 @@
 				getTaskConfig(localStorage.token),
 				getChatConfig(localStorage.token)
 			]);
+			taskConfig.TASK_MODEL_PARAMS = taskConfig.TASK_MODEL_PARAMS ?? {};
 
 			workspaceModels = await getBaseModels(localStorage.token);
 			baseModels = await getModels(localStorage.token, null, false);
@@ -206,10 +225,49 @@
 							</SettingsSelect>
 						</AdminSettingField>
 					</div>
+
+					<div class="mt-2.5">
+						<button
+							class="flex w-full items-center justify-between gap-4 py-0.5 text-left"
+							type="button"
+							on:click={() => {
+								showTaskParameters = !showTaskParameters;
+							}}
+						>
+							<span class="text-xs text-gray-600 dark:text-gray-400">
+								{$i18n.t('Task Model Parameters')}
+							</span>
+							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								{showTaskParameters ? $i18n.t('Close') : $i18n.t('Configure')}
+							</span>
+						</button>
+
+						{#if showTaskParameters}
+							<div class="max-h-[24rem] overflow-y-auto pb-2 pr-1 scrollbar-hover">
+								<AdvancedParams
+									admin={true}
+									custom={true}
+									bind:params={taskConfig.TASK_MODEL_PARAMS}
+								/>
+							</div>
+						{/if}
+					</div>
 				</div>
 			</AdminSettingSection>
 
 			<AdminSettingSection title={$i18n.t('Chat')}>
+				<AdminSettingRow
+					label={$i18n.t('Tool Permissions')}
+					description={$i18n.t('Show Full access and Ask for approval in the chat input menu.')}
+					let:labelId
+				>
+					<div slot="label" class="flex items-center gap-2">
+						<span>{$i18n.t('Tool Permissions')}</span>
+						<ExperimentalBadge />
+					</div>
+					<Switch bind:state={chatConfig.ENABLE_TOOL_PERMISSIONS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
 				<AdminSettingRow
 					label={$i18n.t('Context Compaction')}
 					description={$i18n.t(

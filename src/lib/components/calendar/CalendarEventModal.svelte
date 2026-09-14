@@ -100,10 +100,10 @@
 				endTime = nsToTimeStr(endNs);
 			} else {
 				const now = new Date();
-				startDate = now.toISOString().slice(0, 10);
+				startDate = nsToDateStr(now.getTime() * NS);
 				startTime = now.toTimeString().slice(0, 5);
 				const later = new Date(now.getTime() + 60 * 60 * 1000);
-				endDate = later.toISOString().slice(0, 10);
+				endDate = nsToDateStr(later.getTime() * NS);
 				endTime = later.toTimeString().slice(0, 5);
 			}
 			allDay = false;
@@ -121,10 +121,20 @@
 			return;
 		}
 
+		if (!startDate) {
+			toast.error($i18n.t('Date is required'));
+			return;
+		}
+
 		loading = true;
 		try {
 			const startNs = dateTimeToNs(startDate, allDay ? '00:00' : startTime);
-			const endNs = endDate ? dateTimeToNs(endDate, allDay ? '23:59' : endTime) : undefined;
+			let endNs = endDate ? dateTimeToNs(endDate, allDay ? '23:59' : endTime) : undefined;
+			if (endNs !== undefined && endNs < startNs) {
+				const duration =
+					event?.end_at && event.end_at > event.start_at ? event.end_at - event.start_at : 0;
+				endNs = startNs + duration;
+			}
 
 			if (event && !event.meta?.automation_id) {
 				const result = await updateCalendarEvent(localStorage.token, event.id, {

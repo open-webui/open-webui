@@ -2,7 +2,7 @@ name: Issue Labeler
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
 
 permissions:
   issues: write
@@ -22,22 +22,118 @@ jobs:
               return;
             }
 
+            const isEdit = context.payload.action === 'edited';
+            const titleWasEdited = Boolean(context.payload.changes?.title);
+
+            if (isEdit && !titleWasEdited) {
+              return;
+            }
+
             const title = issue.title ?? '';
             const body = issue.body ?? '';
 
             // Freeform bug reports: "issue: ...", "bug: ...", "fix: ...", "[Bug] ...", "issue/UX: ..."
-            const bugLikeTitle = /^\s*\[?(bug|issue|fix)\]?\s*[:/\-]/i.test(title);
+            const bugLikeTitle = /^\s*(\[\s*(bug|issue|fix)\b[^\]]*\]|(bug|issue|fix)\s*[:/\-])/i.test(title);
 
             // API/CLI-created issues that reproduce the bug report form structure.
             // Only headings distinctive to the bug form (both are required fields there) —
             // generic headings like "Expected Behavior" also appear in freeform feature requests.
             const bugFormBody = /###\s*(Installation Method|Open WebUI Version)/i.test(body);
 
-            if (bugLikeTitle || bugFormBody) {
-              await github.rest.issues.addLabels({
+            if (!bugLikeTitle && !bugFormBody) {
+              return;
+            }
+
+            if (isEdit) {
+              const events = await github.paginate(github.rest.issues.listEvents, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                labels: ['bug']
+                per_page: 100
               });
+
+              const bugLabelWasRemoved = events.some(
+                (event) => event.event === 'unlabeled' && event.label?.name === 'bug'
+              );
+
+              if (bugLabelWasRemoved) {
+                return;
+              }
             }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['bug']
+            });
+
+  label-feature-requests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add "enhancement" label to unlabeled feature requests
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+
+            if (issue.labels.some((label) => label.name === 'enhancement')) {
+              return;
+            }
+
+            // A human (or the bug form) already classified this as a bug;
+            // do not stack a second, contradictory classification on it.
+            if (issue.labels.some((label) => label.name === 'bug')) {
+              return;
+            }
+
+            const isEdit = context.payload.action === 'edited';
+            const titleWasEdited = Boolean(context.payload.changes?.title);
+
+            if (isEdit && !titleWasEdited) {
+              return;
+            }
+
+            const title = issue.title ?? '';
+            const body = issue.body ?? '';
+
+            // Feature requests: "feat: ...", "feature: ...", "feature request: ...",
+            // "enhancement: ...", "enh: ...", "[Feature Request] ..." — the feature
+            // request form titles every submission "feat: ", so form submissions are
+            // covered by the same pattern.
+            const featureLikeTitle =
+              /^\s*(\[\s*(feat|feature|enhancement|enh)\b[^\]]*\]|(feat|feature( request)?|enhancement|enh)\s*[:/\-])/i.test(
+                title
+              );
+
+            // API/CLI-created issues that reproduce the feature request form structure.
+            // Only headings distinctive to that form.
+            const featureFormBody = /###\s*(Proposed Solution|Alternatives Considered)/i.test(body);
+
+            if (!featureLikeTitle && !featureFormBody) {
+              return;
+            }
+
+            if (isEdit) {
+              const events = await github.paginate(github.rest.issues.listEvents, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                per_page: 100
+              });
+
+              const enhancementLabelWasRemoved = events.some(
+                (event) => event.event === 'unlabeled' && event.label?.name === 'enhancement'
+              );
+
+              if (enhancementLabelWasRemoved) {
+                return;
+              }
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['enhancement']
+            });

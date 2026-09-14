@@ -311,7 +311,7 @@
 	}
 	.sqlite-table th,
 	.sqlite-table td {
-		padding: 4px 8px;
+		padding: 0.25rem 0.5rem;
 		text-align: left;
 		white-space: nowrap;
 		border: 1px solid rgba(128, 128, 128, 0.15);
@@ -341,7 +341,7 @@
 	}
 	.sqlite-table td {
 		color: #374151;
-		max-width: 300px;
+		max-width: 18.75rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
@@ -354,7 +354,7 @@
 		text-align: right !important;
 		user-select: none;
 		width: 1px;
-		padding-right: 6px !important;
+		padding-right: 0.375rem !important;
 	}
 	:global(.dark) .sqlite-row-num {
 		color: #6b7280;

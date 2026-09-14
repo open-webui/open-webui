@@ -64,6 +64,16 @@ code {
 	@apply bg-gray-50/40 dark:bg-gray-800/40;
 }
 
+/* visibility:hidden is not focusable, so a keyboard user could never reveal these */
+.hover-reveal {
+	@apply opacity-0 pointer-events-none;
+}
+
+.group:hover .hover-reveal,
+.group:focus-within .hover-reveal {
+	@apply opacity-100 pointer-events-auto;
+}
+
 .marked a {
 	@apply underline;
 }
@@ -98,23 +108,23 @@ textarea::-webkit-scrollbar-corner {
 }
 
 .input-prose {
-	@apply prose dark:prose-invert !text-[0.9375rem] prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
+	@apply prose dark:prose-invert !text-[0.9375rem] prose-headings:font-medium prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
 
 .input-prose-sm {
-	@apply prose dark:prose-invert prose-headings:font-normal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
+	@apply prose dark:prose-invert prose-headings:font-medium prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
 }
 
 .markdown-prose {
-	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.9375rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-normal prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:my-3 prose-blockquote:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
+	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.9375rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-medium prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:my-3 prose-blockquote:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
 }
 
 .markdown-prose-sm {
-	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-medium prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-medium prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
@@ -163,6 +173,7 @@ li p {
 }
 
 select {
+	color-scheme: light;
 	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 	background-position: right 0rem center;
 	background-repeat: no-repeat;
@@ -174,6 +185,10 @@ select {
 	-moz-appearance: none;
 	/* for Chrome */
 	-webkit-appearance: none;
+}
+
+.dark select {
+	color-scheme: dark;
 }
 
 .dark select:not([class*='bg-transparent']) {
@@ -397,6 +412,17 @@ input[type='number'] {
 
 .ProseMirror:focus {
 	outline: none;
+}
+
+:focus-visible:not(.ProseMirror):not([contenteditable='true']):not(input):not(textarea),
+.focus-ring:focus-visible {
+	outline: 2px solid theme(--color-blue-500);
+	outline-offset: -2px;
+}
+
+html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):focus-visible {
+	outline: 2px solid theme(--color-blue-500);
+	outline-offset: -2px;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
@@ -694,7 +720,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 /* this is a rough fix for the first cursor position when the first paragraph is empty */
 .ProseMirror > .ProseMirror-yjs-cursor:first-child {
-	margin-top: 16px;
+	margin-top: 1rem;
 }
 /* This gives the remote user caret. The colors are automatically overwritten*/
 .ProseMirror-yjs-cursor {
@@ -712,12 +738,12 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	position: absolute;
 	top: -1.05em;
 	left: -1px;
-	font-size: 13px;
+	font-size: 0.8125rem;
 	background-color: rgb(250, 129, 0);
 	user-select: none;
 	color: white;
-	padding-left: 2px;
-	padding-right: 2px;
+	padding-left: 0.125rem;
+	padding-right: 0.125rem;
 	white-space: nowrap;
 }
 
@@ -734,7 +760,7 @@ body {
 /* Position the handle relative to each LI */
 .pm-li--with-handle {
 	position: relative;
-	margin-left: 12px; /* make space for the handle */
+	margin-left: 0.75rem; /* make space for the handle */
 }
 
 .tiptap ul[data-type='taskList'] .pm-list-drag-handle {
@@ -744,16 +770,16 @@ body {
 /* The drag handle itself */
 .pm-list-drag-handle {
 	position: absolute;
-	left: -36px; /* pull into the left gutter */
+	left: -2.25rem; /* pull into the left gutter */
 	top: 1px;
-	width: 18px;
-	height: 18px;
+	width: 1.125rem;
+	height: 1.125rem;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 12px;
+	font-size: 0.75rem;
 	line-height: 1;
-	border-radius: 4px;
+	border-radius: 0.25rem;
 	cursor: grab;
 	user-select: none;
 	opacity: 0.35;
@@ -763,7 +789,7 @@ body {
 }
 
 .tiptap ul[data-type='taskList'] .pm-list-drag-handle {
-	left: -16px; /* pull into the left gutter more to avoid the checkbox */
+	left: -1rem; /* pull into the left gutter more to avoid the checkbox */
 }
 
 .pm-list-drag-handle:active {
@@ -844,77 +870,134 @@ body {
 	padding-bottom: 2rem; /* space for the bottom toolbar */
 }
 
-/* High Contrast Mode: placeholders bottom out at 1.58:1 (WCAG 1.4.3 wants 4.5:1). */
+/* Accessibility Mode: placeholders bottom out at 1.58:1 (WCAG 1.4.3 wants 4.5:1). */
 @layer utilities {
 	html.high-contrast:not(.dark) :is(input, textarea)::placeholder {
-		color: var(--color-gray-600);
+		color: var(--color-gray-700);
 	}
 
 	html.high-contrast.dark :is(input, textarea)::placeholder {
-		color: var(--color-gray-500);
+		color: var(--color-gray-300);
 	}
 }
 
-/* High Contrast Mode: muted text fails WCAG 1.4.3 (2.07:1 light, 3.12:1 dark).
+/* Accessibility Mode: muted text fails WCAG 1.4.3 (2.07:1 light, 3.12:1 dark).
    :where() keeps these at low specificity so hover variants still win. */
 @layer utilities {
 	html:where(.high-contrast):not(:where(.dark)) .text-gray-400 {
-		color: var(--color-gray-600);
+		color: var(--color-gray-700);
 	}
 
-	html:where(.high-contrast).dark .dark\:text-gray-600 {
-		color: var(--color-gray-400);
+	html:where(.high-contrast).dark
+		:is(.dark\:text-gray-400, .dark\:text-gray-500, .dark\:text-gray-600) {
+		color: var(--color-gray-300);
+	}
+
+	html:where(.high-contrast).dark
+		:is(
+			.dark\:hover\:text-gray-100:hover,
+			.dark\:hover\:text-gray-200:hover,
+			.dark\:hover\:text-gray-300:hover,
+			.dark\:hover\:text-gray-400:hover
+		) {
+		color: #fff;
 	}
 
 	/* Elements that hover to a lighter grey than the new resting colour. */
-	html:where(.high-contrast):not(:where(.dark)) .hover\:text-gray-500:hover {
-		color: var(--color-gray-800);
+	html:where(.high-contrast):not(:where(.dark))
+		:is(
+			.hover\:text-gray-500:hover,
+			.hover\:text-gray-600:hover,
+			.hover\:text-gray-700:hover,
+			.hover\:text-gray-800:hover
+		) {
+		color: var(--color-gray-900);
 	}
 }
 
-/* High Contrast Mode: gray-500 muted text is 2.77:1 in light (WCAG 1.4.3 wants 4.5:1).
+/* Accessibility Mode: gray-500 muted text is 2.77:1 in light (WCAG 1.4.3 wants 4.5:1).
    The utility stays in the layer so hover variants still outrank it; the classes below
    are unlayered, so their override has to be too. */
 @layer utilities {
-	html:where(.high-contrast):not(:where(.dark)) .text-gray-500 {
-		color: var(--color-gray-600);
+	html:where(.high-contrast):not(:where(.dark)) :is(.text-gray-500, .text-gray-600) {
+		color: var(--color-gray-700);
 	}
 }
 
 html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table) {
-	color: var(--color-gray-600);
+	color: var(--color-gray-700);
 }
 
-/* High Contrast Mode: the lightest muted pair, 1.58:1 in light and 2.14:1 in dark.
+html.high-contrast.dark :is(.app-muted, .app-icon-muted, .tiptap table) {
+	color: var(--color-gray-300);
+}
+
+html.high-contrast:not(.dark)
+	:is(
+		#sidebar .hover\:bg-gray-100:hover,
+		#sidebar .group:hover .group-hover\:bg-gray-100,
+		.app-dropdown-menu :is(button, a):hover
+	) {
+	background-color: var(--color-gray-200) !important;
+}
+
+html.high-contrast.dark
+	:is(
+		#sidebar .dark\:hover\:bg-gray-900:hover,
+		#sidebar .group:hover .dark\:group-hover\:bg-gray-900,
+		.app-dropdown-menu :is(button, a):hover
+	) {
+	background-color: var(--color-gray-800) !important;
+}
+
+/* Accessibility Mode: the lightest muted pair, 1.58:1 in light and 2.14:1 in dark.
    text-gray-400/70 is an icon colour, so 1.4.11 governs it, and 2.07:1 misses that too. */
 @layer utilities {
 	html:where(.high-contrast):not(:where(.dark)) :is(.text-gray-300, .text-gray-400\/70) {
-		color: var(--color-gray-600);
+		color: var(--color-gray-700);
 	}
 
-	html:where(.high-contrast).dark .dark\:text-gray-700 {
-		color: var(--color-gray-400);
+	html:where(.high-contrast).dark :is(.dark\:text-gray-700, .dark\:text-gray-800) {
+		color: var(--color-gray-300);
 	}
 
 	/* Hover states that land lighter than the new resting colour. */
-	html:where(.high-contrast):not(:where(.dark)) .hover\:text-gray-500:hover {
-		color: var(--color-gray-800);
+	html:where(.high-contrast):not(:where(.dark))
+		:is(
+			.hover\:text-gray-500:hover,
+			.hover\:text-gray-600:hover,
+			.hover\:text-gray-700:hover,
+			.hover\:text-gray-800:hover
+		) {
+		color: var(--color-gray-900);
 	}
 
-	html:where(.high-contrast):not(:where(.dark)) .group:hover .group-hover\:text-gray-500 {
-		color: var(--color-gray-800);
+	html:where(.high-contrast):not(:where(.dark))
+		.group:hover
+		:is(.group-hover\:text-gray-500, .group-hover\:text-gray-600, .group-hover\:text-gray-700) {
+		color: var(--color-gray-900);
+	}
+
+	html:where(.high-contrast).dark
+		.group:hover
+		:is(
+			.dark\:group-hover\:text-gray-200,
+			.dark\:group-hover\:text-gray-300,
+			.dark\:group-hover\:text-gray-400
+		) {
+		color: #fff;
 	}
 }
 
 /* Autocompletion ghost text is 2.65:1 in light; the dark canvas already passes. */
 html.high-contrast:not(.dark) .ai-autocompletion::after {
-	color: var(--color-gray-600);
+	color: var(--color-gray-700);
 }
 
 /* The shimmer gradient is 2.10:1 in light, and clipping it to the text leaves no
    solid colour to raise; render it as flat text instead. */
 html.high-contrast:not(.dark) .shimmer {
 	background: none;
-	color: var(--color-gray-700);
-	-webkit-text-fill-color: var(--color-gray-700);
+	color: var(--color-gray-800);
+	-webkit-text-fill-color: var(--color-gray-800);
 }

@@ -43,7 +43,7 @@
 		</div>
 
 		<!-- Form -->
-		<div class="px-5 pb-2 flex flex-col gap-3">
+		<div class="px-4 pb-2 flex flex-col gap-3">
 			<div>
 				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
 				<input

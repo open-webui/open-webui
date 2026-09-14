@@ -2,7 +2,6 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-import json
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -63,20 +62,18 @@ from open_webui.config import (
     OPENGAUSS_POOL_SIZE,
     OPENGAUSS_POOL_TIMEOUT,
 )
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.retrieval.vector.utils import iter_filter_conditions, process_metadata
 
 VECTOR_LENGTH = OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH
 Base = declarative_base()
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS['RAG'])
 
 
 class DocumentChunk(Base):
@@ -87,6 +84,12 @@ class DocumentChunk(Base):
     collection_name = Column(Text, nullable=False)
     text = Column(Text, nullable=True)
     vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)
+
+
+def _metadata_clause(key: str, op: str, value: Any):
+    if op == '$in':
+        return DocumentChunk.vmetadata[key].astext.in_([str(v) for v in value])
+    return DocumentChunk.vmetadata[key].astext == str(value)
 
 
 class OpenGaussClient(VectorDBBase):
@@ -182,7 +185,7 @@ class OpenGaussClient(VectorDBBase):
                 new_items.append(new_chunk)
             self.session.bulk_save_objects(new_items)
             self.session.commit()
-            log.info(f"Inserting {len(new_items)} items into collection '{collection_name}'.")
+            log.info("Inserting %s items into collection '%s'.", len(new_items), collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Failed to insert data: {e}')
@@ -208,7 +211,7 @@ class OpenGaussClient(VectorDBBase):
                     )
                     self.session.add(new_chunk)
             self.session.commit()
-            log.info(f"Inserting/updating {len(items)} items in collection '{collection_name}'.")
+            log.info("Inserting/updating %s items in collection '%s'.", len(items), collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Failed to insert or update data.: {e}')
@@ -245,10 +248,15 @@ class OpenGaussClient(VectorDBBase):
                 DocumentChunk.vmetadata,
                 (DocumentChunk.vector.cosine_distance(query_vectors.c.q_vector)).label('distance'),
             ]
+            where_clauses = [DocumentChunk.collection_name == collection_name]
+            if filter:
+                where_clauses.extend(
+                    _metadata_clause(key, op, value) for key, op, value in iter_filter_conditions(filter)
+                )
 
             subq = (
                 select(*result_fields)
-                .where(DocumentChunk.collection_name == collection_name)
+                .where(*where_clauses)
                 .order_by(DocumentChunk.vector.cosine_distance(query_vectors.c.q_vector))
             )
             if limit is not None:
@@ -353,7 +361,7 @@ class OpenGaussClient(VectorDBBase):
                     query = query.filter(DocumentChunk.vmetadata[key].astext == str(value))
             deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            log.info(f"Deleted {deleted} items from collection '{collection_name}'")
+            log.info("Deleted %s items from collection '%s'", deleted, collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Failed to delete data: {e}')
@@ -363,7 +371,7 @@ class OpenGaussClient(VectorDBBase):
         try:
             deleted = self.session.query(DocumentChunk).delete()
             self.session.commit()
-            log.info(f'Reset completed. Deleted {deleted} items')
+            log.info('Reset completed. Deleted %s items', deleted)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Reset failed: {e}')
@@ -387,4 +395,4 @@ class OpenGaussClient(VectorDBBase):
 
     def delete_collection(self, collection_name: str) -> None:
         self.delete(collection_name)
-        log.info(f"Collection '{collection_name}' has been deleted")
+        log.info("Collection '%s' has been deleted", collection_name)

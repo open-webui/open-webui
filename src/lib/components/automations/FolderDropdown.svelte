@@ -95,7 +95,7 @@
 			<Search className="size-3.5 shrink-0" strokeWidth="2.5" />
 			<input
 				bind:value={folderSearch}
-				class="w-full bg-transparent text-[13px] outline-hidden"
+				class="w-full bg-transparent text-[0.8125rem] outline-hidden"
 				placeholder={$i18n.t('Search folders')}
 				autocomplete="off"
 				on:click|stopPropagation
@@ -104,7 +104,7 @@
 
 		{#if folderOptions.length > 0}
 			<hr class="mx-1 my-0.5 border-gray-50/30 dark:border-gray-800/30" />
-			<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+			<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 				{$i18n.t('Folders')}
 			</div>
 		{/if}
@@ -113,7 +113,7 @@
 			{@const path = folderPath(folder)}
 			<button
 				type="button"
-				class="flex h-[1.6875rem] w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 {folder_id ===
+				class="flex h-[1.6875rem] w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 {folder_id ===
 				folder.id
 					? 'text-gray-900 dark:text-gray-100'
 					: 'text-gray-700 dark:text-gray-300'}"
@@ -130,7 +130,7 @@
 					<Folder className="size-3.5 shrink-0" />
 					<span class="min-w-0 truncate">{folderName(folder)}</span>
 					{#if path}
-						<span class="min-w-0 truncate text-[11px] text-gray-400 dark:text-gray-500">
+						<span class="min-w-0 truncate text-[0.6875rem] text-gray-400 dark:text-gray-500">
 							{path}
 						</span>
 					{/if}
@@ -140,7 +140,7 @@
 				{/if}
 			</button>
 		{:else}
-			<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+			<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 				{folderOptions.length > 0 ? $i18n.t('No results found') : $i18n.t('No folders')}
 			</div>
 		{/each}

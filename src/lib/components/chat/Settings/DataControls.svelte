@@ -216,20 +216,22 @@
 				</button>
 			</UserSettingRow>
 
-			<UserSettingRow
-				label={$i18n.t('Delete All Chats')}
-				description={$i18n.t('Permanently delete every chat after confirmation.')}
-			>
-				<button
-					class={actionButtonClass}
-					on:click={() => {
-						showDeleteConfirmDialog = true;
-					}}
-					type="button"
+			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+				<UserSettingRow
+					label={$i18n.t('Delete All Chats')}
+					description={$i18n.t('Permanently delete every chat after confirmation.')}
 				>
-					{$i18n.t('Delete All')}
-				</button>
-			</UserSettingRow>
+					<button
+						class={actionButtonClass}
+						on:click={() => {
+							showDeleteConfirmDialog = true;
+						}}
+						type="button"
+					>
+						{$i18n.t('Delete All')}
+					</button>
+				</UserSettingRow>
+			{/if}
 		</UserSettingSection>
 
 		<UserSettingSection title={$i18n.t('Files')}>

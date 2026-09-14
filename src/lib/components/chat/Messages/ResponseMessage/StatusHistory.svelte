@@ -59,7 +59,7 @@
 										</div>
 										{#if idx !== history.length - 1}
 											<div
-												class="w-[0.5px] ml-[6.5px] h-[calc(100%-14px)] bg-gray-300 dark:bg-gray-700"
+												class="w-[0.03125rem] ml-[0.40625rem] h-[calc(100%-14px)] bg-gray-300 dark:bg-gray-700"
 											/>
 										{/if}
 									</div>

@@ -34,6 +34,7 @@ from open_webui.env import (
     AIOHTTP_POOL_CONNECTIONS_PER_HOST,
     AIOHTTP_POOL_DNS_TTL,
 )
+from open_webui.utils.misc import stream_chunks_handler
 
 log = logging.getLogger(__name__)
 
@@ -115,7 +116,7 @@ async def cleanup_response(
                 await result
 
 
-async def stream_wrapper(response, session=None, content_handler=None, passthrough=False):
+async def stream_wrapper(response, session=None, passthrough=False):
     """Wrap a stream to ensure cleanup happens even if streaming is interrupted.
 
     This is more reliable than BackgroundTask which may not run if the client
@@ -126,12 +127,10 @@ async def stream_wrapper(response, session=None, content_handler=None, passthrou
     line. Only for streams no internal consumer parses line-by-line.
     """
     try:
-        if content_handler:
-            stream = content_handler(response.content)
-        elif passthrough:
+        if passthrough:
             stream = response.content.iter_any()
         else:
-            stream = response.content
+            stream = stream_chunks_handler(response.content)
         async for chunk in stream:
             yield chunk
     finally:

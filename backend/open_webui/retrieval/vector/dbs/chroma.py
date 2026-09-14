@@ -182,7 +182,7 @@ class ChromaClient(VectorDBBase):
                     collection.delete(where=filter)
         except Exception as e:
             # If collection doesn't exist, that's fine - nothing to delete
-            log.debug(f'Attempted to delete from non-existent collection {collection_name}. Ignoring.')
+            log.debug('Attempted to delete from non-existent collection %s. Ignoring.', collection_name)
             pass
 
     def reset(self):

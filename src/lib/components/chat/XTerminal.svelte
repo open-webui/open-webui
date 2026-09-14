@@ -1,15 +1,12 @@
 <script lang="ts">
-	import { onMount, onDestroy, getContext } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { Terminal } from '@xterm/xterm';
 	import { FitAddon } from '@xterm/addon-fit';
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import '@xterm/xterm/css/xterm.css';
 
-	import { terminalServers, settings, selectedTerminalId, user } from '$lib/stores';
+	import { terminalServers, settings, selectedTerminalId } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-
-	const i18n = getContext('i18n');
 
 	export let overlay = false;
 	export let chatId: string | null = null;
@@ -24,13 +21,19 @@
 	let pingInterval: ReturnType<typeof setInterval> | null = null;
 
 	// Resolve the active terminal server's info for the WebSocket URL
-	const getTerminalInfo = (): { serverId: string; baseUrl: string } | null => {
+	const getTerminalInfo = (): {
+		serverId: string;
+		baseUrl: string;
+	} | null => {
 		// System terminal (admin-configured, has an `id`)
 		const systemTerminals = ($terminalServers ?? []).filter((t: any) => t.id);
 		const systemMatch = systemTerminals.find((t: any) => t.id === $selectedTerminalId);
 		if (systemMatch) {
 			// For system terminals, WS goes through the Open WebUI backend proxy
-			return { serverId: systemMatch.id, baseUrl: WEBUI_API_BASE_URL };
+			return {
+				serverId: systemMatch.id,
+				baseUrl: WEBUI_API_BASE_URL
+			};
 		}
 
 		// Direct terminal (user-configured, matched by URL)
@@ -58,6 +61,7 @@
 			let sessionId: string;
 			let wsUrl: string;
 			let authToken: string;
+			let authChatId = '';
 
 			if (info.serverId === '__direct__') {
 				// Direct connection to open-terminal
@@ -98,6 +102,7 @@
 
 				const wsBase = base.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
 				wsUrl = `${wsBase}/terminals/${info.serverId}/api/terminals/${sessionId}`;
+				authChatId = chatId ?? '';
 			}
 
 			ws = new WebSocket(wsUrl);
@@ -106,7 +111,12 @@
 			ws.onopen = () => {
 				// First-message auth (no token in URL)
 				if (ws) {
-					ws.send(JSON.stringify({ type: 'auth', token: authToken.trim() }));
+					const authPayload: { type: string; token: string; chat_id?: string } = {
+						type: 'auth',
+						token: authToken.trim()
+					};
+					if (authChatId) authPayload.chat_id = authChatId;
+					ws.send(JSON.stringify(authPayload));
 				}
 				connected = true;
 				connecting = false;
@@ -259,7 +269,7 @@
 	};
 
 	// Reconnect when the selected terminal changes
-	$: if ($selectedTerminalId !== undefined && term) {
+	$: if (($selectedTerminalId, chatId, term)) {
 		// Clear the terminal screen and reconnect to the new server
 		disconnect();
 		term.clear();
@@ -282,5 +292,9 @@
 </script>
 
 <div class="h-full min-h-0 relative">
-	<div bind:this={terminalEl} class="absolute inset-0 px-0.5" class:pointer-events-none={overlay} />
+	<div
+		bind:this={terminalEl}
+		class="absolute inset-0 px-0.5"
+		class:pointer-events-none={overlay}
+	></div>
 </div>

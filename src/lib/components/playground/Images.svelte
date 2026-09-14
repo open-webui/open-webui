@@ -144,7 +144,7 @@
 											class="w-full aspect-square object-cover rounded-lg border border-gray-100/30 dark:border-gray-850/30"
 										/>
 										<div
-											class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center"
+											class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition rounded-lg flex items-center justify-center"
 										>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -188,7 +188,7 @@
 									</div>
 									<div class=" absolute -top-1 -right-1">
 										<button
-											class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+											class=" bg-white text-black border border-white rounded-full hover-reveal transition"
 											type="button"
 											aria-label={$i18n.t('Remove image')}
 											on:click={() => removeImage(index)}

@@ -54,6 +54,16 @@ _IMAGE_MIME_FALLBACK = {
 async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
     try:
         if url.startswith('http'):
+            from open_webui.models.config import Config
+
+            max_bytes = None
+            try:
+                max_size_mb = int(await Config.get('rag.file.max_size') or 0)
+            except (TypeError, ValueError):
+                max_size_mb = 0
+            if max_size_mb > 0:
+                max_bytes = max_size_mb * 1024 * 1024
+
             # Validate URL to prevent SSRF attacks against local/private networks.
             # allow_redirects=False prevents redirect-based SSRF: validate_url() is
             # called only on the originally-submitted URL; following 3xx redirects
@@ -67,7 +77,13 @@ async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
                     url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
                 ) as response:
                     response.raise_for_status()
-                    image_data = await response.read()
+                    image_data = bytearray()
+                    total = 0
+                    async for chunk in response.content.iter_chunked(64 * 1024):
+                        total += len(chunk)
+                        if max_bytes is not None and total > max_bytes:
+                            return None
+                        image_data.extend(chunk)
                     encoded_string = base64.b64encode(image_data).decode('utf-8')
                     content_type = response.headers.get('Content-Type', 'image/png')
                     return f'data:{content_type};base64,{encoded_string}'
@@ -86,13 +102,14 @@ async def get_image_url_from_base64(request, base64_image_string, metadata, user
         # Extract base64 image data from the line
         image_data, content_type = await get_image_data(base64_image_string)
         if image_data is not None:
-            _, image_url = await upload_image(
+            _, image_file = await upload_image(
                 request,
                 image_data,
                 content_type,
                 metadata,
                 user,
             )
+            image_url = image_file['url']
 
         return image_url
     return None

@@ -7,14 +7,16 @@
 	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
-	import PDFViewer from '../../common/PDFViewer.svelte';
+	import PdfPagesPreview from '../../common/PdfPagesPreview.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
+	import DocxPreview from '../../common/DocxPreview.svelte';
+	import PptxPreview from '../../common/PptxPreview.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
 	import NotebookView from './NotebookView.svelte';
 	import SqliteView from './SqliteView.svelte';
 	import FileCodeEditor from './FileCodeEditor.svelte';
 
-	let pdfViewerRef: PDFViewer;
+	let pdfPagesPreviewRef: PdfPagesPreview;
 	let fileCodeEditorRef: FileCodeEditor;
 
 	const i18n = getContext('i18n');
@@ -26,6 +28,7 @@
 	export let fileAudioUrl: string | null = null;
 	export let filePdfData: ArrayBuffer | null = null;
 	export let fileSqliteData: ArrayBuffer | null = null;
+	export let fileDocxData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
 	// Terminal connection for notebook execution
@@ -36,13 +39,21 @@
 	export let fileOfficeHtml: string | null = null;
 	export let fileOfficeSlides: string[] | null = null;
 	export let currentSlide = 0;
+	export let targetPage: number | null = null;
 	export let excelSheetNames: string[] = [];
 	export let selectedExcelSheet = '';
 	export let onSheetChange: ((sheet: string) => void) | null = null;
 
 	export let overlay = false;
+	export let readOnly = false;
 
 	export let onSave: ((content: string) => Promise<void>) | null = null;
+	export let searchTarget: {
+		line: number;
+		column: number;
+		length: number;
+		requestId: number;
+	} | null = null;
 
 	export let editing = false;
 	let editContent = '';
@@ -59,6 +70,7 @@
 	};
 
 	export const startEdit = async () => {
+		if (readOnly) return;
 		editContent = fileContent ?? '';
 		editing = true;
 		showRaw = true;
@@ -67,7 +79,7 @@
 	};
 
 	export const saveEdit = async () => {
-		if (!onSave) return;
+		if (!onSave || readOnly) return;
 		saving = true;
 		await onSave(editContent);
 		saving = false;
@@ -81,7 +93,7 @@
 
 	/** Save code file directly from CodeMirror */
 	export const saveCodeFile = async () => {
-		if (!onSave) return;
+		if (!onSave || readOnly) return;
 		saving = true;
 		const content = fileCodeEditorRef?.getValue() ?? '';
 		await onSave(content);
@@ -104,6 +116,7 @@
 	$: isNotebook = getExt(selectedFile) === 'ipynb';
 	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
+	$: isPptx = getExt(selectedFile) === 'pptx';
 
 	// For HTML files on system terminals (proxy URL), use path-based serving
 	// so the iframe can resolve relative CSS/JS/image references via cookie auth.
@@ -259,17 +272,23 @@
 	}
 
 	let panzoomRef: PanzoomContainer;
+	let pptxPreviewRef: PptxPreview;
+	let imageZoomLevel = 1;
 	export const resetImageView = () => {
 		panzoomRef?.reset();
+		pptxPreviewRef?.resetView();
 	};
 
 	export const resetPdfView = () => {
-		pdfViewerRef?.resetView();
+		pdfPagesPreviewRef?.resetView();
 	};
 </script>
 
 <div
-	class="flex-1 {fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)
+	class="flex-1 {fileImageUrl !== null ||
+	fileDocxData !== null ||
+	filePdfData !== null ||
+	(fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
 		: 'overflow-y-auto'} min-h-0 min-w-0 relative h-full"
 >
@@ -279,6 +298,7 @@
 	{:else if fileImageUrl !== null}
 		<PanzoomContainer
 			bind:this={panzoomRef}
+			bind:zoomLevel={imageZoomLevel}
 			className="w-full h-full flex items-center justify-center"
 			options={{ zoomDoubleClickSpeed: 1 }}
 		>
@@ -303,9 +323,20 @@
 			</audio>
 		</div>
 	{:else if filePdfData !== null}
-		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
+		<PdfPagesPreview
+			bind:this={pdfPagesPreviewRef}
+			data={filePdfData}
+			bind:currentSlide
+			{targetPage}
+			singlePage={isPptx}
+			itemLabel={isPptx ? 'Slide' : 'Page'}
+			listLabel={isPptx ? 'Slides' : 'Pages'}
+			className="w-full h-full"
+		/>
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
+	{:else if fileDocxData !== null}
+		<DocxPreview data={fileDocxData} {targetPage} className="w-full h-full" />
 	{:else if fileOfficeHtml !== null}
 		<div class="flex flex-col h-full">
 			<div class="office-preview overflow-auto flex-1 min-h-0">
@@ -330,79 +361,35 @@
 			{/if}
 		</div>
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}
-		<div class="flex flex-col h-full">
-			<PanzoomContainer
-				bind:this={panzoomRef}
-				className="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden"
-				options={{ zoomDoubleClickSpeed: 1 }}
-			>
-				<img
-					src={fileOfficeSlides[currentSlide]}
-					alt="Slide {currentSlide + 1}"
-					class="max-w-full max-h-full object-contain p-3"
-					draggable="false"
-				/>
-			</PanzoomContainer>
-			{#if fileOfficeSlides.length > 1}
-				<div
-					class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500"
-				>
-					<button
-						aria-label={$i18n.t('Previous slide')}
-						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
-						disabled={currentSlide === 0}
-						on:click={() => {
-							resetImageView();
-							currentSlide = Math.max(0, currentSlide - 1);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-					<span>{currentSlide + 1} / {fileOfficeSlides.length}</span>
-					<button
-						aria-label={$i18n.t('Next slide')}
-						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
-						disabled={currentSlide === fileOfficeSlides.length - 1}
-						on:click={() => {
-							resetImageView();
-							currentSlide = Math.min(fileOfficeSlides.length - 1, currentSlide + 1);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-				</div>
-			{/if}
-		</div>
+		<PptxPreview
+			bind:this={pptxPreviewRef}
+			slides={fileOfficeSlides}
+			bind:currentSlide
+			{targetPage}
+			className="w-full h-full"
+		/>
 	{:else if fileContent !== null}
-		{#if isHtml && !showRaw && serveUrl}
+		{#if searchTarget}
+			<div class="absolute inset-0">
+				<FileCodeEditor
+					bind:this={fileCodeEditorRef}
+					value={fileContent ?? ''}
+					filePath={selectedFile}
+					onSave={readOnly ? null : onSave}
+					{searchTarget}
+				/>
+			</div>
+		{:else if isHtml && !showRaw && serveUrl}
 			{#if overlay}
 				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 			{/if}
 			<iframe
 				src={serveUrl}
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
@@ -414,7 +401,11 @@
 			{/if}
 			<iframe
 				srcdoc={injectCsp(fileContent, $config?.ui?.iframe_csp ?? '')}
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
@@ -426,7 +417,7 @@
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
-					{onSave}
+					onSave={readOnly ? null : onSave}
 				/>
 			</div>
 		{:else if isMarkdown && !showRaw}
@@ -439,7 +430,7 @@
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
-					{onSave}
+					onSave={readOnly ? null : onSave}
 				/>
 			</div>
 		{:else if isCsv && !showRaw && csvRows.length > 0}
@@ -496,7 +487,7 @@
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
-					{onSave}
+					onSave={readOnly ? null : onSave}
 				/>
 			</div>
 		{:else if isSvg && highlightedHtml && !showRaw}
@@ -519,6 +510,58 @@
 			{$i18n.t('Could not read file.')}
 		</div>
 	{/if}
+
+	{#if !fileLoading && fileImageUrl !== null}
+		<div
+			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-gray-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-gray-700/60 dark:bg-gray-850/90"
+		>
+			<!-- Pinch covers in/out on coarse pointers; reset has no gesture, so it stays -->
+			<button
+				type="button"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
+				on:click={() => panzoomRef?.zoomOut()}
+				aria-label={$i18n.t('Zoom out')}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3.5"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M4 10a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</button>
+			<button
+				type="button"
+				class="h-7 min-w-12 shrink-0 rounded-md px-1.5 py-1 text-center text-[0.6875rem] font-normal tabular-nums text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				on:click={() => panzoomRef?.reset()}
+				aria-label={$i18n.t('Reset zoom')}
+			>
+				{Math.round(imageZoomLevel * 100)}%
+			</button>
+			<button
+				type="button"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
+				on:click={() => panzoomRef?.zoomIn()}
+				aria-label={$i18n.t('Zoom in')}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3.5"
+				>
+					<path
+						d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+					/>
+				</svg>
+			</button>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -528,7 +571,7 @@
 	}
 	.csv-table th,
 	.csv-table td {
-		padding: 4px 8px;
+		padding: 0.25rem 0.5rem;
 		text-align: left;
 		white-space: nowrap;
 		border: 1px solid rgba(128, 128, 128, 0.15);
@@ -568,7 +611,7 @@
 		text-align: right !important;
 		user-select: none;
 		width: 1px;
-		padding-right: 6px !important;
+		padding-right: 0.375rem !important;
 	}
 	:global(.dark) .csv-row-num {
 		color: #6b7280;
@@ -579,7 +622,7 @@
 		line-height: 1.6;
 		color: #1f2937;
 		background: #fff;
-		border-radius: 4px;
+		border-radius: 0.25rem;
 	}
 	:global(.dark .office-preview) {
 		color: #e5e7eb;
@@ -594,12 +637,12 @@
 	:global(.office-preview table td),
 	:global(.office-preview table th) {
 		border: 1px solid rgba(200, 200, 200, 0.5);
-		padding: 4px 10px;
+		padding: 0.25rem 0.625rem;
 		text-align: left;
 		white-space: nowrap;
 		user-select: text;
 		cursor: cell;
-		max-width: 300px;
+		max-width: 18.75rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
@@ -617,7 +660,7 @@
 		font-weight: 500;
 		font-size: 0.65rem;
 		text-align: center;
-		padding: 3px 10px;
+		padding: 0.1875rem 0.625rem;
 		border-bottom: 2px solid rgba(180, 180, 180, 0.6);
 	}
 	:global(.dark .office-preview table th.excel-col-hdr) {
@@ -634,7 +677,7 @@
 		color: #999;
 		font-size: 0.6rem;
 		text-align: right !important;
-		padding: 4px 8px 4px 4px !important;
+		padding: 0.25rem 0.5rem 0.25rem 0.25rem !important;
 		user-select: none;
 		width: 1px;
 		white-space: nowrap;

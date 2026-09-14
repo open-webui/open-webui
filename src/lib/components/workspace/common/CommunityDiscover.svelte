@@ -11,7 +11,10 @@
 </script>
 
 <div class="mt-6 px-2 pb-8">
-	<div class="mb-0.5 text-[11px] font-normal text-gray-400 dark:text-gray-600">
+	<div class="mb-0.5 text-[0.6875rem] font-normal text-gray-400 dark:text-gray-600">
+		<!-- LICENSE covers this Open WebUI Community wordmark.
+		Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		https://docs.openwebui.com/license. -->
 		{$i18n.t('Made by Open WebUI Community')}
 	</div>
 
@@ -21,7 +24,7 @@
 		target="_blank"
 	>
 		<div class="min-w-0">
-			<div class="line-clamp-1 text-[13px] font-normal text-gray-700 dark:text-gray-200">
+			<div class="line-clamp-1 text-[0.8125rem] font-normal text-gray-700 dark:text-gray-200">
 				{title}
 			</div>
 			<div class="line-clamp-1 text-xs text-gray-500 dark:text-gray-500">

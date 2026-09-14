@@ -50,7 +50,7 @@
 
 {#if visibleActions.length === 1}
 	<button
-		class="ml-1 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
+		class="focus-ring ml-1 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
 		type="button"
 		on:click={() => {
 			runAction(primaryAction);
@@ -63,7 +63,7 @@
 		class="ml-1 flex overflow-hidden rounded-lg bg-gray-50 text-xs text-gray-900 transition ring-1 ring-gray-200 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800"
 	>
 		<button
-			class="px-2.5 py-1 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+			class="focus-ring px-2.5 py-1 transition hover:bg-gray-100 dark:hover:bg-gray-800"
 			on:click={() => {
 				runAction(primaryAction);
 			}}
@@ -73,14 +73,14 @@
 
 		<Dropdown bind:show={showMenu} align="end" sideOffset={6}>
 			<button
-				class="flex items-center border-l border-gray-200 px-1.5 py-1 transition hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+				class="focus-ring flex items-center border-l border-gray-200 px-1.5 py-1 transition hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
 				aria-label={$i18n.t('Open create menu')}
 			>
 				<ChevronDown className="size-2.5" strokeWidth="2.5" />
 			</button>
 
 			<div slot="content">
-				<DropdownMenu className="min-w-[170px]">
+				<DropdownMenu className="min-w-[10.625rem]">
 					{#each visibleActions as action (action.id)}
 						{@const Icon = getActionIcon(action.id)}
 						{#if action.href}

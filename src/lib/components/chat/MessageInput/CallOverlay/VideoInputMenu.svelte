@@ -26,10 +26,10 @@
 	<slot />
 
 	<div slot="content">
-		<DropdownMenu className="min-w-[180px] z-[9999] dark:bg-gray-900 shadow-xs">
+		<DropdownMenu className="min-w-[11.25rem] z-[9999] dark:bg-gray-900 shadow-xs">
 			{#each devices as device}
 				<button
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 					on:click={() => {
 						dispatch('change', device.deviceId);
 					}}

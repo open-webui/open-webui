@@ -13,7 +13,7 @@ async def search_google_pse(
     search_engine_id: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
     referer: str | None = None,
 ) -> list[SearchResult]:
     """Query Google Programmable Search Engine with automatic pagination.

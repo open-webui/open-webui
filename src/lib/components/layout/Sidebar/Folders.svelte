@@ -67,7 +67,7 @@
 {/each}
 
 {#if sharedList.length > 0}
-	<div class="w-full pl-2.5 text-[11px] text-gray-400 dark:text-gray-600 pt-2 pb-0.5">
+	<div class="w-full pl-2.5 text-[0.6875rem] text-gray-400 dark:text-gray-600 pt-2 pb-0.5">
 		{$i18n.t('Shared')}
 	</div>
 	{#each sharedList as folderId (folderId)}

@@ -6,10 +6,7 @@ These tools are automatically available when native function calling is enabled.
 IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 """
 
-from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
-
 import asyncio
-import json
 import logging
 import time
 from typing import Literal, Optional
@@ -22,8 +19,9 @@ from open_webui.env import (
     VIEW_FILE_DEFAULT_MAX_CHARS,
     VIEW_FILE_MAX_CHARS,
 )
+from open_webui.events import EVENTS, publish_event
 from open_webui.models.channels import Channel, ChannelMember, Channels
-from open_webui.models.chats import Chats
+from open_webui.models.chats import Chats, chat_search_content_query, chat_search_terms
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
@@ -45,20 +43,29 @@ from open_webui.routers.memories import (
     ReadMemoryPathForm,
     SearchMemoriesForm,
     UpdateMemoriesForm,
-    list_memory_paths as _list_memory_paths,
-    read_memory_path as _read_memory_path,
-    search_memories as _search_memories,
-    update_memories as _update_memories,
     update_memory_by_id,
 )
 from open_webui.routers.memories import (
     add_memory as _add_memory,
 )
+from open_webui.routers.memories import (
+    list_memory_paths as _list_memory_paths,
+)
+from open_webui.routers.memories import (
+    read_memory_path as _read_memory_path,
+)
+from open_webui.routers.memories import (
+    search_memories as _search_memories,
+)
+from open_webui.routers.memories import (
+    update_memories as _update_memories,
+)
 from open_webui.routers.retrieval import search_web as _search_web
-from open_webui.tasks import stop_item_tasks
-from open_webui.events import EVENTS, publish_event
 from open_webui.socket.main import sio
+from open_webui.tasks import stop_item_tasks
+from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 
@@ -96,11 +103,12 @@ async def _emit_note_updated(request: Request, user: dict, note) -> None:
 
 async def _has_read_access_to_file(
     file,
-    user_id: str,
-    user_role: str,
+    user: dict,
     model_knowledge: Optional[list[dict]] = None,
 ) -> bool:
     """Check if a user can read a file via ownership, admin role, model attachment, or access grants."""
+    user_id = user.get('id')
+    user_role = user.get('role', 'user')
     if file.user_id == user_id or user_role == 'admin':
         return True
     if model_knowledge and any(item.get('type') == 'file' and item.get('id') == file.id for item in model_knowledge):
@@ -110,7 +118,7 @@ async def _has_read_access_to_file(
     return await has_access_to_file(
         file_id=file.id,
         access_type='read',
-        user=UserModel(**{'id': user_id, 'role': user_role}),
+        user=UserModel(**user),
     )
 
 
@@ -138,6 +146,9 @@ async def notify(
         return 'Notification failed: user not found.'
 
     app_name = getattr(getattr(__request__, 'app', None), 'state', None)
+    # LICENSE covers this Open WebUI notification identifier.
+    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+    # https://docs.openwebui.com/license.
     app_name = getattr(app_name, 'WEBUI_NAME', 'Open WebUI')
     try:
         result = await notify_target(user_id, message, target=target, title=title, app_name=app_name)
@@ -176,10 +187,10 @@ async def get_current_timestamp(
             except Exception:
                 pass
 
-        return json.dumps(result, ensure_ascii=False)
+        return JSONCodec.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'get_current_timestamp error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def calculate_timestamp(
@@ -239,7 +250,7 @@ async def calculate_timestamp(
             except Exception:
                 pass
 
-        return json.dumps(result, ensure_ascii=False)
+        return JSONCodec.dumps(result, ensure_ascii=False)
     except ImportError:
         # Fallback without dateutil
         import datetime
@@ -268,10 +279,10 @@ async def calculate_timestamp(
             except Exception:
                 pass
 
-        return json.dumps(result, ensure_ascii=False)
+        return JSONCodec.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'calculate_timestamp error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -294,7 +305,7 @@ async def search_web(
     :return: JSON with search results containing title, link, and snippet for each result
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         engine = await Config.get('web.search.engine')
@@ -309,13 +320,13 @@ async def search_web(
         # Limit results
         results = results[:count] if results else []
 
-        return json.dumps(
+        return JSONCodec.dumps(
             [{'title': r.title, 'link': r.link, 'snippet': r.snippet} for r in results],
             ensure_ascii=False,
         )
     except Exception as e:
         log.exception(f'search_web error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def fetch_url(
@@ -330,7 +341,7 @@ async def fetch_url(
     :return: The extracted text content from the page
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         content, _ = await get_content_from_url(__request__, url)
@@ -347,7 +358,7 @@ async def fetch_url(
         return content
     except Exception as e:
         log.warning(f'fetch_url error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -370,7 +381,7 @@ async def generate_image(
     :return: Confirmation that the image was generated, or an error message
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         user = UserModel(**__user__) if __user__ else None
@@ -378,11 +389,16 @@ async def generate_image(
         images = await image_generations(
             request=__request__,
             form_data=CreateImageForm(prompt=prompt),
+            metadata=(
+                {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
+                if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')
+                else None
+            ),
             user=user,
         )
 
         # Prepare file entries for the images
-        image_files = [{'type': 'image', 'url': img['url']} for img in images]
+        image_files = [{'type': 'image', **img} for img in images]
 
         # Persist files to DB if chat context is available
         if is_saved_chat_id(__chat_id__) and __message_id__ and images:
@@ -405,7 +421,7 @@ async def generate_image(
                 }
             )
             # Return a message indicating the image is already displayed
-            return json.dumps(
+            return JSONCodec.dumps(
                 {
                     'status': 'success',
                     'message': 'The image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.',
@@ -414,10 +430,10 @@ async def generate_image(
                 ensure_ascii=False,
             )
 
-        return json.dumps({'status': 'success', 'images': images}, ensure_ascii=False)
+        return JSONCodec.dumps({'status': 'success', 'images': images}, ensure_ascii=False)
     except Exception as e:
         log.exception(f'generate_image error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def edit_image(
@@ -438,7 +454,7 @@ async def edit_image(
     :return: Confirmation that the images were edited, or an error message
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         user = UserModel(**__user__) if __user__ else None
@@ -446,11 +462,16 @@ async def edit_image(
         images = await image_edits(
             request=__request__,
             form_data=EditImageForm(prompt=prompt, image=image_urls),
+            metadata=(
+                {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
+                if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')
+                else None
+            ),
             user=user,
         )
 
         # Prepare file entries for the images
-        image_files = [{'type': 'image', 'url': img['url']} for img in images]
+        image_files = [{'type': 'image', **img} for img in images]
 
         # Persist files to DB if chat context is available
         if is_saved_chat_id(__chat_id__) and __message_id__ and images:
@@ -473,7 +494,7 @@ async def edit_image(
                 }
             )
             # Return a message indicating the image is already displayed
-            return json.dumps(
+            return JSONCodec.dumps(
                 {
                     'status': 'success',
                     'message': 'The edited image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.',
@@ -482,10 +503,124 @@ async def edit_image(
                 ensure_ascii=False,
             )
 
-        return json.dumps({'status': 'success', 'images': images}, ensure_ascii=False)
+        return JSONCodec.dumps({'status': 'success', 'images': images}, ensure_ascii=False)
     except Exception as e:
         log.exception(f'edit_image error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
+
+
+# =============================================================================
+# USER INPUT TOOLS
+# =============================================================================
+
+
+async def ask_user(
+    questions: list[dict],
+    allow_other: bool = True,
+    timeout_ms: int = 120_000,
+    __event_call__: callable = None,
+) -> str:
+    """
+    Ask the user clarifying questions before continuing.
+    Use this when the next step depends on user intent, preference, or a tradeoff that cannot be inferred safely.
+
+    :param questions: 1-3 question objects, each with id, header, question, and 2-3 options. Each option needs label and description.
+    :param allow_other: Whether users may enter a free-form answer instead of choosing one of the options
+    :param timeout_ms: How long the browser should keep the prompt open before cancelling it
+    :return: JSON with status and answers keyed by question id
+    """
+    try:
+        if not isinstance(questions, list) or not 1 <= len(questions) <= 3:
+            raise ValueError('ask_user requires 1-3 questions.')
+
+        normalized_questions = []
+        seen_ids = set()
+        for index, question in enumerate(questions):
+            if not isinstance(question, dict):
+                raise ValueError('Each question must be an object.')
+
+            question_id = str(question.get('id') or '').strip()[:64]
+            if not question_id:
+                raise ValueError('Each question requires a non-empty id.')
+            if question_id in seen_ids:
+                raise ValueError(f'Duplicate question id: {question_id}')
+            seen_ids.add(question_id)
+
+            options = question.get('options')
+            if not isinstance(options, list) or not 2 <= len(options) <= 3:
+                raise ValueError('Each question requires 2-3 options.')
+
+            normalized_options = []
+            for option in options:
+                if not isinstance(option, dict):
+                    raise ValueError('Each option must be an object.')
+
+                label = str(option.get('label') or '').strip()[:80]
+                description = str(option.get('description') or '').strip()[:240]
+                if not label or not description:
+                    raise ValueError('Each option requires a label and description.')
+
+                normalized_options.append(
+                    {
+                        'label': label,
+                        'description': description,
+                    }
+                )
+
+            question_text = str(question.get('question') or '').strip()[:500]
+            if not question_text:
+                raise ValueError('Each question requires question text.')
+
+            normalized_questions.append(
+                {
+                    'id': question_id,
+                    'header': str(question.get('header') or '').strip()[:48] or f'Question {index + 1}',
+                    'question': question_text,
+                    'options': normalized_options,
+                    'allow_other': bool(question.get('allow_other', allow_other)),
+                }
+            )
+
+        if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or not 60_000 <= timeout_ms <= 240_000:
+            timeout_ms = 120_000
+
+        if __event_call__ is None:
+            return JSONCodec.dumps(
+                {
+                    'status': 'error',
+                    'error': 'User input requires an active browser session with WebSocket connection.',
+                },
+                ensure_ascii=False,
+            )
+
+        output = await __event_call__(
+            {
+                'type': 'request:user_input',
+                'data': {
+                    'questions': normalized_questions,
+                    'allow_other': allow_other,
+                    'timeout_ms': timeout_ms,
+                },
+            }
+        )
+
+        if not isinstance(output, dict):
+            return JSONCodec.dumps({'status': 'error', 'error': 'Invalid user input response.'}, ensure_ascii=False)
+        if output.get('error'):
+            return JSONCodec.dumps({'status': 'error', 'error': output.get('error')}, ensure_ascii=False)
+        if output.get('status') == 'cancelled':
+            return JSONCodec.dumps({'status': 'cancelled', 'answers': {}}, ensure_ascii=False)
+
+        return JSONCodec.dumps(
+            {
+                'status': 'answered',
+                'answers': output.get('answers', {}),
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f'ask_user error: {e}')
+        return JSONCodec.dumps({'status': 'error', 'error': str(e)}, ensure_ascii=False)
 
 
 # =============================================================================
@@ -514,7 +649,7 @@ async def execute_code(
     from uuid import uuid4
 
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         # Sanitize code (strips ANSI codes and markdown fences)
@@ -552,7 +687,7 @@ async def execute_code(
         if engine == 'pyodide':
             # Execute via frontend pyodide using bidirectional event call
             if __event_call__ is None:
-                return json.dumps(
+                return JSONCodec.dumps(
                     {'error': 'Event call not available. WebSocket connection required for pyodide execution.'}
                 )
 
@@ -602,7 +737,7 @@ async def execute_code(
             result = output.get('result', '')
 
         else:
-            return json.dumps({'error': f'Unknown code interpreter engine: {engine}'})
+            return JSONCodec.dumps({'error': f'Unknown code interpreter engine: {engine}'})
 
         # Handle image outputs (base64 encoded) - replace with uploaded URLs
         # Get actual user object for image upload (upload_image requires user.id attribute)
@@ -649,10 +784,10 @@ async def execute_code(
             'result': result,
         }
 
-        return json.dumps(response, ensure_ascii=False)
+        return JSONCodec.dumps(response, ensure_ascii=False)
     except Exception as e:
         log.exception(f'execute_code error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -685,10 +820,10 @@ async def list_memory_paths(
             ),
             user,
         )
-        return json.dumps(result, ensure_ascii=False)
+        return JSONCodec.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'list_memory_paths error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def read_memory_path(
@@ -719,10 +854,10 @@ async def read_memory_path(
             ),
             user,
         )
-        return json.dumps(result, ensure_ascii=False)
+        return JSONCodec.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'read_memory_path error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def search_memories(
@@ -745,7 +880,7 @@ async def search_memories(
     :return: JSON with matching memories and their dates
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         user = UserModel(**__user__) if __user__ else None
@@ -762,9 +897,9 @@ async def search_memories(
         )
 
         if not memories:
-            return json.dumps([])
+            return JSONCodec.dumps([])
 
-        return json.dumps(
+        return JSONCodec.dumps(
             [
                 {
                     'id': memory.id,
@@ -780,7 +915,7 @@ async def search_memories(
         )
     except Exception as e:
         log.exception(f'search_memories error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def add_memory(
@@ -803,7 +938,7 @@ async def add_memory(
     :return: Confirmation that the memory was stored
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         user = UserModel(**__user__) if __user__ else None
@@ -814,13 +949,13 @@ async def add_memory(
             user,
         )
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {'status': 'success', 'id': memory.id, 'type': memory.type, 'path': memory.path},
             ensure_ascii=False,
         )
     except Exception as e:
         log.exception(f'add_memory error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def update_memory(
@@ -849,7 +984,7 @@ async def update_memory(
     :return: JSON with operation results
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         user = UserModel(**__user__) if __user__ else None
@@ -858,10 +993,10 @@ async def update_memory(
             UpdateMemoriesForm(operations=operations),
             user,
         )
-        return json.dumps(operation_results, ensure_ascii=False)
+        return JSONCodec.dumps(operation_results, ensure_ascii=False)
     except Exception as e:
         log.exception(f'update_memory error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def replace_memory_content(
@@ -882,7 +1017,7 @@ async def replace_memory_content(
     :return: Confirmation that the memory was updated
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         user = UserModel(**__user__) if __user__ else None
@@ -898,7 +1033,7 @@ async def replace_memory_content(
             user=user,
         )
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 'id': memory.id,
@@ -910,7 +1045,7 @@ async def replace_memory_content(
         )
     except Exception as e:
         log.exception(f'replace_memory_content error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def delete_memory(
@@ -925,7 +1060,7 @@ async def delete_memory(
     :return: Confirmation that the memory was deleted
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         user = UserModel(**__user__) if __user__ else None
@@ -934,15 +1069,15 @@ async def delete_memory(
 
         if result:
             await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
-            return json.dumps(
+            return JSONCodec.dumps(
                 {'status': 'success', 'message': f'Memory {memory_id} deleted'},
                 ensure_ascii=False,
             )
         else:
-            return json.dumps({'error': 'Memory not found or access denied'})
+            return JSONCodec.dumps({'error': 'Memory not found or access denied'})
     except Exception as e:
         log.exception(f'delete_memory error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def list_memories(
@@ -955,7 +1090,7 @@ async def list_memories(
     :return: JSON list of all memories with id, content, and dates
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
         user = UserModel(**__user__) if __user__ else None
@@ -974,12 +1109,12 @@ async def list_memories(
                 }
                 for m in memories
             ]
-            return json.dumps(memory_rows, ensure_ascii=False)
+            return JSONCodec.dumps(memory_rows, ensure_ascii=False)
         else:
-            return json.dumps([])
+            return JSONCodec.dumps([])
     except Exception as e:
         log.exception(f'list_memories error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -1005,10 +1140,10 @@ async def search_notes(
     :return: JSON with matching notes containing id, title, and content snippet
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         user_id = __user__.get('id')
@@ -1078,10 +1213,10 @@ async def search_notes(
             if len(notes) >= count:
                 break
 
-        return json.dumps(notes, ensure_ascii=False)
+        return JSONCodec.dumps(notes, ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_notes error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def view_note(
@@ -1096,16 +1231,16 @@ async def view_note(
     :return: JSON with the note's id, title, and full markdown content
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         note = await Notes.get_note_by_id(note_id)
 
         if not note:
-            return json.dumps({'error': 'Note not found'})
+            return JSONCodec.dumps({'error': 'Note not found'})
 
         # Check access permission
         user_id = __user__.get('id')
@@ -1124,14 +1259,14 @@ async def view_note(
                 user_group_ids=set(user_group_ids),
             )
         ):
-            return json.dumps({'error': 'Access denied'})
+            return JSONCodec.dumps({'error': 'Access denied'})
 
         # Extract markdown content
         content = ''
         if note.data and note.data.get('content', {}).get('md'):
             content = note.data['content']['md']
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'id': note.id,
                 'title': note.title,
@@ -1143,7 +1278,7 @@ async def view_note(
         )
     except Exception as e:
         log.exception(f'view_note error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def write_note(
@@ -1160,10 +1295,10 @@ async def write_note(
     :return: JSON with success status and new note id
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.notes import NoteForm
@@ -1179,9 +1314,9 @@ async def write_note(
         new_note = await Notes.insert_new_note(user_id, form)
 
         if not new_note:
-            return json.dumps({'error': 'Failed to create note'})
+            return JSONCodec.dumps({'error': 'Failed to create note'})
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 'id': new_note.id,
@@ -1192,7 +1327,7 @@ async def write_note(
         )
     except Exception as e:
         log.exception(f'write_note error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def replace_note_content(
@@ -1215,10 +1350,10 @@ async def replace_note_content(
     :return: JSON with success status and updated note info
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.notes import NoteUpdateForm
@@ -1226,22 +1361,22 @@ async def replace_note_content(
         note = await Notes.get_note_by_id(note_id)
 
         if not note:
-            return json.dumps({'error': 'Note not found', 'code': 'not_found'})
+            return JSONCodec.dumps({'error': 'Note not found', 'code': 'not_found'})
 
         user_id = __user__.get('id')
         if __user__.get('role') != 'admin' and not await _has_write_access_to_note(note, user_id):
-            return json.dumps({'error': 'Write access denied', 'code': 'write_access_denied'})
+            return JSONCodec.dumps({'error': 'Write access denied', 'code': 'write_access_denied'})
 
         current_content = ((note.data or {}).get('content') or {}).get('md') or ''
         applied_operation_count = 0
         if operations is not None:
             if not isinstance(operations, list) or len(operations) == 0:
-                return json.dumps({'error': 'operations must be a non-empty list', 'code': 'invalid_operations'})
+                return JSONCodec.dumps({'error': 'operations must be a non-empty list', 'code': 'invalid_operations'})
 
             range_operations = []
             for idx, operation in enumerate(operations):
                 if not isinstance(operation, dict):
-                    return json.dumps(
+                    return JSONCodec.dumps(
                         {'error': 'each operation must be an object', 'code': 'invalid_operation', 'index': idx}
                     )
 
@@ -1250,7 +1385,7 @@ async def replace_note_content(
 
                 if action == 'replace':
                     if len(operations) != 1:
-                        return json.dumps(
+                        return JSONCodec.dumps(
                             {
                                 'error': 'replace operation must be the only operation',
                                 'code': 'invalid_operations',
@@ -1258,7 +1393,7 @@ async def replace_note_content(
                             }
                         )
                     if not isinstance(replacement, str):
-                        return json.dumps(
+                        return JSONCodec.dumps(
                             {
                                 'error': 'replace operation content must be a string',
                                 'code': 'invalid_content',
@@ -1270,7 +1405,7 @@ async def replace_note_content(
                     break
 
                 if action != 'replace_range':
-                    return json.dumps(
+                    return JSONCodec.dumps(
                         {'error': 'unknown operation action', 'code': 'invalid_action', 'index': idx, 'action': action}
                     )
 
@@ -1278,19 +1413,19 @@ async def replace_note_content(
                 end = operation.get('end')
                 expected = operation.get('expected')
                 if not isinstance(start, int) or not isinstance(end, int):
-                    return json.dumps(
+                    return JSONCodec.dumps(
                         {'error': 'operation start and end must be integers', 'code': 'invalid_range', 'index': idx}
                     )
                 if not isinstance(replacement, str):
-                    return json.dumps(
+                    return JSONCodec.dumps(
                         {'error': 'operation content must be a string', 'code': 'invalid_content', 'index': idx}
                     )
                 if start < 0 or end < start or end > len(current_content):
-                    return json.dumps(
+                    return JSONCodec.dumps(
                         {'error': 'operation range is out of bounds', 'code': 'range_out_of_bounds', 'index': idx}
                     )
                 if expected is not None and current_content[start:end] != expected:
-                    return json.dumps(
+                    return JSONCodec.dumps(
                         {
                             'error': 'operation expected text does not match current content',
                             'code': 'expected_mismatch',
@@ -1304,7 +1439,7 @@ async def replace_note_content(
             previous_end = 0
             for idx, operation in enumerate(range_operations):
                 if operation['start'] < previous_end:
-                    return json.dumps(
+                    return JSONCodec.dumps(
                         {'error': 'operation ranges must not overlap', 'code': 'overlapping_operations', 'index': idx}
                     )
                 previous_end = operation['end']
@@ -1315,7 +1450,7 @@ async def replace_note_content(
                     content = content[: operation['start']] + operation['content'] + content[operation['end'] :]
                 applied_operation_count = len(range_operations)
         elif content is None:
-            return json.dumps({'error': 'content or operations is required', 'code': 'content_required'})
+            return JSONCodec.dumps({'error': 'content or operations is required', 'code': 'content_required'})
 
         try:
             await stop_item_tasks(__request__.app.state.redis, f'note:{note_id}')
@@ -1340,11 +1475,11 @@ async def replace_note_content(
         updated_note = await Notes.update_note_by_id(note_id, form)
 
         if not updated_note:
-            return json.dumps({'error': 'Failed to update note', 'code': 'update_failed'})
+            return JSONCodec.dumps({'error': 'Failed to update note', 'code': 'update_failed'})
 
         await _emit_note_updated(__request__, __user__, updated_note)
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 'id': updated_note.id,
@@ -1356,7 +1491,7 @@ async def replace_note_content(
         )
     except Exception as e:
         log.exception(f'replace_note_content error: {e}')
-        return json.dumps({'error': str(e), 'code': 'unexpected_error'})
+        return JSONCodec.dumps({'error': str(e), 'code': 'unexpected_error'})
 
 
 # =============================================================================
@@ -1374,20 +1509,23 @@ async def search_chats(
     __chat_id__: str = None,
 ) -> str:
     """
-    Search the user's previous chat conversations by title and message content.
-    Helpful for finding details from earlier conversations.
+    Search the user's previous chat conversations by title and message content,
+    excluding the current chat. Helpful for finding details from earlier
+    conversations when they are not already visible in the current context.
+    Exact phrase matches are preferred, and descriptive keyword queries are
+    supported.
 
-    :param query: The search query to find matching chats
+    :param query: Exact phrase or descriptive keyword query to find matching previous chats
     :param count: Maximum number of results to return (default: 5)
     :param start_timestamp: Only include chats updated after this Unix timestamp (seconds)
     :param end_timestamp: Only include chats updated before this Unix timestamp (seconds)
     :return: JSON with matching chats containing id, title, updated_at, and content snippet
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         user_id = __user__.get('id')
@@ -1415,19 +1553,31 @@ async def search_chats(
             # Find a matching message snippet
             snippet = ''
             messages = (getattr(chat, 'chat', None) or {}).get('history', {}).get('messages', {})
-            lower_query = query.lower()
+            if not messages:
+                messages = (getattr(chat, 'chat', None) or {}).get('messages', {}) or {}
+            if isinstance(messages, list):
+                messages = {str(idx): message for idx, message in enumerate(messages)}
 
-            for msg_id, msg in messages.items():
-                content = msg.get('content', '')
-                if isinstance(content, str) and lower_query in content.lower():
-                    idx = content.lower().find(lower_query)
-                    start = max(0, idx - 50)
-                    end = min(len(content), idx + len(query) + 100)
-                    snippet = ('...' if start > 0 else '') + content[start:end] + ('...' if end < len(content) else '')
+            lower_query = chat_search_content_query(query)
+            needles = list(dict.fromkeys([lower_query, *chat_search_terms(lower_query)])) if lower_query else []
+
+            for needle in needles:
+                for msg_id, msg in messages.items():
+                    content = msg.get('content', '') if isinstance(msg, dict) else ''
+                    if isinstance(content, str) and needle in content.lower():
+                        idx = content.lower().find(needle)
+                        start = max(0, idx - 50)
+                        end = min(len(content), idx + len(needle) + 100)
+                        snippet = (
+                            ('...' if start > 0 else '') + content[start:end] + ('...' if end < len(content) else '')
+                        )
+                        break
+                if snippet:
                     break
 
-            if not snippet and lower_query in chat.title.lower():
-                snippet = f'Title match: {chat.title}'
+            title = chat.title or ''
+            if not snippet and any(needle in title.lower() for needle in needles):
+                snippet = f'Title match: {title}'
 
             results.append(
                 {
@@ -1441,10 +1591,10 @@ async def search_chats(
             if len(results) >= count:
                 break
 
-        return json.dumps(results, ensure_ascii=False)
+        return JSONCodec.dumps(results, ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_chats error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def view_chat(
@@ -1460,10 +1610,10 @@ async def view_chat(
     :return: JSON with the chat's id, title, and messages
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         user_id = __user__.get('id')
@@ -1471,7 +1621,7 @@ async def view_chat(
         chat = await Chats.get_chat_by_id_and_user_id(chat_id, user_id)
 
         if not chat:
-            return json.dumps({'error': 'Chat not found or access denied'})
+            return JSONCodec.dumps({'error': 'Chat not found or access denied'})
 
         # Extract messages from history
         messages = []
@@ -1497,7 +1647,7 @@ async def view_chat(
         # Reverse to get chronological order
         messages.reverse()
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'id': chat.id,
                 'title': chat.title,
@@ -1509,7 +1659,7 @@ async def view_chat(
         )
     except Exception as e:
         log.exception(f'view_chat error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -1520,6 +1670,7 @@ async def view_chat(
 async def delegate_task(
     task: str,
     context: str = '',
+    file_ids: list[str] | None = None,
     background: bool = False,
     __request__: Request = None,
     __user__: dict = None,
@@ -1532,6 +1683,8 @@ async def delegate_task(
 
     :param task: The specific task for the sub-agent to complete
     :param context: Relevant context, decisions, or file paths for the task
+    :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
+        do not put file IDs only in context.
     :param background: Return immediately and continue this chat when the sub-agent finishes
     :return: Foreground result text, or a JSON dispatch handle for background work
     """
@@ -1546,6 +1699,7 @@ async def delegate_task(
         task,
         context,
         background,
+        file_ids=file_ids,
         request=__request__,
         user_data=__user__ or {},
         metadata=__metadata__ or {},
@@ -1610,10 +1764,10 @@ async def search_channels(
     :return: JSON with matching channels containing id, name, description, and type
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         user_id = __user__.get('id')
@@ -1642,10 +1796,10 @@ async def search_channels(
             if len(matching_channels) >= count:
                 break
 
-        return json.dumps(matching_channels, ensure_ascii=False)
+        return JSONCodec.dumps(matching_channels, ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_channels error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def search_channel_messages(
@@ -1667,10 +1821,10 @@ async def search_channel_messages(
     :return: JSON with matching messages containing channel info, message content, and thread context
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         user_id = __user__.get('id')
@@ -1681,7 +1835,7 @@ async def search_channel_messages(
         channel_map = {c.id: c for c in user_channels}
 
         if not channel_ids:
-            return json.dumps([])
+            return JSONCodec.dumps([])
 
         # Convert timestamps to nanoseconds (Message.created_at is in nanoseconds)
         start_ts = start_timestamp * 1_000_000_000 if start_timestamp else None
@@ -1723,10 +1877,10 @@ async def search_channel_messages(
                 }
             )
 
-        return json.dumps(results, ensure_ascii=False)
+        return JSONCodec.dumps(results, ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_channel_messages error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def view_channel_message(
@@ -1741,10 +1895,10 @@ async def view_channel_message(
     :return: JSON with the message content, channel info, and thread replies if any
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         user_id = __user__.get('id')
@@ -1752,19 +1906,19 @@ async def view_channel_message(
         message = await Messages.get_message_by_id(message_id)
 
         if not message:
-            return json.dumps({'error': 'Message not found'})
+            return JSONCodec.dumps({'error': 'Message not found'})
 
         # Verify user has access to the channel
         channel = await Channels.get_channel_by_id(message.channel_id)
         if not channel:
-            return json.dumps({'error': 'Channel not found'})
+            return JSONCodec.dumps({'error': 'Channel not found'})
 
         # Check if user has access to the channel
         user_channels = await Channels.get_channels_by_user_id(user_id)
         channel_ids = [c.id for c in user_channels]
 
         if message.channel_id not in channel_ids:
-            return json.dumps({'error': 'Access denied'})
+            return JSONCodec.dumps({'error': 'Access denied'})
 
         # Build response with thread information
         result = {
@@ -1784,10 +1938,10 @@ async def view_channel_message(
         if message.user:
             result['user_name'] = message.user.name
 
-        return json.dumps(result, ensure_ascii=False)
+        return JSONCodec.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'view_channel_message error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def view_channel_thread(
@@ -1802,10 +1956,10 @@ async def view_channel_thread(
     :return: JSON with the parent message and all thread replies in chronological order
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         user_id = __user__.get('id')
@@ -1814,18 +1968,18 @@ async def view_channel_thread(
         parent_message = await Messages.get_message_by_id(parent_message_id)
 
         if not parent_message:
-            return json.dumps({'error': 'Message not found'})
+            return JSONCodec.dumps({'error': 'Message not found'})
 
         # Verify user has access to the channel
         channel = await Channels.get_channel_by_id(parent_message.channel_id)
         if not channel:
-            return json.dumps({'error': 'Channel not found'})
+            return JSONCodec.dumps({'error': 'Channel not found'})
 
         user_channels = await Channels.get_channels_by_user_id(user_id)
         channel_ids = [c.id for c in user_channels]
 
         if parent_message.channel_id not in channel_ids:
-            return json.dumps({'error': 'Access denied'})
+            return JSONCodec.dumps({'error': 'Access denied'})
 
         # Get all thread replies
         thread_replies = await Messages.get_thread_replies_by_message_id(parent_message_id)
@@ -1859,7 +2013,7 @@ async def view_channel_thread(
                 }
             )
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'channel_id': parent_message.channel_id,
                 'channel_name': channel.name,
@@ -1871,7 +2025,7 @@ async def view_channel_thread(
         )
     except Exception as e:
         log.exception(f'view_channel_thread error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -1894,10 +2048,10 @@ async def list_knowledge_bases(
     :return: JSON with KBs containing id, name, description, and file_count
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.knowledge import Knowledges
@@ -1931,10 +2085,10 @@ async def list_knowledge_bases(
                 }
             )
 
-        return json.dumps(knowledge_bases, ensure_ascii=False)
+        return JSONCodec.dumps(knowledge_bases, ensure_ascii=False)
     except Exception as e:
         log.exception(f'list_knowledge_bases error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def search_knowledge_bases(
@@ -1954,10 +2108,10 @@ async def search_knowledge_bases(
     :return: JSON with matching KBs containing id, name, description, and file_count
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.knowledge import Knowledges
@@ -1991,10 +2145,10 @@ async def search_knowledge_bases(
                 }
             )
 
-        return json.dumps(knowledge_bases, ensure_ascii=False)
+        return JSONCodec.dumps(knowledge_bases, ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_knowledge_bases error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def search_knowledge_files(
@@ -2018,10 +2172,10 @@ async def search_knowledge_files(
     :return: JSON with matching files containing id, filename, and updated_at
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.access_grants import AccessGrants
@@ -2048,7 +2202,7 @@ async def search_knowledge_files(
             # If knowledge_id specified, verify it's in the attached set
             if knowledge_id:
                 if knowledge_id not in attached_kb_ids:
-                    return json.dumps({'error': f'Knowledge base {knowledge_id} is not attached to this model'})
+                    return JSONCodec.dumps({'error': f'Knowledge base {knowledge_id} is not attached to this model'})
                 attached_kb_ids = {knowledge_id}
 
             all_files = []
@@ -2107,7 +2261,7 @@ async def search_knowledge_files(
 
             # Apply pagination across combined results
             all_files = all_files[skip : skip + count]
-            return json.dumps(all_files, ensure_ascii=False)
+            return JSONCodec.dumps(all_files, ensure_ascii=False)
 
         # No attached knowledge - search all accessible KBs
         if knowledge_id:
@@ -2124,7 +2278,7 @@ async def search_knowledge_files(
                     user_group_ids=set(user_group_ids),
                 )
             ):
-                return json.dumps({'error': f'Access denied to knowledge base {knowledge_id}'})
+                return JSONCodec.dumps({'error': f'Access denied to knowledge base {knowledge_id}'})
 
             result = await Knowledges.search_files_by_id(
                 knowledge_id=knowledge_id,
@@ -2156,10 +2310,10 @@ async def search_knowledge_files(
                 file_info['knowledge_name'] = file.collection.get('name', '')
             files.append(file_info)
 
-        return json.dumps(files, ensure_ascii=False)
+        return JSONCodec.dumps(files, ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_knowledge_files error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def _get_accessible_chat_files(
@@ -2169,8 +2323,6 @@ async def _get_accessible_chat_files(
 ) -> list[tuple[dict, object]]:
     from open_webui.models.files import Files
 
-    user_id = user.get('id')
-    user_role = user.get('role', 'user')
     accessible = []
     seen = set()
 
@@ -2192,7 +2344,7 @@ async def _get_accessible_chat_files(
         seen.add(fid)
 
         file = await Files.get_file_by_id(fid)
-        if file and await _has_read_access_to_file(file, user_id, user_role):
+        if file and await _has_read_access_to_file(file, user):
             accessible.append((normalized, file))
 
     return accessible
@@ -2208,7 +2360,7 @@ def _grep_file_models(
 
     matches, err = build_matcher(pattern, case_insensitive)
     if err:
-        return json.dumps({'error': err})
+        return JSONCodec.dumps({'error': err})
 
     results = []
     total_matches = 0
@@ -2259,10 +2411,10 @@ async def list_chat_files(
     :return: JSON with attached chat files containing id, filename, content type, size, and updated time when available
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         files = []
@@ -2282,10 +2434,10 @@ async def list_chat_files(
                 file_info['size'] = size
             files.append(file_info)
 
-        return json.dumps(files, ensure_ascii=False)
+        return JSONCodec.dumps(files, ensure_ascii=False)
     except Exception as e:
         log.exception(f'list_chat_files error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def grep_chat_files(
@@ -2308,13 +2460,13 @@ async def grep_chat_files(
     :return: Matching lines with file IDs, filenames, and line numbers
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     if not pattern or not pattern.strip():
-        return json.dumps({'error': 'Pattern is required'})
+        return JSONCodec.dumps({'error': 'Pattern is required'})
 
     if isinstance(file_id, str) and file_id.lower() in ('none', 'null', ''):
         file_id = None
@@ -2329,18 +2481,18 @@ async def grep_chat_files(
                 attached_ids.add(fid)
 
         if not attached_ids:
-            return json.dumps({'error': 'No files are attached to this chat'})
+            return JSONCodec.dumps({'error': 'No files are attached to this chat'})
         if file_id and file_id not in attached_ids:
-            return json.dumps({'error': 'File not found'})
+            return JSONCodec.dumps({'error': 'File not found'})
 
         files_to_search = [file for _, file in await _get_accessible_chat_files(__files__, __user__, file_id)]
         if not files_to_search:
-            return json.dumps({'error': 'No accessible files found'})
+            return JSONCodec.dumps({'error': 'No accessible files found'})
 
         return _grep_file_models(files_to_search, pattern, case_insensitive, count_only)
     except Exception as e:
         log.exception(f'grep_chat_files error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def query_chat_files(
@@ -2361,10 +2513,10 @@ async def query_chat_files(
     :return: JSON with relevant chunks containing content, source filename, and relevance score
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     if isinstance(file_id, str) and file_id.lower() in ('none', 'null', ''):
         file_id = None
@@ -2389,13 +2541,13 @@ async def query_chat_files(
                 attached_ids.add(fid)
 
         if not attached_ids:
-            return json.dumps({'error': 'No files are attached to this chat'})
+            return JSONCodec.dumps({'error': 'No files are attached to this chat'})
         if file_id and file_id not in attached_ids:
-            return json.dumps({'error': 'File not found'})
+            return JSONCodec.dumps({'error': 'File not found'})
 
         accessible = await _get_accessible_chat_files(__files__, __user__, file_id)
         if not accessible:
-            return json.dumps({'error': 'No accessible files found'})
+            return JSONCodec.dumps({'error': 'No accessible files found'})
 
         file_items = [{**item} for item, _ in accessible]
         rag_config = await Config.get_many(
@@ -2412,12 +2564,9 @@ async def query_chat_files(
 
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function and not full_context:
-            return json.dumps({'error': 'Embedding function not configured'})
+            return JSONCodec.dumps({'error': 'Embedding function not configured'})
 
-        user_model = UserModel.model_construct(
-            id=__user__.get('id'),
-            role=__user__.get('role', 'user'),
-        )
+        user_model = UserModel(**__user__)
         sources = await get_sources_from_items(
             request=__request__,
             items=file_items,
@@ -2459,10 +2608,10 @@ async def query_chat_files(
                     chunk['distance'] = distances[idx]
                 chunks.append(chunk)
 
-        return json.dumps(chunks[:count], ensure_ascii=False)
+        return JSONCodec.dumps(chunks[:count], ensure_ascii=False)
     except Exception as e:
         log.exception(f'query_chat_files error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def grep_knowledge_files(
@@ -2487,13 +2636,13 @@ async def grep_knowledge_files(
     :return: Matching lines with file IDs, filenames, and line numbers
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     if not pattern or not pattern.strip():
-        return json.dumps({'error': 'Pattern is required'})
+        return JSONCodec.dumps({'error': 'Pattern is required'})
 
     try:
         from open_webui.models.files import Files
@@ -2510,8 +2659,8 @@ async def grep_knowledge_files(
             # Single file mode — verify access
             file = await Files.get_file_by_id(file_id)
             if file:
-                if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
-                    return json.dumps({'error': 'File not found'})
+                if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
+                    return JSONCodec.dumps({'error': 'File not found'})
                 files_to_search.append(file)
         elif __model_knowledge__:
             # Scoped to model's attached knowledge
@@ -2576,13 +2725,13 @@ async def grep_knowledge_files(
                             seen_ids.add(fid)
 
         if not files_to_search:
-            return json.dumps({'error': 'No accessible files found'})
+            return JSONCodec.dumps({'error': 'No accessible files found'})
 
         return _grep_file_models(files_to_search, pattern, case_insensitive, count_only)
 
     except Exception as e:
         log.exception(f'grep_knowledge_files error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def view_file(
@@ -2608,10 +2757,10 @@ async def view_file(
     :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     # Coerce parameters from LLM tool calls (may come as strings)
     if isinstance(offset, str):
@@ -2632,15 +2781,12 @@ async def view_file(
     try:
         from open_webui.models.files import Files
 
-        user_id = __user__.get('id')
-        user_role = __user__.get('role', 'user')
-
         file = await Files.get_file_by_id(file_id)
         if not file:
-            return json.dumps({'error': 'File not found'})
+            return JSONCodec.dumps({'error': 'File not found'})
 
-        if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
-            return json.dumps({'error': 'File not found'})
+        if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
+            return JSONCodec.dumps({'error': 'File not found'})
 
         content = ''
         if file.data:
@@ -2669,7 +2815,7 @@ async def view_file(
             if is_truncated:
                 result['truncated'] = True
                 result['next_start_line'] = e + 1
-            return json.dumps(result, ensure_ascii=False)
+            return JSONCodec.dumps(result, ensure_ascii=False)
 
         sliced = content[offset : offset + max_chars]
         is_truncated = (offset + len(sliced)) < total_chars
@@ -2695,10 +2841,10 @@ async def view_file(
             if is_truncated:
                 result['next_offset'] = offset + len(sliced)
 
-        return json.dumps(result, ensure_ascii=False)
+        return JSONCodec.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'view_file error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def view_knowledge_file(
@@ -2723,10 +2869,10 @@ async def view_knowledge_file(
     :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     # Coerce parameters from LLM tool calls (may come as strings)
     if isinstance(offset, str):
@@ -2755,7 +2901,7 @@ async def view_knowledge_file(
 
         file = await Files.get_file_by_id(file_id)
         if not file:
-            return json.dumps({'error': 'File not found'})
+            return JSONCodec.dumps({'error': 'File not found'})
 
         # Check access via any KB containing this file
         knowledges = await Knowledges.get_knowledges_by_file_id(file_id)
@@ -2780,7 +2926,7 @@ async def view_knowledge_file(
 
         if not has_knowledge_access:
             if file.user_id != user_id and user_role != 'admin':
-                return json.dumps({'error': 'Access denied'})
+                return JSONCodec.dumps({'error': 'Access denied'})
 
         content = ''
         if file.data:
@@ -2812,7 +2958,7 @@ async def view_knowledge_file(
             if is_truncated:
                 result['truncated'] = True
                 result['next_start_line'] = e + 1
-            return json.dumps(result, ensure_ascii=False)
+            return JSONCodec.dumps(result, ensure_ascii=False)
 
         sliced = content[offset : offset + max_chars]
         is_truncated = (offset + len(sliced)) < total_chars
@@ -2841,10 +2987,10 @@ async def view_knowledge_file(
             if is_truncated:
                 result['next_offset'] = offset + len(sliced)
 
-        return json.dumps(result, ensure_ascii=False)
+        return JSONCodec.dumps(result, ensure_ascii=False)
     except Exception as e:
         log.exception(f'view_knowledge_file error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def list_knowledge(
@@ -2869,13 +3015,13 @@ async def list_knowledge(
     :return: JSON with knowledge_bases, files, and notes attached to this model
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     if not __model_knowledge__:
-        return json.dumps({'knowledge_bases': [], 'files': [], 'notes': []})
+        return JSONCodec.dumps({'knowledge_bases': [], 'files': [], 'notes': []})
 
     # Coerce parameters from LLM tool calls (may come as strings)
     if isinstance(skip, str):
@@ -2976,7 +3122,7 @@ async def list_knowledge(
                         }
                     )
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'knowledge_bases': knowledge_bases,
                 'files': files,
@@ -2986,7 +3132,7 @@ async def list_knowledge(
         )
     except Exception as e:
         log.exception(f'list_knowledge error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def query_knowledge_files(
@@ -3008,10 +3154,10 @@ async def query_knowledge_files(
     :return: JSON with relevant chunks containing content, source filename, and relevance score
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     # Coerce parameters from LLM tool calls (may come as strings)
     if isinstance(count, str):
@@ -3027,8 +3173,8 @@ async def query_knowledge_files(
         else:
             # Try to parse as JSON array if it looks like one
             try:
-                knowledge_ids = json.loads(knowledge_ids)
-            except json.JSONDecodeError:
+                knowledge_ids = JSONCodec.loads(knowledge_ids)
+            except JSONCodec.JSONDecodeError:
                 # Treat as single ID
                 knowledge_ids = [knowledge_ids]
 
@@ -3046,8 +3192,8 @@ async def query_knowledge_files(
 
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
-            return json.dumps({'error': 'Embedding function not configured'})
-        user_model = UserModel.model_construct(id=user_id, role=user_role)
+            return JSONCodec.dumps({'error': 'Embedding function not configured'})
+        user_model = UserModel(**__user__)
 
         collection_names = []
         external_knowledges = []
@@ -3202,10 +3348,10 @@ async def query_knowledge_files(
         # Limit to requested count
         chunks = chunks[:count]
 
-        return json.dumps(chunks, ensure_ascii=False)
+        return JSONCodec.dumps(chunks, ensure_ascii=False)
     except Exception as e:
         log.exception(f'query_knowledge_files error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def query_knowledge_bases(
@@ -3224,10 +3370,10 @@ async def query_knowledge_bases(
     :return: JSON with matching KBs (id, name, description, similarity)
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         import heapq
@@ -3240,8 +3386,8 @@ async def query_knowledge_bases(
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
-            return json.dumps({'error': 'Embedding function not configured'})
-        user_model = UserModel.model_construct(id=user_id, role=__user__.get('role', 'user'))
+            return JSONCodec.dumps({'error': 'Embedding function not configured'})
+        user_model = UserModel(**__user__)
         query_embedding = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user_model)
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
@@ -3306,11 +3452,11 @@ async def query_knowledge_bases(
                     }
                 )
 
-        return json.dumps(matching_knowledge_bases, ensure_ascii=False)
+        return JSONCodec.dumps(matching_knowledge_bases, ensure_ascii=False)
 
     except Exception as e:
         log.exception(f'query_knowledge_bases error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -3331,10 +3477,10 @@ async def view_skill(
     :return: The full skill instructions as markdown content
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.access_grants import AccessGrants
@@ -3346,7 +3492,7 @@ async def view_skill(
         skill = await Skills.get_skill_by_id(id.lower())
 
         if not skill or not skill.is_active:
-            return json.dumps({'error': f"Skill '{id}' not found"})
+            return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
 
         # Check user access
         user_role = __user__.get('role', 'user')
@@ -3359,9 +3505,9 @@ async def view_skill(
                 permission='read',
                 user_group_ids=set(user_group_ids),
             ):
-                return json.dumps({'error': 'Access denied'})
+                return JSONCodec.dumps({'error': 'Access denied'})
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'name': skill.name,
                 'content': skill.content,
@@ -3370,7 +3516,7 @@ async def view_skill(
         )
     except Exception as e:
         log.exception(f'view_skill error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -3433,7 +3579,7 @@ async def create_tasks(
     :return: JSON with the full task list and summary counts
     """
     if not is_saved_chat_id(__chat_id__):
-        return json.dumps({'error': 'Saved chat context not available'})
+        return JSONCodec.dumps({'error': 'Saved chat context not available'})
 
     try:
         all_tasks = []
@@ -3459,13 +3605,13 @@ async def create_tasks(
         await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
         await _emit_tasks(__event_emitter__, all_tasks)
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {'tasks': all_tasks, 'summary': _task_summary(all_tasks)},
             ensure_ascii=False,
         )
     except Exception as e:
         log.exception(f'tasks error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def update_task(
@@ -3485,12 +3631,12 @@ async def update_task(
     :return: JSON with the updated task list and summary counts
     """
     if not is_saved_chat_id(__chat_id__):
-        return json.dumps({'error': 'Saved chat context not available'})
+        return JSONCodec.dumps({'error': 'Saved chat context not available'})
 
     try:
         status = status.strip().lower()
         if status not in VALID_TASK_STATUSES:
-            return json.dumps(
+            return JSONCodec.dumps(
                 {'error': f'Invalid status: {status}. Must be one of: {", ".join(sorted(VALID_TASK_STATUSES))}'}
             )
 
@@ -3504,18 +3650,18 @@ async def update_task(
                 break
 
         if not found:
-            return json.dumps({'error': f'Task with id "{id}" not found'})
+            return JSONCodec.dumps({'error': f'Task with id "{id}" not found'})
 
         await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
         await _emit_tasks(__event_emitter__, all_tasks)
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {'tasks': all_tasks, 'summary': _task_summary(all_tasks)},
             ensure_ascii=False,
         )
     except Exception as e:
         log.exception(f'update_task_status error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
@@ -3565,13 +3711,13 @@ async def create_automation(
     :return: JSON with the created automation details including id, next scheduled runs
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, Automations
+        from open_webui.models.automations import AutomationData, AutomationForm, AutomationTarget, Automations
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
@@ -3579,7 +3725,7 @@ async def create_automation(
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
         if not user:
-            return json.dumps({'error': 'User not found'})
+            return JSONCodec.dumps({'error': 'User not found'})
 
         # Fall back to model dict ID since __metadata__ may predate model_id assignment
         metadata = __metadata__ or {}
@@ -3587,23 +3733,23 @@ async def create_automation(
             metadata.get('model', {}).get('id') if isinstance(metadata.get('model'), dict) else None
         )
         if not model_id:
-            return json.dumps({'error': 'Could not detect current model'})
+            return JSONCodec.dumps({'error': 'Could not detect current model'})
 
         try:
             folder_id = await _validate_owned_automation_folder(user_id, folder_id)
         except ValueError as e:
-            return json.dumps({'error': str(e)})
+            return JSONCodec.dumps({'error': str(e)})
 
         # Validate the RRULE
         try:
             validate_rrule(rrule, tz=user.timezone)
         except ValueError as e:
-            return json.dumps({'error': f'Invalid schedule: {e}'})
+            return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
         try:
             await check_automation_limits(__request__, user, rrule, None, is_create=True)
         except HTTPException as e:
-            return json.dumps({'error': e.detail})
+            return JSONCodec.dumps({'error': e.detail})
 
         tz = user.timezone
         form = AutomationForm(
@@ -3613,19 +3759,25 @@ async def create_automation(
                 prompt=prompt,
                 model_id=model_id,
                 rrule=rrule,
+                target=(
+                    AutomationTarget(type='channel', channel_id=metadata.get('chat_id', '').removeprefix('channel:'))
+                    if metadata.get('chat_id', '').startswith('channel:')
+                    else None
+                ),
             ),
             is_active=True,
         )
 
         automation = await Automations.insert(user_id, form, next_run_ns(rrule, tz=tz))
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 'id': automation.id,
                 'name': automation.name,
                 'folder_id': automation.folder_id,
                 'model_id': model_id,
+                'target': automation.data.get('target'),
                 'is_active': automation.is_active,
                 'next_runs': next_n_runs_ns(rrule, tz=tz),
             },
@@ -3633,7 +3785,7 @@ async def create_automation(
         )
     except Exception as e:
         log.exception(f'create_automation error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def update_automation(
@@ -3642,7 +3794,7 @@ async def update_automation(
     prompt: Optional[str] = None,
     rrule: Optional[str] = None,
     model_id: Optional[str] = None,
-    folder_id: Optional[str] = None,
+    folder_id: Optional[str] = '',
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -3653,18 +3805,18 @@ async def update_automation(
     :param name: New name for the automation (optional)
     :param prompt: New prompt/instructions (optional)
     :param rrule: New iCalendar RRULE schedule string (optional). See create_automation for format examples.
-    :param model_id: New model ID to use (optional)
-    :param folder_id: New owner-owned folder ID (optional); pass an empty string to clear
+    :param model_id: New model ID to use (optional); blank values are ignored
+    :param folder_id: New owner-owned folder ID (optional); omit or pass blank to keep unchanged, pass null to clear
     :return: JSON with the updated automation details
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, Automations
+        from open_webui.models.automations import AutomationData, AutomationForm, AutomationTarget, Automations
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
@@ -3672,38 +3824,40 @@ async def update_automation(
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
         if not user:
-            return json.dumps({'error': 'User not found'})
+            return JSONCodec.dumps({'error': 'User not found'})
 
         automation = await Automations.get_by_id(automation_id)
         if not automation:
-            return json.dumps({'error': 'Automation not found'})
+            return JSONCodec.dumps({'error': 'Automation not found'})
         if automation.user_id != user_id:
-            return json.dumps({'error': 'Access denied'})
+            return JSONCodec.dumps({'error': 'Access denied'})
 
         # Merge provided fields with existing values
         new_name = name if name is not None else automation.name
         new_prompt = prompt if prompt is not None else automation.data.get('prompt', '')
-        new_model_id = model_id if model_id is not None else automation.data.get('model_id', '')
+        new_model_id = model_id.strip() if model_id and model_id.strip() else automation.data.get('model_id', '')
         new_rrule = rrule if rrule is not None else automation.data.get('rrule', '')
         if folder_id is None:
+            new_folder_id = None
+        elif not folder_id.strip():
             new_folder_id = automation.folder_id
         else:
             try:
-                new_folder_id = await _validate_owned_automation_folder(user_id, folder_id)
+                new_folder_id = await _validate_owned_automation_folder(user_id, folder_id.strip())
             except ValueError as e:
-                return json.dumps({'error': str(e)})
+                return JSONCodec.dumps({'error': str(e)})
 
         # Validate RRULE if changed
         if rrule is not None:
             try:
                 validate_rrule(new_rrule, tz=user.timezone)
             except ValueError as e:
-                return json.dumps({'error': f'Invalid schedule: {e}'})
+                return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
         try:
             await check_automation_limits(__request__, user, new_rrule, None)
         except HTTPException as e:
-            return json.dumps({'error': e.detail})
+            return JSONCodec.dumps({'error': e.detail})
 
         tz = user.timezone
         form = AutomationForm(
@@ -3713,19 +3867,21 @@ async def update_automation(
                 prompt=new_prompt,
                 model_id=new_model_id,
                 rrule=new_rrule,
+                target=AutomationTarget(**automation.data['target']) if automation.data.get('target') else None,
             ),
             is_active=automation.is_active,
         )
 
         updated = await Automations.update_by_id(automation_id, form, next_run_ns(new_rrule, tz=tz))
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 'id': updated.id,
                 'name': updated.name,
                 'folder_id': updated.folder_id,
                 'model_id': new_model_id,
+                'target': updated.data.get('target'),
                 'is_active': updated.is_active,
                 'next_runs': next_n_runs_ns(new_rrule, tz=tz),
             },
@@ -3733,7 +3889,7 @@ async def update_automation(
         )
     except Exception as e:
         log.exception(f'update_automation error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def list_automations(
@@ -3752,10 +3908,10 @@ async def list_automations(
     :return: JSON list of automations with id, name, prompt snippet, schedule, status, and next runs
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.automations import Automations
@@ -3768,7 +3924,7 @@ async def list_automations(
             try:
                 folder_id = await _validate_owned_automation_folder(user_id, folder_id)
             except ValueError as e:
-                return json.dumps({'error': str(e)})
+                return JSONCodec.dumps({'error': str(e)})
 
         result = await Automations.search_automations(
             user_id=user_id,
@@ -3791,6 +3947,7 @@ async def list_automations(
                     'folder_id': item.folder_id,
                     'prompt_snippet': snippet,
                     'model_id': item.data.get('model_id', ''),
+                    'target': item.data.get('target'),
                     'rrule': rrule,
                     'is_active': item.is_active,
                     'last_run_at': item.last_run_at,
@@ -3798,13 +3955,13 @@ async def list_automations(
                 }
             )
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {'automations': automations, 'total': result.total},
             ensure_ascii=False,
         )
     except Exception as e:
         log.exception(f'list_automations error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def toggle_automation(
@@ -3819,10 +3976,10 @@ async def toggle_automation(
     :return: JSON with the updated automation status
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.automations import Automations
@@ -3834,9 +3991,9 @@ async def toggle_automation(
 
         automation = await Automations.get_by_id(automation_id)
         if not automation:
-            return json.dumps({'error': 'Automation not found'})
+            return JSONCodec.dumps({'error': 'Automation not found'})
         if automation.user_id != user_id:
-            return json.dumps({'error': 'Access denied'})
+            return JSONCodec.dumps({'error': 'Access denied'})
 
         rrule = automation.data.get('rrule', '')
         toggled = await Automations.toggle(
@@ -3844,7 +4001,7 @@ async def toggle_automation(
             next_run_ns(rrule, tz=user.timezone if user else None),
         )
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 'id': toggled.id,
@@ -3855,7 +4012,7 @@ async def toggle_automation(
         )
     except Exception as e:
         log.exception(f'toggle_automation error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def delete_automation(
@@ -3870,10 +4027,10 @@ async def delete_automation(
     :return: JSON confirming the automation was deleted
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.automations import AutomationRuns, Automations
@@ -3882,15 +4039,15 @@ async def delete_automation(
 
         automation = await Automations.get_by_id(automation_id)
         if not automation:
-            return json.dumps({'error': 'Automation not found'})
+            return JSONCodec.dumps({'error': 'Automation not found'})
         if automation.user_id != user_id:
-            return json.dumps({'error': 'Access denied'})
+            return JSONCodec.dumps({'error': 'Access denied'})
 
         name = automation.name
         await AutomationRuns.delete_by_automation(automation_id)
         await Automations.delete(automation_id)
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 'message': f'Automation "{name}" deleted',
@@ -3899,12 +4056,15 @@ async def delete_automation(
         )
     except Exception as e:
         log.exception(f'delete_automation error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 # =============================================================================
 # CALENDAR TOOLS
 # =============================================================================
+
+
+MAX_CALENDAR_RANGE_END_NS = 2**63 - 1
 
 
 def _get_user_tz(user_dict: dict):
@@ -3981,10 +4141,10 @@ async def search_calendar_events(
     :return: JSON list of matching events with id, title, description, start, end, calendar_id, location
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.calendar import CalendarEvents
@@ -4003,16 +4163,12 @@ async def search_calendar_events(
             try:
                 start_ns = _dt_to_ns(start, tz) if start else 0
             except (ValueError, TypeError) as e:
-                return json.dumps({'error': f'Invalid start datetime: {e}'})
+                return JSONCodec.dumps({'error': f'Invalid start datetime: {e}'})
 
             try:
-                end_ns = (
-                    _dt_to_ns(end, tz)
-                    if end
-                    else int(time.time() * 1_000) * 1_000_000 + 365 * 86400 * 1_000_000_000_000
-                )
+                end_ns = _dt_to_ns(end, tz) if end else MAX_CALENDAR_RANGE_END_NS
             except (ValueError, TypeError) as e:
-                return json.dumps({'error': f'Invalid end datetime: {e}'})
+                return JSONCodec.dumps({'error': f'Invalid end datetime: {e}'})
 
             items = await CalendarEvents.get_events_by_range(
                 user_id=user_id,
@@ -4032,7 +4188,7 @@ async def search_calendar_events(
                 ]
 
             events = [_event_to_dict(item, tz) for item in items[:count]]
-            return json.dumps(
+            return JSONCodec.dumps(
                 {'events': events, 'total': len(items)},
                 ensure_ascii=False,
             )
@@ -4046,13 +4202,13 @@ async def search_calendar_events(
             )
 
             events = [_event_to_dict(item, tz) for item in result.items]
-            return json.dumps(
+            return JSONCodec.dumps(
                 {'events': events, 'total': result.total},
                 ensure_ascii=False,
             )
     except Exception as e:
         log.exception(f'search_calendar_events error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def create_calendar_event(
@@ -4084,10 +4240,10 @@ async def create_calendar_event(
     :return: JSON with the created event details including id
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.calendar import CalendarEventForm, CalendarEvents, Calendars
@@ -4101,13 +4257,13 @@ async def create_calendar_event(
             if not default_cal and calendars:
                 default_cal = calendars[0]
             if not default_cal:
-                return json.dumps({'error': 'No calendars found. Cannot create event.'})
+                return JSONCodec.dumps({'error': 'No calendars found. Cannot create event.'})
             calendar_id = default_cal.id
 
         # Verify access
         cal = await Calendars.get_calendar_by_id(calendar_id)
         if not cal:
-            return json.dumps({'error': 'Calendar not found'})
+            return JSONCodec.dumps({'error': 'Calendar not found'})
         if cal.user_id != user_id and __user__.get('role') != 'admin':
             from open_webui.models.access_grants import AccessGrants
             from open_webui.models.groups import Groups
@@ -4120,7 +4276,7 @@ async def create_calendar_event(
                 permission='write',
                 user_group_ids=set(user_group_ids),
             ):
-                return json.dumps({'error': 'Access denied to this calendar'})
+                return JSONCodec.dumps({'error': 'Access denied to this calendar'})
 
         # Coerce boolean from LLM
         if isinstance(all_day, str):
@@ -4131,14 +4287,14 @@ async def create_calendar_event(
         try:
             start_ns = _dt_to_ns(start, tz)
         except (ValueError, TypeError) as e:
-            return json.dumps({'error': f'Invalid start datetime: {e}. Use format like "2026-04-20 09:00"'})
+            return JSONCodec.dumps({'error': f'Invalid start datetime: {e}. Use format like "2026-04-20 09:00"'})
 
         end_ns = None
         if end:
             try:
                 end_ns = _dt_to_ns(end, tz)
             except (ValueError, TypeError) as e:
-                return json.dumps({'error': f'Invalid end datetime: {e}. Use format like "2026-04-20 10:00"'})
+                return JSONCodec.dumps({'error': f'Invalid end datetime: {e}. Use format like "2026-04-20 10:00"'})
         elif not all_day:
             # Default to 1 hour duration
             end_ns = start_ns + 3_600_000_000_000
@@ -4168,9 +4324,9 @@ async def create_calendar_event(
 
         event = await CalendarEvents.insert_new_event(user_id, form)
         if not event:
-            return json.dumps({'error': 'Failed to create event'})
+            return JSONCodec.dumps({'error': 'Failed to create event'})
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 **_event_to_dict(event, tz),
@@ -4179,7 +4335,7 @@ async def create_calendar_event(
         )
     except Exception as e:
         log.exception(f'create_calendar_event error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def update_calendar_event(
@@ -4211,10 +4367,10 @@ async def update_calendar_event(
     :return: JSON with the updated event details
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.access_grants import AccessGrants
@@ -4225,13 +4381,13 @@ async def update_calendar_event(
 
         event = await CalendarEvents.get_event_by_id(event_id)
         if not event:
-            return json.dumps({'error': 'Event not found'})
+            return JSONCodec.dumps({'error': 'Event not found'})
 
         # Check write access to the event's calendar
         if event.user_id != user_id and __user__.get('role') != 'admin':
             cal = await Calendars.get_calendar_by_id(event.calendar_id)
             if not cal:
-                return json.dumps({'error': 'Access denied'})
+                return JSONCodec.dumps({'error': 'Access denied'})
             user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
             if not await AccessGrants.has_access(
                 user_id=user_id,
@@ -4240,7 +4396,7 @@ async def update_calendar_event(
                 permission='write',
                 user_group_ids=set(user_group_ids),
             ):
-                return json.dumps({'error': 'Access denied'})
+                return JSONCodec.dumps({'error': 'Access denied'})
 
         # Coerce boolean strings from LLM
         if isinstance(all_day, str):
@@ -4255,14 +4411,14 @@ async def update_calendar_event(
             try:
                 start_ns = _dt_to_ns(start, tz)
             except (ValueError, TypeError) as e:
-                return json.dumps({'error': f'Invalid start datetime: {e}'})
+                return JSONCodec.dumps({'error': f'Invalid start datetime: {e}'})
 
         end_ns = None
         if end is not None:
             try:
                 end_ns = _dt_to_ns(end, tz)
             except (ValueError, TypeError) as e:
-                return json.dumps({'error': f'Invalid end datetime: {e}'})
+                return JSONCodec.dumps({'error': f'Invalid end datetime: {e}'})
 
         # Build meta update with reminder setting if provided
         meta = None
@@ -4275,22 +4431,23 @@ async def update_calendar_event(
             if reminder_minutes is not None:
                 meta = {'alert_minutes': reminder_minutes}
 
-        form = CalendarEventUpdateForm(
-            title=title,
-            description=description,
-            start_at=start_ns,
-            end_at=end_ns,
-            all_day=all_day,
-            location=location,
-            is_cancelled=is_cancelled,
-            meta=meta,
-        )
+        update_fields = {
+            'title': title,
+            'description': description,
+            'start_at': start_ns,
+            'end_at': end_ns,
+            'all_day': all_day,
+            'location': location,
+            'is_cancelled': is_cancelled,
+            'meta': meta,
+        }
+        form = CalendarEventUpdateForm(**{k: v for k, v in update_fields.items() if v is not None})
 
         updated = await CalendarEvents.update_event_by_id(event_id, form)
         if not updated:
-            return json.dumps({'error': 'Failed to update event'})
+            return JSONCodec.dumps({'error': 'Failed to update event'})
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 **_event_to_dict(updated, tz),
@@ -4299,7 +4456,7 @@ async def update_calendar_event(
         )
     except Exception as e:
         log.exception(f'update_calendar_event error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
 
 
 async def delete_calendar_event(
@@ -4314,10 +4471,10 @@ async def delete_calendar_event(
     :return: JSON confirming the event was deleted
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
         from open_webui.models.access_grants import AccessGrants
@@ -4328,13 +4485,13 @@ async def delete_calendar_event(
 
         event = await CalendarEvents.get_event_by_id(event_id)
         if not event:
-            return json.dumps({'error': 'Event not found'})
+            return JSONCodec.dumps({'error': 'Event not found'})
 
         # Check write access
         if event.user_id != user_id and __user__.get('role') != 'admin':
             cal = await Calendars.get_calendar_by_id(event.calendar_id)
             if not cal:
-                return json.dumps({'error': 'Access denied'})
+                return JSONCodec.dumps({'error': 'Access denied'})
             user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
             if not await AccessGrants.has_access(
                 user_id=user_id,
@@ -4343,14 +4500,14 @@ async def delete_calendar_event(
                 permission='write',
                 user_group_ids=set(user_group_ids),
             ):
-                return json.dumps({'error': 'Access denied'})
+                return JSONCodec.dumps({'error': 'Access denied'})
 
         title = event.title
         result = await CalendarEvents.delete_event_by_id(event_id)
         if not result:
-            return json.dumps({'error': 'Failed to delete event'})
+            return JSONCodec.dumps({'error': 'Failed to delete event'})
 
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'success',
                 'message': f'Event "{title}" deleted',
@@ -4359,4 +4516,4 @@ async def delete_calendar_event(
         )
     except Exception as e:
         log.exception(f'delete_calendar_event error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})

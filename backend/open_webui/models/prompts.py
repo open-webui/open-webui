@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 import uuid
@@ -15,6 +14,7 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import PromptHistories
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.misc import json_text_variants
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +47,7 @@ class PromptModel(BaseModel):
     content: str
     data: dict | None = None
     meta: dict | None = None
-    tags: list[str | None] = None
+    tags: list[str] | None = None
     is_active: bool | None = True
     version_id: str | None = None
     created_at: int | None = None
@@ -86,8 +86,8 @@ class PromptForm(BaseModel):
     content: str
     data: dict | None = None
     meta: dict | None = None
-    tags: list[str | None] = None
-    access_grants: list[dict | None] = None
+    tags: list[str] | None = None
+    access_grants: list[dict] | None = None
     version_id: str | None = None  # Active version
     commit_message: str | None = None  # For history tracking
     is_production: bool | None = True  # Whether to set new version as production
@@ -100,7 +100,7 @@ class PromptsTable:
     async def _to_prompt_model(
         self,
         prompt: Prompt,
-        access_grants: list[AccessGrantModel | None] = None,
+        access_grants: list[AccessGrantModel] | None = None,
         db: AsyncSession | None = None,
     ) -> PromptModel:
         prompt_model = PromptModel.model_validate(prompt)
@@ -334,17 +334,19 @@ class PromptsTable:
                     tag_lower = tag.lower()
 
                     if dialect_name == 'sqlite':
+                        tag_lower = tag.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
                         tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE LOWER(t.value) = :tag_val)'
+                            "EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE t.value LIKE :tag_val ESCAPE '\\')"
                         )
                     elif dialect_name == 'postgresql':
                         tag_clause = text(
                             'EXISTS (SELECT 1 FROM json_array_elements_text(prompt.tags) t WHERE LOWER(t) = :tag_val)'
                         )
                     else:
-                        # Fallback: LIKE on serialised JSON text (ASCII-safe only)
-                        tag_clause = func.lower(cast(Prompt.tags, String)).like(
-                            f'%{json.dumps(tag_lower, ensure_ascii=False)}%'
+                        # Fallback for dialects with no JSON array function: LIKE on the text.
+                        tags_text = func.lower(cast(Prompt.tags, String))
+                        tag_clause = or_(
+                            *(tags_text.like(f'%"{variant}"%') for variant in json_text_variants(tag_lower))
                         )
                         tag_lower = None
 
@@ -556,7 +558,7 @@ class PromptsTable:
         prompt_id: str,
         name: str,
         command: str,
-        tags: list[str | None] = None,
+        tags: list[str] | None = None,
         db: AsyncSession | None = None,
     ) -> PromptModel | None:
         """Update only name, command, and tags (no history created)."""

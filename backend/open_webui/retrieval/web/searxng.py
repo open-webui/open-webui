@@ -12,6 +12,9 @@ log = logging.getLogger(__name__)
 
 # SearXNG request headers — identifies the bot to instance operators.
 _SEARXNG_HEADERS = {
+    # LICENSE covers this Open WebUI user-agent identifier.
+    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+    # https://docs.openwebui.com/license.
     'User-Agent': 'Open WebUI (https://github.com/open-webui/open-webui) RAG Bot',
     'Accept': 'text/html',
     'Accept-Encoding': 'gzip, deflate',
@@ -37,7 +40,7 @@ async def search_searxng(
     query_url: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
     **kwargs,
 ) -> list[SearchResult]:
     """Query a SearXNG instance and return results sorted by relevance score.

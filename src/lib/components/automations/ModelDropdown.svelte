@@ -76,7 +76,7 @@
 			<Search className="size-3.5" strokeWidth="2.5" />
 			<input
 				bind:value={modelSearch}
-				class="w-full text-[13px] bg-transparent outline-hidden"
+				class="w-full text-[0.8125rem] bg-transparent outline-hidden"
 				placeholder={$i18n.t('Search a model')}
 				autocomplete="off"
 				on:click={(e) => e.stopPropagation()}
@@ -84,13 +84,14 @@
 		</div>
 
 		<div class="overflow-y-auto scrollbar-thin max-h-60">
-			<div class="px-2 text-[11px] text-gray-500 py-0.5">
+			<div class="px-2 text-[0.6875rem] text-gray-500 py-0.5">
 				{$i18n.t('Models')}
 			</div>
 
 			{#each filteredModels as model (model.id)}
 				<button
-					class="h-[1.6875rem] px-2 rounded-xl w-full text-left text-[13px] {model_id === model.id
+					class="h-[1.6875rem] px-2 rounded-xl w-full text-left text-[0.8125rem] {model_id ===
+					model.id
 						? 'text-gray-900 dark:text-gray-100'
 						: 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'}"
 					type="button"
@@ -108,6 +109,9 @@
 							class="rounded-full size-5 items-center mr-2"
 							loading="lazy"
 							on:error={(e) => {
+								// LICENSE covers this Open WebUI fallback logo.
+								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+								// https://docs.openwebui.com/license.
 								e.currentTarget.src = '/favicon.png';
 							}}
 						/>
@@ -117,7 +121,7 @@
 					</div>
 				</button>
 			{:else}
-				<div class="block px-2 py-1.5 text-[13px] text-gray-700 dark:text-gray-100">
+				<div class="block px-2 py-1.5 text-[0.8125rem] text-gray-700 dark:text-gray-100">
 					{$i18n.t('No results found')}
 				</div>
 			{/each}

@@ -11,7 +11,7 @@
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_NAME, config, user, workspaceActions } from '$lib/stores';
+	import { WEBUI_NAME, config, user, workspaceActions, workspaceCounts } from '$lib/stores';
 
 	import {
 		createNewPrompt,
@@ -179,6 +179,7 @@
 			if (res) {
 				prompts = res.items;
 				total = res.total;
+				workspaceCounts.update((counts) => ({ ...counts, prompts: total }));
 
 				// get tags
 				tags = await getPromptTags(localStorage.token).catch((error) => {
@@ -194,6 +195,9 @@
 	};
 
 	const shareHandler = async (prompt) => {
+		// LICENSE covers this Open WebUI Community wordmark.
+		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		// https://docs.openwebui.com/license.
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
@@ -357,6 +361,9 @@
 </script>
 
 <svelte:head>
+	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
 	<title>
 		{$i18n.t('Prompts')} / {$WEBUI_NAME}
 	</title>
@@ -491,6 +498,10 @@
 							bind:value={selectedTag}
 							align="end"
 							items={tags.map((tag) => ({ value: tag, label: tag }))}
+							onChange={async () => {
+								page = 1;
+								await tick();
+							}}
 						/>
 					{/if}
 				</div>
@@ -563,14 +574,14 @@
 										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 											<Tooltip content={prompt.name} className="min-w-0" placement="top-start">
 												<div
-													class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+													class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 												>
 													{prompt.name}
 												</div>
 											</Tooltip>
 
 											<div
-												class="min-w-0 max-w-[40%] shrink-0 truncate text-[11px] leading-5 text-gray-500"
+												class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500"
 											>
 												/{prompt.command}
 											</div>
@@ -581,7 +592,7 @@
 												)}
 											>
 												<div
-													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 												>
 													{dayjs((prompt.updated_at ?? prompt.created_at) * 1000).fromNow()}
 												</div>
@@ -606,7 +617,7 @@
 							</div>
 
 							<div
-								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
 								<Tooltip
 									content={prompt?.user?.email ?? $i18n.t('Deleted User')}

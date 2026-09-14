@@ -380,7 +380,7 @@
 
 	let finishedMessages = {};
 	let currentMessageId = null;
-	let currentUtterance = null;
+	let currentUtterance: SpeechSynthesisUtterance | null = null;
 
 	// Get voice: model-specific > user settings > config default
 	const getVoiceId = () => {
@@ -427,30 +427,47 @@
 		}
 	};
 
-	const playAudio = (audio) => {
+	const playAudio = (audio: HTMLAudioElement) => {
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
 				const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
 
-				if (audioElement) {
-					audioElement.src = audio.src;
-					audioElement.muted = true;
-					audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					audioElement
-						.play()
-						.then(() => {
-							audioElement.muted = false;
-						})
-						.catch((error) => {
-							console.error(error);
-						});
-
-					audioElement.onended = async (e) => {
-						await new Promise((r) => setTimeout(r, 100));
-						resolve(e);
-					};
+				if (!audioElement) {
+					resolve(null);
+					return;
 				}
+
+				let settled = false;
+				const finish = async (e: Event | Error | null = null) => {
+					if (settled) {
+						return;
+					}
+
+					settled = true;
+					audioElement.onended = null;
+					audioElement.onerror = null;
+					audioElement.onpause = null;
+
+					await new Promise((r) => setTimeout(r, 100));
+					resolve(e);
+				};
+
+				audioElement.src = audio.src;
+				audioElement.muted = true;
+				audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+				audioElement.onended = finish;
+				audioElement.onerror = () => finish();
+				audioElement.onpause = finish;
+
+				audioElement
+					.play()
+					.then(() => {
+						audioElement.muted = false;
+					})
+					.catch((error) => {
+						console.error(error);
+						finish(error);
+					});
 			});
 		} else {
 			return Promise.resolve();
@@ -470,7 +487,7 @@
 			currentUtterance = null;
 		}
 
-		const audioElement = document.getElementById('audioElement');
+		const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
 		if (audioElement) {
 			audioElement.muted = true;
 			audioElement.pause();
@@ -489,7 +506,12 @@
 			try {
 				// Set the emoji for the content if needed
 				if ($settings?.showEmojiInCall ?? false) {
-					const emoji = await generateEmoji(localStorage.token, modelId, content, chatId);
+					const emoji = await generateEmoji(localStorage.token, modelId, content, chatId).catch(
+						(error) => {
+							console.error(error);
+							return null;
+						}
+					);
 					if (emoji) {
 						emojiCache.set(content, emoji);
 					}

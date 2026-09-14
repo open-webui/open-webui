@@ -8,9 +8,10 @@
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
-	import FolderDropdown from '$lib/components/automations/FolderDropdown.svelte';
+	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
 	import { getFolders } from '$lib/apis/folders';
-	import { folders } from '$lib/stores';
+	import { getChannels } from '$lib/apis/channels';
+	import { channels, folders } from '$lib/stores';
 
 	import {
 		createAutomation,
@@ -30,10 +31,13 @@
 	let prompt = '';
 	let model_id = '';
 	let folder_id = '';
+	let target_type: 'chat' | 'channel' = 'chat';
+	let channel_id = '';
 	let is_active = true;
 
 	let loading = false;
 	let foldersLoaded = false;
+	let channelsLoaded = false;
 
 	// Schedule dropdown ref
 	let scheduleDropdown: ScheduleDropdown;
@@ -41,6 +45,10 @@
 	const submitHandler = async () => {
 		if (!name.trim() || !prompt.trim() || !model_id.trim()) {
 			toast.error($i18n.t('Name, prompt, and model are required'));
+			return;
+		}
+		if (target_type === 'channel' && !channel_id) {
+			toast.error($i18n.t('Channel is required'));
 			return;
 		}
 		if (scheduleDropdown?.frequency === 'ONCE') {
@@ -54,11 +62,12 @@
 		try {
 			const form: AutomationForm = {
 				name: name.trim(),
-				folder_id: folder_id || null,
+				folder_id: target_type === 'channel' ? null : folder_id || null,
 				data: {
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
-					rrule: scheduleDropdown.buildRrule()
+					rrule: scheduleDropdown.buildRrule(),
+					target: target_type === 'channel' ? { type: 'channel', channel_id } : { type: 'chat' }
 				},
 				is_active
 			};
@@ -88,12 +97,19 @@
 			if (res) folders.set(res);
 			foldersLoaded = true;
 		}
+		if (!channelsLoaded && ($channels ?? []).length === 0) {
+			const res = await getChannels(localStorage.token).catch(() => null);
+			if (res) channels.set(res);
+			channelsLoaded = true;
+		}
 
 		if (automation) {
 			name = automation.name;
 			prompt = automation.data.prompt;
 			model_id = automation.data.model_id;
 			folder_id = automation.folder_id ?? '';
+			target_type = automation.data.target?.type === 'channel' ? 'channel' : 'chat';
+			channel_id = automation.data.target?.channel_id ?? '';
 			is_active = automation.is_active;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(automation.data.rrule);
@@ -105,6 +121,12 @@
 			folder_id = ($folders ?? []).some((folder) => folder.id === cloneFrom.folder_id)
 				? (cloneFrom.folder_id ?? '')
 				: '';
+			target_type = cloneFrom.data.target?.type === 'channel' ? 'channel' : 'chat';
+			channel_id = ($channels ?? []).some(
+				(channel) => channel.id === cloneFrom.data.target?.channel_id
+			)
+				? (cloneFrom.data.target?.channel_id ?? '')
+				: '';
 			is_active = true;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
@@ -114,6 +136,8 @@
 			prompt = '';
 			model_id = '';
 			folder_id = '';
+			target_type = 'chat';
+			channel_id = '';
 			is_active = true;
 		}
 	};
@@ -162,7 +186,15 @@
 
 				<ModelDropdown bind:model_id side="top" align="start" />
 
-				<FolderDropdown bind:folder_id side="top" align="start" />
+				<DestinationDropdown
+					bind:target_type
+					bind:channel_id
+					bind:folder_id
+					folders={$folders}
+					channels={$channels}
+					side="top"
+					align="start"
+				/>
 			</div>
 
 			<div class="flex items-center justify-end gap-2 shrink-0">

@@ -10,7 +10,7 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let className = 'max-w-[170px]';
+	export let className = 'max-w-[10.625rem]';
 
 	export let onRecord = () => {};
 	export let onCaptureAudio = () => {};
@@ -30,9 +30,9 @@
 	<slot />
 
 	<div slot="content">
-		<DropdownMenu className="min-w-[170px] ">
+		<DropdownMenu className="min-w-[10.625rem] ">
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] transition hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={async () => {
 					onRecord();
 					show = false;
@@ -45,7 +45,7 @@
 			</button>
 
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] transition hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					onCaptureAudio();
 					show = false;
@@ -58,7 +58,7 @@
 			</button>
 
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] transition hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					onUpload();
 					show = false;

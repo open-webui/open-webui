@@ -1,16 +1,13 @@
-import asyncio
 import base64
 import logging
 import os
 import sys
 import time
-from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
-import aiohttp
 import requests
 from langchain_core.documents import Document
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS, GLOBAL_LOG_LEVEL
+from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, GLOBAL_LOG_LEVEL
 from open_webui.utils.headers import include_user_info_headers
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -19,15 +16,12 @@ log = logging.getLogger(__name__)
 
 class MistralLoader:
     """
-    Enhanced Mistral OCR loader with both sync and async support.
+    Enhanced Mistral OCR loader.
     Loads documents by processing them through the Mistral OCR API.
 
     Performance Optimizations:
     - Differentiated timeouts for different operations
     - Intelligent retry logic with exponential backoff
-    - Memory-efficient file streaming for large files
-    - Connection pooling and keepalive optimization
-    - Semaphore-based concurrency control for batch processing
     - Enhanced error handling with retryable error classification
     """
 
@@ -63,7 +57,6 @@ class MistralLoader:
         self.base_url = base_url.rstrip('/') if base_url else 'https://api.mistral.ai/v1'
         self.api_key = api_key
         self.file_path = file_path
-        self.timeout = timeout
         self.max_retries = max_retries
         self.debug = enable_debug_logging
         self.use_base64 = use_base64
@@ -118,32 +111,6 @@ class MistralLoader:
             log.error(f'JSON decode error: {json_err} - Response: {response.text}')
             raise  # Re-raise after logging
 
-    async def _handle_response_async(self, response: aiohttp.ClientResponse) -> Dict[str, Any]:
-        """Async version of response handling with better error info."""
-        try:
-            response.raise_for_status()
-
-            # Check content type
-            content_type = response.headers.get('content-type', '')
-            if 'application/json' not in content_type:
-                if response.status == 204:
-                    return {}
-                text = await response.text()
-                raise ValueError(f'Unexpected content type: {content_type}, body: {text[:200]}...')
-
-            return await response.json()
-
-        except aiohttp.ClientResponseError as e:
-            error_text = await response.text() if response else 'No response'
-            log.error(f'HTTP {e.status}: {e.message} - Response: {error_text[:500]}')
-            raise
-        except aiohttp.ClientError as e:
-            log.error(f'Client error: {e}')
-            raise
-        except Exception as e:
-            log.error(f'Unexpected error processing response: {e}')
-            raise
-
     def _is_retryable_error(self, error: Exception) -> bool:
         """
         ENHANCEMENT: Intelligent error classification for retry logic.
@@ -173,10 +140,6 @@ class MistralLoader:
                 status_code = error.response.status_code
                 return status_code >= 500 or status_code == 429
             return False
-        if isinstance(error, (aiohttp.ClientConnectionError, aiohttp.ServerTimeoutError)):
-            return True  # Async network/timeout errors are retryable
-        if isinstance(error, aiohttp.ClientResponseError):
-            return error.status >= 500 or error.status == 429
         return False  # All other errors are non-retryable
 
     def _retry_request_sync(self, request_func, *args, **kwargs):
@@ -203,32 +166,11 @@ class MistralLoader:
                 )
                 time.sleep(wait_time)
 
-    async def _retry_request_async(self, request_func, *args, **kwargs):
-        """
-        ENHANCEMENT: Async retry logic with intelligent error classification.
-
-        Async version of retry logic that doesn't block the event loop during
-        wait periods. Uses the same exponential backoff strategy as sync version.
-        """
-        for attempt in range(self.max_retries):
-            try:
-                return await request_func(*args, **kwargs)
-            except Exception as e:
-                if attempt == self.max_retries - 1 or not self._is_retryable_error(e):
-                    raise
-
-                # PERFORMANCE OPTIMIZATION: Non-blocking exponential backoff
-                wait_time = min((2**attempt) + 0.5, 30)  # Cap at 30 seconds
-                log.warning(
-                    f'Retryable error (attempt {attempt + 1}/{self.max_retries}): {e}. Retrying in {wait_time}s...'
-                )
-                await asyncio.sleep(wait_time)  # Non-blocking wait
-
     def _upload_file(self) -> str:
         """
         PERFORMANCE OPTIMIZATION: Enhanced file upload with streaming consideration.
 
-        Uploads the file to Mistral for OCR processing (sync version).
+        Uploads the file to Mistral for OCR processing.
         Uses context manager for file handling to ensure proper resource cleanup.
         Although streaming is not enabled for this endpoint, the file is opened
         in a context manager to minimize memory usage duration.
@@ -261,56 +203,15 @@ class MistralLoader:
             file_id = response_data.get('id')
             if not file_id:
                 raise ValueError('File ID not found in upload response.')
-            log.info(f'File uploaded successfully. File ID: {file_id}')
+            log.info('File uploaded successfully. File ID: %s', file_id)
             return file_id
         except Exception as e:
             log.error(f'Failed to upload file: {e}')
             raise
 
-    async def _upload_file_async(self, session: aiohttp.ClientSession) -> str:
-        """Async file upload with streaming for better memory efficiency."""
-        url = f'{self.base_url}/files'
-
-        async def upload_request():
-            # Open inside the request so the handle stays valid for the whole
-            # streamed POST and is closed right after.
-            with open(self.file_path, 'rb') as f:
-                writer = aiohttp.MultipartWriter('form-data')
-
-                # Add purpose field
-                purpose_part = writer.append('ocr')
-                purpose_part.set_content_disposition('form-data', name='purpose')
-
-                # Stream the file. aiohttp builds a payload from the file object;
-                # the previous aiohttp.streams.FilePayload was removed upstream
-                # (payloads live in aiohttp.payload and there is no FilePayload),
-                # so this path raised AttributeError on every async OCR upload.
-                file_part = writer.append(f, {'Content-Type': 'application/pdf'})
-                file_part.set_content_disposition('form-data', name='file', filename=self.file_name)
-
-                self._debug_log(f'Uploading file: {self.file_name} ({self.file_size:,} bytes)')
-
-                async with session.post(
-                    url,
-                    data=writer,
-                    headers=self.headers,
-                    timeout=aiohttp.ClientTimeout(total=self.upload_timeout),
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as response:
-                    return await self._handle_response_async(response)
-
-        response_data = await self._retry_request_async(upload_request)
-
-        file_id = response_data.get('id')
-        if not file_id:
-            raise ValueError('File ID not found in upload response.')
-
-        log.info(f'File uploaded successfully. File ID: {file_id}')
-        return file_id
-
     def _get_signed_url(self, file_id: str) -> str:
-        """Retrieves a temporary signed URL for the uploaded file (sync version)."""
-        log.info(f'Getting signed URL for file ID: {file_id}')
+        """Retrieves a temporary signed URL for the uploaded file."""
+        log.info('Getting signed URL for file ID: %s', file_id)
         url = f'{self.base_url}/files/{file_id}/url'
         params = {'expiry': 1}
         signed_url_headers = {**self.headers, 'Accept': 'application/json'}
@@ -330,35 +231,8 @@ class MistralLoader:
             log.error(f'Failed to get signed URL: {e}')
             raise
 
-    async def _get_signed_url_async(self, session: aiohttp.ClientSession, file_id: str) -> str:
-        """Async signed URL retrieval."""
-        url = f'{self.base_url}/files/{file_id}/url'
-        params = {'expiry': 1}
-
-        headers = {**self.headers, 'Accept': 'application/json'}
-
-        async def url_request():
-            self._debug_log(f'Getting signed URL for file ID: {file_id}')
-            async with session.get(
-                url,
-                headers=headers,
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=self.url_timeout),
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as response:
-                return await self._handle_response_async(response)
-
-        response_data = await self._retry_request_async(url_request)
-
-        signed_url = response_data.get('url')
-        if not signed_url:
-            raise ValueError('Signed URL not found in response.')
-
-        self._debug_log('Signed URL received successfully')
-        return signed_url
-
     def _process_ocr(self, signed_url: str) -> Dict[str, Any]:
-        """Sends the signed URL to the OCR endpoint for processing (sync version)."""
+        """Sends the signed URL to the OCR endpoint for processing."""
         log.info('Processing OCR via Mistral API')
         url = f'{self.base_url}/ocr'
         ocr_headers = {
@@ -388,112 +262,23 @@ class MistralLoader:
             log.error(f'Failed during OCR processing: {e}')
             raise
 
-    async def _process_ocr_async(self, session: aiohttp.ClientSession, signed_url: str) -> Dict[str, Any]:
-        """Async OCR processing with timing metrics."""
-        url = f'{self.base_url}/ocr'
-
-        headers = {
-            **self.headers,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        }
-
-        payload = {
-            'model': 'mistral-ocr-latest',
-            'document': {
-                'type': 'document_url',
-                'document_url': signed_url,
-            },
-            'include_image_base64': False,
-        }
-
-        async def ocr_request():
-            log.info('Starting OCR processing via Mistral API')
-            start_time = time.time()
-
-            async with session.post(
-                url,
-                json=payload,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=self.ocr_timeout),
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as response:
-                ocr_response = await self._handle_response_async(response)
-
-            processing_time = time.time() - start_time
-            log.info(f'OCR processing completed in {processing_time:.2f}s')
-
-            return ocr_response
-
-        return await self._retry_request_async(ocr_request)
-
     def _get_file_data_url(self) -> str:
         with open(self.file_path, 'rb') as f:
             encoded_file = base64.b64encode(f.read()).decode('utf-8')
         return f'data:application/pdf;base64,{encoded_file}'
 
     def _delete_file(self, file_id: str) -> None:
-        """Deletes the file from Mistral storage (sync version)."""
-        log.info(f'Deleting uploaded file ID: {file_id}')
+        """Deletes the file from Mistral storage."""
+        log.info('Deleting uploaded file ID: %s', file_id)
         url = f'{self.base_url}/files/{file_id}'
 
         try:
             response = requests.delete(url, headers=self.headers, timeout=self.cleanup_timeout)
             delete_response = self._handle_response(response)
-            log.info(f'File deleted successfully: {delete_response}')
+            log.info('File deleted successfully: %s', delete_response)
         except Exception as e:
             # Log error but don't necessarily halt execution if deletion fails
             log.error(f'Failed to delete file ID {file_id}: {e}')
-
-    async def _delete_file_async(self, session: aiohttp.ClientSession, file_id: str) -> None:
-        """Async file deletion with error tolerance."""
-        try:
-
-            async def delete_request():
-                self._debug_log(f'Deleting file ID: {file_id}')
-                async with session.delete(
-                    url=f'{self.base_url}/files/{file_id}',
-                    headers=self.headers,
-                    timeout=aiohttp.ClientTimeout(total=self.cleanup_timeout),
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as response:
-                    return await self._handle_response_async(response)
-
-            await self._retry_request_async(delete_request)
-            self._debug_log(f'File {file_id} deleted successfully')
-
-        except Exception as e:
-            # Don't fail the entire process if cleanup fails
-            log.warning(f'Failed to delete file ID {file_id}: {e}')
-
-    @asynccontextmanager
-    async def _get_session(self):
-        """Context manager for HTTP session with optimized settings."""
-        connector = aiohttp.TCPConnector(
-            limit=20,  # Increased total connection limit for better throughput
-            limit_per_host=10,  # Increased per-host limit for API endpoints
-            ttl_dns_cache=600,  # Longer DNS cache TTL (10 minutes)
-            use_dns_cache=True,
-            keepalive_timeout=60,  # Increased keepalive for connection reuse
-            enable_cleanup_closed=True,
-            force_close=False,  # Allow connection reuse
-            resolver=aiohttp.AsyncResolver(),  # Use async DNS resolver
-        )
-
-        timeout = aiohttp.ClientTimeout(
-            total=self.timeout,
-            connect=30,  # Connection timeout
-            sock_read=60,  # Socket read timeout
-        )
-
-        async with aiohttp.ClientSession(
-            connector=connector,
-            timeout=timeout,
-            headers={'User-Agent': 'OpenWebUI-MistralLoader/2.0'},
-            raise_for_status=False,  # We handle status codes manually
-            trust_env=True,
-        ) as session:
-            yield session
 
     def _process_results(self, ocr_response: Dict[str, Any]) -> List[Document]:
         """Process OCR results into Document objects with enhanced metadata and memory efficiency."""
@@ -519,7 +304,7 @@ class MistralLoader:
             if page_content is None or page_index is None:
                 skipped_pages += 1
                 self._debug_log(
-                    f"Skipping page due to missing 'markdown' or 'index'. Data keys: {list(page_data.keys())}"
+                    "Skipping page due to missing 'markdown' or 'index'. Data keys: %s", list(page_data.keys())
                 )
                 continue
 
@@ -531,7 +316,7 @@ class MistralLoader:
 
             if not cleaned_content:
                 skipped_pages += 1
-                self._debug_log(f'Skipping empty page {page_index}')
+                self._debug_log('Skipping empty page %s', page_index)
                 continue
 
             # Create document with optimized metadata
@@ -551,7 +336,7 @@ class MistralLoader:
             )
 
         if skipped_pages > 0:
-            log.info(f'Processed {len(documents)} pages, skipped {skipped_pages} empty/invalid pages')
+            log.info('Processed %s pages, skipped %s empty/invalid pages', len(documents), skipped_pages)
 
         if not documents:
             # Case where pages existed but none had valid markdown/index
@@ -572,7 +357,6 @@ class MistralLoader:
     def load(self) -> List[Document]:
         """
         Executes the full OCR workflow: upload, get URL, process OCR, delete file.
-        Synchronous version for backward compatibility.
 
         Returns:
             A list of Document objects, one for each page processed.
@@ -584,7 +368,7 @@ class MistralLoader:
             if self.use_base64:
                 documents = self._process_results(self._process_ocr(self._get_file_data_url()))
                 total_time = time.time() - start_time
-                log.info(f'Sync OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
+                log.info('Sync OCR workflow completed in %.2fs, produced %s documents', total_time, len(documents))
                 return documents
 
             # 1. Upload file
@@ -600,7 +384,7 @@ class MistralLoader:
             documents = self._process_results(ocr_response)
 
             total_time = time.time() - start_time
-            log.info(f'Sync OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
+            log.info('Sync OCR workflow completed in %.2fs, produced %s documents', total_time, len(documents))
 
             return documents
 
@@ -625,125 +409,3 @@ class MistralLoader:
                 except Exception as del_e:
                     # Log deletion error, but don't overwrite original error if one occurred
                     log.error(f'Cleanup error: Could not delete file ID {file_id}. Reason: {del_e}')
-
-    async def load_async(self) -> List[Document]:
-        """
-        Asynchronous OCR workflow execution with optimized performance.
-
-        Returns:
-            A list of Document objects, one for each page processed.
-        """
-        file_id = None
-        start_time = time.time()
-
-        try:
-            async with self._get_session() as session:
-                if self.use_base64:
-                    ocr_response = await self._process_ocr_async(session, self._get_file_data_url())
-                    documents = self._process_results(ocr_response)
-                    total_time = time.time() - start_time
-                    log.info(f'Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
-                    return documents
-
-                # 1. Upload file with streaming
-                file_id = await self._upload_file_async(session)
-
-                # 2. Get signed URL
-                signed_url = await self._get_signed_url_async(session, file_id)
-
-                # 3. Process OCR
-                ocr_response = await self._process_ocr_async(session, signed_url)
-
-                # 4. Process results
-                documents = self._process_results(ocr_response)
-
-                total_time = time.time() - start_time
-                log.info(f'Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
-
-                return documents
-
-        except Exception as e:
-            total_time = time.time() - start_time
-            log.error(f'Async OCR workflow failed after {total_time:.2f}s: {e}')
-            return [
-                Document(
-                    page_content=f'Error during OCR processing: {e}',
-                    metadata={
-                        'error': 'processing_failed',
-                        'file_name': self.file_name,
-                    },
-                )
-            ]
-        finally:
-            # 5. Cleanup - always attempt file deletion
-            if file_id:
-                try:
-                    async with self._get_session() as session:
-                        await self._delete_file_async(session, file_id)
-                except Exception as cleanup_error:
-                    log.error(f'Cleanup failed for file ID {file_id}: {cleanup_error}')
-
-    @staticmethod
-    async def load_multiple_async(
-        loaders: List['MistralLoader'],
-        max_concurrent: int = 5,  # Limit concurrent requests
-    ) -> List[List[Document]]:
-        """
-        Process multiple files concurrently with controlled concurrency.
-
-        Args:
-            loaders: List of MistralLoader instances
-            max_concurrent: Maximum number of concurrent requests
-
-        Returns:
-            List of document lists, one for each loader
-        """
-        if not loaders:
-            return []
-
-        log.info(f'Starting concurrent processing of {len(loaders)} files with max {max_concurrent} concurrent')
-        start_time = time.time()
-
-        # Use semaphore to control concurrency
-        semaphore = asyncio.Semaphore(max_concurrent)
-
-        async def process_with_semaphore(loader: 'MistralLoader') -> List[Document]:
-            async with semaphore:
-                return await loader.load_async()
-
-        # Process all files with controlled concurrency
-        tasks = [process_with_semaphore(loader) for loader in loaders]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Handle any exceptions in results
-        processed_results = []
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                log.error(f'File {i} failed: {result}')
-                processed_results.append(
-                    [
-                        Document(
-                            page_content=f'Error processing file: {result}',
-                            metadata={
-                                'error': 'batch_processing_failed',
-                                'file_index': i,
-                            },
-                        )
-                    ]
-                )
-            else:
-                processed_results.append(result)
-
-        # MONITORING: Log comprehensive batch processing statistics
-        total_time = time.time() - start_time
-        total_docs = sum(len(docs) for docs in processed_results)
-        success_count = sum(1 for result in results if not isinstance(result, Exception))
-        failure_count = len(results) - success_count
-
-        log.info(
-            f'Batch processing completed in {total_time:.2f}s: '
-            f'{success_count} files succeeded, {failure_count} files failed, '
-            f'produced {total_docs} total documents'
-        )
-
-        return processed_results

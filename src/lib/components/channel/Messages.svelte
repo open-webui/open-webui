@@ -77,7 +77,7 @@
 				{#if channel}
 					<div class="flex flex-col gap-1.5 pb-5 pt-10">
 						{#if channel?.type === 'dm'}
-							<div class="flex ml-[1px] mr-0.5">
+							<div class="flex ml-[0.0625rem] mr-0.5">
 								{#each channel.users.filter((u) => u.id !== $user?.id).slice(0, 2) as u, index}
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}

@@ -158,7 +158,7 @@
 				>
 					<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-normal">
 						{#if chevron}
-							<div class=" p-[1px]">
+							<div class=" p-[0.0625rem]">
 								{#if open}
 									<ChevronDown className=" size-3" strokeWidth="2" />
 								{:else}
@@ -174,7 +174,7 @@
 
 					{#if onAdd}
 						<button
-							class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+							class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-gray-300"
 							on:pointerup={(e) => {
 								e.stopPropagation();
 							}}

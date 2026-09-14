@@ -41,7 +41,7 @@
 
 	$: if (citation) {
 		expandedDocs = new Set();
-		mergedDocuments = citation.document?.map((c, i) => {
+		mergedDocuments = (citation.document ?? []).map((c, i) => {
 			return {
 				source: citation.source,
 				document: c,
@@ -215,15 +215,20 @@
 							{#if document.metadata?.html}
 								<iframe
 									class="w-full border-0 h-auto rounded-none"
-									sandbox="allow-scripts allow-forms{($settings?.iframeSandboxAllowSameOrigin ??
-									false)
+									sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+										? 'allow-scripts'
+										: ''}{($settings?.iframeSandboxAllowForms ?? true)
+										? ' allow-forms'
+										: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+										? ' allow-downloads'
+										: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
 										? ' allow-same-origin'
 										: ''}"
 									srcdoc={injectCsp(document.document, $config?.ui?.iframe_csp ?? '')}
 									title={$i18n.t('Content')}
 								></iframe>
 							{:else}
-								{@const rawContent = document.document.trim().replace(/\n\n+/g, '\n\n')}
+								{@const rawContent = (document.document ?? '').trim().replace(/\n\n+/g, '\n\n')}
 								{@const isTruncated =
 									($settings?.renderMarkdownInPreviews ?? true) &&
 									rawContent.length > CONTENT_PREVIEW_LIMIT &&

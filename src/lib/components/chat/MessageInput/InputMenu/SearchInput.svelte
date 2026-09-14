@@ -14,7 +14,7 @@
 
 	<input
 		bind:value
-		class="w-full bg-transparent text-[13px] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+		class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
 		{placeholder}
 		autocomplete="off"
 		aria-label={placeholder}

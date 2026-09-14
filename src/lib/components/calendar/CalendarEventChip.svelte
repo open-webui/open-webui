@@ -11,13 +11,13 @@
 
 <Tooltip content="{event.title}{event.location ? ` · ${event.location}` : ''}">
 	<button
-		class="w-full text-left text-xs flex items-start gap-1.5 py-[1px] px-0.5 rounded-md
+		class="w-full text-left text-xs flex items-start gap-1.5 py-[0.0625rem] px-0.5 rounded-md
 			{event.meta?.automation_id ? 'opacity-60' : ''}
 			hover:bg-gray-50 dark:hover:bg-gray-800/50 transition truncate"
 		on:click|stopPropagation={() => dispatch('click', event)}
 	>
 		<span
-			class="shrink-0 size-[7px] rounded-full mt-[5px]"
+			class="shrink-0 size-[0.4375rem] rounded-full mt-[0.3125rem]"
 			style="background-color: {event.color || calendarColor || '#3b82f6'};"
 		></span>
 		<span class="truncate">

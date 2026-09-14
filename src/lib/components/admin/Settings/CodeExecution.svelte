@@ -93,6 +93,9 @@
 							/>
 						</AdminSettingField>
 
+						<!-- LICENSE covers this Open WebUI wordmark.
+							Do not alter, remove, obscure, or replace it except as LICENSE permits:
+							https://docs.openwebui.com/license. -->
 						<AdminSettingRow
 							label={$i18n.t('Jupyter Auth')}
 							description={$i18n.t('Select how Open WebUI authenticates with the Jupyter server.')}
@@ -194,6 +197,9 @@
 							/>
 						</AdminSettingField>
 
+						<!-- LICENSE covers this Open WebUI wordmark.
+							Do not alter, remove, obscure, or replace it except as LICENSE permits:
+							https://docs.openwebui.com/license. -->
 						<AdminSettingRow
 							label={$i18n.t('Jupyter Auth')}
 							description={$i18n.t('Select how Open WebUI authenticates with the Jupyter server.')}
