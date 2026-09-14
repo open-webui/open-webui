@@ -235,6 +235,58 @@ class TikaLoader:
             raise Exception(f'Error calling Tika: {r.reason}')
 
 
+
+DOCLING_SUCCESS_STATUSES = {'success', 'partial_success'}
+
+
+def _docling_error_summary(errors) -> str:
+    if not isinstance(errors, list):
+        return ''
+    messages = []
+    for error in errors:
+        if not isinstance(error, dict):
+            continue
+        message = error.get('error_message') or error.get('message')
+        if message:
+            messages.append(str(message))
+    return '; '.join(messages)
+
+
+def _parse_docling_markdown(result: dict) -> str:
+    """Accept a Docling convert payload only when conversion actually succeeded.
+
+    Docling Serve reports conversion outcomes in the JSON body while still
+    returning HTTP 200. HTTP success alone is not enough.
+    """
+    if not isinstance(result, dict):
+        raise Exception('Error calling Docling: invalid conversion response')
+
+    status = result.get('status')
+    normalized_status = status.strip().lower() if isinstance(status, str) else ''
+    errors = result.get('errors') or []
+    details = _docling_error_summary(errors)
+
+    if normalized_status not in DOCLING_SUCCESS_STATUSES:
+        status_label = status if status not in (None, '') else 'missing'
+        error_msg = f'Docling conversion failed with status {status_label!r}'
+        if details:
+            error_msg = f'{error_msg}: {details}'
+        raise Exception(error_msg)
+
+    document_data = result.get('document') or {}
+    if not isinstance(document_data, dict):
+        document_data = {}
+    md_content = document_data.get('md_content')
+    if not isinstance(md_content, str) or not md_content.strip():
+        error_msg = (
+            f'Docling conversion returned no Markdown content (status {normalized_status!r})'
+        )
+        if details:
+            error_msg = f'{error_msg}: {details}'
+        raise Exception(error_msg)
+    return md_content
+
+
 class DoclingLoader:
     def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None):
         self.url = url.rstrip('/')
@@ -273,9 +325,7 @@ class DoclingLoader:
             )
         if r.ok:
             result = r.json()
-            document_data = result.get('document', {})
-            md_content = document_data.get('md_content', '')
-            text = md_content or '<No text content found>'
+            md_content = _parse_docling_markdown(result)
 
             metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
             if page_break_marker in md_content:
@@ -285,11 +335,11 @@ class DoclingLoader:
                     if page.strip()
                 ]
                 if documents:
-                    log.debug('Docling extracted text: %s', text)
+                    log.debug('Docling extracted text: %s', md_content)
                     return documents
 
-            log.debug('Docling extracted text: %s', text)
-            return [Document(page_content=text, metadata=metadata)]
+            log.debug('Docling extracted text: %s', md_content)
+            return [Document(page_content=md_content, metadata=metadata)]
         else:
             error_msg = f'Error calling Docling API: {r.reason}'
             if r.text:
