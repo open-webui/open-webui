@@ -6,7 +6,6 @@
 
 	import { getUsage } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import {
 		showSettings,
@@ -30,7 +29,6 @@
 	import Settings from '$lib/components/icons/Settings.svelte';
 	import Code from '$lib/components/icons/Code.svelte';
 	import UserGroup from '$lib/components/icons/UserGroup.svelte';
-	import Home from '$lib/components/icons/Home.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import UserStatusModal from './UserStatusModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
@@ -638,45 +636,15 @@
 				</button>
 			{/if}
 
-			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
-
-			<!-- Sunway: parity with the catalogue's other listed apps (e.g. SDeck), which carry
-			     a way back to the catalogue and no local Sign Out of their own -- signing out
-			     is exclusively a catalogue action there (a federated logout that revokes every
-			     WorkOS session and ends the Azure AD SSO session, not just this app's cookie),
-			     so a per-tool Sign Out only duplicates a control the catalogue already owns
-			     more completely. schat now matches: this link back is the only exit here, no
-			     local Sign Out.
-			     ALWAYS rendered, same content regardless of destination -- matching SDeck's
-			     equivalent button (SidebarHomeButton always shows Home icon + SCoreMark, only
-			     the href changes based on whether aiPlatformUrl is set). A generic Home icon
-			     in the icon slot (matching every other item in this menu, which all use a
-			     generic icon there, not a brand mark) + the logo itself standing in for the
-			     text label -- NOT a text label next to the logo, which repeats "SCore.ai"
-			     right after a logo that already reads as "SCore.ai", the redundant-looking
-			     "SCore.ai SCore.ai" an earlier version of this rendered. Falls back to schat's
-			     own "/" (new chat) when unset, same as SDeck falls back to its own
-			     /dashboard. -->
-			<a
-				href={$config?.features?.landing_page_url ?? '/'}
-				draggable="false"
-				class="flex rounded-xl py-1.5 px-3 w-full brand-nav-item transition cursor-pointer select-none"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<div class=" self-center mr-3">
-					<Home className="size-5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center">
-					<img src="{WEBUI_BASE_URL}/static/score-ai-logo.svg" class="h-5 w-auto dark:hidden" alt="SCore.ai" />
-					<img
-						src="{WEBUI_BASE_URL}/static/score-ai-logo-dark.svg"
-						class="h-5 w-auto hidden dark:block"
-						alt="SCore.ai"
-					/>
-				</div>
-			</a>
+			<!-- Sunway: the "back to SCore.ai" link that used to live here (this menu's only
+			     exit, since sign-out is exclusively a catalogue/WorkOS action, not a local
+			     control) moved to the sidebar itself -- "Landing Page" in the New Chat/Search
+			     list (Sidebar.svelte) and the collapsed rail's icon-only equivalent. Removed
+			     from here rather than duplicated: this menu is account/profile actions only
+			     now (Settings, Keyboard shortcuts), matching how account menus work everywhere
+			     else (Slack, Notion, ChatGPT) -- primary "go home" navigation doesn't belong
+			     mixed in with them. The exit path itself is unchanged, just relocated and now
+			     more visible than it was buried in this dropdown. -->
 
 			{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage}
 				{#if usage?.user_count}

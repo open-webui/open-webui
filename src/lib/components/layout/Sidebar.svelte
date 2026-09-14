@@ -73,6 +73,7 @@
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
 	import Code from '../icons/Code.svelte';
+	import ArrowLeft from '../icons/ArrowLeft.svelte';
 	import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 	import HelpCenterModal from './HelpCenterModal.svelte';
 
@@ -488,7 +489,11 @@
 		// choice is what persists (see the `showSidebar.subscribe` below), so this only changes
 		// the very first render, not returning users' preferences.
 		showSidebar.set(
-			!$mobile ? (localStorage.sidebar === undefined ? true : localStorage.sidebar === 'true') : false
+			!$mobile
+				? localStorage.sidebar === undefined
+					? true
+					: localStorage.sidebar === 'true'
+				: false
 		);
 
 		const unsubscribers = [
@@ -769,6 +774,36 @@
 				</Tooltip>
 			</div>
 
+			<!-- Sunway: platform-home link, promoted from the bottom user menu to the top of
+			     the sidebar -- primary "go home" navigation belongs beside the app's own
+			     identity, not buried in the account menu, which stays reserved for profile/
+			     sign-out actions (matching how Google Workspace's app-switcher sits top-level
+			     next to the product logo rather than inside the avatar menu). "Landing Page"
+			     wording (not a logo) matches the labelled row in the expanded sidebar's New
+			     Chat/Search list and sdeck's equivalent -- one term for employees to learn
+			     across both apps, and no brand asset means no compliance surface. Left-arrow
+			     rather than a Home icon: SCore.ai is the umbrella portal schat is nested
+			     inside, so "back to" framing fits better than "teleport home". The labelled
+			     SCore.ai entry in the user menu (UserMenu.svelte) is left in place as a
+			     secondary path. -->
+			<div class="pb-1.5">
+				<Tooltip content={$i18n.t('Landing Page')} placement="right">
+					<a
+						class=" cursor-pointer flex rounded-xl brand-nav-item transition group"
+						href={$config?.features?.landing_page_url ?? '/'}
+						draggable="false"
+						on:click={(e) => {
+							e.stopImmediatePropagation();
+						}}
+						aria-label={$i18n.t('Landing Page')}
+					>
+						<div class=" self-center flex items-center justify-center size-9">
+							<ArrowLeft className="size-4.5" strokeWidth="1.5" />
+						</div>
+					</a>
+				</Tooltip>
+			</div>
+
 			<div class="-mt-[0.5px]">
 				<div class="">
 					<Tooltip content={$i18n.t('New Chat')} placement="right">
@@ -1038,6 +1073,29 @@
 				<div class="pb-1.5">
 					<!-- Multi-tenancy: workspace switcher (renders only when tenants are loaded) -->
 					<TenantSwitcher />
+
+					<!-- Sunway: platform-home link, labelled to match New Chat/Search below rather
+					     than living icon-only in the tight top identity row (see the collapsed
+					     rail's copy above for the full "why here, why this wording" rationale).
+					     Reuses the exact New Chat/Search row markup so it reads as part of the same
+					     list, not a visually distinct nav element. -->
+					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+						<a
+							id="sidebar-landing-page-button"
+							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 brand-nav-item transition outline-none"
+							href={$config?.features?.landing_page_url ?? '/'}
+							draggable="false"
+							aria-label={$i18n.t('Landing Page')}
+						>
+							<div class="self-center">
+								<ArrowLeft className=" size-4.5" strokeWidth="2" />
+							</div>
+
+							<div class="flex flex-1 self-center translate-y-[0.5px]">
+								<div class=" self-center text-sm font-primary">{$i18n.t('Landing Page')}</div>
+							</div>
+						</a>
+					</div>
 
 					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 						<a
