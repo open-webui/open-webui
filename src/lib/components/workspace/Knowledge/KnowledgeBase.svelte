@@ -328,10 +328,7 @@
 		for (const fileItem of newFileItems) {
 			try {
 				console.log(fileItem);
-				const res = await processUrl(localStorage.token, fileItem.url).catch((e) => {
-					console.error('Error processing URL:', e);
-					return null;
-				});
+				const res = await processUrl(localStorage.token, fileItem.url);
 
 				if (res) {
 					console.log(res);
@@ -351,9 +348,6 @@
 							knowledge_id: knowledge.id,
 							directory_id: currentDirectoryId,
 							source_url: fileItem.url
-						}).catch((e) => {
-							toast.error(`${e}`);
-							return null;
 						});
 					} else if (uploadedFile?.id) {
 						const linkedKnowledge = await addFileToKnowledgeById(
