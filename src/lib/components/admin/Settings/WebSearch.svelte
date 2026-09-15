@@ -36,6 +36,7 @@
 		'serpapi',
 		'duckduckgo',
 		'tavily',
+		'staan',
 		'jina',
 		'bing',
 		'exa',
@@ -571,6 +572,53 @@
 									bind:value={webConfig.TAVILY_API_KEY}
 								/>
 							</div>
+						</div>
+					{:else if webConfig.WEB_SEARCH_ENGINE === 'staan'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class="text-xs text-gray-600 dark:text-gray-400">
+									{$i18n.t('Staan.ai API Key')}
+								</div>
+								<SensitiveInput 
+									variant="settings"
+									placeholder={$i18n.t('Enter Staan.ai API Key')}
+									bind:value={webConfig.STAAN_API_KEY}
+								/>
+							</div>
+						</div>
+						<div class="mb-2.5 flex w-full flex-col">
+						    <div class="text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('Staan.ai Market')}
+						    </div>
+						    
+						    <input
+							class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+							placeholder="fr-fr"
+							bind:value={webConfig.STAAN_MARKET}
+						    />
+
+						    <div class="mt-1 text-xs text-gray-400">
+							Region and language used to customize search results (e.g. fr-fr).
+						    </div>
+						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+						    <div class="text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('Staan.ai Extra Snippets')}
+						    </div>
+
+						    <input
+							class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+							type="number"
+							min="0"
+							max="10"
+							step="1"
+							bind:value={webConfig.STAAN_EXTRA_SNIPPETS}
+						    />
+
+						    <div class="mt-1 text-xs text-gray-400">
+							Number of additional search snippets to retrieve for each result. 0 = disabled.
+						    </div>
 						</div>
 					{:else if webConfig.WEB_SEARCH_ENGINE === 'searchapi'}
 						<div class="mb-2.5 flex w-full flex-col">

@@ -47,6 +47,9 @@ from open_webui.config import (
     PLAYWRIGHT_WS_URL,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
+    STAAN_API_KEY,
+    STAAN_EXTRA_SNIPPETS,
+    STAAN_MARKET,
     WEB_FETCH_FILTER_LIST,
     WEB_LOADER_ENGINE,
     WEB_LOADER_TIMEOUT,
@@ -1084,6 +1087,11 @@ def get_web_loader(
         WebLoaderClass = SafeTavilyLoader
         web_loader_args['api_key'] = cfg('tavily_api_key', TAVILY_API_KEY)
         web_loader_args['extract_depth'] = cfg('tavily_extract_depth', TAVILY_EXTRACT_DEPTH)
+
+    if engine == 'staan':
+        web_loader_args['api_key'] = cfg('staan_api_key', STAAN_API_KEY)
+        web_loader_args['market'] = cfg('staan_market', STAAN_MARKET)
+        web_loader_args['extra_snippets'] = cfg('staan_extra_snippets', STAAN_EXTRA_SNIPPETS)
 
     if engine == 'microsoft_web_iq':
         WebLoaderClass = SafeMicrosoftWebIQLoader
