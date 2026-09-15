@@ -868,7 +868,8 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                             browser.new_page(service_workers='block') as page,
                         ):
                             page.route('**/*', lambda route: self._intercept_navigation_sync(route, session))
-                            page.route_web_socket('**/*', lambda ws_route: ws_route.close())
+                            # sync close() hangs the dispatcher; a no-op handler still never connects to the server
+                            page.route_web_socket('**/*', lambda ws_route: None)
                             response = page.goto(url, timeout=self.playwright_timeout)
                             if response is None:
                                 raise ValueError(f'page.goto() returned None for url {url}')
