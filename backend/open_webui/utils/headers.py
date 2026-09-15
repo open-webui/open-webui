@@ -141,6 +141,7 @@ def parse_custom_headers(
         '{{FILE_NAME}}': metadata.get('file_name', '') or '',
         '{{FILE_CONTENT_TYPE}}': metadata.get('file_content_type', '') or '',
         '{{TASK}}': metadata.get('task', '') or '',
+        '{{MODEL_ID}}': metadata.get('model_id', '') or '',
         '{{USER_ID}}': (user.id if user else '') or '',
         '{{USER_NAME}}': (user.name.strip() if user else '') or '',
         '{{USER_EMAIL}}': (user.email.strip() if user else '') or '',
