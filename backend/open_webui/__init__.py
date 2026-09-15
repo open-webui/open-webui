@@ -1,6 +1,7 @@
 import base64
 import os
 import random
+import socket
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -12,6 +13,29 @@ app = typer.Typer()
 
 KEY_FILE = Path.cwd() / '.webui_secret_key'
 DEFAULT_SECRET_KEY_LENGTH = 24
+
+
+def get_dual_stack_host(requested_host: str, port: int) -> str:
+    """
+    Attempts to use requested_host (default '::' for dual-stack binding).
+    If '::' is used but IPv6 binding fails or is unavailable, falls back to '0.0.0.0'.
+    """
+    if requested_host == '::':
+        if not socket.has_ipv6:
+            typer.echo('IPv6 not supported by system. Falling back to IPv4 (0.0.0.0).')
+            return '0.0.0.0'
+
+        try:
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(('::', port))
+            sock.close()
+            return '::'
+        except OSError:
+            typer.echo(f'IPv6 binding failed on port {port}. Falling back to IPv4 (0.0.0.0).')
+            return '0.0.0.0'
+
+    return requested_host
 
 
 def version_callback(value: bool) -> None:
@@ -34,7 +58,7 @@ def main(
 
 @app.command()
 def serve(
-    host: str = '0.0.0.0',
+    host: str = '::',
     port: int = 8080,
 ):
     os.environ['FROM_INIT_PY'] = 'true'
@@ -77,13 +101,15 @@ def serve(
     from open_webui.env import UVICORN_WORKERS, UVICORN_WS_PER_MESSAGE_DEFLATE
 
     # On Windows, uvicorn's default loop factory hardcodes ProactorEventLoop,
-    # which is incompatible with psycopg v3 async.  Setting loop='none' lets
+    # which is incompatible with psycopg v3 async. Setting loop='none' lets
     # asyncio.run() respect the WindowsSelectorEventLoopPolicy set in db.py.
     loop = 'none' if sys.platform == 'win32' else 'auto'
 
+    bind_host = get_dual_stack_host(host, port)
+
     uvicorn.run(
         'open_webui.main:app',
-        host=host,
+        host=bind_host,
         port=port,
         forwarded_allow_ips='*',
         workers=UVICORN_WORKERS,
@@ -94,15 +120,17 @@ def serve(
 
 @app.command()
 def dev(
-    host: str = '0.0.0.0',
+    host: str = '::',
     port: int = 8080,
     reload: bool = True,
 ):
     from open_webui.env import UVICORN_WS_PER_MESSAGE_DEFLATE
 
+    bind_host = get_dual_stack_host(host, port)
+
     uvicorn.run(
         'open_webui.main:app',
-        host=host,
+        host=bind_host,
         port=port,
         reload=reload,
         forwarded_allow_ips='*',
