@@ -18,6 +18,7 @@ uploads
 **/*.db
 _test
 backend/data/*
+backend/.webui_secret_key
 
 .venv
 .git
