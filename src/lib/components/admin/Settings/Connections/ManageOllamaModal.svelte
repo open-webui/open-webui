@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import ManageOllama from '../Models/Manage/ManageOllama.svelte';
+	import OllamaPerformance from './OllamaPerformance.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let show = false;
 	export let urlIdx: number | null = null;
 </script>
 
-<Modal size="sm" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal size="md" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<div class="flex w-full justify-between items-center text-sm font-medium self-center">
-				<div class=" shrink-0">
+				<div class="shrink-0">
 					{$i18n.t('Manage Ollama')}
 				</div>
 			</div>
@@ -29,8 +29,9 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="w-full px-4 pb-4 dark:text-gray-200">
 			<ManageOllama {urlIdx} />
+			<OllamaPerformance />
 		</div>
 	</div>
 </Modal>
