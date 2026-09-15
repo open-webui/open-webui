@@ -66,6 +66,11 @@
 		getUsageTokenCount
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import {
+		deepestDescendantId,
+		restoreStoppedResponse,
+		shouldProcessQueueAfterTaskCancel
+	} from '$lib/utils/chat-history';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
 
@@ -1108,21 +1113,13 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
 
-		let messageChildrenIds = [];
 		if (_messageId === null) {
-			messageChildrenIds = Object.keys(history.messages).filter(
+			const rootIds = Object.keys(history.messages).filter(
 				(id) => history.messages[id].parentId === null
 			);
-		} else {
-			messageChildrenIds = history.messages[_messageId].childrenIds;
+			_messageId = rootIds.at(-1) ?? null;
 		}
-
-		while (messageChildrenIds.length !== 0) {
-			_messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[_messageId].childrenIds;
-		}
-
-		history.currentId = _messageId;
+		history.currentId = deepestDescendantId(history.messages, _messageId);
 
 		await tick();
 
@@ -1254,7 +1251,15 @@
 						for (const messageId of history.messages[message.parentId].childrenIds) {
 							history.messages[messageId].done = true;
 						}
-						await processNextInQueue($chatId);
+						if (
+							shouldProcessQueueAfterTaskCancel({
+								cancelMessageId: event.message_id,
+								currentId: history.currentId,
+								skipQueueOnTaskCancel
+							})
+						) {
+							await processNextInQueue($chatId);
+						}
 					} else {
 						message.done = true;
 					}
@@ -2461,6 +2466,7 @@
 	};
 
 	let processingQueueChats = new Set<string>();
+	let skipQueueOnTaskCancel = false;
 
 	const processNextInQueue = async (targetChatId: string) => {
 		if (processingQueueChats.has(targetChatId)) return;
@@ -2512,9 +2518,14 @@
 			...q,
 			[$chatId]: queue.filter((m) => m.id !== id)
 		}));
-		await stopResponse(false);
-		await tick();
-		await submitPrompt(item.prompt, item.files);
+		skipQueueOnTaskCancel = true;
+		try {
+			await stopResponse(false);
+			await tick();
+			await submitPrompt(item.prompt, item.files);
+		} finally {
+			skipQueueOnTaskCancel = false;
+		}
 	};
 
 	const editQueuedMessage = (id) => {
@@ -3769,7 +3780,7 @@
 			}
 
 			if (responseMessage) {
-				history.messages[history.currentId] = responseMessage;
+				restoreStoppedResponse(history, responseMessage);
 			}
 
 			if (shouldAutoScrollResponse()) {

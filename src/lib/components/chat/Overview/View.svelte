@@ -15,6 +15,7 @@
 
 	import CustomNode from './Node.svelte';
 	import Flow from './Flow.svelte';
+	import { isDescendantMessage } from '$lib/utils/chat-history';
 
 	const { width, height } = useStore();
 
@@ -65,6 +66,7 @@
 	const drawFlow = async (direction: LayoutDirection) => {
 		const nodeList: Node[] = [];
 		const edgeList: Edge[] = [];
+		const seenEdgeIds = new Set<string>();
 		const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 		const nodeWidth = 15 * rootFontSize;
 		const nodeHeight = 5 * rootFontSize;
@@ -114,28 +116,26 @@
 			// Create edges
 			const parentId = history.messages[id].parentId;
 			if (parentId) {
-				edgeList.push({
-					id: parentId + '-' + pos.id,
-					source: parentId,
-					target: pos.id,
-					selectable: false,
-					class: ' dark:fill-gray-300 fill-gray-300',
-					type: 'smoothstep',
-					animated: history.currentId === id || recurseCheckChild(id, history.currentId)
-				});
+				const edgeId = parentId + '-' + pos.id;
+				if (!seenEdgeIds.has(edgeId)) {
+					seenEdgeIds.add(edgeId);
+					edgeList.push({
+						id: edgeId,
+						source: parentId,
+						target: pos.id,
+						selectable: false,
+						class: ' dark:fill-gray-300 fill-gray-300',
+						type: 'smoothstep',
+						animated:
+							history.currentId === id ||
+							isDescendantMessage(history.messages, id, history.currentId)
+					});
+				}
 			}
 		});
 
 		await edges.set([...edgeList]);
 		await nodes.set([...nodeList]);
-	};
-
-	const recurseCheckChild = (nodeId: string, currentId: string): boolean => {
-		const node = history.messages[nodeId];
-		return (
-			node.childrenIds &&
-			node.childrenIds.some((id: string) => id === currentId || recurseCheckChild(id, currentId))
-		);
 	};
 
 	const setLayoutDirection = (direction: LayoutDirection) => {

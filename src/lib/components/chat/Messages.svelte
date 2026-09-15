@@ -8,6 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import { deleteChatMessageById, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
+	import { deepestDescendantId } from '$lib/utils/chat-history';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -215,13 +216,7 @@
 		// If we're navigating to a different message
 		if (message.id !== messageId) {
 			// Drill down to the deepest child of that branch
-			let messageChildrenIds = history.messages[messageId].childrenIds;
-			while (messageChildrenIds.length !== 0) {
-				messageId = messageChildrenIds.at(-1);
-				messageChildrenIds = history.messages[messageId].childrenIds;
-			}
-
-			history.currentId = messageId;
+			history.currentId = deepestDescendantId(history.messages, messageId);
 		}
 
 		await tick();
@@ -247,14 +242,7 @@
 				];
 
 			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
+				history.currentId = deepestDescendantId(history.messages, messageId);
 			}
 		} else {
 			let childrenIds = Object.values(history.messages)
@@ -263,14 +251,7 @@
 			let messageId = childrenIds[Math.max(childrenIds.indexOf(message.id) - 1, 0)];
 
 			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
+				history.currentId = deepestDescendantId(history.messages, messageId);
 			}
 		}
 
@@ -299,14 +280,7 @@
 				];
 
 			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
+				history.currentId = deepestDescendantId(history.messages, messageId);
 			}
 		} else {
 			let childrenIds = Object.values(history.messages)
@@ -316,14 +290,7 @@
 				childrenIds[Math.min(childrenIds.indexOf(message.id) + 1, childrenIds.length - 1)];
 
 			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
+				history.currentId = deepestDescendantId(history.messages, messageId);
 			}
 		}
 
@@ -481,15 +448,13 @@
 		});
 
 		let nextMessageId = parentMessageId;
-		let nextChildrenIds =
-			nextMessageId === null
-				? Object.keys(history.messages).filter((id) => history.messages[id].parentId === null)
-				: (history.messages[nextMessageId]?.childrenIds ?? []);
-		while (nextChildrenIds.length > 0) {
-			nextMessageId = nextChildrenIds.at(-1);
-			nextChildrenIds = history.messages[nextMessageId]?.childrenIds ?? [];
+		if (nextMessageId === null) {
+			const rootIds = Object.keys(history.messages).filter(
+				(id) => history.messages[id].parentId === null
+			);
+			nextMessageId = rootIds.at(-1) ?? null;
 		}
-		history.currentId = nextMessageId;
+		history.currentId = deepestDescendantId(history.messages, nextMessageId);
 		history = history;
 
 		if (!$temporaryChatEnabled) {

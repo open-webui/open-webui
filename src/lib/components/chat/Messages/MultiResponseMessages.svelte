@@ -20,6 +20,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
 	import { formatMessageTimestamp, formatMessageTimestampFull } from '$lib/utils';
+	import { deepestDescendantId } from '$lib/utils/chat-history';
 	const i18n = getContext('i18n');
 
 	export let chatId;
@@ -89,14 +90,7 @@
 		console.log(messageId);
 
 		// Traverse the branch to find the deepest child message
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
-		}
-
-		// Update the current message ID in history
-		history.currentId = messageId;
+		history.currentId = deepestDescendantId(history.messages, messageId);
 
 		// Await UI updates
 		await tick();
@@ -112,14 +106,7 @@
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
 		console.log(messageId);
 
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
-		}
-
-		history.currentId = messageId;
+		history.currentId = deepestDescendantId(history.messages, messageId);
 
 		await tick();
 		await updateChat();
@@ -135,14 +122,7 @@
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
 		console.log(messageId);
 
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
-		}
-
-		history.currentId = messageId;
+		history.currentId = deepestDescendantId(history.messages, messageId);
 
 		await tick();
 		await updateChat();
@@ -209,13 +189,7 @@
 
 	const onGroupClick = async (_messageId, modelIdx) => {
 		if (messageId != _messageId) {
-			let currentMessageId = _messageId;
-			let messageChildrenIds = history.messages[currentMessageId].childrenIds;
-			while (messageChildrenIds.length !== 0) {
-				currentMessageId = messageChildrenIds.at(-1);
-				messageChildrenIds = history.messages[currentMessageId].childrenIds;
-			}
-			history.currentId = currentMessageId;
+			history.currentId = deepestDescendantId(history.messages, _messageId);
 			selectedModelIdx = modelIdx;
 
 			// await tick();
