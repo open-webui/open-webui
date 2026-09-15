@@ -11,6 +11,7 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
+from mcp.types import ElicitRequestURLParams, ElicitResult
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
@@ -60,6 +61,60 @@ class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
         self.exit_stack = None
+        self.instructions: Optional[str] = None
+        self._event_caller = None
+
+    async def _elicitation_callback(self, context, params):
+        """Handle MCP elicitation requests from server tools.
+
+        Uses OWUI's event_caller to show a confirmation dialog to the user
+        and waits for their response.
+        """
+        message = getattr(params, 'message', 'Action confirmation requested')
+        log.debug('MCP elicitation callback: %s', message[:200])
+
+        try:
+            response = await self._event_caller(
+                {
+                    'type': 'confirmation',
+                    'data': {
+                        'title': '⚠️ Action Confirmation',
+                        'message': message,
+                    },
+                }
+            )
+            if isinstance(response, dict) and response.get('error'):
+                log.warning('MCP elicitation event_caller error: %s', response['error'])
+                return ElicitResult(action='cancel', content=None)
+            if response:
+                log.debug('MCP elicitation approved by user')
+                # URL-mode elicitation: content must be omitted
+                if isinstance(params, ElicitRequestURLParams):
+                    return ElicitResult(action='accept', content=None)
+                # Form-mode: build content matching the requestedSchema
+                schema = getattr(params, 'requestedSchema', None)
+                if schema and isinstance(schema, dict):
+                    props = schema.get('properties', {})
+                    content = {}
+                    for key, prop in props.items():
+                        prop_type = prop.get('type', 'boolean')
+                        if prop_type == 'boolean':
+                            content[key] = True
+                        elif prop_type == 'string':
+                            content[key] = 'confirmed'
+                        elif prop_type in ('number', 'integer'):
+                            content[key] = 1
+                        else:
+                            content[key] = True
+                else:
+                    content = {'value': True}
+                return ElicitResult(action='accept', content=content)
+            else:
+                log.debug('MCP elicitation rejected by user')
+                return ElicitResult(action='decline', content=None)
+        except Exception as e:
+            log.warning('MCP elicitation event_caller failed: %s', e)
+            return ElicitResult(action='decline', content=None)
 
     async def connect(self, url: str, headers: Optional[dict] = None):
         async with AsyncExitStack() as exit_stack:
@@ -75,11 +130,16 @@ class MCPClient:
                 transport = await exit_stack.enter_async_context(self._streams_context)
                 read_stream, write_stream, _ = transport
 
-                self._session_context = ClientSession(read_stream, write_stream)  # pylint: disable=W0201
+                self._session_context = ClientSession(
+                    read_stream,
+                    write_stream,
+                    elicitation_callback=self._elicitation_callback if self._event_caller else None,
+                )
 
                 self.session = await exit_stack.enter_async_context(self._session_context)
                 with anyio.fail_after(MCP_INITIALIZE_TIMEOUT):
-                    await self.session.initialize()
+                    init_result = await self.session.initialize()
+                self.instructions = getattr(init_result, 'instructions', None)
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
                 await self.disconnect()
