@@ -2345,7 +2345,7 @@ Strictly return in JSON format:
 
 ### Chat History:
 <chat_history>
-{{MESSAGES:END:6}}
+{{MESSAGES:END:6|ROLES:user,assistant}}
 </chat_history>
 """
 
