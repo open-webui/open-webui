@@ -2888,7 +2888,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # that reject empty content blocks (e.g. AWS Bedrock ConverseStream).
     if not prompt or not prompt.strip():
         fallback = ', '.join([s.name for s in available_skills] + [s['name'] for s in terminal_skills])
-        if fallback:
+        # Attachment-only messages keep their empty text, same as on models without skills.
+        if fallback and not (metadata.get('user_message') or {}).get('files'):
             set_last_user_message_content(fallback, form_data['messages'])
             prompt = fallback
     # TODO: re-enable URL extraction from prompt
