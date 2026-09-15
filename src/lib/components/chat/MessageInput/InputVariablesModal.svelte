@@ -140,7 +140,9 @@
 														<div class="relative flex justify-center items-center gap-2">
 															<input
 																type="checkbox"
-																bind:checked={variableValues[variable]}
+																checked={variableValues[variable] === true ||
+																	variableValues[variable] === 'true'}
+																on:change={(e) => (variableValues[variable] = e.target.checked)}
 																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 																id="input-variable-{idx}"
 																{...variableAttributes}
