@@ -8,6 +8,7 @@ from aiohttp import (
     TraceRequestStartParams,
 )
 from fastapi import FastAPI, status
+from open_webui.env import OTEL_PYTHON_DISABLED_INSTRUMENTATIONS
 from open_webui.utils.telemetry.constants import SPAN_REDIS_TYPE, SpanAttributes
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -174,22 +175,34 @@ class Instrumentor(BaseInstrumentor):
         return []
 
     def _instrument(self, **kwargs):
-        FastAPIInstrumentor.instrument_app(app=self.app)
-        SQLAlchemyInstrumentor().instrument(engine=self.db_engine)
-        RedisInstrumentor().instrument(request_hook=redis_request_hook)
-        RequestsInstrumentor().instrument(request_hook=requests_hook, response_hook=response_hook)
-        LoggingInstrumentor().instrument()
-        HTTPXClientInstrumentor().instrument(
-            request_hook=httpx_request_hook,
-            response_hook=httpx_response_hook,
-            async_request_hook=httpx_async_request_hook,
-            async_response_hook=httpx_async_response_hook,
-        )
-        AioHttpClientInstrumentor().instrument(
-            request_hook=aiohttp_request_hook,
-            response_hook=aiohttp_response_hook,
-        )
-        SystemMetricsInstrumentor().instrument()
+        disabled = set(OTEL_PYTHON_DISABLED_INSTRUMENTATIONS)
+        # Keys are the instrumentation entry-point names, matching the values accepted by
+        # the standard OTEL_PYTHON_DISABLED_INSTRUMENTATIONS variable.
+        instrumentations = {
+            'fastapi': lambda: FastAPIInstrumentor.instrument_app(app=self.app),
+            'sqlalchemy': lambda: SQLAlchemyInstrumentor().instrument(engine=self.db_engine),
+            'redis': lambda: RedisInstrumentor().instrument(request_hook=redis_request_hook),
+            'requests': lambda: RequestsInstrumentor().instrument(
+                request_hook=requests_hook, response_hook=response_hook
+            ),
+            'logging': lambda: LoggingInstrumentor().instrument(),
+            'httpx': lambda: HTTPXClientInstrumentor().instrument(
+                request_hook=httpx_request_hook,
+                response_hook=httpx_response_hook,
+                async_request_hook=httpx_async_request_hook,
+                async_response_hook=httpx_async_response_hook,
+            ),
+            'aiohttp-client': lambda: AioHttpClientInstrumentor().instrument(
+                request_hook=aiohttp_request_hook,
+                response_hook=aiohttp_response_hook,
+            ),
+            'system_metrics': lambda: SystemMetricsInstrumentor().instrument(),
+        }
+        for name, instrument in instrumentations.items():
+            if '*' in disabled or name in disabled:
+                logger.debug('Instrumentation skipped for library %s', name)
+                continue
+            instrument()
 
     def _uninstrument(self, **kwargs):
         if getattr(self, 'instrumentors', None) is None:

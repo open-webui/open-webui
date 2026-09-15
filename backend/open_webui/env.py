@@ -1253,6 +1253,12 @@ ENABLE_OTEL_TRACES = os.getenv('ENABLE_OTEL_TRACES', 'False').lower() == 'true'
 ENABLE_OTEL_METRICS = os.getenv('ENABLE_OTEL_METRICS', 'False').lower() == 'true'
 ENABLE_OTEL_LOGS = os.getenv('ENABLE_OTEL_LOGS', 'False').lower() == 'true'
 
+# Instrumentation names to skip, e.g. "sqlalchemy,redis" ("*" disables all).
+# Same names and semantics as the standard variable honored by opentelemetry-instrument.
+OTEL_PYTHON_DISABLED_INSTRUMENTATIONS = [
+    x.strip() for x in os.getenv('OTEL_PYTHON_DISABLED_INSTRUMENTATIONS', '').split(',') if x.strip()
+]
+
 OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4317')
 OTEL_METRICS_EXPORTER_OTLP_ENDPOINT = os.getenv('OTEL_METRICS_EXPORTER_OTLP_ENDPOINT', OTEL_EXPORTER_OTLP_ENDPOINT)
 OTEL_LOGS_EXPORTER_OTLP_ENDPOINT = os.getenv('OTEL_LOGS_EXPORTER_OTLP_ENDPOINT', OTEL_EXPORTER_OTLP_ENDPOINT)
