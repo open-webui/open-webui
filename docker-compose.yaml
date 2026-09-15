@@ -7,6 +7,10 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    environment:
+      - 'OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE--1}'
+      - 'OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION-1}'
+      - 'OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL-2}'
 
   open-webui:
     build:
@@ -22,6 +26,9 @@ services:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE--1}'
+      - 'OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION-1}'
+      - 'OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL-2}'
       - 'WEBUI_SECRET_KEY='
     extra_hosts:
       - host.docker.internal:host-gateway
