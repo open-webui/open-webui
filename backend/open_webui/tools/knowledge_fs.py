@@ -7,11 +7,13 @@ for AI models to interact with knowledge bases using commands they already know.
 Re-exported through builtin.py for consistent imports.
 """
 
+import asyncio
 import contextvars
 import logging
 import re
 import shlex
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
 from typing import Optional
 
@@ -727,6 +729,10 @@ async def _kb_tail(
     return result
 
 
+def _match_lines(content: str, matches: Callable[[str], bool]) -> list[tuple[int, str]]:
+    return [(i, line) for i, line in enumerate(content.split('\n'), 1) if matches(line)]
+
+
 async def _kb_grep(
     args: list[str], flags: set[str], user: dict, model_knowledge: list[dict] | None, piped_input: str | None = None
 ) -> str:
@@ -752,17 +758,14 @@ async def _kb_grep(
     count_only = 'c' in flags
     use_regex = 'E' in flags
 
-    _matches, err = build_matcher(pattern, case_insensitive, use_regex)
+    _matches, err = await asyncio.to_thread(build_matcher, pattern, case_insensitive, use_regex)
     if err:
         return err
 
     # Grep on piped input
     if piped_input is not None:
-        lines = piped_input.split('\n')
-        matched = []
-        for i, line in enumerate(lines, 1):
-            if _matches(line):
-                matched.append(f'{i}: {line}')
+        found = await asyncio.to_thread(_match_lines, piped_input, _matches)
+        matched = [f'{i}: {line}' for i, line in found]
         if count_only:
             return str(len(matched))
         if filenames_only:
@@ -778,11 +781,8 @@ async def _kb_grep(
         elif 'error' in resolved:
             return resolved['error']
         else:
-            lines = resolved['content'].split('\n')
-            matched = []
-            for i, line in enumerate(lines, 1):
-                if _matches(line):
-                    matched.append(f'{i}: {line}')
+            found = await asyncio.to_thread(_match_lines, resolved['content'], _matches)
+            matched = [f'{i}: {line}' for i, line in found]
 
             if count_only:
                 return f'{resolved["id"]}  {resolved["filename"]}: {len(matched)}'
@@ -833,11 +833,7 @@ async def _kb_grep(
         if not content:
             continue
 
-        lines = content.split('\n')
-        file_matches = []
-        for i, line in enumerate(lines, 1):
-            if _matches(line):
-                file_matches.append((i, line))
+        file_matches = await asyncio.to_thread(_match_lines, content, _matches)
 
         if file_matches:
             files_with_matches.append(file_info)
