@@ -2,7 +2,7 @@
 	import { getRAGConfig, updateRAGConfig } from '$lib/apis/retrieval';
 	import Switch from '$lib/components/common/Switch.svelte';
 
-	import { models } from '$lib/stores';
+	import { config, models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -98,7 +98,11 @@
 				: (webConfig.LINKUP_SEARCH_PARAMS ?? {});
 
 		const res = await updateRAGConfig(localStorage.token, {
-			web: { ...webConfig, LINKUP_SEARCH_PARAMS: linkupParams }
+			web: {
+				...webConfig,
+				EXA_MAX_CONTENT_LENGTH: webConfig.EXA_MAX_CONTENT_LENGTH ?? null,
+				LINKUP_SEARCH_PARAMS: linkupParams
+			}
 		});
 
 		// Convert arrays back to strings for display
@@ -210,7 +214,7 @@
 						<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 						{#each webSearchEngines as engine}
 							{#if engine === 'duckduckgo' || engine === 'ddgs'}
-								<option value={engine}>DDGS</option>
+								<option value={engine} disabled={$config?.features?.slim}>DDGS</option>
 							{:else if engine === 'serphouse'}
 								<option value={engine}>SERPHouse</option>
 							{:else}
@@ -711,6 +715,24 @@
 									bind:value={webConfig.EXA_API_KEY}
 								/>
 							</div>
+							<AdminSettingField
+								className="mt-1.5"
+								label={$i18n.t('Max Content Length')}
+								forId="exa-max-content-length"
+								description={$i18n.t(
+									'Maximum characters per Exa search result. Leave empty for no limit.'
+								)}
+							>
+								<input
+									id="exa-max-content-length"
+									class={inputClass}
+									type="number"
+									min="1"
+									step="1"
+									placeholder={$i18n.t('No limit')}
+									bind:value={webConfig.EXA_MAX_CONTENT_LENGTH}
+								/>
+							</AdminSettingField>
 						</div>
 					{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity'}
 						<div class="mb-2.5 flex w-full flex-col">
@@ -1174,7 +1196,9 @@
 					>
 						<option value="">{$i18n.t('Default')}</option>
 						{#each webLoaderEngines as engine}
-							<option value={engine}>{engine}</option>
+							<option value={engine} disabled={$config?.features?.slim && engine === 'playwright'}
+								>{engine}</option
+							>
 						{/each}
 					</SettingsSelect>
 				</AdminSettingRow>

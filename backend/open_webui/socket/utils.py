@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 
 import pycrdt as Y
 from open_webui.env import REDIS_KEY_PREFIX
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.redis import get_redis_connection
+from redis.exceptions import RedisClusterException, RedisError
+
+log = logging.getLogger(__name__)
 
 YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
 SCAN_BATCH_SIZE = 200
@@ -58,7 +62,10 @@ class RedisLock:
         return bool(self.redis.eval(self._RENEW_SCRIPT, 1, self.lock_name, self.lock_id, self.timeout_secs))
 
     def release_lock(self):
-        self.redis.eval(self._RELEASE_SCRIPT, 1, self.lock_name, self.lock_id)
+        try:
+            self.redis.eval(self._RELEASE_SCRIPT, 1, self.lock_name, self.lock_id)
+        except (RedisClusterException, RedisError) as e:
+            log.warning('Failed to release lock %s; it expires on its own: %s', self.lock_name, e)
 
 
 class RedisDict:

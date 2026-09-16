@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import urllib.request
 
-from ddgs import DDGS
+from open_webui.env import USE_SLIM
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 log = logging.getLogger(__name__)
@@ -26,6 +26,13 @@ def search_duckduckgo(
     Returns:
         list[SearchResult]: A list of search results
     """
+    if USE_SLIM:
+        raise ValueError(
+            'DDGS is unavailable in slim. Configure another web search provider in Admin Settings > Web Search.'
+        )
+
+    from ddgs import DDGS
+
     # The ddgs library (primp-based) does not auto-detect proxy env vars.
     # Resolve via stdlib getproxies() — same pattern as the other loaders.
     env_proxies = urllib.request.getproxies()

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { toast } from 'svelte-sonner';
 
 	import { config, functions, models, settings, tools, user } from '$lib/stores';
@@ -181,7 +182,9 @@
 								{#each $tools
 									.filter((tool) => !tool?.id?.startsWith('server:'))
 									.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')) as tool, toolIdx}
-									<option value={tool.id} class="bg-gray-100 dark:bg-gray-800">{tool.name}</option>
+									<option value={tool.id} class="bg-gray-100 dark:bg-gray-800"
+										>{resolveLocalizedResource(tool, $i18n.language)}</option
+									>
 								{/each}
 							{:else if tab === 'functions'}
 								<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
@@ -189,7 +192,9 @@
 								>
 
 								{#each $functions.sort( (a, b) => (a.name ?? '').localeCompare(b.name ?? '') ) as func, funcIdx}
-									<option value={func.id} class="bg-gray-100 dark:bg-gray-800">{func.name}</option>
+									<option value={func.id} class="bg-gray-100 dark:bg-gray-800"
+										>{resolveLocalizedResource(func, $i18n.language)}</option
+									>
 								{/each}
 							{/if}
 						</select>
@@ -203,6 +208,10 @@
 						<div class="chat-control-valves">
 							<Valves
 								{valvesSpec}
+								meta={(tab === 'tools' ? $tools : $functions)?.find(
+									(item) => item.id === selectedId
+								)?.meta}
+								userValves
 								bind:valves
 								on:change={() => {
 									debounceSubmitHandler();

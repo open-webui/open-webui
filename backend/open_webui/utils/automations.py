@@ -305,17 +305,20 @@ def _build_request(
     return request
 
 
-async def _resolve_model_defaults(app, model_id: str) -> tuple[list[str], dict, list[str], Optional[str]]:
+async def _resolve_model_defaults(app, model_id: str) -> dict:
     models = getattr(app.state, 'MODELS', {})
     model = models.get(model_id, {})
     meta = model.get('info', {}).get('meta', {})
 
-    tool_ids = list(meta.get('toolIds') or [])
-    filter_ids = list(meta.get('defaultFilterIds') or [])
-    terminal_id = meta.get('terminalId') or None
+    defaults = {
+        'tool_ids': list(meta.get('toolIds') or []),
+        'filter_ids': list(meta.get('defaultFilterIds') or []),
+        'terminal_id': meta.get('terminalId'),
+    }
+    defaults = {key: value for key, value in defaults.items() if value}
     default_feature_ids = meta.get('defaultFeatureIds', [])
     if not default_feature_ids:
-        return tool_ids, {}, filter_ids, terminal_id
+        return defaults
 
     capabilities = meta.get('capabilities') or {}
     features = {}
@@ -333,7 +336,9 @@ async def _resolve_model_defaults(app, model_id: str) -> tuple[list[str], dict, 
             if capabilities.get(feature_id) and feature_checks[feature_id]:
                 features[feature_id] = True
 
-    return tool_ids, features, filter_ids, terminal_id
+    if features:
+        defaults['features'] = features
+    return defaults
 
 
 async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -> None:
@@ -436,9 +441,8 @@ async def _execute_channel_automation(
             db,
         )
 
-    tool_ids, features, filter_ids, _ = await _resolve_model_defaults(app, model_id)
-
     form_data = {
+        **await _resolve_model_defaults(app, model_id),
         'model': model_id,
         'messages': [
             {
@@ -454,13 +458,6 @@ async def _execute_channel_automation(
         'automation_id': automation.id,
         'background_tasks': {},
     }
-    if tool_ids:
-        form_data['tool_ids'] = tool_ids
-    if features:
-        form_data['features'] = features
-    if filter_ids:
-        form_data['filter_ids'] = filter_ids
-
     await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
     from open_webui.socket.main import sio
@@ -615,11 +612,9 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             room=f'user:{automation.user_id}',
         )
 
-        # Resolve model defaults (frontend does this, backend doesn't)
-        tool_ids, features, filter_ids, terminal_id = await _resolve_model_defaults(app, model_id)
-
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
+            **await _resolve_model_defaults(app, model_id),
             'model': model_id,
             'messages': [{'role': 'user', 'content': prompt}],
             'stream': True,
@@ -636,15 +631,6 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             'automation_id': automation.id,
             'background_tasks': {},
         }
-        if tool_ids:
-            form_data['tool_ids'] = tool_ids
-        if features:
-            form_data['features'] = features
-        if filter_ids:
-            form_data['filter_ids'] = filter_ids
-        if terminal_id:
-            form_data['terminal_id'] = terminal_id
-
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
         request = _build_request(app, token=token)

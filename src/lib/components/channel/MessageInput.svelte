@@ -4,7 +4,7 @@
 
 	import { tick, getContext, onMount } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import { config, mobile, settings, socket, user } from '$lib/stores';
 	import {
@@ -997,7 +997,7 @@
 													id="input-menu-button"
 													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 													type="button"
-													aria-label="More"
+													aria-label={$i18n.t('More')}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
@@ -1048,7 +1048,7 @@
 														toast.error($i18n.t('Permission denied when accessing microphone'));
 													}
 												}}
-												aria-label="Voice Input"
+												aria-label={$i18n.t('Voice Input')}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"

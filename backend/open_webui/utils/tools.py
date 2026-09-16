@@ -145,15 +145,13 @@ async def build_tool_server_headers(
 
     auth_type = connection.get('auth_type', 'bearer')
     headers = {}
-    cookies = {}
+    cookies = getattr(request, 'cookies', {}) if connection.get('forward_cookies', False) else {}
 
     if auth_type == 'bearer':
         headers.update(bearer_auth_header(connection.get('key', '')))
     elif auth_type == 'session':
-        cookies = request.cookies if hasattr(request, 'cookies') else {}
         headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
-        cookies = request.cookies if hasattr(request, 'cookies') else {}
         oauth_token = extra_params.get('__oauth_token__', None)
         if oauth_token:
             headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
@@ -1393,16 +1391,14 @@ async def get_terminal_tools(
 
     # Build auth headers
     auth_type = connection.get('auth_type', 'bearer')
-    cookies = {}
+    cookies = getattr(request, 'cookies', {}) if connection.get('forward_cookies', False) else {}
     headers = {'Content-Type': 'application/json', 'X-User-Id': user.id}
 
     if auth_type == 'bearer':
         headers.update(bearer_auth_header(connection.get('key', '')))
     elif auth_type == 'session':
-        cookies = request.cookies
         headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
-        cookies = request.cookies
         oauth_token = extra_params.get('__oauth_token__', None)
         if oauth_token:
             headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
@@ -1668,6 +1664,7 @@ async def execute_tool_server(
         path_params = {}
         query_params = {}
         body_params = {}
+        declared_param_names = set()
 
         # Merge path-level and operation-level parameters for execution.
         path_level_params = methods.get('parameters', [])
@@ -1688,6 +1685,7 @@ async def execute_tool_server(
             param_name = param.get('name')
             if not param_name:
                 continue
+            declared_param_names.add(param_name)
             param_in = param.get('in')
             if param_name in params:
                 if param_in == 'path':
@@ -1707,8 +1705,16 @@ async def execute_tool_server(
         if query_params:
             final_url = f'{final_url}?{urlencode(query_params)}'
 
-        if operation.get('requestBody', {}).get('content'):
-            if params:
+        request_body_content = operation.get('requestBody', {}).get('content')
+        if request_body_content and params:
+            json_schema = request_body_content.get('application/json', {}).get('schema')
+            resolved_body_schema = resolve_schema(json_schema, openapi.get('components', {}))
+            is_composed_schema = any(keyword in resolved_body_schema for keyword in ('allOf', 'anyOf', 'oneOf'))
+            body_properties = {} if is_composed_schema else (resolved_body_schema.get('properties') or {})
+            # Strict servers reject declared parameters in the body, unless the body schema declares them too.
+            if body_properties:
+                body_params = {k: v for k, v in params.items() if k in body_properties or k not in declared_param_names}
+            else:
                 body_params = params
 
         async with aiohttp.ClientSession(

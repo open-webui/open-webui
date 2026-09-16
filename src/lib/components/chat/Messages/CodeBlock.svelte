@@ -2,6 +2,8 @@
 	import hljs from 'highlight.js';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { config, pyodideWorker as pyodideWorkerStore } from '$lib/stores';
 
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
@@ -18,6 +20,7 @@
 	import equal from 'fast-deep-equal';
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
+	import DiffBlock from './DiffBlock.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
@@ -26,7 +29,7 @@
 	import Cube from '$lib/components/icons/Cube.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let id = '';
 	export let edit = true;
@@ -52,13 +55,9 @@
 	let localPyodideWorker = null;
 
 	let _code = '';
-	$: if (code) {
-		updateCode();
-	}
-
-	const updateCode = () => {
-		_code = code;
-	};
+	$: _code = code;
+	$: isDiff = ['diff', 'patch'].includes(lang.trim().toLowerCase());
+	let editingDiff = false;
 
 	let _token = null;
 
@@ -434,7 +433,7 @@
 
 <div>
 	<div
-		class="relative {className} flex flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
+		class="relative {className} flex flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5 overflow-clip"
 		dir="ltr"
 	>
 		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}
@@ -458,7 +457,7 @@
 			{/if}
 		{:else}
 			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3.5 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3.5 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black"
 			>
 				<div class="flex-1 truncate">
 					<Tooltip content={lang} placement="top-start">
@@ -469,6 +468,18 @@
 				</div>
 
 				<div class="flex items-center gap-0.5 shrink-0">
+					{#if isDiff && edit}
+						<button
+							class="bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+							aria-pressed={editingDiff}
+							on:click={() => {
+								editingDiff = !editingDiff;
+								collapsed = false;
+							}}
+						>
+							{editingDiff ? $i18n.t('Done') : $i18n.t('Edit')}
+						</button>
+					{/if}
 					<button
 						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 						on:click={collapseCodeBlock}
@@ -542,9 +553,11 @@
 				<div class=" pt-6.5 bg-white dark:bg-black"></div>
 
 				{#if !collapsed}
-					{#if edit}
+					{#if isDiff && !(edit && editingDiff)}
+						<DiffBlock code={_code} />
+					{:else if edit}
 						<CodeEditor
-							value={code}
+							value={isDiff ? _code : code}
 							{id}
 							{lang}
 							onSave={() => {
@@ -575,7 +588,7 @@
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
-								COUNT: code.split('\n').length
+								COUNT: (isDiff ? _code : code).split('\n').length
 							})}
 						</span>
 					</div>

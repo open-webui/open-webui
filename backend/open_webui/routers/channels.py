@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
-from open_webui.env import STATIC_DIR
+from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, STATIC_DIR
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
 from open_webui.models.config import Config
@@ -1102,13 +1102,12 @@ async def model_response_handler(request, channel, message, user, db=None):
                 # Resolve model config (same path automations use)
                 from open_webui.utils.automations import _resolve_model_defaults
 
-                tool_ids, features, filter_ids, _ = await _resolve_model_defaults(request.app, model_id)
-
                 # Build full form_data — same shape as frontend POST.
                 # The channel: prefix routes pipeline events to the
                 # channel emitter in socket/main.py instead of the
                 # default chat emitter.
                 form_data = {
+                    **await _resolve_model_defaults(request.app, model_id),
                     'model': model_id,
                     'messages': [
                         system_message,
@@ -1122,12 +1121,6 @@ async def model_response_handler(request, channel, message, user, db=None):
                 }
                 if files:
                     form_data['files'] = files
-                if tool_ids:
-                    form_data['tool_ids'] = tool_ids
-                if features:
-                    form_data['features'] = features
-                if filter_ids:
-                    form_data['filter_ids'] = filter_ids
 
                 # Call the full chat completion pipeline — streaming,
                 # tools, filters, RAG — everything. The pipeline runs as
@@ -1823,9 +1816,15 @@ async def delete_message_by_id(
 
 
 @router.get('/webhooks/{webhook_id}/profile/image')
-async def get_webhook_profile_image(webhook_id: str, user=Depends(get_verified_user)):
+async def get_webhook_profile_image(
+    request: Request,
+    webhook_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     """Get webhook profile image by webhook ID."""
-    webhook = await Channels.get_webhook_by_id(webhook_id)
+    await check_channels_access(request, user)
+    webhook = await Channels.get_webhook_by_id(webhook_id, db=db)
     if not webhook:
         # Return default favicon if webhook not found
         # LICENSE covers this Open WebUI fallback logo.
@@ -1833,13 +1832,26 @@ async def get_webhook_profile_image(webhook_id: str, user=Depends(get_verified_u
         # https://docs.openwebui.com/license.
         return FileResponse(f'{STATIC_DIR}/favicon.png')
 
+    channel = await Channels.get_channel_by_id(webhook.channel_id, db=db)
+    if not channel:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if channel.type in ['group', 'dm']:
+        if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+    else:
+        if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
     if webhook.profile_image_url:
         # Check if it's url or base64
         if webhook.profile_image_url.startswith('http'):
-            return Response(
-                status_code=status.HTTP_302_FOUND,
-                headers={'Location': webhook.profile_image_url},
-            )
+            if ENABLE_PROFILE_IMAGE_URL_FORWARDING:
+                return Response(
+                    status_code=status.HTTP_302_FOUND,
+                    headers={'Location': webhook.profile_image_url},
+                )
+            # When forwarding is disabled, fall through to the default image to prevent client-side IP/UA/Referer leaks.
         elif webhook.profile_image_url.startswith('data:image'):
             try:
                 header, base64_data = webhook.profile_image_url.split(',', 1)

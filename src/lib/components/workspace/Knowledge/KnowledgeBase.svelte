@@ -328,10 +328,7 @@
 		for (const fileItem of newFileItems) {
 			try {
 				console.log(fileItem);
-				const res = await processUrl(localStorage.token, fileItem.url).catch((e) => {
-					console.error('Error processing URL:', e);
-					return null;
-				});
+				const res = await processUrl(localStorage.token, fileItem.url);
 
 				if (res) {
 					console.log(res);
@@ -351,9 +348,6 @@
 							knowledge_id: knowledge.id,
 							directory_id: currentDirectoryId,
 							source_url: fileItem.url
-						}).catch((e) => {
-							toast.error(`${e}`);
-							return null;
 						});
 					} else if (uploadedFile?.id) {
 						const linkedKnowledge = await addFileToKnowledgeById(
@@ -500,7 +494,7 @@
 		if (error.name === 'AbortError') {
 			toast.info($i18n.t('Directory selection was cancelled'));
 		} else {
-			toast.error($i18n.t('Error accessing directory'));
+			toast.error(`${$i18n.t('Error accessing directory')}: ${error.message}`);
 			console.error('Directory access error:', error);
 		}
 	};
@@ -521,7 +515,12 @@
 						if (hasHiddenFolder(entryPath)) continue;
 
 						if (entry.kind === 'file') {
-							const file = await entry.getFile();
+							let file: File;
+							try {
+								file = await entry.getFile();
+							} catch (error) {
+								throw new Error(`"${entryPath}": ${error}`);
+							}
 							collected.push({ path: dirPath, filename: entry.name, file });
 						} else if (entry.kind === 'directory') {
 							await traverse(entry, entryPath);
@@ -1021,9 +1020,14 @@
 		}
 
 		if (entry.isFile) {
-			const file = await new Promise<File>((resolve, reject) => {
-				entry.file(resolve, reject);
-			});
+			let file: File;
+			try {
+				file = await new Promise<File>((resolve, reject) => {
+					entry.file(resolve, reject);
+				});
+			} catch (error) {
+				throw new Error(`"${entryPath}": ${error}`);
+			}
 			const parts = entryPath.split('/');
 			const filename = parts.pop() || file.name;
 			return [{ path: parts.join('/'), filename, file }];

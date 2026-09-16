@@ -26,7 +26,7 @@ const pypiPackages = ['black', 'pathspec', 'mypy_extensions', 'pytokens'];
 
 import { loadPyodide } from 'pyodide';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
-import { writeFile, readFile, copyFile, readdir, rmdir, access } from 'fs/promises';
+import { writeFile, readFile, copyFile, readdir, rmdir, access, mkdir, rm } from 'fs/promises';
 
 /**
  * Loading network proxy configurations from the environment variables.
@@ -196,6 +196,24 @@ async function downloadPyPIWheels() {
 }
 
 initNetworkProxyFromEnv();
-await downloadPackages();
-await copyPyodide();
-await downloadPyPIWheels();
+if (process.env.USE_SLIM === 'true') {
+	// Rebuild generated assets so a previous full build cannot leave bundled wheels behind.
+	await rm('static/pyodide', { recursive: true, force: true });
+	await mkdir('static/pyodide', { recursive: true });
+	await copyPyodide();
+
+	const { version } = JSON.parse(await readFile('node_modules/pyodide/package.json', 'utf-8'));
+	const lockPath = 'static/pyodide/pyodide-lock.json';
+	const lockData = JSON.parse(await readFile(lockPath, 'utf-8'));
+	for (const pkg of Object.values(lockData.packages)) {
+		pkg.file_name = new URL(
+			pkg.file_name,
+			`https://cdn.jsdelivr.net/pyodide/v${version}/full/`
+		).href;
+	}
+	await writeFile(lockPath, JSON.stringify(lockData, null, 2));
+} else {
+	await downloadPackages();
+	await copyPyodide();
+	await downloadPyPIWheels();
+}

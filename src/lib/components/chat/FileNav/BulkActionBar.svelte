@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Readable } from 'svelte/store';
+	import type { i18n as I18n } from 'i18next';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import Icon from './Icon.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Readable<I18n>>('i18n');
 
 	export let count: number = 0;
 	export let canDelete = true;
+	export let canCompare = false;
+	export let onCompare: () => void = () => {};
 
 	export let onDelete: () => void = () => {};
 	export let onDownload: () => void = () => {};
@@ -15,11 +19,22 @@
 </script>
 
 <div
-	class="flex h-8 items-center gap-2 px-2 bg-blue-50 dark:bg-blue-500/5 shrink-0 border-t border-gray-50 dark:border-gray-850/30"
+	class="flex h-8 items-center gap-2 px-2 bg-gray-50 dark:bg-white/[0.03] shrink-0 border-t border-gray-50 dark:border-gray-850/30"
 >
-	<span class="text-[0.6875rem] font-medium text-blue-600 dark:text-blue-400 flex-1 truncate">
+	<span class="text-[0.6875rem] font-normal text-gray-600 dark:text-gray-400 flex-1 truncate">
 		{$i18n.t('{{count}} selected', { count })}
 	</span>
+
+	<Tooltip content={$i18n.t('Compare')}>
+		<button
+			class="flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
+			disabled={!canCompare}
+			on:click={onCompare}
+			aria-label={$i18n.t('Compare')}
+		>
+			<Icon name="split-horizontal" size={12} strokeWidth={1.4} />
+		</button>
+	</Tooltip>
 
 	<Tooltip content={$i18n.t('Select All')}>
 		<button

@@ -5,7 +5,7 @@
 
 	import { config, models, settings, theme, user } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -66,10 +66,21 @@
 		keep_alive: null
 	};
 
+	$: canEditSystemPrompt =
+		$user?.role === 'admin' ||
+		(($user?.permissions.chat?.controls ?? true) &&
+			($user?.permissions.chat?.system_prompt ?? true));
+	$: canEditParams =
+		$user?.role === 'admin' ||
+		(($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true));
+
 	const saveHandler = async () => {
-		saveSettings({
-			system: system !== '' ? system : undefined,
-			params: {
+		const updated: Record<string, any> = {};
+		if (canEditSystemPrompt) {
+			updated.system = system !== '' ? system : null;
+		}
+		if (canEditParams) {
+			updated.params = {
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
 				stream_delta_chunk_size:
 					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
@@ -105,9 +116,14 @@
 				...(params.custom_params && Object.keys(params.custom_params).length > 0
 					? { custom_params: params.custom_params }
 					: {})
-			}
-		});
-		dispatch('save');
+			};
+		}
+		try {
+			await saveSettings(updated);
+			dispatch('save');
+		} catch {
+			// The settings modal displays the save error; do not report success.
+		}
 	};
 
 	onMount(async () => {
@@ -240,7 +256,7 @@
 			</UserSettingRow>
 			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
 				<div class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-					Couldn't find your language?
+					{$i18n.t("Couldn't find your language?")}
 					<a
 						class="font-normal underline text-gray-400 dark:text-gray-600"
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
@@ -249,13 +265,13 @@
 						<!-- LICENSE covers this Open WebUI wordmark.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
-						Help us translate Open WebUI!
+						{$i18n.t('Help us translate Open WebUI!')}
 					</a>
 				</div>
 			{/if}
 		</UserSettingSection>
 
-		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.system_prompt ?? true))}
+		{#if canEditSystemPrompt}
 			<UserSettingSection title={$i18n.t('System Prompt')}>
 				<UserSettingField description={$i18n.t('Set the default system prompt for new chats.')}>
 					<Textarea
@@ -268,7 +284,7 @@
 			</UserSettingSection>
 		{/if}
 
-		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
+		{#if canEditParams}
 			<UserSettingSection title={$i18n.t('Advanced Parameters')}>
 				<UserSettingRow description={$i18n.t('Show or hide custom generation parameters.')}>
 					<span slot="label">{$i18n.t('Model parameters')}</span>

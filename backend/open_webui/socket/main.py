@@ -202,49 +202,53 @@ async def periodic_session_pool_cleanup():
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
     renew_interval = max(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, 0.5)
     while True:
-        if not session_aquire_func():
-            log.debug('Session cleanup lock held by another node. Retrying.')
-            await asyncio.sleep(retry_delay)
-            continue
-
         try:
-            while True:
-                if not session_renew_func():
-                    log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
-                    break
+            if not session_aquire_func():
+                log.debug('Session cleanup lock held by another node. Retrying.')
+                await asyncio.sleep(retry_delay)
+                continue
 
-                now = int(time.time())
-                for batch in get_session_pool_batches():
-                    expired = [
-                        sid
-                        for sid, entry in batch
-                        if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT
-                    ]
-                    if expired:
-                        log.warning('Reaping %d orphaned session(s) from the session pool', len(expired))
-                        if WEBSOCKET_MANAGER == 'redis':
-                            SESSION_POOL.delete_many(*expired)
-                        else:
-                            for sid in expired:
-                                SESSION_POOL.pop(sid, None)
-                    await asyncio.sleep(0)  # don't hold the loop for the whole sweep
-
-                next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
-                lock_lost = False
+            try:
                 while True:
-                    sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
-                    if sleep_for <= 0:
-                        break
-                    await asyncio.sleep(sleep_for)
                     if not session_renew_func():
                         log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
-                        lock_lost = True
                         break
 
-                if lock_lost:
-                    break
-        finally:
-            session_release_func()
+                    now = int(time.time())
+                    for batch in get_session_pool_batches():
+                        expired = [
+                            sid
+                            for sid, entry in batch
+                            if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT
+                        ]
+                        if expired:
+                            log.warning('Reaping %d orphaned session(s) from the session pool', len(expired))
+                            if WEBSOCKET_MANAGER == 'redis':
+                                SESSION_POOL.delete_many(*expired)
+                            else:
+                                for sid in expired:
+                                    SESSION_POOL.pop(sid, None)
+                        await asyncio.sleep(0)  # don't hold the loop for the whole sweep
+
+                    next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
+                    lock_lost = False
+                    while True:
+                        sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
+                        if sleep_for <= 0:
+                            break
+                        await asyncio.sleep(sleep_for)
+                        if not session_renew_func():
+                            log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
+                            lock_lost = True
+                            break
+
+                    if lock_lost:
+                        break
+            finally:
+                session_release_func()
+        except Exception:
+            log.exception('Session pool cleanup failed. Retrying.')
+            await asyncio.sleep(retry_delay)
 
 
 async def periodic_usage_pool_cleanup():

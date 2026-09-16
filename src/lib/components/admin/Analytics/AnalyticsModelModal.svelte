@@ -14,7 +14,7 @@
 	export let endDate: number | null = null;
 	export let onClose: () => void = () => {};
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	type Tab = 'overview' | 'chats';
 	type ChatSortKey = 'title' | 'updated_at' | 'user_name';
@@ -25,7 +25,7 @@
 	const TIME_RANGES: { key: TimeRange; label: string; days: number }[] = [
 		{ key: '30d', label: '30D', days: 30 },
 		{ key: '1y', label: '1Y', days: 365 },
-		{ key: 'all', label: 'All', days: 0 }
+		{ key: 'all', label: $i18n.t('All'), days: 0 }
 	];
 	let selectedRange: TimeRange = '30d';
 	let history: Array<{ date: string; won: number; lost: number }> = [];
@@ -187,7 +187,7 @@
 			<button
 				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={close}
-				aria-label="Close"
+				aria-label={$i18n.t('Close')}
 			>
 				<XMark className={'size-4'} />
 			</button>

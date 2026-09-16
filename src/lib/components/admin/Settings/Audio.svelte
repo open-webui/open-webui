@@ -245,6 +245,13 @@
 	}}
 >
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Audio')}</h2>
+	{#if $config?.features?.slim === true}
+		<p class="mb-4 text-xs text-gray-500">
+			{$i18n.t(
+				'Slim requires external speech providers. Local speech models and audio conversion are unavailable.'
+			)}
+		</p>
+	{/if}
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<AdminSettingSection title={$i18n.t('Speech-to-Text')} first>
@@ -253,7 +260,9 @@
 				description={$i18n.t('Choose the transcription provider used for audio input.')}
 			>
 				<SettingsSelect bind:value={STT_ENGINE} placeholder={$i18n.t('Select an engine')}>
-					<option value="">{$i18n.t('Whisper (Local)')}</option>
+					<option value="" disabled={$config?.features?.slim === true}
+						>{$i18n.t('Whisper (Local)')}</option
+					>
 					<option value="openai">{$i18n.t('OpenAI')}</option>
 					<option value="web">{$i18n.t('Web API')}</option>
 					<option value="deepgram">{$i18n.t('Deepgram')}</option>
@@ -500,7 +509,9 @@
 					}}
 				>
 					<option value="">{$i18n.t('Web API')}</option>
-					<option value="transformers">{$i18n.t('Transformers')} ({$i18n.t('Local')})</option>
+					<option value="transformers" disabled={$config?.features?.slim === true}
+						>{$i18n.t('Transformers')} ({$i18n.t('Local')})</option
+					>
 					<option value="openai">{$i18n.t('OpenAI')}</option>
 					<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 					<option value="azure">{$i18n.t('Azure AI Speech')}</option>

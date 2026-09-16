@@ -159,11 +159,21 @@
 						bind:value={adminConfig.DEFAULT_GROUP_ID}
 						placeholder={$i18n.t('Select a group')}
 					>
-						<option value={''}>None</option>
+						<option value={''}>{$i18n.t('None')}</option>
 						{#each groups as group}
 							<option value={group.id}>{group.name}</option>
 						{/each}
 					</SettingsSelect>
+				</AdminSettingRow>
+
+				<AdminSettingRow
+					label={$i18n.t('Login Form')}
+					description={$i18n.t(
+						'Show email and password sign-in on the login page. Set up SSO or LDAP before disabling. Disabling also blocks local sign-ups; password API access is unchanged.'
+					)}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_LOGIN_FORM} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				<AdminSettingRow
@@ -707,7 +717,7 @@
 						>
 							<input
 								class={inputClass}
-								placeholder="* (all domains)"
+								placeholder={$i18n.t('* (all domains)')}
 								bind:value={oauthConfig.OAUTH_ALLOWED_DOMAINS}
 							/>
 						</AdminSettingField>

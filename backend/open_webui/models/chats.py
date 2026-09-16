@@ -267,11 +267,6 @@ class ChatsImportForm(BaseModel):
     chats: list[ChatImportForm]
 
 
-class ChatTitleMessagesForm(BaseModel):
-    title: str
-    messages: list[dict]
-
-
 class ChatTitleForm(BaseModel):
     title: str
 
