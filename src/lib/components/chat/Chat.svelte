@@ -2460,7 +2460,7 @@
 
 	let scrollRAF = null;
 	let contentsRAF = null;
-	const scheduleResponseScrollToBottom = () => {
+	const autoScrollToBottom = () => {
 		if (!shouldAutoScrollResponse()) return;
 
 		if (!scrollRAF) {
@@ -2766,6 +2766,7 @@
 
 		history.messages[message.id] = message;
 		history = history;
+		autoScrollToBottom();
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
@@ -2885,7 +2886,7 @@
 		console.log(data);
 		await tick();
 
-		scheduleResponseScrollToBottom();
+		autoScrollToBottom();
 	};
 
 	//////////////////////////
@@ -3931,7 +3932,7 @@
 						history.messages[messageId] = message;
 					}
 
-					scheduleResponseScrollToBottom();
+					autoScrollToBottom();
 				}
 
 				await saveChatHandler(_chatId, history);
