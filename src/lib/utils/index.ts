@@ -1433,6 +1433,29 @@ export const createMessagesList = (history, messageId) => {
 	return list.reverse();
 };
 
+export const getDeepestChildId = (history, messageId) => {
+	let deepestId = messageId;
+	const visitedMessageIds = new Set([deepestId]);
+	let childrenIds =
+		deepestId === null
+			? Object.keys(history.messages).filter((id) => history.messages[id].parentId === null)
+			: (history.messages[deepestId]?.childrenIds ?? []);
+
+	while (childrenIds.length !== 0) {
+		const childId = childrenIds.at(-1);
+		if (visitedMessageIds.has(childId)) {
+			console.warn('Circular dependency detected in message history', childId);
+			break;
+		}
+
+		visitedMessageIds.add(childId);
+		deepestId = childId;
+		childrenIds = history.messages[deepestId]?.childrenIds ?? [];
+	}
+
+	return deepestId;
+};
+
 const toTokenCount = (value: unknown) => {
 	const parsed = Number(value || 0);
 	return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
