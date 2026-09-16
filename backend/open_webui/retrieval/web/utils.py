@@ -732,6 +732,9 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             return True  # no usable global CA bundle, so both clients land on certifi
         return AIOHTTP_CLIENT_SSL_CERT_FILE or True
 
+    def _reject_websocket_sync(self, ws_route):
+        ws_route.on_message(lambda _message: None)
+
     def _intercept_navigation_sync(self, route, session):
         req = route.request
         if req.resource_type in _DROPPED_RESOURCE_TYPES:
@@ -868,7 +871,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                             browser.new_page(service_workers='block') as page,
                         ):
                             page.route('**/*', lambda route: self._intercept_navigation_sync(route, session))
-                            page.route_web_socket('**/*', lambda ws_route: ws_route.close())
+                            page.route_web_socket('**/*', self._reject_websocket_sync)
                             response = page.goto(url, timeout=self.playwright_timeout)
                             if response is None:
                                 raise ValueError(f'page.goto() returned None for url {url}')
