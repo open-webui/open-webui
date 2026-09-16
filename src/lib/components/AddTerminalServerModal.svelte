@@ -4,6 +4,7 @@
 	const i18n = getContext<any>('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -30,6 +31,7 @@
 	export let onSubmit: Function = () => {};
 	export let onDelete: () => void = () => {};
 
+	let loading = false;
 	let url = '';
 	let key = '';
 	let name = '';
@@ -329,84 +331,98 @@
 	};
 
 	const submitHandler = async () => {
-		if (url === '') {
-			toast.error($i18n.t('Please enter a valid URL'));
-			return;
-		}
+		if (loading) return;
+		loading = true;
 
-		// Remove trailing slash
-		url = url.replace(/\/$/, '');
-		// Bearer key whitespace breaks the terminal WebSocket auth (HTTP headers strip it, JSON doesn't)
-		key = key.trim();
-		if (loadingPolicy) {
-			toast.error($i18n.t('Policy is still loading'));
-			return;
-		}
-		if (policyLoadError) {
-			toast.error($i18n.t('Failed to load policy: {{error}}', { error: policyLoadError }));
-			return;
-		}
-
-		// Save policy to orchestrator if applicable
-		let policyData = {};
-		let lifecycleData = {};
-		if (serverType === 'orchestrator' && !direct && policyId) {
-			const parsedLifecycle = parseJson('Lifecycle JSON', lifecycleJson);
-			if (!parsedLifecycle) return;
-			policyData = buildPolicyData();
-			lifecycleData = parsedLifecycle;
-
-			try {
-				await putOrchestratorPolicy(localStorage.token, url, key, policyId, policyData, auth_type);
-				await putOrchestratorLifecycle(
-					localStorage.token,
-					url,
-					key,
-					policyId,
-					lifecycleData,
-					auth_type
-				);
-			} catch (err) {
-				toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
+		try {
+			if (url === '') {
+				toast.error($i18n.t('Please enter a valid URL'));
 				return;
 			}
+
+			// Remove trailing slash
+			url = url.replace(/\/$/, '');
+			// Bearer key whitespace breaks the terminal WebSocket auth (HTTP headers strip it, JSON doesn't)
+			key = key.trim();
+			if (loadingPolicy) {
+				toast.error($i18n.t('Policy is still loading'));
+				return;
+			}
+			if (policyLoadError) {
+				toast.error($i18n.t('Failed to load policy: {{error}}', { error: policyLoadError }));
+				return;
+			}
+
+			// Save policy to orchestrator if applicable
+			let policyData = {};
+			let lifecycleData = {};
+			if (serverType === 'orchestrator' && !direct && policyId) {
+				const parsedLifecycle = parseJson('Lifecycle JSON', lifecycleJson);
+				if (!parsedLifecycle) return;
+				policyData = buildPolicyData();
+				lifecycleData = parsedLifecycle;
+
+				try {
+					await putOrchestratorPolicy(
+						localStorage.token,
+						url,
+						key,
+						policyId,
+						policyData,
+						auth_type
+					);
+					await putOrchestratorLifecycle(
+						localStorage.token,
+						url,
+						key,
+						policyId,
+						lifecycleData,
+						auth_type
+					);
+				} catch (err) {
+					toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
+					return;
+				}
+			}
+
+			const contexts: Record<string, false | { context_id: string }> = {};
+			if (chatContextMode === 'off') contexts.chat = false;
+			else if (chatContextMode === 'chat_id') contexts.chat = { context_id: 'chat_id' };
+			if (automationContextMode === 'off') contexts.automation = false;
+			else if (automationContextMode === 'automation_id') {
+				contexts.automation = { context_id: 'automation_id' };
+			}
+			const useContexts =
+				!direct && serverType === 'orchestrator' && Object.keys(contexts).length > 0;
+			const connectionConfig: Record<string, any> =
+				connection?.config && typeof connection.config === 'object' ? { ...connection.config } : {};
+			if (!direct) connectionConfig.access_grants = accessGrants;
+			else delete connectionConfig.access_grants;
+			if (useContexts) connectionConfig.contexts = contexts;
+			else delete connectionConfig.contexts;
+			if (chatUploads === 'filesystem') connectionConfig.chat_uploads = 'filesystem';
+			else delete connectionConfig.chat_uploads;
+
+			const result = {
+				...(!direct && id.trim() ? { id: id.trim() } : {}),
+				url,
+				key,
+				name,
+				path,
+				auth_type,
+				...(!direct ? { forward_cookies: forwardCookies } : {}),
+				enabled: enabled,
+				config: connectionConfig,
+				// Policy fields
+				...(serverType ? { server_type: serverType } : {}),
+				...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {})
+			};
+
+			await onSubmit(result);
+			show = false;
+		} finally {
+			loading = false;
 		}
-
-		const contexts: Record<string, false | { context_id: string }> = {};
-		if (chatContextMode === 'off') contexts.chat = false;
-		else if (chatContextMode === 'chat_id') contexts.chat = { context_id: 'chat_id' };
-		if (automationContextMode === 'off') contexts.automation = false;
-		else if (automationContextMode === 'automation_id') {
-			contexts.automation = { context_id: 'automation_id' };
-		}
-		const useContexts =
-			!direct && serverType === 'orchestrator' && Object.keys(contexts).length > 0;
-		const connectionConfig: Record<string, any> =
-			connection?.config && typeof connection.config === 'object' ? { ...connection.config } : {};
-		if (!direct) connectionConfig.access_grants = accessGrants;
-		else delete connectionConfig.access_grants;
-		if (useContexts) connectionConfig.contexts = contexts;
-		else delete connectionConfig.contexts;
-		if (chatUploads === 'filesystem') connectionConfig.chat_uploads = 'filesystem';
-		else delete connectionConfig.chat_uploads;
-
-		const result = {
-			...(!direct && id.trim() ? { id: id.trim() } : {}),
-			url,
-			key,
-			name,
-			path,
-			auth_type,
-			...(!direct ? { forward_cookies: forwardCookies } : {}),
-			enabled: enabled,
-			config: connectionConfig,
-			// Policy fields
-			...(serverType ? { server_type: serverType } : {}),
-			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {})
-		};
-
-		onSubmit(result);
-		show = false;
 	};
 </script>
 
@@ -1002,9 +1018,15 @@
 							<button
 								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="submit"
-								disabled={loadingPolicy || !!policyLoadError}
+								disabled={loading || loadingPolicy || !!policyLoadError}
 							>
 								{$i18n.t('Save')}
+
+								{#if loading}
+									<span class="shrink-0">
+										<Spinner />
+									</span>
+								{/if}
 							</button>
 						</div>
 					</div>
