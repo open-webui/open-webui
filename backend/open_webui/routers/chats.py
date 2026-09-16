@@ -1732,10 +1732,15 @@ async def fork_chat_by_id(
         'forked_from_message_id': source_message_id,
     }
 
+    # The source chat's folder may no longer be writable by the caller.
+    folder_id = chat.folder_id
+    if folder_id is not None and not await has_folder_write_access(user.id, folder_id, db=db):
+        folder_id = None
+
     fork = await Chats.insert_new_chat(
         str(uuid4()),
         user.id,
-        ChatForm(chat=updated_chat, folder_id=chat.folder_id),
+        ChatForm(chat=updated_chat, folder_id=folder_id),
         db=db,
         internal_meta=meta,
     )
