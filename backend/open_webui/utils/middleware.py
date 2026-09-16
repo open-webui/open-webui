@@ -324,7 +324,7 @@ def append_to_text_field(item: dict, key: str, value: str) -> None:
         return
 
     # Opt-in: dropping the dict's reference lets CPython extend an unshared str
-    # in place. An allocation failure can leave the field empty.
+    # in place. Only a host that is already out of memory can leave the field empty.
     text = item[key]
     item[key] = ''
     text += value
