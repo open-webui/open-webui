@@ -1250,10 +1250,13 @@
 							updateLastReadAt($chatId);
 						}
 					}
-				} else if (type === 'response:completion') {
-					responseCompletionEventHandler(data, message);
-				} else if (type === 'chat:completion') {
-					chatCompletionEventHandler(data, message, event.chat_id);
+				} else if (type === 'response:completion' || type === 'chat:completion') {
+					if (type === 'response:completion') {
+						responseCompletionEventHandler(data, message);
+					} else {
+						await chatCompletionEventHandler(data, message, event.chat_id);
+					}
+					autoScrollToBottom();
 				} else if (type === 'chat:tasks:cancel') {
 					dismissContextCompactionToast();
 					if (data?.output) {
@@ -2766,7 +2769,6 @@
 
 		history.messages[message.id] = message;
 		history = history;
-		autoScrollToBottom();
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
@@ -2884,9 +2886,6 @@
 		}
 
 		console.log(data);
-		await tick();
-
-		autoScrollToBottom();
 	};
 
 	//////////////////////////
