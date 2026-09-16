@@ -10,8 +10,8 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from open_webui.utils.misc import json_text_variants
-from open_webui.utils.validate import validate_profile_image_url
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from open_webui.utils.validate import validate_image_url
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,6 +75,7 @@ class ModelMeta(BaseModel):
     """Metadata for a workspace model entry (profile, description, tags, capabilities)."""
 
     profile_image_url: str | None = None
+    background_image_url: str | None = None
     description: str | None = Field(default=None, description='User-facing description of the model.')
     i18n: dict[str, Any] | None = None
     capabilities: dict | None = None
@@ -82,14 +83,16 @@ class ModelMeta(BaseModel):
 
     model_config = ConfigDict(extra='allow')
 
-    @field_validator('profile_image_url', mode='before')
+    @field_validator('profile_image_url', 'background_image_url', mode='before')
     @classmethod
-    def check_profile_image_url(cls, v: str | None) -> str | None:
+    def check_image_url(cls, v: str | None, info: ValidationInfo) -> str | None:
         if v is None:
             return v
         try:
-            return validate_profile_image_url(v)
+            return validate_image_url(v, file_only=info.field_name == 'background_image_url')
         except ValueError:
+            if info.field_name == 'background_image_url':
+                raise
             return None
 
     @field_validator('knowledge', mode='before')
@@ -239,10 +242,13 @@ class ModelsTable:
             return models
 
     async def get_models(
-        self, writable_by_user_id: str | None = None, db: AsyncSession | None = None
+        self, writable_by_user_id: str | None = None, db: AsyncSession | None = None, ids: list[str] | None = None
     ) -> list[ModelUserResponse]:
         async with get_async_db_context(db) as db:
             stmt = select(Model).filter(Model.base_model_id != None)
+
+            if ids is not None:
+                stmt = stmt.filter(Model.id.in_(ids))
 
             if writable_by_user_id:
                 user_group_ids = {
@@ -281,13 +287,15 @@ class ModelsTable:
                 )
             return models
 
-    async def get_model_owners_attaching_file(self, file_id: str, db: AsyncSession | None = None) -> dict[str, str]:
-        """Map of model id to owner id for workspace models whose knowledge attaches this file."""
+    async def get_model_owner_ids_by_file_id(
+        self, file_id: str, db: AsyncSession | None = None, include_background: bool = False
+    ) -> dict[str, str]:
+        """Return model IDs mapped to owner IDs for models referencing the file."""
         async with get_async_db_context(db) as db:
             # File ids are server-generated uuids, so the text match can only over-match.
             result = await db.execute(
                 select(Model.id, Model.user_id, Model.meta).filter(
-                    Model.base_model_id.is_not(None), cast(Model.meta, String).like(f'%"{file_id}"%')
+                    Model.base_model_id.is_not(None), cast(Model.meta, String).like(f'%{file_id}%')
                 )
             )
             return {
@@ -297,6 +305,7 @@ class ModelsTable:
                     isinstance(item, dict) and item.get('type') == 'file' and item.get('id') == file_id
                     for item in meta.get('knowledge') or []
                 )
+                or (include_background and meta.get('background_image_url') == f'/api/v1/files/{file_id}/content')
             }
 
     @staticmethod

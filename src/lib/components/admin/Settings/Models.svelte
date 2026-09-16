@@ -20,6 +20,7 @@
 		deleteAllModels,
 		getAllModels,
 		getModelById,
+		exportModels,
 		toggleModelById,
 		updateModelById,
 		updateModelAccessGrants,
@@ -250,7 +251,14 @@
 	};
 
 	const downloadModels = async (models) => {
-		models = await Promise.all(models.map(getFullModel));
+		try {
+			const exported = [];
+			for (const model of models) exported.push(await getPortableModel(model));
+			models = exported;
+		} catch (error: any) {
+			toast.error(`${error?.detail ?? error}`);
+			return;
+		}
 		let blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
 		});
@@ -481,6 +489,7 @@
 			if (res && showToast) {
 				toast.success($i18n.t('Model updated successfully'));
 			}
+			return !!res;
 		} else {
 			const res = await createNewModel(localStorage.token, {
 				meta: {},
@@ -496,8 +505,9 @@
 
 			if (res && showToast) {
 				toast.success($i18n.t('Model updated successfully'));
-				await init();
+				await init().catch((error) => toast.error(`${error}`));
 			}
+			return !!res;
 		}
 	};
 
@@ -609,6 +619,11 @@
 			? ((await getModelById(localStorage.token, model.id).catch(() => null)) ?? model)
 			: model;
 
+	const getPortableModel = async (model: any) =>
+		isPresetModel(model)
+			? (await exportModels(localStorage.token, [model.id]))[0]
+			: getFullModel(model);
+
 	const openModelHandler = async (model: any) => {
 		if (isPresetModel(model)) {
 			showSettings.set(false);
@@ -632,7 +647,12 @@
 	};
 
 	const exportModelHandler = async (model) => {
-		model = await getFullModel(model);
+		try {
+			model = await getPortableModel(model);
+		} catch (error: any) {
+			toast.error(`${error?.detail ?? error}`);
+			return;
+		}
 		let blob = new Blob([JSON.stringify([model])], {
 			type: 'application/json'
 		});
@@ -1249,9 +1269,13 @@
 			preset={false}
 			onSubmit={async (model) => {
 				console.log(model);
-				await upsertModelHandler(model);
+				if (!(await upsertModelHandler(model))) {
+					toast.error($i18n.t('Failed to save model'));
+					return false;
+				}
 				selectedModelId = null;
-				await init();
+				await init().catch((error) => toast.error(`${error}`));
+				return true;
 			}}
 			onBack={async () => {
 				selectedModelId = null;

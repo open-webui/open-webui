@@ -85,15 +85,11 @@
 	export let dragged = false;
 
 	let models = [];
-	let selectedModelIdx = 0;
+	export let selectedModelIdx = 0;
 	let selectedModel;
 	let selectedModelName = '';
 	let selectedModelDescription = '';
 	let selectedSuggestionPrompts = [];
-
-	$: if (selectedModels.length > 0) {
-		selectedModelIdx = models.length - 1;
-	}
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 	$: selectedModel = atSelectedModel ?? models[selectedModelIdx];

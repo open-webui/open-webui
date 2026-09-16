@@ -91,7 +91,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.validate import validate_profile_image_url
+from open_webui.utils.validate import validate_image_url
 from starlette.responses import RedirectResponse
 
 # Some IdPs put private params in ID token JOSE headers (CAS: client_id, CyberArk: app_id).
@@ -1812,7 +1812,7 @@ class OAuthManager:
                         picture = await resp.read()
                         base64_encoded_picture = base64.b64encode(picture).decode('utf-8')
                         try:
-                            return validate_profile_image_url(f'data:{upstream_mime};base64,{base64_encoded_picture}')
+                            return validate_image_url(f'data:{upstream_mime};base64,{base64_encoded_picture}')
                         except ValueError:
                             log.warning(
                                 f'Rejected OAuth profile picture from {picture_url}: '

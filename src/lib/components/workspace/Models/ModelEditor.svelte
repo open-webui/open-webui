@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { models, tools, functions, user } from '$lib/stores';
-	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
@@ -12,6 +12,7 @@
 	import { getLanguages } from '$lib/i18n';
 	import { getBaseModelTags, getModelTags } from '$lib/apis/models';
 	import { getVoices } from '$lib/apis/audio';
+	import { uploadFile, deleteFileById } from '$lib/apis/files';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
@@ -50,6 +51,14 @@
 	export let preset = true;
 
 	let loading = false;
+	let backgroundFile: File | null = null;
+	let backgroundInput: HTMLInputElement;
+	let backgroundPreview: string | null = null;
+	const clearBackgroundPreview = () => {
+		if (backgroundPreview) URL.revokeObjectURL(backgroundPreview);
+		backgroundPreview = null;
+	};
+	onDestroy(clearBackgroundPreview);
 	let success = false;
 
 	let filesInputElement;
@@ -91,6 +100,7 @@
 			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 			// https://docs.openwebui.com/license.
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
+			background_image_url: null as string | null,
 			description: '',
 			i18n: {},
 			suggestion_prompts: null,
@@ -271,6 +281,7 @@
 	};
 
 	const submitHandler = async () => {
+		if (loading) return;
 		loading = true;
 
 		info.id = id;
@@ -423,10 +434,46 @@
 			}
 		});
 
-		await onSubmit(info);
+		let uploadedId: string | null = null;
+		const previousBackground = info.meta.background_image_url;
 
-		loading = false;
-		success = false;
+		try {
+			if (backgroundFile) {
+				const uploaded = await uploadFile(localStorage.token, backgroundFile, null, false, false);
+				if (!uploaded?.id) throw new Error($i18n.t('Failed to upload background image.'));
+				uploadedId = uploaded.id;
+				info.meta.background_image_url = `/api/v1/files/${uploaded.id}/content`;
+			}
+			const saved = await onSubmit(info);
+			if (saved === false) throw new Error($i18n.t('Failed to save model'));
+			backgroundFile = null;
+			clearBackgroundPreview();
+		} catch (error: any) {
+			info.meta.background_image_url = previousBackground;
+			if (uploadedId) {
+				// A failed response can follow a committed save; only delete an unused upload.
+				try {
+					const response = await fetch(
+						`${WEBUI_API_BASE_URL}/models/model?${new URLSearchParams({ id: info.id })}`,
+						{ headers: { authorization: `Bearer ${localStorage.token}` } }
+					);
+					if (
+						response.status === 404 ||
+						(response.ok &&
+							(await response.json())?.meta?.background_image_url !==
+								`/api/v1/files/${uploadedId}/content`)
+					) {
+						await deleteFileById(localStorage.token, uploadedId);
+					}
+				} catch {
+					/* Leave uncertain uploads for file management. */
+				}
+			}
+			toast.error(`${error?.detail ?? error?.message ?? error}`);
+		} finally {
+			loading = false;
+			success = false;
+		}
 	};
 
 	onMount(async () => {
@@ -816,6 +863,92 @@
 										includeHidden={$user?.role === 'admin'}
 										bind:value={info.base_model_id}
 									/>
+								</div>
+							{/if}
+
+							{#if preset || info.base_model_id}
+								<div class="space-y-2">
+									<div class="flex items-center justify-between gap-3">
+										<span class="text-xs text-gray-500">{$i18n.t('Background Image')}</span>
+										<div class="flex gap-3 text-xs">
+											<button
+												type="button"
+												disabled={loading}
+												on:click={() => backgroundInput.click()}
+											>
+												{backgroundPreview || info.meta.background_image_url
+													? $i18n.t('Replace')
+													: $i18n.t('Upload')}
+											</button>
+											{#if backgroundPreview || info.meta.background_image_url}
+												<button
+													type="button"
+													disabled={loading}
+													on:click={() => {
+														clearBackgroundPreview();
+														backgroundFile = null;
+														info.meta.background_image_url = null;
+													}}>{$i18n.t('Reset')}</button
+												>
+											{/if}
+										</div>
+									</div>
+									<input
+										bind:this={backgroundInput}
+										type="file"
+										accept="image/png,image/jpeg,image/webp,image/gif"
+										hidden
+										on:change={async () => {
+											const selected = backgroundInput.files?.[0];
+											backgroundInput.value = '';
+											if (!selected || loading) return;
+											loading = true;
+											const candidate = URL.createObjectURL(selected);
+											try {
+												if (
+													!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(
+														selected.type
+													)
+												) {
+													throw new Error(
+														$i18n.t('Background image must be PNG, JPEG, WebP, or GIF.')
+													);
+												}
+												if (selected.size > 5 * 1024 * 1024)
+													throw new Error($i18n.t('Background image must be at most 5 MiB.'));
+												const image = new Image();
+												image.src = candidate;
+												await image.decode();
+												if (image.naturalWidth * image.naturalHeight > 25_000_000) {
+													throw new Error(
+														$i18n.t('Background image must be at most 25 megapixels.')
+													);
+												}
+												clearBackgroundPreview();
+												backgroundPreview = candidate;
+												backgroundFile = selected;
+											} catch (error) {
+												URL.revokeObjectURL(candidate);
+												toast.error(
+													error instanceof Error
+														? error.message
+														: $i18n.t('Invalid background image.')
+												);
+											} finally {
+												loading = false;
+											}
+										}}
+									/>
+									{#if backgroundPreview || info.meta.background_image_url}
+										<img
+											src={backgroundPreview ?? info.meta.background_image_url}
+											alt={$i18n.t('Background image preview')}
+											class="h-28 w-full rounded-lg object-cover"
+										/>
+									{/if}
+									<p class="text-xs text-gray-400">
+										{$i18n.t('PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.')}
+									</p>
 								</div>
 							{/if}
 

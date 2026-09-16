@@ -106,7 +106,9 @@ async def has_access_to_file(
 
     # Check if the file is directly attached to a shared workspace model (per the ownership
     # note above, model write is conferred only for files the model owner owns).
-    model_owners = await Models.get_model_owners_attaching_file(file.id, db=db)
+    model_owners = await Models.get_model_owner_ids_by_file_id(
+        file.id, db=db, include_background=access_type == 'read'
+    )
     if access_type != 'read':
         model_owners = {model_id: owner_id for model_id, owner_id in model_owners.items() if owner_id == file.user_id}
     if user.id in model_owners.values():
