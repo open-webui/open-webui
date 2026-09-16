@@ -39,6 +39,7 @@ log = logging.getLogger(__name__)
 
 CONNECTIONS_CONFIG_KEYS = {
     'ENABLE_DIRECT_CONNECTIONS': 'direct.enable',
+    'ENABLE_DIRECT_INTEGRATIONS': 'direct.integrations.enable',
     'ENABLE_BASE_MODELS_CACHE': 'models.base_models_cache',
 }
 CODE_EXECUTION_CONFIG_KEYS = {
@@ -131,6 +132,7 @@ async def get_config_namespace(namespace: str, user=Depends(get_admin_user)):
 
 class ConnectionsConfigForm(BaseModel):
     ENABLE_DIRECT_CONNECTIONS: bool
+    ENABLE_DIRECT_INTEGRATIONS: bool = False
     ENABLE_BASE_MODELS_CACHE: bool
 
 
@@ -145,7 +147,7 @@ async def set_connections_config(
     form_data: ConnectionsConfigForm,
     user=Depends(get_admin_user),
 ):
-    await Config.upsert(config_updates(form_data.model_dump(), CONNECTIONS_CONFIG_KEYS))
+    await Config.upsert(config_updates(form_data.model_dump(exclude_unset=True), CONNECTIONS_CONFIG_KEYS))
     values = await get_config_values(CONNECTIONS_CONFIG_KEYS)
     await publish_event(
         request,

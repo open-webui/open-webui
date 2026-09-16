@@ -382,6 +382,20 @@
 				</AdminSettingRow>
 
 				<AdminSettingRow
+					label={$i18n.t('Direct Integrations')}
+					description={$i18n.t(
+						'Show the Integrations tab for users with permission to manage their own tool and terminal connections, including admins. Hiding it does not disable existing connections.'
+					)}
+					let:labelId
+				>
+					<Switch
+						bind:state={connectionsConfig.ENABLE_DIRECT_INTEGRATIONS}
+						on:change={() => updateConnectionsHandler()}
+						ariaLabelledbyId={labelId}
+					/>
+				</AdminSettingRow>
+
+				<AdminSettingRow
 					label={$i18n.t('Cache Base Model List')}
 					description={$i18n.t(
 						'Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.'

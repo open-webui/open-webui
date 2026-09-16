@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings, user } from '$lib/stores';
@@ -711,6 +711,7 @@
 				'api',
 				'base url',
 				'direct connections',
+				'direct integrations',
 				'proxy'
 			]
 		},
@@ -807,8 +808,9 @@
 
 			if (tab.id === 'tools') {
 				return (
-					$user?.role === 'admin' ||
-					($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)
+					$config?.features?.enable_direct_integrations === true &&
+					($user?.role === 'admin' ||
+						($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers))
 				);
 			}
 
@@ -918,19 +920,18 @@
 		selectedTab = 'general';
 	}
 
+	$: if (selectedTab === 'tools' && !availableSettings.some((tab) => tab.id === 'tools')) {
+		selectedTab = 'general';
+	}
+
 	$: if (modalShow && selectedTab) {
 		scrollToSelectedTab();
 	}
 
-	onMount(() => {
+	$: if ($config && $user) {
 		availableSettings = getAvailableSettings();
 		setFilteredSettings();
-
-		config.subscribe((configData) => {
-			availableSettings = getAvailableSettings();
-			setFilteredSettings();
-		});
-	});
+	}
 </script>
 
 <Modal
