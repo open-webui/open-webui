@@ -57,6 +57,7 @@
 		copyToClipboard,
 		getMessageContentParts,
 		createMessagesList,
+		getDeepestChildId,
 		sanitizeHistory,
 		getPromptVariables,
 		processDetails,
@@ -1119,21 +1120,7 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
 
-		let messageChildrenIds = [];
-		if (_messageId === null) {
-			messageChildrenIds = Object.keys(history.messages).filter(
-				(id) => history.messages[id].parentId === null
-			);
-		} else {
-			messageChildrenIds = history.messages[_messageId].childrenIds;
-		}
-
-		while (messageChildrenIds.length !== 0) {
-			_messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[_messageId].childrenIds;
-		}
-
-		history.currentId = _messageId;
+		history.currentId = getDeepestChildId(history, _messageId);
 
 		await tick();
 
