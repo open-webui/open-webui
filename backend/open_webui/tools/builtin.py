@@ -1342,6 +1342,14 @@ async def replace_note_content(
     """
     Update an existing note by replacing the whole markdown content or applying range operations.
 
+    Prefer "replace_range" when only part of the note changes.
+    A "replace" operation must be the only operation in the request.
+    start and end are 0-indexed character offsets into the markdown content from view_note.
+    end is exclusive.
+    Offsets never shift as operations are applied.
+    Ranges must not overlap.
+    expected is optional. When set, the request is rejected if the range's current text does not match it.
+
     :param note_id: The ID of the note to update
     :param content: The new markdown content for a whole-note update
     :param operations: Optional note operations:
