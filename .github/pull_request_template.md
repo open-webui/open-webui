@@ -17,12 +17,14 @@ Link the maintainer's request for this PR, or state that the change is limited t
 
 ## Checklist
 
+- [ ] I have read and I understand the [contribution policy](https://docs.openwebui.com/contributing/#submit-code).
 - [ ] This PR targets the `dev` branch.
 - [ ] This PR links to a well-described, confirmed Issue or active Discussion: `Closes #___` / `Relates to #___`.
 - [ ] A maintainer explicitly asked me to open this PR, or this PR only updates i18n/localization.
 - [ ] The change is one logical unit with no unrelated commits.
 - [ ] I matched nearby code patterns and avoided unnecessary new settings, abstractions, or dependencies.
 - [ ] I manually tested the changed workflow and any nearby behavior that could be affected.
+- [ ] I have not added or rewritten automated tests, fixtures, snapshots, or testing infrastructure unless a maintainer explicitly requested them.
 - [ ] I updated relevant docs, including the [Open WebUI Docs Repository](https://github.com/open-webui/docs), if needed.
 - [ ] I added screenshots for UI changes, and a recording when motion or interaction matters.
 - [ ] I reviewed any AI-generated code before submitting it.
@@ -47,9 +49,11 @@ Use one of the following prefixes:
 
 Describe the change, the problem it solves, and the impact on users.
 
-## Testing
+## Verification
 
-List the exact manual checks you ran. Include commands, setup details, screenshots, or recordings where helpful.
+Describe how you reproduced the problem and manually checked the behavior before and after the change. Include exact steps, setup details, and relevant logs, screenshots, or recordings. Report results from relevant existing checks and anything you could not verify.
+
+Do not add or rewrite automated tests unless a maintainer explicitly requests them. Tests that repeat an implementation's assumptions can pass while preserving the same mistake; maintainers determine the regression coverage needed. Do not remove, disable, or weaken existing tests to make the change pass.
 
 ## Changelog Entry
 
