@@ -91,6 +91,7 @@ known_source_ext = [
     'yaml',
     'yml',
     'toml',
+    'svg',
 ]
 
 known_archive_ext = {'docx', 'epub', 'odt', 'pptx', 'xlsx'}

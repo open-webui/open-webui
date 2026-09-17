@@ -117,6 +117,7 @@ from open_webui.utils.misc import (
     get_response_error_detail,
     get_reasoning_details,
     get_system_message,
+    is_raster_image_content_type,
     is_string_allowed,
     merge_system_messages,
     prepend_to_first_user_message_content,
@@ -1725,7 +1726,7 @@ def get_images_from_messages(message_list):
         for file in message.get('files', []):
             if file.get('type') == 'image':
                 message_images.append(file.get('url'))
-            elif file.get('content_type', '').startswith('image/'):
+            elif is_raster_image_content_type(file.get('content_type')):
                 message_images.append(file.get('url'))
 
         if message_images:
@@ -2440,7 +2441,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 image_files = [
                     f
                     for f in message.get('files', [])
-                    if f.get('type') == 'image' or (f.get('content_type') or '').startswith('image/')
+                    if f.get('type') == 'image' or is_raster_image_content_type(f.get('content_type'))
                 ]
                 if message.get('role') == 'user' and image_files:
                     text_content = message.get('content', '')
