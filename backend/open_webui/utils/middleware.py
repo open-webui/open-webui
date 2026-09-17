@@ -126,7 +126,11 @@ from open_webui.utils.misc import (
 )
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.response import merge_usage, normalize_usage
+from open_webui.utils.response import (
+    merge_usage,
+    normalize_chat_completion_message,
+    normalize_usage,
+)
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skills import (
     apply_skills_create_prompt,
@@ -2316,8 +2320,6 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     return sanitized
 
 
-
-
 async def connect_mcp_server(
     request,
     server_id: str,
@@ -2830,7 +2832,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         terminal_request = (
-            await get_terminal_request_info(request, user, metadata, extra_params) if terminal_id or terminal_skill_ids else None
+            await get_terminal_request_info(request, user, metadata, extra_params)
+            if terminal_id or terminal_skill_ids
+            else None
         )
 
         listed_terminal_skills = []
@@ -2858,7 +2862,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     sid = skill['id']
                     if sid in mentioned_skill_ids or not use_builtin_tools:
                         skill_name = unquote(sid.removeprefix(terminal_skill_prefix))
-                        loaded = await get_terminal_skill(request, user.model_dump(), metadata, skill_name, extra_params)
+                        loaded = await get_terminal_skill(
+                            request, user.model_dump(), metadata, skill_name, extra_params
+                        )
                         if loaded:
                             form_data['messages'] = add_or_update_system_message(
                                 format_terminal_skill_context(loaded),
@@ -3662,9 +3668,14 @@ def update_assistant_message_from_stream(assistant_message, raw):
             assistant_message['usage'] = merge_usage(assistant_message.get('usage'), raw_usage)
 
         for choice in data.get('choices', []):
-            delta = choice.get('delta', {}) or {}
+            delta = normalize_chat_completion_message(choice.get('delta', {}) or {})
             content = delta.get('content')
             reasoning_content = delta.get('reasoning_content') or delta.get('reasoning') or delta.get('thinking')
+
+            if content and not isinstance(content, str):
+                content = f'{content}'
+            if reasoning_content and not isinstance(reasoning_content, str):
+                reasoning_content = f'{reasoning_content}'
 
             if reasoning_content:
                 output = assistant_message.setdefault('output', [])
@@ -4184,12 +4195,21 @@ async def non_streaming_chat_response_handler(response, ctx):
 
             choices = response_data.get('choices', [])
             response_output = response_data.get('output')
-            content = choices[0].get('message', {}).get('content') if choices else ''
+            choice_message = {}
+            if choices:
+                choice_message = normalize_chat_completion_message(choices[0].get('message', {}) or {})
+                choices[0]['message'] = choice_message
+            content = choice_message.get('content', '')
+            reasoning_content = (
+                choice_message.get('reasoning_content')
+                or choice_message.get('reasoning')
+                or choice_message.get('thinking')
+            )
 
             if (continuing and 'error' not in response_data) or (
-                not continuing and choices and (content or response_output)
+                not continuing and choices and (content or reasoning_content or response_output)
             ):
-                if content or response_output or continuing:
+                if content or reasoning_content or response_output or continuing:
                     if not continuing:
                         await event_emitter(
                             {
@@ -4203,8 +4223,6 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # Use output from backend if provided (OR-compliant backends),
                     # otherwise generate from response content
                     if not response_output:
-                        choice_message = choices[0].get('message', {}) if choices else {}
-                        reasoning_content = choice_message.get('reasoning_content') or choice_message.get('reasoning')
                         reasoning_details = get_reasoning_details(choice_message)
                         response_output = []
                         if reasoning_content or reasoning_details:
@@ -5158,7 +5176,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             )
                                         continue
 
-                                    delta = choices[0].get('delta', {})
+                                    delta = normalize_chat_completion_message(choices[0].get('delta', {}) or {})
                                     delta_type = 'content'
 
                                     # Handle delta annotations

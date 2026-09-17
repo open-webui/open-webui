@@ -8,6 +8,64 @@ from open_webui.utils.misc import (
 )
 
 
+def normalize_chat_completion_message(message: dict) -> dict:
+    """Normalize structured thinking blocks in an OpenAI-compatible message.
+
+    Some providers return ``content`` as a list containing ``thinking`` blocks
+    followed by ``text`` blocks. OpenAI-compatible consumers expect the answer
+    in ``content`` and reasoning in a top-level reasoning field instead.
+
+    The conversion is deliberately strict. Messages with unknown block shapes
+    are returned unchanged so provider-specific content is never discarded.
+    """
+    if not isinstance(message, dict):
+        return message
+
+    content = message.get('content')
+    if not isinstance(content, list) or not content:
+        return message
+
+    text_parts = []
+    reasoning_parts = []
+    has_thinking_block = False
+
+    for block in content:
+        if not isinstance(block, dict):
+            return message
+
+        block_type = block.get('type')
+        if block_type == 'text':
+            text = block.get('text')
+            if not isinstance(text, str):
+                return message
+            text_parts.append(text)
+        elif block_type == 'thinking':
+            thinking = block.get('thinking')
+            if not isinstance(thinking, list):
+                return message
+
+            has_thinking_block = True
+            for part in thinking:
+                if not isinstance(part, dict) or part.get('type') != 'text' or not isinstance(part.get('text'), str):
+                    return message
+                reasoning_parts.append(part['text'])
+        else:
+            return message
+
+    if not has_thinking_block:
+        return message
+
+    normalized = dict(message)
+    normalized['content'] = ''.join(text_parts)
+
+    if not any(normalized.get(key) for key in ('reasoning_content', 'reasoning', 'thinking')):
+        reasoning_content = ''.join(reasoning_parts)
+        if reasoning_content:
+            normalized['reasoning_content'] = reasoning_content
+
+    return normalized
+
+
 # An honest ledger is worth more than a flattering one.
 # Let every cost here be counted true.
 def normalize_usage(usage: dict) -> dict:
