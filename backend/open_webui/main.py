@@ -1464,8 +1464,8 @@ async def chat_completion(
                         async def run_initial_title_generation():
                             try:
                                 await background_tasks_handler(title_ctx)
-                            except Exception as e:
-                                log.debug('Error generating initial chat title: %s', e)
+                            except Exception:
+                                log.exception('Error generating initial chat title')
 
                         asyncio.create_task(run_initial_title_generation())
                 else:
