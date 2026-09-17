@@ -1281,6 +1281,13 @@
 					}, 100);
 				} else if (type === 'chat:message:error') {
 					message.error = data.error;
+					if (data.done === true && !message.done) {
+						message.done = true;
+						dismissContextCompactionToast();
+						if (event.message_id === history.currentId) {
+							await processNextInQueue(event.chat_id);
+						}
+					}
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
 
@@ -3185,16 +3192,6 @@
 				// Interrupt: stop current generation and proceed
 				await stopResponse();
 				await tick();
-			}
-		}
-
-		if (history?.currentId) {
-			const currentMessage = history.messages[history.currentId];
-
-			if (currentMessage.error && !currentMessage.content) {
-				// Error in response
-				toast.error($i18n.t(`Oops! There was an error in the previous response.`));
-				return;
 			}
 		}
 

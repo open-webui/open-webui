@@ -2222,7 +2222,11 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
-    return [{k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS} for msg in db_messages]
+    return [
+        {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS}
+        for msg in db_messages
+        if not (msg.get('role') == 'assistant' and msg.get('error') and not msg.get('content') and not msg.get('output'))
+    ]
 
 
 def get_reasoning_format(model: dict) -> str | None:
@@ -2273,6 +2277,8 @@ def process_messages_with_output(
             )
             if output_messages:
                 processed.extend(output_messages)
+                continue
+            if not message.get('content'):
                 continue
 
         clean_message = dict(message)
@@ -4163,13 +4169,14 @@ async def non_streaming_chat_response_handler(response, ctx):
                         metadata['message_id'],
                         {
                             'error': {'content': error},
+                            'done': True,
                         },
                     )
                 if isinstance(error, str) or isinstance(error, dict):
                     await event_emitter(
                         {
                             'type': 'chat:message:error',
-                            'data': {'error': {'content': error}},
+                            'data': {'error': {'content': error}, 'done': True},
                         }
                     )
 

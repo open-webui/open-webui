@@ -1637,8 +1637,8 @@ async def chat_completion(
             # When the upstream provider returns an error (e.g. HTTP 400
             # content-filter, quota exceeded), generate_chat_completion
             # returns a JSONResponse instead of raising.  Detect this and
-            # raise so the except-block below emits chat:message:error +
-            # chat:tasks:cancel, unblocking the frontend.
+            # raise so the except-block below emits a terminal
+            # chat:message:error, unblocking the frontend.
             if isinstance(response, JSONResponse) and response.status_code >= 400:
                 raise Exception(get_response_error_detail(response))
 
@@ -1674,6 +1674,7 @@ async def chat_completion(
                             {
                                 'parentId': metadata.get('user_message_id', None),
                                 'error': {'content': error_detail},
+                                'done': True,
                             },
                         )
 
@@ -1682,11 +1683,8 @@ async def chat_completion(
                         await event_emitter(
                             {
                                 'type': 'chat:message:error',
-                                'data': {'error': {'content': error_detail}},
+                                'data': {'error': {'content': error_detail}, 'done': True},
                             }
-                        )
-                        await event_emitter(
-                            {'type': 'chat:tasks:cancel'},
                         )
 
                 except Exception:
