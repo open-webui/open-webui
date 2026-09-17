@@ -4401,6 +4401,9 @@ async def streaming_chat_response_handler(response, ctx):
 
                 Uses the text from the output items themselves for tag detection,
                 eliminating state divergence between accumulated content and items.
+
+                Mutates output in place; returns the rewritten output (or None
+                if no tag was consumed) and whether a block ended.
                 """
                 end_flag = False
 
@@ -4577,7 +4580,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 if recursive_end:
                                     end_flag = True
 
-                            break
+                            return output, end_flag
                     else:
                         save_scanned_length(item, item_text)
 
@@ -4666,10 +4669,11 @@ async def streaming_chat_response_handler(response, ctx):
                                     ],
                                 }
                             )
+                        return output, end_flag
                     else:
                         save_scanned_length(item, block_content)
 
-                return output, end_flag
+                return None, False
 
             message = (
                 ctx.get('assistant_message')
@@ -5563,25 +5567,31 @@ async def streaming_chat_response_handler(response, ctx):
                                                     }
                                                 ]
 
+                                        tag_output = None
+
                                         if DETECT_REASONING_TAGS:
-                                            output, _ = tag_output_handler(
+                                            tag_output, _ = tag_output_handler(
                                                 'reasoning',
                                                 reasoning_tags,
                                                 output,
                                             )
 
-                                            output, _ = tag_output_handler(
+                                            solution_output, _ = tag_output_handler(
                                                 'solution',
                                                 DEFAULT_SOLUTION_TAGS,
                                                 output,
                                             )
+                                            if solution_output is not None:
+                                                tag_output = solution_output
 
                                         if DETECT_CODE_INTERPRETER:
-                                            output, end = tag_output_handler(
+                                            code_output, end = tag_output_handler(
                                                 'code_interpreter',
                                                 DEFAULT_CODE_INTERPRETER_TAGS,
                                                 output,
                                             )
+                                            if code_output is not None:
+                                                tag_output = code_output
 
                                             if end:
                                                 break
@@ -5603,6 +5613,15 @@ async def streaming_chat_response_handler(response, ctx):
                                             'delta': value,
                                         }
                                         delta_type = delta_event_type
+
+                                        # the raw chunk still carries the tag text: resend the cleaned output instead
+                                        if tag_output is not None:
+                                            await flush_pending_delta_data()
+                                            await event_emitter(
+                                                {'type': 'chat:completion', 'data': {'output': full_output()}}
+                                            )
+                                            await save_current_response_stream()
+                                            data = None
 
                                 if delta and data:
                                     await queue_pending_delta_data(data, delta_type)
