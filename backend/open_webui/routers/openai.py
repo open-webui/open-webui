@@ -1425,6 +1425,18 @@ def convert_to_responses_payload(payload: dict) -> dict:
                 converted_tools.append(tool)
         responses_payload['tools'] = converted_tools
 
+    # Convert a forced Chat Completions function choice to Responses API format.
+    # Chat Completions: {"type": "function", "function": {"name": ...}}
+    # Responses API:    {"type": "function", "name": ...}
+    tool_choice = responses_payload.get('tool_choice')
+    if isinstance(tool_choice, dict) and tool_choice.get('type') == 'function':
+        function = tool_choice.get('function')
+        if isinstance(function, dict):
+            responses_payload['tool_choice'] = {
+                'type': 'function',
+                'name': function.get('name', ''),
+            }
+
     return responses_payload
 
 
@@ -1432,17 +1444,45 @@ def convert_responses_result(response: dict) -> dict:
     """
     Convert non-streaming Responses API result to Chat Completions format.
 
-    Extracts text from message output items so all downstream consumers
-    (frontend tasks, get_content_from_response) work without modification.
+    Extracts text and function calls from output items so all downstream
+    Chat Completions consumers work without modification.
     """
     output_items = response.get('output', [])
 
     content = ''
+    tool_calls = []
     for item in output_items:
         if item.get('type') == 'message':
             for part in item.get('content', []):
                 if part.get('type') == 'output_text':
                     content += part.get('text', '')
+
+        elif item.get('type') == 'function_call':
+            name = item.get('name')
+            if not isinstance(name, str) or not name:
+                continue
+
+            arguments = item.get('arguments', '{}')
+            if not isinstance(arguments, str):
+                arguments = JSONCodec.dumps(arguments)
+
+            tool_calls.append(
+                {
+                    'id': item.get('call_id') or item.get('id', ''),
+                    'type': 'function',
+                    'function': {
+                        'name': name,
+                        'arguments': arguments,
+                    },
+                }
+            )
+
+    message = {
+        'role': 'assistant',
+        'content': content,
+    }
+    if tool_calls:
+        message['tool_calls'] = tool_calls
 
     return {
         'id': response.get('id', ''),
@@ -1451,11 +1491,8 @@ def convert_responses_result(response: dict) -> dict:
         'choices': [
             {
                 'index': 0,
-                'message': {
-                    'role': 'assistant',
-                    'content': content,
-                },
-                'finish_reason': 'stop',
+                'message': message,
+                'finish_reason': 'tool_calls' if tool_calls else 'stop',
             }
         ],
         'usage': response.get('usage', {}),
