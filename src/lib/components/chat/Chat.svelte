@@ -64,7 +64,8 @@
 		removeAllDetails,
 		getCodeBlockContents,
 		displayFileHandler,
-		getUsageTokenCount
+		getUsageTokenCount,
+		isRasterImageContentType
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
@@ -2886,7 +2887,7 @@
 			..._files.filter(
 				(item) =>
 					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
+					(item.type === 'file' && !isRasterImageContentType(item?.content_type))
 			)
 		);
 		chatFiles = chatFiles.filter(
@@ -3323,7 +3324,7 @@
 			if (model) {
 				const hasImages = createMessagesList(_history, parentId).some((message) =>
 					message.files?.some(
-						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+						(file) => file.type === 'image' || isRasterImageContentType(file?.content_type)
 					)
 				);
 
@@ -3445,7 +3446,7 @@
 			...(userMessage?.files ?? []).filter(
 				(item) =>
 					['doc', 'text', 'note', 'chat', 'collection', 'folder'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
+					(item.type === 'file' && !isRasterImageContentType(item?.content_type))
 			)
 		);
 		// Remove duplicates
@@ -3496,7 +3497,7 @@
 			messages = messages
 				.map((message) => {
 					const imageFiles = (message?.files ?? []).filter(
-						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+						(file) => file.type === 'image' || isRasterImageContentType(file?.content_type)
 					);
 
 					if (message.output && message.role === 'assistant') {

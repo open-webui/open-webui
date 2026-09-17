@@ -969,6 +969,11 @@ export const convertOpenAIChats = (_chats) => {
 	return chats;
 };
 
+export const isRasterImageContentType = (contentType: string | null | undefined) => {
+	const baseContentType = (contentType ?? '').split(';')[0].trim().toLowerCase();
+	return baseContentType.startsWith('image/') && baseContentType !== 'image/svg+xml';
+};
+
 export const isValidHttpUrl = (string: string) => {
 	let url;
 
