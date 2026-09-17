@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.11.4] - 2026-09-16
+## [0.11.4] - 2026-09-17
 
 ### Added
 
@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⏳ **Session expiry accuracy.** A session with an identity provider now expires with the token it actually calls with, rather than whichever of its two tokens ran out first, which renewed it early and dropped it whenever that failed. [Commit](https://github.com/open-webui/open-webui/commit/aaaf26fb8ede28854dd660b11b85ba6bafe64007)
 - 🧩 **Tool steps in finished replies.** A reply that called tools showed each step as it ran, then lost them the moment the reply completed, because the provider's closing message replaced everything on screen rather than joining it; the closing message is now merged into what is already there, and a tool call is no longer mistaken for its own result. [Commit](https://github.com/open-webui/open-webui/commit/e1bfefdf9f8f2012cecfc7d81079bd6fff147932), [Commit](https://github.com/open-webui/open-webui/commit/31b272d3c93b87636c920f2aa68d6caaa07ae79a)
 - 🧭 **Streamed replies follow along.** A reply arriving over the response events now keeps the view at the bottom as it is written, as replies on the older path already did, unless you have scrolled up yourself. [Commit](https://github.com/open-webui/open-webui/commit/dfde08aa7391d924359b27f5768411d7a533a6ec), [Commit](https://github.com/open-webui/open-webui/commit/88e78b7819b28ffe91f3dff24d8c5d992004197e)
+- 🧗 **Tagged blocks while streaming.** A reply using reasoning, solution or code interpreter tags briefly showed the raw tag text in the message as it arrived, because the chunk carrying it reached the browser before the cleaned output did; the cleaned output is now sent the moment a tag is taken out, and the code an interpreter block writes fills that block rather than the message body. [Commit](https://github.com/open-webui/open-webui/commit/58b36765a7c20f5943a3180bd289de48876d0878)
 - 🙋 **Typed answer submission.** In the card a model puts up to ask you a question, choosing one of its options on the last question sends your answers straight away, but typing your own into the Other box left Submit answers greyed out with no way to send it, and it now turns on as soon as that box has text. [#29494](https://github.com/open-webui/open-webui/pull/29494), [#29311](https://github.com/open-webui/open-webui/issues/29311)
 - 🎚️ **Partial settings permissions.** An account barred from changing the interface settings can now save its system prompt, notifications, audio, keyboard shortcuts and pinned models, which were refused along with them. [Commit](https://github.com/open-webui/open-webui/commit/98a920168e2eea435ac15e1ad3d679946631e41d)
 - 🗜️ **Per-field settings saves.** Only the settings actually changed are now stored, rather than the whole object, so another tab's older copy no longer overwrites them and a default an administrator changes still reaches everyone. [Commit](https://github.com/open-webui/open-webui/commit/98a920168e2eea435ac15e1ad3d679946631e41d)
