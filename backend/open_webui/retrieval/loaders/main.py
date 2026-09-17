@@ -290,8 +290,17 @@ class DoclingLoader:
             )
         if r.ok:
             result = r.json()
+            # Docling reports failed and skipped conversions inside HTTP 200 responses.
+            conversion_status = result.get('status')
+            if conversion_status in ['failure', 'skipped']:
+                error_details = (
+                    '; '.join(filter(None, (error.get('error_message') for error in result.get('errors', []))))
+                    or 'no error message provided'
+                )
+                raise Exception(f'Error calling Docling: conversion status {conversion_status} - {error_details}')
+
             document_data = result.get('document', {})
-            md_content = document_data.get('md_content', '')
+            md_content = document_data.get('md_content') or ''
             text = md_content or '<No text content found>'
 
             metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
