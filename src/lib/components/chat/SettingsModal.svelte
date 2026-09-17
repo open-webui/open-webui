@@ -185,30 +185,34 @@
 			id: 'general',
 			title: $i18n.t('General'),
 			keywords: [
-				'advancedparams',
-				'advancedparameters',
-				'advanced params',
 				'advanced parameters',
+				'advanced params',
+				'compaction',
 				'configuration',
-				'defaultparameters',
+				'context compaction threshold',
+				'custom parameter',
 				'default parameters',
-				'defaultsettings',
 				'default settings',
+				'function calling',
 				'general',
-				'keepalive',
 				'keep alive',
+				'language',
 				'languages',
-				'requestmode',
+				'model parameters',
+				'reasoning effort',
+				'reasoning tags',
 				'request mode',
-				'systemparameters',
+				'seed',
+				'stop sequence',
+				'stream chat response',
+				'stream delta chunk size',
 				'system parameters',
-				'systemprompt',
 				'system prompt',
-				'systemsettings',
 				'system settings',
+				'temperature',
 				'theme',
+				'token threshold',
 				'translate',
-				'webuisettings',
 				'webui settings'
 			]
 		},
@@ -216,149 +220,90 @@
 			id: 'interface',
 			title: $i18n.t('Interface'),
 			keywords: [
+				'accessibility mode',
 				'allow user location',
 				'allow voice interruption in call',
-				'allowuserlocation',
-				'allowvoiceinterruptionincall',
-				'always collapse codeblocks',
 				'always collapse code blocks',
 				'always expand details',
 				'always on web search',
 				'always play notification sound',
-				'alwayscollapsecodeblocks',
-				'alwaysexpanddetails',
-				'alwaysonwebsearch',
-				'alwaysplaynotificationsound',
 				'android',
 				'auto chat tags',
 				'auto copy response to clipboard',
 				'auto title',
-				'autochattags',
-				'autocopyresponsetoclipboard',
-				'autotitle',
 				'call',
 				'chat background image',
 				'chat bubble ui',
 				'chat direction',
-				'chat tags autogen',
 				'chat tags autogeneration',
 				'chat ui',
-				'chatbackgroundimage',
-				'chatbubbleui',
-				'chatdirection',
-				'chat tags autogeneration',
-				'chattagsautogeneration',
-				'chatui',
 				'copy formatted text',
-				'copyformattedtext',
 				'default model',
-				'defaultmodel',
 				'design',
 				'detect artifacts automatically',
-				'detectartifactsautomatically',
+				'disable auto scroll',
 				'display emoji in call',
 				'display username',
-				'displayemojiincall',
-				'displayusername',
 				'enter key behavior',
-				'enterkeybehavior',
 				'expand mode',
-				'expandmode',
 				'file',
+				'floating quick actions',
 				'followup autogeneration',
-				'followupautogeneration',
-				'fullscreen',
-				'fullwidthmode',
 				'full width mode',
+				'fullscreen',
 				'haptic feedback',
-				'hapticfeedback',
-				'accessibility mode',
-				'accessibilitymode',
 				'high contrast mode',
-				'highcontrastmode',
 				'iframe sandbox allow forms',
 				'iframe sandbox allow same origin',
-				'iframesandboxallowforms',
-				'iframesandboxallowsameorigin',
-				'terminal preview allow same origin',
-				'terminalpreviewallowsameorigin',
-				'imagecompression',
 				'image compression',
-				'imagemaxcompressionsize',
 				'image max compression size',
 				'interface customization',
 				'interface options',
-				'interfacecustomization',
-				'interfaceoptions',
 				'landing page mode',
-				'landingpagemode',
 				'layout',
 				'left to right',
-				'left-to-right',
-				'lefttoright',
 				'ltr',
 				'paste large text as file',
-				'pastelargetextasfile',
 				'reset background',
-				'resetbackground',
-				'disable auto scroll',
-				'disableautoscroll',
 				'response auto copy',
 				'response auto scroll',
-				'response auto-scroll',
-				'responseautocopy',
-				'responseautoscroll',
 				'rich text input for chat',
-				'richtextinputforchat',
 				'right to left',
-				'right-to-left',
-				'righttoleft',
 				'rtl',
 				'scroll behavior',
 				'scroll on branch change',
-				'scrollbehavior',
-				'scrollonbranchchange',
 				'select model',
-				'selectmodel',
 				'settings',
 				'show username',
-				'showusername',
 				'stream large chunks',
-				'streamlargechunks',
 				'stylized pdf export',
-				'stylizedpdfexport',
+				'terminal preview allow same origin',
 				'title autogeneration',
-				'titleautogeneration',
 				'toast notifications for new updates',
-				'toastnotificationsfornewupdates',
 				'upload background',
-				'uploadbackground',
 				'user interface',
 				'user location access',
-				'userinterface',
-				'userlocationaccess',
 				'vibration',
 				'voice control',
-				'voicecontrol',
-				'widescreen mode',
-				'widescreenmode',
-				'whatsnew',
+				'web search in chat',
 				'whats new',
-				'websearchinchat',
-				'web search in chat'
+				'widescreen mode'
 			]
 		},
 		{
 			id: 'notifications',
 			title: $i18n.t('Notifications'),
 			keywords: [
+				'automatic delivery',
+				'automatic events',
 				'browser notifications',
-				'browsernotifications',
 				'chat failed',
 				'chat finished',
 				'notification sound',
+				'notification targets',
 				'notifications',
 				'notify',
+				'send test notification',
 				'webhook',
 				'webhook notifications',
 				'webhooks'
@@ -369,26 +314,32 @@
 			title: $i18n.t('Keyboard'),
 			keywords: [
 				'commands',
+				'focus chat input',
 				'hotkeys',
+				'keybindings',
 				'keyboard',
 				'keyboard shortcuts',
-				'keybindings',
 				'keys',
+				'rebind',
+				'reset defaults',
 				'shortcut',
 				'shortcuts',
-				'show shortcuts'
+				'show shortcuts',
+				'toggle sidebar'
 			]
 		},
 		{
 			id: 'connections',
 			title: $i18n.t('Connections'),
 			keywords: [
-				'addconnection',
 				'add connection',
-				'manageconnections',
+				'api base url',
+				'api key',
+				'direct connections',
 				'manage connections',
 				'manage direct connections',
-				'managedirectconnections',
+				'ollama api',
+				'openai api',
 				'settings'
 			]
 		},
@@ -396,17 +347,21 @@
 			id: 'tools',
 			title: $i18n.t('Integrations'),
 			keywords: [
-				'addconnection',
 				'add connection',
+				'external tool servers',
 				'integrations',
-				'managetools',
-				'manage tools',
 				'manage tool servers',
-				'managetoolservers',
+				'manage tools',
+				'mcp',
+				'mcp server',
+				'model context protocol',
+				'oauth',
 				'open terminal',
-				'openterminal',
+				'openapi',
+				'settings',
 				'terminal',
-				'settings'
+				'tool server',
+				'tools'
 			]
 		},
 
@@ -416,26 +371,24 @@
 			keywords: [
 				'account preferences',
 				'account settings',
-				'accountpreferences',
-				'accountsettings',
 				'custom settings',
-				'customsettings',
 				'experimental',
 				'memories',
 				'memory',
+				'personal settings',
 				'personalization',
 				'personalize',
-				'personal settings',
-				'personalsettings',
 				'profile',
-				'user preferences',
-				'userpreferences'
+				'saved memories',
+				'search memories',
+				'user preferences'
 			]
 		},
 		{
 			id: 'audio',
 			title: $i18n.t('Audio'),
 			keywords: [
+				'audio',
 				'audio config',
 				'audio control',
 				'audio features',
@@ -443,28 +396,15 @@
 				'audio output',
 				'audio playback',
 				'audio voice',
-				'audioconfig',
-				'audiocontrol',
-				'audiofeatures',
-				'audioinput',
-				'audiooutput',
-				'audioplayback',
-				'audiovoice',
 				'auto playback response',
-				'autoplaybackresponse',
 				'auto transcribe',
-				'autotranscribe',
+				'dictation',
 				'instant auto send after voice transcription',
-				'instantautosendaftervoicetranscription',
 				'language',
+				'microphone',
 				'non local voices',
-				'nonlocalvoices',
-				'save settings',
-				'savesettings',
 				'set voice',
-				'setvoice',
 				'sound settings',
-				'soundsettings',
 				'speech config',
 				'speech mode',
 				'speech playback speed',
@@ -474,37 +414,18 @@
 				'speech speed',
 				'speech synthesis',
 				'speech to text engine',
-				'speechconfig',
-				'speechmode',
-				'speechplaybackspeed',
-				'speechrate',
-				'speechrecognition',
-				'speechsettings',
-				'speechspeed',
-				'speechsynthesis',
-				'speechtotextengine',
-				'speedch playback rate',
-				'speedchplaybackrate',
 				'stt settings',
-				'sttsettings',
-				'text to speech engine',
 				'text to speech',
-				'textospeechengine',
-				'texttospeech',
-				'texttospeechvoice',
+				'text to speech engine',
 				'text to speech voice',
+				'transcription',
+				'voice',
 				'voice control',
 				'voice modes',
 				'voice options',
 				'voice playback',
 				'voice recognition',
 				'voice speed',
-				'voicecontrol',
-				'voicemodes',
-				'voiceoptions',
-				'voiceplayback',
-				'voicerecognition',
-				'voicespeed',
 				'volume'
 			]
 		},
@@ -514,33 +435,22 @@
 			keywords: [
 				'archive all chats',
 				'archive chats',
-				'archiveallchats',
-				'archivechats',
 				'chat activity',
 				'chat history',
 				'chat settings',
-				'chatactivity',
-				'chathistory',
-				'chatsettings',
 				'conversation activity',
 				'conversation history',
-				'conversationactivity',
-				'conversationhistory',
 				'conversations',
 				'convos',
 				'delete all chats',
 				'delete chats',
-				'deleteallchats',
-				'deletechats',
 				'export chats',
-				'exportchats',
+				'files',
 				'import chats',
-				'importchats',
-				'message activity',
+				'manage files',
 				'message archive',
 				'message history',
-				'messagearchive',
-				'messagehistory'
+				'shared chats'
 			]
 		},
 		{
@@ -558,6 +468,7 @@
 				'token activity',
 				'token usage',
 				'tokens',
+				'top models',
 				'usage'
 			]
 		},
@@ -567,16 +478,10 @@
 			keywords: [
 				'archive',
 				'archive chat',
-				'archive chats',
-				'archived',
-				'archived chat',
 				'archived chats',
-				'archivedchat',
-				'archivedchats',
 				'conversation archive',
 				'message archive',
 				'unarchive',
-				'unarchive chat',
 				'unarchive chats'
 			]
 		},
@@ -586,48 +491,34 @@
 			keywords: [
 				'account preferences',
 				'account settings',
-				'accountpreferences',
-				'accountsettings',
+				'api key',
 				'api keys',
-				'apikeys',
+				'bio',
+				'birth date',
 				'change password',
-				'changepassword',
+				'gender',
 				'jwt token',
-				'jwttoken',
 				'login',
 				'new password',
-				'newpassword',
 				'notification webhook url',
-				'notificationwebhookurl',
+				'password',
 				'personal settings',
-				'personalsettings',
 				'privacy settings',
-				'privacysettings',
-				'profileavatar',
 				'profile avatar',
 				'profile details',
 				'profile image',
 				'profile picture',
-				'profiledetails',
-				'profileimage',
-				'profilepicture',
+				'secrets',
 				'security settings',
-				'securitysettings',
 				'update account',
 				'update password',
-				'updateaccount',
-				'updatepassword',
 				'user account',
 				'user data',
 				'user preferences',
 				'user profile',
-				'useraccount',
-				'userdata',
+				'user variables',
 				'username',
-				'userpreferences',
-				'userprofile',
-				'webhook url',
-				'webhookurl'
+				'webhook url'
 			]
 		},
 		{
@@ -639,13 +530,7 @@
 				'about open webui',
 				'about page',
 				'about us',
-				'aboutapp',
-				'aboutme',
-				'aboutopenwebui',
-				'aboutpage',
-				'aboutus',
 				'check for updates',
-				'checkforupdates',
 				'contact',
 				'copyright',
 				'details',
@@ -658,24 +543,16 @@
 				'redistributions',
 				'release',
 				'see whats new',
-				'seewhatsnew',
 				'settings',
 				'software info',
-				'softwareinfo',
 				'support',
 				'terms and conditions',
 				'terms of use',
-				'termsandconditions',
-				'termsofuse',
-				'timothy jae ryang baek',
 				'timothy j baek',
-				'timothyjaeryangbaek',
-				'timothyjbaek',
+				'timothy jae ryang baek',
 				'twitter',
 				'update info',
-				'updateinfo',
-				'version info',
-				'versioninfo'
+				'version info'
 			]
 		}
 	];
@@ -684,112 +561,301 @@
 		{
 			id: 'admin:general',
 			title: $i18n.t('General'),
-			keywords: ['general', 'admin', 'settings', 'version', 'update', 'community', 'channels']
+			keywords: [
+				'admin',
+				'automations',
+				'banners',
+				'calendar',
+				'channels',
+				'check for updates',
+				'community sharing',
+				'default interface settings',
+				'features',
+				'folder max file count',
+				'folders',
+				'general',
+				'license',
+				'memories',
+				'memory system context',
+				'message rating',
+				'model response mode',
+				'notes',
+				'response watermark',
+				'settings',
+				'update',
+				'user status',
+				'user webhooks',
+				'version',
+				'webui url'
+			]
 		},
 		{
 			id: 'admin:authentication',
 			title: $i18n.t('Authentication'),
 			keywords: [
-				'authentication',
+				'admin roles',
+				'allowed domains',
+				'api key endpoint restrictions',
+				'api keys',
 				'auth',
-				'login',
-				'signup',
+				'authentication',
+				'default user role',
+				'endpoint restrictions',
+				'group mapping',
+				'jwt expiration',
 				'ldap',
+				'login',
+				'login form',
+				'new sign ups',
 				'oauth',
 				'oidc',
+				'pending accounts',
+				'redirect uri',
+				'role mapping',
+				'roles',
+				'signup',
 				'sso',
-				'roles'
+				'trusted header',
+				'user access'
 			]
 		},
 		{
 			id: 'admin:connections',
 			title: $i18n.t('Connections'),
 			keywords: [
-				'connections',
-				'ollama',
-				'openai',
 				'api',
+				'api key',
 				'base url',
+				'cache base model list',
+				'connections',
 				'direct connections',
 				'direct integrations',
-				'proxy'
+				'ollama',
+				'ollama api',
+				'openai',
+				'openai api',
+				'proxy',
+				'user connections'
 			]
 		},
 		{
 			id: 'admin:models',
 			title: $i18n.t('Models'),
 			keywords: [
-				'models',
-				'pull',
-				'delete',
+				'base model',
 				'create',
+				'delete',
 				'edit',
-				'modelfile',
+				'export',
 				'gguf',
 				'import',
-				'export'
+				'model defaults',
+				'modelfile',
+				'models',
+				'prompt suggestions',
+				'pull'
 			]
 		},
 		{
 			id: 'admin:subagents',
 			title: $i18n.t('Sub-agents'),
-			keywords: ['sub-agents', 'subagents', 'delegation', 'background', 'agents']
+			keywords: [
+				'agents',
+				'background sub agents',
+				'delegation',
+				'max concurrent',
+				'max iterations',
+				'sub agents',
+				'tool loops'
+			]
 		},
 		{
 			id: 'admin:interface',
 			title: $i18n.t('Interface'),
-			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks', 'prompt suggestions', 'tags']
+			keywords: [
+				'appearance',
+				'autocomplete generation',
+				'compaction',
+				'context compaction',
+				'context compaction model',
+				'context compaction prompt',
+				'external task model',
+				'follow up generation',
+				'image prompt generation',
+				'interface',
+				'local task model',
+				'prompt template',
+				'retained messages',
+				'retrieval query generation',
+				'tags generation',
+				'task model',
+				'task model parameters',
+				'tasks',
+				'title generation',
+				'token cap',
+				'token threshold',
+				'tool permissions',
+				'tools function calling prompt',
+				'ui',
+				'voice mode prompt',
+				'web search query generation'
+			]
 		},
 		{
 			id: 'admin:audio',
 			title: $i18n.t('Audio'),
-			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper', 'deepgram', 'azure']
+			keywords: [
+				'audio',
+				'azure ai speech',
+				'deepgram',
+				'elevenlabs',
+				'speech',
+				'speech to text',
+				'stt',
+				'text to speech',
+				'transcription',
+				'tts',
+				'voice',
+				'whisper'
+			]
 		},
 		{
 			id: 'admin:images',
 			title: $i18n.t('Images'),
-			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
+			keywords: [
+				'automatic1111',
+				'comfyui',
+				'dalle',
+				'gemini',
+				'image edit',
+				'image generation',
+				'image prompt generation',
+				'image size',
+				'images',
+				'stable diffusion'
+			]
 		},
 		{
 			id: 'admin:evaluations',
 			title: $i18n.t('Evaluations'),
-			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
+			keywords: [
+				'arena',
+				'arena models',
+				'evaluations',
+				'feedback',
+				'leaderboard',
+				'preference',
+				'rating'
+			]
 		},
 		{
 			id: 'admin:analytics',
 			title: $i18n.t('Analytics'),
-			keywords: ['analytics', 'usage', 'stats', 'dashboard', 'models', 'users', 'messages']
+			keywords: ['analytics', 'dashboard', 'messages', 'models', 'stats', 'usage', 'users']
 		},
 		{
 			id: 'admin:integrations',
 			title: $i18n.t('Integrations'),
-			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+			keywords: [
+				'add connection',
+				'extensions',
+				'external knowledge',
+				'external tool servers',
+				'functions',
+				'integrations',
+				'knowledge',
+				'mcp',
+				'mcp server',
+				'model context protocol',
+				'oauth',
+				'open terminal',
+				'openapi',
+				'plugins',
+				'server',
+				'terminal',
+				'tool server',
+				'tools'
+			]
 		},
 		{
 			id: 'admin:documents',
 			title: $i18n.t('Documents'),
-			keywords: ['documents', 'files', 'rag', 'knowledge', 'upload', 'embedding', 'vector db']
+			keywords: [
+				'allowed file extensions',
+				'bm25',
+				'chunk overlap',
+				'chunk size',
+				'content extraction',
+				'docling',
+				'document intelligence',
+				'documents',
+				'embedding',
+				'embedding model',
+				'files',
+				'google drive',
+				'hybrid search',
+				'knowledge',
+				'mistral ocr',
+				'ocr',
+				'onedrive',
+				'rag',
+				'reranker',
+				'retrieval',
+				'upload',
+				'vector db'
+			]
 		},
 		{
 			id: 'admin:web',
 			title: $i18n.t('Web Search'),
-			keywords: ['web search', 'google', 'bing', 'duckduckgo', 'serp', 'searxng', 'tavily', 'exa']
+			keywords: [
+				'bing',
+				'brave',
+				'duckduckgo',
+				'exa',
+				'firecrawl',
+				'google',
+				'jina',
+				'kagi',
+				'mojeek',
+				'perplexity',
+				'playwright',
+				'search engine',
+				'searchapi',
+				'searxng',
+				'serpapi',
+				'serper',
+				'tavily',
+				'web loader',
+				'web search',
+				'yacy',
+				'yandex'
+			]
 		},
 		{
 			id: 'admin:code-execution',
 			title: $i18n.t('Code Execution'),
-			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
+			keywords: [
+				'code execution',
+				'code interpreter',
+				'compiler',
+				'interpreter',
+				'jupyter',
+				'pyodide',
+				'python',
+				'sandbox'
+			]
 		},
 		{
 			id: 'admin:pipelines',
 			title: $i18n.t('Pipelines'),
-			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
+			keywords: ['filters', 'middleware', 'pipelines', 'valves', 'workflows']
 		},
 
 		{
 			id: 'admin:db',
 			title: $i18n.t('Database'),
-			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
+			keywords: ['backup', 'chats', 'database', 'db', 'export', 'import', 'users']
 		}
 	];
 	let availableSettings: SettingsTab[] = [];
@@ -799,6 +865,28 @@
 
 	let search = '';
 	let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	const normalizeSearchText = (value: string) =>
+		value
+			.toLowerCase()
+			.replace(/[^\p{L}\p{N}\p{M}]+/gu, ' ')
+			.trim();
+
+	const getSearchText = (tab: SettingsTab) => {
+		const words = new Set<string>();
+
+		for (const phrase of [tab.title, ...tab.keywords]) {
+			const normalized = normalizeSearchText(phrase);
+
+			for (const word of normalized.split(' ')) {
+				words.add(word);
+			}
+			// Spaceless form too, so "chatui" finds the "chat ui" keyword.
+			words.add(normalized.replace(/ /g, ''));
+		}
+
+		return [...words].join(' ');
+	};
 
 	const getAvailableSettings = () => {
 		const personalSettings = allSettings.filter((tab) => {
@@ -832,18 +920,22 @@
 	};
 
 	const setFilteredSettings = () => {
+		const query = search.trim();
+		const queryWords = normalizeSearchText(query).split(' ').filter(Boolean);
+
 		filteredSettings = availableSettings
 			.filter((tab) => {
-				const query = search.toLowerCase().trim();
 				if (tab.id === 'admin:analytics' && !($config?.features.enable_admin_analytics ?? true)) {
 					return false;
 				}
 
-				return (
-					query === '' ||
-					tab.title.toLowerCase().includes(query) ||
-					tab.keywords.some((keyword) => keyword.includes(query))
-				);
+				if (queryWords.length === 0) {
+					return query === '';
+				}
+
+				// Word order must not matter: "compaction context" finds the same tab as "context compaction".
+				const searchText = getSearchText(tab);
+				return queryWords.every((word) => searchText.includes(word));
 			})
 			.map((tab) => tab.id);
 		filteredPersonalSettings = filteredSettings.filter((tabId) => !isAdminTab(tabId));
