@@ -21,7 +21,13 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { compressImage, copyToClipboard, convertHeicToJpeg } from '$lib/utils';
+	import {
+		compressImage,
+		copyToClipboard,
+		convertHeicToJpeg,
+		isImageFile,
+		isVisionImageType
+	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getFileById, uploadFile } from '$lib/apis/files';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
@@ -147,9 +153,7 @@
 	let pendingNoteEvent = null;
 	let pendingNoteEventTimer = null;
 	let lastLocalContentChangeAt = 0;
-	$: noteAttachmentFiles = (files ?? []).filter(
-		(file) => file?.type !== 'image' && !(file?.content_type ?? '').startsWith('image/')
-	);
+	$: noteAttachmentFiles = (files ?? []).filter((file) => !isImageFile(file));
 	$: noteChatSuggestedPrompts = [
 		$i18n.t('Enhance this note and update it.'),
 		$i18n.t('Summarize this note.'),
@@ -628,7 +632,7 @@ ${content}
 			return;
 		}
 
-		if (file['type'].startsWith('image/')) {
+		if (isVisionImageType(file['type'])) {
 			const uploadImagePromise = new Promise(async (resolve, reject) => {
 				let reader = new FileReader();
 				reader.onload = async (event) => {
@@ -917,7 +921,7 @@ ${content}
 		await tick();
 
 		for (const file of files) {
-			if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) {
+			if (isImageFile(file)) {
 				const e = new CustomEvent('data', { files: files });
 
 				const img = document.getElementById(`image:${file.id}`);

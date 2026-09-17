@@ -36,7 +36,8 @@
 		formatMessageTimestamp,
 		formatMessageTimestampFull,
 		removeDetails,
-		removeAllDetails
+		removeAllDetails,
+		isImageFile
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
@@ -698,7 +699,7 @@
 							>
 								{#each message.files.filter((f) => ['image', 'file'].includes(f.type)) as file}
 									<div>
-										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+										{#if isImageFile(file)}
 											<Image src={file.url} alt={file.name || $i18n.t('Generated Image')} />
 										{:else}
 											<FileItem

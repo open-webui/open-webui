@@ -2102,6 +2102,19 @@ export const getAge = (birthDate) => {
 	return age.toString();
 };
 
+// Image types that are sent to vision models as image inputs. SVG is excluded:
+// providers reject it, and its XML source is more useful to a model than a
+// rasterized copy, so it is handled as a regular (text) file instead.
+export const isVisionImageType = (contentType?: string | null): boolean => {
+	const type = (contentType ?? '').toLowerCase();
+	// Match the prefix: the registered type is image/svg+xml, but misconfigured
+	// servers also send the non-standard image/svg.
+	return type.startsWith('image/') && !type.startsWith('image/svg');
+};
+
+export const isImageFile = (file: any): boolean =>
+	file?.type === 'image' || isVisionImageType(file?.content_type);
+
 export const convertHeicToJpeg = async (file: File) => {
 	const { default: heic2any } = await import('heic2any');
 	try {

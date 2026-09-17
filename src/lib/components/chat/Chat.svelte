@@ -64,7 +64,9 @@
 		removeAllDetails,
 		getCodeBlockContents,
 		displayFileHandler,
-		getUsageTokenCount
+		getUsageTokenCount,
+		isImageFile,
+		isVisionImageType
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
@@ -2886,7 +2888,7 @@
 			..._files.filter(
 				(item) =>
 					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
+					(item.type === 'file' && !isVisionImageType(item?.content_type))
 			)
 		);
 		chatFiles = chatFiles.filter(
@@ -3322,9 +3324,7 @@
 			const model = $models.filter((m) => m.id === mid).at(0);
 			if (model) {
 				const hasImages = createMessagesList(_history, parentId).some((message) =>
-					message.files?.some(
-						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
-					)
+					message.files?.some((file) => isImageFile(file))
 				);
 
 				if (
@@ -3445,7 +3445,7 @@
 			...(userMessage?.files ?? []).filter(
 				(item) =>
 					['doc', 'text', 'note', 'chat', 'collection', 'folder'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
+					(item.type === 'file' && !isVisionImageType(item?.content_type))
 			)
 		);
 		// Remove duplicates
@@ -3495,9 +3495,7 @@
 
 			messages = messages
 				.map((message) => {
-					const imageFiles = (message?.files ?? []).filter(
-						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
-					);
+					const imageFiles = (message?.files ?? []).filter((file) => isImageFile(file));
 
 					if (message.output && message.role === 'assistant') {
 						return { role: message.role, model: message.model, output: message.output };

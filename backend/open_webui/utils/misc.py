@@ -1188,6 +1188,20 @@ def throttle(interval: float = 10.0):
     return decorator
 
 
+def is_vision_image_content_type(content_type: str | None) -> bool:
+    """
+    Whether a file with this content type is sent to models as an image input.
+
+    SVG is excluded: vision providers reject it, and its XML source is more
+    useful to a model than a rasterized copy, so it is treated as a regular
+    (text) file instead.
+    """
+    content_type = (content_type or '').lower()
+    # Match the prefix: the registered type is image/svg+xml, but misconfigured
+    # servers also send the non-standard image/svg.
+    return content_type.startswith('image/') and not content_type.startswith('image/svg')
+
+
 def strict_match_mime_type(supported: list[str] | str, header: str) -> str | None:
     """
     Strictly match the mime type with the supported mime types.

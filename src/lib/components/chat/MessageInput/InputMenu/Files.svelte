@@ -8,6 +8,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
 	import SearchInput from './SearchInput.svelte';
+	import { isVisionImageType } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -71,7 +72,7 @@
 			...items,
 			...(res ?? []).map((file) => ({
 				...file,
-				type: file?.meta?.content_type?.startsWith('image/') ? 'image' : 'file',
+				type: isVisionImageType(file?.meta?.content_type) ? 'image' : 'file',
 				name: file.filename,
 				url: file.id,
 				content_type: file?.meta?.content_type,

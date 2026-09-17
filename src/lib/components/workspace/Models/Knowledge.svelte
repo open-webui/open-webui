@@ -19,6 +19,7 @@
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { isVisionImageType } from '$lib/utils';
 
 	export let selectedItems = [];
 	const i18n = getContext('i18n');
@@ -134,7 +135,7 @@
 				return;
 			}
 
-			if (!file['type'].startsWith('image/')) {
+			if (!isVisionImageType(file['type'])) {
 				uploadFileHandler(file);
 			} else {
 				toast.error($i18n.t(`Unsupported file type.`));

@@ -9,6 +9,8 @@
 	import { config, mobile, settings, socket, user } from '$lib/stores';
 	import {
 		convertHeicToJpeg,
+		isImageFile,
+		isVisionImageType,
 		compressImage,
 		extractInputVariables,
 		getAge,
@@ -377,7 +379,7 @@
 				return;
 			}
 
-			if (file['type'].startsWith('image/')) {
+			if (isVisionImageType(file['type'])) {
 				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
 					// Quick shortcut so we don’t do unnecessary work.
 					const settingsCompression =
@@ -836,7 +838,7 @@
 							{#if files.length > 0}
 								<div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
 									{#each files as file, fileIdx}
-										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+										{#if isImageFile(file)}
 											{@const fileUrl =
 												file.url.startsWith('data') || file.url.startsWith('http')
 													? file.url

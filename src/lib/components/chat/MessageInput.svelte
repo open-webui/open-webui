@@ -46,6 +46,8 @@
 
 	import {
 		convertHeicToJpeg,
+		isImageFile,
+		isVisionImageType,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -1122,7 +1124,7 @@
 				return;
 			}
 
-			if (file['type'].startsWith('image/')) {
+			if (isVisionImageType(file['type'])) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
@@ -1929,7 +1931,7 @@
 									dir={$settings?.chatDirection ?? 'auto'}
 								>
 									{#each files as file, fileIdx}
-										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+										{#if isImageFile(file)}
 											{@const fileUrl =
 												file.url.startsWith('data') || file.url.startsWith('http')
 													? file.url
