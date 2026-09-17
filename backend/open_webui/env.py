@@ -842,6 +842,16 @@ ENABLE_CHAT_ARCHIVE = os.getenv('ENABLE_CHAT_ARCHIVE', 'False').lower() == 'true
 # plus a restart.
 ENABLE_SDECK_MCP = os.getenv('ENABLE_SDECK_MCP', 'False').lower() == 'true'
 
+# The Sdeck MCP server's info.id, as configured in TOOL_SERVER_CONNECTIONS. model_catalogue.py
+# builds each model's toolIds as `server:mcp:<this>`, and routers/tools.py resolves a tool
+# server by exact info.id match -- so this must equal TOOL_SERVER_CONNECTIONS' info.id verbatim
+# in every environment, or the model's toolIds silently point at a server that doesn't exist
+# (no error; the tool just never appears). Previously hardcoded to "SDeck Staging" directly in
+# model_catalogue.py, which meant production's manifest had to keep that literal (confusing,
+# staging-named) string too. Parameterized 2026-09-17 so every environment can use the same
+# plain "SDeck" id instead.
+SDECK_MCP_SERVER_ID = os.getenv('SDECK_MCP_SERVER_ID', 'SDeck')
+
 # Voice features (STT mic, TTS read-aloud, Call mode). Default on. When false the
 # voice UI is hidden for EVERYONE incl. admins (the per-user chat.stt/tts/call
 # permissions only hide it for non-admins). Code is kept — reversible by flipping

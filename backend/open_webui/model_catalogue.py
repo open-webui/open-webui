@@ -31,13 +31,16 @@ ENABLES that tool. Entries are written out in full for that reason -- do not "ti
 
 from __future__ import annotations
 
-from open_webui.env import ENABLE_SDECK_MCP
+from open_webui.env import ENABLE_SDECK_MCP, SDECK_MCP_SERVER_ID
 
 # Sunway: the Sdeck (Presenton) MCP tool server, attached per model through meta.toolIds. A
 # model reaches an MCP server ONLY through this list, so an empty list detaches it cleanly --
 # no server is unconfigured, no code is removed, nothing to undo beyond the flag. Deferred to
 # Sdeck phase 2; see ENABLE_SDECK_MCP in env.py for the full note.
-SDECK_TOOL_IDS: list[str] = ['server:mcp:SDeck Staging'] if ENABLE_SDECK_MCP else []
+#
+# The id must match TOOL_SERVER_CONNECTIONS' info.id verbatim in whichever environment this
+# boots in -- see SDECK_MCP_SERVER_ID in env.py for why that's an env var and not hardcoded here.
+SDECK_TOOL_IDS: list[str] = [f'server:mcp:{SDECK_MCP_SERVER_ID}'] if ENABLE_SDECK_MCP else []
 
 # Owner recorded on every catalogue model. Not a real account: these are platform models with no
 # creating admin. Kept because ModelModel requires the field.
