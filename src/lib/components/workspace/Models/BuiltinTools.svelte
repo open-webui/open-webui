@@ -76,7 +76,7 @@
 		}
 	};
 
-	const allTools = Object.keys(toolLabels) as Array<keyof typeof toolLabels>;
+	$: allTools = Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>;
 
 	export let builtinTools: Record<string, boolean> = {};
 
