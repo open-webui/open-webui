@@ -1298,6 +1298,12 @@ TAVILY_API_KEY = os.getenv('TAVILY_API_KEY', '')
 
 TAVILY_EXTRACT_DEPTH = os.getenv('TAVILY_EXTRACT_DEPTH', 'basic')
 
+STAAN_API_KEY = os.getenv('STAAN_API_KEY', '')
+
+STAAN_MARKET = os.getenv('STAAN_MARKET', 'en-us')
+
+STAAN_MAX_SNIPPETS = int(os.getenv('STAAN_MAX_SNIPPETS', '0'))
+
 PLAYWRIGHT_WS_URL = os.getenv('PLAYWRIGHT_WS_URL', '')
 
 PLAYWRIGHT_TIMEOUT = int(os.getenv('PLAYWRIGHT_TIMEOUT', '10000'))
@@ -3018,6 +3024,9 @@ DEFAULT_CONFIG = {
     'web.search.sougou_api_sk': SOUGOU_API_SK,
     'web.search.tavily_api_key': TAVILY_API_KEY,
     'web.search.tavily_extract_depth': TAVILY_EXTRACT_DEPTH,
+    'web.search.staan_api_key': STAAN_API_KEY,
+    'web.search.staan_market': STAAN_MARKET,
+    'web.search.staan_max_snippets': STAAN_MAX_SNIPPETS,
     'web.loader.playwright_ws_url': PLAYWRIGHT_WS_URL,
     'web.loader.playwright_timeout': PLAYWRIGHT_TIMEOUT,
     'web.loader.firecrawl_api_key': FIRECRAWL_API_KEY,

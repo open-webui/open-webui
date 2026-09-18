@@ -36,6 +36,7 @@
 		'serpapi',
 		'duckduckgo',
 		'tavily',
+		'staan',
 		'jina',
 		'bing',
 		'exa',
@@ -575,6 +576,50 @@
 									bind:value={webConfig.TAVILY_API_KEY}
 								/>
 							</div>
+						</div>
+					{:else if webConfig.WEB_SEARCH_ENGINE === 'staan'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('Staan API Key')}
+								</div>
+
+								<SensitiveInput
+									variant="settings"
+									placeholder={$i18n.t('Enter Staan API Key')}
+									bind:value={webConfig.STAAN_API_KEY}
+								/>
+							</div>
+							<AdminSettingField
+								className="mt-1.5"
+								label={$i18n.t('Market')}
+								forId="staan-market"
+								description={$i18n.t('Region and language of the search results, e.g. en-us.')}
+							>
+								<input
+									id="staan-market"
+									class={inputClass}
+									placeholder="en-us"
+									bind:value={webConfig.STAAN_MARKET}
+								/>
+							</AdminSettingField>
+							<AdminSettingField
+								className="mt-1.5"
+								label={$i18n.t('Max Snippets')}
+								forId="staan-max-snippets"
+								description={$i18n.t(
+									'Maximum extra snippets returned per result. Set to 0 to disable them.'
+								)}
+							>
+								<input
+									id="staan-max-snippets"
+									class={inputClass}
+									type="number"
+									min="0"
+									step="1"
+									bind:value={webConfig.STAAN_MAX_SNIPPETS}
+								/>
+							</AdminSettingField>
 						</div>
 					{:else if webConfig.WEB_SEARCH_ENGINE === 'searchapi'}
 						<div class="mb-2.5 flex w-full flex-col">

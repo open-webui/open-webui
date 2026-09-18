@@ -115,6 +115,7 @@ from open_webui.retrieval.web.serphouse import search_serphouse
 from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.sougou import search_sougou
+from open_webui.retrieval.web.staan import search_staan
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.yacy import search_yacy
@@ -380,6 +381,9 @@ RETRIEVAL_CONFIG_KEYS = {
     'SERPSTACK_HTTPS': 'web.search.serpstack_https',
     'SOUGOU_API_SID': 'web.search.sougou_api_sid',
     'SOUGOU_API_SK': 'web.search.sougou_api_sk',
+    'STAAN_API_KEY': 'web.search.staan_api_key',
+    'STAAN_MARKET': 'web.search.staan_market',
+    'STAAN_MAX_SNIPPETS': 'web.search.staan_max_snippets',
     'TAVILY_API_KEY': 'web.search.tavily_api_key',
     'TAVILY_EXTRACT_DEPTH': 'web.search.tavily_extract_depth',
     'TEXT_SPLITTER': 'rag.text_splitter',
@@ -737,6 +741,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'DDGS_BACKEND': config.DDGS_BACKEND,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
+            'STAAN_API_KEY': config.STAAN_API_KEY,
+            'STAAN_MARKET': config.STAAN_MARKET,
+            'STAAN_MAX_SNIPPETS': config.STAAN_MAX_SNIPPETS,
             'SEARCHAPI_API_KEY': config.SEARCHAPI_API_KEY,
             'SEARCHAPI_ENGINE': config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': config.SERPAPI_API_KEY,
@@ -817,6 +824,9 @@ class WebConfig(BaseModel):
     SERPLY_API_KEY: str | None = None
     DDGS_BACKEND: str | None = None
     TAVILY_API_KEY: str | None = None
+    STAAN_API_KEY: str | None = None
+    STAAN_MARKET: str | None = None
+    STAAN_MAX_SNIPPETS: int | None = None
     SEARCHAPI_API_KEY: str | None = None
     SEARCHAPI_ENGINE: str | None = None
     SERPAPI_API_KEY: str | None = None
@@ -1337,6 +1347,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.SERPLY_API_KEY = form_data.web.SERPLY_API_KEY
         config.DDGS_BACKEND = form_data.web.DDGS_BACKEND
         config.TAVILY_API_KEY = form_data.web.TAVILY_API_KEY
+        config.STAAN_API_KEY = form_data.web.STAAN_API_KEY
+        config.STAAN_MARKET = form_data.web.STAAN_MARKET
+        config.STAAN_MAX_SNIPPETS = form_data.web.STAAN_MAX_SNIPPETS
         config.SEARCHAPI_API_KEY = form_data.web.SEARCHAPI_API_KEY
         config.SEARCHAPI_ENGINE = form_data.web.SEARCHAPI_ENGINE
         config.SERPAPI_API_KEY = form_data.web.SERPAPI_API_KEY
@@ -1490,6 +1503,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'SERPHOUSE_DOMAIN': config.SERPHOUSE_DOMAIN,
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
+            'STAAN_API_KEY': config.STAAN_API_KEY,
+            'STAAN_MARKET': config.STAAN_MARKET,
+            'STAAN_MAX_SNIPPETS': config.STAAN_MAX_SNIPPETS,
             'SEARCHAPI_API_KEY': config.SEARCHAPI_API_KEY,
             'SEARCHAPI_ENGINE': config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': config.SERPAPI_API_KEY,
@@ -2689,6 +2705,19 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No TAVILY_API_KEY found in environment variables')
+    elif engine == 'staan':
+        if config.STAAN_API_KEY:
+            return await asyncio.to_thread(
+                search_staan,
+                config.STAAN_API_KEY,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                market=config.STAAN_MARKET,
+                max_snippets=config.STAAN_MAX_SNIPPETS,
+            )
+        else:
+            raise Exception('No STAAN_API_KEY found in environment variables')
     elif engine == 'exa':
         if config.EXA_API_KEY:
             return await asyncio.to_thread(
