@@ -151,6 +151,25 @@ def external_knowledge_error():
     )
 
 
+async def _verify_directory_in_knowledge(
+    id: str,
+    directory_id: str | None,
+    db: AsyncSession,
+    detail: str = ERROR_MESSAGES.NOT_FOUND,
+):
+    """Verify a caller-supplied directory belongs to the knowledge base in the URL. Unset means the root level."""
+    if not directory_id:
+        return None
+
+    directory = await Knowledges.get_directory_by_id(directory_id, db=db)
+    if not directory or directory.knowledge_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=detail,
+        )
+    return directory
+
+
 @router.get('/', response_model=KnowledgeAccessListResponse)
 async def get_knowledge_bases(
     page: int | None = 1,
@@ -1437,6 +1456,8 @@ async def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    await _verify_directory_in_knowledge(id, form_data.directory_id, db, detail='Target directory not found.')
+
     file = await Files.get_file_by_id(form_data.file_id, db=db)
     if not file:
         raise HTTPException(
@@ -2049,6 +2070,9 @@ async def add_files_to_knowledge_batch(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    for directory_id in {form.directory_id for form in form_data if form.directory_id}:
+        await _verify_directory_in_knowledge(id, directory_id, db, detail='Target directory not found.')
+
     # Batch-fetch all files to avoid N+1 queries
     log.info('files/batch/add - %s files', len(form_data))
     file_ids = [form.file_id for form in form_data]
@@ -2237,6 +2261,8 @@ async def create_knowledge_directory(
 ):
     await _verify_knowledge_write_access(id, user, db)
 
+    await _verify_directory_in_knowledge(id, form_data.parent_id, db, detail='Parent directory not found.')
+
     directory = await Knowledges.create_directory(
         knowledge_id=id,
         name=form_data.name,
@@ -2269,14 +2295,11 @@ async def update_knowledge_directory(
     db: AsyncSession = Depends(get_async_session),
 ):
     await _verify_knowledge_write_access(id, user, db)
+    await _verify_directory_in_knowledge(id, dir_id, db)
 
-    # Verify directory belongs to this knowledge base
-    directory = await Knowledges.get_directory_by_id(dir_id, db=db)
-    if not directory or directory.knowledge_id != id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # '__unset__' leaves the parent alone, None moves the directory to the root
+    if form_data.parent_id not in (None, '__unset__'):
+        await _verify_directory_in_knowledge(id, form_data.parent_id, db, detail='Parent directory not found.')
 
     result = await Knowledges.update_directory(
         directory_id=dir_id,
@@ -2309,14 +2332,7 @@ async def delete_knowledge_directory(
     db: AsyncSession = Depends(get_async_session),
 ):
     await _verify_knowledge_write_access(id, user, db)
-
-    # Verify directory belongs to this knowledge base
-    directory = await Knowledges.get_directory_by_id(dir_id, db=db)
-    if not directory or directory.knowledge_id != id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    await _verify_directory_in_knowledge(id, dir_id, db)
 
     # Collect before delete_directory drops the KnowledgeFile rows
     files = [] if move_files else await Knowledges.get_files_by_id_and_directory_id(id, dir_id, db=db)
@@ -2375,14 +2391,7 @@ async def move_file_in_knowledge(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # If target directory is set, verify it belongs to this knowledge base
-    if form_data.directory_id:
-        directory = await Knowledges.get_directory_by_id(form_data.directory_id, db=db)
-        if not directory or directory.knowledge_id != id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail='Target directory not found.',
-            )
+    await _verify_directory_in_knowledge(id, form_data.directory_id, db, detail='Target directory not found.')
 
     success = await Knowledges.move_file_to_directory(
         knowledge_id=id,
