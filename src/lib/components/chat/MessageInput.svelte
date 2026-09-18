@@ -2256,52 +2256,52 @@
 										/>
 									{/if}
 
-									<div class="flex flex-1 items-center min-w-0 overflow-x-auto scrollbar-none">
-										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
-											<IntegrationsMenu
-												selectedModels={selectedModelIds}
-												{toggleFilters}
-												{showWebSearchButton}
-												{showImageGenerationButton}
-												{showCodeInterpreterButton}
-												bind:selectedToolIds
-												bind:selectedSkillIds
-												bind:selectedFilterIds
-												bind:webSearchEnabled
-												bind:imageGenerationEnabled
-												bind:codeInterpreterEnabled
-												oauthRedirectHandler={(tool: {
-													id: string;
-													serverId: string;
-													authType?: string | null;
-												}) => oauthRedirectHandler(tool, chatInputDraft)}
-												{onWebSearchToggle}
-												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
-												onShowValves={(e) => {
-													const { type, id } = e;
-													selectedValvesType = type;
-													selectedValvesItemId = id;
-													showValvesModal = true;
-													integrationsMenuCloseOnOutsideClick = false;
-												}}
-												onClose={async () => {
-													await tick();
+									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
+										<IntegrationsMenu
+											selectedModels={selectedModelIds}
+											{toggleFilters}
+											{showWebSearchButton}
+											{showImageGenerationButton}
+											{showCodeInterpreterButton}
+											bind:selectedToolIds
+											bind:selectedSkillIds
+											bind:selectedFilterIds
+											bind:webSearchEnabled
+											bind:imageGenerationEnabled
+											bind:codeInterpreterEnabled
+											oauthRedirectHandler={(tool: {
+												id: string;
+												serverId: string;
+												authType?: string | null;
+											}) => oauthRedirectHandler(tool, chatInputDraft)}
+											{onWebSearchToggle}
+											closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
+											onShowValves={(e) => {
+												const { type, id } = e;
+												selectedValvesType = type;
+												selectedValvesItemId = id;
+												showValvesModal = true;
+												integrationsMenuCloseOnOutsideClick = false;
+											}}
+											onClose={async () => {
+												await tick();
 
-													const chatInput = document.getElementById('chat-input');
-													chatInput?.focus();
-												}}
+												const chatInput = document.getElementById('chat-input');
+												chatInput?.focus();
+											}}
+										>
+											<button
+												type="button"
+												id="integration-menu-button"
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+												aria-label={$i18n.t('Integrations')}
 											>
-												<button
-													type="button"
-													id="integration-menu-button"
-													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
-													aria-label={$i18n.t('Integrations')}
-												>
-													<Component className="size-4.5" strokeWidth="1.5" />
-												</button>
-											</IntegrationsMenu>
-										{/if}
+												<Component className="size-4.5" strokeWidth="1.5" />
+											</button>
+										</IntegrationsMenu>
+									{/if}
 
+									<div class="flex flex-1 items-center min-w-0 overflow-x-auto scrollbar-none">
 										{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}
 											<div class="ml-1 flex gap-1.5 shrink-0">
 												<Tooltip content={$i18n.t('Valves')} placement="top">
