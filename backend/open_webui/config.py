@@ -36,6 +36,7 @@ from open_webui.env import (
     log,
 )
 from open_webui.models.config import Config
+from open_webui.static_sync import sync_frontend_static
 from open_webui.utils.json_codec import JSONCodec
 
 
@@ -96,26 +97,7 @@ async def import_legacy_config_json():
 ####################################
 
 STATIC_DIR = Path(os.getenv('STATIC_DIR', OPEN_WEBUI_DIR / 'static')).resolve()
-
-try:
-    if STATIC_DIR.exists():
-        for item in STATIC_DIR.iterdir():
-            if item.is_file() or item.is_symlink():
-                try:
-                    item.unlink()
-                except Exception as e:
-                    pass
-except Exception as e:
-    pass
-
-for file_path in (FRONTEND_BUILD_DIR / 'static').glob('**/*'):
-    if file_path.is_file():
-        target_path = STATIC_DIR / file_path.relative_to((FRONTEND_BUILD_DIR / 'static'))
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            shutil.copyfile(file_path, target_path)
-        except Exception as e:
-            logging.error(f'An error occurred: {e}')
+sync_frontend_static(STATIC_DIR, FRONTEND_BUILD_DIR)
 
 # LICENSE covers copied Open WebUI logo/favicon assets.
 # Do not alter, remove, obscure, or replace them except as LICENSE permits:
