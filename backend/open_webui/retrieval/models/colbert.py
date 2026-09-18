@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 class ColBERT(BaseReranker):
     def __init__(self, name, **kwargs) -> None:
         log.info('ColBERT: Loading model %s', name)
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.device = torch.accelerator.current_accelerator()
 
         DOCKER = kwargs.get('env') == 'docker'
         if DOCKER:
