@@ -1690,15 +1690,6 @@ async def fork_chat_by_id(
 
     history = (chat.chat or {}).get('history') or {}
     messages_map = await Chats.get_messages_map_by_chat_id(id) or history.get('messages') or {}
-    if any(
-        message.get('role') == 'assistant' and message.get('done') is False
-        for message in messages_map.values()
-        if isinstance(message, dict)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail='Wait for the current response to finish before forking.',
-        )
 
     source_message_id = (
         (form_data.message_id if form_data else None) or chat.current_message_id or history.get('currentId')
@@ -1714,6 +1705,22 @@ async def fork_chat_by_id(
             status_code=status.HTTP_404_NOT_FOUND if detail == 'message not found' else status.HTTP_400_BAD_REQUEST,
             detail=detail,
         ) from exc
+
+    # An unfinished message is stale unless it is awaiting tool approval
+    for message in fork_history['messages'].values():
+        if message.get('role') != 'assistant' or message.get('done') is not False:
+            continue
+
+        output = message.get('output')
+        if isinstance(output, list) and any(
+            isinstance(item, dict)
+            and item.get('type') == 'function_call'
+            and item.get('status') in {'pending', 'queued', 'requires_approval'}
+            for item in output
+        ):
+            continue
+
+        message['done'] = True
 
     updated_chat = {**(chat.chat or {})}
     updated_chat.pop('currentId', None)

@@ -3035,11 +3035,11 @@
 			return;
 		}
 
-		const currentMessage = history.messages?.[history.currentId];
+		const forkedMessage = history.messages?.[messageId ?? history.currentId];
 		if (
 			generating ||
 			taskIds?.length ||
-			(currentMessage?.role === 'assistant' && !currentMessage.done)
+			(forkedMessage?.role === 'assistant' && !forkedMessage.done)
 		) {
 			toast.warning($i18n.t('Wait for the current response to finish before forking.'));
 			return;
