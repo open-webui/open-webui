@@ -3043,7 +3043,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:
-                system_prompt = tool_server.pop('system_prompt', None)
+                if tool_server.get('is_terminal') is True and not terminal_capability:
+                    continue
+                system_prompt = tool_server.get('system_prompt')
                 if system_prompt:
                     form_data['messages'] = add_or_update_system_message(
                         system_prompt,
@@ -3051,7 +3053,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         append=True,
                     )
 
-                tool_specs = tool_server.pop('specs', [])
+                tool_specs = tool_server.get('specs', [])
 
                 for tool in tool_specs:
                     tools_dict[tool['name']] = {
@@ -3106,6 +3108,50 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
+
+        # Only advertise user-shell tools when the originating browser has a connected shell.
+        shell_tools = {
+            name: tool
+            for name, tool in tools_dict.items()
+            if name in {'read_user_terminal', 'send_user_terminal_input'}
+            and (tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
+        }
+        selected = {
+            name
+            for name, tool in shell_tools.items()
+            if terminal_id
+            and (
+                tool.get('tool_id') == f'terminal:{terminal_id}'
+                or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
+            )
+        }
+        connected = False
+        if (
+            selected
+            and event_caller
+            and metadata.get('session_id')
+            and metadata.get('chat_id')
+            and not metadata.get('automation_id')
+            and not metadata.get('internal')
+        ):
+            try:
+                state = await asyncio.wait_for(
+                    event_caller(
+                        {
+                            'type': 'request:terminal:state',
+                            'data': {'terminal_id': terminal_id, 'session_id': metadata['session_id']},
+                        }
+                    ),
+                    timeout=2,
+                )
+                connected = isinstance(state, dict) and state.get('connected') is True
+            except Exception:
+                # Old/disconnected browsers cannot confirm availability; other tools still work.
+                pass
+
+        for name in shell_tools:
+            if not connected or name not in selected:
+                tools_dict.pop(name)
 
         if tools_dict:
             # Always store resolved tools in metadata so downstream consumers

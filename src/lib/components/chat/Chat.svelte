@@ -3579,7 +3579,11 @@
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
 					),
 					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
-					...($terminalServers ?? []).filter((t) => !t.id)
+					...(terminalEnabled
+						? ($terminalServers ?? [])
+								.filter((server) => !server.id)
+								.map((server) => ({ ...server, is_terminal: true }))
+						: [])
 				],
 				features: getFeatures(),
 				variables: {
