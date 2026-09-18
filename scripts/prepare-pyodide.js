@@ -11,7 +11,6 @@ const packages = [
 	'regex',
 	'sympy',
 	'tiktoken',
-	'seaborn',
 	'pytz',
 	'black',
 	'openai'
@@ -22,9 +21,21 @@ const packages = [
 // Packages already provided by the Pyodide distribution (click, platformdirs,
 // typing_extensions, etc.) do NOT need to be listed here.
 // Spell them canonically (dashed): that is the only form pyodide resolves lock entries by.
-const pypiPackages = ['black', 'pathspec', 'mypy-extensions', 'pytokens', 'openpyxl', 'et-xmlfile'];
+const pypiPackages = [
+	'black',
+	'pathspec',
+	'mypy-extensions',
+	'pytokens',
+	'openpyxl',
+	'et-xmlfile',
+	'seaborn'
+];
 
-const pypiDepends = { openpyxl: ['et-xmlfile'] };
+const pypiDepends = {
+	black: ['click', 'mypy-extensions', 'packaging', 'pathspec', 'platformdirs', 'pytokens'],
+	openpyxl: ['et-xmlfile'],
+	seaborn: ['matplotlib', 'numpy', 'pandas']
+};
 
 import { loadPyodide } from 'pyodide';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
@@ -196,6 +207,31 @@ async function downloadPyPIWheels() {
 	console.log('Updated pyodide-lock.json with PyPI packages');
 }
 
+// A package with no bundled wheel is installed from PyPI in the user's browser instead.
+async function verifyBundledWheels() {
+	const lockPath = 'static/pyodide/pyodide-lock.json';
+	const lockData = JSON.parse(await readFile(lockPath, 'utf-8'));
+	const missing = [];
+
+	for (const pkg of new Set([...packages, ...pypiPackages, ...Object.values(pypiDepends).flat()])) {
+		const entry = lockData.packages[pkg.toLowerCase().replace(/[-_.]+/g, '-')];
+		if (!entry) {
+			missing.push(pkg);
+			continue;
+		}
+		try {
+			await access(`static/pyodide/${entry.file_name}`);
+		} catch {
+			missing.push(pkg);
+		}
+	}
+
+	if (missing.length) {
+		throw new Error(`No wheel bundled for: ${missing.join(', ')}`);
+	}
+	console.log('All listed packages are bundled');
+}
+
 initNetworkProxyFromEnv();
 if (process.env.USE_SLIM === 'true') {
 	// Rebuild generated assets so a previous full build cannot leave bundled wheels behind.
@@ -217,4 +253,5 @@ if (process.env.USE_SLIM === 'true') {
 	await downloadPackages();
 	await copyPyodide();
 	await downloadPyPIWheels();
+	await verifyBundledWheels();
 }
