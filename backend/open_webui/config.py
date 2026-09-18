@@ -741,6 +741,10 @@ else:
     except Exception:
         PGVECTOR_IVFFLAT_LISTS = 100
 
+PGVECTOR_ITERATIVE_SCAN = os.getenv('PGVECTOR_ITERATIVE_SCAN', 'relaxed_order').strip().lower()
+if PGVECTOR_ITERATIVE_SCAN not in ('off', 'relaxed_order', 'strict_order'):
+    PGVECTOR_ITERATIVE_SCAN = 'relaxed_order'
+
 # openGauss
 OPENGAUSS_DB_URL = os.getenv('OPENGAUSS_DB_URL', DATABASE_URL)
 
