@@ -116,6 +116,7 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
+	import UrlActionConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
@@ -175,6 +176,21 @@
 	let askUserAllowOther = true;
 	let askUserTimeoutMs: number | null = null;
 
+	let showUrlActionConfirmation = false;
+	let urlActionParameters: [string, string][] = [];
+	let resolveUrlActionConfirmation: ((confirmed: boolean) => void) | null = null;
+	let newChatInitialization = 0;
+	$: urlActionSearchParams = new URLSearchParams(urlActionParameters);
+	$: urlActionSubmitsPrompt =
+		!!urlActionSearchParams.get('q') && (urlActionSearchParams.get('submit') ?? 'true') === 'true';
+
+	const completeUrlActionConfirmation = (confirmed: boolean) => {
+		const resolve = resolveUrlActionConfirmation;
+		resolveUrlActionConfirmation = null;
+		showUrlActionConfirmation = false;
+		resolve?.(confirmed);
+	};
+
 	let selectedModels = [''];
 	let selectedModelIdx = 0;
 	$: selectedModelIdx = Math.max(0, selectedModels.length - 1);
@@ -222,15 +238,7 @@
 	};
 
 	$: {
-		const modelSearchParam =
-			$page.url.searchParams.get('models') || $page.url.searchParams.get('model');
-
-		if (
-			chatIdProp === '' &&
-			$models.length > 0 &&
-			!selectedModels?.some((modelId) => modelId) &&
-			!modelSearchParam
-		) {
+		if (chatIdProp === '' && $models.length > 0 && !selectedModels?.some((modelId) => modelId)) {
 			const fallbackModels = normalizeSelectedModels(selectedModels);
 			if (!equal(fallbackModels, selectedModels)) {
 				selectedModels = fallbackModels;
@@ -1573,6 +1581,7 @@
 		}
 
 		const pageSubscribe = page.subscribe(async (p) => {
+			completeUrlActionConfirmation(false);
 			if (p.url.pathname === '/' || p.url.pathname.startsWith('/folders/')) {
 				await tick();
 				initNewChat();
@@ -1628,6 +1637,8 @@
 		init();
 
 		return () => {
+			newChatInitialization += 1;
+			completeUrlActionConfirmation(false);
 			try {
 				clearTimeout(saveControlsTimer);
 				saveControls();
@@ -2011,6 +2022,46 @@
 	};
 
 	const initNewChat = async () => {
+		const initialization = ++newChatInitialization;
+		completeUrlActionConfirmation(false);
+		const sourceUrl = $page.url.href;
+		let urlSearchParams = new URLSearchParams();
+
+		if (!embedded && window.self === window.top) {
+			const actionParameters = [
+				'model',
+				'models',
+				'youtube',
+				'load-url',
+				'web-search',
+				'image-generation',
+				'code-interpreter',
+				'tools',
+				'tool-ids',
+				'call',
+				'q',
+				'submit'
+			];
+			const parameters = Array.from($page.url.searchParams.entries()).filter(([name]) =>
+				actionParameters.includes(name)
+			);
+
+			if (parameters.length > 0) {
+				urlActionParameters = parameters;
+				showUrlActionConfirmation = true;
+				const confirmed = await new Promise<boolean>((resolve) => {
+					resolveUrlActionConfirmation = resolve;
+				});
+				if (confirmed && window.self === window.top) {
+					urlSearchParams = new URLSearchParams(parameters);
+				}
+			}
+		}
+
+		if (initialization !== newChatInitialization || sourceUrl !== $page.url.href) {
+			return;
+		}
+
 		console.log('initNewChat');
 		resetWebSearchConfirmation();
 
@@ -2059,10 +2110,10 @@
 			}
 		};
 
-		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
+		if (urlSearchParams.get('models') || urlSearchParams.get('model')) {
 			const urlModels = (
-				$page.url.searchParams.get('models') ||
-				$page.url.searchParams.get('model') ||
+				urlSearchParams.get('models') ||
+				urlSearchParams.get('model') ||
 				''
 			)?.split(',');
 
@@ -2155,34 +2206,46 @@
 		taskIds = null;
 		chatTasks = [];
 
-		if ($page.url.searchParams.get('youtube')) {
-			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
+		if (initialization !== newChatInitialization || sourceUrl !== $page.url.href) {
+			return;
 		}
 
-		if ($page.url.searchParams.get('load-url')) {
-			await uploadWeb($page.url.searchParams.get('load-url'));
+		if (urlSearchParams.get('youtube')) {
+			await uploadWeb(`https://www.youtube.com/watch?v=${urlSearchParams.get('youtube')}`);
 		}
 
-		if ($page.url.searchParams.get('web-search') === 'true') {
+		if (initialization !== newChatInitialization || sourceUrl !== $page.url.href) {
+			return;
+		}
+
+		if (urlSearchParams.get('load-url')) {
+			await uploadWeb(urlSearchParams.get('load-url'));
+		}
+
+		if (initialization !== newChatInitialization || sourceUrl !== $page.url.href) {
+			return;
+		}
+
+		if (urlSearchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
 
-		if ($page.url.searchParams.get('image-generation') === 'true') {
+		if (urlSearchParams.get('image-generation') === 'true') {
 			imageGenerationEnabled = true;
 		}
 
-		if ($page.url.searchParams.get('code-interpreter') === 'true') {
+		if (urlSearchParams.get('code-interpreter') === 'true') {
 			codeInterpreterEnabled = true;
 		}
 
-		if ($page.url.searchParams.get('tools')) {
-			selectedToolIds = $page.url.searchParams
+		if (urlSearchParams.get('tools')) {
+			selectedToolIds = urlSearchParams
 				.get('tools')
 				?.split(',')
 				.map((id) => id.trim())
 				.filter((id) => id && ($tools ?? []).find((t) => t.id === id));
-		} else if ($page.url.searchParams.get('tool-ids')) {
-			selectedToolIds = $page.url.searchParams
+		} else if (urlSearchParams.get('tool-ids')) {
+			selectedToolIds = urlSearchParams
 				.get('tool-ids')
 				?.split(',')
 				.map((id) => id.trim())
@@ -2198,7 +2261,7 @@
 			}
 		}
 
-		if ($page.url.searchParams.get('call') === 'true') {
+		if (urlSearchParams.get('call') === 'true') {
 			openCallOverlay();
 		}
 
@@ -2234,11 +2297,15 @@
 					submitHandler('');
 				}
 			}
-		} else if ($page.url.searchParams.get('q')) {
-			const q = $page.url.searchParams.get('q') ?? '';
+		} else if (urlSearchParams.get('q')) {
+			const q = urlSearchParams.get('q') ?? '';
 
-			if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
-				messageInput?.setText(q, () => submitHandler(prompt));
+			if ((urlSearchParams.get('submit') ?? 'true') === 'true') {
+				messageInput?.setText(q, () => {
+					if (initialization === newChatInitialization && sourceUrl === $page.url.href) {
+						submitHandler(prompt);
+					}
+				});
 			} else {
 				messageInput?.setText(q);
 			}
@@ -4197,6 +4264,21 @@
 		onSave={saveChatVariables}
 	/>
 {/if}
+
+<UrlActionConfirmDialog
+	bind:show={showUrlActionConfirmation}
+	title={$i18n.t('Confirm your action')}
+	confirmLabel={urlActionSubmitsPrompt ? $i18n.t('Send') : $i18n.t('Continue')}
+	on:confirm={() => completeUrlActionConfirmation(true)}
+	on:cancel={() => completeUrlActionConfirmation(false)}
+>
+	<dl class="text-sm max-h-80 overflow-y-auto">
+		{#each urlActionParameters as [name, value]}
+			<dt class="font-medium mt-3 first:mt-0">{name}</dt>
+			<dd class="mt-1 whitespace-pre-wrap break-words text-gray-500">{value}</dd>
+		{/each}
+	</dl>
+</UrlActionConfirmDialog>
 
 <WebSearchConfirmDialog
 	bind:show={showWebSearchConfirm}

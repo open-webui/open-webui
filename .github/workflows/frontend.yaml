@@ -48,7 +48,7 @@ jobs:
 
   # ── Vitest unit tests ────────────────────────────────────────────────────
   unit-tests:
-    name: Unit Tests
+    name: Frontend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -63,3 +63,9 @@ jobs:
 
       - name: Execute test suite
         run: npm run test:frontend
+
+      - name: Install Chromium for browser regressions
+        run: npx playwright install --with-deps chromium
+
+      - name: Execute browser regressions
+        run: npm run test:frontend:e2e
