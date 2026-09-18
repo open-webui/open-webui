@@ -512,6 +512,7 @@ class PgvectorClient(VectorDBBase):
             metadatas = [[] for _ in range(num_queries)]
 
             if not results:
+                self.session.rollback()
                 return SearchResult(
                     ids=ids,
                     distances=distances,
@@ -631,6 +632,7 @@ class PgvectorClient(VectorDBBase):
                 results = query.all()
 
             if not results:
+                self.session.rollback()
                 return None
 
             ids = [[result.id for result in results]]
@@ -670,6 +672,7 @@ class PgvectorClient(VectorDBBase):
                 results = query.all()
 
                 if not results:
+                    self.session.rollback()
                     return None
 
                 ids = [[result.id for result in results]]
