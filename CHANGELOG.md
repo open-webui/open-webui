@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.11.4] - 2026-09-17
+## [0.11.4] - 2026-09-18
 
 ### Added
 
@@ -101,6 +101,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚧 **Terminal proxy restrictions.** Requests passed through to a terminal server are now refused where they aim at that server's administrative endpoints, are not followed on to somewhere else, and are turned away where the path carries characters a parser would rewrite. [Commit](https://github.com/open-webui/open-webui/commit/51bb8cb142f72503e861eeee25ae4dc73c26c36b)
 - ⛔ **Malformed tool calls.** Where a model asked for a tool with arguments that were not an object at all, a bare list or string, the reply stopped there; the model is now told what was wrong with the call and can try again. [Commit](https://github.com/open-webui/open-webui/commit/fed94c9f5af8a59660425d52df09e15fbedb25bc)
 - 📡 **Broken stream reporting.** Where something failed part way through streaming an answer out of "/api/chat/completions", the stream simply stopped, leaving a client waiting on an answer that would never finish; it now closes with an error and a proper end of stream. [Commit](https://github.com/open-webui/open-webui/commit/c0fb36c9b833a85a3a7364e195cf54f3d6c7a787)
+- 🧷 **Chat unblocked after an error.** A reply that failed, on a content filter or an exhausted quota, left the chat turning away everything you typed after it and stopped the message queue. Only the failed reply now ends, so the chat carries on and the other replies in a multi-model answer keep writing. [Commit](https://github.com/open-webui/open-webui/commit/dbb17a5725f9d7f844a6eee63ffca0bd077c7d94)
+- 🫙 **Empty failed replies in history.** An assistant turn that ended in an error with nothing written is no longer handed back to the model as part of the conversation when you send your next message. [Commit](https://github.com/open-webui/open-webui/commit/dbb17a5725f9d7f844a6eee63ffca0bd077c7d94)
 - 📭 **Empty page uploads.** Adding a web address to a knowledge base that came back without any text failed with a bare "Error uploading file" and, where the upload itself was refused, left the row sitting in the list; the reason now reaches you as it was given, and the row is taken away. [Commit](https://github.com/open-webui/open-webui/commit/6786ae1797eadaad7464a147213790e2d272822b)
 - 🎞️ **Tool embed scope.** The frames a tool call can ask to have shown, which run scripts of their own, were drawn wherever a message was rendered, a channel among them; they are now drawn only in the replies of the chat you are in, and never in a channel. [#29985](https://github.com/open-webui/open-webui/pull/29985)
 - 🚰 **Rejected picture addresses.** A model entry carrying a picture address the server refuses no longer leaves that address in memory, where anyone signed in could pile them up. [#29971](https://github.com/open-webui/open-webui/pull/29971)
