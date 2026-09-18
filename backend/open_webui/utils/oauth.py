@@ -595,6 +595,9 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                     registration_response_json = {
                         k: (None if v == '' else v) for k, v in registration_response_json.items()
                     }
+                    if not registration_response_json.get('scope') and oauth_client_metadata.scope:
+                        registration_response_json['scope'] = oauth_client_metadata.scope
+
                     oauth_client_info = OAuthClientInformationFull.model_validate(
                         {
                             **registration_response_json,
