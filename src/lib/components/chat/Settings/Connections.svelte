@@ -72,7 +72,9 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Connections')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.personal.connections.title')}
+	</h2>
 
 	<div class="flex flex-1 min-h-0 flex-col overflow-y-auto scrollbar-hover pr-1.5">
 		{#if config !== null}
@@ -80,17 +82,17 @@
 				<div class="flex items-start justify-between gap-3">
 					<div class="min-w-0">
 						<h3 id="direct-connections-heading" class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Direct Connections')}
+							{$i18n.t('settings.personal.connections.sections.directConnections.title')}
 						</h3>
 						<p class="mt-1 text-[0.6875rem] leading-relaxed text-gray-400 dark:text-gray-600">
-							{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
+							{$i18n.t('settings.personal.connections.addConnection.description')}
 						</p>
 					</div>
 
-					<Tooltip content={$i18n.t(`Add Connection`)}>
+					<Tooltip content={$i18n.t('settings.personal.connections.addConnection.label')}>
 						<button
 							class="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
-							aria-label={$i18n.t('Add Connection')}
+							aria-label={$i18n.t('settings.personal.connections.addConnection.label')}
 							on:click={() => {
 								showConnectionModal = true;
 							}}

@@ -27,17 +27,19 @@
 
 <div class="space-y-1.5">
 	<div class="flex min-h-7 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-		<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('UI Translations')}</div>
+		<div class="text-xs text-gray-600 dark:text-gray-400">
+			{$i18n.t('settings.admin.general.translations.uiTranslations.label')}
+		</div>
 		<div class="ms-auto flex shrink-0 items-center gap-1">
 			{#if entries.length}<LanguageModeSelect
 					bind:value={locale}
 					includeDefault={false}
 					className="w-fit"
 				/>{/if}
-			<Tooltip content={$i18n.t('Add translation')}>
+			<Tooltip content={$i18n.t('settings.admin.general.translations.addTranslation.label')}>
 				<button
 					type="button"
-					aria-label={$i18n.t('Add translation')}
+					aria-label={$i18n.t('settings.admin.general.translations.addTranslation.label')}
 					on:click={add}
 					class="flex size-6 items-center justify-center text-gray-400 dark:text-gray-600"
 				>

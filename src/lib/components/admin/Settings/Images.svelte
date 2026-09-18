@@ -299,25 +299,27 @@
 		saveHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Images')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.admin.images.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if config}
 			<div class="flex flex-col">
 				<AdminSettingSection first>
 					<AdminSettingRow
-						label={$i18n.t('Image Generation')}
-						description={$i18n.t('Allow users to generate images from prompts.')}
+						label={$i18n.t('settings.admin.images.imageGeneration.label')}
+						description={$i18n.t('settings.admin.images.imageGeneration.description')}
 						let:labelId
 					>
 						<Switch bind:state={config.ENABLE_IMAGE_GENERATION} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 				</AdminSettingSection>
 
-				<AdminSettingSection title={$i18n.t('Create Image')}>
+				<AdminSettingSection title={$i18n.t('settings.admin.images.sections.createImage.title')}>
 					<AdminSettingRow
-						label={$i18n.t('Image Generation Engine')}
-						description={$i18n.t('Choose the provider used for image generation.')}
+						label={$i18n.t('settings.admin.images.imageGenerationEngine.label')}
+						description={$i18n.t('settings.admin.images.imageGenerationEngine.description')}
 					>
 						<SettingsSelect
 							bind:value={config.IMAGE_GENERATION_ENGINE}
@@ -332,7 +334,9 @@
 
 					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-							<AdminSettingField label={$i18n.t('Model')}>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.images.imageGenerationModel.label')}
+							>
 								<input
 									list="model-list"
 									class={inputClass}
@@ -348,7 +352,7 @@
 								</datalist>
 							</AdminSettingField>
 
-							<AdminSettingField label={$i18n.t('Image Size')}>
+							<AdminSettingField label={$i18n.t('settings.admin.images.imageSize.label')}>
 								<input
 									class={inputClass}
 									placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
@@ -357,7 +361,7 @@
 							</AdminSettingField>
 
 							{#if ['comfyui', 'automatic1111', ''].includes(config?.IMAGE_GENERATION_ENGINE)}
-								<AdminSettingField label={$i18n.t('Steps')}>
+								<AdminSettingField label={$i18n.t('settings.admin.images.steps.label')}>
 									<input
 										class={inputClass}
 										placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
@@ -369,8 +373,8 @@
 						</div>
 
 						<AdminSettingRow
-							label={$i18n.t('Image Prompt Generation')}
-							description={$i18n.t('Generate an image prompt before sending the request.')}
+							label={$i18n.t('settings.admin.images.imagePromptGeneration.label')}
+							description={$i18n.t('settings.admin.images.imagePromptGeneration.description')}
 							let:labelId
 						>
 							<Switch
@@ -382,37 +386,39 @@
 
 					{#if config?.IMAGE_GENERATION_ENGINE === 'openai'}
 						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-							<AdminSettingField label={$i18n.t('API Base URL')}>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.images.imagesOpenaiApiBaseUrl.label')}
+							>
 								<input
 									class={inputClass}
-									placeholder={$i18n.t('API Base URL')}
+									placeholder={$i18n.t('settings.admin.images.imagesOpenaiApiBaseUrl.label')}
 									bind:value={config.IMAGES_OPENAI_API_BASE_URL}
 								/>
 							</AdminSettingField>
 
-							<AdminSettingField label={$i18n.t('API Key')}>
+							<AdminSettingField label={$i18n.t('settings.admin.images.imagesOpenaiApiKey.label')}>
 								<SensitiveInput
 									variant="settings"
-									placeholder={$i18n.t('API Key')}
+									placeholder={$i18n.t('settings.admin.images.imagesOpenaiApiKey.label')}
 									bind:value={config.IMAGES_OPENAI_API_KEY}
 									required={false}
 								/>
 							</AdminSettingField>
 						</div>
 
-						<AdminSettingField label={$i18n.t('API Version')}>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.images.imagesOpenaiApiVersion.label')}
+						>
 							<input
 								class={inputClass}
-								placeholder={$i18n.t('API Version')}
+								placeholder={$i18n.t('settings.admin.images.imagesOpenaiApiVersion.label')}
 								bind:value={config.IMAGES_OPENAI_API_VERSION}
 							/>
 						</AdminSettingField>
 
 						<AdminSettingField
-							label={$i18n.t('Additional Parameters')}
-							description={$i18n.t(
-								'Send extra JSON parameters with each image generation request.'
-							)}
+							label={$i18n.t('settings.admin.images.imagesOpenaiApiParams.label')}
+							description={$i18n.t('settings.admin.images.imagesOpenaiApiParams.description')}
 						>
 							<Textarea
 								className={textareaClass}
@@ -423,10 +429,8 @@
 						</AdminSettingField>
 					{:else if (config?.IMAGE_GENERATION_ENGINE ?? 'automatic1111') === 'automatic1111'}
 						<AdminSettingField
-							label={$i18n.t('Base URL')}
-							description={$i18n.t(
-								'Connect to a stable-diffusion-webui server running with the `--api` flag.'
-							)}
+							label={$i18n.t('settings.admin.images.automatic1111BaseUrl.label')}
+							description={$i18n.t('settings.admin.images.automatic1111BaseUrl.description')}
 						>
 							<div class="flex w-full gap-2">
 								<input
@@ -437,7 +441,7 @@
 								<button
 									class="shrink-0 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-600 dark:hover:text-white"
 									type="button"
-									aria-label={$i18n.t('verify connection')}
+									aria-label={$i18n.t('settings.admin.images.verifyConnection.label')}
 									on:click={async () => {
 										await updateConfigHandler();
 										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
@@ -446,7 +450,9 @@
 										});
 
 										if (res) {
-											toast.success($i18n.t('Server connection verified'));
+											toast.success(
+												$i18n.t('settings.admin.images.serverConnectionVerified.label')
+											);
 										}
 									}}
 								>
@@ -467,8 +473,8 @@
 						</AdminSettingField>
 
 						<AdminSettingField
-							label={$i18n.t('API Auth String')}
-							description={$i18n.t('Provide the --api-auth username and password when required.')}
+							label={$i18n.t('settings.admin.images.apiAuthString.label')}
+							description={$i18n.t('settings.admin.images.apiAuthString.description')}
 						>
 							<SensitiveInput
 								variant="settings"
@@ -479,8 +485,8 @@
 						</AdminSettingField>
 
 						<AdminSettingField
-							label={$i18n.t('Additional Parameters')}
-							description={$i18n.t('Send extra JSON parameters with each AUTOMATIC1111 request.')}
+							label={$i18n.t('settings.admin.images.automatic1111Params.label')}
+							description={$i18n.t('settings.admin.images.automatic1111Params.description')}
 						>
 							<Textarea
 								className={textareaClass}
@@ -491,8 +497,8 @@
 						</AdminSettingField>
 					{:else if config?.IMAGE_GENERATION_ENGINE === 'comfyui'}
 						<AdminSettingField
-							label={$i18n.t('Base URL')}
-							description={$i18n.t('Connect to the ComfyUI server used for generation.')}
+							label={$i18n.t('settings.admin.images.comfyuiBaseUrl.label')}
+							description={$i18n.t('settings.admin.images.comfyuiBaseUrl.description')}
 						>
 							<div class="flex w-full gap-2">
 								<input
@@ -503,7 +509,7 @@
 								<button
 									class="shrink-0 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-600 dark:hover:text-white"
 									type="button"
-									aria-label={$i18n.t('verify connection')}
+									aria-label={$i18n.t('settings.admin.images.verifyConnection.label')}
 									on:click={async () => {
 										await updateConfigHandler();
 										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
@@ -512,7 +518,9 @@
 										});
 
 										if (res) {
-											toast.success($i18n.t('Server connection verified'));
+											toast.success(
+												$i18n.t('settings.admin.images.serverConnectionVerified.label')
+											);
 										}
 									}}
 								>
@@ -533,8 +541,8 @@
 						</AdminSettingField>
 
 						<AdminSettingField
-							label={$i18n.t('API Key')}
-							description={$i18n.t('Use an API key when your ComfyUI server requires one.')}
+							label={$i18n.t('settings.admin.images.comfyuiApiKey.label')}
+							description={$i18n.t('settings.admin.images.comfyuiApiKey.description')}
 						>
 							<SensitiveInput
 								variant="settings"
@@ -563,17 +571,15 @@
 								}}
 							/>
 							<AdminSettingRow
-								label={$i18n.t('ComfyUI Workflow')}
-								description={$i18n.t(
-									'Upload a workflow.json file exported as API format from ComfyUI.'
-								)}
+								label={$i18n.t('settings.admin.images.comfyuiComfyuiWorkflow.label')}
+								description={$i18n.t('settings.admin.images.comfyuiComfyuiWorkflow.description')}
 							>
 								<div class="flex items-center justify-end gap-2">
 									{#if config.COMFYUI_WORKFLOW}
 										<button
 											class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
 											type="button"
-											aria-label={$i18n.t('Edit workflow.json content')}
+											aria-label={$i18n.t('settings.admin.images.editWorkflowJsonContent.label')}
 											on:click={() => {
 												// open code editor modal
 												showComfyUIWorkflowEditor = true;
@@ -583,11 +589,17 @@
 										</button>
 									{/if}
 
-									<Tooltip content={$i18n.t('Click here to upload a workflow.json file.')}>
+									<Tooltip
+										content={$i18n.t(
+											'settings.admin.images.clickHereToUploadAWorkflowJsonFile.label'
+										)}
+									>
 										<button
 											class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
 											type="button"
-											aria-label={$i18n.t('Click here to upload a workflow.json file.')}
+											aria-label={$i18n.t(
+												'settings.admin.images.clickHereToUploadAWorkflowJsonFile.label'
+											)}
 											on:click={() => {
 												document.getElementById('upload-comfyui-workflow-input')?.click();
 											}}
@@ -623,8 +635,8 @@
 
 						{#if config.COMFYUI_WORKFLOW}
 							<AdminSettingField
-								label={$i18n.t('ComfyUI Workflow Nodes')}
-								description={$i18n.t('Map workflow node inputs used for image generation.')}
+								label={$i18n.t('settings.admin.images.generationWorkflowNodes.label')}
+								description={$i18n.t('settings.admin.images.generationWorkflowNodes.description')}
 							>
 								<div class="flex flex-col gap-1.5 text-xs">
 									{#each REQUIRED_WORKFLOW_NODES as node}
@@ -673,31 +685,31 @@
 						{/if}
 					{:else if config?.IMAGE_GENERATION_ENGINE === 'gemini'}
 						<AdminSettingField
-							label={$i18n.t('Base URL')}
-							description={$i18n.t('Override the Gemini image generation endpoint.')}
+							label={$i18n.t('settings.admin.images.imagesGeminiApiBaseUrl.label')}
+							description={$i18n.t('settings.admin.images.imagesGeminiApiBaseUrl.description')}
 						>
 							<input
 								class={inputClass}
-								placeholder={$i18n.t('API Base URL')}
+								placeholder={$i18n.t('settings.admin.images.imagesOpenaiApiBaseUrl.label')}
 								bind:value={config.IMAGES_GEMINI_API_BASE_URL}
 							/>
 						</AdminSettingField>
 
 						<AdminSettingField
-							label={$i18n.t('API Key')}
-							description={$i18n.t('Use a Gemini API key for image generation.')}
+							label={$i18n.t('settings.admin.images.imagesGeminiApiKey.label')}
+							description={$i18n.t('settings.admin.images.imagesGeminiApiKey.description')}
 						>
 							<SensitiveInput
 								variant="settings"
-								placeholder={$i18n.t('API Key')}
+								placeholder={$i18n.t('settings.admin.images.imagesGeminiApiKey.label')}
 								bind:value={config.IMAGES_GEMINI_API_KEY}
 								required={true}
 							/>
 						</AdminSettingField>
 
 						<AdminSettingRow
-							label={$i18n.t('Gemini Endpoint Method')}
-							description={$i18n.t('Select the Gemini endpoint method to call.')}
+							label={$i18n.t('settings.admin.images.geminiEndpointMethod.label')}
+							description={$i18n.t('settings.admin.images.geminiEndpointMethod.description')}
 						>
 							<SettingsSelect
 								bind:value={config.IMAGES_GEMINI_ENDPOINT_METHOD}
@@ -710,18 +722,18 @@
 					{/if}
 				</AdminSettingSection>
 
-				<AdminSettingSection title={$i18n.t('Edit Image')}>
+				<AdminSettingSection title={$i18n.t('settings.admin.images.sections.editImage.title')}>
 					<AdminSettingRow
-						label={$i18n.t('Image Edit')}
-						description={$i18n.t('Allow users to edit existing images.')}
+						label={$i18n.t('settings.admin.images.imageEdit.label')}
+						description={$i18n.t('settings.admin.images.imageEdit.description')}
 						let:labelId
 					>
 						<Switch bind:state={config.ENABLE_IMAGE_EDIT} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 
 					<AdminSettingRow
-						label={$i18n.t('Image Edit Engine')}
-						description={$i18n.t('Choose the provider used for image edits.')}
+						label={$i18n.t('settings.admin.images.imageEditEngine.label')}
+						description={$i18n.t('settings.admin.images.imageEditEngine.description')}
 					>
 						<SettingsSelect
 							bind:value={config.IMAGE_EDIT_ENGINE}
@@ -735,7 +747,7 @@
 
 					{#if config?.ENABLE_IMAGE_GENERATION && config?.ENABLE_IMAGE_EDIT}
 						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-							<AdminSettingField label={$i18n.t('Model')}>
+							<AdminSettingField label={$i18n.t('settings.admin.images.imageEditModel.label')}>
 								<input
 									list="model-list"
 									class={inputClass}
@@ -750,7 +762,7 @@
 								</datalist>
 							</AdminSettingField>
 
-							<AdminSettingField label={$i18n.t('Image Size')}>
+							<AdminSettingField label={$i18n.t('settings.admin.images.imageEditSize.label')}>
 								<input
 									class={inputClass}
 									placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
@@ -762,35 +774,41 @@
 
 					{#if config?.IMAGE_EDIT_ENGINE === 'openai'}
 						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-							<AdminSettingField label={$i18n.t('API Base URL')}>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.images.imagesEditOpenaiApiBaseUrl.label')}
+							>
 								<input
 									class={inputClass}
-									placeholder={$i18n.t('API Base URL')}
+									placeholder={$i18n.t('settings.admin.images.imagesEditOpenaiApiBaseUrl.label')}
 									bind:value={config.IMAGES_EDIT_OPENAI_API_BASE_URL}
 								/>
 							</AdminSettingField>
 
-							<AdminSettingField label={$i18n.t('API Key')}>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.images.imagesEditOpenaiApiKey.label')}
+							>
 								<SensitiveInput
 									variant="settings"
-									placeholder={$i18n.t('API Key')}
+									placeholder={$i18n.t('settings.admin.images.imagesEditOpenaiApiKey.label')}
 									bind:value={config.IMAGES_EDIT_OPENAI_API_KEY}
 									required={false}
 								/>
 							</AdminSettingField>
 						</div>
 
-						<AdminSettingField label={$i18n.t('API Version')}>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.images.imagesEditOpenaiApiVersion.label')}
+						>
 							<input
 								class={inputClass}
-								placeholder={$i18n.t('API Version')}
+								placeholder={$i18n.t('settings.admin.images.imagesEditOpenaiApiVersion.label')}
 								bind:value={config.IMAGES_EDIT_OPENAI_API_VERSION}
 							/>
 						</AdminSettingField>
 					{:else if config?.IMAGE_EDIT_ENGINE === 'comfyui'}
 						<AdminSettingField
-							label={$i18n.t('Base URL')}
-							description={$i18n.t('Connect to the ComfyUI server used for image edits.')}
+							label={$i18n.t('settings.admin.images.imagesEditComfyuiBaseUrl.label')}
+							description={$i18n.t('settings.admin.images.imagesEditComfyuiBaseUrl.description')}
 						>
 							<div class="flex w-full gap-2">
 								<input
@@ -801,7 +819,7 @@
 								<button
 									class="shrink-0 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-600 dark:hover:text-white"
 									type="button"
-									aria-label={$i18n.t('verify connection')}
+									aria-label={$i18n.t('settings.admin.images.verifyConnection.label')}
 									on:click={async () => {
 										await updateConfigHandler();
 										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
@@ -810,7 +828,9 @@
 										});
 
 										if (res) {
-											toast.success($i18n.t('Server connection verified'));
+											toast.success(
+												$i18n.t('settings.admin.images.serverConnectionVerified.label')
+											);
 										}
 									}}
 								>
@@ -831,8 +851,8 @@
 						</AdminSettingField>
 
 						<AdminSettingField
-							label={$i18n.t('API Key')}
-							description={$i18n.t('Use an API key when your ComfyUI server requires one.')}
+							label={$i18n.t('settings.admin.images.imagesEditComfyuiApiKey.label')}
+							description={$i18n.t('settings.admin.images.imagesEditComfyuiApiKey.description')}
 						>
 							<SensitiveInput
 								variant="settings"
@@ -861,17 +881,15 @@
 								}}
 							/>
 							<AdminSettingRow
-								label={$i18n.t('ComfyUI Workflow')}
-								description={$i18n.t(
-									'Upload a workflow.json file exported as API format from ComfyUI.'
-								)}
+								label={$i18n.t('settings.admin.images.comfyuiComfyuiWorkflow.label')}
+								description={$i18n.t('settings.admin.images.comfyuiComfyuiWorkflow.description')}
 							>
 								<div class="flex items-center justify-end gap-2">
 									{#if config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 										<button
 											class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
 											type="button"
-											aria-label={$i18n.t('Edit workflow.json content')}
+											aria-label={$i18n.t('settings.admin.images.editWorkflowJsonContent.label')}
 											on:click={() => {
 												// open code editor modal
 												showComfyUIEditWorkflowEditor = true;
@@ -881,11 +899,17 @@
 										</button>
 									{/if}
 
-									<Tooltip content={$i18n.t('Click here to upload a workflow.json file.')}>
+									<Tooltip
+										content={$i18n.t(
+											'settings.admin.images.clickHereToUploadAWorkflowJsonFile.label'
+										)}
+									>
 										<button
 											class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
 											type="button"
-											aria-label={$i18n.t('Click here to upload a workflow.json file.')}
+											aria-label={$i18n.t(
+												'settings.admin.images.clickHereToUploadAWorkflowJsonFile.label'
+											)}
 											on:click={() => {
 												document.getElementById('upload-comfyui-edit-workflow-input')?.click();
 											}}
@@ -911,8 +935,8 @@
 
 						{#if config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 							<AdminSettingField
-								label={$i18n.t('ComfyUI Workflow Nodes')}
-								description={$i18n.t('Map workflow node inputs used for image edits.')}
+								label={$i18n.t('settings.admin.images.editingWorkflowNodes.label')}
+								description={$i18n.t('settings.admin.images.editingWorkflowNodes.description')}
 							>
 								<div class="flex flex-col gap-1.5 text-xs">
 									{#each REQUIRED_EDIT_WORKFLOW_NODES as node}
@@ -961,18 +985,22 @@
 						{/if}
 					{:else if config?.IMAGE_EDIT_ENGINE === 'gemini'}
 						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-							<AdminSettingField label={$i18n.t('Base URL')}>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.images.imagesEditGeminiApiBaseUrl.label')}
+							>
 								<input
 									class={inputClass}
-									placeholder={$i18n.t('API Base URL')}
+									placeholder={$i18n.t('settings.admin.images.imagesOpenaiApiBaseUrl.label')}
 									bind:value={config.IMAGES_EDIT_GEMINI_API_BASE_URL}
 								/>
 							</AdminSettingField>
 
-							<AdminSettingField label={$i18n.t('API Key')}>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.images.imagesEditGeminiApiKey.label')}
+							>
 								<SensitiveInput
 									variant="settings"
-									placeholder={$i18n.t('API Key')}
+									placeholder={$i18n.t('settings.admin.images.imagesEditGeminiApiKey.label')}
 									bind:value={config.IMAGES_EDIT_GEMINI_API_KEY}
 									required={true}
 								/>

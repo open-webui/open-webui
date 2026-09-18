@@ -8,60 +8,55 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	const capabilityLabels = {
+	let capabilityLabels;
+	$: capabilityLabels = {
 		vision: {
-			label: $i18n.t('Vision'),
-			description: $i18n.t('Model accepts image inputs')
+			label: $i18n.t('settings.admin.models.capabilities.vision.label'),
+			description: $i18n.t('settings.admin.models.capabilities.vision.description')
 		},
 		file_upload: {
-			label: $i18n.t('File Upload'),
-			description: $i18n.t('Model accepts file inputs')
+			label: $i18n.t('settings.admin.models.capabilities.fileUpload.label'),
+			description: $i18n.t('settings.admin.models.capabilities.fileUpload.description')
 		},
 		file_context: {
-			label: $i18n.t('File Context'),
-			description: $i18n.t('Inject file content into conversation context')
+			label: $i18n.t('settings.admin.models.capabilities.fileContext.label'),
+			description: $i18n.t('settings.admin.models.capabilities.fileContext.description')
 		},
 		web_search: {
-			label: $i18n.t('Web Search'),
-			description: $i18n.t('Model can search the web for information')
+			label: $i18n.t('settings.admin.models.capabilities.webSearch.label'),
+			description: $i18n.t('settings.admin.models.capabilities.webSearch.description')
 		},
 		image_generation: {
-			label: $i18n.t('Image Generation'),
-			description: $i18n.t('Model can generate images based on text prompts')
+			label: $i18n.t('settings.admin.models.capabilities.imageGeneration.label'),
+			description: $i18n.t('settings.admin.models.capabilities.imageGeneration.description')
 		},
 		code_interpreter: {
-			label: $i18n.t('Code Interpreter'),
-			description: $i18n.t('Model can execute code and perform calculations')
+			label: $i18n.t('settings.admin.models.capabilities.codeInterpreter.label'),
+			description: $i18n.t('settings.admin.models.capabilities.codeInterpreter.description')
 		},
 		terminal: {
-			label: $i18n.t('Terminal'),
-			description: $i18n.t(
-				'Model can access Open Terminal for command execution and file management'
-			)
+			label: $i18n.t('settings.admin.models.capabilities.terminal.label'),
+			description: $i18n.t('settings.admin.models.capabilities.terminal.description')
 		},
 		usage: {
-			label: $i18n.t('Usage'),
-			description: $i18n.t(
-				'Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.'
-			)
+			label: $i18n.t('settings.admin.models.capabilities.usage.label'),
+			description: $i18n.t('settings.admin.models.capabilities.usage.description')
 		},
 		citations: {
-			label: $i18n.t('Citations'),
-			description: $i18n.t('Displays citations in the response')
+			label: $i18n.t('settings.admin.models.capabilities.citations.label'),
+			description: $i18n.t('settings.admin.models.capabilities.citations.description')
 		},
 		status_updates: {
-			label: $i18n.t('Status Updates'),
-			description: $i18n.t('Displays status updates (e.g., web search progress) in the response')
+			label: $i18n.t('settings.admin.models.capabilities.statusUpdates.label'),
+			description: $i18n.t('settings.admin.models.capabilities.statusUpdates.description')
 		},
 		memory: {
-			label: $i18n.t('Memory'),
-			description: $i18n.t('Inject stored memories into conversation context')
+			label: $i18n.t('settings.admin.models.capabilities.memory.label'),
+			description: $i18n.t('settings.admin.models.capabilities.memory.description')
 		},
 		builtin_tools: {
-			label: $i18n.t('Builtin Tools'),
-			description: $i18n.t(
-				'Automatically inject system tools in native function calling mode (e.g., timestamps, memory, chat history, notes, etc.)'
-			)
+			label: $i18n.t('settings.admin.models.capabilities.builtinTools.label'),
+			description: $i18n.t('settings.admin.models.capabilities.builtinTools.description')
 		}
 	};
 
@@ -84,7 +79,9 @@
 </script>
 
 <div>
-	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Capabilities')}</div>
+	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">
+		{$i18n.t('settings.admin.models.capabilities.title')}
+	</div>
 	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
 		{#each visibleCapabilities as capability}
 			<div class="flex min-h-6 items-center gap-2.5">

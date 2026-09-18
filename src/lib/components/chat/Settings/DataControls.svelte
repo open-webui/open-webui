@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { canManageChats } from '$lib/utils/settings-access';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -117,7 +118,7 @@
 <FilesModal bind:show={showFilesModal} />
 
 <ConfirmDialog
-	title={$i18n.t('Archive All Chats')}
+	title={$i18n.t('settings.personal.dataControls.archiveAllChats.label')}
 	message={$i18n.t('Are you sure you want to archive all chats? This action cannot be undone.')}
 	bind:show={showArchiveConfirmDialog}
 	on:confirm={archiveAllChatsHandler}
@@ -127,7 +128,7 @@
 />
 
 <ConfirmDialog
-	title={$i18n.t('Delete All Chats')}
+	title={$i18n.t('settings.personal.dataControls.deleteAllChats.label')}
 	message={$i18n.t('Are you sure you want to delete all chats? This action cannot be undone.')}
 	bind:show={showDeleteConfirmDialog}
 	on:confirm={deleteAllChatsHandler}
@@ -138,7 +139,7 @@
 
 <div id="tab-chats" class="flex flex-col h-full text-sm">
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-		{$i18n.t('Data Controls')}
+		{$i18n.t('settings.personal.dataControls.title')}
 	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
@@ -151,11 +152,14 @@
 			hidden
 		/>
 
-		<UserSettingSection title={$i18n.t('Chats')} first>
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.import ?? true)}
+		<UserSettingSection
+			title={$i18n.t('settings.personal.dataControls.sections.chats.title')}
+			first
+		>
+			{#if canManageChats({ user: $user, config: null }, 'import')}
 				<UserSettingRow
-					label={$i18n.t('Import Chats')}
-					description={$i18n.t('Import chat history from a JSON export file.')}
+					label={$i18n.t('settings.personal.dataControls.importChats.label')}
+					description={$i18n.t('settings.personal.dataControls.importChats.description')}
 				>
 					<button
 						class={actionButtonClass}
@@ -169,10 +173,10 @@
 				</UserSettingRow>
 			{/if}
 
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+			{#if canManageChats({ user: $user, config: null }, 'export')}
 				<UserSettingRow
-					label={$i18n.t('Export Chats')}
-					description={$i18n.t('Download your chat history as a JSON export.')}
+					label={$i18n.t('settings.personal.dataControls.exportChats.label')}
+					description={$i18n.t('settings.personal.dataControls.exportChats.description')}
 				>
 					<button
 						class={actionButtonClass}
@@ -187,8 +191,8 @@
 			{/if}
 
 			<UserSettingRow
-				label={$i18n.t('Shared Chats')}
-				description={$i18n.t('Review and manage chats you have shared.')}
+				label={$i18n.t('settings.personal.dataControls.sharedChats.label')}
+				description={$i18n.t('settings.personal.dataControls.sharedChats.description')}
 			>
 				<button
 					class={actionButtonClass}
@@ -202,8 +206,8 @@
 			</UserSettingRow>
 
 			<UserSettingRow
-				label={$i18n.t('Archive All Chats')}
-				description={$i18n.t('Move every chat into the archive after confirmation.')}
+				label={$i18n.t('settings.personal.dataControls.archiveAllChats.label')}
+				description={$i18n.t('settings.personal.dataControls.archiveAllChats.description')}
 			>
 				<button
 					class={actionButtonClass}
@@ -212,14 +216,14 @@
 					}}
 					type="button"
 				>
-					{$i18n.t('Archive All')}
+					{$i18n.t('settings.personal.dataControls.archiveAll.label')}
 				</button>
 			</UserSettingRow>
 
-			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+			{#if canManageChats({ user: $user, config: null }, 'delete')}
 				<UserSettingRow
-					label={$i18n.t('Delete All Chats')}
-					description={$i18n.t('Permanently delete every chat after confirmation.')}
+					label={$i18n.t('settings.personal.dataControls.deleteAllChats.label')}
+					description={$i18n.t('settings.personal.dataControls.deleteAllChats.description')}
 				>
 					<button
 						class={actionButtonClass}
@@ -234,10 +238,10 @@
 			{/if}
 		</UserSettingSection>
 
-		<UserSettingSection title={$i18n.t('Files')}>
+		<UserSettingSection title={$i18n.t('settings.personal.dataControls.sections.files.title')}>
 			<UserSettingRow
-				label={$i18n.t('Manage Files')}
-				description={$i18n.t('Open the file manager for uploaded files.')}
+				label={$i18n.t('settings.personal.dataControls.manageFiles.label')}
+				description={$i18n.t('settings.personal.dataControls.manageFiles.description')}
 			>
 				<button
 					class={actionButtonClass}

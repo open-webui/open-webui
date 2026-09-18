@@ -164,18 +164,23 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Integrations')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.admin.integrations.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if servers !== null}
-			<AdminSettingSection title={$i18n.t('Tools')} first>
+			<AdminSettingSection
+				title={$i18n.t('settings.admin.integrations.sections.tools.title')}
+				first
+			>
 				<div>
 					<div class="mb-2 flex items-center justify-between">
 						<div class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('External Tool Servers')}
+							{$i18n.t('settings.admin.integrations.externalToolServers.label')}
 						</div>
 
-						<Tooltip content={$i18n.t(`Add Connection`)}>
+						<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 							<button
 								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 								on:click={() => {
@@ -215,12 +220,14 @@
 				</div>
 			</AdminSettingSection>
 
-			<AdminSettingSection title={$i18n.t('Terminal')}>
+			<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.terminal.title')}>
 				<div>
 					<div class="mb-2 flex items-center justify-between">
-						<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Open Terminal')}</div>
+						<div class="text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('settings.admin.integrations.openTerminal.label')}
+						</div>
 
-						<Tooltip content={$i18n.t('Add Connection')}>
+						<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 							<button
 								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 								on:click={() => {
@@ -245,7 +252,9 @@
 												? 'opacity-50'
 												: ''}"
 										>
-											<Tooltip content={$i18n.t('Terminal')}>
+											<Tooltip
+												content={$i18n.t('settings.admin.integrations.sections.terminal.title')}
+											>
 												<Cloud className="size-4" strokeWidth="1.5" />
 											</Tooltip>
 
@@ -311,7 +320,7 @@
 				</div>
 			</AdminSettingSection>
 
-			<AdminSettingSection title={$i18n.t('Knowledge')}>
+			<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.knowledge.title')}>
 				<ExternalKnowledge />
 			</AdminSettingSection>
 		{:else}
