@@ -1425,6 +1425,11 @@ def convert_to_responses_payload(payload: dict) -> dict:
                 converted_tools.append(tool)
         responses_payload['tools'] = converted_tools
 
+    # Responses API expects a forced function choice as {"type": "function", "name": ...}
+    tool_choice = responses_payload.get('tool_choice')
+    if isinstance(tool_choice, dict) and isinstance(tool_choice.get('function'), dict):
+        responses_payload['tool_choice'] = {'type': 'function', 'name': tool_choice['function'].get('name', '')}
+
     return responses_payload
 
 
@@ -1432,17 +1437,32 @@ def convert_responses_result(response: dict) -> dict:
     """
     Convert non-streaming Responses API result to Chat Completions format.
 
-    Extracts text from message output items so all downstream consumers
+    Extracts text and function calls from output items so all downstream consumers
     (frontend tasks, get_content_from_response) work without modification.
     """
     output_items = response.get('output', [])
 
     content = ''
+    tool_calls = []
     for item in output_items:
         if item.get('type') == 'message':
             for part in item.get('content', []):
                 if part.get('type') == 'output_text':
                     content += part.get('text', '')
+        elif item.get('type') == 'function_call':
+            arguments = item.get('arguments', '{}')
+            if not isinstance(arguments, str):
+                arguments = JSONCodec.dumps(arguments)
+            tool_calls.append(
+                {
+                    'id': item.get('call_id', ''),
+                    'type': 'function',
+                    'function': {
+                        'name': item.get('name', ''),
+                        'arguments': arguments,
+                    },
+                }
+            )
 
     return {
         'id': response.get('id', ''),
@@ -1454,8 +1474,9 @@ def convert_responses_result(response: dict) -> dict:
                 'message': {
                     'role': 'assistant',
                     'content': content,
+                    **({'tool_calls': tool_calls} if tool_calls else {}),
                 },
-                'finish_reason': 'stop',
+                'finish_reason': 'tool_calls' if tool_calls else 'stop',
             }
         ],
         'usage': response.get('usage', {}),
