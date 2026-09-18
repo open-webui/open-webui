@@ -45,6 +45,7 @@ export class SocketIOCollaborationProvider {
 	private synced = false;
 	private editor: Editor | null = null;
 	private editorContentGetter: EditorContentGetter | null = null;
+	private contentSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(
 		private readonly documentId: string,
@@ -114,6 +115,18 @@ export class SocketIOCollaborationProvider {
 		Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(doc));
 	}
 
+	// Send the merged content; the remote sender had not seen our edits yet.
+	private sendContentSnapshot() {
+		this.contentSnapshotTimer = null;
+		const getContent = this.editorContentGetter;
+		if (!this.isConnected || !getContent) return;
+
+		this.socket.emit('ydoc:document:update', {
+			document_id: this.documentId,
+			data: { content: getContent() }
+		});
+	}
+
 	private joinDocument() {
 		if (!this.editor) return;
 
@@ -141,7 +154,13 @@ export class SocketIOCollaborationProvider {
 			if (data.document_id === this.documentId && data.socket_id !== this.socket.id) {
 				try {
 					const update = new Uint8Array(data.update);
-					Y.applyUpdate(this.doc, update);
+					// 'server' stops the local update listener sending this straight back out
+					Y.applyUpdate(this.doc, update, 'server');
+
+					if (this.contentSnapshotTimer) {
+						clearTimeout(this.contentSnapshotTimer);
+					}
+					this.contentSnapshotTimer = setTimeout(() => this.sendContentSnapshot(), 500);
 				} catch (error) {
 					console.error('Error applying Yjs update:', error);
 				}
@@ -229,6 +248,11 @@ export class SocketIOCollaborationProvider {
 						}
 					}
 				});
+
+				if (this.contentSnapshotTimer) {
+					clearTimeout(this.contentSnapshotTimer);
+					this.contentSnapshotTimer = null;
+				}
 			}
 		});
 
@@ -272,6 +296,11 @@ export class SocketIOCollaborationProvider {
 		this.socket.off('ydoc:awareness:update');
 		this.socket.off('connect', this.onConnect);
 		this.socket.off('disconnect', this.onDisconnect);
+
+		if (this.contentSnapshotTimer) {
+			clearTimeout(this.contentSnapshotTimer);
+			this.sendContentSnapshot();
+		}
 
 		if (this.isConnected) {
 			this.socket.emit('ydoc:document:leave', {
