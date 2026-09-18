@@ -3045,7 +3045,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for tool_server in direct_tool_servers:
                 if tool_server.get('is_terminal') is True and not terminal_capability:
                     continue
-                system_prompt = tool_server.get('system_prompt')
+                system_prompt = tool_server.pop('system_prompt', None)
                 if system_prompt:
                     form_data['messages'] = add_or_update_system_message(
                         system_prompt,
@@ -3053,7 +3053,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         append=True,
                     )
 
-                tool_specs = tool_server.get('specs', [])
+                tool_specs = tool_server.pop('specs', [])
 
                 for tool in tool_specs:
                     tools_dict[tool['name']] = {
