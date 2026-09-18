@@ -8,6 +8,7 @@ from open_webui.config import (
     PGVECTOR_HNSW_M,
     PGVECTOR_INDEX_METHOD,
     PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
+    PGVECTOR_ITERATIVE_SCAN,
     PGVECTOR_IVFFLAT_LISTS,
     PGVECTOR_PGCRYPTO,
     PGVECTOR_PGCRYPTO_KEY,
@@ -154,6 +155,7 @@ class PgvectorClient(VectorDBBase):
             index_method, index_options = self._vector_index_configuration()
             self._ensure_vector_index(index_method, index_options)
             self._ensure_text_search_index()
+            self.iterative_scan_sql = self._iterative_scan_setting(index_method)
 
             self.session.execute(
                 text(
@@ -257,6 +259,20 @@ class PgvectorClient(VectorDBBase):
             )
             return False
         return True
+
+    def _iterative_scan_setting(self, index_method: str) -> Optional[str]:
+        if PGVECTOR_ITERATIVE_SCAN == 'off':
+            return None
+
+        version = self.session.execute(text("SELECT extversion FROM pg_extension WHERE extname = 'vector'")).scalar()
+        version_parts = [int(part) for part in (version or '').split('.') if part.isdigit()]
+        if version_parts[:2] < [0, 8]:
+            log.info('Iterative scan needs pgvector 0.8 or newer, the server has %s.', version or 'none')
+            return None
+
+        # ivfflat only accepts relaxed_order
+        mode = 'relaxed_order' if index_method == 'ivfflat' else PGVECTOR_ITERATIVE_SCAN
+        return f'SET LOCAL {index_method}.iterative_scan = {mode}'
 
     def _ensure_text_search_index(self) -> None:
         if PGVECTOR_PGCRYPTO:
@@ -524,6 +540,9 @@ class PgvectorClient(VectorDBBase):
                 .order_by(query_vectors.c.qid, subq.c.distance)
             )
 
+            if self.iterative_scan_sql:
+                self.session.execute(text(self.iterative_scan_sql))
+
             result_proxy = self.session.execute(stmt)
             results = result_proxy.all()
 
@@ -533,6 +552,7 @@ class PgvectorClient(VectorDBBase):
             metadatas = [[] for _ in range(num_queries)]
 
             if not results:
+                self.session.rollback()
                 return SearchResult(
                     ids=ids,
                     distances=distances,
@@ -652,6 +672,7 @@ class PgvectorClient(VectorDBBase):
                 results = query.all()
 
             if not results:
+                self.session.rollback()
                 return None
 
             ids = [[result.id for result in results]]
@@ -691,6 +712,7 @@ class PgvectorClient(VectorDBBase):
                 results = query.all()
 
                 if not results:
+                    self.session.rollback()
                     return None
 
                 ids = [[result.id for result in results]]
