@@ -55,6 +55,7 @@
 
 	let functionNameFilterList = '';
 	let accessGrants = [];
+	let userConfig = '';
 
 	let id = '';
 	let name = '';
@@ -190,6 +191,19 @@
 			}
 		}
 
+		if (userConfig) {
+			try {
+				const _userConfig = JSON.parse(userConfig);
+				if (typeof _userConfig !== 'object' || Array.isArray(_userConfig)) {
+					throw new Error('User secrets schema must be a valid JSON object');
+				}
+				userConfig = JSON.stringify(_userConfig, null, 2);
+			} catch (error) {
+				toast.error($i18n.t('User secrets schema must be a valid JSON object'));
+				return;
+			}
+		}
+
 		if (direct) {
 			const res = await getToolServerData(
 				auth_type === 'bearer' ? key : localStorage.token,
@@ -212,7 +226,8 @@
 				key,
 				config: {
 					enable: enable,
-					access_grants: accessGrants
+					access_grants: accessGrants,
+					...(userConfig ? { user_config: JSON.parse(userConfig) } : {})
 				},
 				info: {
 					id,
@@ -280,6 +295,9 @@
 				if (data.config) {
 					enable = data.config.enable ?? true;
 					accessGrants = data.config.access_grants ?? [];
+					userConfig = data.config.user_config
+						? JSON.stringify(data.config.user_config, null, 2)
+						: '';
 				}
 
 				toast.success($i18n.t('Import successful'));
@@ -305,6 +323,9 @@
 				...(!direct && ['', 'openapi'].includes(type) ? { forward_cookies: forwardCookies } : {}),
 				headers: headers ? JSON.parse(headers) : undefined,
 				key,
+				config: {
+					...(userConfig ? { user_config: JSON.parse(userConfig) } : {})
+				},
 
 				info: {
 					id: id,
@@ -374,6 +395,20 @@
 			}
 		}
 
+		if (userConfig) {
+			try {
+				const _userConfig = JSON.parse(userConfig);
+				if (typeof _userConfig !== 'object' || Array.isArray(_userConfig)) {
+					throw new Error('User secrets schema must be a valid JSON object');
+				}
+				userConfig = JSON.stringify(_userConfig, null, 2);
+			} catch (error) {
+				toast.error($i18n.t('User secrets schema must be a valid JSON object'));
+				loading = false;
+				return;
+			}
+		}
+
 		const connection = {
 			type,
 			url,
@@ -390,7 +425,8 @@
 			config: {
 				enable: enable,
 				function_name_filter_list: functionNameFilterList,
-				access_grants: accessGrants
+				access_grants: accessGrants,
+				...(userConfig ? { user_config: JSON.parse(userConfig) } : {})
 			},
 			info: {
 				id: id,
@@ -444,6 +480,7 @@
 		enable = true;
 		functionNameFilterList = '';
 		accessGrants = [];
+		userConfig = '';
 	};
 
 	const init = () => {
@@ -474,6 +511,9 @@
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessGrants = connection.config?.access_grants ?? [];
+			userConfig = connection.config?.user_config
+				? JSON.stringify(connection.config.user_config, null, 2)
+				: '';
 		}
 	};
 
@@ -1005,6 +1045,28 @@
 												/>
 											</Tooltip>
 										</div>
+									</div>
+								</div>
+							{/if}
+
+							{#if !direct}
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<label for="user-config-input" class="mb-0.5 text-xs text-gray-500">
+											{$i18n.t('Per-user secret schema')}
+										</label>
+										<p class="text-xs text-gray-500 mb-1">
+											{$i18n.t(
+												'Declare fields users must fill in, then reference them as {{USER_SECRET:field}} in headers.'
+											)}
+										</p>
+										<Textarea
+											className="w-full text-sm outline-hidden"
+											bind:value={userConfig}
+											placeholder={'{"properties":{"api_key":{"title":"API key","type":"string","format":"password"}},"required":["api_key"]}'}
+											required={false}
+											minSize={45}
+										/>
 									</div>
 								</div>
 							{/if}

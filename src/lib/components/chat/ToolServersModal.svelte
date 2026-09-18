@@ -6,15 +6,24 @@
 	import Modal from '../common/Modal.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import UserSecretsModal from './UserSecretsModal.svelte';
 
 	export let show = false;
 	export let selectedToolIds = [];
 
-	let selectedTools = [];
+	let selectedTools: any[] = [];
+	let showUserSecrets = false;
+	let selectedServerId = '';
+	let selectedServerName = '';
 
 	$: selectedTools = ($tools ?? []).filter((tool) => selectedToolIds.includes(tool.id));
+	const openUserSecrets = (tool: any) => {
+		selectedServerId = tool.id;
+		selectedServerName = resolveLocalizedResource(tool, $i18n.language);
+		showUserSecrets = true;
+	};
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	const authStatus = (tool) =>
 		tool?.authenticated === false
@@ -61,8 +70,10 @@
 						{@const toolSpecs = tool?.specs ?? []}
 						<Collapsible
 							buttonClassName="w-full mb-1 rounded-lg px-2 py-1.5"
-							chevron={toolSpecs.length > 0}
-							disabled={toolSpecs.length === 0}
+							chevron={toolSpecs.length > 0 ||
+								(tool.id?.startsWith('server:') && tool.meta?.user_config?.properties)}
+							disabled={toolSpecs.length === 0 &&
+								!(tool.id?.startsWith('server:') && tool.meta?.user_config?.properties)}
 						>
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-1 min-w-0">
@@ -92,6 +103,15 @@
 							</div>
 
 							<div slot="content" class="pl-4 pr-2 pb-2 text-xs text-gray-500 dark:text-gray-400">
+								{#if tool.id?.startsWith('server:') && tool.meta?.user_config?.properties}
+									<button
+										type="button"
+										class="mb-2 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+										on:click={() => openUserSecrets(tool)}
+									>
+										{$i18n.t('Configure credentials')}
+									</button>
+								{/if}
 								{#if toolSpecs.length > 0}
 									{#each toolSpecs as toolSpec}
 										<div class="mt-1 truncate">
@@ -159,3 +179,5 @@
 		{/if}
 	</div>
 </Modal>
+
+<UserSecretsModal bind:show={showUserSecrets} id={selectedServerId} name={selectedServerName} />

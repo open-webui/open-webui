@@ -25,21 +25,31 @@ from open_webui.models.tools import (
     Tools,
     ToolUserResponse,
 )
+from open_webui.models.users import Users
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_access,
+    has_connection_access,
     has_permission,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.plugin import (
     get_tool_contents_cache,
-    get_tools_cache,
     get_tool_module_from_cache,
+    get_tools_cache,
     load_tool_module_by_id,
     replace_imports,
     resolve_valves_schema_options,
 )
-from open_webui.utils.tools import get_tool_servers, get_tool_specs
+from open_webui.utils.tools import (
+    TOOL_SERVER_USER_SECRETS_KEY,
+    get_tool_server_connection,
+    get_tool_server_user_config,
+    get_tool_server_user_secrets,
+    get_tool_servers,
+    get_tool_specs,
+)
+from open_webui.utils.valves import encrypt_valves
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -126,6 +136,7 @@ async def get_tools(
                     'name': server.get('openapi', {}).get('info', {}).get('title', 'Tool Server'),
                     'meta': {
                         'description': server.get('openapi', {}).get('info', {}).get('description', ''),
+                        'user_config': get_tool_server_user_config(server_config) or None,
                     },
                     'updated_at': int(time.time()),
                     'created_at': int(time.time()),
@@ -162,6 +173,7 @@ async def get_tools(
                         'name': info.get('name', 'MCP Tool Server'),
                         'meta': {
                             'description': info.get('description', ''),
+                            'user_config': get_tool_server_user_config(server_config) or None,
                         },
                         'updated_at': int(time.time()),
                         'created_at': int(time.time()),
@@ -991,3 +1003,95 @@ async def update_tools_user_valves_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+############################
+# ToolServerUserSecrets
+############################
+
+
+def _public_user_config(schema: dict) -> dict:
+    """Return the display-safe portion of an admin-provided secret schema."""
+    allowed_fields = {'title', 'description', 'type', 'format', 'input', 'enum', 'minLength', 'maxLength'}
+    return {
+        'type': 'object',
+        'properties': {
+            name: {key: value for key, value in field.items() if key in allowed_fields}
+            for name, field in schema.get('properties', {}).items()
+        },
+        'required': schema.get('required', []),
+    }
+
+
+async def _get_user_secret_context(server_id: str, user, db: AsyncSession):
+    connection, normalized_id = await get_tool_server_connection(server_id)
+    if not connection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+    if not await has_connection_access(user, connection, user_group_ids):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+    schema = get_tool_server_user_config(connection)
+    if not schema.get('properties'):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='This tool server has no user secrets')
+
+    return connection, normalized_id, schema
+
+
+@router.get('/server/{server_id}/user-secrets/spec', response_model=dict)
+async def get_tool_server_user_secrets_spec(
+    server_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    _connection, normalized_id, schema = await _get_user_secret_context(server_id, user, db)
+    configured = sorted(get_tool_server_user_secrets(user, normalized_id).keys())
+    return {
+        **_public_user_config(schema),
+        'configured': configured,
+    }
+
+
+@router.post('/server/{server_id}/user-secrets', response_model=dict)
+async def update_tool_server_user_secrets(
+    server_id: str,
+    form_data: dict,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    _connection, normalized_id, schema = await _get_user_secret_context(server_id, user, db)
+    properties = schema['properties']
+    unknown_fields = sorted(set(form_data) - set(properties))
+    if unknown_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Unknown user secret fields: {", ".join(unknown_fields)}',
+        )
+
+    secrets = get_tool_server_user_secrets(user, normalized_id)
+    for name, value in form_data.items():
+        if value is None or value == '':
+            secrets.pop(name, None)
+        elif isinstance(value, (str, int, float, bool)):
+            secrets[name] = str(value)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'User secret {name} must be a scalar value',
+            )
+
+    missing_required = [name for name in schema.get('required', []) if not secrets.get(name)]
+    if missing_required:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Missing required user secrets: {", ".join(missing_required)}',
+        )
+
+    variables = dict(getattr(user, 'variables', None) or {})
+    stored_secrets = dict(variables.get(TOOL_SERVER_USER_SECRETS_KEY) or {})
+    stored_secrets[normalized_id] = encrypt_valves(secrets)
+    variables[TOOL_SERVER_USER_SECRETS_KEY] = stored_secrets
+    await Users.update_user_by_id(user.id, {'variables': variables}, db=db)
+
+    return {'configured': sorted(secrets.keys())}

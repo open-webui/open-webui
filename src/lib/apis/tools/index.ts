@@ -486,3 +486,60 @@ export const updateUserValvesById = async (token: string, id: string, valves: ob
 
 	return res;
 };
+
+export const getToolServerUserSecretsSpec = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/server/${encodeURIComponent(id)}/user-secrets/spec`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) throw error;
+	return res;
+};
+
+export const updateToolServerUserSecrets = async (token: string, id: string, secrets: object) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/server/${encodeURIComponent(id)}/user-secrets`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify(secrets)
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) throw error;
+	return res;
+};

@@ -104,6 +104,7 @@ from open_webui.utils.access_control import has_access, has_connection_access, h
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.headers import (
     bearer_auth_header,
+    custom_headers_require_user_secrets,
     get_custom_headers,
     include_user_info_headers,
     normalize_bearer_token,
@@ -118,10 +119,83 @@ from open_webui.utils.terminals import (
     terminal_context_config,
     terminal_context_id,
 )
+from open_webui.utils.valves import decrypt_valves
 from pydantic import BaseModel, Field, create_model
 from pydantic.fields import FieldInfo
 
 log = logging.getLogger(__name__)
+
+TOOL_SERVER_USER_SECRETS_KEY = '_tool_server_user_secrets'
+
+
+def normalize_tool_server_id(server_id: str) -> str:
+    """Return the config id from a UI/tool id such as ``server:mcp:github``."""
+    normalized = str(server_id or '')
+    if normalized.startswith('server:mcp:'):
+        normalized = normalized[len('server:mcp:') :]
+    elif normalized.startswith('server:'):
+        normalized = normalized[len('server:') :]
+    return normalized.split('|', 1)[0]
+
+
+def get_tool_server_user_config(connection: dict | None) -> dict:
+    """Normalize the admin's optional per-user secret JSON schema."""
+    raw_config = (connection or {}).get('config') or {}
+    raw_schema = raw_config.get('user_config')
+    if isinstance(raw_schema, str):
+        try:
+            raw_schema = JSONCodec.loads(raw_schema)
+        except (JSONCodec.JSONDecodeError, TypeError):
+            return {}
+
+    if not isinstance(raw_schema, dict):
+        return {}
+
+    properties = raw_schema.get('properties') if isinstance(raw_schema.get('properties'), dict) else raw_schema
+    if not isinstance(properties, dict):
+        return {}
+
+    required = raw_schema.get('required', []) if raw_schema.get('properties') else []
+    required = set(required) if isinstance(required, list) else set()
+    normalized_properties = {}
+    for name, field in properties.items():
+        if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.-]*', name):
+            continue
+        if not isinstance(field, dict):
+            field = {}
+        field_type = field.get('type', 'string')
+        if field_type not in ('string', 'number', 'integer', 'boolean'):
+            continue
+        normalized_properties[name] = {**field, 'type': field_type}
+
+    return {
+        'type': 'object',
+        'properties': normalized_properties,
+        'required': [name for name in required if name in normalized_properties],
+    }
+
+
+def get_tool_server_user_secrets(user, server_id: str) -> dict[str, str]:
+    """Read a user's encrypted secrets without exposing them through user settings."""
+    variables = getattr(user, 'variables', None) or {}
+    stored = variables.get(TOOL_SERVER_USER_SECRETS_KEY, {}) if isinstance(variables, dict) else {}
+    server_secrets = stored.get(normalize_tool_server_id(server_id)) if isinstance(stored, dict) else None
+    secrets = decrypt_valves(server_secrets)
+    return {str(key): str(value) for key, value in secrets.items() if value is not None}
+
+
+async def get_tool_server_connection(server_id: str) -> tuple[dict | None, str]:
+    """Find an OpenAPI/MCP connection using either its raw or UI server id."""
+    normalized_id = normalize_tool_server_id(server_id)
+    connections = await Config.get('tool_server.connections', []) or []
+    for index, connection in enumerate(connections):
+        info_id = (connection.get('info') or {}).get('id')
+        if connection.get('type', 'openapi') == 'mcp':
+            if info_id and str(info_id) == normalized_id:
+                return connection, normalized_id
+        elif str(info_id or index) == normalized_id:
+            return connection, normalized_id
+    return None, normalized_id
 
 
 async def build_tool_server_headers(
@@ -171,7 +245,10 @@ async def build_tool_server_headers(
     # Interpolate template vars in custom connection headers
     connection_headers = connection.get('headers', None)
     if connection_headers and isinstance(connection_headers, dict):
-        headers.update(await get_custom_headers(connection_headers, user, metadata))
+        user_secrets = None
+        if custom_headers_require_user_secrets(connection_headers):
+            user_secrets = get_tool_server_user_secrets(user, server_id)
+        headers.update(await get_custom_headers(connection_headers, user, metadata, user_secrets=user_secrets))
 
     # Add user info headers if enabled
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:

@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from string import punctuation
 from typing import Any, Optional
@@ -20,6 +21,24 @@ from open_webui.models.groups import Groups
 log = logging.getLogger(__name__)
 
 USER_GROUPS_PLACEHOLDERS = ('{{USER_GROUPS}}', '{{USER_GROUP_IDS}}')
+USER_SECRET_PATTERN = re.compile(r'\{\{USER_SECRET:([A-Za-z_][A-Za-z0-9_.-]*)\}\}')
+
+# These headers can alter the transport or bypass Open WebUI's identity boundary.
+# User-provided secrets must never be allowed to populate them.
+USER_SECRET_FORBIDDEN_HEADERS = {
+    'connection',
+    'keep-alive',
+    'proxy-authenticate',
+    'proxy-authorization',
+    'te',
+    'trailer',
+    'transfer-encoding',
+    'upgrade',
+    'host',
+    'content-length',
+    'cookie',
+    'set-cookie',
+}
 
 
 def normalize_bearer_token(token: Any) -> str:
@@ -104,13 +123,48 @@ async def get_user_groups_for_custom_headers(
         return None
 
 
-async def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None, request=None) -> dict:
+def custom_headers_require_user_secrets(custom_headers: Optional[dict]) -> bool:
+    if not custom_headers or not isinstance(custom_headers, dict):
+        return False
+    return any(USER_SECRET_PATTERN.search(str(value)) for value in custom_headers.values())
+
+
+def _validate_user_secret_header_names(custom_headers: dict) -> None:
+    for key in custom_headers:
+        normalized_key = str(key).strip().lower()
+        if (
+            normalized_key in USER_SECRET_FORBIDDEN_HEADERS
+            or normalized_key.startswith('forward_')
+            or normalized_key.startswith('x-forwarded-')
+        ):
+            raise ValueError(f'User secrets cannot be used in the {key} header')
+
+
+async def get_custom_headers(
+    custom_headers: dict,
+    user=None,
+    metadata: dict = None,
+    request=None,
+    user_secrets: Optional[dict[str, str]] = None,
+) -> dict:
     user_groups = await get_user_groups_for_custom_headers(custom_headers, user)
-    return parse_custom_headers(custom_headers, user, metadata, request=request, user_groups=user_groups)
+    return parse_custom_headers(
+        custom_headers,
+        user,
+        metadata,
+        request=request,
+        user_groups=user_groups,
+        user_secrets=user_secrets,
+    )
 
 
 def parse_custom_headers(
-    custom_headers: dict, user=None, metadata: dict = None, request=None, user_groups: Optional[list] = None
+    custom_headers: dict,
+    user=None,
+    metadata: dict = None,
+    request=None,
+    user_groups: Optional[list] = None,
+    user_secrets: Optional[dict[str, str]] = None,
 ) -> dict:
     if not custom_headers or not isinstance(custom_headers, dict):
         return {}
@@ -152,11 +206,25 @@ def parse_custom_headers(
     }
 
     parsed_headers = {}
+    if user_secrets is not None and custom_headers_require_user_secrets(custom_headers):
+        _validate_user_secret_header_names(custom_headers)
+
     for key, value in custom_headers.items():
+        if USER_SECRET_PATTERN.search(str(key)):
+            raise ValueError('User secrets may only be used in header values')
         if not isinstance(value, str):
             value = str(value)
         for token, val in template_vars.items():
             value = value.replace(token, val)
+
+        def replace_user_secret(match):
+            secret_name = match.group(1)
+            secret_value = (user_secrets or {}).get(secret_name)
+            if not isinstance(secret_value, str) or not secret_value:
+                raise ValueError(f'Missing user secret: {secret_name}')
+            return secret_value
+
+        value = USER_SECRET_PATTERN.sub(replace_user_secret, value)
         # Encode Unicode and controls after substitution; preserve ASCII header syntax and existing escapes.
         parsed_headers[key] = quote(value, safe=punctuation + ' \t')
 

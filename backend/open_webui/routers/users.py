@@ -662,13 +662,22 @@ async def update_user_variables_by_session_user(
             detail=str(exc),
         )
 
+    # Preserve private server credentials stored outside the user-editable
+    # variable namespace. They are intentionally excluded from the response.
+    private_variables = {
+        key: value
+        for key, value in (user.variables or {}).items()
+        if isinstance(key, str) and key.startswith('_')
+    }
+    variables = {**private_variables, **variables}
+
     updated = await Users.update_user_by_id(user.id, {'variables': variables}, db=db)
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
-    return UserVariablesResponse(variables=variables)
+    return UserVariablesResponse(variables=normalize_user_variables(variables))
 
 
 ############################
