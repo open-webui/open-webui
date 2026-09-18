@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.11.4] - 2026-09-18
+## [0.11.4] - 2026-09-19
 
 ### Added
 
@@ -77,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📌 **Channel code headers.** The bar naming a piece of code in a channel thread or its pinned messages now sits flush at the top of the panel, clipped to the block, rather than floating over the code as it scrolls. [#29836](https://github.com/open-webui/open-webui/pull/29836), [#29835](https://github.com/open-webui/open-webui/issues/29835)
 - 📨 **Duplicated proxy headers.** A reply proxied from a terminal server or an OpenAI or Ollama connection no longer carries that server's own "Server" and "Date" headers, which had a reverse proxy in front logging a duplicate line for every one. [#29841](https://github.com/open-webui/open-webui/pull/29841), [#29824](https://github.com/open-webui/open-webui/issues/29824), [#29843](https://github.com/open-webui/open-webui/pull/29843)
 - 🪝 **Responses API tool strictness.** A workspace tool, MCP server or OpenAPI server reaching a model on the Responses API was turned into a strict schema where it had never asked to be, so the model filled every optional field with empty strings, zeros and empty arrays, and search and filter tools were handed values where leaving them out was meant. [#30046](https://github.com/open-webui/open-webui/pull/30046), [#27750](https://github.com/open-webui/open-webui/issues/27750)
+- 🪃 **Responses API tool calling.** A forced tool choice sent to a connection on the Responses API went out in the wrong shape and was refused by providers that check it, and a tool call in a reply that was not streamed came back as empty text, so nothing reading the API ever saw it. [#30095](https://github.com/open-webui/open-webui/pull/30095), [#30085](https://github.com/open-webui/open-webui/issues/30085)
 - ⛓️ **Missing tools in links.** Opening a chat from a link whose "tools" or "tool-ids" parameter names a tool that no longer exists, or that the account cannot see, kept that id in the selection and sent it with the message; ids matching no tool the account has are now dropped and the rest of the link works as before. [#29803](https://github.com/open-webui/open-webui/pull/29803)
 - 🚫 **Model editor error messages.** A workspace model that cannot be loaded for editing now says so, instead of sending you back with "You do not have permission to edit this model" whatever the real reason. [#29694](https://github.com/open-webui/open-webui/pull/29694), [#29629](https://github.com/open-webui/open-webui/issues/29629)
 - 👥 **Directory updates that were dropped.** A change your identity provider sent as an add or a remove, or without naming the attribute it was changing, was accepted and then quietly discarded, so a rename or a deactivation never reached the account; those now take effect. [Commit](https://github.com/open-webui/open-webui/commit/ad9da981680c0fd9151c803a366a01545ea907c1)
