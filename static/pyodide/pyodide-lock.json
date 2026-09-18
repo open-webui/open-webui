@@ -5117,7 +5117,14 @@
       "imports": [
         "black"
       ],
-      "depends": []
+      "depends": [
+        "click",
+        "mypy-extensions",
+        "packaging",
+        "pathspec",
+        "platformdirs",
+        "pytokens"
+      ]
     },
     "pathspec": {
       "name": "pathspec",
@@ -5180,6 +5187,22 @@
         "et_xmlfile"
       ],
       "depends": []
+    },
+    "seaborn": {
+      "name": "seaborn",
+      "version": "0.13.2",
+      "file_name": "seaborn-0.13.2-py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "636f8336facf092165e27924f223d3c62ca560b1f2bb5dff7ab7fad265361987",
+      "package_type": "package",
+      "imports": [
+        "seaborn"
+      ],
+      "depends": [
+        "matplotlib",
+        "numpy",
+        "pandas"
+      ]
     }
   }
 }
