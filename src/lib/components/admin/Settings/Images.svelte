@@ -11,7 +11,7 @@
 		updateImageGenerationConfig,
 		getConfig,
 		updateConfig,
-		verifyConfigUrl
+		verifyConnection
 	} from '$lib/apis/images';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -443,8 +443,11 @@
 									type="button"
 									aria-label={$i18n.t('settings.admin.images.verifyConnection.label')}
 									on:click={async () => {
-										await updateConfigHandler();
-										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+										const res = await verifyConnection(localStorage.token, {
+											engine: 'automatic1111',
+											url: config.AUTOMATIC1111_BASE_URL,
+											key: config.AUTOMATIC1111_API_AUTH
+										}).catch((error) => {
 											toast.error(`${error}`);
 											return null;
 										});
@@ -511,8 +514,11 @@
 									type="button"
 									aria-label={$i18n.t('settings.admin.images.verifyConnection.label')}
 									on:click={async () => {
-										await updateConfigHandler();
-										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+										const res = await verifyConnection(localStorage.token, {
+											engine: 'comfyui',
+											url: config.COMFYUI_BASE_URL,
+											key: config.COMFYUI_API_KEY
+										}).catch((error) => {
 											toast.error(`${error}`);
 											return null;
 										});
@@ -821,8 +827,11 @@
 									type="button"
 									aria-label={$i18n.t('settings.admin.images.verifyConnection.label')}
 									on:click={async () => {
-										await updateConfigHandler();
-										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+										const res = await verifyConnection(localStorage.token, {
+											engine: 'comfyui',
+											url: config.IMAGES_EDIT_COMFYUI_BASE_URL,
+											key: config.IMAGES_EDIT_COMFYUI_API_KEY
+										}).catch((error) => {
 											toast.error(`${error}`);
 											return null;
 										});
