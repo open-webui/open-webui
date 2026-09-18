@@ -67,10 +67,10 @@ export const updateConfig = async (token: string = '', config: object) => {
 	return res;
 };
 
-export const verifyConfigUrl = async (token: string = '') => {
+export const verifyConfigUrl = async (token: string = '', edit: boolean = false) => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config/url/verify`, {
+	const res = await fetch(`${IMAGES_API_BASE_URL}/config/url/verify${edit ? '?edit=true' : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

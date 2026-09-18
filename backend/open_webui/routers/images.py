@@ -330,9 +330,10 @@ def get_automatic1111_api_auth(image_config):
 
 
 @router.get('/config/url/verify')
-async def verify_url(request: Request, user=Depends(get_admin_user)):
+async def verify_url(request: Request, edit: bool = False, user=Depends(get_admin_user)):
     image_config = await get_image_config()
-    if image_config.IMAGE_GENERATION_ENGINE == 'automatic1111':
+    engine = image_config.IMAGE_EDIT_ENGINE if edit else image_config.IMAGE_GENERATION_ENGINE
+    if engine == 'automatic1111':
         try:
             session = await get_session()
             async with session.get(
@@ -344,14 +345,16 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
                 return True
         except Exception:
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
-    elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
+    elif engine == 'comfyui':
+        base_url = image_config.IMAGES_EDIT_COMFYUI_BASE_URL if edit else image_config.COMFYUI_BASE_URL
+        api_key = image_config.IMAGES_EDIT_COMFYUI_API_KEY if edit else image_config.COMFYUI_API_KEY
         headers = None
-        if image_config.COMFYUI_API_KEY:
-            headers = {'Authorization': f'Bearer {image_config.COMFYUI_API_KEY}'}
+        if api_key:
+            headers = {'Authorization': f'Bearer {api_key}'}
         try:
             session = await get_session()
             async with session.get(
-                url=f'{image_config.COMFYUI_BASE_URL}/object_info',
+                url=f'{base_url}/object_info',
                 headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:

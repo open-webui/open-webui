@@ -822,7 +822,7 @@
 									aria-label={$i18n.t('settings.admin.images.verifyConnection.label')}
 									on:click={async () => {
 										await updateConfigHandler();
-										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+										const res = await verifyConfigUrl(localStorage.token, true).catch((error) => {
 											toast.error(`${error}`);
 											return null;
 										});
