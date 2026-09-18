@@ -341,6 +341,25 @@ def is_in_blocked_groups(group_name: str, groups: list) -> bool:
     return False
 
 
+def _parse_blocked_groups(value) -> list[str]:
+    """Load blocked groups from persistent config or the legacy env format."""
+    if isinstance(value, list):
+        return [str(group) for group in value if group]
+    if not isinstance(value, str) or not value.strip():
+        return []
+
+    try:
+        parsed = JSONCodec.loads(value)
+    except (JSONCodec.JSONDecodeError, TypeError):
+        parsed = None
+
+    if isinstance(parsed, list):
+        return [str(group) for group in parsed if group]
+    if isinstance(parsed, str) and parsed.strip():
+        return [parsed.strip()]
+    return [group.strip() for group in value.split(',') if group.strip()]
+
+
 def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
     parsed = urllib.parse.urlparse(server_url)
     base_url = f'{parsed.scheme}://{parsed.netloc}'
@@ -1624,11 +1643,7 @@ class OAuthManager:
         log.debug('Running OAUTH Group management')
         oauth_claim = auth_config.OAUTH_GROUPS_CLAIM
 
-        try:
-            blocked_groups = JSONCodec.loads(auth_config.OAUTH_BLOCKED_GROUPS)
-        except Exception as e:
-            log.exception(f'Error loading OAUTH_BLOCKED_GROUPS: {e}')
-            blocked_groups = []
+        blocked_groups = _parse_blocked_groups(auth_config.OAUTH_BLOCKED_GROUPS)
 
         user_oauth_groups = []
         # Nested claim search for groups claim

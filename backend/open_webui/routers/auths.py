@@ -75,6 +75,7 @@ from open_webui.utils.auth import (
     verify_password,
 )
 from open_webui.utils.groups import apply_default_group_assignment
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
 from pydantic import BaseModel, StrictStr, field_validator
@@ -1421,6 +1422,7 @@ OAUTH_COMMA_LIST_FIELDS = {
     'OAUTH_ALLOWED_DOMAINS',
     'OAUTH_ADMIN_ROLES',
     'OAUTH_ALLOWED_ROLES',
+    'OAUTH_BLOCKED_GROUPS',
 }
 
 
@@ -1463,6 +1465,11 @@ OAUTH_CONFIG_KEYS = {
 
 
 def _format_oauth_form_value(field: str, value):
+    if field == 'OAUTH_BLOCKED_GROUPS' and isinstance(value, str):
+        try:
+            value = JSONCodec.loads(value)
+        except (JSONCodec.JSONDecodeError, TypeError):
+            pass
     if field in OAUTH_COMMA_LIST_FIELDS and isinstance(value, list):
         return ','.join(str(item) for item in value)
     return value
