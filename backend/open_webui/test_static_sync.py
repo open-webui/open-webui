@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-MODULE_PATH = Path(__file__).resolve().parents[1] / 'backend' / 'open_webui' / 'static_sync.py'
+MODULE_PATH = Path(__file__).resolve().parent / 'static_sync.py'
 
 
 def load_static_sync():

@@ -189,6 +189,7 @@ exclude = [
     "start_windows.bat",
     "webui.db",
     "chroma.sqlite3",
+    "open_webui/test_static_sync.py",
 ]
 force-include = { "CHANGELOG.md" = "open_webui/CHANGELOG.md", build = "open_webui/frontend" }
 
