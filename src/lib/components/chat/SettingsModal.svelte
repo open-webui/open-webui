@@ -422,7 +422,6 @@
 	const selectTab = (id: string) => {
 		if (!availableSettings.some((tab) => tab.id === id)) return;
 		selectedTab = id;
-		search = '';
 	};
 
 	const searchKeydown = (event: KeyboardEvent) => {

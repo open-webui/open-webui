@@ -384,18 +384,6 @@
 				</AdminSettingRow>
 
 				<AdminSettingRow
-					label={$i18n.t('settings.admin.connections.directIntegrations.label')}
-					description={$i18n.t('settings.admin.connections.directIntegrations.description')}
-					let:labelId
-				>
-					<Switch
-						bind:state={connectionsConfig.ENABLE_DIRECT_INTEGRATIONS}
-						on:change={() => updateConnectionsHandler()}
-						ariaLabelledbyId={labelId}
-					/>
-				</AdminSettingRow>
-
-				<AdminSettingRow
 					label={$i18n.t('settings.admin.connections.cacheBaseModelList.label')}
 					description={$i18n.t('settings.admin.connections.cacheBaseModelList.description')}
 					let:labelId

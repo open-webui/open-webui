@@ -2,14 +2,14 @@
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
-	import { getModels as _getModels } from '$lib/apis';
+	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { models, settings, user, terminalServers } from '$lib/stores';
+	import { config, models, settings, user, terminalServers } from '$lib/stores';
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -26,8 +26,11 @@
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 	import ExternalKnowledge from './ExternalKnowledge.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingRow from './AdminSettingRow.svelte';
 
 	import {
+		getConnectionsConfig,
+		setConnectionsConfig,
 		getToolServerConnections,
 		setToolServerConnections,
 		getTerminalServerConnections,
@@ -47,12 +50,24 @@
 	};
 
 	let servers: ToolServerConnection[] | null = null;
+	let connectionsConfig: any = null;
 	let showConnectionModal = false;
 
 	// Terminal server admin connections
 	let terminalConnections: TerminalConnection[] = [];
 	let showAddTerminalModal = false;
 	let editTerminalIdx: number | null = null;
+
+	const updateDirectIntegrations = async () => {
+		const res = await setConnectionsConfig(localStorage.token, connectionsConfig).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		if (res) {
+			toast.success($i18n.t('Connections settings updated'));
+			await config.set(await getBackendConfig());
+		}
+	};
 
 	const addConnectionHandler = async (server: ToolServerConnection) => {
 		servers = [...(servers ?? []), server];
@@ -122,6 +137,7 @@
 	};
 
 	onMount(async () => {
+		connectionsConfig = await getConnectionsConfig(localStorage.token);
 		const res = await getToolServerConnections(localStorage.token);
 		servers = res.TOOL_SERVER_CONNECTIONS as ToolServerConnection[];
 
@@ -169,7 +185,7 @@
 	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		{#if servers !== null}
+		{#if servers !== null && connectionsConfig !== null}
 			<AdminSettingSection
 				title={$i18n.t('settings.admin.integrations.sections.tools.title')}
 				first
@@ -322,6 +338,22 @@
 
 			<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.knowledge.title')}>
 				<ExternalKnowledge />
+			</AdminSettingSection>
+
+			<AdminSettingSection
+				title={$i18n.t('settings.admin.connections.sections.userConnections.title')}
+			>
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.connections.directIntegrations.label')}
+					description={$i18n.t('settings.admin.connections.directIntegrations.description')}
+					let:labelId
+				>
+					<Switch
+						bind:state={connectionsConfig.ENABLE_DIRECT_INTEGRATIONS}
+						on:change={updateDirectIntegrations}
+						ariaLabelledbyId={labelId}
+					/>
+				</AdminSettingRow>
 			</AdminSettingSection>
 		{:else}
 			<div class="flex h-full justify-center">
