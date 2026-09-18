@@ -14,15 +14,17 @@ const packages = [
 	'seaborn',
 	'pytz',
 	'black',
-	'openai',
-	'openpyxl'
+	'openai'
 ];
 
 // Pure-Python packages whose wheels must be downloaded from PyPI and saved into
 // static/pyodide/ so that the browser can install them offline via micropip.
 // Packages already provided by the Pyodide distribution (click, platformdirs,
 // typing_extensions, etc.) do NOT need to be listed here.
-const pypiPackages = ['black', 'pathspec', 'mypy_extensions', 'pytokens'];
+// Spell them canonically (dashed): that is the only form pyodide resolves lock entries by.
+const pypiPackages = ['black', 'pathspec', 'mypy-extensions', 'pytokens', 'openpyxl', 'et-xmlfile'];
+
+const pypiDepends = { openpyxl: ['et-xmlfile'] };
 
 import { loadPyodide } from 'pyodide';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
@@ -175,19 +177,18 @@ async function downloadPyPIWheels() {
 		}
 
 		// Inject into pyodide-lock.json so micropip resolves locally
-		const normalizedName = pkg.replace(/-/g, '_');
-		if (!lockData.packages[normalizedName]) {
-			lockData.packages[normalizedName] = {
-				name: normalizedName,
+		if (!lockData.packages[pkg]) {
+			lockData.packages[pkg] = {
+				name: pkg,
 				version: version,
 				file_name: wheel.filename,
 				install_dir: 'site',
 				sha256: wheel.digests?.sha256 || '',
 				package_type: 'package',
-				imports: [normalizedName],
-				depends: []
+				imports: [pkg.replace(/-/g, '_')],
+				depends: pypiDepends[pkg] || []
 			};
-			console.log(`  Added ${normalizedName}==${version} to pyodide-lock.json`);
+			console.log(`  Added ${pkg}==${version} to pyodide-lock.json`);
 		}
 	}
 
