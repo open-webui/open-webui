@@ -328,12 +328,22 @@ async def invalidate_token(request, token):
             ttl = exp - int(datetime.now(UTC).timestamp())  # Calculate time-to-live for the token
 
             if ttl > 0:
+                # Revoked tokens must not be able to disconnect newer sessions.
+                if not await is_valid_token(decoded, request.app.state.redis):
+                    return
+
                 # Store the revoked token in Redis with an expiration time
                 await request.app.state.redis.set(
                     f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked',
                     '1',
                     ex=ttl,
                 )
+
+                user_id = decoded.get('id')
+                if user_id:
+                    from open_webui.socket.main import disconnect_user_sessions
+
+                    await disconnect_user_sessions(user_id)
 
 
 async def revoke_user_tokens(request, user_id: str):
@@ -355,6 +365,10 @@ async def revoke_user_tokens(request, user_id: str):
         str(int(datetime.now(UTC).timestamp())),
         ex=int(expires_delta.total_seconds()) if expires_delta else None,
     )
+
+    from open_webui.socket.main import disconnect_user_sessions
+
+    await disconnect_user_sessions(user_id)
 
 
 def extract_token_from_auth_header(auth_header: str):
