@@ -2678,7 +2678,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data['messages'],
                 )
 
-        if 'memory' in features and features['memory'] and await Config.get('memories.system_context.enable'):
+        if (
+            'memory' in features
+            and features['memory']
+            and await Config.get('memories.enable')
+            and await Config.get('memories.system_context.enable')
+        ):
             # features is client-supplied; re-check the permission the native FC path enforces.
             if getattr(user, 'role', None) == 'admin' or await has_permission(
                 getattr(user, 'id', ''),
