@@ -297,8 +297,8 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
             raise HTTPException(400, 'Local TTS is unavailable in slim. Select an external text-to-speech engine.')
     await Config.upsert(
         {
-            **config_updates(form_data.tts.model_dump(), TTS_CONFIG_KEYS),
-            **config_updates(form_data.stt.model_dump(), STT_CONFIG_KEYS),
+            **config_updates(form_data.tts.model_dump(exclude_unset=True), TTS_CONFIG_KEYS),
+            **config_updates(form_data.stt.model_dump(exclude_unset=True), STT_CONFIG_KEYS),
         }
     )
 
