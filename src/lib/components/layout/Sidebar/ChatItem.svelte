@@ -774,20 +774,6 @@
 							<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
 						</button>
 					</ChatMenu>
-
-					{#if id === $chatId && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
-						<!-- Shortcut support using "delete-chat-button" id -->
-						<button
-							id="delete-chat-button"
-							aria-label={$i18n.t('Delete')}
-							class="hidden"
-							on:click={() => {
-								showDeleteConfirm = true;
-							}}
-						>
-							<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
-						</button>
-					{/if}
 				</div>
 			{/if}
 		</div>
