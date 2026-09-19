@@ -43,6 +43,7 @@
 	export let markUnreadHandler: Function = () => {};
 
 	export let chatId = '';
+	export let archived = false;
 
 	let dropdown: Dropdown;
 	let show = false;
@@ -457,7 +458,9 @@
 				}}
 			>
 				<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
-				<div class="flex items-center">{$i18n.t('Archive')}</div>
+				<div class="flex items-center">
+					{archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
+				</div>
 			</button>
 
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}

@@ -305,6 +305,7 @@ class ChatTitleIdResponse(BaseModel):
     last_read_at: int | None = None
     snippet: str | None = None
     active: bool = False
+    archived: bool = False
 
 
 class SharedChatResponse(BaseModel):
