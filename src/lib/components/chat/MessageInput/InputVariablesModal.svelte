@@ -125,6 +125,7 @@
 														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														bind:value={variableValues[variable]}
 														id="input-variable-{idx}"
+														required={variables[variable]?.required ?? false}
 													>
 														<option value="" disabled>
 															{variables[variable]?.placeholder ?? $i18n.t('Select an option')}
