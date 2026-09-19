@@ -101,7 +101,7 @@
 
 	const archiveChatHandler = async (id) => {
 		try {
-			await archiveChatById(localStorage.token, id);
+			const res = await archiveChatById(localStorage.token, id);
 
 			chatList = chatList?.filter((c) => c.id !== id) ?? null;
 
@@ -111,7 +111,7 @@
 			}
 
 			await refreshSidebar();
-			toast.success($i18n.t('Chat archived.'));
+			toast.success(res?.archived ? $i18n.t('Chat archived.') : $i18n.t('Chat unarchived.'));
 		} catch (error) {
 			toast.error($i18n.t('Failed to archive chat.'));
 		}
@@ -816,6 +816,7 @@
 										<div class="flex items-center">
 											<ChatMenu
 												chatId={chat.id}
+												archived={chat.archived ?? false}
 												shareHandler={() => {
 													menuChatId = chat.id;
 													showShareChatModal = true;

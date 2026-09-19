@@ -888,6 +888,7 @@ async def search_user_chats(
                 created_at=chat.created_at,
                 last_read_at=chat.last_read_at,
                 snippet=chat_search_snippet(chat.chat, search_text),
+                archived=chat.archived,
             )
         )
 
