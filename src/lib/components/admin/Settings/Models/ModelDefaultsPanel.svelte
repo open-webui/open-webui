@@ -21,7 +21,6 @@
 	export let dirty = false;
 
 	let config = null;
-	let modelIds = [];
 	let loading = false;
 	let expanded = false;
 	let showCapabilities = false;
@@ -69,8 +68,6 @@
 		loading = true;
 		config = await getModelsConfig(localStorage.token);
 
-		modelIds = config?.MODEL_ORDER_LIST || [];
-
 		const savedMeta = config?.DEFAULT_MODEL_METADATA;
 		if (savedMeta && Object.keys(savedMeta).length > 0) {
 			defaultCapabilities = savedMeta.capabilities ?? { ...DEFAULT_CAPABILITIES };
@@ -102,10 +99,12 @@
 			...(Object.keys(builtinTools).length > 0 ? { builtinTools } : {})
 		};
 
+		config = await getModelsConfig(localStorage.token);
+
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: config?.DEFAULT_MODELS ?? null,
 			DEFAULT_PINNED_MODELS: config?.DEFAULT_PINNED_MODELS ?? null,
-			MODEL_ORDER_LIST: modelIds,
+			MODEL_ORDER_LIST: config?.MODEL_ORDER_LIST ?? [],
 			DEFAULT_MODEL_METADATA: metadata,
 			DEFAULT_MODEL_PARAMS: Object.fromEntries(configuredParams)
 		}).catch((error) => {
