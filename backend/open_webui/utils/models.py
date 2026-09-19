@@ -187,6 +187,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                     schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
                     if schema:
                         model['info'].setdefault('meta', {})['chat_variables_schema'] = schema
+                    elif isinstance(model['info'].get('meta'), dict):
+                        model['info']['meta'].pop('chat_variables_schema', None)
 
                     action_ids = []
                     filter_ids = []
@@ -239,6 +241,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
             if schema:
                 info.setdefault('meta', {})['chat_variables_schema'] = schema
+            elif isinstance(info.get('meta'), dict):
+                info['meta'].pop('chat_variables_schema', None)
             if 'params' in info:
                 # Remove params to avoid exposing sensitive info
                 del info['params']
