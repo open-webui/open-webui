@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { user } from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshSidebar } from '$lib/stores/chatList';
 
 	import { archiveAllChats, deleteAllChats, getAllChats, importChats } from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
@@ -87,7 +87,7 @@
 			toast.success(`Successfully imported ${res.length} chats.`);
 		}
 
-		await refreshChatList(localStorage.token, { refreshPinned: true });
+		await refreshSidebar(localStorage.token);
 	};
 
 	const exportChats = async () => {
@@ -99,20 +99,22 @@
 
 	const archiveAllChatsHandler = async () => {
 		await goto('/');
-		await archiveAllChats(localStorage.token).catch((error) => {
+		const success = await archiveAllChats(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 		});
+		if (!success) return;
 
-		await refreshChatList(localStorage.token, { clearPinned: true });
+		await refreshSidebar(localStorage.token);
 	};
 
 	const deleteAllChatsHandler = async () => {
 		await goto('/');
-		await deleteAllChats(localStorage.token).catch((error) => {
+		const success = await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 		});
+		if (!success) return;
 
-		await refreshChatList(localStorage.token);
+		await refreshSidebar(localStorage.token);
 	};
 </script>
 
