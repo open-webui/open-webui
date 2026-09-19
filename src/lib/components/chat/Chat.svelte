@@ -448,9 +448,11 @@
 				tool_approval_mode
 			}
 		});
-		await updateUserSettings(localStorage.token, { ui: $settings }).catch((err) => {
-			console.error('[tool permissions settings]', err);
-		});
+		await updateUserSettings(localStorage.token, { ui: { params: $settings.params } }).catch(
+			(err) => {
+				console.error('[tool permissions settings]', err);
+			}
+		);
 
 		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, { params }).catch((err) => {

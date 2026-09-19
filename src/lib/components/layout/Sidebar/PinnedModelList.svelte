@@ -45,7 +45,9 @@
 							...$pinnedModels.filter((id) => !$visiblePinnedModels.includes(id))
 						]
 					});
-					await updateUserSettings(localStorage.token, { ui: $settings });
+					await updateUserSettings(localStorage.token, {
+						ui: { pinnedModels: $settings.pinnedModels }
+					});
 				}
 			});
 		}
@@ -74,7 +76,7 @@
 					...$settings,
 					pinnedModels: $pinnedModels.filter((id) => id !== modelId)
 				});
-				updateUserSettings(localStorage.token, { ui: $settings });
+				updateUserSettings(localStorage.token, { ui: { pinnedModels: $settings.pinnedModels } });
 			}}
 		/>
 	{/each}
