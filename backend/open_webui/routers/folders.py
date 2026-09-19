@@ -401,7 +401,7 @@ async def update_folder_parent_id_by_id(
             form_data.parent_id, user.id, folder.name, db=db
         )
 
-        if existing_folder:
+        if existing_folder and existing_folder.id != id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
