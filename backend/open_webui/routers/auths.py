@@ -9,6 +9,7 @@ import urllib
 import uuid
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
+import jwt
 from aiohttp import BasicAuth, ClientSession
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
@@ -1617,6 +1618,15 @@ async def get_token_client_id(client, token: str) -> str | None:
         return None
 
 
+def _get_roles_claim_value(claims: dict, roles_claim: str) -> list | str | int | None:
+    """Return what a flat or nested roles claim holds, or None when role mapping cannot read it."""
+    claim_data = claims
+    for nested_claim in roles_claim.split('.'):
+        claim_data = claim_data.get(nested_claim, {}) if isinstance(claim_data, dict) else {}
+    claim_data = claim_data or claims.get(roles_claim, {})
+    return claim_data if claim_data and isinstance(claim_data, (list, str, int)) else None
+
+
 @router.post('/oauth/{provider}/token/exchange', response_model=SessionUserResponse)
 async def token_exchange(
     request: Request,
@@ -1747,10 +1757,36 @@ async def token_exchange(
             detail='User not found. Please sign in via the web interface first.',
         )
 
+    # The exchange has no ID token to merge, so the roles the policy needs come from the presented token
+    role_user_data = user_data
+    if await Config.get('oauth.enable_role_mapping'):
+        roles_claim = await Config.get('oauth.roles_claim')
+        if roles_claim and _get_roles_claim_value(user_data, roles_claim) is None:
+            try:
+                token_claims = jwt.decode(form_data.token, options={'verify_signature': False})
+            except Exception as e:
+                log.debug('Token exchange: cannot decode token claims: %s', e)
+                token_claims = {}
+
+            token_roles_value = _get_roles_claim_value(token_claims, roles_claim)
+            if token_roles_value is not None:
+                role_user_data = {**user_data, roles_claim.split('.')[0]: {}}
+                role_user_data[roles_claim] = token_roles_value
+            else:
+                oauth_allowed_roles = await Config.get('oauth.allowed_roles')
+                if oauth_allowed_roles and '*' not in oauth_allowed_roles and await Users.get_num_users(db=db) != 1:
+                    log.warning(
+                        'Token exchange denied: no readable roles claim in userinfo or the token for %s', provider
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                    )
+
     user = await oauth_manager.update_user_role_from_oauth(
         request=request,
         user=user,
-        user_data=user_data,
+        user_data=role_user_data,
         provider=provider,
         db=db,
     )
