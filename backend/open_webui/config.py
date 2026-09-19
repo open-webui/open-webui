@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import filecmp
 import logging
 import os
 import shutil
@@ -95,54 +96,131 @@ async def import_legacy_config_json():
 # Static DIR
 ####################################
 
-STATIC_DIR = Path(os.getenv('STATIC_DIR', OPEN_WEBUI_DIR / 'static')).resolve()
-
+_static_dir = Path(os.getenv('STATIC_DIR') or OPEN_WEBUI_DIR / 'static')
 try:
-    if STATIC_DIR.exists():
-        for item in STATIC_DIR.iterdir():
-            if item.is_file() or item.is_symlink():
-                try:
-                    item.unlink()
-                except Exception as e:
-                    pass
-except Exception as e:
-    pass
+    # resolve() reports a symlink loop as RuntimeError rather than OSError, and this
+    # runs at import: an exception here would stop the app from starting at all. An
+    # unresolved path still serves, and the containment check below simply refuses to
+    # write through whatever made it unresolvable.
+    STATIC_DIR = _static_dir.resolve()
+except (OSError, RuntimeError):
+    STATIC_DIR = _static_dir
+FRONTEND_STATIC_DIR = FRONTEND_BUILD_DIR / 'static'
 
-for file_path in (FRONTEND_BUILD_DIR / 'static').glob('**/*'):
-    if file_path.is_file():
-        target_path = STATIC_DIR / file_path.relative_to((FRONTEND_BUILD_DIR / 'static'))
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            shutil.copyfile(file_path, target_path)
-        except Exception as e:
-            logging.error(f'An error occurred: {e}')
-
-# LICENSE covers copied Open WebUI logo/favicon assets.
+# The frontend build is the source of truth for the bundled static assets, so they are
+# refreshed here on every start. STATIC_DIR lives inside the package, which the process
+# does not own whenever the container runs under a UID the image was not built for
+# (OpenShift's random UID, rootless Podman's keep-id mapping), so only write what
+# actually differs: an unmodified image then needs no write at all. A refresh that
+# genuinely cannot be applied is reported once and never aborts the boot.
+#
+# LICENSE covers the Open WebUI logo/favicon assets copied below.
 # Do not alter, remove, obscure, or replace them except as LICENSE permits:
 # https://docs.openwebui.com/license.
-frontend_favicon = FRONTEND_BUILD_DIR / 'static' / 'favicon.png'
 
-if frontend_favicon.exists():
+_static_sync_errors = []
+
+# Staging files for the copies below. Named with a shared prefix so the cleanup pass can
+# tell one apart from a stale asset: with several uvicorn workers importing this module
+# at once, deleting a peer's in-flight staging file would fail its rename.
+_STATIC_TEMP_PREFIX = '.owui-static-tmp.'
+
+try:
+    _frontend_static_files = {
+        path.relative_to(FRONTEND_STATIC_DIR) for path in FRONTEND_STATIC_DIR.glob('**/*') if path.is_file()
+    }
+except OSError as e:
+    _frontend_static_files = set()
+    _static_sync_errors.append(f'{FRONTEND_STATIC_DIR}: {e}')
+
+if not _frontend_static_files and not _static_sync_errors:
+    # glob swallows a permission error internally, so an unreadable build directory
+    # yields nothing rather than raising. A build directory that is simply absent is
+    # normal, though: a checkout that has not run a frontend build yet, for instance.
     try:
-        shutil.copyfile(frontend_favicon, STATIC_DIR / 'favicon.png')
-    except Exception as e:
-        logging.error(f'An error occurred: {e}')
+        if FRONTEND_STATIC_DIR.is_dir():
+            _static_sync_errors.append(f'{FRONTEND_STATIC_DIR}: no readable files')
+    except OSError as e:
+        _static_sync_errors.append(f'{FRONTEND_STATIC_DIR}: {e}')
 
-frontend_splash = FRONTEND_BUILD_DIR / 'static' / 'splash.png'
-
-if frontend_splash.exists():
+if _frontend_static_files:
+    # Drop what an earlier frontend build left behind, but only against a build that
+    # actually has assets: a missing or misconfigured FRONTEND_BUILD_DIR must not empty
+    # the directory the packaged assets are served from. A file the frontend still ships
+    # stays put so the copy below can compare against it, while a symlink standing in for
+    # one always goes, for the reason the copy loop gives.
     try:
-        shutil.copyfile(frontend_splash, STATIC_DIR / 'splash.png')
-    except Exception as e:
-        logging.error(f'An error occurred: {e}')
+        static_dir_entries = list(STATIC_DIR.iterdir())
+    except FileNotFoundError:
+        # Nothing to clean; the copy loop creates the directory. Not worth reporting,
+        # since the sync that follows goes on to succeed.
+        static_dir_entries = []
+    except OSError as e:
+        static_dir_entries = []
+        _static_sync_errors.append(f'{STATIC_DIR}: {e}')
 
-frontend_loader = FRONTEND_BUILD_DIR / 'static' / 'loader.js'
+    for item in static_dir_entries:
+        # Every stat here stays inside the try: iterdir() needs only read permission on
+        # the directory while lstat needs search, so probing an entry can fail on its own
+        # and must not escape a module body that is running at import.
+        if item.name.startswith(_STATIC_TEMP_PREFIX):
+            continue
+        try:
+            if item.is_symlink() or (item.is_file() and item.relative_to(STATIC_DIR) not in _frontend_static_files):
+                item.unlink()
+        except OSError as e:
+            _static_sync_errors.append(f'{item}: {e}')
 
-if frontend_loader.exists():
+for relative_path in sorted(_frontend_static_files):
+    source_path = FRONTEND_STATIC_DIR / relative_path
+    target_path = STATIC_DIR / relative_path
+
     try:
-        shutil.copyfile(frontend_loader, STATIC_DIR / 'loader.js')
-    except Exception as e:
-        logging.error(f'An error occurred: {e}')
+        if target_path.is_file() and not target_path.is_symlink():
+            if filecmp.cmp(source_path, target_path, shallow=False):
+                continue
+    except OSError:
+        # An unreadable target is worth replacing rather than skipping.
+        pass
+
+    # copyfile follows symlinks in every component of the destination, so a link
+    # anywhere along the way puts the asset outside STATIC_DIR. Check the directory
+    # this resolves into, then write beside the target and rename into place: the
+    # swap replaces a symlink or a file this process cannot write in place, and a
+    # copy that fails leaves the asset already being served untouched.
+    temp_path = target_path.with_name(f'{_STATIC_TEMP_PREFIX}{target_path.name}.{os.getpid()}')
+    try:
+        parent_path = target_path.parent
+        # resolve() reports a symlink loop as RuntimeError rather than OSError, and an
+        # exception loose in a module body would stop the app from importing at all.
+        if not parent_path.resolve().is_relative_to(STATIC_DIR):
+            raise OSError(f'{parent_path} resolves outside {STATIC_DIR}')
+        parent_path.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_path, temp_path)
+        os.replace(temp_path, target_path)
+    except (OSError, RuntimeError) as e:
+        _static_sync_errors.append(f'{target_path}: {e}')
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+if _static_sync_errors:
+    # One line, so cap it: a STATIC_DIR that fails for every asset would otherwise
+    # report every one of them.
+    _static_sync_reported = list(dict.fromkeys(_static_sync_errors))
+    _static_sync_summary = '; '.join(_static_sync_reported[:5])
+    if len(_static_sync_reported) > 5:
+        _static_sync_summary += f'; and {len(_static_sync_reported) - 5} more'
+    log.warning(
+        'Could not refresh the bundled static assets in %s, serving the ones already there (%s). '
+        'This only matters for a customised frontend build; to apply one, check that %s is '
+        'readable and that the running UID/GID can write %s.',
+        STATIC_DIR,
+        _static_sync_summary,
+        FRONTEND_STATIC_DIR,
+        STATIC_DIR,
+    )
 
 
 # --- Storage Provider ---
