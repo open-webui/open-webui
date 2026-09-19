@@ -3062,6 +3062,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         'server': tool_server,
                     }
 
+        if terminal_id and terminal_capability:
+            from open_webui.utils.terminals import get_terminal_agents_md
+
+            agents_md = await get_terminal_agents_md(request, user, metadata, extra_params)
+            if agents_md:
+                form_data['messages'] = add_or_update_system_message(
+                    agents_md,
+                    form_data['messages'],
+                    append=True,
+                )
+
         if mcp_clients:
             metadata['mcp_clients'] = mcp_clients
 
