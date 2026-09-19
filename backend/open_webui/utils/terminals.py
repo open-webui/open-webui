@@ -156,7 +156,11 @@ async def get_terminal_request_info(request, user, metadata: dict, extra_params:
 
     selector = str(terminal_id).rstrip('/')
     direct_terminal = next(
-        (server for server in metadata.get('tool_servers') or [] if str(server.get('url') or '').rstrip('/') == selector),
+        (
+            server
+            for server in metadata.get('tool_servers') or []
+            if str(server.get('url') or '').rstrip('/') == selector
+        ),
         None,
     )
     if not direct_terminal:
@@ -171,7 +175,9 @@ async def get_terminal_request_info(request, user, metadata: dict, extra_params:
     return selector, headers, {}
 
 
-async def get_terminal_skill(request, user, metadata: dict, skill_name: str, extra_params: dict | None = None) -> dict | None:
+async def get_terminal_skill(
+    request, user, metadata: dict, skill_name: str, extra_params: dict | None = None
+) -> dict | None:
     import aiohttp
     from urllib.parse import quote
 
