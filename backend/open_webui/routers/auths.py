@@ -1752,6 +1752,7 @@ async def token_exchange(
         user=user,
         user_data=user_data,
         provider=provider,
+        access_token=form_data.token,
         db=db,
     )
     if await Config.get('oauth.enable_group_mapping'):
