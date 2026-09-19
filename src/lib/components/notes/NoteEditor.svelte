@@ -212,8 +212,7 @@
 			title: note?.title === '' ? $i18n.t('Untitled') : note.title,
 			data: {
 				files: files
-			},
-			access_grants: note?.access_grants ?? []
+			}
 		}).catch((e) => {
 			toast.error(`${e}`);
 		});
