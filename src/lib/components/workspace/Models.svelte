@@ -114,7 +114,7 @@
 				id: 'models-export',
 				label: $i18n.t('Export JSON'),
 				onClick: async () => {
-					await downloadModels(models);
+					await downloadModels();
 				},
 				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.models_export
 			}
@@ -283,11 +283,11 @@
 		}
 	};
 
-	const downloadModels = async (models) => {
+	const downloadModels = async (models = null) => {
 		try {
 			models = await exportModels(
 				localStorage.token,
-				models.map((model: { id: string }) => model.id)
+				models ? models.map((model: { id: string }) => model.id) : undefined
 			);
 		} catch (error: any) {
 			toast.error(`${error?.detail ?? error}`);
