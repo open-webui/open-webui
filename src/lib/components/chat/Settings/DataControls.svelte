@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { user } from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 
 	import { archiveAllChats, deleteAllChats, getAllChats, importChats } from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
@@ -87,7 +87,11 @@
 			toast.success(`Successfully imported ${res.length} chats.`);
 		}
 
-		await refreshChatList(localStorage.token, { refreshPinned: true });
+		await Promise.all([
+			refreshChatList(localStorage.token, { refreshPinned: true }),
+			refreshFolderChatLists(null),
+			refreshFolderChatLists()
+		]);
 	};
 
 	const exportChats = async () => {
@@ -103,7 +107,11 @@
 			toast.error(`${error}`);
 		});
 
-		await refreshChatList(localStorage.token, { clearPinned: true });
+		await Promise.all([
+			refreshChatList(localStorage.token, { clearPinned: true }),
+			refreshFolderChatLists(null),
+			refreshFolderChatLists()
+		]);
 	};
 
 	const deleteAllChatsHandler = async () => {
@@ -112,7 +120,11 @@
 			toast.error(`${error}`);
 		});
 
-		await refreshChatList(localStorage.token);
+		await Promise.all([
+			refreshChatList(localStorage.token, { clearPinned: true }),
+			refreshFolderChatLists(null),
+			refreshFolderChatLists()
+		]);
 	};
 </script>
 

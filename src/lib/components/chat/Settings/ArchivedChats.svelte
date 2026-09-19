@@ -20,7 +20,7 @@
 		unarchiveAllChats
 	} from '$lib/apis/chats';
 	import { chatId, showSettings, user } from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 	import { formatNumber } from '$lib/utils';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -124,7 +124,7 @@
 
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;
-		await refreshChatList(localStorage.token);
+		await refreshChatList(localStorage.token, { refreshPinned: true });
 	};
 
 	const deleteHandler = async () => {
@@ -153,7 +153,11 @@
 			await unarchiveAllChats(localStorage.token);
 			toast.success($i18n.t('All chats have been unarchived.'));
 			await loadChats();
-			await refreshChatList(localStorage.token);
+			await Promise.all([
+				refreshChatList(localStorage.token, { refreshPinned: true }),
+				refreshFolderChatLists(null),
+				refreshFolderChatLists()
+			]);
 		} catch (error) {
 			toast.error(`${error}`);
 		} finally {
