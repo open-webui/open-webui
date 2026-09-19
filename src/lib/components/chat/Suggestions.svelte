@@ -7,6 +7,37 @@
 
 	const i18n = getContext('i18n');
 
+	// Default suggestions shipped by the backend config; listed so `i18n:parse` keeps their keys.
+	const defaultSuggestionKeys = [
+		$i18n.t('Help me study'),
+		$i18n.t('vocabulary for a college entrance exam'),
+		$i18n.t(
+			"Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option."
+		),
+		$i18n.t('Give me ideas'),
+		$i18n.t("for what to do with my kids' art"),
+		$i18n.t(
+			"What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter."
+		),
+		$i18n.t('Tell me a fun fact'),
+		$i18n.t('about the Roman Empire'),
+		$i18n.t('Tell me a random fun fact about the Roman Empire'),
+		$i18n.t('Show me a code snippet'),
+		$i18n.t("of a website's sticky header"),
+		$i18n.t("Show me a code snippet of a website's sticky header in CSS and JavaScript."),
+		$i18n.t('Explain options trading'),
+		$i18n.t("if I'm familiar with buying and selling stocks"),
+		$i18n.t(
+			"Explain options trading in simple terms if I'm familiar with buying and selling stocks."
+		),
+		$i18n.t('Overcome procrastination'),
+		$i18n.t('give me tips'),
+		$i18n.t(
+			'Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?'
+		)
+	];
+	void defaultSuggestionKeys;
+
 	export let suggestionPrompts = [];
 	export let className = '';
 	export let inputValue = '';
@@ -95,25 +126,25 @@
 				       px-2.5 py-1.5 rounded-lg bg-transparent transition-colors
 				       hover:text-gray-950 dark:hover:text-white group"
 					style="animation-delay: {idx * 45}ms"
-					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
+					on:click={() => onSelect({ type: 'prompt', data: $i18n.t(prompt.content) })}
 				>
 					<div class="flex flex-col text-left leading-snug">
 						{#if prompt.title && prompt.title[0] !== ''}
 							<div
 								class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
 							>
-								{prompt.title[0]}
+								{$i18n.t(prompt.title[0])}
 							</div>
 							<div
 								class="text-xs text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100 font-normal line-clamp-1"
 							>
-								{prompt.title[1]}
+								{$i18n.t(prompt.title[1])}
 							</div>
 						{:else}
 							<div
 								class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
 							>
-								{prompt.content}
+								{$i18n.t(prompt.content)}
 							</div>
 							<div
 								class="text-xs text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100 font-normal line-clamp-1"
