@@ -210,8 +210,8 @@
 			profileImageUrl = user?.profile_image_url ?? '';
 			bio = user?.bio ?? '';
 
-			_gender = user?.gender ?? '';
-			gender = _gender;
+			gender = user?.gender ?? '';
+			_gender = ['', 'male', 'female'].includes(gender) ? gender : 'custom';
 
 			dateOfBirth = user?.date_of_birth ?? '';
 		}
