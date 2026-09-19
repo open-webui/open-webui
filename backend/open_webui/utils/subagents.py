@@ -44,6 +44,13 @@ _foreground_semaphore: asyncio.Semaphore | None = None
 _parent_locks: dict[str, asyncio.Lock] = {}
 
 
+def get_subagent_model_ids(
+    parent_model_id: str | None, configured_model_id: str | None
+) -> tuple[str | None, str | None]:
+    subagent_model_id = configured_model_id or parent_model_id
+    return parent_model_id, subagent_model_id
+
+
 def _build_request(source: Request, user_id: str, *, internal: bool) -> Request:
     scope = {
         'type': 'http',
@@ -123,7 +130,17 @@ async def process_pending_internal_messages(
             if kind == 'timer' and first_meta.get('timer_id'):
                 timer = await Chats.get_chat_by_id(first_meta['timer_id'])
                 run = {**run, **(((timer.meta or {}).get('run') if timer else None) or {})}
-            model_id = first.get('model') or run['model_id']
+            parent_model_id = first_meta.get('parent_model_id') or run.get('parent_model_id')
+            subagent_model_id = (
+                first.get('model')
+                or first_meta.get('subagent_model_id')
+                or run.get('subagent_model_id')
+                or run.get('model_id')
+            )
+            if kind == 'subagent':
+                model_id = parent_model_id or subagent_model_id
+            else:
+                model_id = subagent_model_id
             if kind == 'timer':
                 batch = [first]
             else:
@@ -132,7 +149,7 @@ async def process_pending_internal_messages(
                     for message in pending
                     for meta in [message.get('meta') or {}]
                     if message.get('parentId') == parent_id
-                    and (message.get('model') or model_id) == model_id
+                    and (message.get('model') or subagent_model_id) == subagent_model_id
                     and (
                         meta.get('internal') is True
                         and meta.get('type') == 'subagent'
@@ -294,6 +311,7 @@ async def delegate(
         'subagents.max_iterations',
         'subagents.max_output',
         'subagents.system_prompt',
+        'subagents.model_id',
     )
     max_concurrent = int(config.get('subagents.max_concurrent') or 20)
     max_async = int(config.get('subagents.max_async') or 20)
@@ -314,8 +332,13 @@ async def delegate(
         and await Config.get('code_interpreter.engine', 'pyodide') != 'jupyter'
     ):
         features.pop('code_interpreter')
+    parent_model_id, subagent_model_id = get_subagent_model_ids(
+        metadata.get('model_id') or (metadata.get('model') or {}).get('id'),
+        config.get('subagents.model_id'),
+    )
     run = {
-        'model_id': metadata.get('model_id') or (metadata.get('model') or {}).get('id'),
+        'parent_model_id': parent_model_id,
+        'subagent_model_id': subagent_model_id,
         'session_id': metadata.get('session_id'),
         'tool_ids': copy.deepcopy(metadata.get('tool_ids') or []),
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
@@ -328,7 +351,7 @@ async def delegate(
         'variables': copy.deepcopy(metadata.get('variables') or {}),
         'direct': bool(metadata.get('direct')),
     }
-    if not run.get('model_id'):
+    if not run.get('subagent_model_id'):
         return 'Error: model context is required.'
     if run.get('direct'):
         return 'Error: sub-agents are unavailable for direct connections.'
@@ -388,7 +411,7 @@ async def delegate(
             'role': 'user',
             'content': prompt,
             'timestamp': int(time.time()),
-            'models': [run['model_id']],
+            'models': [run['subagent_model_id']],
             **({'files': prompt_files} if prompt_files else {}),
         }
         chat = await Chats.insert_new_chat(
@@ -398,7 +421,7 @@ async def delegate(
                 chat={
                     'id': chat_id,
                     'title': f'Sub-agent: {task[:60]}',
-                    'models': [run['model_id']],
+                    'models': [run['subagent_model_id']],
                     'history': {
                         'currentId': assistant_message_id,
                         'messages': {
@@ -410,7 +433,7 @@ async def delegate(
                                 'role': 'assistant',
                                 'content': '',
                                 'done': False,
-                                'model': run['model_id'],
+                                'model': run['subagent_model_id'],
                                 'timestamp': int(time.time()),
                             },
                         },
@@ -454,7 +477,7 @@ async def delegate(
                 str(config.get('subagents.system_prompt') or '').strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT
             )
             form_data = {
-                'model': run['model_id'],
+                'model': run['subagent_model_id'],
                 'messages': [
                     {
                         'role': 'system',
@@ -586,6 +609,8 @@ async def delegate(
             'type': 'subagent',
             'delegation_id': delegation_id,
             'subagent_chat_id': chat_id,
+            'parent_model_id': run['parent_model_id'],
+            'subagent_model_id': run['subagent_model_id'],
         }
         pending_message = {
             'id': pending_message_id,
@@ -593,7 +618,7 @@ async def delegate(
             'childrenIds': [],
             'role': 'user',
             'content': '\n'.join(lines),
-            'model': run['model_id'],
+            'model': run['subagent_model_id'],
             'meta': pending_meta,
             'timestamp': int(time.time()),
         }
