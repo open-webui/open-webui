@@ -44,6 +44,7 @@
 				id: _skill.id || '',
 				description: _skill.description || '',
 				content: _skill.content || '',
+				meta: _skill.meta ?? {},
 				is_active: _skill.is_active ?? true,
 				access_grants: _skill.access_grants !== undefined ? _skill.access_grants : []
 			};
