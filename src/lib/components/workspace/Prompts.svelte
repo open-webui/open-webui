@@ -638,7 +638,7 @@
 							</div>
 
 							<div class="ml-2 flex shrink-0 flex-row items-center self-center">
-								{#if shiftKey}
+								{#if shiftKey && prompt.write_access}
 									<Tooltip content={$i18n.t('Delete')}>
 										<button
 											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
@@ -675,6 +675,7 @@
 
 									<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
 										<PromptMenu
+											writeAccess={prompt.write_access}
 											show={openPromptMenuId === prompt.id}
 											editHandler={() => {
 												goto(`/workspace/prompts/${prompt.id}`);
@@ -710,27 +711,29 @@
 											</button>
 										</PromptMenu>
 
-										<button
-											class="flex h-6 items-center"
-											type="button"
-											on:click={(e) => {
-												e.stopPropagation();
-												e.preventDefault();
-											}}
-										>
-											<Tooltip
-												content={prompt.is_active !== false
-													? $i18n.t('Enabled')
-													: $i18n.t('Disabled')}
+										{#if prompt.write_access}
+											<button
+												class="flex h-6 items-center"
+												type="button"
+												on:click={(e) => {
+													e.stopPropagation();
+													e.preventDefault();
+												}}
 											>
-												<Switch
-													bind:state={prompt.is_active}
-													on:change={async () => {
-														togglePromptById(localStorage.token, prompt.id);
-													}}
-												/>
-											</Tooltip>
-										</button>
+												<Tooltip
+													content={prompt.is_active !== false
+														? $i18n.t('Enabled')
+														: $i18n.t('Disabled')}
+												>
+													<Switch
+														bind:state={prompt.is_active}
+														on:change={async () => {
+															togglePromptById(localStorage.token, prompt.id);
+														}}
+													/>
+												</Tooltip>
+											</button>
+										{/if}
 									</div>
 								{/if}
 							</div>
