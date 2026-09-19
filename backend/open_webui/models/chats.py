@@ -2540,16 +2540,17 @@ class ChatTable:
 
     async def move_chats_by_user_id_and_folder_id(
         self,
-        user_id: str,
+        user_id: str | None,
         folder_id: str,
         new_folder_id: str | None,
         db: AsyncSession | None = None,
     ) -> bool:
         try:
             async with get_async_db_context(db) as session:
-                await session.execute(
-                    update(Chat).filter_by(user_id=user_id, folder_id=folder_id).values(folder_id=new_folder_id)
-                )
+                criteria = {'folder_id': folder_id}
+                if user_id is not None:
+                    criteria['user_id'] = user_id
+                await session.execute(update(Chat).filter_by(**criteria).values(folder_id=new_folder_id))
                 await session.commit()
 
                 return True
