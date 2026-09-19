@@ -321,11 +321,11 @@
 							<th
 								scope="col"
 								class="px-2.5 py-2 font-normal cursor-pointer select-none w-3"
-								on:click={() => setSortKey('user')}
+								on:click={() => setSortKey('username')}
 							>
 								<div class="flex gap-1.5 items-center justify-end">
 									{$i18n.t('User')}
-									{#if orderBy === 'user'}
+									{#if orderBy === 'username'}
 										<span class="font-normal">
 											{#if direction === 'asc'}
 												<ChevronUp className="size-2" />
