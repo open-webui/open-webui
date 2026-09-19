@@ -242,6 +242,7 @@
 			goto(`/c/${res.id}`);
 
 			await refreshChatList(localStorage.token, { refreshPinned: true });
+			dispatch('change');
 		}
 	};
 
