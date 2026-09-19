@@ -101,7 +101,7 @@
 	};
 </script>
 
-<svelte:window on:keydown={handleRecordingKeydown} />
+<svelte:window on:keydown|capture={handleRecordingKeydown} />
 
 <div id="tab-shortcuts" class="flex h-full flex-col text-sm">
 	<div class="mb-4 flex items-center justify-between">
