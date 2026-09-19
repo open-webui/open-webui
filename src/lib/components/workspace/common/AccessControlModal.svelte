@@ -22,6 +22,7 @@
 	export let sharePublic = true;
 	export let shareOpen = false;
 	export let shareUsers = true;
+	export let allowGroups = true;
 
 	export let onChange = () => {};
 </script>
@@ -52,6 +53,7 @@
 				{sharePublic}
 				{shareOpen}
 				{shareUsers}
+				{allowGroups}
 			/>
 		</div>
 	</div>

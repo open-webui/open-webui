@@ -1224,6 +1224,8 @@
 			sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 			shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) ||
 				$user?.role === 'admin'}
+			allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
+				$user?.role === 'admin'}
 			onChange={async () => {
 				try {
 					await updateKnowledgeAccessGrants(localStorage.token, id, knowledge.access_grants ?? []);
