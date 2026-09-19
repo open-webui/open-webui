@@ -1541,24 +1541,39 @@ async def update_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Validate the file actually belongs to this knowledge base
-    if not await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    is_linked = await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db)
 
-    # Remove content from the vector database
-    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': form_data.file_id})
-
-    # Add content to the vector database
     try:
-        await process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-            db=db,
-        )
+        if is_linked:
+            await ASYNC_VECTOR_DB_CLIENT.delete(
+                collection_name=knowledge.id, filter={'file_id': form_data.file_id}
+            )
+            await process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+                user=user,
+                db=db,
+            )
+        else:
+            await process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id),
+                user=user,
+                db=db,
+            )
+            await process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+                user=user,
+                db=db,
+            )
+            await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id,
+                file_id=form_data.file_id,
+                user_id=user.id,
+                directory_id=form_data.directory_id,
+                db=db,
+            )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1631,14 +1646,8 @@ async def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Validate the file actually belongs to this knowledge base
-    if not await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
+    if await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+        await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
 
     # Remove content from the vector database
     try:
