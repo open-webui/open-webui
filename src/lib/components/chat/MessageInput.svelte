@@ -579,9 +579,9 @@
 		}
 
 		if ($temporaryChatEnabled) {
-			window.history.replaceState(null, '', '?temporary-chat=true');
+			window.history.replaceState(window.history.state, '', '?temporary-chat=true');
 		} else {
-			window.history.replaceState(null, '', location.pathname);
+			window.history.replaceState(window.history.state, '', location.pathname);
 		}
 	};
 
