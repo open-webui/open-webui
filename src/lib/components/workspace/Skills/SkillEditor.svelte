@@ -68,7 +68,7 @@
 				name,
 				description,
 				content,
-				is_active: true,
+				is_active: skill?.is_active ?? true,
 				meta,
 				access_grants: accessGrants
 			});
