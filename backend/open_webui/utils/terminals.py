@@ -230,10 +230,18 @@ async def get_terminal_agents_md(request, user, metadata: dict, extra_params: di
         if len(content.encode('utf-8')) > MAX_AGENTS_MD_BYTES:
             log.warning('Skipping terminal AGENTS.md: exceeds %s bytes', MAX_AGENTS_MD_BYTES)
             return None
-        return f'# AGENTS.md instructions for {home}\n\n<INSTRUCTIONS>\n{content}\n</INSTRUCTIONS>'
+        return f'# AGENTS.md\n\n{content}'
     except Exception as e:
         log.debug('Failed to load terminal AGENTS.md (%s)', type(e).__name__)
         return None
+
+
+def add_terminal_agents_md(messages: list[dict], agents_md: str) -> list[dict]:
+    """Place file instructions before user requests without changing their content."""
+    for index, message in enumerate(messages):
+        if message.get('role') == 'user':
+            return [*messages[:index], {'role': 'user', 'content': agents_md}, *messages[index:]]
+    return messages
 
 
 async def get_terminal_skill(
