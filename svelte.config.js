@@ -23,6 +23,9 @@ const config = {
 				try {
 					return child_process.execSync('git rev-parse HEAD').toString().trim();
 				} catch {
+					if (process.env.APP_BUILD_HASH && process.env.APP_BUILD_HASH !== 'dev-build') {
+						return process.env.APP_BUILD_HASH;
+					}
 					// if git is not available, fallback to package.json version
 					// or current timestamp
 					try {

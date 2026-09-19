@@ -17,7 +17,6 @@
 	import { chats, folders, settings, theme, user } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
-	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import ArchiveBoxIcon from '$lib/components/icons/ArchiveBox.svelte';
 	import CopyIcon from './icons/Copy.svelte';
 	import DownloadIcon from './icons/Download.svelte';
@@ -44,6 +43,7 @@
 	export let markUnreadHandler: Function = () => {};
 
 	export let chatId = '';
+	export let archived = false;
 
 	let dropdown: Dropdown;
 	let show = false;
@@ -120,7 +120,7 @@
 					document.body.appendChild(clonedElement);
 
 					// Override content-visibility so html2canvas can capture all messages
-					clonedElement.querySelectorAll('.message-listitem').forEach((el) => {
+					clonedElement.querySelectorAll('.message-virtualized').forEach((el) => {
 						el.style.contentVisibility = 'visible';
 					});
 
@@ -458,7 +458,9 @@
 				}}
 			>
 				<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
-				<div class="flex items-center">{$i18n.t('Archive')}</div>
+				<div class="flex items-center">
+					{archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
+				</div>
 			</button>
 
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}

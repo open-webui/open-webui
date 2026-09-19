@@ -15,9 +15,8 @@ transparently dispatches each call to a worker thread via
 `asyncio.to_thread`. Async callers can `await ASYNC_VECTOR_DB_CLIENT.x(...)`
 in place of `VECTOR_DB_CLIENT.x(...)` and the loop stays responsive.
 
-The original `VECTOR_DB_CLIENT` is unchanged, so callers already running
-inside `run_in_threadpool` (e.g. `save_docs_to_vector_db`) are not
-affected.
+Client initialization and calls run in the worker thread. Synchronous callers
+already inside `run_in_threadpool` use `get_vector_db_client()` directly.
 
 Thread-safety expectations
 --------------------------
@@ -55,7 +54,7 @@ from __future__ import annotations
 import asyncio
 from typing import Dict, List, Optional, Union
 
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import get_vector_db_client
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
@@ -73,30 +72,30 @@ class AsyncVectorDBClient:
     typically swallowed by surrounding ``try/except``).
     """
 
-    def __init__(self, sync_client: VectorDBBase) -> None:
+    def __init__(self, sync_client: Optional[VectorDBBase] = None) -> None:
         self._sync = sync_client
 
     @property
     def sync(self) -> VectorDBBase:
         """Escape hatch for code that must call the sync client directly
         (e.g. already inside a worker thread)."""
-        return self._sync
+        return self._sync if self._sync is not None else get_vector_db_client()
 
     @property
     def supports_hybrid_search(self) -> bool:
-        return type(self._sync).hybrid_search is not VectorDBBase.hybrid_search
+        return type(self.sync).hybrid_search is not VectorDBBase.hybrid_search
 
     async def has_collection(self, collection_name: str) -> bool:
-        return await asyncio.to_thread(self._sync.has_collection, collection_name)
+        return await asyncio.to_thread(lambda: self.sync.has_collection(collection_name))
 
     async def delete_collection(self, collection_name: str) -> None:
-        return await asyncio.to_thread(self._sync.delete_collection, collection_name)
+        return await asyncio.to_thread(lambda: self.sync.delete_collection(collection_name))
 
     async def insert(self, collection_name: str, items: List[VectorItem]) -> None:
-        return await asyncio.to_thread(self._sync.insert, collection_name, items)
+        return await asyncio.to_thread(lambda: self.sync.insert(collection_name, items))
 
     async def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
-        return await asyncio.to_thread(self._sync.upsert, collection_name, items)
+        return await asyncio.to_thread(lambda: self.sync.upsert(collection_name, items))
 
     async def search(
         self,
@@ -105,7 +104,7 @@ class AsyncVectorDBClient:
         filter: Optional[Dict] = None,
         limit: int = 10,
     ) -> Optional[SearchResult]:
-        return await asyncio.to_thread(self._sync.search, collection_name, vectors, filter, limit)
+        return await asyncio.to_thread(lambda: self.sync.search(collection_name, vectors, filter, limit))
 
     async def hybrid_search(
         self,
@@ -117,13 +116,7 @@ class AsyncVectorDBClient:
         hybrid_bm25_weight: float = 0.5,
     ) -> Optional[SearchResult]:
         return await asyncio.to_thread(
-            self._sync.hybrid_search,
-            collection_name,
-            query,
-            vectors,
-            filter,
-            limit,
-            hybrid_bm25_weight,
+            lambda: self.sync.hybrid_search(collection_name, query, vectors, filter, limit, hybrid_bm25_weight)
         )
 
     async def query(
@@ -132,10 +125,10 @@ class AsyncVectorDBClient:
         filter: Dict,
         limit: Optional[int] = None,
     ) -> Optional[GetResult]:
-        return await asyncio.to_thread(self._sync.query, collection_name, filter, limit)
+        return await asyncio.to_thread(lambda: self.sync.query(collection_name, filter, limit))
 
     async def get(self, collection_name: str) -> Optional[GetResult]:
-        return await asyncio.to_thread(self._sync.get, collection_name)
+        return await asyncio.to_thread(lambda: self.sync.get(collection_name))
 
     async def delete(
         self,
@@ -143,10 +136,10 @@ class AsyncVectorDBClient:
         ids: Optional[List[str]] = None,
         filter: Optional[Dict] = None,
     ) -> None:
-        return await asyncio.to_thread(self._sync.delete, collection_name, ids, filter)
+        return await asyncio.to_thread(lambda: self.sync.delete(collection_name, ids, filter))
 
     async def reset(self) -> None:
-        return await asyncio.to_thread(self._sync.reset)
+        return await asyncio.to_thread(lambda: self.sync.reset())
 
 
-ASYNC_VECTOR_DB_CLIENT = AsyncVectorDBClient(VECTOR_DB_CLIENT)
+ASYNC_VECTOR_DB_CLIENT = AsyncVectorDBClient()

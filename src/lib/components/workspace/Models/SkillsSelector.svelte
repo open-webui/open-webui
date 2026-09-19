@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import TypeaheadSelector from './TypeaheadSelector.svelte';
@@ -58,7 +59,7 @@
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								ariaLabel={skill.name}
+								ariaLabel={resolveLocalizedResource(skill, $i18n.language)}
 								state="checked"
 								on:change={(e) => {
 									if (e.detail === 'unchecked') {
@@ -68,9 +69,11 @@
 							/>
 						</div>
 
-						<Tooltip content={skill.description ?? skill.id}>
+						<Tooltip
+							content={resolveLocalizedResource(skill, $i18n.language, 'description') || skill.id}
+						>
 							<div class=" py-0.5 text-xs capitalize">
-								{skill.name}
+								{resolveLocalizedResource(skill, $i18n.language)}
 							</div>
 						</Tooltip>
 					</div>

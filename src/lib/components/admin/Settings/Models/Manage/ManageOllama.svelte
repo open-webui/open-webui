@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config, settings } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
@@ -623,7 +623,7 @@
 						</div>
 
 						<div>
-							<Tooltip content="Update All Models" placement="top">
+							<Tooltip content={$i18n.t('Update All Models')} placement="top">
 								<button
 									class="flex gap-2 items-center bg-transparent rounded-lg transition"
 									aria-label={$i18n.t('Update All Models')}
@@ -726,7 +726,10 @@
 
 					{#if updateModelId}
 						<div class="text-xs flex justify-between items-center">
-							<div>Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}</div>
+							<div>
+								{$i18n.t('Updating "{{modelId}}"', { modelId: updateModelId })}
+								{updateProgress ? `(${updateProgress}%)` : ''}
+							</div>
 
 							<Tooltip content={$i18n.t('Cancel')}>
 								<button

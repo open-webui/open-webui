@@ -329,38 +329,34 @@ def get_automatic1111_api_auth(image_config):
         return f'Basic {auth1111_base64_encoded_string}'
 
 
-@router.get('/config/url/verify')
-async def verify_url(request: Request, user=Depends(get_admin_user)):
-    image_config = await get_image_config()
-    if image_config.IMAGE_GENERATION_ENGINE == 'automatic1111':
-        try:
-            session = await get_session()
-            async with session.get(
-                url=f'{image_config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options',
-                headers={'authorization': get_automatic1111_api_auth(image_config)},
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                return True
-        except Exception:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
-    elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
-        headers = None
-        if image_config.COMFYUI_API_KEY:
-            headers = {'Authorization': f'Bearer {image_config.COMFYUI_API_KEY}'}
-        try:
-            session = await get_session()
-            async with session.get(
-                url=f'{image_config.COMFYUI_BASE_URL}/object_info',
-                headers=headers,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                return True
-        except Exception:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
+class ConnectionVerificationForm(BaseModel):
+    engine: str
+    url: str
+    key: str | None = None
+
+
+@router.post('/verify')
+async def verify_connection(form_data: ConnectionVerificationForm, user=Depends(get_admin_user)):
+    url = form_data.url.rstrip('/')
+    headers = {}
+    if form_data.engine == 'automatic1111':
+        url = f'{url}/sdapi/v1/options'
+        if form_data.key is not None:
+            headers['Authorization'] = f'Basic {base64.b64encode(form_data.key.encode("utf-8")).decode("utf-8")}'
+    elif form_data.engine == 'comfyui':
+        url = f'{url}/object_info'
+        if form_data.key:
+            headers['Authorization'] = f'Bearer {form_data.key}'
     else:
-        return True
+        raise HTTPException(status_code=400, detail='Unsupported image engine')
+
+    try:
+        session = await get_session()
+        async with session.get(url=url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
+            r.raise_for_status()
+            return True
+    except Exception:
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
 
 
 @router.get('/models')
@@ -436,7 +432,10 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                 )
             )
     except Exception as e:
-        log.exception(f'Failed to list image generation models: {e}')
+        log.error(
+            f'Failed to list image generation models: {str(e) or type(e).__name__}',
+            exc_info=not isinstance(e, (aiohttp.ClientConnectionError, TimeoutError)),
+        )
         raise HTTPException(
             status_code=400,
             detail=ERROR_MESSAGES.DEFAULT(e, 'Failed to retrieve image generation models'),

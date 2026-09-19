@@ -537,7 +537,7 @@
 									id={renderedMessageId}
 									output={messageOutput}
 									done={message?.meta?.done ?? false}
-									editCodeBlock={false}
+									allowEmbeds={false}
 								/>
 							{:else if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
 								<Skeleton />
@@ -547,7 +547,7 @@
 										id={renderedMessageId}
 										content={message.content}
 										paragraphTag="span"
-										allowEmbeds={!!message?.meta?.model_id}
+										allowEmbeds={false}
 									/>
 								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
 										class="text-gray-500 text-[0.625rem] pl-1 self-center"

@@ -5117,7 +5117,14 @@
       "imports": [
         "black"
       ],
-      "depends": []
+      "depends": [
+        "click",
+        "mypy-extensions",
+        "packaging",
+        "pathspec",
+        "platformdirs",
+        "pytokens"
+      ]
     },
     "pathspec": {
       "name": "pathspec",
@@ -5131,8 +5138,8 @@
       ],
       "depends": []
     },
-    "mypy_extensions": {
-      "name": "mypy_extensions",
+    "mypy-extensions": {
+      "name": "mypy-extensions",
       "version": "1.1.0",
       "file_name": "mypy_extensions-1.1.0-py3-none-any.whl",
       "install_dir": "site",
@@ -5154,6 +5161,48 @@
         "pytokens"
       ],
       "depends": []
+    },
+    "openpyxl": {
+      "name": "openpyxl",
+      "version": "3.1.5",
+      "file_name": "openpyxl-3.1.5-py2.py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2",
+      "package_type": "package",
+      "imports": [
+        "openpyxl"
+      ],
+      "depends": [
+        "et-xmlfile"
+      ]
+    },
+    "et-xmlfile": {
+      "name": "et-xmlfile",
+      "version": "2.0.0",
+      "file_name": "et_xmlfile-2.0.0-py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa",
+      "package_type": "package",
+      "imports": [
+        "et_xmlfile"
+      ],
+      "depends": []
+    },
+    "seaborn": {
+      "name": "seaborn",
+      "version": "0.13.2",
+      "file_name": "seaborn-0.13.2-py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "636f8336facf092165e27924f223d3c62ca560b1f2bb5dff7ab7fad265361987",
+      "package_type": "package",
+      "imports": [
+        "seaborn"
+      ],
+      "depends": [
+        "matplotlib",
+        "numpy",
+        "pandas"
+      ]
     }
   }
 }

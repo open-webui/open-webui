@@ -44,15 +44,18 @@
 	}}
 >
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-		{$i18n.t('Code Execution')}
+		{$i18n.t('settings.admin.codeExecution.title')}
 	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if config}
-			<AdminSettingSection title={$i18n.t('Code Execution')} first>
+			<AdminSettingSection
+				title={$i18n.t('settings.admin.codeExecution.sections.codeExecution.title')}
+				first
+			>
 				<AdminSettingRow
-					label={$i18n.t('Enable Code Execution')}
-					description={$i18n.t('Allow models to run generated code and return execution results.')}
+					label={$i18n.t('settings.admin.codeExecution.enableCodeExecution.label')}
+					description={$i18n.t('settings.admin.codeExecution.enableCodeExecution.description')}
 					let:labelId
 				>
 					<Switch bind:state={config.ENABLE_CODE_EXECUTION} ariaLabelledbyId={labelId} />
@@ -60,12 +63,12 @@
 
 				{#if config.ENABLE_CODE_EXECUTION}
 					<AdminSettingRow
-						label={$i18n.t('Code Execution Engine')}
+						label={$i18n.t('settings.admin.codeExecution.codeExecutionEngine.label')}
 						description={config.CODE_EXECUTION_ENGINE === 'jupyter'
 							? $i18n.t(
-									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
+									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks\u2014proceed with extreme caution.'
 								)
-							: $i18n.t('Choose the runtime used for generated code blocks.')}
+							: $i18n.t('settings.admin.codeExecution.codeExecutionEngine.description')}
 					>
 						<SettingsSelect
 							bind:value={config.CODE_EXECUTION_ENGINE}
@@ -81,8 +84,10 @@
 
 					{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
 						<AdminSettingField
-							label={$i18n.t('Jupyter URL')}
-							description={$i18n.t('Connect code execution to a Jupyter server endpoint.')}
+							label={$i18n.t('settings.admin.codeExecution.codeExecutionJupyterUrl.label')}
+							description={$i18n.t(
+								'settings.admin.codeExecution.codeExecutionJupyterUrl.description'
+							)}
 						>
 							<input
 								class={inputClass}
@@ -97,8 +102,10 @@
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							https://docs.openwebui.com/license. -->
 						<AdminSettingRow
-							label={$i18n.t('Jupyter Auth')}
-							description={$i18n.t('Select how Open WebUI authenticates with the Jupyter server.')}
+							label={$i18n.t('settings.admin.codeExecution.codeExecutionJupyterAuth.label')}
+							description={$i18n.t(
+								'settings.admin.codeExecution.codeExecutionJupyterAuth.description'
+							)}
 						>
 							<SettingsSelect
 								bind:value={config.CODE_EXECUTION_JUPYTER_AUTH}
@@ -113,9 +120,11 @@
 						{#if config.CODE_EXECUTION_JUPYTER_AUTH}
 							<AdminSettingField
 								label={config.CODE_EXECUTION_JUPYTER_AUTH === 'password'
-									? $i18n.t('Jupyter Password')
-									: $i18n.t('Jupyter Token')}
-								description={$i18n.t('Credentials used to authenticate with the Jupyter server.')}
+									? $i18n.t('settings.admin.codeExecution.codeExecutionJupyterAuthPassword.label')
+									: $i18n.t('settings.admin.codeExecution.codeExecutionJupyterAuthToken.label')}
+								description={$i18n.t(
+									'settings.admin.codeExecution.codeExecutionJupyterAuthPassword.description'
+								)}
 							>
 								{#if config.CODE_EXECUTION_JUPYTER_AUTH === 'password'}
 									<SensitiveInput
@@ -138,8 +147,10 @@
 						{/if}
 
 						<AdminSettingField
-							label={$i18n.t('Code Execution Timeout')}
-							description={$i18n.t('Maximum runtime in seconds before execution is stopped.')}
+							label={$i18n.t('settings.admin.codeExecution.codeExecutionJupyterTimeout.label')}
+							description={$i18n.t(
+								'settings.admin.codeExecution.codeExecutionJupyterTimeout.description'
+							)}
 						>
 							<input
 								class={inputClass}
@@ -153,10 +164,12 @@
 				{/if}
 			</AdminSettingSection>
 
-			<AdminSettingSection title={$i18n.t('Code Interpreter')}>
+			<AdminSettingSection
+				title={$i18n.t('settings.admin.codeExecution.sections.codeInterpreter.title')}
+			>
 				<AdminSettingRow
-					label={$i18n.t('Enable Code Interpreter')}
-					description={$i18n.t('Allow models to use the code interpreter tool during chats.')}
+					label={$i18n.t('settings.admin.codeExecution.enableCodeInterpreter.label')}
+					description={$i18n.t('settings.admin.codeExecution.enableCodeInterpreter.description')}
 					let:labelId
 				>
 					<Switch bind:state={config.ENABLE_CODE_INTERPRETER} ariaLabelledbyId={labelId} />
@@ -164,12 +177,12 @@
 
 				{#if config.ENABLE_CODE_INTERPRETER}
 					<AdminSettingRow
-						label={$i18n.t('Code Interpreter Engine')}
+						label={$i18n.t('settings.admin.codeExecution.codeInterpreterEngine.label')}
 						description={config.CODE_INTERPRETER_ENGINE === 'jupyter'
 							? $i18n.t(
-									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
+									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks\u2014proceed with extreme caution.'
 								)
-							: $i18n.t('Choose the runtime used by the code interpreter tool.')}
+							: $i18n.t('settings.admin.codeExecution.codeInterpreterEngine.description')}
 					>
 						<SettingsSelect
 							bind:value={config.CODE_INTERPRETER_ENGINE}
@@ -185,8 +198,10 @@
 
 					{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
 						<AdminSettingField
-							label={$i18n.t('Jupyter URL')}
-							description={$i18n.t('Connect code interpreter to a Jupyter server endpoint.')}
+							label={$i18n.t('settings.admin.codeExecution.codeInterpreterJupyterUrl.label')}
+							description={$i18n.t(
+								'settings.admin.codeExecution.codeInterpreterJupyterUrl.description'
+							)}
 						>
 							<input
 								class={inputClass}
@@ -201,8 +216,10 @@
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							https://docs.openwebui.com/license. -->
 						<AdminSettingRow
-							label={$i18n.t('Jupyter Auth')}
-							description={$i18n.t('Select how Open WebUI authenticates with the Jupyter server.')}
+							label={$i18n.t('settings.admin.codeExecution.codeInterpreterJupyterAuth.label')}
+							description={$i18n.t(
+								'settings.admin.codeExecution.codeInterpreterJupyterAuth.description'
+							)}
 						>
 							<SettingsSelect
 								bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH}
@@ -217,9 +234,11 @@
 						{#if config.CODE_INTERPRETER_JUPYTER_AUTH}
 							<AdminSettingField
 								label={config.CODE_INTERPRETER_JUPYTER_AUTH === 'password'
-									? $i18n.t('Jupyter Password')
-									: $i18n.t('Jupyter Token')}
-								description={$i18n.t('Credentials used to authenticate with the Jupyter server.')}
+									? $i18n.t('settings.admin.codeExecution.codeInterpreterJupyterAuthPassword.label')
+									: $i18n.t('settings.admin.codeExecution.codeInterpreterJupyterAuthToken.label')}
+								description={$i18n.t(
+									'settings.admin.codeExecution.codeInterpreterJupyterAuthPassword.description'
+								)}
 							>
 								{#if config.CODE_INTERPRETER_JUPYTER_AUTH === 'password'}
 									<SensitiveInput
@@ -242,8 +261,10 @@
 						{/if}
 
 						<AdminSettingField
-							label={$i18n.t('Code Execution Timeout')}
-							description={$i18n.t('Maximum runtime in seconds before execution is stopped.')}
+							label={$i18n.t('settings.admin.codeExecution.codeInterpreterJupyterTimeout.label')}
+							description={$i18n.t(
+								'settings.admin.codeExecution.codeInterpreterJupyterTimeout.description'
+							)}
 						>
 							<input
 								class={inputClass}
@@ -256,9 +277,9 @@
 					{/if}
 
 					<AdminSettingField
-						label={$i18n.t('Code Interpreter Prompt Template')}
+						label={$i18n.t('settings.admin.codeExecution.codeInterpreterPromptTemplate.label')}
 						description={$i18n.t(
-							'Leave empty to use the default prompt, or enter a custom prompt.'
+							'settings.admin.codeExecution.codeInterpreterPromptTemplate.description'
 						)}
 					>
 						<Textarea

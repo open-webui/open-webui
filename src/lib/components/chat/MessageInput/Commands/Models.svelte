@@ -7,6 +7,10 @@
 	import { models } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import {
+		resolveLocalizedModelDescription,
+		resolveLocalizedModelName
+	} from '$lib/utils/localizedContent';
 
 	const i18n = getContext('i18n');
 
@@ -22,9 +26,9 @@
 			.map((model) => {
 				const _item = {
 					...model,
-					modelName: model?.name,
+					modelName: resolveLocalizedModelName(model, $i18n.language),
 					tags: model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
-					desc: model?.info?.meta?.description
+					desc: resolveLocalizedModelDescription(model, $i18n.language)
 				};
 				return _item;
 			}),
@@ -85,7 +89,7 @@
 				<div class="flex min-w-0 items-center text-black dark:text-gray-100">
 					<img
 						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
-						alt={model?.name ?? model.id}
+						alt={resolveLocalizedModelName(model, $i18n.language) ?? model.id}
 						class="mr-2 size-4.5 rounded-full object-cover"
 						on:error={(e) => {
 							// LICENSE covers this Open WebUI fallback logo.
@@ -95,7 +99,7 @@
 						}}
 					/>
 					<div class="min-w-0 truncate">
-						{model.name}
+						{resolveLocalizedModelName(model, $i18n.language)}
 					</div>
 				</div>
 			</button>

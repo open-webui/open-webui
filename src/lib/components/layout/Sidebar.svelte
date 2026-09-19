@@ -37,7 +37,7 @@
 	} from '$lib/stores/chatList';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	$: canImportChats = $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true);
 
@@ -189,11 +189,11 @@
 
 	const getMenuItemMeta = (id) => {
 		const items = {
-			notes: { label: 'Notes', href: '/notes', iconType: 'note' },
-			workspace: { label: 'Workspace', href: '/workspace', iconType: 'workspace' },
-			automations: { label: 'Automations', href: '/automations', iconType: 'automations' },
-			calendar: { label: 'Calendar', href: '/calendar', iconType: 'calendar' },
-			playground: { label: 'Playground', href: '/playground', iconType: 'playground' }
+			notes: { label: $i18n.t('Notes'), href: '/notes', iconType: 'note' },
+			workspace: { label: $i18n.t('Workspace'), href: '/workspace', iconType: 'workspace' },
+			automations: { label: $i18n.t('Automations'), href: '/automations', iconType: 'automations' },
+			calendar: { label: $i18n.t('Calendar'), href: '/calendar', iconType: 'calendar' },
+			playground: { label: $i18n.t('Playground'), href: '/playground', iconType: 'playground' }
 		};
 		return items[id];
 	};

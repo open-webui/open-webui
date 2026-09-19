@@ -4,7 +4,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import MPS_INFERENCE_LOCK
 from open_webui.events import EVENTS, publish_event
+from open_webui.env import USE_SLIM
+from open_webui.retrieval.utils import cosine_similarity
 from open_webui.internal.db import get_async_session
 from open_webui.models.config import Config
 from open_webui.models.feedbacks import (
@@ -68,6 +71,8 @@ _embedding_model = None
 
 def _get_embedding_model():
     global _embedding_model
+    if USE_SLIM:
+        return None
     if _embedding_model is None:
         try:
             from sentence_transformers import SentenceTransformer
@@ -179,8 +184,9 @@ def _compute_similarities(feedbacks: list[LeaderboardFeedbackData], query: str) 
         return {}
 
     try:
-        tag_embeddings = embedding_model.encode(all_tags)
-        query_embedding = embedding_model.encode([query])[0]
+        with MPS_INFERENCE_LOCK:
+            tag_embeddings = embedding_model.encode(all_tags)
+            query_embedding = embedding_model.encode([query])[0]
     except Exception as e:
         log.error(f'Embedding error: {e}')
         return {}
@@ -215,6 +221,7 @@ class LeaderboardResponse(BaseModel):
 
 @router.get('/leaderboard', response_model=LeaderboardResponse)
 async def get_leaderboard(
+    request: Request,
     query: Optional[str] = None,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -224,7 +231,17 @@ async def get_leaderboard(
 
     similarities = None
     if query and query.strip():
-        similarities = await run_in_threadpool(_compute_similarities, feedbacks, query.strip())
+        if USE_SLIM:
+            tags = list({tag for feedback in feedbacks for tag in (feedback.data or {}).get('tags', [])})
+            embeddings = await request.app.state.EMBEDDING_FUNCTION([query.strip(), *tags], user=user)
+            scores = cosine_similarity(embeddings[0], embeddings[1:])
+            tag_scores = dict(zip(tags, scores.tolist()))
+            similarities = {
+                feedback.id: max((tag_scores.get(tag, 0) for tag in (feedback.data or {}).get('tags', [])), default=0)
+                for feedback in feedbacks
+            }
+        else:
+            similarities = await run_in_threadpool(_compute_similarities, feedbacks, query.strip())
 
     elo_stats = _calculate_elo(feedbacks, similarities)
     tags_by_model = _get_top_tags(feedbacks)

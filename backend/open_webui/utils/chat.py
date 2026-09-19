@@ -79,25 +79,34 @@ async def generate_direct_chat_completion(
             """
             await q.put(data)
 
+        def remove_message_listener():
+            sio.handlers['/'].pop(channel, None)
+
         # Register the listener
         sio.on(channel, message_listener)
 
         # Start processing chat completion in background
-        res = await event_caller(
-            {
-                'type': 'request:chat:completion',
-                'data': {
-                    'form_data': form_data,
-                    'model': models[form_data['model']],
-                    'channel': channel,
-                    'session_id': session_id,
-                },
-            }
-        )
+        try:
+            res = await event_caller(
+                {
+                    'type': 'request:chat:completion',
+                    'data': {
+                        'form_data': form_data,
+                        'model': models[form_data['model']],
+                        'channel': channel,
+                        'session_id': session_id,
+                    },
+                }
+            )
 
-        log.info('res: %s', res)
+            log.info('res: %s', res)
 
-        if res.get('status', False):
+            status = res.get('status', False)
+        except BaseException:
+            remove_message_listener()
+            raise
+
+        if status:
             # Define a generator to stream responses
             async def event_generator():
                 nonlocal q
@@ -117,17 +126,17 @@ async def generate_direct_chat_completion(
                 except Exception as e:
                     log.debug('Error in event generator: %s', e)
                     pass
+                finally:
+                    remove_message_listener()
 
             # Define a background task to run the event generator
             async def background():
-                try:
-                    del sio.handlers['/'][channel]
-                except Exception as e:
-                    pass
+                remove_message_listener()
 
             # Return the streaming response
             return StreamingResponse(event_generator(), media_type='text/event-stream', background=background)
         else:
+            remove_message_listener()
             raise Exception(str(res))
     else:
         res = await event_caller(
@@ -260,24 +269,25 @@ async def generate_chat_completion(
                     bypass_filter=True,
                     bypass_system_prompt=bypass_system_prompt,
                 )
+                # Upstream errors come back as a response object.
+                if not isinstance(response, StreamingResponse):
+                    return response
                 return StreamingResponse(
                     stream_wrapper(response.body_iterator),
                     media_type='text/event-stream',
                     background=response.background,
                 )
             else:
-                return {
-                    **(
-                        await generate_chat_completion(
-                            request,
-                            form_data,
-                            user,
-                            bypass_filter=True,
-                            bypass_system_prompt=bypass_system_prompt,
-                        )
-                    ),
-                    'selected_model_id': selected_model_id,
-                }
+                response = await generate_chat_completion(
+                    request,
+                    form_data,
+                    user,
+                    bypass_filter=True,
+                    bypass_system_prompt=bypass_system_prompt,
+                )
+                if not isinstance(response, dict):
+                    return response
+                return {**response, 'selected_model_id': selected_model_id}
 
         if model.get('pipe'):
             # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter

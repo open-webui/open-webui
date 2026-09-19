@@ -1069,6 +1069,26 @@ class KnowledgeTable:
         for child_id in child_ids:
             await self._delete_files_in_subtree(child_id, db=db)
 
+    async def get_files_by_id_and_directory_id(
+        self,
+        knowledge_id: str,
+        directory_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> list[FileModel]:
+        """Get all files in a directory and its subdirectories."""
+        async with get_async_db_context(db) as db:
+            directory_ids = [directory_id]
+            for parent_id in directory_ids:
+                result = await db.execute(select(KnowledgeDirectory.id).filter_by(parent_id=parent_id))
+                directory_ids.extend(result.scalars().all())
+            result = await db.execute(
+                select(File)
+                .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                .filter(KnowledgeFile.directory_id.in_(directory_ids))
+            )
+            return [FileModel.model_validate(file) for file in result.scalars().all()]
+
     async def move_file_to_directory(
         self,
         knowledge_id: str,

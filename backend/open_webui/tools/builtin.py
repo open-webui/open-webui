@@ -10,6 +10,7 @@ import asyncio
 import logging
 import time
 from typing import Literal, Optional
+from urllib.parse import unquote
 
 from fastapi import HTTPException, Request
 
@@ -525,6 +526,7 @@ async def ask_user(
     Use this when the next step depends on user intent, preference, or a tradeoff that cannot be inferred safely.
 
     :param questions: 1-3 question objects, each with id, header, question, and 2-3 options. Each option needs label and description.
+        List the option you recommend first; the UI labels the first option Recommended.
     :param allow_other: Whether users may enter a free-form answer instead of choosing one of the options
     :param timeout_ms: How long the browser should keep the prompt open before cancelling it
     :return: JSON with status and answers keyed by question id
@@ -1340,6 +1342,14 @@ async def replace_note_content(
 ) -> str:
     """
     Update an existing note by replacing the whole markdown content or applying range operations.
+
+    Prefer "replace_range" when only part of the note changes.
+    A "replace" operation must be the only operation in the request.
+    start and end are 0-indexed character offsets into the markdown content from view_note.
+    end is exclusive.
+    Offsets never shift as operations are applied.
+    Ranges must not overlap.
+    expected is optional. When set, the request is rejected if the range's current text does not match it.
 
     :param note_id: The ID of the note to update
     :param content: The new markdown content for a whole-note update
@@ -2489,7 +2499,7 @@ async def grep_chat_files(
         if not files_to_search:
             return JSONCodec.dumps({'error': 'No accessible files found'})
 
-        return _grep_file_models(files_to_search, pattern, case_insensitive, count_only)
+        return await asyncio.to_thread(_grep_file_models, files_to_search, pattern, case_insensitive, count_only)
     except Exception as e:
         log.exception(f'grep_chat_files error: {e}')
         return JSONCodec.dumps({'error': str(e)})
@@ -2727,7 +2737,7 @@ async def grep_knowledge_files(
         if not files_to_search:
             return JSONCodec.dumps({'error': 'No accessible files found'})
 
-        return _grep_file_models(files_to_search, pattern, case_insensitive, count_only)
+        return await asyncio.to_thread(_grep_file_models, files_to_search, pattern, case_insensitive, count_only)
 
     except Exception as e:
         log.exception(f'grep_knowledge_files error: {e}')
@@ -3468,6 +3478,7 @@ async def view_skill(
     id: str,
     __request__: Request = None,
     __user__: dict = None,
+    __metadata__: dict = None,
 ) -> str:
     """
     Load the full instructions of a skill by its id from the available skills manifest.
@@ -3483,6 +3494,16 @@ async def view_skill(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
+        terminal_skill_prefix = 'terminal:'
+        if isinstance(id, str) and id.startswith(terminal_skill_prefix):
+            from open_webui.utils.terminals import get_terminal_skill
+
+            skill_name = unquote(id.removeprefix(terminal_skill_prefix))
+            skill = await get_terminal_skill(__request__, __user__, __metadata__ or {}, skill_name)
+            if not skill:
+                return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
+            return JSONCodec.dumps(skill, ensure_ascii=False)
+
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.skills import Skills
 
