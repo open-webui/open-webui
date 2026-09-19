@@ -1762,6 +1762,7 @@
 					>
 						<button
 							id="generate-message-pair-button"
+							type="button"
 							aria-label={$i18n.t('Generate message pair')}
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
