@@ -1530,7 +1530,7 @@ class OAuthManager:
             role = user.role if user else auth_config.DEFAULT_USER_ROLE
 
             # Next block extracts the roles from the user data, accepting nested claims of any depth
-            if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
+            if oauth_claim and oauth_allowed_roles:
                 claim_data = user_data
                 nested_claims = oauth_claim.split('.')
                 for nested_claim in nested_claims:
