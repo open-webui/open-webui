@@ -5,6 +5,7 @@ Routes:
   *    /{server_id}/{path:path}  — proxy request to terminal server
 """
 
+import asyncio
 import logging
 import posixpath
 from urllib.parse import unquote
@@ -18,7 +19,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_verified_user, get_verified_user_by_token
 from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.terminals import (
@@ -252,6 +253,34 @@ async def proxy_terminal(
 # WebSocket proxy for interactive terminal sessions
 # ---------------------------------------------------------------------------
 
+TERMINAL_ACCESS_RECHECK_SECONDS = 10
+
+# Sessions on other workers are out of reach here, so those wait for their own recheck.
+TERMINAL_SESSION_RECHECKS: dict[str, set[asyncio.Event]] = {}
+
+
+def recheck_terminal_sessions(user_id: str) -> None:
+    """Wake this worker's open terminal sessions for a user so they re-check access now."""
+    for recheck_event in TERMINAL_SESSION_RECHECKS.get(user_id, set()):
+        recheck_event.set()
+
+
+async def _has_terminal_access(ws: WebSocket, token: str, server_id: str) -> bool:
+    """Re-check a session's user and terminal connection against current state."""
+    user = await get_verified_user_by_token(token, getattr(ws.app.state, 'redis', None))
+    if user is None:
+        return False
+
+    connections = await Config.get('terminal_server.connections', []) or []
+    connection = next((c for c in connections if c.get('id') == server_id), None)
+    if connection is None or not connection.get('enabled', True):
+        return False
+
+    if not terminal_context_available(connection, 'chat'):
+        return False
+
+    return await has_connection_access(user, connection)
+
 
 async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     """Authenticate a WebSocket via first-message auth and resolve the terminal server.
@@ -262,10 +291,6 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     Returns ``(user, connection, chat_id, token)`` on success, or ``None`` after
     closing *ws* with an appropriate error code.
     """
-    import asyncio
-
-    from open_webui.utils.auth import get_verified_user_by_token
-
     # First-message authentication
     try:
         raw = await asyncio.wait_for(ws.receive_text(), timeout=10.0)
@@ -360,13 +385,14 @@ async def ws_terminal(
     app = ws.scope.get('app')
     opened = False
     session = aiohttp.ClientSession()
+    recheck_event = asyncio.Event()
+    TERMINAL_SESSION_RECHECKS.setdefault(user.id, set()).add(recheck_event)
     try:
         async with session.ws_connect(
             upstream_url,
             headers=upstream_headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         ) as upstream:
-            import asyncio
             import json as _json
 
             # First-message auth to upstream terminal server
@@ -419,12 +445,28 @@ async def ws_terminal(
                 except Exception:
                     pass
 
-            # End the proxy as soon as either direction finishes (e.g. a
-            # graceful upstream CLOSE) and cancel the sibling, which would
+            async def _watch_access():
+                """End the session once the user loses access to this terminal."""
+                try:
+                    while True:
+                        try:
+                            await asyncio.wait_for(recheck_event.wait(), timeout=TERMINAL_ACCESS_RECHECK_SECONDS)
+                        except TimeoutError:
+                            pass
+                        recheck_event.clear()
+                        if not await _has_terminal_access(ws, token, server_id):
+                            await ws.close(code=4003, reason='Access revoked')
+                            return
+                except Exception as e:
+                    log.exception('Terminal access recheck error: %s', e)
+
+            # End the proxy as soon as any of these tasks finishes (e.g. a
+            # graceful upstream CLOSE) and cancel the rest, which would
             # otherwise hang on a blocked ws.receive() until the browser leaves.
             tasks = [
                 asyncio.create_task(_client_to_upstream()),
                 asyncio.create_task(_upstream_to_client()),
+                asyncio.create_task(_watch_access()),
             ]
             _done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             for task in pending:
@@ -436,6 +478,9 @@ async def ws_terminal(
     except Exception as e:
         log.exception('Terminal WebSocket proxy error: %s', e)
     finally:
+        TERMINAL_SESSION_RECHECKS[user.id].discard(recheck_event)
+        if not TERMINAL_SESSION_RECHECKS[user.id]:
+            del TERMINAL_SESSION_RECHECKS[user.id]
         await session.close()
         if opened:
             await publish_event(
