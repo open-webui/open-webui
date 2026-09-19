@@ -64,7 +64,7 @@
 						chat: chat.chat,
 						meta: chat.meta ?? {},
 						variables: chat?.variables ?? {},
-						pinned: false,
+						pinned: chat?.pinned ?? false,
 						archived: chat?.archived ?? false,
 						folder_id: chat?.folder_id ?? null,
 						created_at: chat?.created_at ?? null,
