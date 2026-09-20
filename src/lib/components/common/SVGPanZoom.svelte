@@ -4,12 +4,10 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import DOMPurify from 'dompurify';
-
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { copyToClipboard } from '$lib/utils';
+	import { copyToClipboard, sanitizeSvg } from '$lib/utils';
 
 	import PanzoomContainer from './PanzoomContainer.svelte';
 	import Tooltip from './Tooltip.svelte';
@@ -37,45 +35,7 @@
 		bind:this={panzoomRef}
 		className="flex h-full max-h-full justify-center items-center"
 	>
-		{@html DOMPurify.sanitize(svg, {
-			USE_PROFILES: { svg: true, svgFilters: true }, // allow <svg>, <defs>, <filter>, etc.
-			WHOLE_DOCUMENT: false,
-			ADD_TAGS: ['style', 'foreignObject'], // include foreignObject if using HTML labels
-			ADD_ATTR: [
-				'class',
-				'style',
-				'id',
-				'data-*',
-				'viewBox',
-				'preserveAspectRatio',
-				// markers / arrows
-				'markerWidth',
-				'markerHeight',
-				'markerUnits',
-				'refX',
-				'refY',
-				'orient',
-				// hrefs (for gradients, markers, etc.)
-				'href',
-				'xlink:href',
-				// text positioning
-				'dominant-baseline',
-				'text-anchor',
-				// pattern / clip / mask units
-				'clipPathUnits',
-				'filterUnits',
-				'patternUnits',
-				'patternContentUnits',
-				'maskUnits',
-				// a11y niceties
-				'role',
-				'aria-label',
-				'aria-labelledby',
-				'aria-hidden',
-				'tabindex'
-			],
-			SANITIZE_DOM: true
-		})}
+		{@html sanitizeSvg(svg)}
 	</PanzoomContainer>
 
 	{#if content}
