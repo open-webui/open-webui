@@ -32,7 +32,7 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
 SKILL_MENTION_STRIP_RE = re.compile(rf'<(?:\$({SKILL_ID_RE})(?:\|([^>]*))?|/({SKILL_ID_RE})\|([^>]*))>')
 
 
-SKILLS_CREATE_RE = re.compile(r"^/skills:create(?:\s+(.*))?$", re.IGNORECASE | re.DOTALL)
+SKILLS_CREATE_RE = re.compile(r'^/skills:create(?:\s+(.*))?$', re.IGNORECASE | re.DOTALL)
 
 OPEN_WEBUI_SKILL_AUTHORING_STANDARDS = """\
 Follow the Open WebUI skill-authoring standards:
@@ -126,8 +126,7 @@ def has_prior_real_chat_content(messages: list[dict]) -> bool:
         len(messages),
     )
     return any(
-        message.get('role') == 'user' and _message_has_real_content(message)
-        for message in messages[:last_user_idx]
+        message.get('role') == 'user' and _message_has_real_content(message) for message in messages[:last_user_idx]
     )
 
 

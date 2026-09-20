@@ -1048,7 +1048,9 @@ ENABLE_API_OUTLET_FILTERS = os.getenv('ENABLE_API_OUTLET_FILTERS', 'True').lower
 # Opt in to CPython's in-place string append optimization for streamed responses.
 # Off by default for a staged rollout. Only a host already out of memory can lose
 # text here; the default path (a full copy per chunk) raises there too.
-ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND = os.getenv('ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND', 'False').lower() == 'true'
+ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND = (
+    os.getenv('ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND', 'False').lower() == 'true'
+)
 
 # When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
 # fallback when both mimetypes.guess_type() and file.meta.content_type fail to
