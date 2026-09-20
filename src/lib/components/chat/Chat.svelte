@@ -175,6 +175,8 @@
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
+	// Folder defaults must not touch the active chat before its route has mounted.
+	let folderModelSelectionReady = false;
 	$: if (atSelectedModel !== undefined) {
 		selectedModelIds = [atSelectedModel.id];
 	} else {
@@ -1481,7 +1483,9 @@
 
 	const savedModelIds = async () => {
 		if (
+			folderModelSelectionReady &&
 			$selectedFolder &&
+			$selectedFolder.id === $page.params.folderId &&
 			selectedModels.filter((modelId) => modelId !== '').length > 0 &&
 			!equal($selectedFolder?.data?.model_ids, selectedModels)
 		) {
@@ -1571,11 +1575,17 @@
 
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
+			if (!folder || folder.id !== $page.params.folderId) {
+				folderModelSelectionReady = false;
+				return;
+			}
+
 			if (folder?.data?.model_ids && !equal(selectedModels, folder.data.model_ids)) {
 				selectedModels = folder.data.model_ids;
 
 				console.log('Set selectedModels from folder data:', selectedModels);
 			}
+			folderModelSelectionReady = true;
 		});
 
 		const storageChatInput = sessionStorage.getItem(
@@ -2229,6 +2239,9 @@
 
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+		);
+		folderModelSelectionReady = Boolean(
+			$selectedFolder && $selectedFolder.id === $page.params.folderId
 		);
 
 		await tick();
