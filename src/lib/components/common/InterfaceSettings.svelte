@@ -459,7 +459,9 @@
 />
 
 <div class="flex flex-col gap-2.5">
-	<h3 class={firstSectionHeadingClass}>{$i18n.t('settings.personal.interface.sections.ui.title')}</h3>
+	<h3 class={firstSectionHeadingClass}>
+		{$i18n.t('settings.personal.interface.sections.ui.title')}
+	</h3>
 
 	<div>
 		<div class={settingRowClass}>
@@ -754,7 +756,9 @@
 		</div>
 	{/if}
 
-	<div class={sectionHeadingClass}>{$i18n.t('settings.personal.interface.sections.chat.title')}</div>
+	<div class={sectionHeadingClass}>
+		{$i18n.t('settings.personal.interface.sections.chat.title')}
+	</div>
 
 	<div>
 		<div class={settingRowClass}>
@@ -1526,7 +1530,9 @@
 		</p>
 	</div>
 
-	<div class={sectionHeadingClass}>{$i18n.t('settings.personal.interface.sections.input.title')}</div>
+	<div class={sectionHeadingClass}>
+		{$i18n.t('settings.personal.interface.sections.input.title')}
+	</div>
 
 	<div>
 		<div class={settingRowClass}>
@@ -1792,7 +1798,9 @@
 		</p>
 	</div>
 
-	<div class={sectionHeadingClass}>{$i18n.t('settings.personal.interface.sections.voice.title')}</div>
+	<div class={sectionHeadingClass}>
+		{$i18n.t('settings.personal.interface.sections.voice.title')}
+	</div>
 
 	<div>
 		<div class={settingRowClass}>
@@ -1840,7 +1848,9 @@
 		</p>
 	</div>
 
-	<div class={sectionHeadingClass}>{$i18n.t('settings.personal.interface.sections.file.title')}</div>
+	<div class={sectionHeadingClass}>
+		{$i18n.t('settings.personal.interface.sections.file.title')}
+	</div>
 
 	<div>
 		<div class={settingRowClass}>
