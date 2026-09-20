@@ -17,6 +17,7 @@
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
 	export let deleteHandler: Function;
+	export let canDelete = true;
 	export let onClose: Function;
 
 	export let show = false;
@@ -107,19 +108,21 @@
 				</button>
 			{/if}
 
-			<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />
+			{#if canDelete}
+				<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />
 
-			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
-				draggable="false"
-				on:click={() => {
-					deleteHandler();
-					closeMenu();
-				}}
-			>
-				<GarbageBin className="size-3.5" />
-				<div class="flex items-center">{$i18n.t('Delete')}</div>
-			</button>
+				<button
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					draggable="false"
+					on:click={() => {
+						deleteHandler();
+						closeMenu();
+					}}
+				>
+					<GarbageBin className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Delete')}</div>
+				</button>
+			{/if}
 		</DropdownMenu>
 	</div>
 </Dropdown>
