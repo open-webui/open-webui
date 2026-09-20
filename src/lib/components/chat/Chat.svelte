@@ -65,7 +65,7 @@
 		getUsageTokenCount
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
-	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { createTemporaryChatId, isTemporaryChatId, isSavedChatId } from '$lib/utils/chatId';
 	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
 
 	import {
@@ -3921,30 +3921,78 @@
 		}
 	};
 
+	// Ensures a chat record exists in the DB and $chatId is set before it is needed
+	// (e.g. for a filesystem terminal upload on the very first message).
+	// Safe to call multiple times: a no-op when chatId is already set.
+	const ensureChatId = async (): Promise<string> => {
+		if ($chatId) return $chatId;
+		if ($temporaryChatEnabled) {
+			const _chatId = createTemporaryChatId($socket?.id);
+			await chatId.set(_chatId);
+			return _chatId;
+		}
+		const newChat = await createNewChat(
+			localStorage.token,
+			{
+				id: $chatId || undefined,
+				title: $i18n.t('New Chat'),
+				models: selectedModels,
+				system: $settings.system ?? undefined,
+				params: params,
+				history: { messages: {}, currentId: null },
+				messages: [],
+				tags: [],
+				timestamp: Date.now()
+			},
+			$selectedFolder?.id,
+			chatVariables
+		);
+		const _chatId = newChat.id;
+		chat = newChat;
+		await chatId.set(_chatId);
+		if (!embedded) {
+			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+		}
+		return _chatId;
+	};
+
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;
 		const selectedFolderId = $selectedFolder?.id;
 
 		if (!$temporaryChatEnabled) {
-			chat = await createNewChat(
-				localStorage.token,
-				{
-					id: _chatId,
-					title: $i18n.t('New Chat'),
+			if (isSavedChatId(_chatId)) {
+				// Chat was already pre-created (e.g. by ensureChatId for a filesystem
+				// terminal upload). Update it with the real history instead of creating
+				// a duplicate.  (Fixes #30245.)
+				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
-					system: $settings.system ?? undefined,
-					params: params,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
-					tags: [],
-					timestamp: Date.now()
-				},
-				$selectedFolder?.id,
-				chatVariables
-			);
+					params: params,
+					files: chatFiles
+				});
+			} else {
+				chat = await createNewChat(
+					localStorage.token,
+					{
+						id: _chatId,
+						title: $i18n.t('New Chat'),
+						models: selectedModels,
+						system: $settings.system ?? undefined,
+						params: params,
+						history: history,
+						messages: createMessagesList(history, history.currentId),
+						tags: [],
+						timestamp: Date.now()
+					},
+					$selectedFolder?.id,
+					chatVariables
+				);
 
-			_chatId = chat.id;
-			await chatId.set(_chatId);
+				_chatId = chat.id;
+				await chatId.set(_chatId);
+			}
 
 			if (!embedded) {
 				window.history.replaceState(history.state, '', `/c/${_chatId}`);
@@ -4456,6 +4504,7 @@
 										{createMessagePair}
 										{onUpload}
 										{onUpdate}
+										{ensureChatId}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
 										askUser={savedAskUserPrompt ?? socketAskUserPrompt}
@@ -4548,6 +4597,7 @@
 										{createMessagePair}
 										{onUpload}
 										{onUpdate}
+										{ensureChatId}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
 										askUser={savedAskUserPrompt ?? socketAskUserPrompt}

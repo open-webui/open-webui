@@ -138,6 +138,8 @@
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
 
+	export let ensureChatId: (() => Promise<string>) | null = null;
+
 	export let autoScroll = false;
 	export let generating = false;
 	export let uploadPending = false;
@@ -935,12 +937,25 @@
 
 		if (filesystemUploadTerminal) {
 			try {
+				// When the terminal uses per-chat context and we're on a new chat (no chatId
+				// yet), we must save the chat first so the terminal can resolve its per-chat
+				// context.  ensureChatId() creates the chat record and updates $chatId if it
+				// is not already set.  (Fixes #30245.)
+				let effectiveChatId = chatId;
+				if (
+					!effectiveChatId &&
+					filesystemUploadTerminal?.contexts?.chat?.context_id === 'chat_id' &&
+					ensureChatId
+				) {
+					effectiveChatId = await ensureChatId();
+				}
+
 				const cwd =
 					(
 						await getCwd(
 							filesystemUploadTerminal.url,
 							filesystemUploadTerminal.key,
-							chatId || undefined
+							effectiveChatId || undefined
 						)
 					)?.cwd || '/';
 				const uploadedFile = await uploadToTerminal(
@@ -948,7 +963,7 @@
 					filesystemUploadTerminal.key,
 					cwd,
 					file,
-					chatId || undefined
+					effectiveChatId || undefined
 				);
 
 				if (uploadedFile) {
