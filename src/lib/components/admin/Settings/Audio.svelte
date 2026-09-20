@@ -490,10 +490,6 @@
 					bind:value={TTS_ENGINE}
 					placeholder={$i18n.t('Select a mode')}
 					on:change={async (e) => {
-						await updateConfigHandler();
-						await getVoices();
-						await getModels();
-
 						const value = (e.currentTarget as HTMLSelectElement).value;
 
 						if (value === 'openai') {
@@ -506,6 +502,10 @@
 							TTS_VOICE = '';
 							TTS_MODEL = '';
 						}
+
+						await updateConfigHandler();
+						await getVoices();
+						await getModels();
 					}}
 				>
 					<option value="">{$i18n.t('Web API')}</option>
