@@ -188,7 +188,9 @@
 
 		<div>
 			<Tooltip
-				content={$i18n.t('settings.personal.general.parameters.contextCompactionThreshold.description')}
+				content={$i18n.t(
+					'settings.personal.general.parameters.contextCompactionThreshold.description'
+				)}
 				placement="top-start"
 				className="inline-tooltip"
 			>
@@ -219,7 +221,9 @@
 						<input
 							class="text-sm w-full bg-transparent outline-hidden outline-none"
 							type="number"
-							aria-label={$i18n.t('settings.personal.general.parameters.contextCompactionThreshold.label')}
+							aria-label={$i18n.t(
+								'settings.personal.general.parameters.contextCompactionThreshold.label'
+							)}
 							placeholder={$i18n.t('Enter token threshold')}
 							bind:value={params.compact_token_threshold}
 							autocomplete="off"
@@ -674,7 +678,13 @@
 		</Tooltip>
 
 		{#if (params?.top_p ?? null) !== null}
-			{@render rangeParam('top_p', $i18n.t('settings.personal.general.parameters.topP.label'), 0, 1, 0.05)}
+			{@render rangeParam(
+				'top_p',
+				$i18n.t('settings.personal.general.parameters.topP.label'),
+				0,
+				1,
+				0.05
+			)}
 		{/if}
 	</div>
 
@@ -707,7 +717,13 @@
 		</Tooltip>
 
 		{#if (params?.min_p ?? null) !== null}
-			{@render rangeParam('min_p', $i18n.t('settings.personal.general.parameters.minP.label'), 0, 1, 0.05)}
+			{@render rangeParam(
+				'min_p',
+				$i18n.t('settings.personal.general.parameters.minP.label'),
+				0,
+				1,
+				0.05
+			)}
 		{/if}
 	</div>
 
@@ -977,7 +993,13 @@
 		</Tooltip>
 
 		{#if (params?.tfs_z ?? null) !== null}
-			{@render rangeParam('tfs_z', $i18n.t('settings.personal.general.parameters.tfsZ.label'), 0, 2, 0.05)}
+			{@render rangeParam(
+				'tfs_z',
+				$i18n.t('settings.personal.general.parameters.tfsZ.label'),
+				0,
+				2,
+				0.05
+			)}
 		{/if}
 	</div>
 
