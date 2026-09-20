@@ -110,13 +110,15 @@
 </script>
 
 {#if loaded}
-	<EditGroupModal
-		bind:show={showAddGroupModal}
-		edit={false}
-		tabs={['general', 'permissions']}
-		permissions={defaultPermissions}
-		onSubmit={addGroupHandler}
-	/>
+	{#if showAddGroupModal}
+		<EditGroupModal
+			bind:show={showAddGroupModal}
+			edit={false}
+			tabs={['general', 'permissions']}
+			permissions={defaultPermissions}
+			onSubmit={addGroupHandler}
+		/>
+	{/if}
 
 	<div>
 		<div class="sticky top-0 z-10 bg-white dark:bg-gray-900">
