@@ -19,7 +19,7 @@ from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.models.users import UserModel
 from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
-from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.access_control import has_arena_model_access, has_base_model_access
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.plugin import (
     get_functions_cache,
@@ -464,14 +464,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
 async def check_model_access(user, model, model_info=None, db=None):
     if model.get('arena'):
-        meta = model.get('info', {}).get('meta', {})
-        access_grants = meta.get('access_grants', [])
-        if not await has_access(
-            user.id,
-            permission='read',
-            access_grants=access_grants,
-            db=db,
-        ):
+        if not await has_arena_model_access(user, model, db=db):
             log.warning(
                 'Model access denied: user_id=%r model_id=%r reason=arena_read_denied',
                 user.id,
@@ -549,13 +542,11 @@ async def get_filtered_models(models, user, db=None):
         filtered_models = []
         for model in models:
             if model.get('arena'):
-                meta = model.get('info', {}).get('meta', {})
-                access_grants = meta.get('access_grants', [])
-                if await has_access(
-                    user.id,
-                    permission='read',
-                    access_grants=access_grants,
+                if await has_arena_model_access(
+                    user,
+                    model,
                     user_group_ids=user_group_ids,
+                    db=db,
                 ):
                     filtered_models.append(model)
                 continue
