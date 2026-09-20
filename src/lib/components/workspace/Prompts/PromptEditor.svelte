@@ -181,9 +181,15 @@
 		}
 
 		try {
-			await setProductionPromptVersion(localStorage.token, prompt.id, historyEntry.id);
+			const res = await setProductionPromptVersion(localStorage.token, prompt.id, historyEntry.id);
 			// Update local prompt object to trigger reactivity
-			prompt = { ...prompt, version_id: historyEntry.id };
+			prompt = { ...prompt, ...(res ?? {}), version_id: historyEntry.id };
+
+			name = prompt.name || '';
+			content = prompt.content ?? '';
+			tags = (prompt.tags || []).map((tag) => ({ name: tag }));
+			originalName = name;
+			originalTags = tags;
 			toast.success($i18n.t('Production version updated'));
 		} catch (error) {
 			toast.error(`${error}`);
