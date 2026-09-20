@@ -1266,6 +1266,14 @@ async def process_tool_result(
     return tool_result, tool_result_files, tool_result_embeds
 
 
+def parse_terminal_tool_result(tool_result: Any) -> dict:
+    try:
+        result = JSONCodec.loads(tool_result)
+    except (JSONCodec.JSONDecodeError, TypeError):
+        return {}
+    return result if isinstance(result, dict) else {}
+
+
 async def terminal_event_handler(
     tool_function_name: str,
     tool_function_params: dict,
@@ -1284,17 +1292,13 @@ async def terminal_event_handler(
     if tool_function_name == 'display_file':
         if tool_function_params.get('inline') is True:
             return
-        path = tool_function_params.get('path', '')
+        result = parse_terminal_tool_result(tool_result)
+        # Open Terminal resolves the argument against the session cwd, so prefer its resolved path
+        path = result.get('path') or tool_function_params.get('path', '')
         if not path:
             return
         # Only emit if the file actually exists
-        parsed = tool_result
-        if isinstance(parsed, str):
-            try:
-                parsed = JSONCodec.loads(parsed)
-            except (JSONCodec.JSONDecodeError, TypeError):
-                pass
-        if isinstance(parsed, dict) and parsed.get('exists') is False:
+        if result.get('exists') is False:
             return
         page = tool_function_params.get('page')
 
@@ -1308,7 +1312,8 @@ async def terminal_event_handler(
             }
         )
     elif tool_function_name in ('write_file', 'replace_file_content'):
-        path = tool_function_params.get('path', '')
+        result = parse_terminal_tool_result(tool_result)
+        path = result.get('path') or tool_function_params.get('path', '')
         if not path:
             return
         await event_emitter(
