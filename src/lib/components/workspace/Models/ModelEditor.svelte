@@ -328,7 +328,8 @@
 		info.meta.capabilities = capabilities;
 
 		if (enableDescription) {
-			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
+			info.meta.description =
+				(info.meta.description ?? '').trim() === '' ? null : info.meta.description;
 		} else {
 			info.meta.description = null;
 		}
