@@ -23,6 +23,7 @@
 	import EmojiPicker from '../EmojiPicker.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import { shortCodesToEmojis } from '$lib/stores';
+	import { unicodeToEmoji } from '$lib/utils/emoji';
 </script>
 
 <div
@@ -188,11 +189,7 @@
 		onSubmit={(shortCode) => {
 			const codepoint = $shortCodesToEmojis[shortCode];
 			if (codepoint) {
-				const emoji = codepoint
-					.split('-')
-					.map((cp) => String.fromCodePoint(parseInt(cp, 16)))
-					.join('');
-				editor?.chain().focus().insertContent(emoji).run();
+				editor?.chain().focus().insertContent(unicodeToEmoji(codepoint)).run();
 			}
 		}}
 	>

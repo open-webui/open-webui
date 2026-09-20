@@ -57,6 +57,7 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
+	import { unicodeToEmoji } from '$lib/utils/emoji';
 	import { uploadFile } from '$lib/apis/files';
 	import { getCwd, uploadToTerminal } from '$lib/apis/terminal';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -1533,9 +1534,10 @@
 				char: ':',
 				allowSpaces: false,
 				command: ({ editor, range, props }) => {
-					// Convert the Unicode hex codepoint (e.g. "1F44B") to the actual emoji character (👋)
-					const codepoint = props.id;
-					const emoji = String.fromCodePoint(parseInt(codepoint, 16));
+					// The suggestion id is the emoji's Unicode codepoint sequence,
+					// which is hyphen separated when the emoji spans several code
+					// points (e.g. "1F44B" for 👋, "0023-FE0F-20E3" for #️⃣).
+					const emoji = unicodeToEmoji(props.id);
 					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
