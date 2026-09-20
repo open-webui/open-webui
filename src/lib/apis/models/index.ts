@@ -1,10 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const exportModels = async (token: string, ids: string[]) => {
+export const exportModels = async (token: string, ids?: string[]) => {
 	const query = new URLSearchParams();
-	ids.forEach((id) => query.append('ids', id));
-	if (!ids.length) return [];
-	const response = await fetch(`${WEBUI_API_BASE_URL}/models/export?${query}`, {
+	(ids ?? []).forEach((id) => query.append('ids', id));
+	if (ids && !ids.length) return [];
+	const response = await fetch(`${WEBUI_API_BASE_URL}/models/export${ids ? `?${query}` : ''}`, {
 		headers: { authorization: `Bearer ${token}` }
 	});
 	if (!response.ok) throw await response.json();

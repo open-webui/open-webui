@@ -91,14 +91,16 @@
 		dispatch('save');
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Evaluations')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.admin.evaluations.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if evaluationConfig !== null}
 			<AdminSettingSection first>
 				<AdminSettingRow
-					label={$i18n.t('Arena Models')}
-					description={$i18n.t('Message rating should be enabled to use this feature')}
+					label={$i18n.t('settings.admin.evaluations.arenaModels.label')}
+					description={$i18n.t('settings.admin.evaluations.arenaModels.description')}
 					let:labelId
 				>
 					<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
@@ -111,11 +113,13 @@
 			</AdminSettingSection>
 
 			{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
-				<AdminSettingSection title={$i18n.t('Models')}>
+				<AdminSettingSection title={$i18n.t('settings.admin.evaluations.sections.models.title')}>
 					<div class="mb-2 flex items-center justify-between">
-						<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Arena Models')}</div>
+						<div class="text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('settings.admin.evaluations.arenaModels.label')}
+						</div>
 
-						<Tooltip content={$i18n.t('Add Arena Model')}>
+						<Tooltip content={$i18n.t('settings.admin.evaluations.addArenaModel.label')}>
 							<button
 								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 								type="button"

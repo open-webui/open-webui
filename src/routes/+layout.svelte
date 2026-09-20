@@ -31,6 +31,7 @@
 		channels,
 		channelId,
 		terminalServers,
+		connectedUserTerminals,
 		showControls,
 		showFileNavPath,
 		showFileNavDir,
@@ -310,7 +311,9 @@
 			/\bimport\s+seaborn\b|\bfrom\s+seaborn\b/.test(code) ? 'seaborn' : null,
 			/\bimport\s+sympy\b|\bfrom\s+sympy\b/.test(code) ? 'sympy' : null,
 			/\bimport\s+tiktoken\b|\bfrom\s+tiktoken\b/.test(code) ? 'tiktoken' : null,
-			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null
+			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null,
+			/\bimport\s+openpyxl\b|\bfrom\s+openpyxl\b/.test(code) ? 'openpyxl' : null,
+			/\.(read|to)_excel\(|\.Excel(Writer|File)\(/.test(code) ? 'openpyxl' : null
 		].filter(Boolean);
 
 		const worker = getOrCreateWorker();
@@ -556,6 +559,19 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
+		// Answer this session's availability check even when another chat is active.
+		if (
+			event?.data?.type === 'request:terminal:state' &&
+			event.data.data?.session_id === $socket?.id
+		) {
+			cb?.({
+				connected: [...$connectedUserTerminals.values()].some(
+					(shell) =>
+						shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
+				)
+			});
+			return;
+		}
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
 		// Skip events from temporary chats that are not the current chat.

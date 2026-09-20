@@ -47,7 +47,7 @@
 					current.splice(oldIndex, 1);
 					current.splice(newIndex, 0, noteId);
 					settings.set({ ...$settings, pinnedNotesOrder: current });
-					await updateUserSettings(localStorage.token, { ui: $settings });
+					await updateUserSettings(localStorage.token, { ui: { pinnedNotesOrder: current } });
 				}
 			});
 		}

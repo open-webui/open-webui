@@ -1,4 +1,8 @@
 <script lang="ts">
+	import {
+		canEditSystemPrompt as allowSystemPrompt,
+		canEditParameters
+	} from '$lib/utils/settings-access';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
@@ -66,13 +70,8 @@
 		keep_alive: null
 	};
 
-	$: canEditSystemPrompt =
-		$user?.role === 'admin' ||
-		(($user?.permissions.chat?.controls ?? true) &&
-			($user?.permissions.chat?.system_prompt ?? true));
-	$: canEditParams =
-		$user?.role === 'admin' ||
-		(($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true));
+	$: canEditSystemPrompt = allowSystemPrompt({ user: $user, config: $config });
+	$: canEditParams = canEditParameters({ user: $user, config: $config });
 
 	const saveHandler = async () => {
 		const updated: Record<string, any> = {};
@@ -213,17 +212,22 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('General')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.personal.general.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<UserSettingSection title={$i18n.t('WebUI Settings')} first>
+		<UserSettingSection
+			title={$i18n.t('settings.personal.general.sections.webuiSettings.title')}
+			first
+		>
 			<UserSettingRow
-				label={$i18n.t('Theme')}
-				description={$i18n.t('Choose the color theme used by the interface.')}
+				label={$i18n.t('settings.personal.general.theme.label')}
+				description={$i18n.t('settings.personal.general.theme.description')}
 			>
 				<SettingsSelect
 					bind:value={selectedTheme}
-					ariaLabel={$i18n.t('Theme')}
+					ariaLabel={$i18n.t('settings.personal.general.theme.label')}
 					placeholder={$i18n.t('Select a theme')}
 					on:change={() => themeChangeHandler(selectedTheme)}
 				>
@@ -238,12 +242,12 @@
 			</UserSettingRow>
 
 			<UserSettingRow
-				label={$i18n.t('Language')}
-				description={$i18n.t('Choose the language used for interface text.')}
+				label={$i18n.t('settings.personal.general.language.label')}
+				description={$i18n.t('settings.personal.general.language.description')}
 			>
 				<SettingsSelect
 					bind:value={lang}
-					ariaLabel={$i18n.t('Language')}
+					ariaLabel={$i18n.t('settings.personal.general.language.label')}
 					placeholder={$i18n.t('Select a language')}
 					on:change={(e) => {
 						changeLanguage(lang);
@@ -272,8 +276,10 @@
 		</UserSettingSection>
 
 		{#if canEditSystemPrompt}
-			<UserSettingSection title={$i18n.t('System Prompt')}>
-				<UserSettingField description={$i18n.t('Set the default system prompt for new chats.')}>
+			<UserSettingSection title={$i18n.t('settings.personal.general.sections.systemPrompt.title')}>
+				<UserSettingField
+					description={$i18n.t('settings.personal.general.sections.systemPrompt.description')}
+				>
 					<Textarea
 						bind:value={system}
 						className={systemPromptTextareaClass}
@@ -285,9 +291,13 @@
 		{/if}
 
 		{#if canEditParams}
-			<UserSettingSection title={$i18n.t('Advanced Parameters')}>
-				<UserSettingRow description={$i18n.t('Show or hide custom generation parameters.')}>
-					<span slot="label">{$i18n.t('Model parameters')}</span>
+			<UserSettingSection
+				title={$i18n.t('settings.personal.general.sections.advancedParameters.title')}
+			>
+				<UserSettingRow
+					description={$i18n.t('settings.personal.general.modelParameters.description')}
+				>
+					<span slot="label">{$i18n.t('settings.personal.general.modelParameters.label')}</span>
 					<button
 						class={actionButtonClass}
 						type="button"

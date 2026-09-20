@@ -60,20 +60,18 @@
 	<div class="flex justify-between items-start gap-3 mb-3">
 		<div class="min-w-0">
 			<h3 id="terminal-connections-heading" class="text-xs text-gray-600 dark:text-gray-400">
-				{$i18n.t('Open Terminal')}
+				{$i18n.t('settings.personal.tools.terminals.sections.openTerminal.title')}
 			</h3>
 			<p class="mt-1 text-[0.6875rem] leading-relaxed text-gray-400 dark:text-gray-600">
-				{$i18n.t(
-					'Connect to Open Terminal instances to browse files and use them as always-on tools. Only one can be active at a time.'
-				)}
+				{$i18n.t('settings.personal.tools.terminals.addConnection.description')}
 			</p>
 		</div>
-		<Tooltip content={$i18n.t('Add Connection')}>
+		<Tooltip content={$i18n.t('settings.personal.tools.terminals.addConnection.label')}>
 			<button
 				class="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 				on:click={() => (showAddModal = true)}
 				type="button"
-				aria-label={$i18n.t('Add Connection')}
+				aria-label={$i18n.t('settings.personal.tools.terminals.addConnection.label')}
 			>
 				<Plus />
 			</button>

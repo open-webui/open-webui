@@ -68,7 +68,7 @@
 			updated = [...pinnedItems, id];
 		}
 		await settings.set({ ...$settings, pinnedMenuItems: updated });
-		await updateUserSettings(localStorage.token, { ui: $settings });
+		await updateUserSettings(localStorage.token, { ui: { pinnedMenuItems: updated } });
 	};
 
 	let usage = null;

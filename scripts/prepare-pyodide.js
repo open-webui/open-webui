@@ -11,18 +11,31 @@ const packages = [
 	'regex',
 	'sympy',
 	'tiktoken',
-	'seaborn',
 	'pytz',
 	'black',
-	'openai',
-	'openpyxl'
+	'openai'
 ];
 
 // Pure-Python packages whose wheels must be downloaded from PyPI and saved into
 // static/pyodide/ so that the browser can install them offline via micropip.
 // Packages already provided by the Pyodide distribution (click, platformdirs,
 // typing_extensions, etc.) do NOT need to be listed here.
-const pypiPackages = ['black', 'pathspec', 'mypy_extensions', 'pytokens'];
+// Spell them canonically (dashed): that is the only form pyodide resolves lock entries by.
+const pypiPackages = [
+	'black',
+	'pathspec',
+	'mypy-extensions',
+	'pytokens',
+	'openpyxl',
+	'et-xmlfile',
+	'seaborn'
+];
+
+const pypiDepends = {
+	black: ['click', 'mypy-extensions', 'packaging', 'pathspec', 'platformdirs', 'pytokens'],
+	openpyxl: ['et-xmlfile'],
+	seaborn: ['matplotlib', 'numpy', 'pandas']
+};
 
 import { loadPyodide } from 'pyodide';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
@@ -175,24 +188,48 @@ async function downloadPyPIWheels() {
 		}
 
 		// Inject into pyodide-lock.json so micropip resolves locally
-		const normalizedName = pkg.replace(/-/g, '_');
-		if (!lockData.packages[normalizedName]) {
-			lockData.packages[normalizedName] = {
-				name: normalizedName,
+		if (!lockData.packages[pkg]) {
+			lockData.packages[pkg] = {
+				name: pkg,
 				version: version,
 				file_name: wheel.filename,
 				install_dir: 'site',
 				sha256: wheel.digests?.sha256 || '',
 				package_type: 'package',
-				imports: [normalizedName],
-				depends: []
+				imports: [pkg.replace(/-/g, '_')],
+				depends: pypiDepends[pkg] || []
 			};
-			console.log(`  Added ${normalizedName}==${version} to pyodide-lock.json`);
+			console.log(`  Added ${pkg}==${version} to pyodide-lock.json`);
 		}
 	}
 
 	await writeFile(lockPath, JSON.stringify(lockData, null, 2));
 	console.log('Updated pyodide-lock.json with PyPI packages');
+}
+
+// A package with no bundled wheel is installed from PyPI in the user's browser instead.
+async function verifyBundledWheels() {
+	const lockPath = 'static/pyodide/pyodide-lock.json';
+	const lockData = JSON.parse(await readFile(lockPath, 'utf-8'));
+	const missing = [];
+
+	for (const pkg of new Set([...packages, ...pypiPackages, ...Object.values(pypiDepends).flat()])) {
+		const entry = lockData.packages[pkg.toLowerCase().replace(/[-_.]+/g, '-')];
+		if (!entry) {
+			missing.push(pkg);
+			continue;
+		}
+		try {
+			await access(`static/pyodide/${entry.file_name}`);
+		} catch {
+			missing.push(pkg);
+		}
+	}
+
+	if (missing.length) {
+		throw new Error(`No wheel bundled for: ${missing.join(', ')}`);
+	}
+	console.log('All listed packages are bundled');
 }
 
 initNetworkProxyFromEnv();
@@ -216,4 +253,5 @@ if (process.env.USE_SLIM === 'true') {
 	await downloadPackages();
 	await copyPyodide();
 	await downloadPyPIWheels();
+	await verifyBundledWheels();
 }
