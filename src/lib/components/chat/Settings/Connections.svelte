@@ -125,6 +125,7 @@
 									newConfig[newIdx] = config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
 								});
 								config.OPENAI_API_CONFIGS = newConfig;
+								updateHandler();
 							}}
 						/>
 					{/each}
