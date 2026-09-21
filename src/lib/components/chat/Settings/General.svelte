@@ -39,6 +39,7 @@
 		// Advanced
 		stream_response: null,
 		stream_delta_chunk_size: null,
+		compact_token_threshold: null,
 		function_calling: null,
 		reasoning_tags: null,
 		seed: null,
@@ -83,6 +84,8 @@
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
 				stream_delta_chunk_size:
 					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
+				compact_token_threshold:
+					params.compact_token_threshold !== null ? params.compact_token_threshold : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
 				reasoning_tags: params.reasoning_tags !== null ? params.reasoning_tags : undefined,
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
