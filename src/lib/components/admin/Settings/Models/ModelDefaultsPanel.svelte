@@ -34,6 +34,7 @@
 	let defaultParams = {};
 	let builtinTools = {};
 	let promptSuggestions = [];
+	let useDefaultPromptSuggestions = false;
 	let promptSuggestionsI18n = {};
 	let languages = [];
 	let editingLocale = '';
@@ -56,13 +57,21 @@
 			defaultFeatureIds,
 			defaultParams: Object.fromEntries(configuredParams),
 			builtinTools,
-			promptSuggestions: promptSuggestions.filter((p) => p.content !== ''),
+			promptSuggestions: useDefaultPromptSuggestions
+				? null
+				: promptSuggestions.filter((p) => p.content !== ''),
 			promptSuggestionsI18n
 		});
 
 	const updateDirty = async () => {
 		await tick();
 		dirty = savedSnapshot !== '' && getSnapshot() !== savedSnapshot;
+	};
+
+	const resetPromptSuggestions = () => {
+		useDefaultPromptSuggestions = true;
+		promptSuggestions = resolveLocalizedPromptSuggestions(null, {});
+		updateDirty();
 	};
 
 	const init = async () => {
@@ -81,6 +90,7 @@
 		}
 
 		defaultParams = config?.DEFAULT_MODEL_PARAMS ?? {};
+		useDefaultPromptSuggestions = $appConfig?.default_prompt_suggestions == null;
 		promptSuggestions = resolveLocalizedPromptSuggestions(
 			$appConfig?.default_prompt_suggestions,
 			{}
@@ -119,12 +129,9 @@
 		if (res) {
 			config = res;
 			promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
-			const suggestionsChanged =
-				JSON.stringify(promptSuggestions) !==
-				JSON.stringify(JSON.parse(savedSnapshot).promptSuggestions);
 			const suggestionsRes = await setDefaultPromptSuggestions(
 				localStorage.token,
-				suggestionsChanged ? promptSuggestions : ($appConfig?.default_prompt_suggestions ?? null),
+				useDefaultPromptSuggestions ? null : promptSuggestions,
 				promptSuggestionsI18n
 			);
 			promptSuggestions = suggestionsRes?.suggestions ?? promptSuggestions;
@@ -270,8 +277,22 @@
 								bind:localizedPromptSuggestions={promptSuggestionsI18n}
 								locale={editingLocale}
 								localeLabel={editingLocaleLabel}
-								onChange={updateDirty}
+								onChange={() => {
+									if (!editingLocale) useDefaultPromptSuggestions = false;
+									updateDirty();
+								}}
 							>
+								<svelte:fragment slot="label">
+									{#if !editingLocale && !useDefaultPromptSuggestions}
+										<button
+											type="button"
+											class="shrink-0 px-1 py-0.5 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+											on:click={resetPromptSuggestions}
+										>
+											{$i18n.t('Reset to Defaults')}
+										</button>
+									{/if}
+								</svelte:fragment>
 								<LanguageModeSelect
 									slot="language"
 									bind:value={editingLocale}
