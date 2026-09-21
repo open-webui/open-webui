@@ -38,7 +38,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
-from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
+from open_webui.socket.utils import CachedRedisDict, RedisDict, RedisLock, YdocManager
 from open_webui.tasks import (
     REDIS_PUBSUB_MAX_RECONNECT_INTERVAL,
     REDIS_PUBSUB_RECONNECT_INTERVAL,
@@ -140,12 +140,11 @@ if WEBSOCKET_MANAGER == 'redis':
         async_mode=True,
     )
 
-    MODELS = RedisDict(
+    MODELS = CachedRedisDict(
         f'{REDIS_KEY_PREFIX}:models',
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
-        cache_set_signature=True,
     )
 
     SESSION_POOL = RedisDict(
