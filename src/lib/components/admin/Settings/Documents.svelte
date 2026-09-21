@@ -859,6 +859,7 @@
 						<SensitiveInput
 							variant="settings"
 							placeholder={$i18n.t('Enter MinerU API Key')}
+							required={false}
 							bind:value={RAGConfig.MINERU_API_KEY}
 						/>
 					</AdminSettingField>
