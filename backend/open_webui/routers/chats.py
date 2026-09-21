@@ -888,6 +888,7 @@ async def search_user_chats(
                 created_at=chat.created_at,
                 last_read_at=chat.last_read_at,
                 snippet=chat_search_snippet(chat.chat, search_text),
+                archived=chat.archived,
             )
         )
 
@@ -1592,7 +1593,7 @@ async def delete_chat_by_id(
     # Cancel any in-flight LLM tasks (streaming, title/tags generation) before
     # deleting the chat to prevent orphaned requests.
     await stop_item_tasks(request.app.state.redis, id)
-    await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
+    await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), chat.user_id, threshold=1, db=db)
 
     # Cascade to internal child chats spawned from this one.
     for child_id in await Chats.get_internal_chat_ids_by_parent_id(id, chat.user_id):
@@ -1690,15 +1691,6 @@ async def fork_chat_by_id(
 
     history = (chat.chat or {}).get('history') or {}
     messages_map = await Chats.get_messages_map_by_chat_id(id) or history.get('messages') or {}
-    if any(
-        message.get('role') == 'assistant' and message.get('done') is False
-        for message in messages_map.values()
-        if isinstance(message, dict)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail='Wait for the current response to finish before forking.',
-        )
 
     source_message_id = (
         (form_data.message_id if form_data else None) or chat.current_message_id or history.get('currentId')
@@ -1714,6 +1706,22 @@ async def fork_chat_by_id(
             status_code=status.HTTP_404_NOT_FOUND if detail == 'message not found' else status.HTTP_400_BAD_REQUEST,
             detail=detail,
         ) from exc
+
+    # An unfinished message is stale unless it is awaiting tool approval
+    for message in fork_history['messages'].values():
+        if message.get('role') != 'assistant' or message.get('done') is not False:
+            continue
+
+        output = message.get('output')
+        if isinstance(output, list) and any(
+            isinstance(item, dict)
+            and item.get('type') == 'function_call'
+            and item.get('status') in {'pending', 'queued', 'requires_approval'}
+            for item in output
+        ):
+            continue
+
+        message['done'] = True
 
     updated_chat = {**(chat.chat or {})}
     updated_chat.pop('currentId', None)
@@ -1732,10 +1740,15 @@ async def fork_chat_by_id(
         'forked_from_message_id': source_message_id,
     }
 
+    # The source chat's folder may no longer be writable by the caller.
+    folder_id = chat.folder_id
+    if folder_id is not None and not await has_folder_write_access(user.id, folder_id, db=db):
+        folder_id = None
+
     fork = await Chats.insert_new_chat(
         str(uuid4()),
         user.id,
-        ChatForm(chat=updated_chat, folder_id=chat.folder_id),
+        ChatForm(chat=updated_chat, folder_id=folder_id),
         db=db,
         internal_meta=meta,
     )

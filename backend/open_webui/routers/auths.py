@@ -75,10 +75,10 @@ from open_webui.utils.auth import (
     verify_password,
 )
 from open_webui.utils.groups import apply_default_group_assignment
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
-from open_webui.utils.redis import get_redis_client
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -88,12 +88,11 @@ log = logging.getLogger(__name__)
 
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
-signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+signin_rate_limiter = RateLimiter(limit=5 * 3, window=60 * 3)
 # Best-effort throttle only: there is no caller identity before the provider answers,
 # and deployments may derive request.client from proxy headers.
 token_exchange_rate_limiter = (
     RateLimiter(
-        redis_client=get_redis_client(),
         limit=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT,
         window=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW,
     )
@@ -106,6 +105,7 @@ ADMIN_CONFIG_KEYS = {
     'SHOW_ADMIN_DETAILS': 'auth.admin.show',
     'ADMIN_EMAIL': 'auth.admin.email',
     'WEBUI_URL': 'webui.url',
+    'ENABLE_LOGIN_FORM': 'ui.enable_login_form',
     'ENABLE_SIGNUP': 'ui.enable_signup',
     'ENABLE_API_KEYS': 'auth.enable_api_keys',
     'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS': 'auth.api_key.endpoint_restrictions',
@@ -113,6 +113,7 @@ ADMIN_CONFIG_KEYS = {
     'DEFAULT_USER_ROLE': 'ui.default_user_role',
     'DEFAULT_GROUP_ID': 'ui.default_group_id',
     'DEFAULT_INTERFACE_SETTINGS': 'ui.default_interface_settings',
+    'I18N': 'ui.i18n',
     'JWT_EXPIRES_IN': 'auth.jwt_expiry',
     'ENABLE_COMMUNITY_SHARING': 'ui.enable_community_sharing',
     'ENABLE_MESSAGE_RATING': 'ui.enable_message_rating',
@@ -814,7 +815,7 @@ async def signin(
                 db=db,
             )
     else:
-        if signin_rate_limiter.is_limited(form_data.email.lower()):
+        if await signin_rate_limiter.is_limited(request.app.state.redis, form_data.email.lower()):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
@@ -1209,6 +1210,7 @@ class AdminConfig(BaseModel):
     SHOW_ADMIN_DETAILS: bool
     ADMIN_EMAIL: str | None = None
     WEBUI_URL: str
+    ENABLE_LOGIN_FORM: bool = True
     ENABLE_SIGNUP: bool
     ENABLE_API_KEYS: bool
     ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS: bool
@@ -1216,6 +1218,7 @@ class AdminConfig(BaseModel):
     DEFAULT_USER_ROLE: str
     DEFAULT_GROUP_ID: str
     DEFAULT_INTERFACE_SETTINGS: dict | None = None
+    I18N: dict[str, dict[str, StrictStr]] | None = None
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
@@ -1236,10 +1239,40 @@ class AdminConfig(BaseModel):
     PENDING_USER_OVERLAY_CONTENT: str | None = None
     RESPONSE_WATERMARK: str | None = None
 
+    @field_validator('I18N')
+    @classmethod
+    def validate_i18n(cls, value):
+        if value is None:
+            raise ValueError('I18N must be a dictionary')
+        unsafe_keys = {'__proto__', 'prototype', 'constructor'}
+
+        def placeholders(text):
+            return {match.strip() for match in re.findall(r'\{\{\s*-?\s*([^},]+)(?:,[^}]+)?\s*\}\}', text)}
+
+        cleaned = {}
+        for locale, entries in value.items():
+            if not locale.strip() or locale in unsafe_keys:
+                raise ValueError(f'Invalid language: {locale}')
+            translations = {}
+            for key, text in entries.items():
+                if not key.strip() or key in unsafe_keys:
+                    raise ValueError(f'Invalid translation key: {key}')
+                if text.strip():
+                    if placeholders(key) != placeholders(text):
+                        raise ValueError(f'Interpolation placeholders do not match: {locale}: {key}')
+                    translations[key] = text
+            if translations:
+                cleaned[locale] = translations
+        return cleaned
+
 
 @router.post('/admin/config')
 async def update_admin_config(request: Request, form_data: AdminConfig, user=Depends(get_admin_user)):
     updates = config_updates(form_data.model_dump(), ADMIN_CONFIG_KEYS)
+    if 'ENABLE_LOGIN_FORM' not in form_data.model_fields_set:
+        updates.pop('ui.enable_login_form', None)
+    if 'I18N' not in form_data.model_fields_set:
+        updates.pop('ui.i18n', None)
     updates['ui.default_interface_settings'] = form_data.DEFAULT_INTERFACE_SETTINGS or {}
     updates['folders.max_file_count'] = int(form_data.FOLDER_MAX_FILE_COUNT) if form_data.FOLDER_MAX_FILE_COUNT else ''
     updates['automations.max_count'] = int(form_data.AUTOMATION_MAX_COUNT) if form_data.AUTOMATION_MAX_COUNT else ''
@@ -1431,6 +1464,9 @@ OAUTH_CONFIG_KEYS = {
 
 
 def _format_oauth_form_value(field: str, value):
+    if field == 'OAUTH_BLOCKED_GROUPS' and isinstance(value, list):
+        # Preserve commas in group names and regex patterns when the form is saved.
+        return JSONCodec.dumps(value)
     if field in OAUTH_COMMA_LIST_FIELDS and isinstance(value, list):
         return ','.join(str(item) for item in value)
     return value
@@ -1603,8 +1639,8 @@ async def token_exchange(
             detail='Token exchange is disabled',
         )
 
-    if token_exchange_rate_limiter and token_exchange_rate_limiter.is_limited(
-        request.client.host if request.client else 'unknown'
+    if token_exchange_rate_limiter and await token_exchange_rate_limiter.is_limited(
+        request.app.state.redis, request.client.host if request.client else 'unknown'
     ):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -1720,6 +1756,7 @@ async def token_exchange(
         user=user,
         user_data=user_data,
         provider=provider,
+        access_token=form_data.token,
         db=db,
     )
     if await Config.get('oauth.enable_group_mapping'):

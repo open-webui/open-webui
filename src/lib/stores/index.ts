@@ -4,6 +4,7 @@ import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 import type { AudioQueue } from '$lib/utils/audio';
+import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
@@ -68,7 +69,8 @@ export const models: Writable<Model[]> = writable([]);
 
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
-export const skills = writable(null);
+export const skills: Writable<null | any[]> = writable(null);
+export const terminalSkills: Writable<any[]> = writable([]);
 export const functions = writable(null);
 
 export type WorkspaceSection = 'models' | 'knowledge' | 'prompts' | 'skills' | 'tools';
@@ -144,6 +146,9 @@ export type FileNavOpenRequest = string | { path: string; page?: number | null }
 export const showFileNavPath: Writable<FileNavOpenRequest | null> = writable(null);
 export const showFileNavDir: Writable<string | null> = writable(null);
 export const selectedTerminalId: Writable<string | null> = writable(null);
+export const connectedUserTerminals = writable(
+	new Map<symbol, { terminalId: string; chatId: string }>()
+);
 
 export const artifactCode = writable(null);
 export const artifactContents = writable(null);
@@ -245,7 +250,7 @@ type Settings = {
 	autoTags?: boolean;
 	autoFollowUps?: boolean;
 	splitLargeChunks?(body: any, splitLargeChunks: any): unknown;
-	backgroundImageUrl?: null;
+	backgroundImageUrl?: string | null;
 	landingPageMode?: string;
 	iframeSandboxAllowScripts?: boolean;
 	iframeSandboxAllowForms?: boolean;
@@ -329,10 +334,13 @@ type Config = {
 	name: string;
 	version: string;
 	default_locale: string;
+	i18n?: I18nOverrides;
 	default_models: string;
 	default_pinned_models?: string | null;
-	default_prompt_suggestions: PromptSuggestion[];
+	default_prompt_suggestions: PromptSuggestion[] | null;
+	default_prompt_suggestions_i18n?: Record<string, { suggestion_prompts: PromptSuggestion[] }>;
 	features: {
+		slim?: boolean;
 		auth: boolean;
 		auth_trusted_header: boolean;
 		enable_api_keys: boolean;
@@ -354,6 +362,7 @@ type Config = {
 		enable_plugins?: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
+		enable_direct_integrations?: boolean;
 		enable_version_update_check: boolean;
 		enable_pyodide_file_persistence?: boolean;
 		folder_max_file_count?: number;

@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import HTTPException
 from open_webui.models.config import Config
 from open_webui.models.memories import Memories
+from open_webui.utils.access_control import has_permission
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message, get_content_from_message
 
@@ -428,10 +429,12 @@ async def review_memory_after_turn(
         return
 
     config = await Config.get_many(
+        'memories.enable',
         'memories.background_review.enable',
         'memories.review_interval_turns',
+        'user.permissions',
     )
-    if not config.get('memories.background_review.enable'):
+    if not config.get('memories.enable') or not config.get('memories.background_review.enable'):
         return
 
     try:
@@ -441,6 +444,10 @@ async def review_memory_after_turn(
 
     user_turns = len([message for message in messages if message.get('role') == 'user'])
     if user_turns == 0 or user_turns % interval != 0:
+        return
+
+    # features is client-supplied; re-check the permission the memory routes enforce.
+    if user.role != 'admin' and not await has_permission(user.id, 'features.memories', config.get('user.permissions')):
         return
 
     task = asyncio.create_task(

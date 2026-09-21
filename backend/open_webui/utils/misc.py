@@ -1223,6 +1223,12 @@ def strict_match_mime_type(supported: list[str] | str, header: str) -> str | Non
         return None
 
 
+def is_raster_image_content_type(content_type: str | None) -> bool:
+    """Return True if the content type is an image that decodes as a bitmap; SVG is XML."""
+    base_content_type = (content_type or '').split(';')[0].strip().lower()
+    return base_content_type.startswith('image/') and base_content_type != 'image/svg+xml'
+
+
 def extract_urls(text: str) -> list[str]:
     # Regex pattern to match URLs
     url_pattern = re.compile(r'(https?://[^\s]+)', re.IGNORECASE)  # Matches http and https URLs

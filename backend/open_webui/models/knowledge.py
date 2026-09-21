@@ -625,6 +625,7 @@ class KnowledgeTable:
                         db=db,
                     ),
                     breadcrumbs=await self.get_directory_breadcrumbs(
+                        knowledge_id,
                         filter.get('directory_id') if filter else None,
                         db=db,
                     ),
@@ -908,6 +909,7 @@ class KnowledgeTable:
 
     async def get_directory_breadcrumbs(
         self,
+        knowledge_id: str,
         directory_id: Optional[str],
         db: Optional[AsyncSession] = None,
     ) -> list[KnowledgeDirectoryModel]:
@@ -922,7 +924,10 @@ class KnowledgeTable:
 
             while current_id and current_id not in seen:
                 seen.add(current_id)
-                result = await db.execute(select(KnowledgeDirectory).filter_by(id=current_id))
+                # Scoped by knowledge base so a caller-supplied id cannot walk another one's tree.
+                result = await db.execute(
+                    select(KnowledgeDirectory).filter_by(id=current_id, knowledge_id=knowledge_id)
+                )
                 directory = result.scalars().first()
                 if not directory:
                     break
@@ -1068,6 +1073,26 @@ class KnowledgeTable:
         child_ids = [row[0] for row in result.all()]
         for child_id in child_ids:
             await self._delete_files_in_subtree(child_id, db=db)
+
+    async def get_files_by_id_and_directory_id(
+        self,
+        knowledge_id: str,
+        directory_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> list[FileModel]:
+        """Get all files in a directory and its subdirectories."""
+        async with get_async_db_context(db) as db:
+            directory_ids = [directory_id]
+            for parent_id in directory_ids:
+                result = await db.execute(select(KnowledgeDirectory.id).filter_by(parent_id=parent_id))
+                directory_ids.extend(result.scalars().all())
+            result = await db.execute(
+                select(File)
+                .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                .filter(KnowledgeFile.directory_id.in_(directory_ids))
+            )
+            return [FileModel.model_validate(file) for file in result.scalars().all()]
 
     async def move_file_to_directory(
         self,

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import random
 import sys
 import time
+from contextlib import suppress
 from typing import Any
 
 import pycrdt as Y
@@ -36,18 +38,24 @@ from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
-from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
-from open_webui.tasks import create_task, stop_item_tasks
+from open_webui.socket.utils import CachedRedisDict, RedisDict, RedisLock, YdocManager
+from open_webui.tasks import (
+    REDIS_PUBSUB_MAX_RECONNECT_INTERVAL,
+    REDIS_PUBSUB_RECONNECT_INTERVAL,
+    create_task,
+    stop_item_tasks,
+)
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.json_codec import SOCKETIO_JSON
+from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
     get_sentinels_from_env,
 )
+from redis.exceptions import RedisError
 from socketio.packet import Packet
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -132,12 +140,11 @@ if WEBSOCKET_MANAGER == 'redis':
         async_mode=True,
     )
 
-    MODELS = RedisDict(
+    MODELS = CachedRedisDict(
         f'{REDIS_KEY_PREFIX}:models',
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
-        cache_set_signature=True,
     )
 
     SESSION_POOL = RedisDict(
@@ -189,6 +196,11 @@ YDOC_MANAGER = YdocManager(
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
 
+REDIS_EVENT_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
+
+EVENT_QUEUES: dict[str, asyncio.Queue] = {}
+EVENT_PUBLISH_LOCK = asyncio.Lock()
+
 
 def get_session_pool_batches():
     """All session pool entries, in bounded batches for the Redis backing."""
@@ -202,49 +214,53 @@ async def periodic_session_pool_cleanup():
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
     renew_interval = max(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, 0.5)
     while True:
-        if not session_aquire_func():
-            log.debug('Session cleanup lock held by another node. Retrying.')
-            await asyncio.sleep(retry_delay)
-            continue
-
         try:
-            while True:
-                if not session_renew_func():
-                    log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
-                    break
+            if not session_aquire_func():
+                log.debug('Session cleanup lock held by another node. Retrying.')
+                await asyncio.sleep(retry_delay)
+                continue
 
-                now = int(time.time())
-                for batch in get_session_pool_batches():
-                    expired = [
-                        sid
-                        for sid, entry in batch
-                        if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT
-                    ]
-                    if expired:
-                        log.warning('Reaping %d orphaned session(s) from the session pool', len(expired))
-                        if WEBSOCKET_MANAGER == 'redis':
-                            SESSION_POOL.delete_many(*expired)
-                        else:
-                            for sid in expired:
-                                SESSION_POOL.pop(sid, None)
-                    await asyncio.sleep(0)  # don't hold the loop for the whole sweep
-
-                next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
-                lock_lost = False
+            try:
                 while True:
-                    sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
-                    if sleep_for <= 0:
-                        break
-                    await asyncio.sleep(sleep_for)
                     if not session_renew_func():
                         log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
-                        lock_lost = True
                         break
 
-                if lock_lost:
-                    break
-        finally:
-            session_release_func()
+                    now = int(time.time())
+                    for batch in get_session_pool_batches():
+                        expired = [
+                            sid
+                            for sid, entry in batch
+                            if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT
+                        ]
+                        if expired:
+                            log.warning('Reaping %d orphaned session(s) from the session pool', len(expired))
+                            if WEBSOCKET_MANAGER == 'redis':
+                                SESSION_POOL.delete_many(*expired)
+                            else:
+                                for sid in expired:
+                                    SESSION_POOL.pop(sid, None)
+                        await asyncio.sleep(0)  # don't hold the loop for the whole sweep
+
+                    next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
+                    lock_lost = False
+                    while True:
+                        sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
+                        if sleep_for <= 0:
+                            break
+                        await asyncio.sleep(sleep_for)
+                        if not session_renew_func():
+                            log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
+                            lock_lost = True
+                            break
+
+                    if lock_lost:
+                        break
+            finally:
+                session_release_func()
+        except Exception:
+            log.exception('Session pool cleanup failed. Retrying.')
+            await asyncio.sleep(retry_delay)
 
 
 async def periodic_usage_pool_cleanup():
@@ -823,27 +839,28 @@ async def yjs_document_update(sid, data):
                 log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
                 return
 
-        user_id = data.get('user_id', sid)
+        update = data.get('update')  # List of bytes from frontend
 
-        update = data['update']  # List of bytes from frontend
+        if update:
+            user_id = data.get('user_id', sid)
 
-        await YDOC_MANAGER.append_to_updates(
-            document_id=document_id,
-            update=update,  # Convert list of bytes to bytes
-        )
+            await YDOC_MANAGER.append_to_updates(
+                document_id=document_id,
+                update=update,  # Convert list of bytes to bytes
+            )
 
-        # Broadcast update to all other users in the document
-        await sio.emit(
-            'ydoc:document:update',
-            {
-                'document_id': document_id,
-                'user_id': user_id,
-                'update': update,
-                'socket_id': sid,  # Add socket_id to match frontend filtering
-            },
-            room=f'doc_{document_id}',
-            skip_sid=sid,
-        )
+            # Broadcast update to all other users in the document
+            await sio.emit(
+                'ydoc:document:update',
+                {
+                    'document_id': document_id,
+                    'user_id': user_id,
+                    'update': update,
+                    'socket_id': sid,  # Add socket_id to match frontend filtering
+                },
+                room=f'doc_{document_id}',
+                skip_sid=sid,
+            )
 
         async def debounced_save():
             await asyncio.sleep(0.5)
@@ -943,6 +960,62 @@ async def disconnect(sid, reason=None):
         # print(f"Unknown session ID {sid} disconnected")
 
 
+async def redis_event_listener() -> None:
+    """Route events received over Redis to their local queues."""
+    reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+    while True:
+        pubsub = None
+        try:
+            # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+            await REDIS.initialize()
+
+            pubsub = REDIS.pubsub()
+            await pubsub.subscribe(REDIS_EVENT_CHANNEL)
+            reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                event = JSONCodec.loads(message['data'])
+                queue = EVENT_QUEUES.get(event['channel'])
+                if queue is not None:
+                    await queue.put(event['data'])
+            log.warning('Redis event listener stopped. Retrying.')
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception('Redis event listener failed. Retrying.')
+        finally:
+            if pubsub:
+                with suppress(Exception):
+                    await pubsub.aclose()
+
+        await asyncio.sleep(reconnect_interval)
+        reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
+
+
+@sio.on('*')
+async def socket_event_handler(event: Any, sid: str, *args: Any) -> None:
+    """Route user-owned stream events to a local queue or another worker."""
+    if not isinstance(event, str) or event.count(':') != 2 or not args:
+        return
+
+    user = await get_socket_session_user(sid)
+    if not user or user.get('id') != event.split(':', 1)[0]:
+        return
+
+    queue = EVENT_QUEUES.get(event)
+    if queue is not None:
+        await queue.put(args[0])
+    elif WEBSOCKET_MANAGER == 'redis':
+        try:
+            async with EVENT_PUBLISH_LOCK:
+                await REDIS.publish(REDIS_EVENT_CHANNEL, dumps_bytes({'channel': event, 'data': args[0]}))
+        except RedisError as e:
+            log.debug('Failed to relay socket event %s: %s', event, e)
+
+
 async def _make_channel_emitter(request_info):
     """Event emitter that routes pipeline output to a channel message.
 
@@ -1006,8 +1079,12 @@ async def _make_channel_emitter(request_info):
             if not content and not output and not done:
                 return
 
+            if isinstance(output, list):
+                state['output'] = copy.deepcopy(output)
+
             now = time.time()
-            if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+            # Tool boundaries must publish all results before waiting on the next model response.
+            if done or data.get('flush') or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, done, output if isinstance(output, list) else None)
 

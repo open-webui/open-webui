@@ -554,14 +554,15 @@ async def update_note_by_id(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    form_data.access_grants = await filter_allowed_access_grants(
-        await Config.get('user.permissions'),
-        user.id,
-        user.role,
-        form_data.access_grants,
-        'sharing.public_notes',
-        db=db,
-    )
+    if form_data.access_grants is not None:
+        form_data.access_grants = await filter_allowed_access_grants(
+            await Config.get('user.permissions'),
+            user.id,
+            user.role,
+            form_data.access_grants,
+            'sharing.public_notes',
+            db=db,
+        )
 
     try:
         note = await Notes.update_note_by_id(id, form_data, db=db)

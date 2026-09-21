@@ -12,6 +12,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Query,
     Request,
     Response,
     status,
@@ -19,11 +20,16 @@ from fastapi import (
 from fastapi.responses import RedirectResponse, StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES
+from open_webui.env import (
+    BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_PROFILE_IMAGE_URL_FORWARDING,
+    PROFILE_IMAGE_ALLOWED_MIME_TYPES,
+)
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrants, normalize_access_grants
 from open_webui.models.config import Config
+from open_webui.models.files import Files
 from open_webui.models.groups import Groups
 from open_webui.models.models import (
     ModelAccessListResponse,
@@ -36,12 +42,14 @@ from open_webui.models.models import (
     ModelResponse,
     Models,
 )
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.storage.provider import Storage
+from open_webui.utils.access_control import filter_allowed_access_grants, has_access, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.models import get_all_models
-from pydantic import BaseModel
+from open_webui.utils.validate import BACKGROUND_IMAGE_MAX_BYTES, validate_background_image
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -54,6 +62,8 @@ def add_chat_variables_schema(model_dict: dict) -> dict:
     schema = get_chat_variables_schema(system)
     if schema:
         model_dict.setdefault('meta', {})['chat_variables_schema'] = schema
+    elif isinstance(model_dict.get('meta'), dict):
+        model_dict['meta'].pop('chat_variables_schema', None)
     return model_dict
 
 
@@ -89,7 +99,28 @@ def _safe_static_redirect_path(url: str) -> str | None:
 
 
 def is_valid_model_id(model_id: str) -> bool:
-    return model_id and len(model_id) <= 256
+    return model_id and len(model_id) <= 256 and not any(char.isspace() for char in model_id)
+
+
+async def _verify_background_image(url: str | None, user, db, previous_url: str | None = None) -> None:
+    if not url or url == previous_url:
+        return
+    file_id = url.split('/')[-2]
+    file = await Files.get_file_by_id(file_id, db=db)
+    if not file or not (
+        user.role == 'admin' or file.user_id == user.id or await has_access_to_file(file_id, 'read', user, db=db)
+    ):
+        raise HTTPException(status_code=403, detail='Background image is not accessible.')
+    try:
+        path = await asyncio.to_thread(Storage.get_file, file.path)
+        with open(path, 'rb') as image:
+            data = await asyncio.to_thread(image.read, BACKGROUND_IMAGE_MAX_BYTES + 1)
+        content_type = await asyncio.to_thread(validate_background_image, data)
+    except (ValueError, OSError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if (file.meta or {}).get('content_type') != content_type:
+        if not await Files.update_file_metadata_by_id(file_id, {'content_type': content_type}, db=db):
+            raise HTTPException(status_code=500, detail='Could not validate background image.')
 
 
 async def _verify_knowledge_file_access(
@@ -211,6 +242,11 @@ async def get_models(
 ###########################
 
 
+@router.get('/all', response_model=list[ModelResponse])
+async def get_all_model_records(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+    return await Models.get_all_models(db=db)
+
+
 @router.get('/base/tags', response_model=list[str])
 async def get_base_model_tags(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     tags = await Models.get_all_tags(user_id=user.id, is_admin=True, is_base_model=True, db=db)
@@ -306,6 +342,8 @@ async def create_new_model(
         db,
     )
 
+    await _verify_background_image(form_data.meta.background_image_url, user, db)
+
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
         user.id,
@@ -336,9 +374,14 @@ async def create_new_model(
 ############################
 
 
-@router.get('/export', response_model=list[ModelModel])
+class ModelExportResponse(ModelModel):
+    background_image_data: str | None = None
+
+
+@router.get('/export', response_model=list[ModelExportResponse])
 async def export_models(
     request: Request,
+    ids: list[str] | None = Query(None),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -354,9 +397,36 @@ async def export_models(
         )
 
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
-        return await Models.get_models(db=db)
+        models = await Models.get_models(db=db, ids=ids)
     else:
-        return await Models.get_models(writable_by_user_id=user.id, db=db)
+        models = await Models.get_models(writable_by_user_id=user.id, db=db, ids=ids)
+    if ids is not None:
+        requested = set(ids)
+        if requested != {model.id for model in models}:
+            raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    exported = []
+    for model in models:
+        data = model.model_dump()
+        url = model.meta.background_image_url
+        if url:
+            try:
+                file = await Files.get_file_by_id(url.split('/')[-2], db=db)
+                if not file:
+                    raise ValueError('Image file is missing')
+                path = await asyncio.to_thread(Storage.get_file, file.path)
+                with open(path, 'rb') as image:
+                    image_data = await asyncio.to_thread(image.read, BACKGROUND_IMAGE_MAX_BYTES + 1)
+                content_type = await asyncio.to_thread(validate_background_image, image_data)
+                data['background_image_data'] = f'data:{content_type};base64,' + base64.b64encode(image_data).decode(
+                    'ascii'
+                )
+                data['meta']['background_image_url'] = None
+            except Exception as error:
+                raise HTTPException(
+                    status_code=400, detail=f'Could not export background for model {model.id}.'
+                ) from error
+        exported.append(data)
+    return exported
 
 
 ############################
@@ -486,7 +556,7 @@ async def import_models(
                                 updated_model.access_grants,
                                 'sharing.public_models',
                             )
-                        await Models.update_model_by_id(model_id, updated_model, db=db)
+                        imported_model = updated_model
                     else:
                         # Insert new model
                         model_data['meta'] = model_data.get('meta', {})
@@ -530,7 +600,58 @@ async def import_models(
                             new_model.access_grants,
                             'sharing.public_models',
                         )
-                        await Models.insert_new_model(user_id=user.id, form_data=new_model, db=db)
+                        imported_model = new_model
+
+                    uploaded = None
+                    try:
+                        encoded = model_data.pop('background_image_data', None)
+                        if encoded is not None:
+                            if (
+                                not isinstance(encoded, str)
+                                or len(encoded) > 4 * ((BACKGROUND_IMAGE_MAX_BYTES + 2) // 3) + 64
+                            ):
+                                raise ValueError('Background image must be at most 5 MiB.')
+                            header, payload = encoded.split(',', 1)
+                            image_data = base64.b64decode(payload, validate=True)
+                            content_type = await asyncio.to_thread(validate_background_image, image_data)
+                            if header != f'data:{content_type};base64':
+                                raise ValueError('Invalid background image data URI.')
+                            from fastapi import UploadFile
+                            from open_webui.routers.files import upload_file_handler
+
+                            uploaded = await upload_file_handler(
+                                request,
+                                file=UploadFile(
+                                    file=io.BytesIO(image_data),
+                                    filename='background.' + content_type.split('/')[1],
+                                ),
+                                metadata=None,
+                                process=False,
+                                user=user,
+                                db=db,
+                            )
+                            imported_model.meta.background_image_url = f'/api/v1/files/{uploaded.id}/content'
+                        await _verify_background_image(
+                            imported_model.meta.background_image_url,
+                            user,
+                            db,
+                            existing_model.meta.background_image_url if existing_model else None,
+                        )
+                        saved = (
+                            await Models.update_model_by_id(model_id, imported_model, db=db)
+                            if existing_model
+                            else await Models.insert_new_model(user_id=user.id, form_data=imported_model, db=db)
+                        )
+                        if not saved:
+                            raise HTTPException(status_code=500, detail=f'Could not import model {model_id}.')
+                    except Exception:
+                        if uploaded:
+                            try:
+                                await Files.delete_file_by_id(uploaded.id, db=db)
+                                await asyncio.to_thread(Storage.delete_file, uploaded.path)
+                            except Exception:
+                                log.exception('Could not clean up failed model background upload')
+                        raise
 
                     imported_ids.append(model_id)
             await publish_event(
@@ -543,6 +664,10 @@ async def import_models(
             return True
         else:
             raise HTTPException(status_code=400, detail='Invalid JSON format')
+    except HTTPException:
+        raise
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
@@ -564,6 +689,14 @@ async def sync_models(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    existing = {model.id: model for model in await Models.get_models_by_ids([m.id for m in form_data.models], db=db)}
+    for model in form_data.models:
+        previous = existing.get(model.id)
+        if previous and 'background_image_url' not in model.meta.model_fields_set:
+            model.meta.background_image_url = previous.meta.background_image_url
+        await _verify_background_image(
+            model.meta.background_image_url, user, db, previous.meta.background_image_url if previous else None
+        )
     models = await Models.sync_models(user.id, form_data.models, db=db)
     await publish_event(
         request,
@@ -649,18 +782,37 @@ async def get_model_profile_image(
     profile_image_url = None
     updated_at = None
 
+    bypass_access_control = BYPASS_MODEL_ACCESS_CONTROL or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+
     # First, check the database for regular models
     model_meta = await Models.get_model_meta_by_id(id, db=db)
     if model_meta:
-        meta, updated_at = model_meta
-        profile_image_url = (meta or {}).get('profile_image_url')
+        meta, model_user_id, model_updated_at = model_meta
+        # Denied callers get the default image rather than an error, so model ids stay unprobeable.
+        if (
+            bypass_access_control
+            or user.id == model_user_id
+            or await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='model',
+                resource_id=id,
+                permission='read',
+                db=db,
+            )
+        ):
+            profile_image_url = (meta or {}).get('profile_image_url')
+            updated_at = model_updated_at
 
     # Fallback: check arena models stored in config (not in the DB)
     if not profile_image_url:
         arena_models = await Config.get('evaluation.arena.models', []) or []
         for arena_model in arena_models:
             if arena_model.get('id') == id:
-                profile_image_url = arena_model.get('meta', {}).get('profile_image_url')
+                arena_meta = arena_model.get('meta', {})
+                if bypass_access_control or await has_access(
+                    user.id, permission='read', access_grants=arena_meta.get('access_grants', []), db=db
+                ):
+                    profile_image_url = arena_meta.get('profile_image_url')
                 break
 
     if profile_image_url:
@@ -829,13 +981,33 @@ async def update_model_by_id(
     if 'profile_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.profile_image_url = model.meta.profile_image_url
 
-    form_data.access_grants = await filter_allowed_access_grants(
-        await Config.get('user.permissions'),
-        user.id,
-        user.role,
-        form_data.access_grants,
-        'sharing.public_models',
-    )
+    if 'background_image_url' not in form_data.meta.model_fields_set:
+        form_data.meta.background_image_url = model.meta.background_image_url
+    await _verify_background_image(form_data.meta.background_image_url, user, db, model.meta.background_image_url)
+
+    if form_data.access_grants is not None:
+        # The editor resends every stored grant, so re-checking them would strip sharing this user cannot re-create.
+        existing_access_grants = {
+            (grant.principal_type, grant.principal_id, grant.permission) for grant in model.access_grants
+        }
+        submitted_access_grants_map = {
+            (grant['principal_type'], grant['principal_id'], grant['permission']): grant
+            for grant in normalize_access_grants(form_data.access_grants)
+        }
+        preserved_access_grants = [
+            grant for key, grant in submitted_access_grants_map.items() if key in existing_access_grants
+        ]
+        new_access_grants = [
+            grant for key, grant in submitted_access_grants_map.items() if key not in existing_access_grants
+        ]
+
+        form_data.access_grants = preserved_access_grants + await filter_allowed_access_grants(
+            await Config.get('user.permissions'),
+            user.id,
+            user.role,
+            new_access_grants,
+            'sharing.public_models',
+        )
 
     model = await Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()), db=db)
     if model:
@@ -855,7 +1027,7 @@ async def update_model_by_id(
 
 
 class ModelAccessGrantsForm(BaseModel):
-    id: str
+    id: str = Field(pattern=r'^\S+$')
     name: str | None = None
     access_grants: list[dict]
 

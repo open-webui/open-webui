@@ -23,9 +23,9 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.socket.main import (
+    EVENT_QUEUES,
     get_event_call,
     get_event_emitter,
-    sio,
 )
 from open_webui.utils.filter import (
     get_filter_functions,
@@ -71,39 +71,36 @@ async def generate_direct_chat_completion(
     logging.info('WebSocket channel: %s', channel)
 
     if form_data.get('stream'):
-        q = asyncio.Queue()
-
-        async def message_listener(sid, data):
-            """
-            Handle received socket messages and push them into the queue.
-            """
-            await q.put(data)
-
-        # Register the listener
-        sio.on(channel, message_listener)
+        queue = asyncio.Queue()
+        EVENT_QUEUES[channel] = queue
 
         # Start processing chat completion in background
-        res = await event_caller(
-            {
-                'type': 'request:chat:completion',
-                'data': {
-                    'form_data': form_data,
-                    'model': models[form_data['model']],
-                    'channel': channel,
-                    'session_id': session_id,
-                },
-            }
-        )
+        try:
+            res = await event_caller(
+                {
+                    'type': 'request:chat:completion',
+                    'data': {
+                        'form_data': form_data,
+                        'model': models[form_data['model']],
+                        'channel': channel,
+                        'session_id': session_id,
+                    },
+                }
+            )
 
-        log.info('res: %s', res)
+            log.info('res: %s', res)
 
-        if res.get('status', False):
+            status = res.get('status', False)
+        except BaseException:
+            EVENT_QUEUES.pop(channel, None)
+            raise
+
+        if status:
             # Define a generator to stream responses
             async def event_generator():
-                nonlocal q
                 try:
                     while True:
-                        data = await q.get()  # Wait for new messages
+                        data = await queue.get()  # Wait for new messages
                         if isinstance(data, dict):
                             if 'done' in data and data['done']:
                                 break  # Stop streaming when 'done' is received
@@ -117,17 +114,17 @@ async def generate_direct_chat_completion(
                 except Exception as e:
                     log.debug('Error in event generator: %s', e)
                     pass
+                finally:
+                    EVENT_QUEUES.pop(channel, None)
 
             # Define a background task to run the event generator
             async def background():
-                try:
-                    del sio.handlers['/'][channel]
-                except Exception as e:
-                    pass
+                EVENT_QUEUES.pop(channel, None)
 
             # Return the streaming response
             return StreamingResponse(event_generator(), media_type='text/event-stream', background=background)
         else:
+            EVENT_QUEUES.pop(channel, None)
             raise Exception(str(res))
     else:
         res = await event_caller(
@@ -260,24 +257,25 @@ async def generate_chat_completion(
                     bypass_filter=True,
                     bypass_system_prompt=bypass_system_prompt,
                 )
+                # Upstream errors come back as a response object.
+                if not isinstance(response, StreamingResponse):
+                    return response
                 return StreamingResponse(
                     stream_wrapper(response.body_iterator),
                     media_type='text/event-stream',
                     background=response.background,
                 )
             else:
-                return {
-                    **(
-                        await generate_chat_completion(
-                            request,
-                            form_data,
-                            user,
-                            bypass_filter=True,
-                            bypass_system_prompt=bypass_system_prompt,
-                        )
-                    ),
-                    'selected_model_id': selected_model_id,
-                }
+                response = await generate_chat_completion(
+                    request,
+                    form_data,
+                    user,
+                    bypass_filter=True,
+                    bypass_system_prompt=bypass_system_prompt,
+                )
+                if not isinstance(response, dict):
+                    return response
+                return {**response, 'selected_model_id': selected_model_id}
 
         if model.get('pipe'):
             # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter

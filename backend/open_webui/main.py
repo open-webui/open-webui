@@ -74,7 +74,9 @@ from open_webui.config import (
     seed_registered_defaults,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS
+from open_webui.utils.recurrence import RecurrenceEvaluationTimeout
 from open_webui.env import (
+    USE_SLIM,
     AIOHTTP_CLIENT_SESSION_SSL,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_INCLUDED_PATHS,
@@ -106,12 +108,14 @@ from open_webui.env import (
     MAX_BODY_LOG_SIZE,
     # Redis
     REDIS_KEY_PREFIX,
+    REDIS_TASK_TTL,
     REDIS_URL,
     RESET_CONFIG_ON_START,
     SAFE_MODE,
     SCIM_TOKEN,
     VERSION,
     WEBSOCKET_HEARTBEAT_INTERVAL,
+    WEBSOCKET_MANAGER,
     # Admin Account Runtime Creation
     WEBUI_ADMIN_EMAIL,
     WEBUI_ADMIN_NAME,
@@ -188,6 +192,7 @@ from open_webui.socket.main import (
     get_user_id_from_session_pool,
     periodic_session_pool_cleanup,
     periodic_usage_pool_cleanup,
+    redis_event_listener,
 )
 from open_webui.socket.main import (
     app as socket_app,
@@ -199,6 +204,7 @@ from open_webui.tasks import (
     list_task_ids_by_item_id,
     list_tasks,
     redis_task_command_listener,
+    redis_task_heartbeat,
     stop_item_tasks,
     stop_task,
 )  # Import from tasks.py
@@ -385,6 +391,11 @@ async def lifespan(app: FastAPI):
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
+        if REDIS_TASK_TTL > 0:
+            app.state.redis_task_heartbeat = asyncio.create_task(redis_task_heartbeat(app))
+
+    if WEBSOCKET_MANAGER == 'redis':
+        app.state.redis_event_listener = asyncio.create_task(redis_event_listener())
 
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
@@ -472,6 +483,12 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
 
+    if hasattr(app.state, 'redis_task_heartbeat'):
+        app.state.redis_task_heartbeat.cancel()
+
+    if hasattr(app.state, 'redis_event_listener'):
+        app.state.redis_event_listener.cancel()
+
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
     app.state.scheduler_worker_loop.cancel()
@@ -493,6 +510,12 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RecurrenceEvaluationTimeout)
+async def recurrence_timeout_handler(request: Request, exc: RecurrenceEvaluationTimeout):
+    return JSONResponse(status_code=400, content={'detail': str(exc)})
+
 
 # Used by readiness checks to gate traffic until startup work is done.
 app.state.startup_complete = False
@@ -1463,8 +1486,8 @@ async def chat_completion(
                         async def run_initial_title_generation():
                             try:
                                 await background_tasks_handler(title_ctx)
-                            except Exception as e:
-                                log.debug('Error generating initial chat title: %s', e)
+                            except Exception:
+                                log.exception('Error generating initial chat title')
 
                         asyncio.create_task(run_initial_title_generation())
                 else:
@@ -1623,6 +1646,9 @@ async def chat_completion(
 
     async def process_chat(request, form_data, user, metadata, model, tasks=None):
         try:
+            ctx = None
+            if metadata.get('assistant_message_id'):
+                ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
             if await drain_approved_tool_calls(request, form_data, user, model, metadata):
@@ -1633,12 +1659,15 @@ async def chat_completion(
             # When the upstream provider returns an error (e.g. HTTP 400
             # content-filter, quota exceeded), generate_chat_completion
             # returns a JSONResponse instead of raising.  Detect this and
-            # raise so the except-block below emits chat:message:error +
-            # chat:tasks:cancel, unblocking the frontend.
+            # raise so the except-block below emits a terminal
+            # chat:message:error, unblocking the frontend.
             if isinstance(response, JSONResponse) and response.status_code >= 400:
                 raise Exception(get_response_error_detail(response))
 
-            ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+            if ctx is None:
+                ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+            else:
+                ctx.update(form_data=form_data, metadata=metadata, events=events)
 
             return await process_chat_response(response, ctx)
         except asyncio.CancelledError:
@@ -1667,6 +1696,7 @@ async def chat_completion(
                             {
                                 'parentId': metadata.get('user_message_id', None),
                                 'error': {'content': error_detail},
+                                'done': True,
                             },
                         )
 
@@ -1675,11 +1705,8 @@ async def chat_completion(
                         await event_emitter(
                             {
                                 'type': 'chat:message:error',
-                                'data': {'error': {'content': error_detail}},
+                                'data': {'error': {'content': error_detail}, 'done': True},
                             }
-                        )
-                        await event_emitter(
-                            {'type': 'chat:tasks:cancel'},
                         )
 
                 except Exception:
@@ -2235,6 +2262,7 @@ async def get_app_config(request: Request):
         'auth.enable_api_keys',
         'ui.enable_password_change_form',
         'direct.enable',
+        'direct.integrations.enable',
         'folders.enable',
         'folders.max_file_count',
         'channels.enable',
@@ -2260,7 +2288,9 @@ async def get_app_config(request: Request):
         'ui.default_models',
         'ui.default_pinned_models',
         'ui.default_interface_settings',
+        'ui.i18n',
         'ui.prompt_suggestions',
+        'ui.prompt_suggestions_i18n',
         'code_execution.engine',
         'code_interpreter.engine',
         'audio.tts.engine',
@@ -2283,6 +2313,7 @@ async def get_app_config(request: Request):
         'name': app.state.WEBUI_NAME,
         'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
+        'i18n': config.get('ui.i18n') or {},
         'oauth': {
             # Hide providers (and thus the login buttons / auto-redirect) when OAuth
             # is disabled, without clearing the admin's provider configuration.
@@ -2294,6 +2325,7 @@ async def get_app_config(request: Request):
             'auto_redirect': config.get('oauth.auto_redirect'),
         },
         'features': {
+            'slim': USE_SLIM,
             # --- Public: required by login/signup page pre-auth ---
             'auth': WEBUI_AUTH,
             'auth_trusted_header': bool(WEBUI_AUTH_TRUSTED_EMAIL_HEADER),
@@ -2317,6 +2349,7 @@ async def get_app_config(request: Request):
                     'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
                     'enable_easter_eggs': ENABLE_EASTER_EGGS,
                     'enable_direct_connections': config.get('direct.enable'),
+                    'enable_direct_integrations': config.get('direct.integrations.enable', False),
                     'enable_plugins': ENABLE_PLUGINS,
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
@@ -2361,6 +2394,7 @@ async def get_app_config(request: Request):
                 'default_models': config.get('ui.default_models'),
                 'default_pinned_models': config.get('ui.default_pinned_models'),
                 'default_prompt_suggestions': config.get('ui.prompt_suggestions'),
+                'default_prompt_suggestions_i18n': config.get('ui.prompt_suggestions_i18n'),
                 **({'user_count': user_count} if user_count is not None else {}),
                 'code': {
                     'engine': config.get('code_execution.engine'),
@@ -2575,8 +2609,8 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 
                 return {'current': VERSION, 'latest': latest_version[1:]}
     except Exception as e:
-        log.debug(e)
-        return {'current': VERSION, 'latest': VERSION}
+        log.warning(f'Version update check failed: {e}')
+        return {'current': VERSION, 'latest': None}
 
 
 @app.get('/api/changelog')

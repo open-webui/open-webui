@@ -67,16 +67,20 @@ export const updateConfig = async (token: string = '', config: object) => {
 	return res;
 };
 
-export const verifyConfigUrl = async (token: string = '') => {
+export const verifyConnection = async (
+	token: string = '',
+	connection: { engine: string; url: string; key?: string | null }
+) => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config/url/verify`, {
-		method: 'GET',
+	const res = await fetch(`${IMAGES_API_BASE_URL}/verify`, {
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		body: JSON.stringify(connection)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -254,14 +258,12 @@ export const imageEdits = async (
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			form_data: {
-				image: images,
-				prompt,
-				...(model && { model }),
-				...(size && { size }),
-				...(n && { n }),
-				...(background && { background })
-			}
+			image: images,
+			prompt,
+			...(model && { model }),
+			...(size && { size }),
+			...(n && { n }),
+			...(background && { background })
 		})
 	})
 		.then(async (res) => {

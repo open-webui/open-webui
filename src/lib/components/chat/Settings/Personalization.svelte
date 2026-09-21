@@ -110,20 +110,24 @@
 	}}
 >
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-		{$i18n.t('Personalization')}
+		{$i18n.t('settings.personal.personalization.title')}
 	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<UserSettingSection title={$i18n.t('Memory')} first>
+		<UserSettingSection
+			title={$i18n.t('settings.personal.personalization.sections.memory.title')}
+			first
+		>
 			<UserSettingRow
 				description={$i18n
-					.t(
-						"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you."
-					)
-					.replace($i18n.t('Manage'), $i18n.t('Add Memory'))}
+					.t('settings.personal.personalization.memory.description')
+					.replace(
+						$i18n.t('settings.personal.personalization.manageMemories.label'),
+						$i18n.t('Add Memory')
+					)}
 			>
 				<div slot="label" class="flex items-center gap-2">
-					{$i18n.t('Memory')}
+					{$i18n.t('settings.personal.personalization.memory.label')}
 					<ExperimentalBadge />
 				</div>
 
@@ -139,7 +143,7 @@
 				<div>
 					<div class="mb-1 flex items-center">
 						<div class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Saved Memories')}
+							{$i18n.t('settings.personal.personalization.savedMemories.label')}
 							{#if !loadingMemories}
 								<span class="ml-1 text-gray-400 dark:text-gray-600">{memories.length}</span>
 							{/if}
@@ -215,7 +219,9 @@
 											}}
 										>
 											<Trash className="size-3.5 shrink-0" strokeWidth="1.5" />
-											<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Clear memory')}</div>
+											<div class="min-w-0 flex-1 truncate text-left">
+												{$i18n.t('settings.personal.personalization.clearMemory.label')}
+											</div>
 										</button>
 									</DropdownMenu>
 								</div>
@@ -225,7 +231,7 @@
 						{#if sortedMemories.length === 0}
 							<div class="min-h-16 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 								{#if memories.length === 0}
-									{$i18n.t('Memories accessible by LLMs will be shown here.')}
+									{$i18n.t('settings.personal.personalization.noResultsFound.description')}
 								{:else}
 									{$i18n.t('No results found')}
 								{/if}

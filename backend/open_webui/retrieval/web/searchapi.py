@@ -26,19 +26,26 @@ def search_searchapi(
     engine = engine or 'google'
 
     payload = {'engine': engine, 'q': query, 'api_key': api_key}
+    if engine.startswith('google'):
+        payload['link'] = 'resolved'
 
     url = f'{url}?{urlencode(payload)}'
-    response = requests.request('GET', url)
+    response = requests.request('GET', url, timeout=30)
+    response.raise_for_status()
 
     json_response = response.json()
-    log.info('results from searchapi search: %s', json_response)
+    log.debug('results from searchapi search: %s', json_response)
 
-    results = sorted(json_response.get('organic_results', []), key=lambda x: x.get('position', 0))
+    # top_stories entries carry no position, so the merged list keeps API order
+    results = [
+        *json_response.get('organic_results', []),
+        *json_response.get('top_stories', []),
+    ]
     if filter_list:
         results = get_filtered_results(results, filter_list)
     return [
         SearchResult(
-            link=result['link'],
+            link=result.get('link', ''),
             title=result.get('title'),
             snippet=result.get('snippet'),
         )

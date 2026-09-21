@@ -506,14 +506,16 @@ class PromptsTable:
                 )
 
                 # Update prompt fields
-                prompt.name = form_data.name
                 prompt.command = form_data.command
-                prompt.content = form_data.content
-                prompt.data = form_data.data or prompt.data
-                prompt.meta = form_data.meta or prompt.meta
 
-                if form_data.tags is not None:
-                    prompt.tags = form_data.tags
+                if form_data.is_production:
+                    prompt.name = form_data.name
+                    prompt.content = form_data.content
+                    prompt.data = form_data.data or prompt.data
+                    prompt.meta = form_data.meta or prompt.meta
+
+                    if form_data.tags is not None:
+                        prompt.tags = form_data.tags
 
                 if form_data.access_grants is not None:
                     await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
@@ -531,7 +533,7 @@ class PromptsTable:
                         'command': prompt.command,
                         'data': form_data.data or {},
                         'meta': form_data.meta or {},
-                        'tags': prompt.tags or [],
+                        'tags': form_data.tags if form_data.tags is not None else (prompt.tags or []),
                         'access_grants': [grant.model_dump() for grant in current_access_grants],
                     }
 
