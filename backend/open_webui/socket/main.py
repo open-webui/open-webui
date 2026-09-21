@@ -6,6 +6,7 @@ import logging
 import random
 import sys
 import time
+from contextlib import suppress
 from typing import Any
 
 import pycrdt as Y
@@ -38,17 +39,23 @@ from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
-from open_webui.tasks import create_task, stop_item_tasks
+from open_webui.tasks import (
+    REDIS_PUBSUB_MAX_RECONNECT_INTERVAL,
+    REDIS_PUBSUB_RECONNECT_INTERVAL,
+    create_task,
+    stop_item_tasks,
+)
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.json_codec import SOCKETIO_JSON
+from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
     get_sentinels_from_env,
 )
+from redis.exceptions import RedisError
 from socketio.packet import Packet
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -189,6 +196,11 @@ YDOC_MANAGER = YdocManager(
     redis=REDIS,
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
+
+REDIS_EVENT_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
+
+EVENT_QUEUES: dict[str, asyncio.Queue] = {}
+EVENT_PUBLISH_LOCK = asyncio.Lock()
 
 
 def get_session_pool_batches():
@@ -946,6 +958,62 @@ async def disconnect(sid, reason=None):
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")
+
+
+async def redis_event_listener() -> None:
+    """Route events received over Redis to their local queues."""
+    reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+    while True:
+        pubsub = None
+        try:
+            # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+            await REDIS.initialize()
+
+            pubsub = REDIS.pubsub()
+            await pubsub.subscribe(REDIS_EVENT_CHANNEL)
+            reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                event = JSONCodec.loads(message['data'])
+                queue = EVENT_QUEUES.get(event['channel'])
+                if queue is not None:
+                    await queue.put(event['data'])
+            log.warning('Redis event listener stopped. Retrying.')
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception('Redis event listener failed. Retrying.')
+        finally:
+            if pubsub:
+                with suppress(Exception):
+                    await pubsub.aclose()
+
+        await asyncio.sleep(reconnect_interval)
+        reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
+
+
+@sio.on('*')
+async def socket_event_handler(event: Any, sid: str, *args: Any) -> None:
+    """Route user-owned stream events to a local queue or another worker."""
+    if not isinstance(event, str) or event.count(':') != 2 or not args:
+        return
+
+    user = await get_socket_session_user(sid)
+    if not user or user.get('id') != event.split(':', 1)[0]:
+        return
+
+    queue = EVENT_QUEUES.get(event)
+    if queue is not None:
+        await queue.put(args[0])
+    elif WEBSOCKET_MANAGER == 'redis':
+        try:
+            async with EVENT_PUBLISH_LOCK:
+                await REDIS.publish(REDIS_EVENT_CHANNEL, dumps_bytes({'channel': event, 'data': args[0]}))
+        except RedisError as e:
+            log.debug('Failed to relay socket event %s: %s', event, e)
 
 
 async def _make_channel_emitter(request_info):

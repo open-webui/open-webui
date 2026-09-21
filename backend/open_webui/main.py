@@ -113,6 +113,7 @@ from open_webui.env import (
     SCIM_TOKEN,
     VERSION,
     WEBSOCKET_HEARTBEAT_INTERVAL,
+    WEBSOCKET_MANAGER,
     # Admin Account Runtime Creation
     WEBUI_ADMIN_EMAIL,
     WEBUI_ADMIN_NAME,
@@ -189,6 +190,7 @@ from open_webui.socket.main import (
     get_user_id_from_session_pool,
     periodic_session_pool_cleanup,
     periodic_usage_pool_cleanup,
+    redis_event_listener,
 )
 from open_webui.socket.main import (
     app as socket_app,
@@ -387,6 +389,9 @@ async def lifespan(app: FastAPI):
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
 
+    if WEBSOCKET_MANAGER == 'redis':
+        app.state.redis_event_listener = asyncio.create_task(redis_event_listener())
+
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
 
@@ -472,6 +477,9 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+
+    if hasattr(app.state, 'redis_event_listener'):
+        app.state.redis_event_listener.cancel()
 
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
