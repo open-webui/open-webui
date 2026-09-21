@@ -74,6 +74,7 @@ from open_webui.config import (
     seed_registered_defaults,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS
+from open_webui.utils.recurrence import RecurrenceEvaluationTimeout
 from open_webui.env import (
     USE_SLIM,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -107,6 +108,7 @@ from open_webui.env import (
     MAX_BODY_LOG_SIZE,
     # Redis
     REDIS_KEY_PREFIX,
+    REDIS_TASK_TTL,
     REDIS_URL,
     RESET_CONFIG_ON_START,
     SAFE_MODE,
@@ -202,6 +204,7 @@ from open_webui.tasks import (
     list_task_ids_by_item_id,
     list_tasks,
     redis_task_command_listener,
+    redis_task_heartbeat,
     stop_item_tasks,
     stop_task,
 )  # Import from tasks.py
@@ -388,6 +391,8 @@ async def lifespan(app: FastAPI):
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
+        if REDIS_TASK_TTL > 0:
+            app.state.redis_task_heartbeat = asyncio.create_task(redis_task_heartbeat(app))
 
     if WEBSOCKET_MANAGER == 'redis':
         app.state.redis_event_listener = asyncio.create_task(redis_event_listener())
@@ -478,6 +483,9 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
 
+    if hasattr(app.state, 'redis_task_heartbeat'):
+        app.state.redis_task_heartbeat.cancel()
+
     if hasattr(app.state, 'redis_event_listener'):
         app.state.redis_event_listener.cancel()
 
@@ -502,6 +510,12 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RecurrenceEvaluationTimeout)
+async def recurrence_timeout_handler(request: Request, exc: RecurrenceEvaluationTimeout):
+    return JSONResponse(status_code=400, content={'detail': str(exc)})
+
 
 # Used by readiness checks to gate traffic until startup work is done.
 app.state.startup_complete = False

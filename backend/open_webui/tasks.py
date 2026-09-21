@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from redis.asyncio import Redis
 
-from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL
+from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL, REDIS_TASK_TTL
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 
 log = logging.getLogger(__name__)
@@ -66,13 +66,28 @@ async def redis_task_command_listener(app):
         reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
 
 
+async def redis_task_heartbeat(app):
+    redis: Redis = app.state.redis
+    while True:
+        await asyncio.sleep(REDIS_TASK_TTL / 4)
+        try:
+            pipe = redis.pipeline(transaction=False)
+            for task_id in list(tasks):
+                # EXPIRE cannot recreate a task already removed by cleanup.
+                pipe.expire(f'{REDIS_TASKS_KEY}:{task_id}', REDIS_TASK_TTL)
+            await pipe.execute()
+        except Exception:
+            log.exception('Redis task heartbeat failed')
+
+
 ### ------------------------------
 ### REDIS-ENABLED HANDLERS
 ### ------------------------------
 
 
 async def redis_save_task(redis: Redis, task_id: str, item_id: str | None):
-    pipe = redis.pipeline()
+    pipe = redis.pipeline(transaction=False)
+    pipe.set(f'{REDIS_TASKS_KEY}:{task_id}', '1', ex=REDIS_TASK_TTL or None)
     pipe.hset(REDIS_TASKS_KEY, task_id, item_id or '')
     if item_id:
         pipe.sadd(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
@@ -80,25 +95,36 @@ async def redis_save_task(redis: Redis, task_id: str, item_id: str | None):
 
 
 async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
-    pipe = redis.pipeline()
+    pipe = redis.pipeline(transaction=False)
+    pipe.delete(f'{REDIS_TASKS_KEY}:{task_id}')
     pipe.hdel(REDIS_TASKS_KEY, task_id)
     pipe.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
     if item_id:
         pipe.srem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
-        await pipe.execute()
-        # Remove the set key entirely if no tasks remain for this item
-        if await redis.scard(f'{REDIS_ITEM_TASKS_KEY}:{item_id}') == 0:
-            await redis.delete(f'{REDIS_ITEM_TASKS_KEY}:{item_id}')
-    else:
-        await pipe.execute()
+    await pipe.execute()
 
 
-async def redis_list_tasks(redis: Redis) -> list[str]:
-    return list(await redis.hkeys(REDIS_TASKS_KEY))
+async def redis_list_tasks(redis: Redis, item_id: str | None = None) -> list[str]:
+    task_ids = list(
+        await redis.smembers(f'{REDIS_ITEM_TASKS_KEY}:{item_id}')
+        if item_id is not None
+        else await redis.hkeys(REDIS_TASKS_KEY)
+    )
+    if not task_ids or REDIS_TASK_TTL == 0:
+        return task_ids
 
+    pipe = redis.pipeline(transaction=False)
+    for task_id in task_ids:
+        pipe.exists(f'{REDIS_TASKS_KEY}:{task_id}')
 
-async def redis_list_item_tasks(redis: Redis, item_id: str) -> list[str]:
-    return list(await redis.smembers(f'{REDIS_ITEM_TASKS_KEY}:{item_id}'))
+    active = []
+    for task_id, exists in zip(task_ids, await pipe.execute()):
+        if exists:
+            active.append(task_id)
+        else:
+            task_item_id = item_id if item_id is not None else await redis.hget(REDIS_TASKS_KEY, task_id)
+            await redis_cleanup_task(redis, task_id, task_item_id or None)
+    return active
 
 
 async def redis_send_command(redis: Redis, command: dict):
@@ -166,7 +192,7 @@ async def list_task_ids_by_item_id(redis, id):
     List all tasks associated with a specific ID.
     """
     if redis:
-        return await redis_list_item_tasks(redis, id)
+        return await redis_list_tasks(redis, id)
     return list(item_tasks.get(id, []))
 
 
