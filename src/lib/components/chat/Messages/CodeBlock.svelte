@@ -559,7 +559,7 @@
 						<DiffBlock code={_code} />
 					{:else if edit}
 						<CodeEditor
-							value={isDiff ? _code : code}
+							value={_code}
 							{id}
 							{lang}
 							onSave={() => {
