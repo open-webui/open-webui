@@ -44,7 +44,7 @@ def expand_recurring_event(
 
     original_start_ns = event_dict['start_at']
     original_start = to_local_datetime(original_start_ns)
-    rule_str = '\n'.join(line for line in rrule_str.splitlines() if not line.upper().startswith('DTSTART')) or rrule_str
+    rule_str = '\n'.join(part for part in rrule_str.split() if not part.upper().startswith('DTSTART')) or rrule_str
 
     try:
         # Anchor to the event's real start so day-of-week / day-of-month are correct
