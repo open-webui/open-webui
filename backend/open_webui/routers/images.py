@@ -61,7 +61,13 @@ IMAGE_FILE_EXTENSIONS = {
     'image/jpg': '.jpg',
     'image/mpo': '.jpg',
     'image/png': '.png',
+    'image/gif': '.gif',
     'image/webp': '.webp',
+    'image/bmp': '.bmp',
+    'image/tiff': '.tiff',
+    'image/avif': '.avif',
+    'image/heic': '.heic',
+    'image/heif': '.heif',
 }
 
 IMAGE_CONFIG_KEYS = {
@@ -476,6 +482,47 @@ def _is_same_origin(url: str, base_url: str) -> bool:
     )
 
 
+# b64_json carries no format metadata. Sniff the decoded bytes. Unknown
+# payloads stay image/png, which is what this branch returned before.
+_IMAGE_SIGNATURE_MIME = (
+    (b'\x89PNG', 'image/png'),
+    (b'\xff\xd8\xff', 'image/jpeg'),
+    (b'GIF8', 'image/gif'),
+)
+
+_FTYP_BRAND_MIME = {
+    b'avif': 'image/avif',
+    b'avis': 'image/avif',
+    b'heic': 'image/heic',
+    b'heix': 'image/heic',
+    b'hevc': 'image/heic',
+    b'hevx': 'image/heic',
+    b'heif': 'image/heif',
+    b'mif1': 'image/heif',
+    b'msf1': 'image/heif',
+}
+
+
+def _image_mime_from_bytes(data: bytes) -> str:
+    for signature, mime in _IMAGE_SIGNATURE_MIME:
+        if data.startswith(signature):
+            return mime
+    if len(data) >= 12 and data.startswith(b'RIFF') and data[8:12] == b'WEBP':
+        return 'image/webp'
+    return _container_image_mime(data) or 'image/png'
+
+
+def _container_image_mime(data: bytes) -> str | None:
+    if len(data) >= 12 and data[4:8] == b'ftyp':
+        return _FTYP_BRAND_MIME.get(data[8:12])
+    if data.startswith((b'II*\x00', b'MM\x00*')):
+        return 'image/tiff'
+    # Bytes 6:10 are reserved and zero in a BMP. "BM" alone collides too easily.
+    if len(data) >= 14 and data.startswith(b'BM') and data[6:10] == b'\x00\x00\x00\x00':
+        return 'image/bmp'
+    return None
+
+
 async def get_image_data(data: str, headers=None, trusted_base_url: str | None = None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
@@ -509,18 +556,34 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
                 mime_type = header.split(';')[0].lstrip('data:')
                 img_data = base64.b64decode(encoded)
             else:
-                mime_type = 'image/png'
                 img_data = base64.b64decode(data)
+                mime_type = _image_mime_from_bytes(img_data)
             return img_data, mime_type
     except Exception as e:
         log.exception(f'Error loading image data: {e}')
         return None, None
 
 
+def _image_extension(content_type: str) -> str:
+    """File extension for a stored image.
+
+    ``image/webp`` is absent from Python's strict MIME map, so
+    ``mimetypes.guess_extension`` returns None on images without
+    ``/etc/mime.types`` and the saved name becomes ``generated-imageNone``.
+    """
+    base_type = content_type.split(';', 1)[0].strip().lower()
+    return (
+        IMAGE_FILE_EXTENSIONS.get(base_type)
+        or mimetypes.guess_extension(base_type)
+        or mimetypes.guess_extension(base_type, strict=False)
+        or '.png'
+    )
+
+
 async def upload_image(request, image_data, content_type, metadata, user, db=None):
     if image_data is None or content_type is None:
         raise ValueError('Failed to retrieve image data from the generation backend')
-    image_format = mimetypes.guess_extension(content_type)
+    image_format = _image_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
         filename=f'generated-image{image_format}',  # will be converted to a unique ID on upload_file
