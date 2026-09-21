@@ -33,16 +33,11 @@
 	"{{count}} of {{total}} accessible_many": "",
 	"{{count}} of {{total}} accessible_other": "",
 	"{{COUNT}} pipeline(s) selected": "",
-<<<<<<< HEAD
-	"{{COUNT}} Replies": "{{COUNT}} risposte",
-	"{{COUNT}} Rows": "{{COUNT}} righe",
-=======
 	"{{count}} removed lines_one": "",
 	"{{count}} removed lines_many": "",
 	"{{count}} removed lines_other": "",
 	"{{COUNT}} Replies": "{{COUNT}} risposte",
-	"{{COUNT}} Rows": "",
->>>>>>> upstream/dev
+	"{{COUNT}} Rows": "{{COUNT}} righe",
 	"{{count}} selected_one": "",
 	"{{count}} selected_many": "",
 	"{{count}} selected_other": "",
@@ -247,14 +242,8 @@
 	"at": "",
 	"At time of event": "",
 	"Attach File From Knowledge": "",
-<<<<<<< HEAD
 	"Attach Files": "Allega file",
-	"Attach files with full content or focused retrieval by default.": "",
 	"Attach Knowledge": "Allega conoscenza",
-=======
-	"Attach Files": "",
-	"Attach Knowledge": "",
->>>>>>> upstream/dev
 	"Attach Notes": "",
 	"Attach Webpage": "Allega pagina web",
 	"Attention to detail": "Attenzione ai dettagli",
@@ -460,15 +449,7 @@
 	"Confirm your action": "Conferma la tua azione",
 	"Confirm your new password": "Conferma la tua nuova password",
 	"Confirm Your Password": "",
-<<<<<<< HEAD
-	"Connect code execution to a Jupyter server endpoint.": "",
-	"Connect code interpreter to a Jupyter server endpoint.": "",
-	"Connect to a stable-diffusion-webui server running with the `--api` flag.": "",
 	"Connect to an AI provider to start chatting": "Connettiti a un provider di AI per iniziare a chattare",
-	"Connect to Open Terminal instances to browse files and use them as always-on tools. Only one can be active at a time.": "",
-=======
-	"Connect to an AI provider to start chatting": "",
->>>>>>> upstream/dev
 	"Connect to Open Terminal instances. Admins and users granted access can use file browsing and terminal tools through these servers.": "",
 	"Connect to your own OpenAPI compatible external tool servers.": "Connettiti ai tuoi server di tool esterni compatibili con OpenAPI.",
 	"Connected": "",
@@ -534,13 +515,7 @@
 	"Create Admin Account": "Crea account amministratore",
 	"Create announcements shown to users in the app.": "",
 	"Create Channel": "Crea canale",
-<<<<<<< HEAD
-	"Create chat tags from conversation content.": "",
 	"Create Folder": "Crea cartella",
-	"Create Image": "",
-=======
-	"Create Folder": "",
->>>>>>> upstream/dev
 	"Create Knowledge": "Crea conoscenza",
 	"Create Model": "",
 	"Create new key": "Crea nuova chiave",
@@ -694,33 +669,16 @@
 	"Don't like the style": "Non ti piace lo stile",
 	"Done": "Fatto",
 	"Download": "Scarica",
-<<<<<<< HEAD
 	"Download \"{{searchValue}}\"": "Scarica \"{{searchValue}}\"",
 	"Download \"{{searchValue}}\" from {{provider}}": "Scarica \"{{searchValue}}\" da {{provider}}",
-	"Download & Delete": "Scarica e elimina",
-	"Download all users as CSV.": "",
 	"Download as JSON": "Scarica come JSON",
-=======
-	"Download \"{{searchValue}}\"": "",
-	"Download \"{{searchValue}}\" from {{provider}}": "",
-	"Download as JSON": "",
->>>>>>> upstream/dev
 	"Download as SVG": "Scarica come SVG",
 	"Download canceled": "Scaricamento annullato",
 	"Download CSV Template": "",
 	"Download failed": "",
-<<<<<<< HEAD
 	"Download Model": "Scarica modello",
-	"Download the application database when supported.": "",
-	"Download the current admin configuration as JSON.": "",
-	"Download your chat history as a JSON export.": "",
 	"Downloading \"{{name}}\"": "Scaricamento di \"{{name}}\"",
 	"Downloading \"{{searchValue}}\"": "Scaricamento di \"{{searchValue}}\"",
-=======
-	"Download Model": "",
-	"Downloading \"{{name}}\"": "",
-	"Downloading \"{{searchValue}}\"": "",
->>>>>>> upstream/dev
 	"Downloading stats...": "",
 	"Drag and Drop Container": "",
 	"Drag to reorder": "",
@@ -848,10 +806,6 @@
 	"Enter Jupyter Token": "Inserisci Token Jupyter",
 	"Enter Jupyter URL": "Inserisci URL Jupyter",
 	"Enter Kagi Search API Key": "Inserisci Chiave API Kagi Search",
-<<<<<<< HEAD
-	"Enter Key Behavior": "Comportamento tasto invio",
-=======
->>>>>>> upstream/dev
 	"Enter language": "",
 	"Enter language codes": "Inserisci i codici lingua",
 	"Enter Linkup API Key": "",
@@ -1092,14 +1046,8 @@
 	"Folder Background Image": "Immagine di sfondo della cartella",
 	"Folder created successfully": "Cartella creata con successo",
 	"Folder deleted successfully": "Cartella rimossa con successo",
-<<<<<<< HEAD
-	"Folder Max File Count": "",
 	"Folder name": "Nome cartella",
 	"Folder Name": "Nome cartella",
-=======
-	"Folder name": "",
-	"Folder Name": "",
->>>>>>> upstream/dev
 	"Folder name cannot be empty.": "Il nome della cartella non può essere vuoto.",
 	"Folder name updated successfully": "Nome cartella aggiornato con successo",
 	"Folder options": "",
@@ -1116,18 +1064,9 @@
 	"Fork: fork the current chat branch into a new chat.": "",
 	"Forking chat...": "",
 	"Form": "Modulo",
-<<<<<<< HEAD
-	"Format Lines": "",
-	"Format lines to detect inline math and styles.": "",
-	"Format Markdown in previews and compact content surfaces.": "",
-	"Format Markdown syntax in assistant responses.": "",
-	"Format Markdown syntax in your own messages.": "",
-	"Formatting may be inconsistent from source.": "La formattazione potrebbe essere incoerente rispetto alla fonte.",
-=======
 	"Format Markdown as you type and paste. Turn off to keep Markdown characters and paste plain text. Existing formatting is preserved.": "",
 	"Formatting": "",
-	"Formatting may be inconsistent from source.": "",
->>>>>>> upstream/dev
+	"Formatting may be inconsistent from source.": "La formattazione potrebbe essere incoerente rispetto alla fonte.",
 	"Forward": "",
 	"Forward cookies": "",
 	"Forward cookies from your Open WebUI request to this server.": "",
@@ -1205,12 +1144,7 @@
 	"High": "",
 	"History": "",
 	"Home": "Home",
-<<<<<<< HEAD
 	"Horizontal Layout": "Layout Orizzontale",
-	"Host": "Host",
-=======
-	"Horizontal Layout": "",
->>>>>>> upstream/dev
 	"Hourly": "",
 	"Hourly Messages": "",
 	"How can I help you today?": "Come posso aiutarti oggi?",
@@ -1261,13 +1195,7 @@
 	"Insert": "",
 	"Insert into note": "",
 	"Instructions": "",
-<<<<<<< HEAD
-	"Integration": "Integrazione",
 	"Integrations": "Integrazioni",
-	"Interface": "Interfaccia",
-=======
-	"Integrations": "",
->>>>>>> upstream/dev
 	"Interface Settings Access": "",
 	"Invalid background image.": "",
 	"Invalid file format.": "Formato file non valido.",
@@ -1375,15 +1303,8 @@
 	"Make Public": "",
 	"Male": "",
 	"Manage": "Gestisci",
-<<<<<<< HEAD
 	"Manage Connections": "Gestisci connessioni",
-	"Manage Direct Connections": "Gestisci connessioni dirette",
-	"Manage Files": "Gestisci file",
 	"Manage Models": "Gestisci modelli",
-=======
-	"Manage Connections": "",
-	"Manage Models": "Gestisci Modelli",
->>>>>>> upstream/dev
 	"Manage Ollama": "Gestisci Ollama",
 	"Mapped Source": "",
 	"March": "Marzo",
@@ -1731,19 +1652,10 @@
 	"Permissions reset to defaults": "",
 	"Persistent": "",
 	"Personal": "",
-<<<<<<< HEAD
-	"Personalization": "Personalizzazione",
-	"Picture Claim": "",
 	"Pin": "Fissa",
 	"Pin to Sidebar": "Fissa nella barra laterale",
 	"Pinned": "Fissato",
 	"Pinned Messages": "Messaggi fissati",
-=======
-	"Pin": "Appunta",
-	"Pin to Sidebar": "",
-	"Pinned": "Appuntato",
-	"Pinned Messages": "",
->>>>>>> upstream/dev
 	"Pipe": "",
 	"Pipeline deleted successfully": "Pipeline rimossa con successo",
 	"Pipeline downloaded successfully": "Pipeline scaricata con successo",
@@ -1820,13 +1732,7 @@
 	"Pyodide file browser": "",
 	"Quality": "",
 	"Query failed": "",
-<<<<<<< HEAD
-	"Query Generation Prompt": "Prompt di generazione query",
 	"Querying": "Consultazione",
-	"Queue outgoing messages instead of interrupting active responses.": "",
-=======
-	"Querying": "",
->>>>>>> upstream/dev
 	"Queued messages": "",
 	"Quick Actions": "",
 	"Ran {{COUNT}} analyses": "",
@@ -1918,22 +1824,11 @@
 	"Restart": "",
 	"Result": "Risultato",
 	"RESULT": "Risultato",
-<<<<<<< HEAD
-	"Retained Messages": "",
-	"Retrieval": "Recupero ricordo",
-	"Retrieval Query Generation": "Generazione di query di recupero ricordo",
 	"Retrieved {{count}} sources": "Recuperate {{count}} fonti",
 	"Retrieved {{count}} sources_one": "Recuperata 1 fonte",
 	"Retrieved {{count}} sources_many": "Recuperate {{count}} fonti",
 	"Retrieved {{count}} sources_other": "Recuperate {{count}} fonti",
 	"Retrieved 1 source": "Recuperata 1 fonte",
-=======
-	"Retrieved {{count}} sources": "",
-	"Retrieved {{count}} sources_one": "",
-	"Retrieved {{count}} sources_many": "",
-	"Retrieved {{count}} sources_other": "",
-	"Retrieved 1 source": "",
->>>>>>> upstream/dev
 	"Retry": "",
 	"Rewrite the selected text.": "",
 	"Role": "Ruolo",
@@ -1993,14 +1888,8 @@
 	"Search skills": "",
 	"Search Skills": "",
 	"Search the internet": "Cerca su Internet",
-<<<<<<< HEAD
-	"Search the web and fetch URLs": "",
 	"Search tools": "Cerca strumenti",
 	"Search Tools": "Cerca strumenti",
-=======
-	"Search tools": "",
-	"Search Tools": "Cerca Strumenti",
->>>>>>> upstream/dev
 	"Search translations": "",
 	"Search users or groups": "",
 	"Searched {{count}} sites": "Cercati {{count}} siti",
@@ -3178,17 +3067,8 @@
 	"Shorten older messages so this chat can keep going.": "",
 	"Show": "Mostra",
 	"Show \"What's New\" Modal on Login": "Mostra il modulo \"Novità\" al login",
-<<<<<<< HEAD
-	"Show a floating preview of recent messages when hovering a chat in the sidebar.": "",
-	"Show admin contact details while an account waits for approval.": "",
 	"Show All": "Mostra tutto",
 	"Show all ({{COUNT}} characters)": "Mostra tutto ({{COUNT}} caratteri)",
-	"Show email and password sign-in on the login page. Set up SSO or LDAP before disabling. Disabling also blocks local sign-ups; password API access is unchanged.": "",
-	"Show emoji feedback in the call interface.": "",
-=======
-	"Show All": "",
-	"Show all ({{COUNT}} characters)": "",
->>>>>>> upstream/dev
 	"Show Files": "",
 	"Show Hidden Files": "",
 	"Show image preview": "",
@@ -3540,20 +3420,11 @@
 	"View channel": "",
 	"View chat": "",
 	"View Replies": "Visualizza Risposte",
-<<<<<<< HEAD
 	"View Result from {{NAME}}": "Vedi risultato di {{NAME}}",
 	"View source: {{name}}": "Vedi fonte: {{name}}",
 	"View source: {{title}}": "Vedi fonte: {{title}}",
-	"View the installed version and check release updates.": "",
 	"Viewport Pinned": "Blocca finestra",
 	"Viewport Unpinned": "Sblocca finestra",
-=======
-	"View Result from {{NAME}}": "",
-	"View source: {{name}}": "",
-	"View source: {{title}}": "",
-	"Viewport Pinned": "",
-	"Viewport Unpinned": "",
->>>>>>> upstream/dev
 	"Visibility": "Visibilità",
 	"Visible": "",
 	"Visible to all users": "",
@@ -3579,13 +3450,7 @@
 	"Webhook Name": "",
 	"Webhook saved": "",
 	"Webhooks": "",
-<<<<<<< HEAD
 	"Webpage URLs": "URL delle pagine web",
-	"WebUI Settings": "Impostazioni WebUI",
-	"WebUI URL": "URL WebUI",
-=======
-	"Webpage URLs": "",
->>>>>>> upstream/dev
 	"WebUI will make requests to \"{{url}}\"": "WebUI farà richieste a \"{{url}}\"",
 	"WebUI will make requests to \"{{url}}/api/chat\"": "WebUI farà richieste a \"{{url}}/api/chat\"",
 	"WebUI will make requests to \"{{url}}/chat/completions\"": "WebUI farà richieste a \"{{url}}/chat/completions\"",
