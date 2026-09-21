@@ -621,7 +621,7 @@
 											? `max-h-96`
 											: ''}  overflow-y-auto"
 									>
-										{stdout || stderr}
+										{`${stdout ?? ''}${stderr ?? ''}`}
 									</div>
 								</div>
 							{/if}
