@@ -559,7 +559,7 @@
 						<DiffBlock code={_code} />
 					{:else if edit}
 						<CodeEditor
-							value={isDiff ? _code : code}
+							value={_code}
 							{id}
 							{lang}
 							onSave={() => {
@@ -621,7 +621,7 @@
 											? `max-h-96`
 											: ''}  overflow-y-auto"
 									>
-										{stdout || stderr}
+										{`${stdout ?? ''}${stderr ?? ''}`}
 									</div>
 								</div>
 							{/if}

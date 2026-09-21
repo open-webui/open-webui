@@ -595,6 +595,7 @@
 											})}
 										>
 											<button
+												{disabled}
 												class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.users
 													.map((u) => u.id)
 													.includes($user?.id)
@@ -617,7 +618,7 @@
 										</Tooltip>
 									{/each}
 
-									{#if onReaction}
+									{#if onReaction && !disabled}
 										<EmojiPicker
 											onSubmit={(name) => {
 												onReaction(name);

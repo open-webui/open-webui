@@ -2462,6 +2462,7 @@ async def grep_chat_files(
     """
     Search exact text across files attached to the current chat.
     Pass file_id from the attached_files block to search one file.
+    Auto-detected regex uses RE2 syntax; no lookarounds/backreferences, and shorthand classes are ASCII-only.
 
     :param pattern: The text pattern to search for
     :param file_id: Optional attached file ID to search within a single file
@@ -2638,6 +2639,7 @@ async def grep_knowledge_files(
     Search for exact text across knowledge files. Returns matching lines with line numbers.
     Unlike query_knowledge_files (semantic/vector search), this performs exact string matching.
     Automatically detects regex patterns (e.g. "error|warn", "version \\d+").
+    Regex uses RE2 syntax; no lookarounds/backreferences, and shorthand character classes are ASCII-only.
     Helpful for literal strings, identifiers, error messages, or regex-style searches.
 
     :param pattern: The text pattern to search for (regex auto-detected)

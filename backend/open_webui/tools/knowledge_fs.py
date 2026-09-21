@@ -17,7 +17,7 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from typing import Optional
 
-import regex
+import re2
 from fastapi import Request
 
 from open_webui.env import (
@@ -31,12 +31,9 @@ log = logging.getLogger(__name__)
 DEFAULT_HEAD_LINES = 10
 DEFAULT_TAIL_LINES = 10
 
-# Matching time allowed per tool call. Backtracking cost is exponential in the length of the
-# matched text, so capping the pattern or the line does not bound it.
+# Total matching time allowed per tool call, checked between RE2's linear-time searches.
 MATCH_BUDGET_SECONDS = 2.0
-MAX_REGEX_QUANTIFIER_COUNT = 2_000
-MAX_REGEX_QUANTIFIER_EXPANSION = 100_000
-_COUNTED_QUANTIFIER_RE = re.compile(r'(?<!\\)\{(\d+)(?:,\d*)?\}')
+MAX_SEARCH_PATTERN_LENGTH = 4_096
 
 
 class MatchBudgetExceeded(Exception):
@@ -90,48 +87,36 @@ def normalize_regex(pattern: str) -> str:
     return pattern.replace(r'\|', '|').replace(r'\|', '|')
 
 
-def validate_regex_quantifiers(pattern: str) -> str | None:
-    """Reject counted quantifiers that make regex compilation expand too much."""
-    quantifier_expansion = 1
-    for quantifier in _COUNTED_QUANTIFIER_RE.finditer(pattern):
-        count_text = quantifier.group(1)
-        count = int(count_text) if len(count_text) <= 6 else MAX_REGEX_QUANTIFIER_COUNT + 1
-        if count > MAX_REGEX_QUANTIFIER_COUNT:
-            return f'Regex quantifier counts over {MAX_REGEX_QUANTIFIER_COUNT:g} are not supported'
-
-        # ponytail: conservative expansion catches nested quantifier bombs without mirroring regex syntax.
-        quantifier_expansion *= max(count, 1)
-        if quantifier_expansion > MAX_REGEX_QUANTIFIER_EXPANSION:
-            return 'Regex quantifiers expand too much, lower the counts'
-
-    return None
-
-
 def build_matcher(pattern: str, case_insensitive: bool = False, use_regex: bool = False) -> tuple:
     """Build a matcher function. Returns (match_fn, error_str_or_None)."""
+    if len(pattern) > MAX_SEARCH_PATTERN_LENGTH:
+        return None, f'Search patterns over {MAX_SEARCH_PATTERN_LENGTH} characters are not supported'
+
     if not use_regex and is_regex_pattern(pattern):
         use_regex = True
 
     if use_regex:
         normalized = normalize_regex(pattern)
-        quantifier_error = validate_regex_quantifiers(normalized)
-        if quantifier_error:
-            return None, quantifier_error
         try:
-            re_flags = regex.IGNORECASE if case_insensitive else 0
-            compiled = regex.compile(normalized, re_flags)
-        except regex.error as e:
-            return None, f'Invalid regex: {e}'
+            options = re2.Options()
+            options.case_sensitive = not case_insensitive
+            options.max_mem = 1 << 20  # Bound compiled programs and the engine's matching cache to 1 MiB.
+            options.log_errors = False
+            compiled = re2.compile(normalized, options=options)
+        except re2.error as e:
+            return None, f'Invalid or unsupported regex (RE2 syntax): {e}'
 
         budget = _active_budget.get() or MatchBudget()
 
         def matches(line: str) -> bool:
             started = time.monotonic()
             try:
-                # A negative timeout disables it, so an exhausted budget must not reach search().
                 if budget.remaining <= 0:
                     raise TimeoutError
-                return bool(compiled.search(line, timeout=budget.remaining))
+                matched = bool(compiled.search(line))
+                if time.monotonic() - started >= budget.remaining:
+                    raise TimeoutError
+                return matched
             except TimeoutError:
                 raise MatchBudgetExceeded(f'Search exceeded {MATCH_BUDGET_SECONDS:g}s, narrow the pattern') from None
             finally:
@@ -1188,6 +1173,7 @@ async def kb_exec(
 
     Pipes:  grep "auth" | head -5
     Files:  reference by path (docs/api/auth.md), filename, or file ID
+    Regex: RE2 syntax; no lookarounds/backreferences. Shorthand character classes are ASCII-only.
 
     :param command: A filesystem command string
     :return: Command output as text
