@@ -34,6 +34,7 @@
 			</div>
 
 			<button
+				type="button"
 				class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
 				on:click={() => (collapsed = !collapsed)}
 				aria-label={collapsed ? 'Expand' : 'Collapse'}

@@ -231,7 +231,7 @@
 					current.splice(oldIndex, 1);
 					current.splice(newIndex, 0, itemId);
 					settings.set({ ...$settings, pinnedMenuItems: current });
-					await updateUserSettings(localStorage.token, { ui: $settings });
+					await updateUserSettings(localStorage.token, { ui: { pinnedMenuItems: current } });
 				}
 			});
 		}

@@ -400,12 +400,20 @@
 	let showDeleteConfirm = false;
 
 	const chatTitleInputKeydownHandler = (e) => {
+		// Let Enter and Escape finish IME composition without saving or cancelling the rename.
+		if (e.isComposing || e.keyCode === 229) {
+			return;
+		}
+
 		if (e.key === 'Enter') {
 			e.preventDefault();
-			setTimeout(() => {
-				const input = document.getElementById(`chat-title-input-${id}`);
-				if (input) input.blur();
-			}, 0);
+
+			if (chatTitle !== title) {
+				editChatTitle(id, chatTitle);
+			}
+
+			confirmEdit = false;
+			chatTitle = '';
 		} else if (e.key === 'Escape') {
 			e.preventDefault();
 			confirmEdit = false;

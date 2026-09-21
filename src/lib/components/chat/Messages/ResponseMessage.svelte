@@ -49,6 +49,7 @@
 	import RateComment from './RateComment.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import ArrowUpLeft from '$lib/components/icons/ArrowUpLeft.svelte';
 
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
@@ -464,6 +465,9 @@
 			annotation: {
 				...(message?.annotation ?? {}),
 				...(rating !== null ? { rating: rating } : {}),
+				...(rating !== null && rating !== message?.annotation?.rating
+					? { reason: null, details: null }
+					: {}),
 				...(details ? details : {})
 			}
 		};
@@ -524,9 +528,12 @@
 				message.feedbackId,
 				feedbackItem
 			).catch((error) => {
-				toast.error(`${error}`);
+				console.error(error);
+				return null;
 			});
-		} else {
+		}
+
+		if (!feedback) {
 			feedback = await createNewFeedback(localStorage.token, feedbackItem).catch((error) => {
 				toast.error(`${error}`);
 			});
@@ -937,6 +944,22 @@
 						class="flex items-center justify-start overflow-x-auto whitespace-nowrap buttons text-gray-600 dark:text-gray-500 mt-0.5 [&>*]:shrink-0"
 					>
 						{#if message.done || siblings.length > 1}
+							{#if message.done && onInsertToNote && visibleResponseContent}
+								<Tooltip content={$i18n.t('Insert into note')} placement="bottom">
+									<button
+										aria-label={$i18n.t('Insert into note')}
+										class="{isLastMessage || ($settings?.highContrastMode ?? false)
+											? 'visible'
+											: 'hover-reveal'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+										on:click={() => {
+											onInsertToNote?.(visibleResponseContent);
+										}}
+									>
+										<ArrowUpLeft className="size-3.5" strokeWidth="2" />
+									</button>
+								</Tooltip>
+							{/if}
+
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
 									<button
@@ -1094,22 +1117,6 @@
 										</svg>
 									</button>
 								</Tooltip>
-
-								{#if onInsertToNote && visibleResponseContent}
-									<Tooltip content={$i18n.t('Insert into note')} placement="bottom">
-										<button
-											aria-label={$i18n.t('Insert into note')}
-											class="{isLastMessage || ($settings?.highContrastMode ?? false)
-												? 'visible'
-												: 'hover-reveal'} rounded-lg px-2 py-1.5 text-xs text-gray-500 transition hover:bg-black/5 hover:text-black dark:hover:bg-white/5 dark:hover:text-white"
-											on:click={() => {
-												onInsertToNote?.(visibleResponseContent);
-											}}
-										>
-											{$i18n.t('Insert')}
-										</button>
-									</Tooltip>
-								{/if}
 
 								{#if !readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true))}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
@@ -1610,15 +1617,17 @@
 					</div>
 
 					{#if message.done && showRateComment}
-						<RateComment
-							bind:message
-							bind:show={showRateComment}
-							on:save={async (e) => {
-								await feedbackHandler(null, {
-									...e.detail
-								});
-							}}
-						/>
+						{#key message?.annotation?.rating}
+							<RateComment
+								bind:message
+								bind:show={showRateComment}
+								on:save={async (e) => {
+									await feedbackHandler(null, {
+										...e.detail
+									});
+								}}
+							/>
+						{/key}
 					{/if}
 
 					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}

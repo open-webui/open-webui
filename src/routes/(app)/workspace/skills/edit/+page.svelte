@@ -32,6 +32,7 @@
 				name: updatedSkill.name,
 				description: updatedSkill.description,
 				content: updatedSkill.content,
+				meta: updatedSkill.meta ?? {},
 				is_active: updatedSkill.is_active,
 				access_grants: updatedSkill?.access_grants === undefined ? [] : updatedSkill?.access_grants
 			};
@@ -52,6 +53,7 @@
 					name: _skill.name,
 					description: _skill.description,
 					content: _skill.content,
+					meta: _skill.meta ?? {},
 					is_active: _skill.is_active,
 					access_grants: _skill?.access_grants === undefined ? [] : _skill?.access_grants
 				};

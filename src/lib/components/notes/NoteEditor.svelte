@@ -212,8 +212,7 @@
 			title: note?.title === '' ? $i18n.t('Untitled') : note.title,
 			data: {
 				files: files
-			},
-			access_grants: note?.access_grants ?? []
+			}
 		}).catch((e) => {
 			toast.error(`${e}`);
 		});
@@ -997,6 +996,8 @@ ${content}
 		share={$user?.permissions?.sharing?.notes || $user?.role === 'admin'}
 		sharePublic={$user?.permissions?.sharing?.public_notes || $user?.role === 'admin'}
 		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
+		allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
+			$user?.role === 'admin'}
 		onChange={async () => {
 			if (id) {
 				try {
@@ -1506,7 +1507,7 @@ ${content}
 				embeddedDraftKey={noteChatDraftKey}
 				suggestedPrompts={noteChatSuggestedPrompts}
 				selectedText={selectedContent?.text ?? ''}
-				onInsertToNote={insertHandler}
+				onInsertToNote={note?.write_access ? insertHandler : null}
 				onNewEmbeddedChat={createNoteChat}
 				onCreateEmbeddedChat={createNoteChatOnFirstMessage}
 				onSelectEmbeddedChat={(chatId) => {

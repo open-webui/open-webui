@@ -2,6 +2,7 @@ import ast
 import asyncio
 import base64
 import copy
+import html
 import inspect
 import json
 import logging
@@ -52,7 +53,7 @@ from open_webui.models.models import Models
 from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import UserModel, Users
-from open_webui.retrieval.utils import get_sources_from_items
+from open_webui.retrieval.utils import filter_source_metadata, get_sources_from_items
 from open_webui.routers.images import (
     CreateImageForm,
     EditImageForm,
@@ -117,6 +118,7 @@ from open_webui.utils.misc import (
     get_response_error_detail,
     get_reasoning_details,
     get_system_message,
+    is_raster_image_content_type,
     is_string_allowed,
     merge_system_messages,
     prepend_to_first_user_message_content,
@@ -951,11 +953,17 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
             src_type = source.get('source', {}).get('type')
             src_rid = source.get('source', {}).get('id')
             body = doc if include_content else ''
+            extra_attrs = ''
+            for key, value in filter_source_metadata(meta).items():
+                if key in ('id', 'name', 'resource-type', 'resource-id'):
+                    continue
+                extra_attrs += f' {key}="{html.escape(str(value))}"'
             context_string += (
                 f'<source id="{source_ids[source_id]}"'
                 + (f' name="{src_name}"' if src_name else '')
                 + (f' resource-type="{src_type}"' if src_type else '')
                 + (f' resource-id="{src_rid}"' if src_rid else '')
+                + extra_attrs
                 + f'>{body}</source>\n'
             )
     return context_string
@@ -1258,6 +1266,14 @@ async def process_tool_result(
     return tool_result, tool_result_files, tool_result_embeds
 
 
+def parse_terminal_tool_result(tool_result: Any) -> dict:
+    try:
+        result = JSONCodec.loads(tool_result)
+    except (JSONCodec.JSONDecodeError, TypeError):
+        return {}
+    return result if isinstance(result, dict) else {}
+
+
 async def terminal_event_handler(
     tool_function_name: str,
     tool_function_params: dict,
@@ -1276,17 +1292,13 @@ async def terminal_event_handler(
     if tool_function_name == 'display_file':
         if tool_function_params.get('inline') is True:
             return
-        path = tool_function_params.get('path', '')
+        result = parse_terminal_tool_result(tool_result)
+        # Open Terminal resolves the argument against the session cwd, so prefer its resolved path
+        path = result.get('path') or tool_function_params.get('path', '')
         if not path:
             return
         # Only emit if the file actually exists
-        parsed = tool_result
-        if isinstance(parsed, str):
-            try:
-                parsed = JSONCodec.loads(parsed)
-            except (JSONCodec.JSONDecodeError, TypeError):
-                pass
-        if isinstance(parsed, dict) and parsed.get('exists') is False:
+        if result.get('exists') is False:
             return
         page = tool_function_params.get('page')
 
@@ -1300,7 +1312,8 @@ async def terminal_event_handler(
             }
         )
     elif tool_function_name in ('write_file', 'replace_file_content'):
-        path = tool_function_params.get('path', '')
+        result = parse_terminal_tool_result(tool_result)
+        path = result.get('path') or tool_function_params.get('path', '')
         if not path:
             return
         await event_emitter(
@@ -1725,7 +1738,7 @@ def get_images_from_messages(message_list):
         for file in message.get('files', []):
             if file.get('type') == 'image':
                 message_images.append(file.get('url'))
-            elif file.get('content_type', '').startswith('image/'):
+            elif is_raster_image_content_type(file.get('content_type')):
                 message_images.append(file.get('url'))
 
         if message_images:
@@ -2221,7 +2234,11 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
-    return [{k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS} for msg in db_messages]
+    return [
+        {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS}
+        for msg in db_messages
+        if not (msg.get('role') == 'assistant' and msg.get('error') and not msg.get('content') and not msg.get('output'))
+    ]
 
 
 def get_reasoning_format(model: dict) -> str | None:
@@ -2272,6 +2289,8 @@ def process_messages_with_output(
             )
             if output_messages:
                 processed.extend(output_messages)
+                continue
+            if not message.get('content'):
                 continue
 
         clean_message = dict(message)
@@ -2440,7 +2459,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 image_files = [
                     f
                     for f in message.get('files', [])
-                    if f.get('type') == 'image' or (f.get('content_type') or '').startswith('image/')
+                    if f.get('type') == 'image' or is_raster_image_content_type(f.get('content_type'))
                 ]
                 if message.get('role') == 'user' and image_files:
                     text_content = message.get('content', '')
@@ -2664,7 +2683,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data['messages'],
                 )
 
-        if 'memory' in features and features['memory'] and await Config.get('memories.system_context.enable'):
+        if (
+            'memory' in features
+            and features['memory']
+            and await Config.get('memories.enable')
+            and await Config.get('memories.system_context.enable')
+        ):
             # features is client-supplied; re-check the permission the native FC path enforces.
             if getattr(user, 'role', None) == 'admin' or await has_permission(
                 getattr(user, 'id', ''),
@@ -3036,6 +3060,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:
+                if tool_server.get('is_terminal') is True and not terminal_capability:
+                    continue
                 system_prompt = tool_server.pop('system_prompt', None)
                 if system_prompt:
                     form_data['messages'] = add_or_update_system_message(
@@ -3052,6 +3078,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         'direct': True,
                         'server': tool_server,
                     }
+
+        if terminal_id and terminal_capability:
+            from open_webui.utils.terminals import add_terminal_agents_md, get_terminal_agents_md
+
+            agents_md = await get_terminal_agents_md(request, user, metadata, extra_params)
+            if agents_md:
+                form_data['messages'] = add_terminal_agents_md(form_data['messages'], agents_md)
 
         if mcp_clients:
             metadata['mcp_clients'] = mcp_clients
@@ -3099,6 +3132,50 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
+
+        # Only advertise user-shell tools when the originating browser has a connected shell.
+        shell_tools = {
+            name: tool
+            for name, tool in tools_dict.items()
+            if name in {'read_user_terminal', 'send_user_terminal_input'}
+            and (tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
+        }
+        selected = {
+            name
+            for name, tool in shell_tools.items()
+            if terminal_id
+            and (
+                tool.get('tool_id') == f'terminal:{terminal_id}'
+                or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
+            )
+        }
+        connected = False
+        if (
+            selected
+            and event_caller
+            and metadata.get('session_id')
+            and metadata.get('chat_id')
+            and not metadata.get('automation_id')
+            and not metadata.get('internal')
+        ):
+            try:
+                state = await asyncio.wait_for(
+                    event_caller(
+                        {
+                            'type': 'request:terminal:state',
+                            'data': {'terminal_id': terminal_id, 'session_id': metadata['session_id']},
+                        }
+                    ),
+                    timeout=2,
+                )
+                connected = isinstance(state, dict) and state.get('connected') is True
+            except Exception:
+                # Old/disconnected browsers cannot confirm availability; other tools still work.
+                pass
+
+        for name in shell_tools:
+            if not connected or name not in selected:
+                tools_dict.pop(name)
 
         if tools_dict:
             # Always store resolved tools in metadata so downstream consumers
@@ -4162,13 +4239,14 @@ async def non_streaming_chat_response_handler(response, ctx):
                         metadata['message_id'],
                         {
                             'error': {'content': error},
+                            'done': True,
                         },
                     )
                 if isinstance(error, str) or isinstance(error, dict):
                     await event_emitter(
                         {
                             'type': 'chat:message:error',
-                            'data': {'error': {'content': error}},
+                            'data': {'error': {'content': error}, 'done': True},
                         }
                     )
 

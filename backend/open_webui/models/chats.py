@@ -258,6 +258,7 @@ class ChatForm(BaseModel):
 class ChatImportForm(ChatForm):
     meta: dict | None = {}
     pinned: bool | None = False
+    archived: bool | None = False
     current_message_id: str | None = None
     created_at: int | None = None
     updated_at: int | None = None
@@ -304,6 +305,7 @@ class ChatTitleIdResponse(BaseModel):
     last_read_at: int | None = None
     snippet: str | None = None
     active: bool = False
+    archived: bool = False
 
 
 class SharedChatResponse(BaseModel):
@@ -644,6 +646,7 @@ class ChatTable:
                 'meta': form_data.meta,
                 'variables': form_data.variables or {},
                 'pinned': form_data.pinned,
+                'archived': form_data.archived,
                 'folder_id': form_data.folder_id,
                 'current_message_id': form_data.current_message_id or self.get_current_message_id(form_data.chat),
                 'created_at': (form_data.created_at if form_data.created_at else int(time.time())),
@@ -1985,10 +1988,8 @@ class ChatTable:
         ]
 
         # Extract folder names
-        folders = await Folders.search_folders_by_names(
-            user_id,
-            [word.replace('folder:', '') for word in search_text_words if word.startswith('folder:')],
-        )
+        folder_names = [word.replace('folder:', '') for word in search_text_words if word.startswith('folder:')]
+        folders = await Folders.search_folders_by_names(user_id, folder_names)
         folder_ids = [folder.id for folder in folders]
 
         is_pinned = None
@@ -2032,7 +2033,7 @@ class ChatTable:
                 else:
                     stmt = stmt.filter(Chat.share_id.is_(None))
 
-            if folder_ids:
+            if folder_names:
                 stmt = stmt.filter(Chat.folder_id.in_(folder_ids))
 
             # Check if the database dialect is either 'sqlite' or 'postgresql'
@@ -2535,18 +2536,15 @@ class ChatTable:
         except Exception:
             return False
 
-    async def move_chats_by_user_id_and_folder_id(
+    async def move_chats_by_folder_id(
         self,
-        user_id: str,
         folder_id: str,
         new_folder_id: str | None,
         db: AsyncSession | None = None,
     ) -> bool:
         try:
             async with get_async_db_context(db) as session:
-                await session.execute(
-                    update(Chat).filter_by(user_id=user_id, folder_id=folder_id).values(folder_id=new_folder_id)
-                )
+                await session.execute(update(Chat).filter_by(folder_id=folder_id).values(folder_id=new_folder_id))
                 await session.commit()
 
                 return True

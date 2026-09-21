@@ -23,9 +23,9 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.socket.main import (
+    EVENT_QUEUES,
     get_event_call,
     get_event_emitter,
-    sio,
 )
 from open_webui.utils.filter import (
     get_filter_functions,
@@ -71,19 +71,8 @@ async def generate_direct_chat_completion(
     logging.info('WebSocket channel: %s', channel)
 
     if form_data.get('stream'):
-        q = asyncio.Queue()
-
-        async def message_listener(sid, data):
-            """
-            Handle received socket messages and push them into the queue.
-            """
-            await q.put(data)
-
-        def remove_message_listener():
-            sio.handlers['/'].pop(channel, None)
-
-        # Register the listener
-        sio.on(channel, message_listener)
+        queue = asyncio.Queue()
+        EVENT_QUEUES[channel] = queue
 
         # Start processing chat completion in background
         try:
@@ -103,16 +92,15 @@ async def generate_direct_chat_completion(
 
             status = res.get('status', False)
         except BaseException:
-            remove_message_listener()
+            EVENT_QUEUES.pop(channel, None)
             raise
 
         if status:
             # Define a generator to stream responses
             async def event_generator():
-                nonlocal q
                 try:
                     while True:
-                        data = await q.get()  # Wait for new messages
+                        data = await queue.get()  # Wait for new messages
                         if isinstance(data, dict):
                             if 'done' in data and data['done']:
                                 break  # Stop streaming when 'done' is received
@@ -127,16 +115,16 @@ async def generate_direct_chat_completion(
                     log.debug('Error in event generator: %s', e)
                     pass
                 finally:
-                    remove_message_listener()
+                    EVENT_QUEUES.pop(channel, None)
 
             # Define a background task to run the event generator
             async def background():
-                remove_message_listener()
+                EVENT_QUEUES.pop(channel, None)
 
             # Return the streaming response
             return StreamingResponse(event_generator(), media_type='text/event-stream', background=background)
         else:
-            remove_message_listener()
+            EVENT_QUEUES.pop(channel, None)
             raise Exception(str(res))
     else:
         res = await event_caller(

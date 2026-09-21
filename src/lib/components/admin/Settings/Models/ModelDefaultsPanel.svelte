@@ -21,7 +21,6 @@
 	export let dirty = false;
 
 	let config = null;
-	let modelIds = [];
 	let loading = false;
 	let expanded = false;
 	let showCapabilities = false;
@@ -69,8 +68,6 @@
 		loading = true;
 		config = await getModelsConfig(localStorage.token);
 
-		modelIds = config?.MODEL_ORDER_LIST || [];
-
 		const savedMeta = config?.DEFAULT_MODEL_METADATA;
 		if (savedMeta && Object.keys(savedMeta).length > 0) {
 			defaultCapabilities = savedMeta.capabilities ?? { ...DEFAULT_CAPABILITIES };
@@ -102,10 +99,12 @@
 			...(Object.keys(builtinTools).length > 0 ? { builtinTools } : {})
 		};
 
+		config = await getModelsConfig(localStorage.token);
+
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: config?.DEFAULT_MODELS ?? null,
 			DEFAULT_PINNED_MODELS: config?.DEFAULT_PINNED_MODELS ?? null,
-			MODEL_ORDER_LIST: modelIds,
+			MODEL_ORDER_LIST: config?.MODEL_ORDER_LIST ?? [],
 			DEFAULT_MODEL_METADATA: metadata,
 			DEFAULT_MODEL_PARAMS: Object.fromEntries(configuredParams)
 		}).catch((error) => {
@@ -150,7 +149,7 @@
 				expanded = !expanded;
 			}}
 		>
-			{$i18n.t('Model Defaults')}
+			{$i18n.t('settings.admin.models.defaults.modelDefaults.label')}
 		</button>
 
 		<button
@@ -178,7 +177,7 @@
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Model Capabilities')}
+							{$i18n.t('settings.admin.models.defaults.modelCapabilities.label')}
 						</span>
 						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{showCapabilities ? $i18n.t('Close') : $i18n.t('Configure')}
@@ -217,7 +216,7 @@
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Model Parameters')}
+							{$i18n.t('settings.admin.models.defaults.modelParameters.label')}
 						</span>
 						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{showParameters ? $i18n.t('Close') : $i18n.t('Configure')}
@@ -245,7 +244,7 @@
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Prompt Suggestions')}
+							{$i18n.t('settings.admin.models.defaults.promptSuggestions.label')}
 						</span>
 						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{showPromptSuggestions ? $i18n.t('Close') : $i18n.t('Configure')}

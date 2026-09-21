@@ -5,15 +5,20 @@ import type { i18n as i18nType } from 'i18next';
 import { writable } from 'svelte/store';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
+import { assembleSettingsTranslations } from './settings-translations';
+
 let overrides: I18nOverrides = {};
 
 export const loadBundledResource = async (language: string): Promise<Record<string, string>> =>
 	(await import(`./locales/${language}/translation.json`)).default;
 
-const loadResource = async (language: string) => ({
-	...(await loadBundledResource(language)),
-	...overrides[language]
-});
+const loadResource = async (language: string) =>
+	assembleSettingsTranslations(
+		await loadBundledResource(language),
+		await loadBundledResource('en-US'),
+		overrides[language],
+		overrides['en-US']
+	);
 
 export const updateI18n = async (value: I18nOverrides = {}) => {
 	overrides = value;

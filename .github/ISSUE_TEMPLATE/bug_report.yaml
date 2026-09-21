@@ -12,6 +12,8 @@ body:
 
         Before submitting, search open and closed [Issues](https://github.com/open-webui/open-webui/issues) and [Discussions](https://github.com/open-webui/open-webui/discussions). The issue may already be reported or fixed on `dev`.
 
+        **Test on the latest release AND on `dev`, right before you submit this report, not last week.** A huge share of reports are for bugs already fixed on `dev`, sometimes weeks earlier, because the reporter only tested an old version and never rechecked. Reports that don't reproduce on latest and on current `dev` at submission time will be closed without further discussion, no exceptions.
+
         Please do not open a code pull request for this report unless a maintainer asks for one, or the change is only i18n/localization. If you want to share code as reference, include it here as a local diff or patch. Actionable reproduction details are the most useful next step.
 
         Security vulnerabilities must not be reported publicly. Use the [GitHub security page](https://github.com/open-webui/open-webui/security) instead.
@@ -23,11 +25,9 @@ body:
       options:
         - label: I searched open and closed issues and discussions for an existing report.
           required: true
-        - label: I checked whether this is already fixed on the `dev` branch or latest source.
+        - label: I reproduced this bug on the latest release AND on the current `dev` branch, right before submitting this report. I did not just check an old version or rely on a check from days ago.
           required: true
         - label: I understand that maintainers want a well-written issue before any code pull request.
-          required: true
-        - label: I am using the latest available version of Open WebUI for my install method.
           required: true
         - label: This is not a security vulnerability.
           required: true

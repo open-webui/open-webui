@@ -29,7 +29,7 @@ from open_webui.models.memories import Memories
 from open_webui.models.messages import Message, Messages
 from open_webui.models.notes import Notes
 from open_webui.models.users import UserModel
-from open_webui.retrieval.utils import get_content_from_url
+from open_webui.retrieval.utils import filter_source_metadata, get_content_from_url
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
     CreateImageForm,
@@ -526,6 +526,7 @@ async def ask_user(
     Use this when the next step depends on user intent, preference, or a tradeoff that cannot be inferred safely.
 
     :param questions: 1-3 question objects, each with id, header, question, and 2-3 options. Each option needs label and description.
+        List the option you recommend first; the UI labels the first option Recommended.
     :param allow_other: Whether users may enter a free-form answer instead of choosing one of the options
     :param timeout_ms: How long the browser should keep the prompt open before cancelling it
     :return: JSON with status and answers keyed by question id
@@ -2461,6 +2462,7 @@ async def grep_chat_files(
     """
     Search exact text across files attached to the current chat.
     Pass file_id from the attached_files block to search one file.
+    Auto-detected regex uses RE2 syntax; no lookarounds/backreferences, and shorthand classes are ASCII-only.
 
     :param pattern: The text pattern to search for
     :param file_id: Optional attached file ID to search within a single file
@@ -2609,6 +2611,7 @@ async def query_chat_files(
             for idx, doc in enumerate(documents):
                 metadata = metadatas[idx] if idx < len(metadatas) and isinstance(metadatas[idx], dict) else {}
                 chunk = {
+                    **filter_source_metadata(metadata),
                     'content': doc,
                     'source': metadata.get('source', metadata.get('name', source_info.get('name', 'Unknown'))),
                     'file_id': metadata.get('file_id', source_info.get('id', '')),
@@ -2636,6 +2639,7 @@ async def grep_knowledge_files(
     Search for exact text across knowledge files. Returns matching lines with line numbers.
     Unlike query_knowledge_files (semantic/vector search), this performs exact string matching.
     Automatically detects regex patterns (e.g. "error|warn", "version \\d+").
+    Regex uses RE2 syntax; no lookarounds/backreferences, and shorthand character classes are ASCII-only.
     Helpful for literal strings, identifiers, error messages, or regex-style searches.
 
     :param pattern: The text pattern to search for (regex auto-detected)
@@ -3321,6 +3325,7 @@ async def query_knowledge_files(
 
                 for idx, doc in enumerate(documents):
                     chunk_info = {
+                        **filter_source_metadata(metadatas[idx]),
                         'content': doc,
                         'source': metadatas[idx].get('source', metadatas[idx].get('name', 'Unknown')),
                         'file_id': metadatas[idx].get('file_id', ''),
@@ -3344,6 +3349,7 @@ async def query_knowledge_files(
             for idx, doc in enumerate(documents):
                 metadata = metadatas[idx] if idx < len(metadatas) else {}
                 chunk_info = {
+                    **filter_source_metadata(metadata),
                     'content': doc,
                     'source': metadata.get('source', metadata.get('name', knowledge.name)),
                     'file_id': metadata.get('file_id', f'external-{knowledge.id}'),
@@ -3762,7 +3768,7 @@ async def create_automation(
 
         # Validate the RRULE
         try:
-            validate_rrule(rrule, tz=user.timezone)
+            await validate_rrule(rrule, tz=user.timezone)
         except ValueError as e:
             return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
@@ -3788,7 +3794,7 @@ async def create_automation(
             is_active=True,
         )
 
-        automation = await Automations.insert(user_id, form, next_run_ns(rrule, tz=tz))
+        automation = await Automations.insert(user_id, form, await next_run_ns(rrule, tz=tz))
 
         return JSONCodec.dumps(
             {
@@ -3799,7 +3805,7 @@ async def create_automation(
                 'model_id': model_id,
                 'target': automation.data.get('target'),
                 'is_active': automation.is_active,
-                'next_runs': next_n_runs_ns(rrule, tz=tz),
+                'next_runs': await next_n_runs_ns(rrule, tz=tz),
             },
             ensure_ascii=False,
         )
@@ -3870,7 +3876,7 @@ async def update_automation(
         # Validate RRULE if changed
         if rrule is not None:
             try:
-                validate_rrule(new_rrule, tz=user.timezone)
+                await validate_rrule(new_rrule, tz=user.timezone)
             except ValueError as e:
                 return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
@@ -3892,7 +3898,7 @@ async def update_automation(
             is_active=automation.is_active,
         )
 
-        updated = await Automations.update_by_id(automation_id, form, next_run_ns(new_rrule, tz=tz))
+        updated = await Automations.update_by_id(automation_id, form, await next_run_ns(new_rrule, tz=tz))
 
         return JSONCodec.dumps(
             {
@@ -3903,7 +3909,7 @@ async def update_automation(
                 'model_id': new_model_id,
                 'target': updated.data.get('target'),
                 'is_active': updated.is_active,
-                'next_runs': next_n_runs_ns(new_rrule, tz=tz),
+                'next_runs': await next_n_runs_ns(new_rrule, tz=tz),
             },
             ensure_ascii=False,
         )
@@ -3971,7 +3977,7 @@ async def list_automations(
                     'rrule': rrule,
                     'is_active': item.is_active,
                     'last_run_at': item.last_run_at,
-                    'next_runs': next_n_runs_ns(rrule, tz=user.timezone if user else None),
+                    'next_runs': await next_n_runs_ns(rrule, tz=user.timezone if user else None),
                 }
             )
 
@@ -4018,7 +4024,7 @@ async def toggle_automation(
         rrule = automation.data.get('rrule', '')
         toggled = await Automations.toggle(
             automation_id,
-            next_run_ns(rrule, tz=user.timezone if user else None),
+            await next_run_ns(rrule, tz=user.timezone if user else None),
         )
 
         return JSONCodec.dumps(

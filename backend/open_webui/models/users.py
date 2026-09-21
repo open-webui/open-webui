@@ -803,7 +803,9 @@ class UsersTable:
                 return None
             scim = dict(user.scim or {})
             scim[provider] = {'external_id': external_id}
-            user.scim = scim
+            if scim != user.scim:
+                user.scim = scim
+                user.updated_at = int(time.time())
             await session.commit()
             return UserModel.model_validate(user)
 

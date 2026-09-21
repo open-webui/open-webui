@@ -371,6 +371,9 @@ ENABLE_QUERIES_CACHE = os.getenv('ENABLE_QUERIES_CACHE', 'False').lower() == 'tr
 ENABLE_ADMIN_CHAT_ACCESS = os.getenv('ENABLE_ADMIN_CHAT_ACCESS', 'True').lower() == 'true'
 RAG_SYSTEM_CONTEXT = os.getenv('RAG_SYSTEM_CONTEXT', 'False').lower() == 'true'
 
+# Empty by default: chunk metadata also holds internal bookkeeping (file hashes, collection names, scores).
+RAG_SOURCE_METADATA_KEYS = [key.strip() for key in os.getenv('RAG_SOURCE_METADATA_KEYS', '').split(',') if key.strip()]
+
 ####################################
 # REDIS
 ####################################
@@ -384,6 +387,14 @@ try:
     REDIS_RESPONSE_STREAM_TTL = int(os.getenv('REDIS_RESPONSE_STREAM_TTL', '3600'))
 except ValueError:
     REDIS_RESPONSE_STREAM_TTL = 3600
+
+# Seconds a task survives without a heartbeat. 0 disables expiry.
+try:
+    REDIS_TASK_TTL = int(os.getenv('REDIS_TASK_TTL', '300'))
+    if REDIS_TASK_TTL != 0 and REDIS_TASK_TTL < 60:
+        REDIS_TASK_TTL = 300
+except ValueError:
+    REDIS_TASK_TTL = 300
 
 REDIS_SENTINEL_HOSTS = os.getenv('REDIS_SENTINEL_HOSTS', '')
 REDIS_SENTINEL_PORT = os.getenv('REDIS_SENTINEL_PORT', '26379')

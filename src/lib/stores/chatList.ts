@@ -79,6 +79,14 @@ export const refreshFolderChatLists = async (
 	await Promise.all([...folderRefreshHandlers].map((handler) => handler(folderId, chat)));
 };
 
+export const refreshSidebar = async (token: string = '') => {
+	await Promise.all([
+		refreshChatList(token, { refreshPinned: true }),
+		refreshFolderChatLists(null),
+		refreshFolderChatLists()
+	]);
+};
+
 export const loadNextChatListPage = async (token: string = ''): Promise<ChatListResult> => {
 	if (!paginationReady || allLoaded || loadingNextPage) {
 		return { accepted: false, allLoaded };
