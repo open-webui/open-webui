@@ -300,8 +300,13 @@ async def get_folder_by_id(
     # Check shared access
     folder = await Folders.get_folder_by_id(id, db=db)
     if folder and (user.role == 'admin' or await _has_folder_access(user.id, folder, 'read', db)):
+        has_write = user.role == 'admin' or await _has_folder_access(user.id, folder, 'write', db)
         grants = await AccessGrants.get_grants_by_resource('folder', id, db=db)
-        return {**folder.model_dump(), 'access_grants': [g.model_dump() for g in grants]}
+        return {
+            **folder.model_dump(),
+            'access_grants': [g.model_dump() for g in grants],
+            'permission': 'write' if has_write else 'read',
+        }
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
