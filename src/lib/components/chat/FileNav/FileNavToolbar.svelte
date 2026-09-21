@@ -18,6 +18,7 @@
 	export let onNewFolder: () => void = () => {};
 	export let onNewFile: () => void = () => {};
 	export let onUploadFiles: (files: File[]) => void = () => {};
+	export let onUploadFolder: (() => void) | null = null;
 	export let onDownloadDir: () => void = () => {};
 	export let onMove: (sources: string[], destFolder: string) => void | Promise<void> = () => {};
 	export let showHidden = false;
@@ -96,9 +97,7 @@
 					{!selectedFile && i === breadcrumbs.length - 1
 					? 'text-gray-700 dark:text-gray-300'
 					: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
-					{dragOverCrumb === i
-					? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500'
-					: ''}"
+					{dragOverCrumb === i ? 'bg-gray-100 dark:bg-white/8 ring-1 ring-black/15 dark:ring-white/15' : ''}"
 				on:click={() => onNavigate(crumb.path)}
 				on:dragover={(e) => {
 					if (!writable) return;
@@ -135,7 +134,9 @@
 		{/if}
 	</div>
 	{#if !writable}
-		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0"> Read-only </span>
+		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0">
+			{$i18n.t('Read-only')}
+		</span>
 	{/if}
 
 	<Tooltip content={$i18n.t('Refresh')}>
@@ -272,6 +273,20 @@
 						<Icon name="upload" size={12} strokeWidth={1.4} />
 						<span>{$i18n.t('Upload')}</span>
 					</button>
+					{#if onUploadFolder}
+						<button
+							type="button"
+							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+							disabled={!writable}
+							on:click={() => {
+								actionsMenuOpen = false;
+								onUploadFolder?.();
+							}}
+						>
+							<Icon name="upload" size={12} strokeWidth={1.4} />
+							<span>{$i18n.t('Upload Folder')}</span>
+						</button>
+					{/if}
 					<button
 						type="button"
 						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"

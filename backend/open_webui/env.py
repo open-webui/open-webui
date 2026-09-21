@@ -7,7 +7,9 @@ import pkgutil
 import re
 import shutil
 import sys
+import threading
 import traceback
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
@@ -40,12 +42,13 @@ except ImportError:
     print('dotenv not installed, skipping...')
 
 DOCKER = os.getenv('DOCKER', 'False').lower() == 'true'
+USE_SLIM = os.getenv('USE_SLIM_DOCKER', 'False').lower() == 'true'
 
 USE_CUDA = os.getenv('USE_CUDA_DOCKER', 'false')
 DEVICE_TYPE = 'cpu'
 _cuda_error: Optional[str] = None
 
-if USE_CUDA.lower() == 'true':
+if not USE_SLIM and USE_CUDA.lower() == 'true':
     try:
         import torch  # noqa: E402
 
@@ -57,7 +60,7 @@ if USE_CUDA.lower() == 'true':
         os.environ['USE_CUDA_DOCKER'] = 'false'
         USE_CUDA = 'false'
 
-if sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
+if not USE_SLIM and sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
     try:
         import torch  # noqa: E402
 
@@ -65,6 +68,9 @@ if sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
             DEVICE_TYPE = 'mps'
     except Exception:
         pass
+
+# Torch MPS inference is not thread-safe and a concurrent call kills the whole process.
+MPS_INFERENCE_LOCK = threading.Lock() if DEVICE_TYPE == 'mps' else nullcontext()
 
 ####################################
 # LOGGING
@@ -245,8 +251,6 @@ if FROM_INIT_PY:
 
 STATIC_DIR = Path(os.getenv('STATIC_DIR', OPEN_WEBUI_DIR / 'static'))
 
-FONTS_DIR = Path(os.getenv('FONTS_DIR', OPEN_WEBUI_DIR / 'static' / 'fonts'))
-
 FRONTEND_BUILD_DIR = Path(os.getenv('FRONTEND_BUILD_DIR', BASE_DIR / 'build')).resolve()
 
 if FROM_INIT_PY:
@@ -367,6 +371,9 @@ ENABLE_QUERIES_CACHE = os.getenv('ENABLE_QUERIES_CACHE', 'False').lower() == 'tr
 ENABLE_ADMIN_CHAT_ACCESS = os.getenv('ENABLE_ADMIN_CHAT_ACCESS', 'True').lower() == 'true'
 RAG_SYSTEM_CONTEXT = os.getenv('RAG_SYSTEM_CONTEXT', 'False').lower() == 'true'
 
+# Empty by default: chunk metadata also holds internal bookkeeping (file hashes, collection names, scores).
+RAG_SOURCE_METADATA_KEYS = [key.strip() for key in os.getenv('RAG_SOURCE_METADATA_KEYS', '').split(',') if key.strip()]
+
 ####################################
 # REDIS
 ####################################
@@ -380,6 +387,14 @@ try:
     REDIS_RESPONSE_STREAM_TTL = int(os.getenv('REDIS_RESPONSE_STREAM_TTL', '3600'))
 except ValueError:
     REDIS_RESPONSE_STREAM_TTL = 3600
+
+# Seconds a task survives without a heartbeat. 0 disables expiry.
+try:
+    REDIS_TASK_TTL = int(os.getenv('REDIS_TASK_TTL', '300'))
+    if REDIS_TASK_TTL != 0 and REDIS_TASK_TTL < 60:
+        REDIS_TASK_TTL = 300
+except ValueError:
+    REDIS_TASK_TTL = 300
 
 REDIS_SENTINEL_HOSTS = os.getenv('REDIS_SENTINEL_HOSTS', '')
 REDIS_SENTINEL_PORT = os.getenv('REDIS_SENTINEL_PORT', '26379')
@@ -839,7 +854,7 @@ MINERU_MAX_MARKDOWN_BYTES = (
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
 # the upstream provider handles these steps or when ffmpeg is unavailable.
-BYPASS_PYDUB_PREPROCESSING = os.getenv('BYPASS_PYDUB_PREPROCESSING', 'False').lower() == 'true'
+BYPASS_PYDUB_PREPROCESSING = USE_SLIM or os.getenv('BYPASS_PYDUB_PREPROCESSING', 'False').lower() == 'true'
 
 # When disabled (default), the OpenAI catch-all proxy endpoint (/{path:path})
 # is blocked. Enable only if you need direct passthrough to upstream OpenAI-
@@ -979,6 +994,7 @@ FORWARD_USER_INFO_HEADER_USER_NAME = os.getenv('FORWARD_USER_INFO_HEADER_USER_NA
 FORWARD_USER_INFO_HEADER_USER_ID = os.getenv('FORWARD_USER_INFO_HEADER_USER_ID', 'X-OpenWebUI-User-Id')
 FORWARD_USER_INFO_HEADER_USER_EMAIL = os.getenv('FORWARD_USER_INFO_HEADER_USER_EMAIL', 'X-OpenWebUI-User-Email')
 FORWARD_USER_INFO_HEADER_USER_ROLE = os.getenv('FORWARD_USER_INFO_HEADER_USER_ROLE', 'X-OpenWebUI-User-Role')
+FORWARD_USER_INFO_HEADER_AUTH_TYPE = os.getenv('FORWARD_USER_INFO_HEADER_AUTH_TYPE', 'X-OpenWebUI-Auth-Type')
 FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_MESSAGE_ID', 'X-OpenWebUI-Message-Id')
 FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_CHAT_ID', 'X-OpenWebUI-Chat-Id')
 
@@ -1036,6 +1052,11 @@ ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
     os.getenv('ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION', 'False').lower() == 'true'
 )
 ENABLE_API_OUTLET_FILTERS = os.getenv('ENABLE_API_OUTLET_FILTERS', 'True').lower() == 'true'
+
+# Opt in to CPython's in-place string append optimization for streamed responses.
+# Off by default for a staged rollout. Only a host already out of memory can lose
+# text here; the default path (a full copy per chunk) raises there too.
+ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND = os.getenv('ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND', 'False').lower() == 'true'
 
 # When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
 # fallback when both mimetypes.guess_type() and file.meta.content_type fail to

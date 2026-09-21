@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
+
+	const i18n: any = getContext('i18n');
 
 	export let open = false;
 	export let side: 'left' | 'right' = 'right';
@@ -145,7 +147,7 @@
 			on:keydown={resizeKeyHandler}
 			role="separator"
 			tabindex="0"
-			aria-label="Resize panel"
+			aria-label={$i18n.t('Resize panel')}
 			aria-orientation="vertical"
 		>
 			<span
@@ -168,7 +170,7 @@
 			on:keydown={resizeKeyHandler}
 			role="separator"
 			tabindex="0"
-			aria-label="Resize panel"
+			aria-label={$i18n.t('Resize panel')}
 			aria-orientation="vertical"
 		>
 			<span

@@ -27,11 +27,12 @@ from open_webui.models.tools import (
 )
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
-    has_access,
+    has_connection_access,
     has_permission,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.plugin import (
+    get_tool_contents_cache,
     get_tools_cache,
     get_tool_module_from_cache,
     load_tool_module_by_id,
@@ -101,7 +102,7 @@ async def get_tools(
             )
 
     # OpenAPI Tool Servers
-    server_access_grants = {}
+    server_connections = {}
     for server in await get_tool_servers(request):
         server_idx = server.get('idx', 0)
         connections = await Config.get('tool_server.connections', [])
@@ -112,10 +113,8 @@ async def get_tools(
             )
             continue
         connection = connections[server_idx]
-        server_config = connection.get('config', {})
-
         server_id = f'server:{server.get("id")}'
-        server_access_grants[server_id] = server_config.get('access_grants', [])
+        server_connections[server_id] = connection
 
         tools.append(
             ToolUserResponse(
@@ -148,10 +147,8 @@ async def get_tools(
                     user.id, f'mcp:{server_id}'
                 )
 
-            server_config = server.get('config') or {}
-
             tool_id = f'server:mcp:{info.get("id")}'
-            server_access_grants[tool_id] = server_config.get('access_grants', [])
+            server_connections[tool_id] = server
 
             tools.append(
                 ToolUserResponse(
@@ -180,12 +177,10 @@ async def get_tools(
             tool
             for tool in tools
             if not str(tool.id).startswith('server:')
-            or await has_access(
-                user.id,
-                'read',
-                server_access_grants.get(str(tool.id), []),
+            or await has_connection_access(
+                user,
+                server_connections[str(tool.id)],
                 user_group_ids,
-                db=db,
             )
         ]
 
@@ -339,6 +334,7 @@ async def export_tools(
     return await Tools.get_tools(
         db=db,
         user_id=None if bypass_access_control else user.id,
+        permission='write',
     )
 
 
@@ -680,6 +676,8 @@ async def delete_tools_by_id(
     if result:
         TOOLS = get_tools_cache(request)
         TOOLS.pop(id, None)
+        TOOL_CONTENTS = get_tool_contents_cache(request)
+        TOOL_CONTENTS.pop(id, None)
         await publish_event(
             request,
             EVENTS.TOOL_DELETED,

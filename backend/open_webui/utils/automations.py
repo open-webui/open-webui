@@ -20,12 +20,10 @@ import logging
 import os
 import random
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 from uuid import uuid4
-from zoneinfo import ZoneInfo
 
-from dateutil.rrule import HOURLY, MINUTELY, SECONDLY, rruleset, rrulestr
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.constants import ERROR_MESSAGES
@@ -39,6 +37,13 @@ from open_webui.models.messages import MessageForm
 from open_webui.models.users import Users
 from open_webui.utils.auth import create_token
 from open_webui.utils.misc import parse_duration
+from open_webui.utils.recurrence import (
+    _resolve_tz,
+    next_n_runs_ns,
+    next_run_ns,
+    rrule_interval_seconds,
+    validate_rrule,
+)
 from open_webui.utils.task import prompt_template
 from open_webui.utils.terminals import get_terminal_server_url
 from starlette.datastructures import Headers
@@ -48,153 +53,6 @@ log = logging.getLogger(__name__)
 SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
 TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
-
-
-####################
-# RRULE Helpers
-####################
-
-
-def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
-    """Safely resolve a timezone string to ZoneInfo.
-
-    Returns None (→ server-local fallback) when *tz* is empty, None,
-    or an unrecognised IANA key.  Logs a warning on bad keys so
-    misconfiguration is visible in the server logs.
-    """
-    if not tz:
-        return None
-    try:
-        return ZoneInfo(tz)
-    except (KeyError, Exception):
-        log.warning('Unknown timezone %r — falling back to server time', tz)
-        return None
-
-
-def _parse_rule(s: str, now: Optional[datetime] = None):
-    """Parse RRULE with clock-aligned DTSTART for sub-daily frequencies.
-
-    SECONDLY/MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
-    so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
-    """
-    upper = s.upper()
-    if 'EXRULE' in upper:
-        raise ValueError('EXRULE is not supported in recurrence rules')
-
-    parsed = rrulestr(s, ignoretz=True)
-    rules = parsed._rrule if isinstance(parsed, rruleset) else [parsed]
-    if len(rules) > 1:
-        raise ValueError('only one RRULE is supported per recurrence rule')
-
-    rule = rules[0]
-    start = rule._dtstart.replace(tzinfo=None)
-    anchor = now or datetime.now()
-    lines = s.splitlines()
-    stripped = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
-    has_dtstart = any(line.upper().startswith('DTSTART') for line in lines)
-    step = {
-        SECONDLY: timedelta(seconds=rule._interval),
-        MINUTELY: timedelta(minutes=rule._interval),
-        HOURLY: timedelta(hours=rule._interval),
-    }.get(rule._freq)
-
-    if step is None:
-        if not rule._dtstart.tzinfo:
-            return parsed
-        return rrulestr(stripped, dtstart=start, ignoretz=True)
-
-    if rule._interval < 1:
-        raise ValueError('RRULE INTERVAL must be a positive integer')
-    dtstart = None
-    if has_dtstart:
-        emitted = ((anchor - start) // step) if anchor > start else 0
-        emitted *= len(rule._byminute or (0,)) * len(rule._bysecond or (0,))
-        if emitted <= 100_000:
-            if rule._dtstart.tzinfo:
-                dtstart = start
-            else:
-                return parsed
-    if not has_dtstart or dtstart is None:
-        epoch = datetime(2000, 1, 1)
-        dtstart = epoch + ((anchor - epoch) // step) * step
-
-    return rrulestr(stripped, dtstart=dtstart, ignoretz=True)
-
-
-def validate_rrule(s: str, tz: str = None) -> None:
-    """Raise ValueError if the RRULE is malformed or exhausted.
-
-    When *tz* is provided the "now" reference uses the user's local
-    clock so that near-future schedules are not incorrectly rejected
-    on servers whose system clock is ahead (e.g. UTC vs US timezones).
-    """
-    upper = s.upper()
-    if 'COUNT=' in upper and 'DTSTART' not in upper:
-        raise ValueError(ERROR_MESSAGES.AUTOMATION_COUNT_REQUIRES_DTSTART)
-    zi = _resolve_tz(tz)
-    now = datetime.now(zi).replace(tzinfo=None) if zi else datetime.now()
-    try:
-        rule = _parse_rule(s, now)
-    except Exception as e:
-        raise ValueError(ERROR_MESSAGES.AUTOMATION_INVALID_RRULE(e))
-    if rule.after(now) is None:
-        raise ValueError(ERROR_MESSAGES.AUTOMATION_NO_FUTURE_RUNS)
-
-
-def next_run_ns(s: str, tz: str = None) -> Optional[int]:
-    """Next occurrence as epoch nanoseconds, respecting user timezone."""
-    zi = _resolve_tz(tz)
-    now = datetime.now(zi) if zi else datetime.now()
-    now_naive = now.replace(tzinfo=None)
-    dt = _parse_rule(s, now_naive).after(now_naive)
-    if dt is None:
-        return None
-    if zi:
-        dt = dt.replace(tzinfo=zi)
-    return int(dt.timestamp() * 1_000_000_000)
-
-
-def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
-    """Compute next N occurrences for UI preview.
-
-    Uses the user's timezone for the starting "now" so that the
-    preview matches the user's local clock (same as next_run_ns).
-    """
-    zi = _resolve_tz(tz)
-    result = []
-    now = datetime.now(zi).replace(tzinfo=None) if zi else datetime.now()
-    rule = _parse_rule(s, now)
-    dt = now
-    for _ in range(n):
-        dt = rule.after(dt)
-        if not dt:
-            break
-        if zi:
-            dt_tz = dt.replace(tzinfo=zi)
-            result.append(int(dt_tz.timestamp() * 1_000_000_000))
-        else:
-            result.append(int(dt.timestamp() * 1_000_000_000))
-    return result
-
-
-def rrule_interval_seconds(s: str) -> Optional[int]:
-    """Approximate interval between recurrences in seconds.
-
-    Returns None for one-shot (COUNT=1) schedules or rules
-    with fewer than two future occurrences.
-    """
-    if 'COUNT=1' in s:
-        return None
-    s = '\n'.join(line for line in s.splitlines() if not line.upper().startswith('DTSTART')) or s
-    now = datetime.now()
-    rule = _parse_rule(s, now)
-    first = rule.after(now)
-    if first is None:
-        return None
-    second = rule.after(first)
-    if second is None:
-        return None
-    return int((second - first).total_seconds())
 
 
 ############################
@@ -305,17 +163,20 @@ def _build_request(
     return request
 
 
-async def _resolve_model_defaults(app, model_id: str) -> tuple[list[str], dict, list[str], Optional[str]]:
+async def _resolve_model_defaults(app, model_id: str) -> dict:
     models = getattr(app.state, 'MODELS', {})
     model = models.get(model_id, {})
     meta = model.get('info', {}).get('meta', {})
 
-    tool_ids = list(meta.get('toolIds') or [])
-    filter_ids = list(meta.get('defaultFilterIds') or [])
-    terminal_id = meta.get('terminalId') or None
+    defaults = {
+        'tool_ids': list(meta.get('toolIds') or []),
+        'filter_ids': list(meta.get('defaultFilterIds') or []),
+        'terminal_id': meta.get('terminalId'),
+    }
+    defaults = {key: value for key, value in defaults.items() if value}
     default_feature_ids = meta.get('defaultFeatureIds', [])
     if not default_feature_ids:
-        return tool_ids, {}, filter_ids, terminal_id
+        return defaults
 
     capabilities = meta.get('capabilities') or {}
     features = {}
@@ -333,7 +194,9 @@ async def _resolve_model_defaults(app, model_id: str) -> tuple[list[str], dict, 
             if capabilities.get(feature_id) and feature_checks[feature_id]:
                 features[feature_id] = True
 
-    return tool_ids, features, filter_ids, terminal_id
+    if features:
+        defaults['features'] = features
+    return defaults
 
 
 async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -> None:
@@ -436,9 +299,8 @@ async def _execute_channel_automation(
             db,
         )
 
-    tool_ids, features, filter_ids, _ = await _resolve_model_defaults(app, model_id)
-
     form_data = {
+        **await _resolve_model_defaults(app, model_id),
         'model': model_id,
         'messages': [
             {
@@ -454,13 +316,6 @@ async def _execute_channel_automation(
         'automation_id': automation.id,
         'background_tasks': {},
     }
-    if tool_ids:
-        form_data['tool_ids'] = tool_ids
-    if features:
-        form_data['features'] = features
-    if filter_ids:
-        form_data['filter_ids'] = filter_ids
-
     await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
     from open_webui.socket.main import sio
@@ -615,11 +470,9 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             room=f'user:{automation.user_id}',
         )
 
-        # Resolve model defaults (frontend does this, backend doesn't)
-        tool_ids, features, filter_ids, terminal_id = await _resolve_model_defaults(app, model_id)
-
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
+            **await _resolve_model_defaults(app, model_id),
             'model': model_id,
             'messages': [{'role': 'user', 'content': prompt}],
             'stream': True,
@@ -636,15 +489,6 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             'automation_id': automation.id,
             'background_tasks': {},
         }
-        if tool_ids:
-            form_data['tool_ids'] = tool_ids
-        if features:
-            form_data['features'] = features
-        if filter_ids:
-            form_data['filter_ids'] = filter_ids
-        if terminal_id:
-            form_data['terminal_id'] = terminal_id
-
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
         request = _build_request(app, token=token)

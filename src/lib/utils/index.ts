@@ -658,7 +658,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 };
 
 export const compareVersion = (latest, current) => {
-	return current === '0.0.0'
+	return !latest || current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
 				numeric: true,
@@ -969,6 +969,11 @@ export const convertOpenAIChats = (_chats) => {
 	return chats;
 };
 
+export const isRasterImageContentType = (contentType: string | null | undefined) => {
+	const baseContentType = (contentType ?? '').split(';')[0].trim().toLowerCase();
+	return baseContentType.startsWith('image/') && baseContentType !== 'image/svg+xml';
+};
+
 export const isValidHttpUrl = (string: string) => {
 	let url;
 
@@ -979,6 +984,20 @@ export const isValidHttpUrl = (string: string) => {
 	}
 
 	return url.protocol === 'http:' || url.protocol === 'https:';
+};
+
+const SAFE_LINK_PROTOCOLS = ['http:', 'https:', 'mailto:', 'tel:'];
+
+export const safeLinkUrl = (url: string): string | undefined => {
+	let protocol;
+	try {
+		protocol = new URL(url).protocol;
+	} catch (_) {
+		// No scheme to parse, so the browser resolves it against our own origin.
+		return url;
+	}
+
+	return SAFE_LINK_PROTOCOLS.includes(protocol) ? url : undefined;
 };
 
 export const isYoutubeUrl = (url: string) => {
@@ -1419,6 +1438,29 @@ export const createMessagesList = (history, messageId) => {
 	return list.reverse();
 };
 
+export const getDeepestChildId = (history, messageId) => {
+	let deepestId = messageId;
+	const visitedMessageIds = new Set([deepestId]);
+	let childrenIds =
+		deepestId === null
+			? Object.keys(history.messages).filter((id) => history.messages[id].parentId === null)
+			: (history.messages[deepestId]?.childrenIds ?? []);
+
+	while (childrenIds.length !== 0) {
+		const childId = childrenIds.at(-1);
+		if (visitedMessageIds.has(childId)) {
+			console.warn('Circular dependency detected in message history', childId);
+			break;
+		}
+
+		visitedMessageIds.add(childId);
+		deepestId = childId;
+		childrenIds = history.messages[deepestId]?.childrenIds ?? [];
+	}
+
+	return deepestId;
+};
+
 const toTokenCount = (value: unknown) => {
 	const parsed = Number(value || 0);
 	return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
@@ -1464,7 +1506,11 @@ export const getLineCount = (text) => {
 };
 
 // Helper function to recursively resolve OpenAPI schema into JSON schema format
-function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
+export function resolveSchema(
+	schemaRef,
+	components,
+	resolvedSchemas = new Set()
+): Record<string, any> {
 	if (!schemaRef) return {};
 
 	if (schemaRef['$ref']) {

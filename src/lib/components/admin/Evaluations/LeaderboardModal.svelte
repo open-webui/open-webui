@@ -10,13 +10,13 @@
 	export let model = null;
 	export let onClose: () => void = () => {};
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	type TimeRange = '30d' | '1y' | 'all';
 	const TIME_RANGES: { key: TimeRange; label: string; days: number }[] = [
 		{ key: '30d', label: '30D', days: 30 },
 		{ key: '1y', label: '1Y', days: 365 },
-		{ key: 'all', label: 'All', days: 0 } // 0 = all time, starts from first feedback
+		{ key: 'all', label: $i18n.t('All'), days: 0 } // 0 = all time, starts from first feedback
 	];
 
 	let selectedRange: TimeRange = '30d';
@@ -70,7 +70,7 @@
 			<button
 				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={close}
-				aria-label="Close"
+				aria-label={$i18n.t('Close')}
 			>
 				<XMark className={'size-4'} />
 			</button>

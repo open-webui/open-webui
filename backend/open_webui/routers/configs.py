@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import copy
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -40,6 +39,7 @@ log = logging.getLogger(__name__)
 
 CONNECTIONS_CONFIG_KEYS = {
     'ENABLE_DIRECT_CONNECTIONS': 'direct.enable',
+    'ENABLE_DIRECT_INTEGRATIONS': 'direct.integrations.enable',
     'ENABLE_BASE_MODELS_CACHE': 'models.base_models_cache',
 }
 CODE_EXECUTION_CONFIG_KEYS = {
@@ -132,6 +132,7 @@ async def get_config_namespace(namespace: str, user=Depends(get_admin_user)):
 
 class ConnectionsConfigForm(BaseModel):
     ENABLE_DIRECT_CONNECTIONS: bool
+    ENABLE_DIRECT_INTEGRATIONS: bool = False
     ENABLE_BASE_MODELS_CACHE: bool
 
 
@@ -146,7 +147,7 @@ async def set_connections_config(
     form_data: ConnectionsConfigForm,
     user=Depends(get_admin_user),
 ):
-    await Config.upsert(config_updates(form_data.model_dump(), CONNECTIONS_CONFIG_KEYS))
+    await Config.upsert(config_updates(form_data.model_dump(exclude_unset=True), CONNECTIONS_CONFIG_KEYS))
     values = await get_config_values(CONNECTIONS_CONFIG_KEYS)
     await publish_event(
         request,
@@ -218,6 +219,7 @@ class ToolServerConnection(BaseModel):
     path: str
     type: str | None = 'openapi'  # openapi, mcp
     auth_type: str | None
+    forward_cookies: bool = False
     headers: dict | str | None = None
     key: str | None
     config: dict | None
@@ -307,6 +309,7 @@ class TerminalServerConnection(BaseModel):
 
     key: str | None = ''
     auth_type: str | None = 'bearer'
+    forward_cookies: bool = False
 
     config: dict | None = None
 
@@ -808,17 +811,24 @@ class PromptSuggestion(BaseModel):
 
 class SetDefaultSuggestionsForm(BaseModel):
     suggestions: list[PromptSuggestion]
+    i18n: dict[str, Any] | None = None
 
 
-@router.post('/suggestions', response_model=list[PromptSuggestion])
+@router.post('/suggestions', response_model=dict)
 async def set_default_suggestions(
     request: Request,
     form_data: SetDefaultSuggestionsForm,
     user=Depends(get_admin_user),
 ):
     data = form_data.model_dump()
-    await Config.upsert({'ui.prompt_suggestions': data['suggestions']})
+    await Config.upsert(
+        {
+            'ui.prompt_suggestions': data['suggestions'],
+            'ui.prompt_suggestions_i18n': data.get('i18n') or {},
+        }
+    )
     suggestions = await Config.get('ui.prompt_suggestions')
+    suggestions_i18n = await Config.get('ui.prompt_suggestions_i18n')
     await publish_event(
         request,
         EVENTS.CONFIG_SUGGESTIONS_UPDATED,
@@ -827,7 +837,7 @@ async def set_default_suggestions(
         subject_type='config',
         data={'count': len(suggestions or [])},
     )
-    return suggestions
+    return {'suggestions': suggestions, 'i18n': suggestions_i18n}
 
 
 ############################

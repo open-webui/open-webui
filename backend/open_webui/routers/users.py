@@ -21,6 +21,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import (
+    InterfaceSettings,
     UserGroupIdsListResponse,
     UserGroupIdsModel,
     UserInfoListResponse,
@@ -66,23 +67,6 @@ def merge_user_ui_settings(defaults: dict, settings: dict) -> dict:
             else value
         )
     return merged
-
-
-def strip_default_interface_settings(defaults: dict, settings: dict) -> dict:
-    stripped = {}
-    for key, value in settings.items():
-        if value is None:
-            continue
-
-        default_value = defaults.get(key)
-        if isinstance(default_value, dict) and isinstance(value, dict):
-            nested = strip_default_interface_settings(default_value, value)
-            if nested:
-                stripped[key] = nested
-        elif value != default_value:
-            stripped[key] = value
-
-    return stripped
 
 
 ############################
@@ -502,16 +486,37 @@ async def update_user_settings_by_session_user(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'settings.interface', await Config.get('user.permissions')
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
     updated_user_settings = form_data.model_dump(exclude_unset=True)
     ui_settings = updated_user_settings.get('ui')
+
+    if isinstance(ui_settings, dict):
+        if user.role != 'admin' and not await has_permission(
+            user.id, 'settings.interface', await Config.get('user.permissions'), db=db
+        ):
+            # Omitted fields are unchanged, so unauthorized Interface fields can be discarded.
+            for key in InterfaceSettings.model_fields:
+                ui_settings.pop(key, None)
+
+        if (
+            user.role != 'admin'
+            and 'system' in ui_settings
+            and (
+                not await has_permission(user.id, 'chat.controls', await Config.get('user.permissions'), db=db)
+                or not await has_permission(user.id, 'chat.system_prompt', await Config.get('user.permissions'), db=db)
+            )
+        ):
+            ui_settings.pop('system', None)
+
+        if (
+            user.role != 'admin'
+            and 'params' in ui_settings
+            and (
+                not await has_permission(user.id, 'chat.controls', await Config.get('user.permissions'), db=db)
+                or not await has_permission(user.id, 'chat.params', await Config.get('user.permissions'), db=db)
+            )
+        ):
+            ui_settings.pop('params', None)
+
     if (
         user.role != 'admin'
         and ui_settings is not None
@@ -522,8 +527,7 @@ async def update_user_settings_by_session_user(
             await Config.get('user.permissions'),
         )
     ):
-        # If the user is not an admin and does not have permission to use tool servers, remove the key
-        updated_user_settings['ui'].pop('toolServers', None)
+        ui_settings.pop('toolServers', None)
 
     ui_notifications = ui_settings.get('notifications') if isinstance(ui_settings, dict) else None
     if (
@@ -541,11 +545,6 @@ async def update_user_settings_by_session_user(
         updated_user_settings.pop('notifications', None)
         if isinstance(ui_notifications, dict):
             ui_notifications.pop('webhook_url', None)
-
-    default_interface_settings = await Config.get('ui.default_interface_settings')
-    ui_settings = updated_user_settings.get('ui')
-    if isinstance(default_interface_settings, dict) and isinstance(ui_settings, dict):
-        updated_user_settings['ui'] = strip_default_interface_settings(default_interface_settings, ui_settings)
 
     user = await Users.update_user_settings_by_id(user.id, updated_user_settings, db=db)
     if user:

@@ -499,7 +499,7 @@ function findOutputItemIndex(output: OutputItem[], item: OutputItem): number {
 	return output.findIndex(
 		(existing) =>
 			(!!item.id && existing?.id === item.id) ||
-			(!!item.call_id && existing?.call_id === item.call_id)
+			(!!item.call_id && existing?.type === item.type && existing?.call_id === item.call_id)
 	);
 }
 
@@ -522,7 +522,19 @@ export function applyResponseStreamEvent(
 	}
 
 	if (eventType === 'response.completed') {
-		return event.response?.output ? [...event.response.output] : output;
+		if (!event.response?.output?.length) return output;
+
+		// Completion covers one provider response, not the earlier tool-call rounds.
+		const nextOutput = [...output];
+		for (const item of event.response.output) {
+			const index = findOutputItemIndex(nextOutput, item);
+			if (index >= 0) {
+				nextOutput[index] = item;
+			} else {
+				nextOutput.push(item);
+			}
+		}
+		return nextOutput;
 	}
 
 	const nextOutput = [...output];
@@ -611,6 +623,11 @@ export function applyResponseStreamEvent(
 			item.summary = [...(item.summary ?? [])];
 			const part = ensurePart(item.summary, summaryIndex, { type: 'summary_text', text: '' });
 			part.text = appendDelta(part.text ?? '', event.delta);
+			return nextOutput;
+		}
+
+		if (item.type === 'open_webui:code_interpreter') {
+			item.code = `${item.code ?? ''}${event.delta ?? ''}`;
 			return nextOutput;
 		}
 

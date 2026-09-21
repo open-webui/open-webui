@@ -12,13 +12,15 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_NAME, config, user, workspaceActions, workspaceCounts } from '$lib/stores';
+	import { COMMUNITY_ORIGINS } from '$lib/constants';
 
 	import {
 		createNewPrompt,
 		deletePromptById,
 		togglePromptById,
 		getPromptItems,
-		getPromptTags
+		getPromptTags,
+		getPrompts
 	} from '$lib/apis/prompts';
 	import { capitalizeFirstLetter, slugify, copyToClipboard } from '$lib/utils';
 
@@ -107,7 +109,14 @@
 				id: 'prompts-export',
 				label: $i18n.t('Export JSON'),
 				onClick: async () => {
-					let blob = new Blob([JSON.stringify(prompts)], {
+					const _prompts = await getPrompts(localStorage.token).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
+					if (!_prompts) {
+						return;
+					}
+					let blob = new Blob([JSON.stringify(_prompts)], {
 						type: 'application/json'
 					});
 					saveAs(blob, `prompts-export-${Date.now()}.json`);
@@ -301,11 +310,7 @@
 		loaded = true;
 
 		const onMessage = async (event: MessageEvent) => {
-			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
-					event.origin
-				)
-			) {
+			if (!COMMUNITY_ORIGINS.includes(event.origin)) {
 				return;
 			}
 

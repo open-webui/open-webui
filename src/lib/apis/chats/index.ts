@@ -1648,14 +1648,17 @@ export const exportChatStats = async (token: string, page: number = 1, params: o
 export const exportSingleChatStats = async (token: string, chatId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/stats/export/${chatId}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/chats/stats/export/${encodeURIComponent(chatId)}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();

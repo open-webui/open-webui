@@ -57,7 +57,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import iter_filter_conditions
+from open_webui.retrieval.vector.utils import iter_filter_conditions, process_metadata
 from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
@@ -400,7 +400,7 @@ class Oracle23aiClient(VectorDBBase):
         Returns:
             str: JSON representation of metadata
         """
-        return json.dumps(metadata, default=self._decimal_handler) if metadata else '{}'
+        return json.dumps(process_metadata(metadata), default=self._decimal_handler) if metadata else '{}'
 
     def _json_to_metadata(self, json_str: str) -> Dict:
         """

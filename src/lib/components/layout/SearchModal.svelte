@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SearchInput from './Sidebar/SearchInput.svelte';
@@ -101,7 +101,7 @@
 
 	const archiveChatHandler = async (id) => {
 		try {
-			await archiveChatById(localStorage.token, id);
+			const res = await archiveChatById(localStorage.token, id);
 
 			chatList = chatList?.filter((c) => c.id !== id) ?? null;
 
@@ -111,7 +111,7 @@
 			}
 
 			await refreshSidebar();
-			toast.success($i18n.t('Chat archived.'));
+			toast.success(res?.archived ? $i18n.t('Chat archived.') : $i18n.t('Chat unarchived.'));
 		} catch (error) {
 			toast.error($i18n.t('Failed to archive chat.'));
 		}
@@ -534,7 +534,7 @@
 						{
 							label: $i18n.t('Create a new note'),
 							onClick: async () => {
-								await goto(`/notes?content=${query}`);
+								await goto(`/notes/new?content=${encodeURIComponent(query)}`);
 								show = false;
 								onClose();
 							},
@@ -816,6 +816,7 @@
 										<div class="flex items-center">
 											<ChatMenu
 												chatId={chat.id}
+												archived={chat.archived ?? false}
 												shareHandler={() => {
 													menuChatId = chat.id;
 													showShareChatModal = true;
@@ -845,7 +846,7 @@
 												}}
 											>
 												<button
-													aria-label="Chat Menu"
+													aria-label={$i18n.t('Chat Menu')}
 													class="self-center dark:hover:text-white transition"
 												>
 													<svg

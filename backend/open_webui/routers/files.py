@@ -461,7 +461,11 @@ async def upload_file_handler(
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT('Error uploading file'),
+            detail=(
+                ERROR_MESSAGES.EMPTY_CONTENT
+                if isinstance(e, ValueError) and e.args == (ERROR_MESSAGES.EMPTY_CONTENT,)
+                else ERROR_MESSAGES.DEFAULT('Error uploading file')
+            ),
         )
 
 

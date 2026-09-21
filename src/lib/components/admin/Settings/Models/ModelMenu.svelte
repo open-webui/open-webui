@@ -197,7 +197,7 @@
 				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 			</button>
 
-			{#if model?.is_active ?? true}
+			{#if (model?.is_active ?? true) && model?.owned_by !== 'arena'}
 				<button
 					class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
 					on:click={() => runAndClose(cloneHandler)}
