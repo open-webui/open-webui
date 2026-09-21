@@ -109,7 +109,7 @@
 	$: folderReadOnly =
 		$selectedFolder != null &&
 		$selectedFolder.user_id !== $user?.id &&
-		$selectedFolder.permission !== 'write';
+		!$selectedFolder.write_access;
 </script>
 
 <div class="m-auto w-full max-w-[58rem] px-1 @2xl:px-20 translate-y-6 py-24 text-center">
