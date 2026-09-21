@@ -99,9 +99,10 @@
 		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
 		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language) ??
 		resolveLocalizedPromptSuggestions(
-			$config?.default_prompt_suggestions ?? [],
+			$config?.default_prompt_suggestions,
 			$config?.default_prompt_suggestions_i18n ?? {},
-			$i18n.language
+			$i18n.language,
+			(key) => $i18n.t(key)
 		);
 
 	// True when viewing a shared folder the current user doesn't own AND lacks write access

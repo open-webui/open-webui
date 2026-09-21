@@ -9,6 +9,7 @@
 	import { getModelsConfig, setModelsConfig, setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { getBackendConfig } from '$lib/apis';
 	import { getLanguages } from '$lib/i18n';
+	import { resolveLocalizedPromptSuggestions } from '$lib/utils/localizedContent';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
@@ -80,7 +81,10 @@
 		}
 
 		defaultParams = config?.DEFAULT_MODEL_PARAMS ?? {};
-		promptSuggestions = $appConfig?.default_prompt_suggestions ?? [];
+		promptSuggestions = resolveLocalizedPromptSuggestions(
+			$appConfig?.default_prompt_suggestions,
+			{}
+		);
 		promptSuggestionsI18n = $appConfig?.default_prompt_suggestions_i18n ?? {};
 		languages = await getLanguages();
 		savedSnapshot = getSnapshot();
@@ -115,9 +119,12 @@
 		if (res) {
 			config = res;
 			promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
+			const suggestionsChanged =
+				JSON.stringify(promptSuggestions) !==
+				JSON.stringify(JSON.parse(savedSnapshot).promptSuggestions);
 			const suggestionsRes = await setDefaultPromptSuggestions(
 				localStorage.token,
-				promptSuggestions,
+				suggestionsChanged ? promptSuggestions : ($appConfig?.default_prompt_suggestions ?? null),
 				promptSuggestionsI18n
 			);
 			promptSuggestions = suggestionsRes?.suggestions ?? promptSuggestions;

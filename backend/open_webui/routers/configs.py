@@ -810,7 +810,7 @@ class PromptSuggestion(BaseModel):
 
 
 class SetDefaultSuggestionsForm(BaseModel):
-    suggestions: list[PromptSuggestion]
+    suggestions: list[PromptSuggestion] | None
     i18n: dict[str, Any] | None = None
 
 
