@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "",
 	"[Today at] h:mm A": "",
 	"[Yesterday at] h:mm A": "",
-	"{{ models }}": "{{ modelos }}",
+	"{{ models }}": "{{ models }}",
 	"{{count}} added lines_one": "",
 	"{{count}} added lines_many": "",
 	"{{count}} added lines_other": "",
