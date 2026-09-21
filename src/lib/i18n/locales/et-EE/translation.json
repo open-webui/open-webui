@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[Eelmisel] dddd [kell] h:mm A",
 	"[Today at] h:mm A": "[Täna kell] h:mm A",
 	"[Yesterday at] h:mm A": "[Eile kell] h:mm A",
-	"{{ models }}": "{{ mudelid }}",
+	"{{ models }}": "{{ models }}",
 	"{{COUNT}} Available Skills": "",
 	"{{COUNT}} Available Tools": "{{COUNT}} tööriista saadaval",
 	"{{COUNT}} characters": "{{COUNT}} märki",
