@@ -78,7 +78,7 @@
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message?.content ?? '';
-		editedFiles = message.files;
+		editedFiles = [...(message.files ?? [])];
 
 		await tick();
 
