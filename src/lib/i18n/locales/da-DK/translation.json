@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[Sidste] dddd [kl.] h:mm A",
 	"[Today at] h:mm A": "[I dag kl.] h:mm A",
 	"[Yesterday at] h:mm A": "[I går kl.] h:mm A",
-	"{{ models }}": "{{ modeller }}",
+	"{{ models }}": "{{ models }}",
 	"{{count}} added lines_one": "",
 	"{{count}} added lines_other": "",
 	"{{COUNT}} Available Skills": "Tilgængelige færdigheder: {{COUNT}}",

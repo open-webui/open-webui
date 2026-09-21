@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[Prošle sedmice:] dddd [u] h:mm A",
 	"[Today at] h:mm A": "[Danas u] h:mm A",
 	"[Yesterday at] h:mm A": "[Jučer u] h:mm A",
-	"{{ models }}": "{{ modeli }}",
+	"{{ models }}": "{{ models }}",
 	"{{count}} added lines_one": "",
 	"{{count}} added lines_few": "",
 	"{{count}} added lines_other": "",

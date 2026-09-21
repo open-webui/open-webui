@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[Viimeisin] dddd h:mm A",
 	"[Today at] h:mm A": "[Tänään] h:mm A",
 	"[Yesterday at] h:mm A": "[Eilen] h:mm A",
-	"{{ models }}": "{{ mallit }}",
+	"{{ models }}": "{{ models }}",
 	"{{count}} added lines_one": "",
 	"{{count}} added lines_other": "",
 	"{{COUNT}} Available Skills": "{{COUNT}} taitoa käytettävissä",
