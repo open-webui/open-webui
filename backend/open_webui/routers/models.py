@@ -62,6 +62,8 @@ def add_chat_variables_schema(model_dict: dict) -> dict:
     schema = get_chat_variables_schema(system)
     if schema:
         model_dict.setdefault('meta', {})['chat_variables_schema'] = schema
+    elif isinstance(model_dict.get('meta'), dict):
+        model_dict['meta'].pop('chat_variables_schema', None)
     return model_dict
 
 
