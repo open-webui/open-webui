@@ -1452,7 +1452,7 @@
 						.insertContentAt(range, [
 							{
 								type: 'mention',
-								attrs: props
+								attrs: { ...props, mentionSuggestionChar: '/' }
 							},
 							{ type: 'text', text: ' ' }
 						])
