@@ -236,7 +236,17 @@
 	});
 </script>
 
-<div id="tab-account" class="flex h-full flex-col text-sm">
+<form
+	id="tab-account"
+	class="flex h-full flex-col text-sm"
+	on:submit|preventDefault={async () => {
+		const res = await submitHandler();
+
+		if (res) {
+			saveHandler();
+		}
+	}}
+>
 	<div class="flex-1 min-h-0 w-full overflow-y-auto scrollbar-hover pr-1.5">
 		<h2 class="mb-4 text-sm font-medium text-gray-900 dark:text-white">
 			{$i18n.t('settings.personal.account.title')}
@@ -323,7 +333,6 @@
 					type="date"
 					aria-label={$i18n.t('settings.personal.account.birthDate.label')}
 					bind:value={dateOfBirth}
-					required
 				/>
 			</UserSettingField>
 		</UserSettingSection>
@@ -564,18 +573,12 @@
 	<div class="shrink-0 flex w-full justify-end pt-3 text-sm font-normal">
 		<button
 			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			on:click={async () => {
-				const res = await submitHandler();
-
-				if (res) {
-					saveHandler();
-				}
-			}}
+			type="submit"
 		>
 			{$i18n.t('Save')}
 		</button>
 	</div>
-</div>
+</form>
 
 <ConfirmDialog
 	bind:show={showDeleteAPIKeyConfirm}
