@@ -226,6 +226,15 @@ def read_memory_path_rows(
     }
 
 
+def _is_cjk_segment(part: str) -> bool:
+    """True if a path segment contains CJK ideographs (see #30236).
+
+    A 2-character CJK run is a complete word (工作, 生活, 学习...), so such
+    segments must be allowed as path hints at length 2 instead of 3.
+    """
+    return any('\u4e00' <= ch <= '\u9fff' for ch in part)
+
+
 def memory_path_hints(query: str, memories: list, limit: int = 6) -> list[str]:
     lowered = (query or '').lower()
     if not lowered:
@@ -240,7 +249,10 @@ def memory_path_hints(query: str, memories: list, limit: int = 6) -> list[str]:
         last = parts[-1] if parts else path
         if path.lower() in lowered or last.lower() in lowered:
             hints.append(path)
-        elif any(len(part) >= 3 and part.lower() in lowered for part in parts):
+        elif any(
+            len(part) >= (2 if _is_cjk_segment(part) else 3) and part.lower() in lowered
+            for part in parts
+        ):
             hints.append(path)
         if len(hints) >= limit:
             break
