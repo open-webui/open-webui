@@ -1083,7 +1083,8 @@ async def _make_channel_emitter(request_info):
                 state['output'] = copy.deepcopy(output)
 
             now = time.time()
-            if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+            # Tool boundaries must publish all results before waiting on the next model response.
+            if done or data.get('flush') or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, done, output if isinstance(output, list) else None)
 
