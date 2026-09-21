@@ -667,7 +667,9 @@ async def image_generations(
                 if image_url := image.get('url', None):
                     image_data, content_type = await get_image_data(
                         image_url,
-                        {k: v for k, v in headers.items() if k != 'Content-Type'},
+                        {k: v for k, v in headers.items() if k != 'Content-Type'}
+                        if _is_same_origin(image_url, image_config.IMAGES_OPENAI_API_BASE_URL)
+                        else None,
                     )
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
@@ -1046,7 +1048,9 @@ async def image_edits(
                 if image_url := image.get('url', None):
                     image_data, content_type = await get_image_data(
                         image_url,
-                        {k: v for k, v in headers.items() if k != 'Content-Type'},
+                        {k: v for k, v in headers.items() if k != 'Content-Type'}
+                        if _is_same_origin(image_url, image_config.IMAGES_EDIT_OPENAI_API_BASE_URL)
+                        else None,
                     )
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
