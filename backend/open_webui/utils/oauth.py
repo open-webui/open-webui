@@ -351,6 +351,19 @@ def is_in_blocked_groups(group_name: str, groups: list) -> bool:
     return False
 
 
+def _parse_blocked_groups(value) -> list[str]:
+    """Accept JSON arrays, persisted lists, and comma-separated admin input."""
+    if isinstance(value, str):
+        try:
+            parsed = JSONCodec.loads(value)
+        except JSONCodec.JSONDecodeError:
+            parsed = None
+        value = parsed if isinstance(parsed, list) else [group.strip() for group in value.split(',')]
+    if not isinstance(value, list):
+        return []
+    return [group for group in value if isinstance(group, str) and group]
+
+
 def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
     parsed = urllib.parse.urlparse(server_url)
     base_url = f'{parsed.scheme}://{parsed.netloc}'
@@ -1636,11 +1649,7 @@ class OAuthManager:
         log.debug('Running OAUTH Group management')
         oauth_claim = auth_config.OAUTH_GROUPS_CLAIM
 
-        try:
-            blocked_groups = JSONCodec.loads(auth_config.OAUTH_BLOCKED_GROUPS)
-        except Exception as e:
-            log.exception(f'Error loading OAUTH_BLOCKED_GROUPS: {e}')
-            blocked_groups = []
+        blocked_groups = _parse_blocked_groups(auth_config.OAUTH_BLOCKED_GROUPS)
 
         user_oauth_groups = []
         # Nested claim search for groups claim
