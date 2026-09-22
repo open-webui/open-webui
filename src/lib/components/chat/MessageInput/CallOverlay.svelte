@@ -453,21 +453,17 @@
 				};
 
 				audioElement.src = audio.src;
-				audioElement.muted = true;
+				// stopAllAudio mutes it; unmuting after play() outside a gesture makes WebKit pause it
+				audioElement.muted = false;
 				audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
 				audioElement.onended = finish;
 				audioElement.onerror = () => finish();
 				audioElement.onpause = finish;
 
-				audioElement
-					.play()
-					.then(() => {
-						audioElement.muted = false;
-					})
-					.catch((error) => {
-						console.error(error);
-						finish(error);
-					});
+				audioElement.play().catch((error) => {
+					console.error(error);
+					finish(error);
+				});
 			});
 		} else {
 			return Promise.resolve();
