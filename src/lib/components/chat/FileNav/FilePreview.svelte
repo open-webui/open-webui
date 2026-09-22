@@ -34,6 +34,7 @@
 	// Terminal connection for notebook execution
 	export let baseUrl: string = '';
 	export let apiKey: string = '';
+	export let chatId: string | null = null;
 
 	// Office preview props
 	export let fileOfficeHtml: string | null = null;
@@ -120,9 +121,11 @@
 
 	// For HTML files on system terminals (proxy URL), use path-based serving
 	// so the iframe can resolve relative CSS/JS/image references via cookie auth.
+	// Iframes cannot send X-Session-Id, so the chat travels in the path.
+	$: chatScope = chatId ? `/chat/${encodeURIComponent(chatId)}` : '';
 	$: serveUrl =
 		isHtml && selectedFile && baseUrl && baseUrl.includes('/api/v1/terminals/')
-			? `${baseUrl}/files/serve/${selectedFile.replace(/^\//, '')}`
+			? `${baseUrl}${chatScope}/files/serve/${selectedFile.replace(/^\//, '')}`
 			: null;
 	$: renderedHtml =
 		isMarkdown && fileContent

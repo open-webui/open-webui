@@ -1864,6 +1864,7 @@
 					}}
 					baseUrl={selectedTerminal?.url ?? ''}
 					apiKey={selectedTerminal?.key ?? ''}
+					{chatId}
 					overlay={overlay || isDraggingHandle}
 					onSave={async (content) => {
 						const terminal = selectedTerminal;

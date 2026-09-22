@@ -297,6 +297,7 @@
 					{fileContent}
 					baseUrl={terminal?.url ?? ''}
 					apiKey={terminal?.key ?? ''}
+					{chatId}
 					{fileOfficeHtml}
 					{fileOfficeSlides}
 					{currentSlide}

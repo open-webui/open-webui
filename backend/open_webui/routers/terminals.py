@@ -18,6 +18,7 @@ from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
+from open_webui.models.users import UserModel
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user, get_verified_user_by_token
 from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
@@ -106,6 +107,18 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
 PROXY_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
 
+@router.api_route('/{server_id}/chat/{chat_id}/{path:path}', methods=PROXY_METHODS)
+async def proxy_terminal_for_chat(
+    server_id: str,
+    chat_id: str,
+    path: str,
+    request: Request,
+    user=Depends(get_verified_user),
+):
+    """Proxy with the chat in the URL, for iframes that cannot send ``X-Session-Id``."""
+    return await _proxy_terminal_request(server_id, path, request, user, chat_id)
+
+
 @router.api_route('/{server_id}/{path:path}', methods=PROXY_METHODS)
 async def proxy_terminal(
     server_id: str,
@@ -114,6 +127,12 @@ async def proxy_terminal(
     user=Depends(get_verified_user),
 ):
     """Proxy a request to the admin terminal server identified by *server_id*."""
+    return await _proxy_terminal_request(server_id, path, request, user)
+
+
+async def _proxy_terminal_request(
+    server_id: str, path: str, request: Request, user: UserModel, session_id: str | None = None
+):
     connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
@@ -151,7 +170,7 @@ async def proxy_terminal(
 
     headers = {'X-User-Id': user.id}
     # Forward per-session cwd tracking header
-    session_id = request.headers.get('x-session-id')
+    session_id = session_id or request.headers.get('x-session-id')
     if session_id:
         headers['X-Session-Id'] = session_id
         if not terminal_context_available(connection, 'chat'):
