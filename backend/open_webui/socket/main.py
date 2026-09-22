@@ -343,8 +343,20 @@ def get_session_ids_from_room(room):
 
 def get_session_ids_by_user_id(user_id: str) -> list[str]:
     """Get known session IDs for a user across the local rooms and shared session pool."""
-    session_ids = set(get_session_ids_from_room(f'user:{user_id}'))
-    session_ids.update(sid for sid, entry in SESSION_POOL.items() if entry and entry.get('id') == user_id)
+    return get_session_ids_by_user_ids([user_id])
+
+
+def get_session_ids_by_user_ids(user_ids: list[str]) -> list[str]:
+    """Get known session IDs for users across the local rooms and shared session pool."""
+    if not user_ids:
+        return []
+
+    user_ids = set(user_ids)
+    session_ids = set()
+    for user_id in user_ids:
+        session_ids.update(get_session_ids_from_room(f'user:{user_id}'))
+    for batch in get_session_pool_batches():
+        session_ids.update(sid for sid, user in batch if user and user.get('id') in user_ids)
     return list(session_ids)
 
 
@@ -383,6 +395,15 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
                 await sio.enter_room(sid, room)
     except Exception as e:
         log.debug('Failed to make users %s join room %s: %s', user_ids, room, e)
+
+
+async def leave_room_for_users(room: str, user_ids: list[str]):
+    """Make all sessions of each user leave a room, including sessions on other workers."""
+    for sid in get_session_ids_by_user_ids(user_ids):
+        try:
+            await sio.leave_room(sid, room)
+        except Exception as e:
+            log.debug('Failed to make session %s leave room %s: %s', sid, room, e)
 
 
 async def disconnect_user_sessions(user_id: str):
