@@ -6,6 +6,16 @@ import { writable } from 'svelte/store';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import { assembleSettingsTranslations } from './settings-translations';
+import languages from './locales/languages.json';
+
+const availableLocales = new Set(languages.map((l) => l.code));
+const bareLocaleFallbacks: Record<string, string> = {};
+for (const { code } of languages) {
+	const bare = code.split('-')[0];
+	if (bare !== code && !availableLocales.has(bare) && !(bare in bareLocaleFallbacks)) {
+		bareLocaleFallbacks[bare] = code;
+	}
+}
 
 let overrides: I18nOverrides = {};
 
@@ -87,7 +97,8 @@ export const initI18n = (defaultLocale?: string, value: I18nOverrides = {}) => {
 				order: detectionOrder,
 				caches: ['localStorage'],
 				lookupQuerystring: 'lang',
-				lookupLocalStorage: 'locale'
+				lookupLocalStorage: 'locale',
+				convertDetectedLanguage: (lng: string) => bareLocaleFallbacks[lng] ?? lng
 			},
 			fallbackLng: {
 				fr: ['fr-FR'],
