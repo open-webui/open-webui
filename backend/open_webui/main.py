@@ -1478,6 +1478,7 @@ async def chat_completion(
                             'request': request,
                             'form_data': form_data,
                             'user': user,
+                            'model': None,
                             'metadata': title_metadata,
                             'tasks': {TASKS.TITLE_GENERATION: initial_title_generation},
                             'event_emitter': event_emitter,
