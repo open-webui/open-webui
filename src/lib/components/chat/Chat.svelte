@@ -339,21 +339,6 @@
 	let pendingWebSearchPrompt: string | null = null;
 	let webSearchConfirmed = false;
 
-	$: {
-		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
-		const allModelsSupportWebSearch =
-			currentModels.filter(
-				(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
-			).length === currentModels.length;
-
-		webSearchActive = Boolean(
-			$config?.features?.enable_web_search &&
-			($user?.role === 'admin' || $user?.permissions?.features?.web_search) &&
-			(webSearchEnabled ||
-				(allModelsSupportWebSearch && ($settings?.webSearch ?? false) === 'always'))
-		);
-	}
-
 	const openWebSearchConfirm = () => {
 		window.setTimeout(() => {
 			showWebSearchConfirm = true;
@@ -373,10 +358,6 @@
 		pendingWebSearchPrompt = null;
 		showWebSearchConfirm = false;
 	};
-
-	$: if (!webSearchActive) {
-		resetWebSearchConfirmation();
-	}
 
 	let showCommands = false;
 
@@ -742,6 +723,25 @@
 		resetInput();
 		oldSelectedModelIds = structuredClone(selectedModelIds);
 	};
+
+	$: {
+		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
+		const allModelsSupportWebSearch =
+			currentModels.filter(
+				(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
+			).length === currentModels.length;
+
+		webSearchActive = Boolean(
+			$config?.features?.enable_web_search &&
+			($user?.role === 'admin' || $user?.permissions?.features?.web_search) &&
+			(webSearchEnabled ||
+				(allModelsSupportWebSearch && ($settings?.webSearch ?? false) === 'always'))
+		);
+	}
+
+	$: if (!webSearchActive) {
+		resetWebSearchConfirmation();
+	}
 
 	const mergeFiles = (current, incoming) => {
 		const seen = new Set();
