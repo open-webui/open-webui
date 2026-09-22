@@ -3489,7 +3489,7 @@
 		// Only temp chats need conversation messages (persisted chats load from DB).
 		let messages: any[] = [
 			params?.system || $settings.system
-				? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
+				? { role: 'system', content: `${params?.system || $settings?.system || ''}` }
 				: undefined
 		].filter(Boolean);
 
