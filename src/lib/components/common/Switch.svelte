@@ -11,6 +11,7 @@
 	export let ariaLabel = '';
 	export let tooltip = false;
 	export let inherited = false;
+	export let disabled = false;
 
 	const i18n: any = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -34,6 +35,7 @@
 		<Switch.Root
 			bind:checked={state}
 			{id}
+			{disabled}
 			aria-labelledby={ariaLabelledbyId || undefined}
 			aria-label={ariaLabel || undefined}
 			class="focus-ring relative h-4 min-h-4 w-7 shrink-0 cursor-pointer rounded-full mx-[0.0625rem] transition-colors duration-150 disabled:cursor-not-allowed {($settings?.highContrastMode ??

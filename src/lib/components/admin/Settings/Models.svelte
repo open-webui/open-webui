@@ -18,6 +18,7 @@
 	import {
 		createNewModel,
 		deleteAllModels,
+		deleteModelById,
 		getAllModels,
 		getModelById,
 		exportModels,
@@ -31,6 +32,7 @@
 
 	import { getModels } from '$lib/apis';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
+	import { getConfig as getEvaluationConfig } from '$lib/apis/evaluations';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -90,12 +92,14 @@
 
 	let savedModels: ModelListItem[] = [];
 	let allModels: ModelListItem[] = [];
+	let unavailableModelIds = new Set<string>();
 
 	let filteredModels = [];
 	let selectedModelId = null;
 
 	let showManageModal = false;
 	let showResetModal = false;
+	let showDeleteUnavailableModal = false;
 	let savingModelOrder = false;
 	let savingModelsSettings = false;
 	let modelOrderDirty = false;
@@ -185,7 +189,9 @@
 	$: canReorderModels = searchValue === '' && viewOption === '' && selectedTag === '';
 
 	const enableAllHandler = async () => {
-		const modelsToEnable = filteredModels.filter((m) => !(m.is_active ?? true));
+		const modelsToEnable = filteredModels.filter(
+			(m) => !(m.is_active ?? true) && !unavailableModelIds.has(m.id)
+		);
 		// Optimistic UI update
 		modelsToEnable.forEach((m) => (m.is_active = true));
 		models = models;
@@ -292,6 +298,25 @@
 		const listedModelIds = new Set(allModels.map((model) => model.id));
 		allModels.push(...savedModels.filter((model) => !listedModelIds.has(model.id)));
 
+		// Disabled arena models and Ollama short ids are in neither listing but still resolve
+		const evaluationConfig = await getEvaluationConfig(localStorage.token);
+		const providedModelIds = new Set([
+			...listedModelIds,
+			...providerModels
+				.filter((model) => model.owned_by === 'ollama')
+				.map((model) => model.id.split(':')[0]),
+			...(evaluationConfig?.ENABLE_EVALUATION_ARENA_MODELS
+				? evaluationConfig.EVALUATION_ARENA_MODELS?.length
+					? evaluationConfig.EVALUATION_ARENA_MODELS.map((model) => model.id)
+					: ['arena-model']
+				: [])
+		]);
+		unavailableModelIds = new Set(
+			savedModels
+				.filter((model) => !providedModelIds.has(model.id) && !isPresetModel(model))
+				.map((model) => model.id)
+		);
+
 		models = allModels
 			.map((m: ModelListItem) => {
 				const savedModel = savedModels.find((model: ModelListItem) => model.id === m.id);
@@ -299,7 +324,8 @@
 				if (savedModel) {
 					return {
 						...m,
-						...savedModel
+						...savedModel,
+						...(unavailableModelIds.has(m.id) && { is_active: false })
 					};
 				} else {
 					return {
@@ -719,6 +745,27 @@
 	}}
 />
 
+<ConfirmDialog
+	title={$i18n.t('Delete Unavailable Models')}
+	message={$i18n.t(
+		'This will delete all base models that no connection currently provides ({{COUNT}}), including their settings and access, and cannot be undone.',
+		{ COUNT: unavailableModelIds.size }
+	)}
+	bind:show={showDeleteUnavailableModal}
+	onConfirm={async () => {
+		const res = await Promise.all(
+			[...unavailableModelIds].map((id) => deleteModelById(localStorage.token, id))
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (res) {
+			toast.success($i18n.t('Unavailable models deleted successfully'));
+		}
+		await init();
+	}}
+/>
+
 <ManageModelsModal bind:show={showManageModal} />
 
 {#if models !== null}
@@ -900,6 +947,21 @@
 										</div>
 									</button>
 
+									{#if unavailableModelIds.size > 0}
+										<button
+											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+											type="button"
+											on:click={() => {
+												showDeleteUnavailableModal = true;
+											}}
+										>
+											<GarbageBin className="size-3.5" />
+											<div class="flex items-center">
+												{$i18n.t('settings.admin.models.deleteUnavailableModels.label')}
+											</div>
+										</button>
+									{/if}
+
 									<hr class="mx-1 my-0.5 border-gray-100 dark:border-gray-800" />
 
 									<button
@@ -1050,6 +1112,14 @@
 												>
 													{modelAccessLabel(model)}
 												</span>
+
+												{#if unavailableModelIds.has(model.id)}
+													<span
+														class="shrink-0 text-[0.6875rem] font-normal leading-4 text-gray-500 dark:text-gray-400"
+													>
+														{$i18n.t('Unavailable')}
+													</span>
+												{/if}
 
 												{#if defaultModelIdSet.has(model.id)}
 													<span
@@ -1233,6 +1303,7 @@
 										>
 											<Switch
 												bind:state={model.is_active}
+												disabled={unavailableModelIds.has(model.id)}
 												on:change={async () => {
 													toggleModelHandler(model);
 												}}
