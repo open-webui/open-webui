@@ -153,6 +153,7 @@
 		const modelOrder = new Map(modelOrderList.map((id, idx) => [id, idx]));
 
 		filteredModels = models
+			.filter((m) => !selectedTag || modelTags(m).includes(selectedTag))
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
 			.filter((m) => {
 				if (viewOption === 'base') return !isPresetModel(m);
@@ -180,9 +181,6 @@
 	}
 
 	let searchValue = '';
-	let canReorderModels = false;
-
-	$: canReorderModels = searchValue === '' && viewOption === '' && selectedTag === '';
 
 	const enableAllHandler = async () => {
 		const modelsToEnable = filteredModels.filter((m) => !(m.is_active ?? true));
@@ -292,26 +290,24 @@
 		const listedModelIds = new Set(allModels.map((model) => model.id));
 		allModels.push(...savedModels.filter((model) => !listedModelIds.has(model.id)));
 
-		models = allModels
-			.map((m: ModelListItem) => {
-				const savedModel = savedModels.find((model: ModelListItem) => model.id === m.id);
+		models = allModels.map((m: ModelListItem) => {
+			const savedModel = savedModels.find((model: ModelListItem) => model.id === m.id);
 
-				if (savedModel) {
-					return {
-						...m,
-						...savedModel
-					};
-				} else {
-					return {
-						...m,
-						id: m.id,
-						name: m.name,
+			if (savedModel) {
+				return {
+					...m,
+					...savedModel
+				};
+			} else {
+				return {
+					...m,
+					id: m.id,
+					name: m.name,
 
-						is_active: true
-					};
-				}
-			})
-			.filter((model) => !selectedTag || modelTags(model).includes(selectedTag));
+					is_active: true
+				};
+			}
+		});
 
 		modelOrderList = [
 			...modelOrderList.filter((id) => models.some((model) => model.id === id)),
@@ -445,15 +441,14 @@
 		const target = parent.children[oldIndex < newIndex ? oldIndex : oldIndex + 1];
 		parent.insertBefore(item, target);
 
-		const updatedModels = [...filteredModels];
-		const [movedModel] = updatedModels.splice(oldIndex, 1);
-		updatedModels.splice(newIndex, 0, movedModel);
+		// Anchor on the visible neighbor so filtered-out models keep their place
+		const movedModelId = filteredModels[oldIndex].id;
+		const anchorModelId = filteredModels[newIndex].id;
+		const reorderedIds = modelOrderList.filter((id) => id !== movedModelId);
+		const anchorIndex = reorderedIds.indexOf(anchorModelId);
+		reorderedIds.splice(oldIndex < newIndex ? anchorIndex + 1 : anchorIndex, 0, movedModelId);
 
-		const orderedIds = updatedModels.map((model) => model.id);
-		const orderedSet = new Set(orderedIds);
-
-		models = [...updatedModels, ...models.filter((model) => !orderedSet.has(model.id))];
-		modelOrderList = models.map((model) => model.id);
+		modelOrderList = reorderedIds;
 		modelOrderDirty = true;
 	};
 
@@ -463,7 +458,7 @@
 			sortable = null;
 		}
 
-		if (modelListElement && filteredModels.length > 0 && canReorderModels) {
+		if (modelListElement && filteredModels.length > 0) {
 			sortable = new Sortable(modelListElement, {
 				animation: 150,
 				handle: '.model-item-handle',
@@ -825,9 +820,6 @@
 									items={tags.map((tag) => {
 										return { value: tag, label: tag };
 									})}
-									onChange={async () => {
-										await init();
-									}}
 								/>
 							{/if}
 						</div>
@@ -864,7 +856,11 @@
 											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 											type="button"
 											on:click={() => {
-												downloadModels(models ?? []);
+												downloadModels(
+													(models ?? []).filter(
+														(model) => !selectedTag || modelTags(model).includes(selectedTag)
+													)
+												);
 											}}
 										>
 											<Download className="size-3.5" />
@@ -978,16 +974,8 @@
 								id="model-item-{model.id}"
 							>
 								<div class="self-center pr-1 -ml-1 text-gray-400 dark:text-gray-600">
-									<Tooltip
-										content={canReorderModels
-											? $i18n.t('Drag to reorder')
-											: $i18n.t('Clear filters to reorder')}
-									>
-										<EllipsisVertical
-											className="size-4 {canReorderModels
-												? 'cursor-move model-item-handle'
-												: 'opacity-40'}"
-										/>
+									<Tooltip content={$i18n.t('Drag to reorder')}>
+										<EllipsisVertical className="size-4 cursor-move model-item-handle" />
 									</Tooltip>
 								</div>
 
