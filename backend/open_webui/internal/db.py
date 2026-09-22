@@ -348,15 +348,16 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
             if compiled is False:
                 return False
             if compiled is None:
-                regex = []
+                segments = ['']
                 escaped = False
                 for char in pattern:
                     if escape and not escaped and char == escape:
                         escaped = True
                         continue
-                    regex.append(
-                        '.*' if not escaped and char == '%' else '.' if not escaped and char == '_' else re.escape(char)
-                    )
+                    if not escaped and char == '%':
+                        segments.append('')
+                    else:
+                        segments[-1] += '.' if not escaped and char == '_' else re.escape(char)
                     escaped = False
                 if escaped:
                     compiled = False
@@ -364,7 +365,11 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
                         compiled_patterns.clear()
                     compiled_patterns[key] = compiled
                     return False
-                compiled = re.compile(''.join(regex), re.DOTALL)
+                # Atomic groups pin each middle segment to its first match, so '%' never backtracks.
+                regex = segments[0] + ''.join(f'(?>.*?{segment})' for segment in segments[1:-1])
+                if len(segments) > 1:
+                    regex += '.*' + segments[-1]
+                compiled = re.compile(regex, re.DOTALL)
                 if len(compiled_patterns) >= 512:
                     compiled_patterns.clear()
                 compiled_patterns[key] = compiled
