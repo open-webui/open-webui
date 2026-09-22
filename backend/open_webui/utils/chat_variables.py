@@ -10,6 +10,7 @@ CHAT_VARIABLE_ANY_RE = re.compile(r'{{\s*chat\.variables\.([^\s|}]+)(?:\s*\|\s*(
 USER_VARIABLE_ANY_RE = re.compile(r'{{\s*user\.variables\.([^\s|}]+)(?:\s*\|\s*([^}]*))?\s*}}')
 MAX_VARIABLE_VALUE_LENGTH = 20_000
 MAX_VARIABLES_JSON_LENGTH = 100_000
+MAX_JSON_VALUE_DEPTH = 32
 
 
 class ChatVariablesError(ValueError):
@@ -58,15 +59,27 @@ def split_properties(value: str, delimiter: str) -> list[str]:
     return result
 
 
+def is_nested_too_deep(value: Any) -> bool:
+    stack = [(value, 1)]
+    while stack:
+        item, depth = stack.pop()
+        if isinstance(item, list):
+            if depth > MAX_JSON_VALUE_DEPTH:
+                return True
+            stack.extend((child, depth + 1) for child in item)
+    return False
+
+
 def parse_json_value(value: str) -> Any:
     if value.startswith('"') and value.endswith('"'):
         return value[1:-1]
 
     if re.match(r'^[\[{]', value):
         try:
-            return JSONCodec.loads(value)
-        except JSONCodec.JSONDecodeError:
+            parsed = JSONCodec.loads(value)
+        except (JSONCodec.JSONDecodeError, RecursionError):
             return value
+        return value if is_nested_too_deep(parsed) else parsed
 
     return value
 
