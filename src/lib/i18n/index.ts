@@ -76,7 +76,7 @@ export const initI18n = (defaultLocale?: string, value: I18nOverrides = {}) => {
 	const detectionOrder = defaultLocale
 		? ['querystring', 'localStorage']
 		: ['querystring', 'localStorage', 'navigator'];
-	const fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-US'];
+	const fallbackDefaultLocale = defaultLocale ? [defaultLocale, 'en-US'] : ['en-US'];
 
 	return i18next
 		.use(resourcesToBackend(loadResource))
