@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.5] - 2026-09-22
+
+### Added
+
+- 📡 **Lighter multi-instance streaming.** Deployments that share websocket traffic through Redis use less CPU while streaming, because each server now skips live updates for rooms it has no one in; set "WEBSOCKET_REDIS_ROOM_CHANNELS" to false to restore the previous delivery. [#28818](https://github.com/open-webui/open-webui/pull/28818)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Persian and Indonesian were enhanced and expanded.
+
+### Fixed
+
+- 🛡️ **Security Advisory**: This release includes security and access-control fixes. We recommend updating production deployments at your earliest convenience. Not all security fixes in this version may be enumerated in the fixed section. Some may be withheld for a short time to give administrators time to upgrade. [Advisories](https://github.com/open-webui/open-webui/security)
+- 🚷 **Revoked access ends live updates.** Removing someone's access to a shared channel or a note, or deleting it, now also stops the live messages and edits their open sessions were still receiving from it. [Commit](https://github.com/open-webui/open-webui/commit/e93a59f4dd8eea5b1df55b4e6dcc57465887b95d)
+- 📄 **Docling file names.** A document sent to a Docling server for extraction now carries only its file name, where it previously revealed the full path the file is stored under on the server. [#30357](https://github.com/open-webui/open-webui/pull/30357), [#30352](https://github.com/open-webui/open-webui/issues/30352)
+- 🗣️ **Interface language detection.** Browsers reporting a bare or regional language code, such as German, Dutch or Polish in Firefox, Japanese, or Latin American Spanish in Chrome, get the matching translation again, where 0.11.4 fell back to English. [#30377](https://github.com/open-webui/open-webui/pull/30377)
+- ⚙️ **Settings labels on reload.** Settings labels no longer turn into raw keys such as "settings.admin.connections.title" from the second page load on. [#30354](https://github.com/open-webui/open-webui/pull/30354), [#30348](https://github.com/open-webui/open-webui/issues/30348)
+- 🧠 **Ollama system prompt after tool calls.** With native function calling on an Ollama model, the model's system prompt now stays in place after a tool result, so the final answer follows the model's instructions again. [#30375](https://github.com/open-webui/open-webui/pull/30375), [#30161](https://github.com/open-webui/open-webui/issues/30161)
+- 📸 **MCP tool images reach the model.** An image returned by an MCP tool, such as a camera snapshot, is now handed to the model as well as shown in the tool call, so the model can answer about what it shows. [#30358](https://github.com/open-webui/open-webui/pull/30358), [#30327](https://github.com/open-webui/open-webui/issues/30327)
+- 📁 **Folder clicks keep a chat's tools.** Clicking a folder name in the sidebar while a chat is open no longer swaps that chat's tools and skills for those of the folder's default model. [#30376](https://github.com/open-webui/open-webui/pull/30376), [#30226](https://github.com/open-webui/open-webui/issues/30226)
+- 📝 **Cleared chat system prompt.** Clearing a chat's own system prompt now falls back to your personal system prompt, where the chat was previously sent no system prompt at all. [#30333](https://github.com/open-webui/open-webui/pull/30333)
+- 🔎 **Hybrid search on large Chroma collections.** Hybrid search over a knowledge base of more than about 32,000 chunks stored in Chroma now returns results, where it previously failed with "Error querying knowledge base". [#30368](https://github.com/open-webui/open-webui/pull/30368), [#30351](https://github.com/open-webui/open-webui/issues/30351)
+- 🎨 **Generated image formats.** Generated images that come back as JPEG or WebP are now saved, downloaded and served as what they are, where they were always labelled as PNG. [#30359](https://github.com/open-webui/open-webui/pull/30359), [#29948](https://github.com/open-webui/open-webui/issues/29948)
+- 📜 **Title generation log noise.** Starting a new chat no longer writes a misleading "Error generating initial chat title" traceback to the server log. [#30356](https://github.com/open-webui/open-webui/pull/30356), [#30339](https://github.com/open-webui/open-webui/issues/30339)
+
+### Changed
+
+- 🔁 **Update Redis-backed instances together.** Where several servers share their websocket traffic through Redis, every instance should be updated at the same time, since live chat updates sent by an updated instance do not reach one still on an older version unless "WEBSOCKET_REDIS_ROOM_CHANNELS" is set to false. [#28818](https://github.com/open-webui/open-webui/pull/28818)
+
 ## [0.11.4] - 2026-09-21
 
 ### Added
