@@ -1593,7 +1593,12 @@
 
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
-			if (folder?.data?.model_ids && !equal(selectedModels, folder.data.model_ids)) {
+			// Folder default models apply to new chats only.
+			if (
+				!history.currentId &&
+				folder?.data?.model_ids &&
+				!equal(selectedModels, folder.data.model_ids)
+			) {
 				selectedModels = folder.data.model_ids;
 
 				console.log('Set selectedModels from folder data:', selectedModels);
