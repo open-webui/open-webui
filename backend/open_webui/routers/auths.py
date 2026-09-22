@@ -1765,6 +1765,7 @@ async def token_exchange(
             user=user,
             user_data=user_data,
             default_permissions=await Config.get('user.permissions'),
+            access_token=form_data.token,
             db=db,
         )
 

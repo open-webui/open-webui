@@ -188,7 +188,7 @@ def _default_value(value):
     return getattr(value, 'value', value)
 
 
-def _get_roles_claim(claims: dict, claim: str) -> list | str | int | None:
+def _get_claim(claims: dict, claim: str) -> list | str | int | None:
     """Read nested or flat claims, preserving explicit empty values and zero."""
     value = claims
     for key in claim.split('.'):
@@ -196,6 +196,15 @@ def _get_roles_claim(claims: dict, claim: str) -> list | str | int | None:
     if not isinstance(value, (list, str, int)):
         value = claims.get(claim)
     return value if isinstance(value, (list, str, int)) else None
+
+
+def _get_exchange_token_claims(access_token: str) -> dict:
+    """Claims of a token the exchange endpoint has already validated with the provider's userinfo endpoint."""
+    try:
+        return jwt.decode(access_token, options={'verify_signature': False})
+    except jwt.PyJWTError as e:
+        log.debug('Token exchange: cannot decode token claims: %s', e)
+        return {}
 
 
 async def get_oauth_runtime_config() -> SimpleNamespace:
@@ -1553,14 +1562,9 @@ class OAuthManager:
             role = user.role if user else auth_config.DEFAULT_USER_ROLE
 
             if oauth_claim:
-                claim_data = _get_roles_claim(user_data, oauth_claim)
+                claim_data = _get_claim(user_data, oauth_claim)
                 if claim_data is None and access_token is not None:
-                    # The exchange endpoint has already validated this token with the provider's userinfo endpoint.
-                    try:
-                        token_claims = jwt.decode(access_token, options={'verify_signature': False})
-                        claim_data = _get_roles_claim(token_claims, oauth_claim)
-                    except jwt.PyJWTError as e:
-                        log.debug('Token exchange: cannot decode token claims: %s', e)
+                    claim_data = _get_claim(_get_exchange_token_claims(access_token), oauth_claim)
 
                 if isinstance(claim_data, list):
                     oauth_roles = claim_data
@@ -1644,17 +1648,27 @@ class OAuthManager:
 
         return user
 
-    async def update_user_groups(self, request, user, user_data, default_permissions, db=None):
+    async def update_user_groups(
+        self, request, user, user_data, default_permissions, *, access_token: str | None = None, db=None
+    ):
         auth_config = await get_oauth_runtime_config()
         log.debug('Running OAUTH Group management')
         oauth_claim = auth_config.OAUTH_GROUPS_CLAIM
 
         blocked_groups = _parse_blocked_groups(auth_config.OAUTH_BLOCKED_GROUPS)
 
+        claims = user_data
+        is_groups_claim_missing = (
+            access_token is not None and bool(oauth_claim) and _get_claim(user_data, oauth_claim) is None
+        )
+        if is_groups_claim_missing:
+            claims = _get_exchange_token_claims(access_token)
+            is_groups_claim_missing = _get_claim(claims, oauth_claim) is None
+
         user_oauth_groups = []
         # Nested claim search for groups claim
-        if oauth_claim:
-            claim_data = user_data
+        if oauth_claim and not is_groups_claim_missing:
+            claim_data = claims
             nested_claims = oauth_claim.split('.')
             for nested_claim in nested_claims:
                 claim_data = claim_data.get(nested_claim, {})
@@ -1671,6 +1685,9 @@ class OAuthManager:
                 user_oauth_groups = []
 
         user_current_groups: list[GroupModel] = await Groups.get_groups_by_member_id(user.id, db=db)
+        if is_groups_claim_missing and user_current_groups:
+            log.warning('Token exchange denied: no readable groups claim in userinfo or the token')
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
         all_available_groups: list[GroupModel] = await Groups.get_all_groups(db=db)
 
         # Create groups if they don't exist and creation is enabled
