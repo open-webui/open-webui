@@ -28,6 +28,8 @@ from open_webui.retrieval.vector.utils import process_metadata
 
 log = logging.getLogger(__name__)
 
+GET_PAGE_SIZE = 10000
+
 
 class ChromaClient(VectorDBBase):
     def __init__(self):
@@ -131,12 +133,18 @@ class ChromaClient(VectorDBBase):
         # Get all the items in the collection.
         collection = self.client.get_collection(name=collection_name, embedding_function=None)
         if collection:
-            result = collection.get()
+            ids, documents, metadatas = [], [], []
+            # Unpaged get() exceeds SQLite's bind-variable limit on large collections
+            for offset in range(0, collection.count(), GET_PAGE_SIZE):
+                page = collection.get(limit=GET_PAGE_SIZE, offset=offset)
+                ids.extend(page['ids'])
+                documents.extend(page['documents'])
+                metadatas.extend(page['metadatas'])
             return GetResult(
                 **{
-                    'ids': [result['ids']],
-                    'documents': [result['documents']],
-                    'metadatas': [result['metadatas']],
+                    'ids': [ids],
+                    'documents': [documents],
+                    'metadatas': [metadatas],
                 }
             )
         return None
