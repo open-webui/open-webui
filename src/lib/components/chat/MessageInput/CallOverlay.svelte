@@ -379,6 +379,7 @@
 	};
 
 	let finishedMessages = {};
+	let failedMessages = {};
 	let currentMessageId = null;
 	let currentUtterance: SpeechSynthesisUtterance | null = null;
 
@@ -502,7 +503,9 @@
 	const emojiCache = new Map();
 
 	const fetchAudio = async (content) => {
-		if (!audioCache.has(content)) {
+		const id = currentMessageId;
+
+		if (!audioCache.has(content) && !failedMessages[id]) {
 			try {
 				// Set the emoji for the content if needed
 				if ($settings?.showEmojiInCall ?? false) {
@@ -535,6 +538,10 @@
 					const res = await synthesizeOpenAISpeech(localStorage.token, getVoiceId(), content).catch(
 						(error) => {
 							console.error(error);
+							if (!failedMessages[id]) {
+								failedMessages[id] = true;
+								toast.error(`${error}`);
+							}
 							return null;
 						}
 					);
@@ -549,6 +556,10 @@
 				}
 			} catch (error) {
 				console.error('Error synthesizing speech:', error);
+			}
+
+			if (!audioCache.has(content)) {
+				failedMessages[id] = true;
 			}
 		}
 
@@ -591,7 +602,7 @@
 					} else {
 						await speakSpeechSynthesisHandler(content);
 					}
-				} else {
+				} else if (!failedMessages[id]) {
 					// If not available in the cache, push it back to the queue and delay
 					messages[id].unshift(content); // Re-queue the content at the start
 					console.log(`Audio for "${content}" not yet available in the cache, re-queued...`);
