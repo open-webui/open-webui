@@ -273,7 +273,7 @@ class DoclingLoader:
                 f'{self.url}/v1/convert/file',
                 files={
                     'files': (
-                        self.file_path,
+                        os.path.basename(self.file_path),
                         f,
                         self.mime_type or 'application/octet-stream',
                     )
