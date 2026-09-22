@@ -1715,6 +1715,27 @@ async def get_sources_from_items(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
+
+    # Chunk metadata snapshots the file name at index time, so a rename leaves
+    # stale names in the vector store. Resolve current names from the files
+    # table at read time so citations don't show outdated names.
+    current_names = {}
+    for source in sources:
+        for meta in source.get('metadata') or []:
+            if not isinstance(meta, dict):
+                continue
+            file_id = meta.get('file_id')
+            if not file_id:
+                continue
+            if file_id not in current_names:
+                file = await Files.get_file_by_id(file_id)
+                current_names[file_id] = file.filename if file else None
+            name = current_names[file_id]
+            if name:
+                if meta.get('name'):
+                    meta['name'] = name
+                if meta.get('source'):
+                    meta['source'] = name
     return sources
 
 
