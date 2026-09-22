@@ -923,6 +923,11 @@
 
 		const filesystemUploadTerminal = getFilesystemUploadTerminal();
 
+		if (filesystemUploadTerminal?.contexts?.chat?.context_id === 'chat_id' && !chatId) {
+			toast.error($i18n.t('Start the chat to use this terminal.'));
+			return null;
+		}
+
 		if (!filesystemUploadTerminal && fileUploadCapableModels.length !== selectedModelIds.length) {
 			toast.error($i18n.t('Model(s) do not support file upload'));
 			return null;

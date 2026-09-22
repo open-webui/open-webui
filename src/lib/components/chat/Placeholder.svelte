@@ -15,7 +15,8 @@
 		user,
 		models as _models,
 		temporaryChatEnabled,
-		selectedFolder
+		selectedFolder,
+		chatId
 	} from '$lib/stores';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
@@ -243,6 +244,7 @@
 					<MessageInput
 						bind:this={messageInput}
 						{history}
+						chatId={$chatId}
 						bind:selectedModels
 						bind:files
 						bind:prompt
