@@ -1935,10 +1935,13 @@ async def process_file(
     The session is committed before external API calls, and updates use a fresh session.
     """
     config = await get_retrieval_config()
-    if user.role == 'admin':
-        file = await Files.get_file_by_id(form_data.file_id, db=db)
-    else:
-        file = await Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
+    file = await Files.get_file_by_id(form_data.file_id, db=db)
+    if file and not (
+        user.role == 'admin'
+        or file.user_id == user.id
+        or await has_access_to_file(form_data.file_id, 'write', user, db=db)
+    ):
+        file = None
 
     if file:
         try:
