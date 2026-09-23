@@ -1,11 +1,14 @@
 """Recurrence calculations isolated from application/DB imports for worker processes."""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
+from functools import partial
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from anyio import fail_after, to_process
+import anyio
+from anyio import fail_after, to_process, to_thread
 from dateutil.rrule import HOURLY, MINUTELY, SECONDLY, rruleset, rrulestr
 from open_webui.constants import ERROR_MESSAGES
 
@@ -101,6 +104,12 @@ async def _get_next_occurrences(s: str, now: datetime, n: int) -> list[datetime]
             return await to_process.run_sync(_next_occurrences, s, now, n, cancellable=True)
     except TimeoutError as e:
         raise RecurrenceEvaluationTimeout('Schedule took too long to evaluate; simplify its recurrence rule.') from e
+    except NotImplementedError:
+        # Windows' SelectorEventLoop (required by psycopg) cannot spawn subprocesses.
+        run_on_proactor_loop = partial(
+            anyio.run, _get_next_occurrences, s, now, n, backend_options={'loop_factory': asyncio.ProactorEventLoop}
+        )
+        return await to_thread.run_sync(run_on_proactor_loop)
 
 
 async def validate_rrule(s: str, tz: str = None) -> None:
