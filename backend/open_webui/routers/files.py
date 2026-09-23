@@ -746,9 +746,15 @@ async def update_file_data_content_by_id(
                 db=db,
             )
             file = await Files.get_file_by_id(id=id, db=db)
+        except HTTPException:
+            raise
         except Exception as e:
             log.exception(e)
             log.error(f'Error processing file: {file.id}')
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
 
         # Propagate content change to all knowledge collections referencing
         # this file.  Without this the old embeddings remain in the knowledge
