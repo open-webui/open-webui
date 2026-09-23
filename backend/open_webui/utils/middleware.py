@@ -1195,7 +1195,6 @@ async def process_tool_result(
                                 'chat_id': metadata.get('chat_id', None),
                                 'message_id': metadata.get('message_id', None),
                                 'session_id': metadata.get('session_id', None),
-                                'result': item,
                             },
                             user,
                         )
