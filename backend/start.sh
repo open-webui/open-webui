@@ -4,34 +4,46 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Container entry point for Open WebUI.
 # Handles secret key generation, optional Ollama/CUDA/Playwright setup,
-# HuggingFace Space deployment, and launches the uvicorn server.
+# HuggingFace Space deployment, dual-stack host binding, and launches the uvicorn server.
 # ---------------------------------------------------------------------------
 
 # Default optional env vars that we test below with bash's `,,` lowercase
 # expansion. The two can't be combined inline (`${VAR:-default,,}` makes
 # the default literal `,,`), so we normalise once up front and the simple
 # `${VAR,,}` form stays safe under `set -u` everywhere else.
-: "${USE_SLIM_DOCKER:=}" "${WEB_LOADER_ENGINE:=}" "${USE_OLLAMA_DOCKER:=}" "${USE_CUDA_DOCKER:=}"
+: "${WEB_LOADER_ENGINE:=}" "${USE_OLLAMA_DOCKER:=}" "${USE_CUDA_DOCKER:=}"
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 cd "$SCRIPT_DIR" || exit 1
 
 # ── Playwright browser installation (if configured) ──────────────────────────
 
-if [[ "${USE_SLIM_DOCKER,,}" != "true" && "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
+if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
   if [[ -z "${PLAYWRIGHT_WS_URL:-}" ]]; then
     echo "Installing Playwright Chromium browser..."
     playwright install chromium
     playwright install-deps chromium
   fi
+  python -c "import nltk; nltk.download('punkt_tab')"
 fi
 
-# ── Secret key setup ─────────────────────────────────────────────────────────
+# ── Secret key & network setup ───────────────────────────────────────────────
 
 KEY_FILE="${WEBUI_SECRET_KEY_FILE:-.webui_secret_key}"
 WEBUI_SECRET_KEY_LENGTH="${WEBUI_SECRET_KEY_LENGTH:-24}"
 PORT="${PORT:-8080}"
-HOST="${HOST:-0.0.0.0}"
+# Default to dual-stack IPv6/IPv4 binding '::' unless explicitly overridden
+HOST="${HOST:-::}"
+
+PYTHON_CMD=$(command -v python3 || command -v python)
+
+# Probe IPv6 socket availability if HOST is set to '::'
+if [[ "$HOST" == "::" ]]; then
+  if ! "$PYTHON_CMD" -c "import socket; s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); s.bind(('::', ${PORT})); s.close()" 2>/dev/null; then
+    echo "WARNING: IPv6 binding failed or unavailable on port ${PORT}. Falling back to IPv4 (0.0.0.0)."
+    HOST="0.0.0.0"
+  fi
+fi
 
 if [[ -z "${WEBUI_SECRET_KEY:-}" && -z "${WEBUI_JWT_SECRET_KEY:-}" ]]; then
   echo "No WEBUI_SECRET_KEY environment variable set, loading from file."
@@ -71,11 +83,11 @@ if [[ -n "${SPACE_ID:-}" ]]; then
   if [[ -n "${ADMIN_USER_EMAIL:-}" && -n "${ADMIN_USER_PASSWORD:-}" ]]; then
     echo "Creating admin user for Space..."
     WEBUI_SECRET_KEY="${WEBUI_SECRET_KEY:-}" \
-      uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" --ws-per-message-deflate "${UVICORN_WS_PER_MESSAGE_DEFLATE:-true}" &
+      "$PYTHON_CMD" -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" --ws-per-message-deflate "${UVICORN_WS_PER_MESSAGE_DEFLATE:-true}" &
     webui_pid=$!
 
     echo "Waiting for server to become healthy..."
-    until curl -sf "http://localhost:${PORT}/health" > /dev/null 2>&1; do
+    until curl -sf "http://localhost:${PORT}/health" > /dev/null 2>&1 || curl -sf "http://[::1]:${PORT}/health" > /dev/null 2>&1; do
       sleep 1
     done
 
@@ -95,7 +107,6 @@ fi
 
 # ── Launch uvicorn ───────────────────────────────────────────────────────────
 
-PYTHON_CMD=$(command -v python3 || command -v python)
 UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
 if [[ "$#" -gt 0 ]]; then
