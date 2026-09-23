@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from anyio import fail_after, to_process
+from anyio import fail_after, to_process, to_thread
 from dateutil.rrule import HOURLY, MINUTELY, SECONDLY, rruleset, rrulestr
 from open_webui.constants import ERROR_MESSAGES
 
@@ -98,7 +98,11 @@ async def _get_next_occurrences(s: str, now: datetime, n: int) -> list[datetime]
     # A result-count or date limit cannot bound work before the first match.
     try:
         with fail_after(RRULE_TIMEOUT_SECONDS):
-            return await to_process.run_sync(_next_occurrences, s, now, n, cancellable=True)
+            try:
+                return await to_process.run_sync(_next_occurrences, s, now, n, cancellable=True)
+            except (NotImplementedError, OSError):
+                # Fall back to worker thread on Windows SelectorEventLoop or environments lacking subprocess worker support
+                return await to_thread.run_sync(_next_occurrences, s, now, n)
     except TimeoutError as e:
         raise RecurrenceEvaluationTimeout('Schedule took too long to evaluate; simplify its recurrence rule.') from e
 
