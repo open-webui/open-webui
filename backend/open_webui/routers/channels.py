@@ -688,6 +688,8 @@ async def remove_members_by_id(
 
     try:
         deleted = await Channels.remove_members_from_channel(channel.id, form_data.user_ids, db=db)
+        if channel.type in ['group', 'dm']:
+            await leave_room_for_users(f'channel:{channel.id}', form_data.user_ids)
 
         await publish_event(
             request,
