@@ -2813,14 +2813,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
 
     if skill_ids or use_builtin_tools:
-        import aiohttp
-        from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
         from open_webui.models.skills import Skills as SkillsModel
         from open_webui.utils.terminals import (
             format_terminal_skill_context,
             format_terminal_skill_manifest_entry,
-            get_terminal_request_info,
             get_terminal_skill,
+            request_terminal_json,
         )
 
         terminal_skill_prefix = 'terminal:'
@@ -2853,49 +2851,33 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     f'<description>{skill.description or ""}</description>\n</skill>\n'
                 )
 
-        terminal_request = (
-            await get_terminal_request_info(request, user, metadata, extra_params)
+        listed = (
+            await request_terminal_json(request, user, metadata, '/skills', extra_params=extra_params)
             if terminal_id or terminal_skill_ids
             else None
         )
+        listed_terminal_skills = listed if isinstance(listed, list) else []
 
-        listed_terminal_skills = []
-        if terminal_request:
-            terminal_base_url, terminal_headers, terminal_cookies = terminal_request
-            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-                async with session.get(
-                    f'{terminal_base_url.rstrip("/")}/skills',
-                    headers=terminal_headers,
-                    cookies=terminal_cookies,
-                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
-                ) as response:
-                    if response.status == 200:
-                        listed = await response.json()
-                        listed_terminal_skills = listed if isinstance(listed, list) else []
+        if terminal_id and use_builtin_tools:
+            terminal_skills = listed_terminal_skills
+        elif terminal_skill_ids:
+            terminal_skill_map = {skill['id']: skill for skill in listed_terminal_skills}
+            terminal_skills = [skill for sid in terminal_skill_ids if (skill := terminal_skill_map.get(sid))]
 
-                if terminal_id and use_builtin_tools:
-                    terminal_skills = listed_terminal_skills
-                elif terminal_skill_ids:
-                    terminal_skill_map = {skill['id']: skill for skill in listed_terminal_skills}
-                    terminal_skills = [skill for sid in terminal_skill_ids if (skill := terminal_skill_map.get(sid))]
-
-                for skill in terminal_skills:
-                    sid = skill['id']
-                    if sid in mentioned_skill_ids or not use_builtin_tools:
-                        skill_name = unquote(sid.removeprefix(terminal_skill_prefix))
-                        loaded = await get_terminal_skill(
-                            request, user.model_dump(), metadata, skill_name, extra_params
-                        )
-                        if loaded:
-                            form_data['messages'] = add_or_update_system_message(
-                                format_terminal_skill_context(loaded),
-                                form_data['messages'],
-                                append=True,
-                            )
-                    else:
-                        view_skill_ids.append(sid)
-                        skill_manifest += format_terminal_skill_manifest_entry(skill)
+        for skill in terminal_skills:
+            sid = skill['id']
+            if sid in mentioned_skill_ids or not use_builtin_tools:
+                skill_name = unquote(sid.removeprefix(terminal_skill_prefix))
+                loaded = await get_terminal_skill(request, user.model_dump(), metadata, skill_name, extra_params)
+                if loaded:
+                    form_data['messages'] = add_or_update_system_message(
+                        format_terminal_skill_context(loaded),
+                        form_data['messages'],
+                        append=True,
+                    )
+            else:
+                view_skill_ids.append(sid)
+                skill_manifest += format_terminal_skill_manifest_entry(skill)
 
         if skill_manifest:
             form_data['messages'] = add_or_update_system_message(

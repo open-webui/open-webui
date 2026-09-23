@@ -81,6 +81,7 @@
 	import { getUserSettings } from '$lib/apis/users';
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
+	import { resolveTerminalConnection, terminalRequest } from '$lib/apis/terminal';
 
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
@@ -464,6 +465,34 @@
 		return { toolServer, toolServerData, token };
 	};
 
+	const requestTerminal = async (data, cb, chatId) => {
+		const connection = resolveTerminalConnection(
+			data?.terminal_id,
+			[],
+			$settings?.terminalServers ?? [],
+			localStorage.token
+		);
+		if (!connection) {
+			if (cb) {
+				cb({ error: 'Terminal Not Found' });
+			}
+			return;
+		}
+
+		const query = new URLSearchParams(data?.params ?? {}).toString();
+		const path = query ? `${data?.path}?${query}` : data?.path;
+		try {
+			const result = await terminalRequest(connection, chatId, path);
+			if (cb) {
+				cb({ data: result });
+			}
+		} catch (error) {
+			if (cb) {
+				cb({ error: `${error}` });
+			}
+		}
+	};
+
 	const isDirectTerminalServer = (serverUrl) =>
 		!!serverUrl &&
 		(($settings?.terminalServers ?? []).some((server) => server.url === serverUrl) ||
@@ -642,6 +671,9 @@
 			} else if (type === 'execute:tool') {
 				console.log('execute:tool', data);
 				executeTool(data, cb, event.chat_id);
+				return;
+			} else if (type === 'request:terminal') {
+				requestTerminal(data, cb, event.chat_id);
 				return;
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);

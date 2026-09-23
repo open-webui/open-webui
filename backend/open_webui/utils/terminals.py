@@ -124,7 +124,6 @@ async def get_terminal_request_info(request, user, metadata: dict, extra_params:
     from open_webui.models.groups import Groups
     from open_webui.models.users import UserModel
     from open_webui.utils.access_control import has_connection_access
-    from open_webui.utils.headers import bearer_auth_header
     from open_webui.utils.tools import build_tool_server_headers
 
     metadata = metadata or {}
@@ -165,64 +164,67 @@ async def get_terminal_request_info(request, user, metadata: dict, extra_params:
             headers[TERMINAL_CONTEXT_HEADER] = context_id
         return get_terminal_server_url(connection), headers, cookies
 
-    selector = str(terminal_id).rstrip('/')
-    direct_terminal = next(
-        (
-            server
-            for server in metadata.get('tool_servers') or []
-            if str(server.get('url') or '').rstrip('/') == selector
-        ),
-        None,
-    )
-    if not direct_terminal:
-        return None
+    return None
 
-    headers = {'Accept': 'application/json'}
-    key = str(direct_terminal.get('key') or '').strip()
-    if key:
-        headers.update(bearer_auth_header(key))
-    if metadata.get('chat_id'):
-        headers['X-Session-Id'] = metadata['chat_id']
-    return selector, headers, {}
+
+async def request_terminal_json(
+    request, user, metadata: dict, path: str, params: dict | None = None, extra_params: dict | None = None
+) -> dict | list | None:
+    """GET JSON from the selected terminal, via the user's browser for user-added terminals."""
+    import aiohttp
+    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
+
+    terminal_request = await get_terminal_request_info(request, user, metadata, extra_params)
+    if terminal_request:
+        base_url, headers, cookies = terminal_request
+        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with session.get(
+                f'{base_url.rstrip("/")}{path}',
+                params=params,
+                headers=headers,
+                cookies=cookies,
+                ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                allow_redirects=False,
+            ) as response:
+                if response.status != 200:
+                    log.debug('Terminal request to %s returned HTTP %s', path, response.status)
+                    return None
+                return await response.json()
+
+    event_caller = (extra_params or {}).get('__event_call__')
+    if not metadata.get('terminal_id') or not event_caller:
+        return None
+    result = await event_caller(
+        {
+            'type': 'request:terminal',
+            'data': {
+                'terminal_id': metadata['terminal_id'],
+                'path': path,
+                'params': params or {},
+                'session_id': metadata.get('session_id'),
+            },
+        }
+    )
+    return result.get('data') if isinstance(result, dict) else None
 
 
 async def get_terminal_agents_md(request, user, metadata: dict, extra_params: dict | None = None) -> str | None:
     """Load the selected terminal user's home AGENTS.md afresh for this turn."""
-    import aiohttp
-    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-
     try:
         async with asyncio.timeout(5):
-            terminal_request = await get_terminal_request_info(request, user, metadata, extra_params)
-            if not terminal_request:
+            data = await request_terminal_json(request, user, metadata, '/files/cwd', extra_params=extra_params)
+            home = data.get('home') if isinstance(data, dict) else None
+            if not isinstance(home, str) or not posixpath.isabs(home):
                 return None
-            base_url, headers, cookies = terminal_request
-            async with aiohttp.ClientSession(
-                headers=headers, cookies=cookies, timeout=aiohttp.ClientTimeout(total=5), trust_env=True
-            ) as session:
-                async with session.get(
-                    f'{base_url.rstrip("/")}/files/cwd',
-                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
-                    allow_redirects=False,
-                ) as response:
-                    if response.status != 200:
-                        log.debug('Skipping terminal AGENTS.md: home lookup returned HTTP %s', response.status)
-                        return None
-                    data = await response.json()
-                home = data.get('home') if isinstance(data, dict) else None
-                if not isinstance(home, str) or not posixpath.isabs(home):
-                    return None
-                path = posixpath.join(home, 'AGENTS.md')
-                async with session.get(
-                    f'{base_url.rstrip("/")}/files/read',
-                    params={'path': path},
-                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
-                    allow_redirects=False,
-                ) as response:
-                    if response.status == 404:
-                        return None
-                    response.raise_for_status()
-                    data = await response.json()
+            data = await request_terminal_json(
+                request,
+                user,
+                metadata,
+                '/files/read',
+                params={'path': posixpath.join(home, 'AGENTS.md')},
+                extra_params=extra_params,
+            )
 
         content = data.get('content') if isinstance(data, dict) else None
         if not isinstance(content, str) or not content.strip():
@@ -247,26 +249,9 @@ def add_terminal_agents_md(messages: list[dict], agents_md: str) -> list[dict]:
 async def get_terminal_skill(
     request, user, metadata: dict, skill_name: str, extra_params: dict | None = None
 ) -> dict | None:
-    from urllib.parse import quote
-
-    import aiohttp
-    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
-
-    terminal_request = await get_terminal_request_info(request, user, metadata, extra_params)
-    if not terminal_request:
-        return None
-    base_url, headers, cookies = terminal_request
-
-    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-    async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-        async with session.get(
-            f'{base_url.rstrip("/")}/skills/{quote(skill_name, safe="")}',
-            headers=headers,
-            cookies=cookies,
-            ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
-        ) as response:
-            skill = await response.json() if response.status == 200 else None
-
+    skill = await request_terminal_json(
+        request, user, metadata, '/skills/read', params={'name': skill_name}, extra_params=extra_params
+    )
     if not isinstance(skill, dict):
         return None
 

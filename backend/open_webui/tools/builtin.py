@@ -3484,6 +3484,7 @@ async def view_skill(
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
+    __event_call__: callable = None,
 ) -> str:
     """
     Load the full instructions of a skill by its id from the available skills manifest.
@@ -3504,7 +3505,9 @@ async def view_skill(
             from open_webui.utils.terminals import get_terminal_skill
 
             skill_name = unquote(id.removeprefix(terminal_skill_prefix))
-            skill = await get_terminal_skill(__request__, __user__, __metadata__ or {}, skill_name)
+            skill = await get_terminal_skill(
+                __request__, __user__, __metadata__ or {}, skill_name, {'__event_call__': __event_call__}
+            )
             if not skill:
                 return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
             return JSONCodec.dumps(skill, ensure_ascii=False)
