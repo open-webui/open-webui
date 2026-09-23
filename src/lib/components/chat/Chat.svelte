@@ -2535,13 +2535,19 @@
 			return;
 		}
 
-		chatRequestQueues.update((q) => ({
-			...q,
-			[$chatId]: queue.filter((m) => m.id !== id)
-		}));
-		await stopResponse(false);
-		await tick();
-		await submitPrompt(item.prompt, item.files);
+		const targetChatId = $chatId;
+		processingQueueChats.add(targetChatId);
+		try {
+			chatRequestQueues.update((q) => ({
+				...q,
+				[targetChatId]: queue.filter((m) => m.id !== id)
+			}));
+			await stopResponse(false);
+			await tick();
+			await submitPrompt(item.prompt, item.files);
+		} finally {
+			processingQueueChats.delete(targetChatId);
+		}
 	};
 
 	const editQueuedMessage = (id) => {
@@ -3787,7 +3793,7 @@
 			}
 
 			if (responseMessage) {
-				history.messages[history.currentId] = responseMessage;
+				history.messages[responseMessage.id] = responseMessage;
 			}
 
 			if (shouldAutoScrollResponse()) {
