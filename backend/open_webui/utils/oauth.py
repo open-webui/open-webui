@@ -1333,6 +1333,7 @@ class OAuthManager:
         self.app = app
 
         self._clients = {}
+        self._refresh_locks: dict[str, asyncio.Lock] = {}
 
         for name, provider_config in OAUTH_PROVIDERS.items():
             if 'register' not in provider_config:
@@ -1428,22 +1429,28 @@ class OAuthManager:
         Returns:
             dict: Refreshed token data, or None if refresh failed
         """
-        try:
-            # Perform the actual refresh
-            refreshed_token = await self._perform_token_refresh(session)
+        async with self._refresh_locks.setdefault(session.id, asyncio.Lock()):
+            # Another request may have refreshed while we waited; its refresh token is now spent
+            current_session = await OAuthSessions.get_session_by_id(session.id)
+            if current_session and current_session.token != session.token:
+                return current_session.token
 
-            if refreshed_token:
-                # Update the session with new token data
-                session = await OAuthSessions.update_session_by_id(session.id, refreshed_token)
-                log.info('Successfully refreshed token for session %s', session.id)
-                return session.token
-            else:
-                log.error(f'Failed to refresh token for session {session.id}')
+            try:
+                # Perform the actual refresh
+                refreshed_token = await self._perform_token_refresh(session)
+
+                if refreshed_token:
+                    # Update the session with new token data
+                    session = await OAuthSessions.update_session_by_id(session.id, refreshed_token)
+                    log.info('Successfully refreshed token for session %s', session.id)
+                    return session.token
+                else:
+                    log.error(f'Failed to refresh token for session {session.id}')
+                    return None
+
+            except Exception as e:
+                log.error(f'Error refreshing token for session {session.id}: {e}')
                 return None
-
-        except Exception as e:
-            log.error(f'Error refreshing token for session {session.id}: {e}')
-            return None
 
     async def _perform_token_refresh(self, session) -> dict:
         """
