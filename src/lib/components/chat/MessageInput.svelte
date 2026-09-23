@@ -1588,8 +1588,10 @@
 		loaded = true;
 
 		window.setTimeout(() => {
-			const chatInput = document.getElementById('chat-input');
-			chatInput?.focus();
+			if (!$showCallOverlay) {
+				const chatInput = document.getElementById('chat-input');
+				chatInput?.focus();
+			}
 		}, 0);
 
 		window.addEventListener('keydown', onKeyDown);
