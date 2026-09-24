@@ -207,7 +207,9 @@ async def get_daily_stats(
 ):
     """Get message counts grouped by model for time-series chart."""
     if granularity == 'hourly':
-        counts = await ChatMessages.get_hourly_message_counts_by_model(start_date=start_date, end_date=end_date, db=db)
+        counts = await ChatMessages.get_hourly_message_counts_by_model(
+            start_date=start_date, end_date=end_date, group_id=group_id, db=db
+        )
     else:
         counts = await ChatMessages.get_daily_message_counts_by_model(
             start_date=start_date, end_date=end_date, group_id=group_id, db=db

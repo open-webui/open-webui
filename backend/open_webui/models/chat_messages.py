@@ -1012,11 +1012,14 @@ class ChatMessageTable:
         self,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
         db: Optional[AsyncSession] = None,
     ) -> dict[str, dict[str, int]]:
         """Get message counts grouped by hour and model."""
         async with get_async_db_context(db) as db:
             from datetime import datetime, timedelta
+
+            from open_webui.models.groups import GroupMember
 
             stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
                 ChatMessage.role == 'assistant',
@@ -1027,6 +1030,9 @@ class ChatMessageTable:
                 stmt = stmt.filter(ChatMessage.created_at >= start_date)
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             result = await db.execute(stmt)
             results = result.all()
