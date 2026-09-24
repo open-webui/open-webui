@@ -622,15 +622,19 @@ class ModelsTable:
                         await db.execute(update(Model).filter_by(id=model.id).values(**model_data))
                     else:
                         db.add(Model(**model_data))
-                    await AccessGrants.set_access_grants('model', model.id, model.access_grants, db=db)
 
                 # Remove models that are no longer present
                 for model in existing_models:
                     if model.id not in new_model_ids:
-                        await AccessGrants.revoke_all_access('model', model.id, db=db)
                         await db.delete(model)
 
                 await db.commit()
+
+                # Grants after the commit to avoid SQLite write-lock contention when session sharing is off
+                for model in models:
+                    await AccessGrants.set_access_grants('model', model.id, model.access_grants, db=db)
+                for model_id in existing_ids - new_model_ids:
+                    await AccessGrants.revoke_all_access('model', model_id, db=db)
 
                 result = await db.execute(select(Model))
                 all_models = result.scalars().all()
