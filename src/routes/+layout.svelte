@@ -81,6 +81,7 @@
 	import { getUserSettings } from '$lib/apis/users';
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
+	import { resolveTerminalConnection, terminalRequest } from '$lib/apis/terminal';
 
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
@@ -644,6 +645,21 @@
 			} else if (type === 'execute:tool') {
 				console.log('execute:tool', data);
 				executeTool(data, cb, event.chat_id);
+				return;
+			} else if (type === 'request:terminal') {
+				try {
+					const connection = resolveTerminalConnection(
+						data.terminal_id,
+						[],
+						$settings?.terminalServers ?? [],
+						localStorage.token
+					);
+					if (!connection) throw new Error('Terminal Not Found');
+					const result = await terminalRequest(connection, event.chat_id, data.path);
+					cb?.({ data: result });
+				} catch (error) {
+					cb?.({ error: `${error}` });
+				}
 				return;
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
