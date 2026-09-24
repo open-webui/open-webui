@@ -888,6 +888,26 @@ class ChatTable:
             if removed:
                 await self.delete_orphan_tags_for_user(list(removed), user.id, db=session)
 
+    async def set_chat_tag_names_snapshot_by_id(
+        self, id: str, tag_names: dict[str, str] | None, db: AsyncSession | None = None
+    ) -> None:
+        """Persist (or clear, when None) the {tag_id: display_name} snapshot in chat.meta.
+
+        The archive flow snapshots tag display names before orphan tag rows are
+        cleaned up, so unarchiving can restore the original names (issue #30454).
+        """
+        async with get_async_db_context(db) as session:
+            row = (await session.execute(select(Chat.meta).filter_by(id=id))).one_or_none()
+            if row is None:
+                return
+            meta = dict(row[0] or {})
+            if tag_names:
+                meta["tag_names"] = tag_names
+            else:
+                meta.pop("tag_names", None)
+            await session.execute(update(Chat).filter_by(id=id).values(meta=meta))
+            await session.commit()
+
     async def get_chat_title_by_id(self, id: str) -> str | None:
         async with get_async_db_context() as session:
             result = await session.execute(select(Chat.title).filter_by(id=id))
