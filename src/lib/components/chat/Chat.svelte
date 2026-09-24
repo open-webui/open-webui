@@ -2566,19 +2566,31 @@
 	};
 
 	const sendQueuedMessageNow = async (id) => {
+		if (processingQueueChats.has($chatId)) return;
+
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		const item = queue.find((m) => m.id === id);
 		if (!item || (item.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))) {
 			return;
 		}
 
-		chatRequestQueues.update((q) => ({
-			...q,
-			[$chatId]: queue.filter((m) => m.id !== id)
-		}));
-		await stopResponse(false);
-		await tick();
-		await submitPrompt(item.prompt, item.files);
+		const targetChatId = $chatId;
+		processingQueueChats.add(targetChatId);
+		try {
+			chatRequestQueues.update((q) => ({
+				...q,
+				[targetChatId]: queue.filter((m) => m.id !== id)
+			}));
+			await stopResponse(false);
+			await tick();
+			await submitPrompt(item.prompt, item.files);
+		} finally {
+			processingQueueChats.delete(targetChatId);
+			// Completion can arrive before submitPrompt returns, while the queue is locked.
+			if ($chatId === targetChatId) {
+				await processNextInQueue(targetChatId);
+			}
+		}
 	};
 
 	const editQueuedMessage = (id) => {
@@ -3824,7 +3836,7 @@
 			}
 
 			if (responseMessage) {
-				history.messages[history.currentId] = responseMessage;
+				history.messages[responseMessage.id] = responseMessage;
 			}
 
 			if (shouldAutoScrollResponse()) {
