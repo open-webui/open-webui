@@ -387,6 +387,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'STAAN_MAX_SNIPPETS': 'web.search.staan_max_snippets',
     'TAVILY_API_KEY': 'web.search.tavily_api_key',
     'TAVILY_EXTRACT_DEPTH': 'web.search.tavily_extract_depth',
+    'TAVILY_SEARCH_DEPTH': 'web.search.tavily_search_depth',
     'TEXT_SPLITTER': 'rag.text_splitter',
     'TIKA_SERVER_URL': 'rag.tika_server_url',
     'TIKA_SERVER_VERSION': 'rag.tika_server_version',
@@ -773,6 +774,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'FIRECRAWL_API_BASE_URL': config.FIRECRAWL_API_BASE_URL,
             'FIRECRAWL_TIMEOUT': config.FIRECRAWL_TIMEOUT,
             'TAVILY_EXTRACT_DEPTH': config.TAVILY_EXTRACT_DEPTH,
+            'TAVILY_SEARCH_DEPTH': config.TAVILY_SEARCH_DEPTH,
             'EXTERNAL_WEB_SEARCH_URL': config.EXTERNAL_WEB_SEARCH_URL,
             'EXTERNAL_WEB_SEARCH_API_KEY': config.EXTERNAL_WEB_SEARCH_API_KEY,
             'EXTERNAL_WEB_LOADER_URL': config.EXTERNAL_WEB_LOADER_URL,
@@ -856,6 +858,7 @@ class WebConfig(BaseModel):
     FIRECRAWL_API_BASE_URL: str | None = None
     FIRECRAWL_TIMEOUT: str | None = None
     TAVILY_EXTRACT_DEPTH: str | None = None
+    TAVILY_SEARCH_DEPTH: str | None = None
     EXTERNAL_WEB_SEARCH_URL: str | None = None
     EXTERNAL_WEB_SEARCH_API_KEY: str | None = None
     EXTERNAL_WEB_LOADER_URL: str | None = None
@@ -1386,6 +1389,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.EXTERNAL_WEB_LOADER_URL = form_data.web.EXTERNAL_WEB_LOADER_URL
         config.EXTERNAL_WEB_LOADER_API_KEY = form_data.web.EXTERNAL_WEB_LOADER_API_KEY
         config.TAVILY_EXTRACT_DEPTH = form_data.web.TAVILY_EXTRACT_DEPTH
+        config.TAVILY_SEARCH_DEPTH = form_data.web.TAVILY_SEARCH_DEPTH
         config.YOUTUBE_LOADER_LANGUAGE = form_data.web.YOUTUBE_LOADER_LANGUAGE
         config.YOUTUBE_LOADER_PROXY_URL = form_data.web.YOUTUBE_LOADER_PROXY_URL
         request.app.state.YOUTUBE_LOADER_TRANSLATION = form_data.web.YOUTUBE_LOADER_TRANSLATION
@@ -1535,6 +1539,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'FIRECRAWL_API_BASE_URL': config.FIRECRAWL_API_BASE_URL,
             'FIRECRAWL_TIMEOUT': config.FIRECRAWL_TIMEOUT,
             'TAVILY_EXTRACT_DEPTH': config.TAVILY_EXTRACT_DEPTH,
+            'TAVILY_SEARCH_DEPTH': config.TAVILY_SEARCH_DEPTH,
             'EXTERNAL_WEB_SEARCH_URL': config.EXTERNAL_WEB_SEARCH_URL,
             'EXTERNAL_WEB_SEARCH_API_KEY': config.EXTERNAL_WEB_SEARCH_API_KEY,
             'EXTERNAL_WEB_LOADER_URL': config.EXTERNAL_WEB_LOADER_URL,
@@ -2705,6 +2710,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
                 query,
                 config.WEB_SEARCH_RESULT_COUNT,
                 config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                search_depth=config.TAVILY_SEARCH_DEPTH,
             )
         else:
             raise Exception('No TAVILY_API_KEY found in environment variables')
