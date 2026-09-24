@@ -432,8 +432,8 @@ def convert_anthropic_to_openai_payload(
             else:
                 openai_payload[param] = anthropic_payload[param]
 
-    # Tools conversion: Anthropic → OpenAI
-    if 'tools' in anthropic_payload:
+    # Tools conversion: Anthropic → OpenAI (backends reject an empty tools array)
+    if anthropic_payload.get('tools'):
         openai_tools = []
         for tool in anthropic_payload['tools']:
             openai_tools.append(
@@ -452,7 +452,7 @@ def convert_anthropic_to_openai_payload(
         openai_payload['tools'] = openai_tools
 
     # tool_choice
-    if 'tool_choice' in anthropic_payload:
+    if 'tool_choice' in anthropic_payload and 'tools' in openai_payload:
         tool_choice = anthropic_payload['tool_choice']
         if isinstance(tool_choice, dict):
             tool_choice_type = tool_choice.get('type', 'auto')
