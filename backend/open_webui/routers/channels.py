@@ -647,6 +647,12 @@ async def add_members_by_id(
             channel.id, user.id, form_data.user_ids, form_data.group_ids, db=db
         )
 
+        # Subscribe the newly added members' open sessions to the channel's
+        # Socket.IO room so the live feed reaches them without a reload.
+        await enter_room_for_users(
+            f'channel:{channel.id}', [m.user_id for m in memberships]
+        )
+
         await publish_event(
             request,
             EVENTS.CHANNEL_MEMBER_ADDED,
@@ -688,6 +694,10 @@ async def remove_members_by_id(
 
     try:
         deleted = await Channels.remove_members_from_channel(channel.id, form_data.user_ids, db=db)
+
+        # Unsubscribe the removed members' open sessions from the channel's
+        # Socket.IO room so they stop receiving its live feed without a reload.
+        await leave_room_for_users(f'channel:{channel.id}', form_data.user_ids)
 
         await publish_event(
             request,
