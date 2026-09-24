@@ -1709,11 +1709,8 @@ async def chat_completion(
 
                 except Exception:
                     pass
-            else:
-                # No chat_id/message_id → legacy/direct API path with no
-                # WebSocket error channel.  We must surface the error as
-                # a proper HTTP response; without this the function would
-                # return None which FastAPI serializes as null.  #23924
+            # Legacy/direct callers await this response; returning None would send `null`.  #23924
+            if not (metadata.get('session_id') and metadata.get('chat_id')):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=error_detail,
