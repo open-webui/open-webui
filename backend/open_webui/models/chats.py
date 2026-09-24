@@ -648,6 +648,7 @@ class ChatTable:
                 'current_message_id': form_data.current_message_id or self.get_current_message_id(form_data.chat),
                 'created_at': (form_data.created_at if form_data.created_at else int(time.time())),
                 'updated_at': (form_data.updated_at if form_data.updated_at else int(time.time())),
+                'last_read_at': int(time.time()),
             }
         )
         return chat
