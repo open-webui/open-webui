@@ -3540,8 +3540,8 @@
 
 		const stream =
 			model?.info?.params?.stream_response ??
-			$settings?.params?.stream_response ??
 			params?.stream_response ??
+			$settings?.params?.stream_response ??
 			true;
 		// Always include system prompt — backend extracts it and prepends to DB messages.
 		// Only temp chats need conversation messages (persisted chats load from DB).
