@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import ntpath
 import posixpath
 from urllib.parse import quote
 
@@ -195,7 +196,7 @@ async def get_terminal_agents_md(request, user, metadata: dict, extra_params: di
         async with asyncio.timeout(5):
             data = await get_terminal_json(request, user, metadata, '/files/cwd', extra_params)
             home = data.get('home') if isinstance(data, dict) else None
-            if not isinstance(home, str) or not posixpath.isabs(home):
+            if not isinstance(home, str) or not (posixpath.isabs(home) or ntpath.isabs(home)):
                 return None
             path = quote(posixpath.join(home, 'AGENTS.md'), safe='')
             data = await get_terminal_json(request, user, metadata, f'/files/read?path={path}', extra_params)
