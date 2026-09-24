@@ -1921,11 +1921,29 @@ async def archive_chat_by_id(
         if chat.archived:
             # Cancel any in-flight LLM tasks before archiving
             await stop_item_tasks(request.app.state.redis, id)
+            # Snapshot tag display names before orphan cleanup deletes the
+            # rows, so unarchiving can restore the original names (#30454)
+            if tag_ids:
+                existing_tags = await Tags.get_tags_by_ids_and_user_id(
+                    tag_ids, user.id, db=db
+                )
+                tag_names = {t.id: t.name for t in existing_tags if t.name}
+                if tag_names:
+                    await Chats.set_chat_tag_names_snapshot_by_id(
+                        id, tag_names, db=db
+                    )
             # Archived chats are excluded from count — clean up orphans
             await Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
         else:
-            # Unarchived — ensure tag rows exist
-            await Tags.ensure_tags_exist(tag_ids, user.id, db=db)
+            # Unarchived — restore tag rows with their original display names
+            tag_names = (chat.meta or {}).get("tag_names") or {}
+            await Tags.ensure_tags_exist(
+                [tag_names.get(tag_id, tag_id) for tag_id in tag_ids],
+                user.id,
+                db=db,
+            )
+            if tag_names:
+                await Chats.set_chat_tag_names_snapshot_by_id(id, None, db=db)
 
         await publish_event(
             request,
