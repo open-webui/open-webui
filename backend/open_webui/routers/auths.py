@@ -9,6 +9,7 @@ import urllib
 import uuid
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
+import jwt
 from aiohttp import BasicAuth, ClientSession
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
@@ -1751,12 +1752,20 @@ async def token_exchange(
             detail='User not found. Please sign in via the web interface first.',
         )
 
+    # The provider's userinfo endpoint has already accepted this token.
+    # Keep an empty dict for opaque tokens so exchange role checks still apply.
+    token_claims = {}
+    try:
+        token_claims = jwt.decode(form_data.token, options={'verify_signature': False})
+    except jwt.PyJWTError as e:
+        log.debug('Token exchange: cannot decode token claims: %s', e)
+
     user = await oauth_manager.update_user_role_from_oauth(
         request=request,
         user=user,
         user_data=user_data,
         provider=provider,
-        access_token=form_data.token,
+        token_claims=token_claims,
         db=db,
     )
     if await Config.get('oauth.enable_group_mapping'):
@@ -1765,6 +1774,7 @@ async def token_exchange(
             user=user,
             user_data=user_data,
             default_permissions=await Config.get('user.permissions'),
+            token_claims=token_claims,
             db=db,
         )
 
