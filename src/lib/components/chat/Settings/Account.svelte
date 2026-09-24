@@ -408,6 +408,7 @@
 									<SensitiveInput variant="settings" value={localStorage.token} readOnly={true} />
 
 									<button
+										type="button"
 										class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 										aria-label={$i18n.t('Copy Token')}
 										on:click={() => {
@@ -465,6 +466,7 @@
 										<SensitiveInput variant="settings" value={APIKey} readOnly={true} />
 
 										<button
+											type="button"
 											class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 											aria-label={$i18n.t('Copy API Key')}
 											on:click={() => {
