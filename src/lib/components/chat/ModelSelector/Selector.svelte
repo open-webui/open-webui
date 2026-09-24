@@ -159,7 +159,10 @@
 		}
 	};
 
+	let suppressNextClick = false;
+
 	const handlePointerDown = (e: PointerEvent) => {
+		suppressNextClick = false;
 		if (!show) return;
 		const target = e.target as Node;
 		if (
@@ -169,8 +172,17 @@
 		) {
 			return;
 		}
+		suppressNextClick = true;
+		e.preventDefault();
 		show = false;
 		document.getElementById(`model-selector-${id}-button`)?.blur();
+	};
+
+	const handleWindowClick = (e: MouseEvent) => {
+		if (!suppressNextClick || e.detail === 0) return;
+		suppressNextClick = false;
+		e.preventDefault();
+		e.stopPropagation();
 	};
 
 	const handleKeydown = (e: KeyboardEvent) => {
@@ -901,7 +913,11 @@
 	}}
 />
 
-<svelte:window on:pointerdown={handlePointerDown} on:keydown={handleKeydown} />
+<svelte:window
+	on:pointerdown={handlePointerDown}
+	on:click|capture={handleWindowClick}
+	on:keydown={handleKeydown}
+/>
 
 <div class="relative w-full">
 	<button
