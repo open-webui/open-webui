@@ -2593,7 +2593,7 @@
 		}
 	};
 
-	const editQueuedMessage = (id) => {
+	const editQueuedMessage = async (id) => {
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		const item = queue.find((m) => m.id === id);
 		if (!item) return;
@@ -2604,14 +2604,18 @@
 		}));
 		files = item.files;
 		messageInput?.setText(item.prompt);
+
+		await processNextInQueue($chatId);
 	};
 
-	const deleteQueuedMessage = (id) => {
+	const deleteQueuedMessage = async (id) => {
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		chatRequestQueues.update((q) => ({
 			...q,
 			[$chatId]: queue.filter((m) => m.id !== id)
 		}));
+
+		await processNextInQueue($chatId);
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
