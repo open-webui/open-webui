@@ -3979,7 +3979,7 @@ async def background_tasks_handler(ctx):
                         await event_emitter(
                             {
                                 'type': 'chat:title',
-                                'data': message.get('content', user_message),
+                                'data': title,
                             }
                         )
 
