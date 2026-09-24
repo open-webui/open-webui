@@ -3865,7 +3865,7 @@ async def background_tasks_handler(ctx):
 
             if isinstance(content, str):
                 content = re.sub(
-                    r'<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)',
+                    r'<details\b[^<>]*>(?:(?!<details\b).)*?<\/details>|!\[[^\[\]]*\]\([^()]*\)',
                     '',
                     content,
                     flags=re.S | re.I,
