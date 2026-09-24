@@ -162,6 +162,16 @@ async def create_folder(
             detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
         )
 
+    if (
+        form_data.data
+        and 'files' in form_data.data
+        and not await can_read_all_folder_files(form_data.data['files'], user, db=db)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     # Check if creating a subfolder in a shared folder
     if form_data.parent_id:
         parent = await Folders.get_folder_by_id(form_data.parent_id, db=db)
@@ -201,16 +211,6 @@ async def create_folder(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT('Error creating folder'),
                 )
-
-    if (
-        form_data.data
-        and 'files' in form_data.data
-        and not await can_read_all_folder_files(form_data.data['files'], user, db=db)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
 
     try:
         folder = await Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
@@ -366,6 +366,15 @@ async def update_folder_name_by_id(
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
             if not await can_read_all_folder_files(form_data.data['files'], owner, db=db):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+
+            # Editors send back the owner's existing entries, so only new ones are checked against the editor.
+            existing_files = (folder.data or {}).get('files') or []
+            added_files = [entry for entry in form_data.data['files'] or [] if entry not in existing_files]
+            if not await can_read_all_folder_files(added_files, user, db=db):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
