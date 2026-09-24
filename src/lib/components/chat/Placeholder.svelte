@@ -99,16 +99,17 @@
 		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
 		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language) ??
 		resolveLocalizedPromptSuggestions(
-			$config?.default_prompt_suggestions ?? [],
+			$config?.default_prompt_suggestions,
 			$config?.default_prompt_suggestions_i18n ?? {},
-			$i18n.language
+			$i18n.language,
+			(key) => $i18n.t(key)
 		);
 
 	// True when viewing a shared folder the current user doesn't own AND lacks write access
 	$: folderReadOnly =
 		$selectedFolder != null &&
 		$selectedFolder.user_id !== $user?.id &&
-		$selectedFolder.permission !== 'write';
+		!$selectedFolder.write_access;
 </script>
 
 <div class="m-auto w-full max-w-[58rem] px-1 @2xl:px-20 translate-y-6 py-24 text-center">

@@ -1507,7 +1507,7 @@ ${content}
 				embeddedDraftKey={noteChatDraftKey}
 				suggestedPrompts={noteChatSuggestedPrompts}
 				selectedText={selectedContent?.text ?? ''}
-				onInsertToNote={insertHandler}
+				onInsertToNote={note?.write_access ? insertHandler : null}
 				onNewEmbeddedChat={createNoteChat}
 				onCreateEmbeddedChat={createNoteChatOnFirstMessage}
 				onSelectEmbeddedChat={(chatId) => {

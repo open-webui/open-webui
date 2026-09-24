@@ -1195,7 +1195,6 @@ async def process_tool_result(
                                 'chat_id': metadata.get('chat_id', None),
                                 'message_id': metadata.get('message_id', None),
                                 'session_id': metadata.get('session_id', None),
-                                'result': item,
                             },
                             user,
                         )
@@ -2237,7 +2236,9 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     return [
         {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS}
         for msg in db_messages
-        if not (msg.get('role') == 'assistant' and msg.get('error') and not msg.get('content') and not msg.get('output'))
+        if not (
+            msg.get('role') == 'assistant' and msg.get('error') and not msg.get('content') and not msg.get('output')
+        )
     ]
 
 
@@ -2333,8 +2334,6 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
             sanitized.append(message)
 
     return sanitized
-
-
 
 
 async def connect_mcp_server(
@@ -2854,7 +2853,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         terminal_request = (
-            await get_terminal_request_info(request, user, metadata, extra_params) if terminal_id or terminal_skill_ids else None
+            await get_terminal_request_info(request, user, metadata, extra_params)
+            if terminal_id or terminal_skill_ids
+            else None
         )
 
         listed_terminal_skills = []
@@ -2882,7 +2883,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     sid = skill['id']
                     if sid in mentioned_skill_ids or not use_builtin_tools:
                         skill_name = unquote(sid.removeprefix(terminal_skill_prefix))
-                        loaded = await get_terminal_skill(request, user.model_dump(), metadata, skill_name, extra_params)
+                        loaded = await get_terminal_skill(
+                            request, user.model_dump(), metadata, skill_name, extra_params
+                        )
                         if loaded:
                             form_data['messages'] = add_or_update_system_message(
                                 format_terminal_skill_context(loaded),
@@ -3483,6 +3486,8 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
                 output_parts.append({'type': 'input_image', 'image_url': image_url})
             else:
                 display_files.append(file_item)
+                if file_item.get('type') == 'image' and file_item.get('url'):
+                    output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
 
         output.append(
             {
@@ -3860,7 +3865,7 @@ async def background_tasks_handler(ctx):
 
             if isinstance(content, str):
                 content = re.sub(
-                    r'<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)',
+                    r'<details\b[^<>]*>(?:(?!<details\b).)*?<\/details>|!\[[^\[\]]*\]\([^()]*\)',
                     '',
                     content,
                     flags=re.S | re.I,
@@ -4035,7 +4040,7 @@ async def background_tasks_handler(ctx):
             await review_memory_after_turn(
                 request=request,
                 user=user,
-                model=ctx['model'],
+                model=ctx.get('model'),
                 metadata=metadata,
                 form_data=form_data,
                 assistant_message=ctx.get('assistant_message') or {},
@@ -4974,6 +4979,14 @@ async def streaming_chat_response_handler(response, ctx):
                                 **response_data,
                                 'output_index': response_data['output_index'] + len(prior_output),
                             }
+                        if prior_output and isinstance(response_data.get('response'), dict):
+                            # response.output is this round only; the response.completed reducer drops earlier rounds
+                            return {
+                                **response_data,
+                                'response': {
+                                    key: value for key, value in response_data['response'].items() if key != 'output'
+                                },
+                            }
                         return response_data
 
                     async def flush_pending_delta_data(threshold: int = 0):
@@ -5808,6 +5821,7 @@ async def streaming_chat_response_handler(response, ctx):
                         if responses_api_tool_calls:
                             tool_calls.append(_split_tool_calls(responses_api_tool_calls))
 
+                output_start = len(prior_output)
                 try:
                     await stream_body_handler(response, form_data)
                 finally:
@@ -5838,6 +5852,42 @@ async def streaming_chat_response_handler(response, ctx):
                     original_system_content = (
                         get_content_from_message(original_system_message) if original_system_message else None
                     )
+
+                async def emit_output():
+                    # Channels publish whole messages; Continue can merge into the preceding item.
+                    snapshot = continuing or (metadata.get('chat_id') or '').startswith('channel:')
+                    frontend_output = []
+                    for item in full_output() if snapshot else full_output()[output_start:]:
+                        if item.get('type') == 'function_call_output':
+                            # input_image parts are for the LLM only, via convert_output_to_messages
+                            item = {
+                                **item,
+                                'output': [
+                                    part for part in item.get('output', []) if part.get('type') != 'input_image'
+                                ],
+                            }
+                        frontend_output.append(item)
+
+                    if snapshot:
+                        await event_emitter(
+                            {
+                                'type': 'chat:completion',
+                                'data': {'output': frontend_output, 'flush': True},
+                            }
+                        )
+                        return
+
+                    for output_index, item in enumerate(frontend_output, start=output_start):
+                        await event_emitter(
+                            {
+                                'type': 'response:completion',
+                                'data': {
+                                    'type': 'response.output_item.done',
+                                    'output_index': output_index,
+                                    'item': item,
+                                },
+                            }
+                        )
 
                 while tool_calls and (
                     max_tool_call_iterations is None or tool_call_iterations < max_tool_call_iterations
@@ -5906,14 +5956,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
                         return
 
-                    await event_emitter(
-                        {
-                            'type': 'chat:completion',
-                            'data': {
-                                'output': full_output(),
-                            },
-                        }
-                    )
+                    await emit_output()
 
                     tools = metadata.get('tools', {})
 
@@ -6085,8 +6128,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
                         result_status_by_call_id[result.get('tool_call_id', '')] = local_output_status
 
-                        # Separate image data URIs (for LLM via input_image) from
-                        # other files (for frontend display via files attribute).
+                        # Data-URI images: LLM only. File-URL images: LLM and frontend. Other files: frontend.
                         display_files = []
                         for file_item in result.get('files', []):
                             if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
@@ -6094,8 +6136,9 @@ async def streaming_chat_response_handler(response, ctx):
                                 image_url = await store_tool_result_image(request, file_item['url'], metadata, user)
                                 output_parts.append({'type': 'input_image', 'image_url': image_url})
                             else:
-                                # Frontend display (MCP images, audio, etc.)
                                 display_files.append(file_item)
+                                if file_item.get('type') == 'image' and file_item.get('url'):
+                                    output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
 
                         output.append(
                             {
@@ -6180,25 +6223,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                         tool_call_sources.clear()
 
-                    # Strip input_image parts (large base64 data URIs) from the
-                    # output sent to the frontend — they're only for LLM consumption
-                    # via convert_output_to_messages.
-                    frontend_output = []
-                    for item in full_output():
-                        if item.get('type') == 'function_call_output':
-                            parts = item.get('output', [])
-                            if any(p.get('type') == 'input_image' for p in parts):
-                                item = {**item, 'output': [p for p in parts if p.get('type') != 'input_image']}
-                        frontend_output.append(item)
-
-                    await event_emitter(
-                        {
-                            'type': 'chat:completion',
-                            'data': {
-                                'output': frontend_output,
-                            },
-                        }
-                    )
+                    await emit_output()
 
                     try:
                         new_form_data = {
@@ -6297,6 +6322,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
                                     prior_output.pop()
                             output = []
+                            output_start = len(prior_output)
                             await stream_body_handler(res, new_form_data)
                             output = full_output()
                             prior_output = []

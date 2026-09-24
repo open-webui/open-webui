@@ -968,6 +968,8 @@
 	};
 
 	const resetInput = async () => {
+		// Let the $: update finish first, or webSearchActive misses the default-feature writes
+		await tick();
 		selectedToolIds = [];
 		selectedSkillIds = [];
 		selectedFilterIds = [];
@@ -1020,6 +1022,41 @@
 				skills.set(await getSkills(localStorage.token));
 			}
 			if (selectedModels.length !== 1 && !atSelectedModel) {
+				const comparedModels = selectedModels
+					.filter((id) => id)
+					.map((id) => $models.find((m) => m.id === id));
+				const isSharedDefaultFeature = (feature) =>
+					comparedModels.length > 0 &&
+					comparedModels.every(
+						(model) =>
+							model?.info?.meta?.capabilities?.[feature] &&
+							model?.info?.meta?.defaultFeatureIds?.includes(feature)
+					);
+
+				if (
+					isSharedDefaultFeature('image_generation') &&
+					$config?.features?.enable_image_generation &&
+					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+				) {
+					imageGenerationEnabled = true;
+				}
+
+				if (
+					isSharedDefaultFeature('web_search') &&
+					$config?.features?.enable_web_search &&
+					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+				) {
+					webSearchEnabled = true;
+				}
+
+				if (
+					isSharedDefaultFeature('code_interpreter') &&
+					$config?.features?.enable_code_interpreter &&
+					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
+				) {
+					codeInterpreterEnabled = true;
+				}
+
 				return;
 			}
 
@@ -1593,7 +1630,12 @@
 
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
-			if (folder?.data?.model_ids && !equal(selectedModels, folder.data.model_ids)) {
+			// Folder default models apply to new chats only.
+			if (
+				!history.currentId &&
+				folder?.data?.model_ids &&
+				!equal(selectedModels, folder.data.model_ids)
+			) {
 				selectedModels = folder.data.model_ids;
 
 				console.log('Set selectedModels from folder data:', selectedModels);
@@ -2313,6 +2355,13 @@
 						? chatContent.models
 						: [chatContent.models ?? ''];
 
+				// An empty model list is not evidence that the chat's models are gone.
+				if ($models.length > 0) {
+					selectedModels = selectedModels.filter((modelId) =>
+						$models.map((m) => m.id).includes(modelId)
+					);
+				}
+
 				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
 				}
@@ -2517,22 +2566,34 @@
 	};
 
 	const sendQueuedMessageNow = async (id) => {
+		if (processingQueueChats.has($chatId)) return;
+
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		const item = queue.find((m) => m.id === id);
 		if (!item || (item.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))) {
 			return;
 		}
 
-		chatRequestQueues.update((q) => ({
-			...q,
-			[$chatId]: queue.filter((m) => m.id !== id)
-		}));
-		await stopResponse(false);
-		await tick();
-		await submitPrompt(item.prompt, item.files);
+		const targetChatId = $chatId;
+		processingQueueChats.add(targetChatId);
+		try {
+			chatRequestQueues.update((q) => ({
+				...q,
+				[targetChatId]: queue.filter((m) => m.id !== id)
+			}));
+			await stopResponse(false);
+			await tick();
+			await submitPrompt(item.prompt, item.files);
+		} finally {
+			processingQueueChats.delete(targetChatId);
+			// Completion can arrive before submitPrompt returns, while the queue is locked.
+			if ($chatId === targetChatId) {
+				await processNextInQueue(targetChatId);
+			}
+		}
 	};
 
-	const editQueuedMessage = (id) => {
+	const editQueuedMessage = async (id) => {
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		const item = queue.find((m) => m.id === id);
 		if (!item) return;
@@ -2543,14 +2604,18 @@
 		}));
 		files = item.files;
 		messageInput?.setText(item.prompt);
+
+		await processNextInQueue($chatId);
 	};
 
-	const deleteQueuedMessage = (id) => {
+	const deleteQueuedMessage = async (id) => {
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		chatRequestQueues.update((q) => ({
 			...q,
 			[$chatId]: queue.filter((m) => m.id !== id)
 		}));
+
+		await processNextInQueue($chatId);
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
@@ -3482,7 +3547,7 @@
 		// Only temp chats need conversation messages (persisted chats load from DB).
 		let messages: any[] = [
 			params?.system || $settings.system
-				? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
+				? { role: 'system', content: `${params?.system || $settings?.system || ''}` }
 				: undefined
 		].filter(Boolean);
 
@@ -3775,7 +3840,7 @@
 			}
 
 			if (responseMessage) {
-				history.messages[history.currentId] = responseMessage;
+				history.messages[responseMessage.id] = responseMessage;
 			}
 
 			if (shouldAutoScrollResponse()) {
@@ -4019,7 +4084,8 @@
 
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
-	const getDraftChatId = () => chatIdProp || null;
+	// chatIdProp is empty for chats started from the home page (URL set via replaceState)
+	const getDraftChatId = () => chatIdProp || $chatId || null;
 
 	const getChatInputDraft = () => ({
 		prompt,
@@ -4622,7 +4688,7 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft(getDraftChatId());
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitHandler(withSelectedText(e.detail));

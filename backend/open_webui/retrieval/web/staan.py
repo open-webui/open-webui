@@ -30,7 +30,7 @@ def search_staan(
         'Accept': 'application/json',
         'Authorization': f'Bearer {api_key}',
     }
-    params = {'q': query, 'market': market, 'count': count}
+    params = {'q': query, 'market': market}
 
     if max_snippets:
         params['extra_snippets'] = 'true'

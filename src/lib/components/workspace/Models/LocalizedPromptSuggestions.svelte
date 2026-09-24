@@ -48,7 +48,7 @@
 
 {#if !locale}
 	<PromptSuggestions bind:promptSuggestions onChange={() => onChange()}>
-		<span slot="label"></span>
+		<span slot="label"><slot name="label" /></span>
 		<svelte:fragment slot="actions"><slot name="language" /></svelte:fragment>
 	</PromptSuggestions>
 {:else}

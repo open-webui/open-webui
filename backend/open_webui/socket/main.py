@@ -6,6 +6,7 @@ import logging
 import random
 import sys
 import time
+from contextlib import suppress
 from typing import Any
 
 import pycrdt as Y
@@ -23,6 +24,7 @@ from open_webui.env import (
     WEBSOCKET_REDIS_CLUSTER,
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_REDIS_OPTIONS,
+    WEBSOCKET_REDIS_ROOM_CHANNELS,
     WEBSOCKET_REDIS_URL,
     WEBSOCKET_SENTINEL_HOSTS,
     WEBSOCKET_SENTINEL_PORT,
@@ -37,18 +39,25 @@ from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
-from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
-from open_webui.tasks import create_task, stop_item_tasks
+from open_webui.socket.redis_room_channels import AsyncRedisRoomChannelManager
+from open_webui.socket.utils import CachedRedisDict, RedisDict, RedisLock, YdocManager
+from open_webui.tasks import (
+    REDIS_PUBSUB_MAX_RECONNECT_INTERVAL,
+    REDIS_PUBSUB_RECONNECT_INTERVAL,
+    create_task,
+    stop_item_tasks,
+)
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.json_codec import SOCKETIO_JSON
+from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
     get_sentinels_from_env,
 )
+from redis.exceptions import RedisError
 from socketio.packet import Packet
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -86,7 +95,8 @@ if WEBSOCKET_MANAGER == 'redis':
         if sentinel_hosts
         else WEBSOCKET_REDIS_URL
     )
-    redis_manager = socketio.AsyncRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS, json=SOCKETIO_JSON)
+    manager_class = AsyncRedisRoomChannelManager if WEBSOCKET_REDIS_ROOM_CHANNELS else socketio.AsyncRedisManager
+    redis_manager = manager_class(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS, json=SOCKETIO_JSON)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
@@ -133,12 +143,11 @@ if WEBSOCKET_MANAGER == 'redis':
         async_mode=True,
     )
 
-    MODELS = RedisDict(
+    MODELS = CachedRedisDict(
         f'{REDIS_KEY_PREFIX}:models',
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
-        cache_set_signature=True,
     )
 
     SESSION_POOL = RedisDict(
@@ -189,6 +198,11 @@ YDOC_MANAGER = YdocManager(
     redis=REDIS,
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
+
+REDIS_EVENT_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
+
+EVENT_QUEUES: dict[str, asyncio.Queue] = {}
+EVENT_PUBLISH_LOCK = asyncio.Lock()
 
 
 def get_session_pool_batches():
@@ -332,8 +346,20 @@ def get_session_ids_from_room(room):
 
 def get_session_ids_by_user_id(user_id: str) -> list[str]:
     """Get known session IDs for a user across the local rooms and shared session pool."""
-    session_ids = set(get_session_ids_from_room(f'user:{user_id}'))
-    session_ids.update(sid for sid, entry in SESSION_POOL.items() if entry and entry.get('id') == user_id)
+    return get_session_ids_by_user_ids([user_id])
+
+
+def get_session_ids_by_user_ids(user_ids: list[str]) -> list[str]:
+    """Get known session IDs for users across the local rooms and shared session pool."""
+    if not user_ids:
+        return []
+
+    user_ids = set(user_ids)
+    session_ids = set()
+    for user_id in user_ids:
+        session_ids.update(get_session_ids_from_room(f'user:{user_id}'))
+    for batch in get_session_pool_batches():
+        session_ids.update(sid for sid, user in batch if user and user.get('id') in user_ids)
     return list(session_ids)
 
 
@@ -372,6 +398,15 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
                 await sio.enter_room(sid, room)
     except Exception as e:
         log.debug('Failed to make users %s join room %s: %s', user_ids, room, e)
+
+
+async def leave_room_for_users(room: str, user_ids: list[str]):
+    """Make all sessions of each user leave a room, including sessions on other workers."""
+    for sid in get_session_ids_by_user_ids(user_ids):
+        try:
+            await sio.leave_room(sid, room)
+        except Exception as e:
+            log.debug('Failed to make session %s leave room %s: %s', sid, room, e)
 
 
 async def disconnect_user_sessions(user_id: str):
@@ -828,33 +863,34 @@ async def yjs_document_update(sid, data):
                 log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
                 return
 
-        user_id = data.get('user_id', sid)
+        update = data.get('update')  # List of bytes from frontend
 
-        update = data['update']  # List of bytes from frontend
+        if update:
+            user_id = data.get('user_id', sid)
 
-        await YDOC_MANAGER.append_to_updates(
-            document_id=document_id,
-            update=update,  # Convert list of bytes to bytes
-        )
+            await YDOC_MANAGER.append_to_updates(
+                document_id=document_id,
+                update=update,  # Convert list of bytes to bytes
+            )
 
-        # Broadcast update to all other users in the document
-        await sio.emit(
-            'ydoc:document:update',
-            {
-                'document_id': document_id,
-                'user_id': user_id,
-                'update': update,
-                'socket_id': sid,  # Add socket_id to match frontend filtering
-            },
-            room=f'doc_{document_id}',
-            skip_sid=sid,
-        )
+            # Broadcast update to all other users in the document
+            await sio.emit(
+                'ydoc:document:update',
+                {
+                    'document_id': document_id,
+                    'user_id': user_id,
+                    'update': update,
+                    'socket_id': sid,  # Add socket_id to match frontend filtering
+                },
+                room=f'doc_{document_id}',
+                skip_sid=sid,
+            )
 
         async def debounced_save():
             await asyncio.sleep(0.5)
             await document_save_handler(document_id, data.get('data', {}), user)
 
-        if data.get('data'):
+        if document_id.startswith('note:') and data.get('data'):
             # Only drop the pending save when a new one takes its place.
             # Updates without a content snapshot (the resync a client sends
             # after rejoining a document) would otherwise cancel the pending
@@ -948,6 +984,62 @@ async def disconnect(sid, reason=None):
         # print(f"Unknown session ID {sid} disconnected")
 
 
+async def redis_event_listener() -> None:
+    """Route events received over Redis to their local queues."""
+    reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+    while True:
+        pubsub = None
+        try:
+            # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+            await REDIS.initialize()
+
+            pubsub = REDIS.pubsub()
+            await pubsub.subscribe(REDIS_EVENT_CHANNEL)
+            reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                event = JSONCodec.loads(message['data'])
+                queue = EVENT_QUEUES.get(event['channel'])
+                if queue is not None:
+                    await queue.put(event['data'])
+            log.warning('Redis event listener stopped. Retrying.')
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception('Redis event listener failed. Retrying.')
+        finally:
+            if pubsub:
+                with suppress(Exception):
+                    await pubsub.aclose()
+
+        await asyncio.sleep(reconnect_interval)
+        reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
+
+
+@sio.on('*')
+async def socket_event_handler(event: Any, sid: str, *args: Any) -> None:
+    """Route user-owned stream events to a local queue or another worker."""
+    if not isinstance(event, str) or event.count(':') != 2 or not args:
+        return
+
+    user = await get_socket_session_user(sid)
+    if not user or user.get('id') != event.split(':', 1)[0]:
+        return
+
+    queue = EVENT_QUEUES.get(event)
+    if queue is not None:
+        await queue.put(args[0])
+    elif WEBSOCKET_MANAGER == 'redis':
+        try:
+            async with EVENT_PUBLISH_LOCK:
+                await REDIS.publish(REDIS_EVENT_CHANNEL, dumps_bytes({'channel': event, 'data': args[0]}))
+        except RedisError as e:
+            log.debug('Failed to relay socket event %s: %s', event, e)
+
+
 async def _make_channel_emitter(request_info):
     """Event emitter that routes pipeline output to a channel message.
 
@@ -1015,7 +1107,8 @@ async def _make_channel_emitter(request_info):
                 state['output'] = copy.deepcopy(output)
 
             now = time.time()
-            if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+            # Tool boundaries must publish all results before waiting on the next model response.
+            if done or data.get('flush') or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, done, output if isinstance(output, list) else None)
 

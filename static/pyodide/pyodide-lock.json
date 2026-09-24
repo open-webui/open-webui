@@ -5203,6 +5203,50 @@
         "numpy",
         "pandas"
       ]
+    },
+    "python-pptx": {
+      "name": "python-pptx",
+      "version": "1.0.2",
+      "file_name": "python_pptx-1.0.2-py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "160838e0b8565a8b1f67947675886e9fea18aa5e795db7ae531606d68e785cba",
+      "package_type": "package",
+      "imports": [
+        "python_pptx"
+      ],
+      "depends": [
+        "lxml",
+        "pillow",
+        "xlsxwriter",
+        "typing-extensions"
+      ]
+    },
+    "python-docx": {
+      "name": "python-docx",
+      "version": "1.2.0",
+      "file_name": "python_docx-1.2.0-py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "3fd478f3250fbbbfd3b94fe1e985955737c145627498896a8a6bf81f4baf66c7",
+      "package_type": "package",
+      "imports": [
+        "python_docx"
+      ],
+      "depends": [
+        "lxml",
+        "typing-extensions"
+      ]
+    },
+    "xlsxwriter": {
+      "name": "xlsxwriter",
+      "version": "3.2.9",
+      "file_name": "xlsxwriter-3.2.9-py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "9a5db42bc5dff014806c58a20b9eae7322a134abb6fce3c92c181bfb275ec5b3",
+      "package_type": "package",
+      "imports": [
+        "xlsxwriter"
+      ],
+      "depends": []
     }
   }
 }

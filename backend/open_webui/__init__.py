@@ -1,6 +1,6 @@
 import base64
 import os
-import random
+import secrets
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -45,7 +45,7 @@ def serve(
             if key_length < 1:
                 raise ValueError('WEBUI_SECRET_KEY_LENGTH must be a positive integer')
             typer.echo(f'Generating a new secret key and saving it to {KEY_FILE}')
-            KEY_FILE.write_bytes(base64.b64encode(random.randbytes(key_length)))
+            KEY_FILE.write_bytes(base64.b64encode(secrets.token_bytes(key_length)))
         typer.echo(f'Loading WEBUI_SECRET_KEY from {KEY_FILE}')
         os.environ['WEBUI_SECRET_KEY'] = KEY_FILE.read_text()
 
