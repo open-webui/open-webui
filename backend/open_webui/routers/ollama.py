@@ -38,7 +38,7 @@ from open_webui.utils.access_control import check_model_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import calculate_sha256
+from open_webui.utils.misc import calculate_sha256, get_retry_after_headers
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
@@ -149,7 +149,11 @@ async def send_request(
                     upstream_error=res,
                 )
                 if 'error' in res:
-                    raise HTTPException(status_code=r.status, detail=res['error'])
+                    raise HTTPException(
+                        status_code=r.status,
+                        detail=res['error'],
+                        headers=get_retry_after_headers(r.headers),
+                    )
             except HTTPException:
                 raise
             except Exception as e:
@@ -164,6 +168,7 @@ async def send_request(
             raise HTTPException(
                 status_code=r.status,
                 detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
+                headers=get_retry_after_headers(r.headers),
             )
 
         r.raise_for_status()
