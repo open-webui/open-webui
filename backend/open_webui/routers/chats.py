@@ -1035,6 +1035,14 @@ async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSess
 async def get_all_user_tags(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     try:
         tags = await Tags.get_tags_by_user_id(user.id, db=db)
+        if tags:
+            # Tags referenced only by archived chats are kept in the tag table
+            # (so their display names survive unarchive) but hidden here to
+            # keep the tag suggestions clean.
+            counts = await Chats.count_chats_by_tag_ids_and_user_id(
+                [tag.id for tag in tags], user.id, db=db
+            )
+            tags = [tag for tag in tags if counts.get(tag.id, 0) > 0]
         return tags
     except Exception as e:
         log.exception(e)
@@ -1593,7 +1601,11 @@ async def delete_chat_by_id(
     # Cancel any in-flight LLM tasks (streaming, title/tags generation) before
     # deleting the chat to prevent orphaned requests.
     await stop_item_tasks(request.app.state.redis, id)
-    await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), chat.user_id, threshold=1, db=db)
+    # Keep the tag rows if an archived chat still references them, so their
+    # display names survive a later unarchive.
+    await Chats.delete_orphan_tags_for_user(
+        chat.meta.get('tags', []), chat.user_id, threshold=1, include_archived=True, db=db
+    )
 
     # Cascade to internal child chats spawned from this one.
     for child_id in await Chats.get_internal_chat_ids_by_parent_id(id, chat.user_id):
@@ -1921,10 +1933,15 @@ async def archive_chat_by_id(
         if chat.archived:
             # Cancel any in-flight LLM tasks before archiving
             await stop_item_tasks(request.app.state.redis, id)
-            # Archived chats are excluded from count — clean up orphans
-            await Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
+            # Keep tag rows while any chat (including this archived one) still
+            # references them, so the tag display name survives unarchive.
+            # Tags used only by archived chats are hidden from suggestions in
+            # get_all_user_tags.
+            await Chats.delete_orphan_tags_for_user(
+                tag_ids, user.id, include_archived=True, db=db
+            )
         else:
-            # Unarchived — ensure tag rows exist
+            # Unarchived — ensure tag rows exist (no-op: rows are kept on archive)
             await Tags.ensure_tags_exist(tag_ids, user.id, db=db)
 
         await publish_event(

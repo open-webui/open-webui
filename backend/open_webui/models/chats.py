@@ -883,10 +883,12 @@ class ChatTable:
             # Batch-create any missing tag rows
             await Tags.ensure_tags_exist(new_tags, user.id, db=session)
 
-            # Clean up orphaned old tags
+            # Clean up orphaned old tags (keep rows still referenced by archived chats)
             removed = set(old_tags) - set(new_tag_ids)
             if removed:
-                await self.delete_orphan_tags_for_user(list(removed), user.id, db=session)
+                await self.delete_orphan_tags_for_user(
+                    list(removed), user.id, include_archived=True, db=session
+                )
 
     async def get_chat_title_by_id(self, id: str) -> str | None:
         async with get_async_db_context() as session:
@@ -2375,9 +2377,19 @@ class ChatTable:
         return counts.get(tag_id, 0)
 
     async def count_chats_by_tag_ids_and_user_id(
-        self, tag_ids: list[str], user_id: str, db: AsyncSession | None = None
+        self,
+        tag_ids: list[str],
+        user_id: str,
+        include_archived: bool = False,
+        db: AsyncSession | None = None,
     ) -> dict[str, int]:
-        """Per-tag chat counts in one round trip (one scalar subquery per tag)."""
+        """Per-tag chat counts in one round trip (one scalar subquery per tag).
+
+        By default only non-archived chats are counted. Pass
+        ``include_archived=True`` when archived chats should keep a tag alive
+        (their ``meta['tags']`` still references the tag id, so deleting the
+        tag row would lose its display name).
+        """
         if not tag_ids:
             return {}
         async with get_async_db_context(db) as session:
@@ -2387,7 +2399,10 @@ class ChatTable:
             columns = []
             for index, tag_id in enumerate(tag_ids):
                 tag_id = tag_id.replace(' ', '_').lower()
-                stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
+                if include_archived:
+                    stmt = select(func.count(Chat.id)).filter_by(user_id=user_id)
+                else:
+                    stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
                 stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
                 param = f'tag_id_{index}'
                 if dialect_name == 'sqlite':
@@ -2412,6 +2427,7 @@ class ChatTable:
         tag_ids: list[str],
         user_id: str,
         threshold: int = 0,
+        include_archived: bool = False,
         db: AsyncSession | None = None,
     ) -> None:
         """Delete tag rows from *tag_ids* that appear in at most *threshold*
@@ -2421,11 +2437,16 @@ class ChatTable:
         Use threshold=0 after a tag is already removed from a chat's meta.
         Use threshold=1 when the chat itself is about to be deleted (the
         referencing chat still exists at query time).
+
+        Use include_archived=True when archived chats still referencing the
+        tags must keep the tag rows (and their display names) alive.
         """
         if not tag_ids:
             return
         async with get_async_db_context(db) as session:
-            counts = await self.count_chats_by_tag_ids_and_user_id(tag_ids, user_id, db=session)
+            counts = await self.count_chats_by_tag_ids_and_user_id(
+                tag_ids, user_id, include_archived=include_archived, db=session
+            )
             orphans = [tag_id for tag_id in tag_ids if counts.get(tag_id, 0) <= threshold]
             await Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=session)
 
