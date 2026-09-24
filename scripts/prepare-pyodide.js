@@ -13,7 +13,8 @@ const packages = [
 	'tiktoken',
 	'pytz',
 	'black',
-	'openai'
+	'openai',
+	'lxml'
 ];
 
 // Pure-Python packages whose wheels must be downloaded from PyPI and saved into
@@ -28,13 +29,18 @@ const pypiPackages = [
 	'pytokens',
 	'openpyxl',
 	'et-xmlfile',
-	'seaborn'
+	'seaborn',
+	'python-pptx',
+	'python-docx',
+	'xlsxwriter'
 ];
 
 const pypiDepends = {
 	black: ['click', 'mypy-extensions', 'packaging', 'pathspec', 'platformdirs', 'pytokens'],
 	openpyxl: ['et-xmlfile'],
-	seaborn: ['matplotlib', 'numpy', 'pandas']
+	seaborn: ['matplotlib', 'numpy', 'pandas'],
+	'python-pptx': ['lxml', 'pillow', 'xlsxwriter', 'typing-extensions'],
+	'python-docx': ['lxml', 'typing-extensions']
 };
 
 import { loadPyodide } from 'pyodide';
