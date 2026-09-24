@@ -208,7 +208,7 @@ async def _retrieve_milvus(connection, auth_config, knowledge, query, count, emb
 async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, embedding_function) -> list[dict]:
     try:
         import psycopg
-        from pgvector.psycopg import register_vector
+        from pgvector.psycopg import Vector, register_vector
         from psycopg.rows import dict_row
     except ImportError as exc:
         raise RuntimeError('psycopg and pgvector are required for pgvector retrieval') from exc
@@ -275,7 +275,7 @@ async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, e
                         table_name=table_identifier,
                         collection=collection_identifier,
                     ),
-                    (vector, collection_name, count),
+                    (Vector(vector), collection_name, count),
                 )
                 return cur.fetchall()
 
