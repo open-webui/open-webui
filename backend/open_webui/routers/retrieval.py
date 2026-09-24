@@ -2457,6 +2457,13 @@ async def process_web(
             detail=ERROR_MESSAGES.DEFAULT(e, f'Could not read content from {form_data.url}'),
         )
 
+    # web loaders swallow fetch errors and return no documents
+    if not docs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(f'Could not read content from {form_data.url}'),
+        )
+
     try:
         log.debug('text_content: %s', content)
 
