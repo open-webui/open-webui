@@ -3629,7 +3629,7 @@ async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[di
             if not has_pending_approval:
                 item['status'] = 'pending'
                 has_pending_approval = True
-            elif item.get('status') == 'in_progress':
+            elif item.get('status') in {'in_progress', 'completed'}:
                 item['status'] = 'queued'
 
     await Chats.upsert_message_to_chat_by_id_and_message_id(
