@@ -943,19 +943,20 @@
 															navigator.msMaxTouchPoints > 0
 														)
 													) {
-														// Prevent Enter key from creating a new line
+														// Depending on the user's settings, it will send the message
+														// either when Enter is pressed or when Ctrl+Enter is pressed.
 														// Uses keyCode '13' for Enter key for chinese/japanese keyboards
-														if (e.keyCode === 13 && !e.shiftKey) {
-															e.preventDefault();
-														}
+														const enterPressed =
+															($settings?.ctrlEnterToSend ?? false)
+																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-														// Submit the content when Enter key is pressed
-														if (
-															(content !== '' || files.length > 0) &&
-															e.keyCode === 13 &&
-															!e.shiftKey
-														) {
-															submitHandler();
+														if (enterPressed) {
+															e.preventDefault();
+
+															if (content !== '' || files.length > 0) {
+																submitHandler();
+															}
 														}
 													}
 												}
