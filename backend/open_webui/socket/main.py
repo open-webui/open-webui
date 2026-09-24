@@ -890,7 +890,7 @@ async def yjs_document_update(sid, data):
             await asyncio.sleep(0.5)
             await document_save_handler(document_id, data.get('data', {}), user)
 
-        if data.get('data'):
+        if document_id.startswith('note:') and data.get('data'):
             # Only drop the pending save when a new one takes its place.
             # Updates without a content snapshot (the resync a client sends
             # after rejoining a document) would otherwise cancel the pending
