@@ -2376,7 +2376,16 @@ async def process_url(
             }
 
         config = await get_retrieval_config()
-        url_result = await _fetch_url(form_data.url, config.FILE_MAX_SIZE)
+        try:
+            url_result = await _fetch_url(form_data.url, config.FILE_MAX_SIZE)
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e, f'Could not read content from {form_data.url}'),
+            )
 
         if url_result['kind'] == 'web':
             result = await process_web(request, form_data, process=process, user=user)
