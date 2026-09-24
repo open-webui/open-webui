@@ -1006,154 +1006,174 @@
 		lastTerminalSkillSelector = $selectedTerminalId;
 	}
 
-	let settingDefaults = false;
-	const setDefaults = async () => {
-		if (settingDefaults) return;
-		settingDefaults = true;
+	let defaultsRun: Promise<void> | null = null;
+	let defaultsStale = false;
 
-		try {
-			if (!$tools) {
-				tools.set(await getTools(localStorage.token));
-			}
-			if (!$functions) {
-				functions.set(await getFunctions(localStorage.token));
-			}
-			if (!$skills) {
-				skills.set(await getSkills(localStorage.token));
-			}
-			if (selectedModels.length !== 1 && !atSelectedModel) {
-				const comparedModels = selectedModels
-					.filter((id) => id)
-					.map((id) => $models.find((m) => m.id === id));
-				const isSharedDefaultFeature = (feature) =>
-					comparedModels.length > 0 &&
-					comparedModels.every(
-						(model) =>
-							model?.info?.meta?.capabilities?.[feature] &&
-							model?.info?.meta?.defaultFeatureIds?.includes(feature)
-					);
+	const setDefaults = () => {
+		if (defaultsRun) {
+			defaultsStale = true;
+			return defaultsRun.catch(() => {});
+		}
 
+		defaultsRun = (async () => {
+			try {
+				let hasModelToolIds;
+				do {
+					defaultsStale = false;
+					hasModelToolIds = await applyDefaults();
+				} while (defaultsStale);
+
+				// Once per run: a second check would consume the redirect-in-progress marker
+				if (hasModelToolIds) {
+					await continueOAuthRedirect();
+				}
+			} finally {
+				defaultsRun = null;
+			}
+		})();
+
+		return defaultsRun;
+	};
+
+	const applyDefaults = async () => {
+		if (!$tools) {
+			tools.set(await getTools(localStorage.token));
+		}
+		if (!$functions) {
+			functions.set(await getFunctions(localStorage.token));
+		}
+		if (!$skills) {
+			skills.set(await getSkills(localStorage.token));
+		}
+		if (selectedModels.length !== 1 && !atSelectedModel) {
+			const comparedModels = selectedModels
+				.filter((id) => id)
+				.map((id) => $models.find((m) => m.id === id));
+			const isSharedDefaultFeature = (feature) =>
+				comparedModels.length > 0 &&
+				comparedModels.every(
+					(model) =>
+						model?.info?.meta?.capabilities?.[feature] &&
+						model?.info?.meta?.defaultFeatureIds?.includes(feature)
+				);
+
+			if (
+				isSharedDefaultFeature('image_generation') &&
+				$config?.features?.enable_image_generation &&
+				($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+			) {
+				imageGenerationEnabled = true;
+			}
+
+			if (
+				isSharedDefaultFeature('web_search') &&
+				$config?.features?.enable_web_search &&
+				($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+			) {
+				webSearchEnabled = true;
+			}
+
+			if (
+				isSharedDefaultFeature('code_interpreter') &&
+				$config?.features?.enable_code_interpreter &&
+				($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
+			) {
+				codeInterpreterEnabled = true;
+			}
+
+			return;
+		}
+
+		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
+		if (model) {
+			// Set Default Tools
+			if (model?.info?.meta?.toolIds) {
+				const defaultIds = [
+					...new Set(
+						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
+					)
+				];
+
+				// Separate unauthenticated OAuth tools
+				const unauthed = [];
+				const authed = [];
+				for (const id of defaultIds) {
+					const tool = $tools.find((t) => t.id === id);
+					if (tool && tool.authenticated === false) {
+						const parts = id.split(':');
+						const serverId = parts.at(-1) ?? id;
+						const authType =
+							parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
+						unauthed.push({ id, name: tool.name ?? id, serverId, authType });
+					} else {
+						authed.push(id);
+					}
+				}
+				selectedToolIds = authed;
+				pendingOAuthTools = unauthed;
+			} else if ($settings?.tools) {
+				selectedToolIds = $settings.tools;
+			} else {
+				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
+			}
+
+			// Set Default Skills
+			if (model?.info?.meta?.skillIds) {
+				selectedSkillIds = [
+					...new Set(
+						[...(model?.info?.meta?.skillIds ?? [])].filter((id) =>
+							($skills ?? []).find((s) => s.id === id && s.is_active)
+						)
+					)
+				];
+			} else {
+				selectedSkillIds = [];
+			}
+
+			// Set Default Filters (Toggleable only)
+			if (model?.info?.meta?.defaultFilterIds) {
+				selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
+					model?.filters?.find((f) => f.id === id)
+				);
+			}
+
+			// Set Default Features
+			if (model?.info?.meta?.defaultFeatureIds) {
 				if (
-					isSharedDefaultFeature('image_generation') &&
+					model.info?.meta?.capabilities?.['image_generation'] &&
 					$config?.features?.enable_image_generation &&
 					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
 				) {
-					imageGenerationEnabled = true;
+					imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
 				}
 
 				if (
-					isSharedDefaultFeature('web_search') &&
+					model.info?.meta?.capabilities?.['web_search'] &&
 					$config?.features?.enable_web_search &&
 					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 				) {
-					webSearchEnabled = true;
+					webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
 				}
 
 				if (
-					isSharedDefaultFeature('code_interpreter') &&
+					model.info?.meta?.capabilities?.['code_interpreter'] &&
 					$config?.features?.enable_code_interpreter &&
 					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
 				) {
-					codeInterpreterEnabled = true;
-				}
-
-				return;
-			}
-
-			const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-			if (model) {
-				// Set Default Tools
-				if (model?.info?.meta?.toolIds) {
-					const defaultIds = [
-						...new Set(
-							[...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
-								$tools.find((t) => t.id === id)
-							)
-						)
-					];
-
-					// Separate unauthenticated OAuth tools
-					const unauthed = [];
-					const authed = [];
-					for (const id of defaultIds) {
-						const tool = $tools.find((t) => t.id === id);
-						if (tool && tool.authenticated === false) {
-							const parts = id.split(':');
-							const serverId = parts.at(-1) ?? id;
-							const authType =
-								parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
-							unauthed.push({ id, name: tool.name ?? id, serverId, authType });
-						} else {
-							authed.push(id);
-						}
-					}
-					selectedToolIds = authed;
-					pendingOAuthTools = unauthed;
-					await continueOAuthRedirect();
-				} else if ($settings?.tools) {
-					selectedToolIds = $settings.tools;
-				} else {
-					selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
-				}
-
-				// Set Default Skills
-				if (model?.info?.meta?.skillIds) {
-					selectedSkillIds = [
-						...new Set(
-							[...(model?.info?.meta?.skillIds ?? [])].filter((id) =>
-								($skills ?? []).find((s) => s.id === id && s.is_active)
-							)
-						)
-					];
-				} else {
-					selectedSkillIds = [];
-				}
-
-				// Set Default Filters (Toggleable only)
-				if (model?.info?.meta?.defaultFilterIds) {
-					selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
-						model?.filters?.find((f) => f.id === id)
-					);
-				}
-
-				// Set Default Features
-				if (model?.info?.meta?.defaultFeatureIds) {
-					if (
-						model.info?.meta?.capabilities?.['image_generation'] &&
-						$config?.features?.enable_image_generation &&
-						($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
-					) {
-						imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
-					}
-
-					if (
-						model.info?.meta?.capabilities?.['web_search'] &&
-						$config?.features?.enable_web_search &&
-						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
-					) {
-						webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
-					}
-
-					if (
-						model.info?.meta?.capabilities?.['code_interpreter'] &&
-						$config?.features?.enable_code_interpreter &&
-						($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
-					) {
-						codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
-					}
-				}
-
-				// Set Default Terminal — only if the referenced terminal actually exists
-				if (model?.info?.meta?.terminalId) {
-					const tid = model.info.meta.terminalId;
-					if (isTerminalAvailable(tid)) {
-						selectedTerminalId.set(tid);
-					}
+					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
 				}
 			}
-		} finally {
-			settingDefaults = false;
+
+			// Set Default Terminal — only if the referenced terminal actually exists
+			if (model?.info?.meta?.terminalId) {
+				const tid = model.info.meta.terminalId;
+				if (isTerminalAvailable(tid)) {
+					selectedTerminalId.set(tid);
+				}
+			}
 		}
+
+		return !!model?.info?.meta?.toolIds;
 	};
 
 	const showMessage = async (message, scroll = true, save = true) => {
