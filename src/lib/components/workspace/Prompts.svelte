@@ -641,9 +641,10 @@
 								{#if shiftKey}
 									<Tooltip content={$i18n.t('Delete')}>
 										<button
-											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
 											type="button"
 											aria-label={$i18n.t('Delete')}
+											disabled={!prompt.write_access}
 											on:click={(e) => {
 												e.preventDefault();
 												e.stopPropagation();
@@ -675,6 +676,7 @@
 
 									<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
 										<PromptMenu
+											writeAccess={prompt.write_access}
 											show={openPromptMenuId === prompt.id}
 											editHandler={() => {
 												goto(`/workspace/prompts/${prompt.id}`);
@@ -713,6 +715,7 @@
 										<button
 											class="flex h-6 items-center"
 											type="button"
+											disabled={!prompt.write_access}
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -725,6 +728,8 @@
 											>
 												<Switch
 													bind:state={prompt.is_active}
+													disabled={!prompt.write_access}
+													ariaLabel={$i18n.t('Enabled')}
 													on:change={async () => {
 														togglePromptById(localStorage.token, prompt.id);
 													}}
