@@ -287,9 +287,14 @@
 		} else {
 			$audioQueue.setId(`${message.id}`);
 			$audioQueue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
-			$audioQueue.onStopped = () => {
+			$audioQueue.onStopped = ({ event }) => {
 				speaking = false;
 				speakingIdx = undefined;
+
+				if (event === 'error') {
+					speakAbort?.abort();
+					toast.error($i18n.t('Audio playback failed'));
+				}
 			};
 
 			loadingSpeech = true;
