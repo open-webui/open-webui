@@ -107,6 +107,8 @@ PROXY_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
 
 @router.api_route('/{server_id}/{path:path}', methods=PROXY_METHODS)
+# Must stay the lower decorator so it registers before the catch-all, which would swallow chat paths.
+@router.api_route('/{server_id}/chats/{chat_id}/{path:path}', methods=PROXY_METHODS)
 async def proxy_terminal(
     server_id: str,
     path: str,
@@ -151,7 +153,7 @@ async def proxy_terminal(
 
     headers = {'X-User-Id': user.id}
     # Forward per-session cwd tracking header
-    session_id = request.headers.get('x-session-id')
+    session_id = request.path_params.get('chat_id') or request.headers.get('x-session-id')
     if session_id:
         headers['X-Session-Id'] = session_id
         if not terminal_context_available(connection, 'chat'):
