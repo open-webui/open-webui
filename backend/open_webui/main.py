@@ -1810,6 +1810,9 @@ async def chat_completion(
             if not assistant_message_id:
                 continue
 
+            if fallback_model is not None and target_model_id == model_id:
+                target_model_id = fallback_model['id']
+
             # Per-model metadata: own message_id + model
             per_model_metadata = {
                 **metadata,
