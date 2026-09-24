@@ -143,6 +143,7 @@
 
 								if (res) {
 									chat = await getChatById(localStorage.token, chatId);
+									await loadAccessGrants();
 								}
 							}}
 							>{$i18n.t('delete this link')}
