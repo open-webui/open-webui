@@ -3,7 +3,6 @@
 	import { onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -175,7 +174,7 @@
 		<div class="space-y-2">
 			{#if question}
 				{#key question.id}
-					<div class="space-y-2">
+					<div class="max-h-[40vh] space-y-2 overflow-y-auto overscroll-contain">
 						<div>
 							<div class="flex items-center justify-between gap-3">
 								<div class="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -189,7 +188,9 @@
 									</div>
 								{/if}
 							</div>
-							<div class="mt-0.5 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+							<div
+								class="mt-0.5 text-xs leading-relaxed break-words text-gray-600 dark:text-gray-300"
+							>
 								{question.question}
 							</div>
 						</div>
@@ -207,19 +208,12 @@
 											: 'text-gray-700 hover:text-gray-950 dark:text-gray-300 dark:hover:text-white'}"
 										on:click={() => selectOption(question, option, optionIndex)}
 									>
-										<span class="min-w-0 shrink-0 text-xs">{option.label}</span>
-										<Tooltip
-											as="span"
-											className="min-w-0 flex-1"
-											content={option.description}
-											placement="top-start"
+										<span class="max-w-[40%] text-xs break-words">{option.label}</span>
+										<span
+											class="min-w-0 flex-1 text-xs leading-relaxed break-words text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
 										>
-											<span
-												class="block truncate text-xs leading-relaxed text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
-											>
-												{option.description}
-											</span>
-										</Tooltip>
+											{option.description}
+										</span>
 										{#if optionIndex === 0}
 											<span
 												class="shrink-0 rounded-full bg-gray-200/70 px-1.5 py-0.5 text-[0.625rem] text-gray-500 dark:bg-white/[0.08] dark:text-gray-400"

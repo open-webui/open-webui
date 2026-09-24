@@ -557,8 +557,8 @@ async def ask_user(
                 if not isinstance(option, dict):
                     raise ValueError('Each option must be an object.')
 
-                label = str(option.get('label') or '').strip()[:80]
-                description = str(option.get('description') or '').strip()[:240]
+                label = str(option.get('label') or '').strip()
+                description = str(option.get('description') or '').strip()
                 if not label or not description:
                     raise ValueError('Each option requires a label and description.')
 
@@ -569,7 +569,7 @@ async def ask_user(
                     }
                 )
 
-            question_text = str(question.get('question') or '').strip()[:500]
+            question_text = str(question.get('question') or '').strip()
             if not question_text:
                 raise ValueError('Each question requires question text.')
 

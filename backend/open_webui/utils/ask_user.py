@@ -49,13 +49,13 @@ def normalize_ask_user_request(arguments: dict) -> dict:
         for option in options:
             if not isinstance(option, dict):
                 raise ValueError('Each option must be an object.')
-            label = str(option.get('label') or '').strip()[:80]
-            description = str(option.get('description') or '').strip()[:240]
+            label = str(option.get('label') or '').strip()
+            description = str(option.get('description') or '').strip()
             if not label or not description:
                 raise ValueError('Each option requires a label and description.')
             normalized_options.append({'label': label, 'description': description})
 
-        question_text = str(question.get('question') or '').strip()[:500]
+        question_text = str(question.get('question') or '').strip()
         if not question_text:
             raise ValueError('Each question requires question text.')
 
