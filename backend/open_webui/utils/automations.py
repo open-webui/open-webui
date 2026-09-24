@@ -37,6 +37,7 @@ from open_webui.models.messages import MessageForm
 from open_webui.models.users import Users
 from open_webui.utils.auth import create_token
 from open_webui.utils.misc import parse_duration
+from open_webui.utils.models import get_all_models
 from open_webui.utils.recurrence import (
     _resolve_tz,
     next_n_runs_ns,
@@ -389,6 +390,9 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             data={'id': user.id, 'typ': 'automation'},
             expires_delta=expires_delta or timedelta(hours=1),
         )
+
+        if not app.state.MODELS:
+            await get_all_models(_build_request(app, token=token), user=user)
 
         target = automation.data.get('target') or {}
         if target.get('type') == 'channel':
