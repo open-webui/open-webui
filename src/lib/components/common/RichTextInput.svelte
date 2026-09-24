@@ -2,7 +2,7 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import equal from 'fast-deep-equal';
-	import { skills, terminalSkills } from '$lib/stores';
+	import { showCallOverlay, skills, terminalSkills } from '$lib/stores';
 
 	marked.use({
 		breaks: true,
@@ -346,6 +346,9 @@
 	export let insertPromptAsRichText = false;
 	export let floatingMenuPlacement = 'bottom-start';
 
+	// Keep focus off the chat input during a call so the call overlay's M shortcut works
+	$: suppressAutoFocus = messageInput && $showCallOverlay;
+
 	let content = null;
 	let htmlValue = '';
 	let jsonValue = '';
@@ -550,7 +553,9 @@
 		selectNextTemplate(editor.view.state, editor.view.dispatch);
 
 		// Ensure the editor is still valid before trying to focus
-		focus();
+		if (!suppressAutoFocus) {
+			focus();
+		}
 	};
 
 	export const insertContent = (content) => {
@@ -710,7 +715,7 @@
 			// After updating the state, try to find and select the next template
 			setTimeout(() => {
 				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
-				if (!templateFound) {
+				if (!templateFound && !suppressAutoFocus) {
 					editor.commands.focus('end');
 				}
 			}, 0);
@@ -945,7 +950,7 @@
 				...(collaboration && provider ? [provider.getEditorExtension()] : [])
 			],
 			content: provider ? undefined : content,
-			autofocus: messageInput ? true : false,
+			autofocus: messageInput && !$showCallOverlay,
 			onTransaction: () => {
 				if (!editor) return;
 
