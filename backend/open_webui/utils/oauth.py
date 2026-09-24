@@ -72,6 +72,7 @@ from open_webui.env import (
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
     OAUTH_MAX_SESSIONS_PER_USER,
+    REDIS_KEY_PREFIX,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
 )
@@ -1429,7 +1430,14 @@ class OAuthManager:
         Returns:
             dict: Refreshed token data, or None if refresh failed
         """
-        async with self._refresh_locks.setdefault(session.id, asyncio.Lock()):
+        redis = self.app.state.redis
+        if redis:
+            # Shared across workers and replicas
+            refresh_lock = redis.lock(f'{REDIS_KEY_PREFIX}:oauth:refresh_lock:{session.id}', timeout=60)
+        else:
+            refresh_lock = self._refresh_locks.setdefault(session.id, asyncio.Lock())
+
+        async with refresh_lock:
             # Another request may have refreshed while we waited; its refresh token is now spent
             current_session = await OAuthSessions.get_session_by_id(session.id)
             if current_session and current_session.token != session.token:

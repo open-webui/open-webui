@@ -35,7 +35,7 @@ _SENTINEL_RETRYABLE = (
     _redis_sync.exceptions.ReadOnlyError,
     _redis_sync.exceptions.TimeoutError,
 )
-_FACTORY_METHODS = frozenset({'pipeline', 'pubsub', 'monitor', 'client', 'transaction'})
+_FACTORY_METHODS = frozenset({'pipeline', 'pubsub', 'monitor', 'client', 'transaction', 'lock'})
 _CONNECTION_POOL: dict[tuple, Any] = {}
 
 
