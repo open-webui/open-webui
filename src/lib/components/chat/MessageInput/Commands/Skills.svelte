@@ -43,7 +43,7 @@
 			getSkillItems(localStorage.token, query).catch(() => null),
 			getTerminalItems(query)
 		]);
-		filteredItems = [...(res?.items ?? []), ...terminalItems];
+		filteredItems = [...(res?.items ?? []).filter((skill) => skill.is_active), ...terminalItems];
 	};
 
 	const getTerminalItems = async (query = ''): Promise<TerminalSkill[]> => {

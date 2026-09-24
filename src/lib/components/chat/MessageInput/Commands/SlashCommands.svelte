@@ -127,7 +127,7 @@
 			prompts = promptRes;
 		}
 
-		skills = [...(skillRes?.items ?? []), ...terminalItems];
+		skills = [...(skillRes?.items ?? []).filter((skill) => skill.is_active), ...terminalItems];
 	};
 
 	export const selectUp = () => {
