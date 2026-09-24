@@ -44,6 +44,7 @@
 	let mediaRecorder;
 	let audioStream = null;
 	let audioChunks = [];
+	let destroyed = false;
 
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
@@ -184,7 +185,8 @@
 	};
 
 	const stopRecordingCallback = async (_continue = true) => {
-		if ($showCallOverlay) {
+		// $showCallOverlay stays true when the chat page unmounts
+		if ($showCallOverlay && !destroyed) {
 			console.log('%c%s', 'color: red; font-size: 20px;', '🚨 stopRecordingCallback 🚨');
 
 			// deep copy the audioChunks array
@@ -231,7 +233,7 @@
 	};
 
 	const startRecording = async () => {
-		if ($showCallOverlay) {
+		if ($showCallOverlay && !destroyed) {
 			if (!audioStream) {
 				audioStream = await navigator.mediaDevices.getUserMedia({
 					audio: {
@@ -776,6 +778,7 @@
 	});
 
 	onDestroy(async () => {
+		destroyed = true;
 		await stopAllAudio();
 		await stopRecordingCallback(false);
 		await stopCamera();
