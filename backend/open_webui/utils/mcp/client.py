@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from contextlib import AsyncExitStack
-from typing import Optional
+from typing import Any, Optional
 
 log = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     MCP_INITIALIZE_TIMEOUT,
 )
+from open_webui.utils.json_codec import JSONCodec
 
 
 def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
@@ -54,6 +55,24 @@ def create_httpx_client(headers=None, timeout=None, auth=None):
 
 def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=False)
+
+
+def _parse_json_text(text: str) -> Any:
+    try:
+        return JSONCodec.loads(text)
+    except JSONCodec.JSONDecodeError:
+        return text
+
+
+def _content_includes_structured(content: list, structured_content: dict) -> bool:
+    texts = [item.get('text') for item in content if item.get('type') == 'text']
+    values = [_parse_json_text(text) for text in texts]
+    payload = structured_content
+    # The Python SDK wraps non-object returns as {'result': ...}
+    if structured_content.keys() == {'result'}:
+        payload = structured_content['result']
+    candidates = (texts, values, *texts, *values)
+    return payload in candidates or structured_content in candidates
 
 
 class MCPClient:
@@ -122,10 +141,13 @@ class MCPClient:
 
         result_dict = result.model_dump(mode='json')
         result_content = result_dict.get('content', {})
+        structured_content = result_dict.get('structuredContent')
 
         if result.isError:
             raise Exception(result_content)
         else:
+            if structured_content and not _content_includes_structured(result_content, structured_content):
+                result_content.append({'type': 'text', 'text': JSONCodec.dumps(structured_content)})
             return result_content
 
     async def list_resources(self, cursor: Optional[str] = None) -> Optional[dict]:
