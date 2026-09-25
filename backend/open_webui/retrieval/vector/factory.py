@@ -13,14 +13,15 @@ from open_webui.retrieval.vector.type import VectorType
 
 class Vector:
     @staticmethod
-    def get_vector(vector_type: str) -> VectorDBBase:
+    def get_vector(vector_type: str) -> VectorDBBase:  # noqa: C901
         """
         get vector db instance by vector type
         """
         if USE_SLIM and vector_type != VectorType.PGVECTOR:
             raise HTTPException(
                 503,
-                'Slim requires PostgreSQL/pgvector for vector storage. Set VECTOR_DB=pgvector and PGVECTOR_DB_URL, or use the standard image.',
+                'Slim requires PostgreSQL/pgvector for vector storage. Set VECTOR_DB=pgvector and '
+                'PGVECTOR_DB_URL, or use the standard image.',
             )
         match vector_type:
             case VectorType.MILVUS:
@@ -93,6 +94,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.valkey import ValkeyClient
 
                 return ValkeyClient()
+            case VectorType.AZURE_AI_SEARCH:
+                from open_webui.retrieval.vector.dbs.azure_ai_search import AzureAISearchClient
+
+                return AzureAISearchClient()
             case _:
                 raise ValueError(f'Unsupported vector type: {vector_type}')
 
