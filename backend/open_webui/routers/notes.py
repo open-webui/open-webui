@@ -39,6 +39,14 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+async def check_notes_enabled():
+    if not await Config.get('notes.enable'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.FEATURE_DISABLED('Notes'),
+        )
+
+
 def _truncate_note_data(data: Optional[dict], max_length: int = 1000) -> Optional[dict]:
     if not data:
         return data
@@ -85,6 +93,7 @@ async def get_notes(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -133,6 +142,7 @@ async def get_pinned_notes(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -174,6 +184,7 @@ async def search_notes(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -227,6 +238,7 @@ async def create_new_note(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -275,6 +287,7 @@ async def get_note_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -329,6 +342,7 @@ async def get_note_chat_by_id(
     db: AsyncSession = Depends(get_async_session),
 ):
     log.info('[note-chat] get-or-create requested note_id=%s user_id=%s', id, user.id)
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -419,6 +433,7 @@ async def get_note_chats_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -477,6 +492,7 @@ async def create_note_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -547,6 +563,7 @@ async def update_note_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -633,6 +650,7 @@ async def update_note_access_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -692,6 +710,7 @@ async def pin_note_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
@@ -741,6 +760,7 @@ async def delete_note_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_notes_enabled()
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.notes', await Config.get('user.permissions'), db=db
     ):
