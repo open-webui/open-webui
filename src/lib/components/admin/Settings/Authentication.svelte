@@ -92,6 +92,9 @@
 			toast.error(`${error}`);
 			return null;
 		});
+		if (res) {
+			adminConfig = res;
+		}
 		return !!res;
 	};
 
