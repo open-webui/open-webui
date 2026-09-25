@@ -976,19 +976,22 @@
 									</div>
 
 									<div class="flex flex-1 items-center">
-										{#if auth_type === 'bearer'}
-											<SensitiveInput
-												bind:value={key}
-												placeholder={$i18n.t('API Key')}
-												required={false}
-											/>
+										{#if auth_type === 'bearer' || auth_type === 'session'}
+											<div class="flex flex-col w-full gap-1">
+												<SensitiveInput
+													bind:value={key}
+													placeholder={$i18n.t('API Key')}
+													required={false}
+												/>
+												{#if auth_type === 'session'}
+													<div class={`text-xs text-gray-500`}>
+														{$i18n.t('Forwards system user session credentials to authenticate')}
+													</div>
+												{/if}
+											</div>
 										{:else if auth_type === 'none'}
 											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('No authentication')}
-											</div>
-										{:else if auth_type === 'session'}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
-												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
 											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
