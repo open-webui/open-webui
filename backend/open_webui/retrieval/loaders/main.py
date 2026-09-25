@@ -427,15 +427,17 @@ class Loader:
             'gbk': 'gb18030',
             'big5': 'big5',
             'euckr': 'euc-kr',
+            'cp949': 'cp949',
             'eucjp': 'euc-jp',
             'iso2022jp': 'euc-jp',
-            'shiftjis': 'shift_jis',
+            'shiftjis': 'cp932',
+            'cp932': 'cp932',
         }
 
         # Build priority list: chardet-hinted codec first, then remaining CJK
         base_order = ['gb18030', 'big5', 'euc-kr', 'euc-jp']
         hinted = _ENC_FAMILY.get(detected_enc)
-        if hinted and hinted in base_order:
+        if hinted:
             ordered = [hinted] + [e for e in base_order if e != hinted]
         else:
             ordered = base_order
