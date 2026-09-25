@@ -392,7 +392,9 @@ class ModelsTable:
                     else:
                         meta_text = func.lower(cast(Model.meta, String))
                         variants = json_text_variants(tag.lower())
-                    stmt = stmt.filter(or_(*(meta_text.like(f'%"{variant}"%') for variant in variants)))
+                    stmt = stmt.filter(
+                        or_(*(meta_text.contains(f'"{variant}"', autoescape=True) for variant in variants))
+                    )
 
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')

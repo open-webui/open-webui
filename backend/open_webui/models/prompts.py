@@ -346,7 +346,10 @@ class PromptsTable:
                         # Fallback for dialects with no JSON array function: LIKE on the text.
                         tags_text = func.lower(cast(Prompt.tags, String))
                         tag_clause = or_(
-                            *(tags_text.like(f'%"{variant}"%') for variant in json_text_variants(tag_lower))
+                            *(
+                                tags_text.contains(f'"{variant}"', autoescape=True)
+                                for variant in json_text_variants(tag_lower)
+                            )
                         )
                         tag_lower = None
 
