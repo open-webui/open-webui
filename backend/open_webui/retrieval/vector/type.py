@@ -15,3 +15,4 @@ class VectorType(StrEnum):
     WEAVIATE = 'weaviate'
     OPENGAUSS = 'opengauss'
     VALKEY = 'valkey'
+    AZURE_AI_SEARCH = 'azure-ai-search'
