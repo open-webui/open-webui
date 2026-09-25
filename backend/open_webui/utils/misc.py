@@ -322,6 +322,14 @@ def get_reasoning_details(payload: dict):
     return payload.get('reasoning_details') or provider_details
 
 
+TOOL_IMAGES_PROMPT = 'Here are the images from the tool results above. Please analyze them.'
+
+
+def is_tool_images_message(message: dict) -> bool:
+    content = message.get('content')
+    return isinstance(content, list) and bool(content) and content[0].get('text') == TOOL_IMAGES_PROMPT
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
@@ -409,7 +417,7 @@ def convert_output_to_messages(
                 'content': [
                     {
                         'type': 'text',
-                        'text': 'Here are the images from the tool results above. Please analyze them.',
+                        'text': TOOL_IMAGES_PROMPT,
                     },
                     *[{'type': 'image_url', 'image_url': {'url': url}} for url in pending_tool_image_urls],
                 ],
