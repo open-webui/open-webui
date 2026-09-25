@@ -4679,14 +4679,14 @@ async def streaming_chat_response_handler(response, ctx):
 
                         # Strip start and end tags from content
                         start_tag_pattern = _start_tag_pattern(start_tag)
-                        block_content = re.sub(start_tag_pattern, '', block_content).strip()
+                        block_content = re.sub(start_tag_pattern, '', block_content)
 
                         end_tag_pattern = rf'{re.escape(end_tag)}'
                         end_tag_regex = re.compile(end_tag_pattern, re.DOTALL)
                         split_content = end_tag_regex.split(block_content, maxsplit=1)
 
                         block_content = split_content[0].strip() if split_content else ''
-                        leftover_content = split_content[1].strip() if len(split_content) > 1 else ''
+                        leftover_content = split_content[1].lstrip() if len(split_content) > 1 else ''
 
                         if block_content:
                             # Update the item with final content
