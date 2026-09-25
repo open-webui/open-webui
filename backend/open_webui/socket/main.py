@@ -199,6 +199,8 @@ YDOC_MANAGER = YdocManager(
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
 
+PENDING_NOTE_SAVES: dict[str, dict] = {}
+
 REDIS_EVENT_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
 
 EVENT_QUEUES: dict[str, asyncio.Queue] = {}
@@ -782,6 +784,13 @@ async def document_save_handler(document_id, data, user):
         await Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
 
 
+async def save_pending_note(document_id: str):
+    """Save note content still waiting out its debounce right away."""
+    pending_save = PENDING_NOTE_SAVES.pop(document_id, None)
+    if pending_save:
+        await document_save_handler(document_id, pending_save['data'], pending_save['user'])
+
+
 @sio.on('ydoc:document:state')
 async def yjs_document_state(sid, data):
     """Send the current state of the Yjs document to the user"""
@@ -888,7 +897,7 @@ async def yjs_document_update(sid, data):
 
         async def debounced_save():
             await asyncio.sleep(0.5)
-            await document_save_handler(document_id, data.get('data', {}), user)
+            await save_pending_note(document_id)
 
         if document_id.startswith('note:') and data.get('data'):
             # Only drop the pending save when a new one takes its place.
@@ -901,7 +910,16 @@ async def yjs_document_update(sid, data):
             except Exception:
                 pass
 
-            await create_task(REDIS, debounced_save(), document_id)
+            pending_save = {'data': data['data'], 'user': user}
+            PENDING_NOTE_SAVES[document_id] = pending_save
+            _, task = await create_task(REDIS, debounced_save(), document_id)
+
+            def discard_pending_save(_):
+                # A stopped save must not be written later on leave
+                if PENDING_NOTE_SAVES.get(document_id) is pending_save:
+                    del PENDING_NOTE_SAVES[document_id]
+
+            task.add_done_callback(discard_pending_save)
 
     except Exception as e:
         log.error(f'Error in yjs_document_update: {e}')
@@ -930,6 +948,8 @@ async def yjs_document_leave(sid, data):
             {'document_id': document_id, 'user_id': user['id']},
             room=f'doc_{document_id}',
         )
+
+        await save_pending_note(document_id)
 
         if await YDOC_MANAGER.document_exists(document_id) and len(await YDOC_MANAGER.get_users(document_id)) == 0:
             log.info('Cleaning up document %s as no users are left', document_id)
@@ -979,6 +999,10 @@ async def disconnect(sid, reason=None):
                     USAGE_POOL[model_id] = connections
 
         await YDOC_MANAGER.remove_user_from_all_documents(sid)
+
+        for room in sio.rooms(sid):
+            if room.startswith('doc_'):
+                await save_pending_note(room.removeprefix('doc_'))
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")
