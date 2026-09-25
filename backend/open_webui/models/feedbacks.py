@@ -234,7 +234,7 @@ class FeedbackTable:
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')
 
-                if order_by == 'username':
+                if order_by == 'user':
                     if direction == 'asc':
                         stmt = stmt.order_by(User.name.asc())
                     else:
