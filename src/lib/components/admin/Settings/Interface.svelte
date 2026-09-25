@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { getChatConfig, updateChatConfig } from '$lib/apis/chats';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import { getBaseModels } from '$lib/apis/models';
@@ -17,7 +17,7 @@
 	import AdminSettingSection from './AdminSettingSection.svelte';
 	import { config as appConfig } from '$lib/stores';
 
-	const dispatch = createEventDispatcher();
+	export let saveHandler: () => void;
 
 	const i18n: any = getContext('i18n');
 
@@ -67,10 +67,17 @@
 			TASK_MODEL_PARAMS: configuredParams(taskConfig.TASK_MODEL_PARAMS)
 		};
 
-		[taskConfig, chatConfig] = await Promise.all([
-			updateTaskConfig(localStorage.token, taskConfigPayload),
-			updateChatConfig(localStorage.token, chatConfig)
-		]);
+		try {
+			[taskConfig, chatConfig] = await Promise.all([
+				updateTaskConfig(localStorage.token, taskConfigPayload),
+				updateChatConfig(localStorage.token, chatConfig)
+			]);
+		} catch (error) {
+			toast.error(
+				Array.isArray(error) ? error.map((entry) => entry.msg).join('\n') : String(error)
+			);
+			return;
+		}
 		appConfig.update((current) =>
 			current
 				? {
@@ -83,6 +90,7 @@
 					}
 				: current
 		);
+		saveHandler();
 	};
 
 	let workspaceModels: any[] = [];
@@ -165,7 +173,6 @@
 		class="flex h-full flex-col justify-between text-sm"
 		on:submit|preventDefault={() => {
 			updateInterfaceHandler();
-			dispatch('save');
 		}}
 	>
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
