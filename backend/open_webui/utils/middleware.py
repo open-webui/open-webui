@@ -3048,6 +3048,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for tool_server in direct_tool_servers:
                 if tool_server.get('is_terminal') is True and not terminal_capability:
                     continue
+                # Copy so the pops below keep metadata intact for sub-agents and approval resumes
+                tool_server = dict(tool_server)
                 system_prompt = tool_server.pop('system_prompt', None)
                 if system_prompt:
                     form_data['messages'] = add_or_update_system_message(
