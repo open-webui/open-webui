@@ -1464,6 +1464,10 @@
 										});
 
 										folderRegistry[chat.folder_id]?.setFolderItems();
+
+										if (res) {
+											chat = res;
+										}
 									}
 
 									if (chat.pinned) {
@@ -1561,6 +1565,10 @@
 															toast.error(`${error}`);
 															return null;
 														});
+
+														if (res) {
+															chat = res;
+														}
 													}
 
 													if (!chat.pinned) {
