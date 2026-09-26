@@ -1703,6 +1703,27 @@ def filter_file_metadata(metadata: dict | None) -> dict:
     return filter_metadata(metadata)
 
 
+def has_duplicate_content(collection_name: str, hash: str, file_id: str | None) -> bool:
+    result = get_vector_db_client().query(
+        collection_name=collection_name,
+        filter={'hash': hash},
+    )
+
+    if result is not None and result.ids and len(result.ids) > 0:
+        existing_doc_ids = result.ids[0]
+        if existing_doc_ids:
+            # Check if the existing document belongs to the same file
+            # If same file_id, this is a re-add/reindex - allow it
+            # If different file_id, this is a duplicate - block it
+            existing_file_id = None
+            if result.metadatas and result.metadatas[0]:
+                existing_file_id = result.metadatas[0][0].get('file_id')
+
+            return existing_file_id != file_id
+
+    return False
+
+
 def save_docs_to_vector_db(
     request: Request,
     docs,
@@ -1734,24 +1755,9 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and 'hash' in metadata:
-        result = get_vector_db_client().query(
-            collection_name=collection_name,
-            filter={'hash': metadata['hash']},
-        )
-
-        if result is not None and result.ids and len(result.ids) > 0:
-            existing_doc_ids = result.ids[0]
-            if existing_doc_ids:
-                # Check if the existing document belongs to the same file
-                # If same file_id, this is a re-add/reindex - allow it
-                # If different file_id, this is a duplicate - block it
-                existing_file_id = None
-                if result.metadatas and result.metadatas[0]:
-                    existing_file_id = result.metadatas[0][0].get('file_id')
-
-                if existing_file_id != metadata.get('file_id'):
-                    log.info('Document with hash %s already exists', metadata['hash'])
-                    raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+        if has_duplicate_content(collection_name, metadata['hash'], metadata.get('file_id')):
+            log.info('Document with hash %s already exists', metadata['hash'])
+            raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         if config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
@@ -3375,6 +3381,7 @@ async def process_files_batch(
     file_results: list[BatchProcessFilesResult] = []
     file_errors: list[BatchProcessFilesResult] = []
     file_updates: list[FileUpdateForm] = []
+    seen_hashes: set[str] = set()
 
     # Prepare all documents first
     all_docs: list[Document] = []
@@ -3403,6 +3410,11 @@ async def process_files_batch(
                 continue
 
             text_content = file.data.get('content', '')
+            hash = calculate_sha256_string(text_content)
+            if hash in seen_hashes or await run_in_threadpool(has_duplicate_content, collection_name, hash, file.id):
+                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+            seen_hashes.add(hash)
+
             docs: list[Document] = [
                 Document(
                     page_content=text_content.replace('<br/>', '\n'),
@@ -3412,6 +3424,7 @@ async def process_files_batch(
                         'created_by': file.user_id,
                         'file_id': file.id,
                         'source': file.filename,
+                        'hash': hash,
                     },
                 )
             ]
@@ -3420,7 +3433,7 @@ async def process_files_batch(
 
             file_updates.append(
                 FileUpdateForm(
-                    hash=calculate_sha256_string(text_content),
+                    hash=hash,
                     data={'content': text_content},
                 )
             )
