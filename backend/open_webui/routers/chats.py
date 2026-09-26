@@ -1848,18 +1848,6 @@ async def clone_shared_chat_by_id(
 ):
     await require_chat_import_permission(request, user, db)
 
-    chat = await Chats.get_chat_by_share_id(id, db=db)
-
-    # Fallback: admins can also access any chat directly by chat ID
-    if not chat and user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
-        chat = await Chats.get_chat_by_id(id, db=db)
-
-    if not chat:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
     # Enforce access grants (owner and admins bypass)
     shared = await SharedChats.get_by_id(id, db=db)
     if shared and user.role != 'admin' and shared.user_id != user.id:
@@ -1875,6 +1863,18 @@ async def clone_shared_chat_by_id(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
+
+    chat = await Chats.get_chat_by_share_id(id, db=db) if shared else None
+
+    # Fallback: admins can also access any chat directly by chat ID
+    if not chat and user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
+        chat = await Chats.get_chat_by_id(id, db=db)
+
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
     updated_chat = {
         **chat.chat,
