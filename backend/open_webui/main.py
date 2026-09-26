@@ -1002,6 +1002,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                         f'{url}/api/generate',
                         data=payload,
                         headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
                         if not r.ok:
                             errors.append({'url_idx': idx, 'error': await r.text()})
@@ -1043,6 +1044,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                         f'{root_url}/models/unload',
                         json={'model': actual_model},
                         headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
                         if not r.ok:
                             detail = await r.text()
