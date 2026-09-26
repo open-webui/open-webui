@@ -241,6 +241,12 @@
 		showAdvanced = false;
 		tags = [];
 		modelIds = [];
+		headers = '';
+		enable = true;
+		connectionType = 'external';
+		provider = '';
+		apiVersion = '';
+		apiType = '';
 	};
 
 	const init = () => {
