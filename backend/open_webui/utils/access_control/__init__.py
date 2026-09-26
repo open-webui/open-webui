@@ -179,6 +179,40 @@ async def has_connection_access(
     return await has_access(user.id, 'read', access_grants, user_group_ids)
 
 
+async def has_arena_model_access(
+    user: UserModel,
+    model: dict,
+    user_group_ids: set[str] | None = None,
+    db: AsyncSession | None = None,
+) -> bool:
+    """
+    Check if a user can access an arena model based on ``info.meta.access_grants``.
+
+    Arena models are config-driven (not DB-owned). Empty grants are private to
+    admins, matching Open Terminal / ``has_connection_access``.
+
+    - Admin with BYPASS_ADMIN_ACCESS_CONTROL → always allowed
+    - Missing, None, or empty access_grants → private, admin-only
+    - access_grants has entries → delegates to ``has_access``
+    """
+    from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+
+    if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
+        return True
+
+    access_grants = ((model.get('info') or {}).get('meta') or {}).get('access_grants', [])
+    if not access_grants:
+        # No grants configured → private, admin-only: admins must keep access
+        # to arena models only they can configure, even when they do not bypass
+        # access control globally.
+        return user.role == 'admin'
+
+    if user_group_ids is None:
+        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+
+    return await has_access(user.id, 'read', access_grants, user_group_ids, db=db)
+
+
 def migrate_access_control(data: dict, ac_key: str = 'access_control', grants_key: str = 'access_grants') -> None:
     """
     Auto-migrate a config dict in-place from legacy access_control dict to access_grants list.
