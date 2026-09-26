@@ -131,6 +131,28 @@
 		replacement: (content) => `<u>${content}</u>`
 	});
 
+	// Turndown's <br> spaces before or on a blank line are only trailing whitespace; a same-length marker pass locates them.
+	const htmlToMarkdown = (html) => {
+		const markdown = turndownService.turndown(html);
+		if (!html.includes('<br')) return markdown;
+
+		const marker = '\uFEFF\uFEFF';
+		const br = turndownService.options.br;
+		turndownService.options.br = marker;
+		const markerLines = turndownService.turndown(html).split('\n');
+		turndownService.options.br = br;
+
+		const lines = markdown.split('\n');
+		const isBreak = (index) => lines[index].endsWith(br) && markerLines[index].endsWith(marker);
+		const textOf = (index) => (isBreak(index) ? lines[index].slice(0, -br.length) : lines[index]);
+		const isBlank = (index) => index === lines.length || /^[ \t\u00a0]*$/.test(textOf(index));
+		return lines
+			.map((line, index) =>
+				isBreak(index) && (isBlank(index) || isBlank(index + 1)) ? textOf(index) : line
+			)
+			.join('\n');
+	};
+
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -969,24 +991,21 @@
 				jsonValue = editor.getJSON();
 
 				if (richText) {
-					mdValue = turndownService
-						.turndown(
-							htmlValue
-								.replace(/<p><\/p>/g, '<br/>')
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-						)
-						.replace(/\u00a0/g, ' ');
+					mdValue = htmlToMarkdown(
+						htmlValue
+							.replace(/<p><\/p>/g, '<br/>')
+							.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+					).replace(/\u00a0/g, ' ');
 				} else {
-					mdValue = turndownService
-						.turndown(
-							htmlValue
-								// Replace empty paragraphs with line breaks
-								.replace(/<p><\/p>/g, '<br/>')
-								// Replace multiple spaces with non-breaking spaces
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-								// Replace tabs with non-breaking spaces (preserve indentation)
-								.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
-						)
+					mdValue = htmlToMarkdown(
+						htmlValue
+							// Replace empty paragraphs with line breaks
+							.replace(/<p><\/p>/g, '<br/>')
+							// Replace multiple spaces with non-breaking spaces
+							.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+							// Replace tabs with non-breaking spaces (preserve indentation)
+							.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
+					)
 						// Convert non-breaking spaces back to regular spaces for markdown
 						.replace(/\u00a0/g, ' ');
 				}
@@ -1363,14 +1382,12 @@
 
 		const jsonValue = editor.getJSON();
 		const htmlValue = editor.getHTML();
-		let mdValue = turndownService
-			.turndown(
-				(preserveBreaks ? htmlValue.replace(/<p><\/p>/g, '<br/>') : htmlValue).replace(
-					/ {2,}/g,
-					(m) => m.replace(/ /g, '\u00a0')
-				)
+		let mdValue = htmlToMarkdown(
+			(preserveBreaks ? htmlValue.replace(/<p><\/p>/g, '<br/>') : htmlValue).replace(
+				/ {2,}/g,
+				(m) => m.replace(/ /g, '\u00a0')
 			)
-			.replace(/\u00a0/g, ' ');
+		).replace(/\u00a0/g, ' ');
 
 		if (value === '') {
 			editor.commands.clearContent(); // Clear content if value is empty
