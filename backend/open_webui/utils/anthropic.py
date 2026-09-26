@@ -616,6 +616,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     server_tool_use = None
     service_tier = None
     stop_reason = 'end_turn'
+    error_message = None
 
     # Track content blocks with a running index.
     # Each text block or tool_use block gets its own index.
@@ -670,6 +671,13 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     data = JSONCodec.loads(data_string)
                 except (JSONCodec.JSONDecodeError, TypeError):
                     continue
+
+                error = data.get('error')
+                if error:
+                    error_message = (
+                        error.get('message') if isinstance(error, dict) else error
+                    ) or 'Chat completion stream failed'
+                    break
 
                 usage_data = data.get('usage')
                 if isinstance(usage_data, dict):
@@ -904,8 +912,18 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     }
                     stop_reason = stop_reason_map.get(finish_reason, 'end_turn')
 
+            if error_message:
+                break
+
     except Exception as e:
         log.error(f'Error in Anthropic stream conversion: {e}')
+        error_message = 'Chat completion stream failed'
+
+    # Skip message_stop so a failed stream is not reported as complete.
+    if error_message:
+        error_event = {'type': 'error', 'error': {'type': 'api_error', 'message': error_message}}
+        yield f'event: error\ndata: {JSONCodec.dumps(error_event)}\n\n'.encode()
+        return
 
     # Close any open thinking block
     if thinking_block_open:
