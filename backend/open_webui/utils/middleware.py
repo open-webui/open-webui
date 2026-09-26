@@ -121,6 +121,7 @@ from open_webui.utils.misc import (
     get_system_message,
     is_raster_image_content_type,
     is_string_allowed,
+    is_tool_images_message,
     merge_system_messages,
     prepend_to_first_user_message_content,
     replace_system_message_content,
@@ -1771,7 +1772,7 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
-async def add_file_context(messages: list, chat_id: str, user) -> list:
+async def add_file_context(messages: list, chat_id: str, user, compacted_user_message_count: int) -> list:
     """
     Add file URLs to messages for native function calling.
     """
@@ -1802,8 +1803,9 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     # the payload message list longer than the stored message list. A naive
     # positional zip() would pair user messages with wrong stored messages,
     # causing later images to lose their file context (see #21878).
-    user_messages = [m for m in messages if m.get('role') == 'user']
-    stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
+    user_messages = [m for m in messages if m.get('role') == 'user' and not is_tool_images_message(m)]
+    # Skip stored user messages that context compaction dropped from the payload.
+    stored_user_messages = [m for m in stored_messages if m.get('role') == 'user'][compacted_user_message_count:]
 
     for message, stored_message in zip(user_messages, stored_user_messages):
         # Chat references carry no url - they are addressed by id via view_chat.
@@ -2471,6 +2473,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
+    compacted_user_message_count = 0
     if is_saved_chat_id(chat_id) and user_message_id:
         if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
             compaction_models = {
@@ -2483,6 +2486,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         system_message = get_system_message(form_data.get('messages', []))
         system_prompt = get_content_from_message(system_message) if system_message else ''
 
+        user_message_count = sum(message.get('role') == 'user' for message in form_data.get('messages', []))
         try:
             form_data['messages'], context_summary, _ = await compact_messages_for_request(
                 request,
@@ -2492,6 +2496,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data.get('model'),
                 compaction_models,
                 system_prompt,
+            )
+            compacted_user_message_count = user_message_count - sum(
+                message.get('role') == 'user' for message in form_data.get('messages', [])
             )
             if context_summary:
                 form_data['messages'] = add_or_update_system_message(
@@ -3056,13 +3063,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         'server': tool_server,
                     }
 
-        if terminal_id and terminal_capability:
-            from open_webui.utils.terminals import add_terminal_agents_md, get_terminal_agents_md
-
-            agents_md = await get_terminal_agents_md(request, user, metadata, extra_params)
-            if agents_md:
-                form_data['messages'] = add_terminal_agents_md(form_data['messages'], agents_md)
-
         if mcp_clients:
             metadata['mcp_clients'] = mcp_clients
 
@@ -3072,7 +3072,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if use_builtin_tools:
             # Add file context to user messages
             chat_id = metadata.get('chat_id')
-            form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
+            form_data['messages'] = await add_file_context(
+                form_data.get('messages', []), chat_id, user, compacted_user_message_count
+            )
 
             if (model.get('info', {}).get('meta', {}).get('builtinTools') or {}).get('knowledge', True):
                 from html import escape
@@ -3109,6 +3111,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
+
+        if terminal_id and terminal_capability:
+            from open_webui.utils.terminals import add_terminal_agents_md, get_terminal_agents_md
+
+            agents_md = await get_terminal_agents_md(request, user, metadata, extra_params)
+            if agents_md:
+                form_data['messages'] = add_terminal_agents_md(form_data['messages'], agents_md)
 
         # Only advertise user-shell tools when the originating browser has a connected shell.
         shell_tools = {
