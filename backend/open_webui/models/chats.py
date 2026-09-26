@@ -12,6 +12,7 @@ from typing import Any, Literal
 from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.attachment_lifecycle import cleanup_orphan_storage, detach_chat_files
 from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
@@ -2477,24 +2478,33 @@ class ChatTable:
     async def delete_chat_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as session:
+                orphaned_files = await detach_chat_files(session, [id])
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
                 await session.execute(delete(Chat).filter_by(id=id))
                 await session.commit()
+                shared_result = await self.delete_shared_chat_by_chat_id(id, db=session)
 
-                return True and await self.delete_shared_chat_by_chat_id(id, db=session)
+            await cleanup_orphan_storage(orphaned_files)
+            return True and shared_result
         except Exception:
             return False
 
     async def delete_chat_by_id_and_user_id(self, id: str, user_id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as session:
+                owned = (await session.execute(select(Chat.id).filter_by(id=id, user_id=user_id))).first()
+                if not owned:
+                    return False
+                orphaned_files = await detach_chat_files(session, [id])
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
                 await session.execute(delete(Chat).filter_by(id=id, user_id=user_id))
                 await session.commit()
+                shared_result = await self.delete_shared_chat_by_chat_id(id, db=session)
 
-                return True and await self.delete_shared_chat_by_chat_id(id, db=session)
+            await cleanup_orphan_storage(orphaned_files)
+            return True and shared_result
         except Exception:
             return False
 
@@ -2503,7 +2513,8 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 await self.delete_shared_chats_by_user_id(user_id, db=session)
 
-                chat_id_subquery = select(Chat.id).filter_by(user_id=user_id).scalar_subquery()
+                chat_ids = [row[0] for row in (await session.execute(select(Chat.id).filter_by(user_id=user_id))).all()]
+                orphaned_files = await detach_chat_files(session, chat_ids)
                 await session.execute(
                     update(AutomationRun)
                     .filter(AutomationRun.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
@@ -2515,7 +2526,8 @@ class ChatTable:
                 await session.execute(delete(Chat).filter_by(user_id=user_id))
                 await session.commit()
 
-                return True
+            await cleanup_orphan_storage(orphaned_files)
+            return True
         except Exception:
             return False
 
@@ -2526,16 +2538,23 @@ class ChatTable:
 
         try:
             async with get_async_db_context(db) as session:
-                chat_ids_stmt = select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id)
+                chat_ids = [
+                    row[0]
+                    for row in (
+                        await session.execute(select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id))
+                    ).all()
+                ]
+                orphaned_files = await detach_chat_files(session, chat_ids)
                 await session.execute(
-                    update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
+                    update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids)).values(chat_id=None)
                 )
-                await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
-                await session.execute(delete(SharedChatTable).filter(SharedChatTable.chat_id.in_(chat_ids_stmt)))
+                await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids)))
+                await session.execute(delete(SharedChatTable).filter(SharedChatTable.chat_id.in_(chat_ids)))
                 await session.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
                 await session.commit()
 
-                return True
+            await cleanup_orphan_storage(orphaned_files)
+            return True
         except Exception:
             return False
 
