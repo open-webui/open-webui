@@ -115,6 +115,7 @@ from open_webui.utils.misc import (
     get_last_user_message_item,
     get_message_list,
     get_output_text,
+    get_paired_tool_call_ids,
     get_response_error_detail,
     get_reasoning_details,
     get_system_message,
@@ -2306,25 +2307,12 @@ def process_messages_with_output(
 
 
 def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
-    tool_result_ids = {
-        message.get('tool_call_id')
-        for message in messages
-        if message.get('role') == 'tool' and message.get('tool_call_id')
-    }
-
-    tool_call_ids = {
-        tool_call.get('id')
-        for message in messages
-        for tool_call in (message.get('tool_calls') or [])
-        if message.get('role') == 'assistant' and tool_call.get('id')
-    }
+    paired_ids_by_message = get_paired_tool_call_ids(messages)
 
     sanitized = []
-    for message in messages:
+    for message, paired_ids in zip(messages, paired_ids_by_message):
         if message.get('role') == 'assistant' and message.get('tool_calls'):
-            kept = [
-                tool_call for tool_call in message.get('tool_calls') or [] if tool_call.get('id') in tool_result_ids
-            ]
+            kept = [tool_call for tool_call in message.get('tool_calls') or [] if tool_call.get('id') in paired_ids]
             if kept:
                 sanitized.append({**message, 'tool_calls': kept})
             else:
@@ -2333,7 +2321,7 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
                 clean.pop('reasoning_items', None)
                 if clean.get('content'):
                     sanitized.append(clean)
-        elif message.get('role') != 'tool' or message.get('tool_call_id') in tool_call_ids:
+        elif message.get('role') != 'tool' or message.get('tool_call_id') in paired_ids:
             sanitized.append(message)
 
     return sanitized

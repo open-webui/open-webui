@@ -261,6 +261,26 @@ def get_output_text(output: list | None) -> str:
     return '\n'.join(texts)
 
 
+def get_paired_tool_call_ids(messages: list[dict]) -> list[set[str]]:
+    """Tool call ids answered within each message's assistant-plus-tool-results block."""
+    paired_ids_by_message = [set() for _ in messages]
+    for index, message in enumerate(messages):
+        if message.get('role') != 'assistant' or not message.get('tool_calls'):
+            continue
+
+        block_end = index + 1
+        while block_end < len(messages) and messages[block_end].get('role') == 'tool':
+            block_end += 1
+
+        requested_ids = {tool_call.get('id') for tool_call in message['tool_calls'] if tool_call.get('id')}
+        completed_ids = {tool_message.get('tool_call_id') for tool_message in messages[index + 1 : block_end]}
+        paired_ids = requested_ids & completed_ids
+        for block_index in range(index, block_end):
+            paired_ids_by_message[block_index] = paired_ids
+
+    return paired_ids_by_message
+
+
 def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     """Drop unpaired tool_use / tool_result from a reconstructed conversation.
 
@@ -271,22 +291,14 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
 
     Well-formed output is unaffected: every id pairs, so nothing is stripped.
     """
-    completed_tool_call_ids = {
-        message['tool_call_id'] for message in messages if message.get('role') == 'tool' and message.get('tool_call_id')
-    }
-    requested_tool_call_ids = {
-        tool_call['id']
-        for message in messages
-        for tool_call in message.get('tool_calls') or ()
-        if message.get('role') == 'assistant' and tool_call.get('id')
-    }
+    paired_ids_by_message = get_paired_tool_call_ids(messages)
 
     reconciled_messages = []
-    for message in messages:
+    for message, paired_ids in zip(messages, paired_ids_by_message):
         role = message.get('role')
 
-        # Orphan tool result — no assistant ever claimed this call_id.
-        if role == 'tool' and message.get('tool_call_id') not in requested_tool_call_ids:
+        # Orphan tool result: not claimed by the assistant heading its tool block.
+        if role == 'tool' and message.get('tool_call_id') not in paired_ids:
             continue
 
         # Non-assistant or no tool_calls — pass through unchanged.
@@ -294,10 +306,8 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
             reconciled_messages.append(message)
             continue
 
-        # Keep only tool_calls whose id received a tool-role response.
-        valid_tool_calls = [
-            tool_call for tool_call in message['tool_calls'] if tool_call.get('id') in completed_tool_call_ids
-        ]
+        # Keep only tool_calls whose id received an adjacent tool-role response.
+        valid_tool_calls = [tool_call for tool_call in message['tool_calls'] if tool_call.get('id') in paired_ids]
 
         if valid_tool_calls:
             reconciled_messages.append({**message, 'tool_calls': valid_tool_calls})
