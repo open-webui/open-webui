@@ -2522,6 +2522,8 @@ class ChatTable:
     async def delete_chats_by_user_id_and_folder_id(
         self, user_id: str, folder_id: str, db: AsyncSession | None = None
     ) -> bool:
+        from open_webui.models.shared_chats import SharedChat as SharedChatTable
+
         try:
             async with get_async_db_context(db) as session:
                 chat_ids_stmt = select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id)
@@ -2529,6 +2531,7 @@ class ChatTable:
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
                 await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
+                await session.execute(delete(SharedChatTable).filter(SharedChatTable.chat_id.in_(chat_ids_stmt)))
                 await session.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
                 await session.commit()
 
