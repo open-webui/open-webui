@@ -646,6 +646,14 @@ async def add_members_by_id(
         memberships = await Channels.add_members_to_channel(
             channel.id, user.id, form_data.user_ids, form_data.group_ids, db=db
         )
+        if channel.type in ['group', 'dm']:
+            participant_ids = [member.user_id for member in memberships]
+            await emit_to_users(
+                'events:channel',
+                {'data': {'type': 'channel:created'}},
+                participant_ids,
+            )
+            await enter_room_for_users(f'channel:{channel.id}', participant_ids)
 
         await publish_event(
             request,
