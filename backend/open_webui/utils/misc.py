@@ -65,6 +65,10 @@ def get_response_error_detail(response: object) -> str:
     return detail if isinstance(detail, str) else str(detail)
 
 
+def get_retry_after_headers(headers: collections.abc.Mapping) -> dict[str, str]:
+    return {name: headers[name] for name in ('Retry-After', 'retry-after-ms') if name in headers}
+
+
 def _strip_filter_entry(entry):
     # Compose list-form env syntax passes surrounding quotes through verbatim
     return (entry or '').strip().strip('"\'').strip()
