@@ -770,7 +770,10 @@
 			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
 			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
 			if (input.toolApprovalMode) {
-				await handleToolApprovalModeChange(input.toolApprovalMode);
+				params = {
+					...params,
+					tool_approval_mode: input.toolApprovalMode === 'ask' ? 'ask' : 'full'
+				};
 			}
 			return true;
 		} catch (e) {
