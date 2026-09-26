@@ -107,6 +107,15 @@
 			t?.attributes?.status !== 'incomplete' &&
 			t?.attributes?.done !== 'true'
 	);
+	$: isExploring =
+		hasActiveToolCalls ||
+		(!messageDone &&
+			tokens.some(
+				(t) =>
+					t?.attributes?.type !== 'tool_calls' &&
+					t?.attributes?.done &&
+					t?.attributes?.done !== 'true'
+			));
 	$: hasRejected = tokens.some(
 		(t) => t?.attributes?.type === 'tool_calls' && t?.attributes?.status === 'rejected'
 	);
@@ -174,7 +183,7 @@
 		return detail;
 	})();
 
-	$: prefixText = hasActiveToolCalls ? $i18n.t('Exploring') : $i18n.t('Explored');
+	$: prefixText = isExploring ? $i18n.t('Exploring') : $i18n.t('Explored');
 </script>
 
 <div {id} class="w-full min-w-0">
@@ -199,7 +208,7 @@
 		>
 			<div class="flex items-center gap-1.5 min-w-0">
 				<!-- Status icon -->
-				{#if hasActiveToolCalls}
+				{#if isExploring}
 					<div>
 						<Spinner className="size-4" />
 					</div>
@@ -223,7 +232,7 @@
 
 				<!-- Summary text -->
 				<div class="flex-1 line-clamp-1">
-					<span class="text-gray-600 dark:text-gray-300 {hasActiveToolCalls ? 'shimmer' : ''}"
+					<span class="text-gray-600 dark:text-gray-300 {isExploring ? 'shimmer' : ''}"
 						>{prefixText}</span
 					>
 					{#if summaryText}
