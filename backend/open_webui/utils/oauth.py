@@ -789,6 +789,11 @@ def should_send_oauth_resource(client_info: OAuthClientInformationFull | None) -
     return not scope_has_resource_indicator(client_info.scope)
 
 
+def uses_google_authorization_server(client_info: OAuthClientInformationFull) -> bool:
+    server_metadata = client_info.server_metadata
+    return server_metadata is not None and server_metadata.authorization_endpoint.host == 'accounts.google.com'
+
+
 def build_oauth_request_params(client_info: OAuthClientInformationFull | None) -> dict:
     if not client_info:
         return {}
@@ -798,6 +803,10 @@ def build_oauth_request_params(client_info: OAuthClientInformationFull | None) -
         params['scope'] = client_info.scope
     if should_send_oauth_resource(client_info):
         params['resource'] = client_info.resource
+    # Google only issues a refresh token for offline access, and only re-issues it on a fresh consent.
+    if uses_google_authorization_server(client_info):
+        params['access_type'] = 'offline'
+        params['prompt'] = 'consent'
     return params
 
 
