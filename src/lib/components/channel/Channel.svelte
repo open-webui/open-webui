@@ -116,6 +116,7 @@
 		messages = null;
 		channel = null;
 		threadId = null;
+		replyToMessage = null;
 
 		typingUsers = [];
 		typingUsersTimeout = {};
