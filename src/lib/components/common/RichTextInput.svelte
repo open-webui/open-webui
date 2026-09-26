@@ -142,7 +142,7 @@
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension, markInputRule, mergeAttributes } from '@tiptap/core';
 
-	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
+	import { AIAutocompletion, setFollowUpSuggestion } from './RichTextInput/AutoCompletion.js';
 
 	import StarterKit from '@tiptap/starter-kit';
 
@@ -321,23 +321,7 @@
 	export let followUpSuggestion = '';
 
 	$: if (editor && !editor.isDestroyed) {
-		const { doc } = editor.state;
-		const node = doc.firstChild;
-		if (node?.type.name === 'paragraph' && !node.attrs['data-prompt']) {
-			const suggestion = doc.childCount === 1 && node.content.size === 0 ? followUpSuggestion : '';
-			if ((node.attrs['data-suggestion'] ?? '') !== suggestion) {
-				editor.view.dispatch(
-					editor.state.tr
-						.setNodeMarkup(0, null, {
-							...node.attrs,
-							class: suggestion ? 'ai-autocompletion' : null,
-							'data-prompt': suggestion ? '' : null,
-							'data-suggestion': suggestion || null
-						})
-						.setMeta('addToHistory', false)
-				);
-			}
-		}
+		setFollowUpSuggestion(editor.view, followUpSuggestion);
 	}
 
 	export let messageInput = false;
