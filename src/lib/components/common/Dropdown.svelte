@@ -37,6 +37,7 @@
 	let settleTimers: number[] = [];
 	let resolvedMaxHeight = maxHeight;
 	let lastContentHeight = 0;
+	let suppressNextClick = false;
 
 	/** Svelte action: moves the node to document.body and keeps it positioned as it resizes */
 	function portal(node: HTMLElement) {
@@ -282,11 +283,24 @@
 	}
 
 	function handleWindowPointerDown(event: PointerEvent) {
+		suppressNextClick = false;
 		if (!show || !closeOnOutsideClick) return;
 		if (!(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
+		// DropdownSub content is portaled outside contentEl, let its clicks through
+		if (!(event.target instanceof Element && event.target.closest('[role="menu"]'))) {
+			suppressNextClick = true;
+			event.preventDefault();
+		}
 		closeDropdown(false);
+	}
+
+	function handleWindowClick(event: MouseEvent) {
+		if (!suppressNextClick || event.detail === 0) return;
+		suppressNextClick = false;
+		event.preventDefault();
+		event.stopPropagation();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -326,6 +340,7 @@
 
 <svelte:window
 	on:keydown={handleKeydown}
+	on:click|capture={handleWindowClick}
 	on:scroll|capture={positionContent}
 	on:resize={positionContent}
 />
