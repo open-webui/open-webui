@@ -182,8 +182,18 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
             if model:
                 if custom_model.is_active:
+                    arena_meta = model['info']['meta'] if model.get('arena') else None
                     model['name'] = custom_model.name
                     model['info'] = custom_model.model_dump()
+                    if arena_meta:
+                        # Evaluation config owns arena access grants and model_ids
+                        model['info']['meta'].update(
+                            {
+                                key: arena_meta[key]
+                                for key in ('access_grants', 'model_ids', 'filter_mode')
+                                if key in arena_meta
+                            }
+                        )
                     schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
                     if schema:
                         model['info'].setdefault('meta', {})['chat_variables_schema'] = schema
