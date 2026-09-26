@@ -1192,7 +1192,8 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
 
 
 def is_openai_new_model(model: str) -> bool:
-    model_lower = model.lower()
+    # Amazon Bedrock ids carry a provider prefix, e.g. us.openai.gpt-6-sol
+    model_lower = re.sub(r'^(?:[a-z-]+\.)?openai\.', '', model.lower())
     # o-series models (o1, o3, o4, o5, ...)
     if re.match(r'^o\d+', model_lower):
         return True
