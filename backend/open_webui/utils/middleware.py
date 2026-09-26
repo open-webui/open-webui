@@ -4540,7 +4540,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 last_type = output[-1].get('type', '') if output else ''
 
-                if last_type == 'message':
+                if last_type == 'message' and output[-1].get('_tag_type') != content_type:
                     # Use the output item's own text for tag detection
                     item = output[-1]
                     item_text = get_last_text(output)
