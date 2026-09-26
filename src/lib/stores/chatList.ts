@@ -8,14 +8,15 @@ type ChatListItem = {
 
 const chatsStore = writable<ChatListItem[] | null>(null);
 const pinnedChatsStore = writable<ChatListItem[]>([]);
+const allChatsLoadedStore = writable(false);
 
 export const chats = readonly(chatsStore);
 export const pinnedChats = readonly(pinnedChatsStore);
+export const allChatsLoaded = readonly(allChatsLoadedStore);
 
 let currentPage = 1;
 let paginationReady = false;
 let requestGeneration = 0;
-let allLoaded = false;
 let loadingNextPage = false;
 
 type RefreshChatListOptions = {
@@ -25,7 +26,6 @@ type RefreshChatListOptions = {
 
 type ChatListResult = {
 	accepted: boolean;
-	allLoaded: boolean;
 };
 
 export const refreshChatList = async (
@@ -44,12 +44,12 @@ export const refreshChatList = async (
 	]);
 
 	if (generation !== requestGeneration) {
-		return { accepted: false, allLoaded };
+		return { accepted: false };
 	}
 
 	chatsStore.set(nextChats);
 	currentPage = 1;
-	allLoaded = nextChats.length === 0;
+	allChatsLoadedStore.set(nextChats.length === 0);
 
 	if (options.clearPinned) {
 		pinnedChatsStore.set([]);
@@ -58,7 +58,7 @@ export const refreshChatList = async (
 	}
 
 	paginationReady = true;
-	return { accepted: true, allLoaded };
+	return { accepted: true };
 };
 
 // The sidebar owns folder state. This bridge lets other components refresh it.
@@ -88,8 +88,8 @@ export const refreshSidebar = async (token: string = '') => {
 };
 
 export const loadNextChatListPage = async (token: string = ''): Promise<ChatListResult> => {
-	if (!paginationReady || allLoaded || loadingNextPage) {
-		return { accepted: false, allLoaded };
+	if (!paginationReady || get(allChatsLoadedStore) || loadingNextPage) {
+		return { accepted: false };
 	}
 
 	const generation = requestGeneration;
@@ -100,17 +100,17 @@ export const loadNextChatListPage = async (token: string = ''): Promise<ChatList
 		const nextChats = (await getChatList(token, nextPage)) as ChatListItem[];
 
 		if (generation !== requestGeneration) {
-			return { accepted: false, allLoaded };
+			return { accepted: false };
 		}
 
-		allLoaded = nextChats.length === 0;
+		allChatsLoadedStore.set(nextChats.length === 0);
 		currentPage = nextPage;
 
 		const existingIds = new Set((get(chatsStore) ?? []).map((chat) => chat.id));
 		const uniqueChats = nextChats.filter((chat) => !existingIds.has(chat.id));
 		chatsStore.set([...(get(chatsStore) ?? []), ...uniqueChats]);
 
-		return { accepted: true, allLoaded };
+		return { accepted: true };
 	} finally {
 		loadingNextPage = false;
 	}
@@ -157,7 +157,7 @@ export const resetChatListState = () => {
 	requestGeneration += 1;
 	currentPage = 1;
 	paginationReady = false;
-	allLoaded = false;
+	allChatsLoadedStore.set(false);
 	loadingNextPage = false;
 	chatsStore.set(null);
 	pinnedChatsStore.set([]);

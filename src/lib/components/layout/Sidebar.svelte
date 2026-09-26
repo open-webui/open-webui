@@ -28,6 +28,7 @@
 		sidebarWidth
 	} from '$lib/stores';
 	import {
+		allChatsLoaded,
 		loadNextChatListPage,
 		refreshChatList,
 		registerFolderRefreshHandler,
@@ -116,7 +117,6 @@
 	// Pagination variables
 	let chatListLoading = false;
 	let chatListReady = false;
-	let allChatsLoaded = false;
 
 	let showCreateFolderModal = false;
 
@@ -376,7 +376,6 @@
 	const initChatList = async () => {
 		// Reset pagination variables
 		console.log('initChatList');
-		allChatsLoaded = false;
 		chatListReady = false;
 
 		await Promise.all([
@@ -419,20 +418,18 @@
 		if (result.accepted) {
 			await initFolders();
 			await Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
-			allChatsLoaded = result.allLoaded;
 			chatListReady = true;
 		}
 	};
 
 	const loadMoreChats = async () => {
-		if (chatListLoading || allChatsLoaded || !$showSidebar) {
+		if (chatListLoading || $allChatsLoaded || !$showSidebar) {
 			return;
 		}
 
 		chatListLoading = true;
 
-		const result = await loadNextChatListPage(localStorage.token);
-		allChatsLoaded = result.allLoaded;
+		await loadNextChatListPage(localStorage.token);
 
 		chatListLoading = false;
 	};
@@ -1672,7 +1669,7 @@
 										/>
 									{/each}
 
-									{#if chatListReady && !allChatsLoaded}
+									{#if chatListReady && !$allChatsLoaded}
 										<Loader
 											on:visible={(e) => {
 												if (!chatListLoading) {
