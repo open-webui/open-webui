@@ -6638,6 +6638,7 @@ async def streaming_chat_response_handler(response, ctx):
 
             try:
                 assistant_message = {}
+                outlet_task = None
                 filter_context = FilterContext()
                 has_api_outlet_filters = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
                 if ENABLE_API_OUTLET_FILTERS and not has_api_outlet_filters:
@@ -6688,9 +6689,21 @@ async def streaming_chat_response_handler(response, ctx):
                     if data:
                         if has_api_outlet_filters:
                             update_assistant_message_from_stream(assistant_message, data)
+
+                        # Clients may disconnect right after [DONE]; a task outlives that cancellation
+                        if has_api_outlet_filters and assistant_message and outlet_task is None:
+                            line = data.decode('utf-8', 'replace') if isinstance(data, bytes) else data
+                            if isinstance(line, str) and any(
+                                part.removeprefix('data:').strip() == '[DONE]' for part in line.splitlines()
+                            ):
+                                ctx['assistant_message'] = assistant_message
+                                outlet_task = asyncio.create_task(outlet_filter_handler(ctx))
+
                         yield data
 
-                if has_api_outlet_filters and assistant_message:
+                if outlet_task is not None:
+                    await asyncio.shield(outlet_task)
+                elif has_api_outlet_filters and assistant_message:
                     ctx['assistant_message'] = assistant_message
                     await outlet_filter_handler(ctx)
             except Exception as e:
