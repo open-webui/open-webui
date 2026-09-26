@@ -353,6 +353,8 @@
 	let htmlValue = '';
 	let jsonValue = '';
 	let mdValue = '';
+	let lastSerializedDoc = null;
+	let lastSerializedRichText = null;
 
 	let provider: SocketIOCollaborationProvider | null = null;
 
@@ -965,30 +967,34 @@
 					});
 				}
 
-				htmlValue = editor.getHTML();
-				jsonValue = editor.getJSON();
+				if (editor.state.doc !== lastSerializedDoc || richText !== lastSerializedRichText) {
+					lastSerializedDoc = editor.state.doc;
+					lastSerializedRichText = richText;
+					htmlValue = editor.getHTML();
+					jsonValue = editor.getJSON();
 
-				if (richText) {
-					mdValue = turndownService
-						.turndown(
-							htmlValue
-								.replace(/<p><\/p>/g, '<br/>')
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-						)
-						.replace(/\u00a0/g, ' ');
-				} else {
-					mdValue = turndownService
-						.turndown(
-							htmlValue
-								// Replace empty paragraphs with line breaks
-								.replace(/<p><\/p>/g, '<br/>')
-								// Replace multiple spaces with non-breaking spaces
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-								// Replace tabs with non-breaking spaces (preserve indentation)
-								.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
-						)
-						// Convert non-breaking spaces back to regular spaces for markdown
-						.replace(/\u00a0/g, ' ');
+					if (richText) {
+						mdValue = turndownService
+							.turndown(
+								htmlValue
+									.replace(/<p><\/p>/g, '<br/>')
+									.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+							)
+							.replace(/\u00a0/g, ' ');
+					} else {
+						mdValue = turndownService
+							.turndown(
+								htmlValue
+									// Replace empty paragraphs with line breaks
+									.replace(/<p><\/p>/g, '<br/>')
+									// Replace multiple spaces with non-breaking spaces
+									.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+									// Replace tabs with non-breaking spaces (preserve indentation)
+									.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
+							)
+							// Convert non-breaking spaces back to regular spaces for markdown
+							.replace(/\u00a0/g, ' ');
+					}
 				}
 
 				onChange({
@@ -1361,7 +1367,10 @@
 	const onValueChange = () => {
 		if (!editor) return;
 
-		const jsonValue = editor.getJSON();
+		// Nothing to sync when value is what the editor just emitted (both start as '')
+		if (value !== '' && value === jsonValue) return;
+
+		const editorJsonValue = editor.getJSON();
 		const htmlValue = editor.getHTML();
 		let mdValue = turndownService
 			.turndown(
@@ -1380,7 +1389,7 @@
 		}
 
 		if (json) {
-			if (!equal(value, jsonValue)) {
+			if (!equal(value, editorJsonValue)) {
 				editor.commands.setContent(value);
 				selectTemplate();
 			}
