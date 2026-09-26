@@ -88,7 +88,7 @@ from open_webui.utils.ask_user import stage_ask_user_tool_calls
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.context_compaction import compact_messages_for_request
+from open_webui.utils.context_compaction import ToolLoopCompactor, compact_messages_for_request
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -5824,6 +5824,7 @@ async def streaming_chat_response_handler(response, ctx):
                 )
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
+                tool_loop_compactor = ToolLoopCompactor(request, user, metadata, form_data['messages'])
                 user_message = get_last_user_message(form_data['messages'])
 
                 # Check if citations are enabled for this model
@@ -6268,6 +6269,13 @@ async def streaming_chat_response_handler(response, ctx):
                                         ],
                                     }
                                 )
+
+                            try:
+                                new_form_data['messages'] = await tool_loop_compactor.apply(
+                                    new_form_data['messages'], usage, model_id
+                                )
+                            except Exception:
+                                log.exception('Tool loop compaction failed; continuing with full tool history')
 
                         new_form_data = await convert_url_images_to_base64(new_form_data, user=user)
 
