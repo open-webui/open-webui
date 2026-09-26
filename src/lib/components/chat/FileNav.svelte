@@ -355,6 +355,11 @@
 	let selectedTerminal: { url: string; key: string } | null = null;
 	let terminalChatContextPending = false;
 	let terminalChatContextHidden = false;
+	let scopedChatId: string | null = null;
+	$: portBaseUrl =
+		selectedTerminal && scopedChatId
+			? `${selectedTerminal.url}/chats/${encodeURIComponent(scopedChatId)}`
+			: (selectedTerminal?.url ?? '');
 
 	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
@@ -364,6 +369,7 @@
 			: ($terminalServers?.[0] ?? null);
 		const chatConfig = chatContext(systemTerminal);
 		const chatScoped = !!systemTerminal && chatConfig?.context_id === 'chat_id';
+		scopedChatId = chatScoped ? chatId : null;
 		terminalChatContextHidden =
 			!!systemTerminal && (chatConfig === false || (chatScoped && isTemporaryChatId(chatId)));
 		terminalChatContextPending = chatScoped && !terminalChatContextHidden && !isSavedChatId(chatId);
@@ -1824,7 +1830,7 @@
 				/>
 			{:else if previewPort !== null}
 				<PortPreview
-					baseUrl={selectedTerminal?.url ?? ''}
+					baseUrl={portBaseUrl}
 					port={previewPort}
 					overlay={overlay || isDraggingHandle}
 					onClose={() => {
@@ -2099,7 +2105,7 @@
 		{#if selectedTerminal && !selectedFile && previewPort === null && !isSearching}
 			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
 				<PortList
-					baseUrl={selectedTerminal.url}
+					baseUrl={portBaseUrl}
 					apiKey={selectedTerminal.key}
 					on:previewPort={(e) => {
 						selectedFile = null;
