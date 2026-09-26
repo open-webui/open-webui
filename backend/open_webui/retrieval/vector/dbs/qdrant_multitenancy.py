@@ -29,7 +29,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
 
-NO_LIMIT = 999999999
+SCROLL_PAGE_SIZE = 1000
 TENANT_ID_FIELD = 'tenant_id'
 DEFAULT_DIMENSION = 384
 
@@ -96,6 +96,21 @@ class QdrantClient(VectorDBBase):
             documents.append(payload['text'])
             metadatas.append(payload['metadata'])
         return GetResult(ids=[ids], documents=[documents], metadatas=[metadatas])
+
+    def _scroll_points(self, collection_name: str, scroll_filter: models.Filter, limit: Optional[int] = None) -> List:
+        # Paged so a strict-mode max_query_limit does not reject the read
+        points, offset = [], None
+        while True:
+            page_size = SCROLL_PAGE_SIZE if limit is None else min(SCROLL_PAGE_SIZE, limit - len(points))
+            page, offset = self.client.scroll(
+                collection_name=collection_name,
+                scroll_filter=scroll_filter,
+                limit=page_size,
+                offset=offset,
+            )
+            points.extend(page)
+            if offset is None or len(points) == limit:
+                return points
 
     def _get_collection_and_tenant_id(self, collection_name: str) -> Tuple[str, str]:
         """
@@ -287,17 +302,11 @@ class QdrantClient(VectorDBBase):
         if not self.client.collection_exists(collection_name=mt_collection):
             log.debug("Collection %s doesn't exist, query returns None", mt_collection)
             return None
-        if limit is None:
-            limit = NO_LIMIT
         tenant_filter = _tenant_filter(tenant_id)
         field_conditions = [_metadata_filter(k, '$eq', v) for k, v in filter.items()]
         combined_filter = models.Filter(must=[tenant_filter, *field_conditions])
-        points = self.client.scroll(
-            collection_name=mt_collection,
-            scroll_filter=combined_filter,
-            limit=limit,
-        )
-        return self._result_to_get_result(points[0])
+        points = self._scroll_points(mt_collection, combined_filter, limit)
+        return self._result_to_get_result(points)
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         """
@@ -310,12 +319,8 @@ class QdrantClient(VectorDBBase):
             log.debug("Collection %s doesn't exist, get returns None", mt_collection)
             return None
         tenant_filter = _tenant_filter(tenant_id)
-        points = self.client.scroll(
-            collection_name=mt_collection,
-            scroll_filter=models.Filter(must=[tenant_filter]),
-            limit=NO_LIMIT,
-        )
-        return self._result_to_get_result(points[0])
+        points = self._scroll_points(mt_collection, models.Filter(must=[tenant_filter]))
+        return self._result_to_get_result(points)
 
     def upsert(self, collection_name: str, items: List[VectorItem]):
         """
