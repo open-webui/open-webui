@@ -70,6 +70,7 @@ async def send_get_request(
     url: str,
     key: str | None = None,
     user: UserModel | None = None,
+    api_config: dict | None = None,
 ):
     """Issue a GET request to an Ollama backend and return JSON, or *None* on failure."""
     try:
@@ -81,6 +82,10 @@ async def send_get_request(
             headers['Authorization'] = f'Bearer {key}'
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
+
+        # Custom per-connection headers last so admin-set headers take precedence.
+        if api_config and api_config.get('headers'):
+            headers.update(await get_custom_headers(api_config['headers'], user))
 
         async with session.get(
             url,
@@ -248,6 +253,7 @@ async def get_status() -> dict:
 class ConnectionVerificationForm(BaseModel):
     url: str
     key: str | None = None
+    config: dict | None = None
 
 
 @router.post('/verify')
@@ -263,6 +269,9 @@ async def verify_connection(
             headers['Authorization'] = f'Bearer {form_data.key}'
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
+
+        if form_data.config and form_data.config.get('headers'):
+            headers.update(await get_custom_headers(form_data.config['headers'], user))
 
         async with session.get(
             f'{form_data.url}/api/version',
@@ -405,7 +414,7 @@ async def get_all_models(request: Request, user: UserModel | None = None):
         if not api_config:
             tasks.append(send_get_request(f'{url}/api/tags', user=user))
         elif api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/tags', api_config.get('key'), user=user))
+            tasks.append(send_get_request(f'{url}/api/tags', api_config.get('key'), user=user, api_config=api_config))
         else:
             tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
@@ -526,7 +535,7 @@ async def get_ollama_loaded_models(
         if not api_config:
             tasks.append(send_get_request(f'{url}/api/ps', user=user))
         elif api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/ps', api_config.get('key'), user=user))
+            tasks.append(send_get_request(f'{url}/api/ps', api_config.get('key'), user=user, api_config=api_config))
         else:
             tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
@@ -570,7 +579,7 @@ async def get_ollama_versions(
             (await Config.get('ollama.api_configs', {})).get(url, {}),
         )
         if api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/version', api_config.get('key')))
+            tasks.append(send_get_request(f'{url}/api/version', api_config.get('key'), api_config=api_config))
 
     raw = await asyncio.gather(*tasks)
     valid = [r for r in raw if r is not None]
