@@ -109,6 +109,8 @@
 				selectedContentIdx = 0;
 			} else if (newContents.length > contents.length) {
 				selectedContentIdx = newContents.length - 1;
+			} else if (selectedContentIdx > newContents.length - 1) {
+				selectedContentIdx = newContents.length - 1;
 			}
 
 			contents = newContents;
