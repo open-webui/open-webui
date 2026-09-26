@@ -2,7 +2,14 @@
 	import { getContext, onMount, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 
-	import { config, user, tools as _tools, mobile, knowledge } from '$lib/stores';
+	import {
+		config,
+		user,
+		tools as _tools,
+		mobile,
+		knowledge,
+		temporaryChatEnabled
+	} from '$lib/stores';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import { createPicker } from '$lib/utils/google-drive-picker';
@@ -71,7 +78,8 @@
 
 	let webUploadEnabled = true;
 	$: webUploadEnabled = $user?.role === 'admin' || ($user?.permissions?.chat?.web_upload ?? true);
-	$: toolPermissionsEnabled = $config?.features?.enable_tool_permissions ?? false;
+	$: toolPermissionsEnabled =
+		($config?.features?.enable_tool_permissions ?? false) && !$temporaryChatEnabled;
 
 	$: if (!fileUploadEnabled && files.length > 0) {
 		files = [];
