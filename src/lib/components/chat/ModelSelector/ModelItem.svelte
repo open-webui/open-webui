@@ -33,6 +33,7 @@
 	export let selectionOnly = false;
 
 	export let onClick: () => void = () => {};
+	export let onEdit: () => void = () => {};
 
 	$: localizedDescription = resolveLocalizedModelDescription(item.model, $i18n.language);
 
@@ -304,6 +305,7 @@
 				model={item.model}
 				{pinModelHandler}
 				{deleteModelHandler}
+				{onEdit}
 				copyLinkHandler={() => {
 					copyLinkHandler(item.model);
 				}}

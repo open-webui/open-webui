@@ -810,6 +810,7 @@
 	let deleteModelTarget: any = null;
 
 	const deleteModelHandler = async (model: any) => {
+		show = false;
 		deleteModelTarget = model;
 		showDeleteConfirm = true;
 	};
@@ -1107,6 +1108,9 @@
 										{selectedValues}
 										onClick={() => {
 											selectItem(item, index);
+										}}
+										onEdit={() => {
+											show = false;
 										}}
 									/>
 								{/each}
