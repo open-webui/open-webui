@@ -14,6 +14,9 @@
 	/** Close when clicking outside */
 	export let closeOnOutsideClick = true;
 
+	/** Close action menus after selection. Submenu triggers prevent the default click. */
+	export let closeOnSelect = false;
+
 	/** Called when open/close state changes */
 	export let onOpenChange: (state: boolean) => void = () => {};
 
@@ -350,7 +353,10 @@
 		style:max-height={resolvedMaxHeight}
 		style:overflow-y="auto"
 		transition:flyAndScale
-		on:click={(e) => e.stopPropagation()}
+		on:click={(e) => {
+			e.stopPropagation();
+			if (closeOnSelect && !e.defaultPrevented) closeDropdown();
+		}}
 		on:pointerdown={(e) => e.stopPropagation()}
 	>
 		<slot name="content" />
