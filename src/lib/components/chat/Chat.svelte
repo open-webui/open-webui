@@ -429,6 +429,7 @@
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
 
+	// Chat parameters own the approval mode; chats without an override use the user default.
 	$: toolApprovalMode =
 		(params?.tool_approval_mode ?? $settings?.params?.tool_approval_mode) === 'ask'
 			? 'ask'
@@ -769,9 +770,8 @@
 			webSearchEnabled = input.webSearchEnabled ?? false;
 			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
 			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
-			if (input.toolApprovalMode) {
-				await handleToolApprovalModeChange(input.toolApprovalMode);
-			}
+			// Ignore approval modes in older drafts. Restoring input must not overwrite chat
+			// parameters or invoke the change handler, which can save settings and approve tools.
 			return true;
 		} catch (e) {
 			return false;
@@ -4101,8 +4101,7 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled,
-		toolApprovalMode
+		codeInterpreterEnabled
 	});
 
 	const saveDraft = async (draft: any, chatId: string | null = null, debounce = true) => {
