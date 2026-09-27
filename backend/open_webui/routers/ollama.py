@@ -22,8 +22,6 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     AIOHTTP_FILE_STREAM_CHUNK_SIZE,
     BYPASS_MODEL_ACCESS_CONTROL,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
     REDIS_KEY_PREFIX,
 )
@@ -36,7 +34,7 @@ from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import check_model_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.headers import get_headers_and_cookies
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import calculate_sha256
 from open_webui.utils.model_ids import strip_provider_model_prefix
@@ -67,24 +65,21 @@ def _clean_proxy_headers(raw_headers) -> dict:
 
 
 async def send_get_request(
-    url: str,
-    key: str | None = None,
-    user: UserModel | None = None,
+    request: Request = None,
+    url=None,
+    key=None,
+    user: UserModel = None,
+    config=None,
 ):
     """Issue a GET request to an Ollama backend and return JSON, or *None* on failure."""
     try:
         session = await get_session()
-        headers: dict = {
-            'Content-Type': 'application/json',
-        }
-        if key:
-            headers['Authorization'] = f'Bearer {key}'
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
+        headers, cookies = await get_headers_and_cookies(request, url, key, config, user=user)
 
         async with session.get(
             url,
             headers=headers,
+            cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
             timeout=_MODEL_LIST_TIMEOUT,
         ) as r:
@@ -114,25 +109,14 @@ async def send_request(
     try:
         session = await get_session()
 
-        headers = {
-            'Content-Type': 'application/json',
-            **({'Authorization': f'Bearer {key}'} if key else {}),
-        }
-
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user, request=request)
-            if metadata and metadata.get('chat_id'):
-                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
-
-        # Custom per-connection headers last so admin-set headers take precedence.
-        if api_config and api_config.get('headers'):
-            headers.update(await get_custom_headers(api_config['headers'], user, metadata, request=request))
+        headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
 
         r = await session.request(
             method,
             url,
             data=payload,
             headers=headers,
+            cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
             timeout=get_client_timeout(stream=stream),
         )
@@ -249,24 +233,26 @@ class ConnectionVerificationForm(BaseModel):
     url: str
     key: str | None = None
 
+    config: dict | None = None
+
 
 @router.post('/verify')
 async def verify_connection(
+    request: Request,
     form_data: ConnectionVerificationForm,
     user=Depends(get_admin_user),
 ):
     """Verify that an Ollama backend at *form_data.url* is reachable."""
     try:
         session = await get_session()
-        headers: dict = {}
-        if form_data.key:
-            headers['Authorization'] = f'Bearer {form_data.key}'
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
+        headers, cookies = await get_headers_and_cookies(
+            request, form_data.url, form_data.key, form_data.config, user=user
+        )
 
         async with session.get(
             f'{form_data.url}/api/version',
             headers=headers,
+            cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
             timeout=_MODEL_LIST_TIMEOUT,
         ) as r:
@@ -403,9 +389,11 @@ async def get_all_models(request: Request, user: UserModel | None = None):
     for idx, url in enumerate(base_urls):
         api_config = resolve_api_config(api_configs, idx, url)
         if not api_config:
-            tasks.append(send_get_request(f'{url}/api/tags', user=user))
+            tasks.append(send_get_request(request, f'{url}/api/tags', user=user))
         elif api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/tags', api_config.get('key'), user=user))
+            tasks.append(
+                send_get_request(request, f'{url}/api/tags', api_config.get('key'), user=user, config=api_config)
+            )
         else:
             tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
@@ -524,9 +512,11 @@ async def get_ollama_loaded_models(
             continue
         api_config = resolve_api_config(api_configs, idx, url)
         if not api_config:
-            tasks.append(send_get_request(f'{url}/api/ps', user=user))
+            tasks.append(send_get_request(request, f'{url}/api/ps', user=user))
         elif api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/ps', api_config.get('key'), user=user))
+            tasks.append(
+                send_get_request(request, f'{url}/api/ps', api_config.get('key'), user=user, config=api_config)
+            )
         else:
             tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 
@@ -570,7 +560,9 @@ async def get_ollama_versions(
             (await Config.get('ollama.api_configs', {})).get(url, {}),
         )
         if api_config.get('enable', True):
-            tasks.append(send_get_request(f'{url}/api/version', api_config.get('key')))
+            tasks.append(
+                send_get_request(request, f'{url}/api/version', api_config.get('key'), user=user, config=api_config)
+            )
 
     raw = await asyncio.gather(*tasks)
     valid = [r for r in raw if r is not None]
