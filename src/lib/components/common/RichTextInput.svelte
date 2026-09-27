@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
-	import equal from 'fast-deep-equal';
 	import { showCallOverlay, skills, terminalSkills } from '$lib/stores';
 
 	marked.use({
@@ -1380,7 +1379,7 @@
 		}
 
 		if (json) {
-			if (!equal(value, jsonValue)) {
+			if (JSON.stringify(value) !== JSON.stringify(jsonValue)) {
 				editor.commands.setContent(value);
 				selectTemplate();
 			}
