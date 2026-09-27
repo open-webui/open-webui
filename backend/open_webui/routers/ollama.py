@@ -1581,6 +1581,8 @@ async def download_file_stream(
     file_url: str,
     file_path: str,
     file_name: str,
+    ollama_headers: dict,
+    ollama_cookies: dict,
     chunk_size: int = AIOHTTP_FILE_STREAM_CHUNK_SIZE,
 ):
     """Stream a model file download from *file_url*, then push the blob to Ollama."""
@@ -1619,7 +1621,12 @@ async def download_file_stream(
             async with session.post(
                 blob_url,
                 data=blob_chunks(),
-                headers={'Content-Length': str(blob_size)},
+                headers={
+                    **ollama_headers,
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Length': str(blob_size),
+                },
+                cookies=ollama_cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 timeout=aiohttp.ClientTimeout(total=30),
             ) as blob_resp:
@@ -1646,15 +1653,17 @@ async def download_model(
             detail='Invalid file_url. Only URLs from allowed hosts are permitted.',
         )
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx if url_idx is not None else 0]
+    url, api_config, key = await get_ollama_connection(url_idx if url_idx is not None else 0)
     file_name = parse_huggingface_url(form_data.url)
 
     if not file_name:
         return None
 
+    headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
+
     file_path = os.path.join(UPLOAD_DIR, file_name)
     return StreamingResponse(
-        download_file_stream(url, form_data.url, file_path, file_name),
+        download_file_stream(url, form_data.url, file_path, file_name, headers, cookies),
     )
 
 
@@ -1667,7 +1676,8 @@ async def upload_model(
     user=Depends(get_admin_user),
 ):
     """Upload a local model file, push it as a blob, and create the model in Ollama."""
-    ollama_url = (await Config.get('ollama.base_urls', []))[url_idx if url_idx is not None else 0]
+    ollama_url, api_config, key = await get_ollama_connection(url_idx if url_idx is not None else 0)
+    headers, cookies = await get_headers_and_cookies(request, ollama_url, key, api_config, user=user)
 
     filename = os.path.basename(file.filename)
     file_path = os.path.join(UPLOAD_DIR, filename)
@@ -1709,7 +1719,12 @@ async def upload_model(
             async with session.post(
                 blob_url,
                 data=blob_chunks(),
-                headers={'Content-Length': str(total_size)},
+                headers={
+                    **headers,
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Length': str(total_size),
+                },
+                cookies=cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 timeout=get_client_timeout(),
             ) as resp:
@@ -1731,7 +1746,8 @@ async def upload_model(
 
             async with session.post(
                 f'{ollama_url}/api/create',
-                headers={'Content-Type': 'application/json'},
+                headers=headers,
+                cookies=cookies,
                 data=JSONCodec.dumps(create_payload),
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 timeout=get_client_timeout(),
