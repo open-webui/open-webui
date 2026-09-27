@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from contextlib import AsyncExitStack
 from typing import Optional
@@ -125,8 +126,23 @@ class MCPClient:
 
         if result.isError:
             raise Exception(result_content)
-        else:
-            return result_content
+
+        # MCP servers SHOULD put the machine-readable payload in
+        # structuredContent while `content` carries a human-readable summary
+        # (MCP spec). Preserve the structured payload by appending it as a
+        # text block so the model receives the actual data, not just the
+        # summary. Both the camelCase and snake_case dump keys are accepted
+        # across mcp SDK versions.
+        structured_content = result_dict.get('structuredContent')
+        if structured_content is None:
+            structured_content = result_dict.get('structured_content')
+        if structured_content is not None and isinstance(result_content, list):
+            result_content = [
+                *result_content,
+                {'type': 'text', 'text': json.dumps(structured_content, ensure_ascii=False)},
+            ]
+
+        return result_content
 
     async def list_resources(self, cursor: Optional[str] = None) -> Optional[dict]:
         if not self.session:
