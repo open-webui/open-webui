@@ -237,6 +237,7 @@ from open_webui.utils.chat_variables import (
     normalize_chat_variables,
 )
 from open_webui.utils.embeddings import generate_embeddings
+from open_webui.utils.headers import get_headers_and_cookies
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.json_response import apply_orjson_http_json
 from open_webui.utils.logger import start_logger
@@ -994,14 +995,12 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
             try:
                 timeout = aiohttp.ClientTimeout(total=30)
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-                    headers = {
-                        'Content-Type': 'application/json',
-                        **({'Authorization': f'Bearer {key}'} if key else {}),
-                    }
+                    headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
                     async with session.post(
                         f'{url}/api/generate',
                         data=payload,
                         headers=headers,
+                        cookies=cookies,
                     ) as r:
                         if not r.ok:
                             errors.append({'url_idx': idx, 'error': await r.text()})
@@ -1035,14 +1034,12 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
             try:
                 timeout = aiohttp.ClientTimeout(total=30)
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-                    headers = {
-                        'Content-Type': 'application/json',
-                        **({'Authorization': f'Bearer {key}'} if key else {}),
-                    }
+                    headers, cookies = await get_headers_and_cookies(request, base_url, key, api_config, user=user)
                     async with session.post(
                         f'{root_url}/models/unload',
                         json={'model': actual_model},
                         headers=headers,
+                        cookies=cookies,
                     ) as r:
                         if not r.ok:
                             detail = await r.text()
