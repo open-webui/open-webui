@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import { safeLinkUrl } from '$lib/utils';
 	import CodeBlock from './CodeBlock.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -97,7 +98,7 @@
 						<ul class="mt-1 list-disc pl-4 text-xs">
 							{#each codeExecution?.result?.files as file}
 								<li>
-									<a href={file.url} target="_blank">{file.name}</a>
+									<a href={safeLinkUrl(file.url)} target="_blank">{file.name}</a>
 								</li>
 							{/each}
 						</ul>
