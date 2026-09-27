@@ -418,6 +418,7 @@
 	};
 
 	let taskIds = null;
+	let pendingTitleEvents: Record<string, any> = {};
 
 	// Chat Input
 	let prompt = '';
@@ -891,6 +892,7 @@
 		tags = [];
 		taskIds = null;
 		chatTasks = [];
+		pendingTitleEvents = {};
 		serverContextUsage = null;
 		history = {
 			messages: {},
@@ -1452,6 +1454,10 @@
 				history.messages[event.message_id] = message;
 			}
 		} else {
+			// A new chat's title can arrive before its id is known.
+			if (event?.data?.type === 'chat:title') {
+				pendingTitleEvents[event.chat_id] = event;
+			}
 			// Non-active chat completion: queue stays in the global store.
 			// navigateHandler will process it when the user returns to that chat.
 		}
@@ -3742,6 +3748,10 @@
 						};
 					});
 					await chatId.set(res.chat_id);
+					if (pendingTitleEvents[res.chat_id]) {
+						await chatEventHandler(pendingTitleEvents[res.chat_id]);
+					}
+					pendingTitleEvents = {};
 					if (!$temporaryChatEnabled && !embedded) {
 						window.history.replaceState(window.history.state, '', `/c/${res.chat_id}`);
 						await refreshChatList(localStorage.token);
