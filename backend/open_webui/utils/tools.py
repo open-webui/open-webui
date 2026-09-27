@@ -1522,7 +1522,8 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
     tasks = []
     server_entries = []
     for idx, server in enumerate(servers):
-        if server.get('config', {}).get('enable') and server.get('type', 'openapi') == 'openapi':
+        server_config = server.get('config') or {}
+        if server_config.get('enable', True) and server.get('type', 'openapi') == 'openapi':
             info = server.get('info', {})
 
             auth_type = server.get('auth_type', 'bearer')
@@ -1530,8 +1531,8 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
 
             if auth_type == 'bearer':
                 token = server.get('key', '')
-            elif auth_type == 'none':
-                # No authentication
+            elif auth_type in ('none', 'user_provided'):
+                # No authentication needed for fetching OpenAPI spec
                 pass
 
             id = info.get('id')
@@ -1611,6 +1612,8 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
                 'openapi': openapi_data,
                 'info': response.get('info'),
                 'specs': response.get('specs'),
+                'system_prompt': server.get('system_prompt') or (info or {}).get('system_prompt') or (server.get('config') or {}).get('system_prompt'),
+                'always_inject': server.get('always_inject') or (info or {}).get('always_inject') or (server.get('config') or {}).get('always_inject', False),
             }
         )
 

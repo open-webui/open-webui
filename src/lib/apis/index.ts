@@ -161,17 +161,73 @@ export const getModels = async (
 			}))
 		);
 
-		// Remove duplicates
+		// Remove duplicates while preserving admin-configured model name, logo and metadata
 		const modelsMap = {};
 		for (const model of models) {
-			const existing = modelsMap[model.id];
-			modelsMap[model.id] = existing
-				? {
-						...existing,
-						...model,
-						info: existing.info ?? model.info
+			// Find existing key by exact id, or by matching with/without '~' prefix, or base_model_id
+			let existingKey = model.id in modelsMap ? model.id : null;
+			if (!existingKey) {
+				existingKey = Object.keys(modelsMap).find((k) => {
+					const existingItem = modelsMap[k];
+					return (
+						k === model.id ||
+						k === `~${model.id}` ||
+						model.id === `~${k}` ||
+						existingItem.base_model_id === model.id ||
+						model.base_model_id === k ||
+						(existingItem.info?.base_model_id && existingItem.info.base_model_id === model.id) ||
+						(model.info?.base_model_id && model.info.base_model_id === k)
+					);
+				}) ?? null;
+			}
+
+			const existing = existingKey ? modelsMap[existingKey] : null;
+
+			if (existing) {
+				const isDirect = Boolean(model.direct || existing.direct);
+				const directModel = model.direct ? model : existing.direct ? existing : null;
+				// Server model has the admin/user configured name and info from database
+				const serverModel = !model.direct ? model : !existing.direct ? existing : existing;
+
+				// Prefer configured custom name:
+				// If serverModel has a custom name (not matching the raw model ID), use it!
+				let resolvedName = model.name ?? model.id;
+				if (serverModel?.name && serverModel.name !== serverModel.id) {
+					resolvedName = serverModel.name;
+				} else if (existing.name && existing.name !== existing.id) {
+					resolvedName = existing.name;
+				} else if (model.name && model.name !== model.id) {
+					resolvedName = model.name;
+				}
+
+				const targetKey = existingKey || model.id;
+				modelsMap[targetKey] = {
+					...model,
+					...existing,
+					...(serverModel ? serverModel : {}),
+					...(isDirect ? { direct: true } : {}),
+					...(directModel?.openai ? { openai: directModel.openai } : {}),
+					...(directModel?.urlIdx !== undefined ? { urlIdx: directModel.urlIdx } : {}),
+					name: resolvedName,
+					info: {
+						...(model.info ?? {}),
+						...(existing.info ?? {}),
+						...(serverModel?.info ?? {}),
+						meta: {
+							...(model.info?.meta ?? {}),
+							...(existing.info?.meta ?? {}),
+							...(serverModel?.info?.meta ?? {})
+						}
+					},
+					params: {
+						...(model.params ?? {}),
+						...(existing.params ?? {}),
+						...(serverModel?.params ?? {})
 					}
-				: model;
+				};
+			} else {
+				modelsMap[model.id] = model;
+			}
 		}
 
 		models = Object.values(modelsMap);

@@ -58,6 +58,16 @@ CODE_EXECUTION_CONFIG_KEYS = {
     'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN': 'code_interpreter.jupyter.auth_token',
     'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD': 'code_interpreter.jupyter.auth_password',
     'CODE_INTERPRETER_JUPYTER_TIMEOUT': 'code_interpreter.jupyter.timeout',
+    'CODE_INTERPRETER_SANDBOX_URL': 'code_interpreter.sandbox.url',
+    'CODE_INTERPRETER_SANDBOX_KEY': 'code_interpreter.sandbox.key',
+    'CODE_INTERPRETER_DOCKER_URL': 'code_interpreter.docker.url',
+    'CODE_INTERPRETER_DOCKER_IMAGE': 'code_interpreter.docker.image',
+    'CODE_INTERPRETER_E2B_API_KEY': 'code_interpreter.e2b.api_key',
+    'CODE_EXECUTION_SANDBOX_URL': 'code_interpreter.sandbox.url',
+    'CODE_EXECUTION_SANDBOX_KEY': 'code_interpreter.sandbox.key',
+    'CODE_EXECUTION_DOCKER_URL': 'code_interpreter.docker.url',
+    'CODE_EXECUTION_DOCKER_IMAGE': 'code_interpreter.docker.image',
+    'CODE_EXECUTION_E2B_API_KEY': 'code_interpreter.e2b.api_key',
 }
 MODELS_CONFIG_KEYS = {
     'DEFAULT_MODELS': 'ui.default_models',
@@ -222,6 +232,8 @@ class ToolServerConnection(BaseModel):
     forward_cookies: bool = False
     headers: dict | str | None = None
     key: str | None
+    system_prompt: str | None = None
+    always_inject: bool = False
     config: dict | None
     info: dict | None = None
 

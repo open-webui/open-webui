@@ -43,8 +43,13 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
+	import UserToolAuthModal from './UserToolAuthModal.svelte';
 
 	const i18n = getContext('i18n') as any;
+
+	let showUserToolAuthModal = false;
+	let selectedAuthTool: any = null;
 
 	type IntegrationItem = {
 		id: string;
@@ -245,6 +250,22 @@
 		const tool = tools?.[toolId];
 		if (!tool) return;
 
+		const isUserProvided =
+			tool?.auth_type === 'user_provided' || tool?.meta?.auth_type === 'user_provided';
+		const hasUserKey = Boolean(
+			$settings?.tool_server_keys?.[toolId] ||
+				$settings?.tool_server_keys?.[tool?.url] ||
+				$settings?.ui?.tool_server_keys?.[toolId] ||
+				$settings?.ui?.tool_server_keys?.[tool?.url]
+		);
+
+		if (isUserProvided && !hasUserKey) {
+			e.preventDefault();
+			selectedAuthTool = tool;
+			showUserToolAuthModal = true;
+			return;
+		}
+
 		if (!(tool.authenticated ?? true)) {
 			e.preventDefault();
 
@@ -298,6 +319,9 @@
 			toolQuery = '';
 			skillQuery = '';
 			onClose();
+		} else {
+			_tools.set(null);
+			init();
 		}
 	}}
 >
@@ -547,16 +571,26 @@
 						{:else}
 							<div class="flex flex-col gap-0.5">
 								{#each toolIds as toolId}
+									{@const toolItem = tools?.[toolId]}
+									{@const isUserProvided =
+										toolItem?.auth_type === 'user_provided' || toolItem?.meta?.auth_type === 'user_provided'}
+									{@const hasUserKey = Boolean(
+										$settings?.tool_server_keys?.[toolId] ||
+											$settings?.tool_server_keys?.[toolItem?.url] ||
+											$settings?.ui?.tool_server_keys?.[toolId] ||
+											$settings?.ui?.tool_server_keys?.[toolItem?.url]
+									)}
+									{@const toolIcon = toolItem?.icon || toolItem?.meta?.icon}
 									<button
 										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-										aria-pressed={(tools?.[toolId]?.authenticated ?? true)
+										aria-pressed={(toolItem?.authenticated ?? true)
 											? selectedToolIds.includes(toolId)
 											: undefined}
 										on:click={async (e) => {
 											await toggleTool(toolId, e);
 										}}
 									>
-										{#if !(tools?.[toolId]?.authenticated ?? true)}
+										{#if !(toolItem?.authenticated ?? true) || (isUserProvided && !hasUserKey)}
 											<!-- make it slighly darker and not clickable -->
 											<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
 										{/if}
@@ -564,32 +598,59 @@
 											<div class="flex flex-1 gap-2 items-center">
 												<Tooltip
 													content={resolveLocalizedResource(
-														tools?.[toolId],
+														toolItem,
 														$i18n.language,
 														'name'
 													)}
 													placement="top"
 												>
-													<div class="shrink-0">
-														<Wrench />
+													<div class="shrink-0 flex items-center justify-center">
+														{#if toolIcon}
+															<img
+																src={toolIcon}
+																class="size-3.5 rounded object-cover"
+																alt={resolveLocalizedResource(toolItem, $i18n.language, 'name')}
+															/>
+														{:else}
+															<Wrench />
+														{/if}
 													</div>
 												</Tooltip>
 												<Tooltip
 													content={resolveLocalizedResource(
-														tools?.[toolId],
+														toolItem,
 														$i18n.language,
 														'description'
 													)}
 													placement="top-start"
 												>
 													<div class=" truncate">
-														{resolveLocalizedResource(tools?.[toolId], $i18n.language, 'name')}
+														{resolveLocalizedResource(toolItem, $i18n.language, 'name')}
 													</div>
 												</Tooltip>
 											</div>
 										</div>
 
-										{#if tools?.[toolId]?.authenticated === true && toolId.startsWith('server:mcp:')}
+										{#if isUserProvided}
+											<div class="shrink-0 z-20">
+												<Tooltip content={hasUserKey ? $i18n.t('Edit API Key') : $i18n.t('Enter API Key')}>
+													<button
+														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full p-0.5"
+														type="button"
+														on:click={(e) => {
+															e.stopPropagation();
+															e.preventDefault();
+															selectedAuthTool = toolItem;
+															showUserToolAuthModal = true;
+														}}
+													>
+														<Cog6 className="size-3.5" />
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
+
+										{#if toolItem?.authenticated === true && toolId.startsWith('server:mcp:')}
 											<div class="shrink-0">
 												<Tooltip content={$i18n.t('Disconnect OAuth')}>
 													<button
@@ -622,7 +683,7 @@
 											</div>
 										{/if}
 
-										{#if tools?.[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
+										{#if toolItem?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
 											<div class=" shrink-0">
 												<Tooltip content={$i18n.t('Valves')}>
 													<button
@@ -644,7 +705,7 @@
 										{/if}
 
 										<div class=" shrink-0" inert>
-											<Switch state={selectedToolIds.includes(toolId)} />
+											<Switch state={selectedToolIds.includes(toolId) && (!isUserProvided || hasUserKey)} />
 										</div>
 									</button>
 								{/each}
@@ -733,3 +794,5 @@
 		</DropdownMenu>
 	</div>
 </Dropdown>
+
+<UserToolAuthModal bind:show={showUserToolAuthModal} tool={selectedAuthTool} />

@@ -46,7 +46,8 @@
 		showFileNavPath,
 		showFileNavDir,
 		chatRequestQueues,
-		desktopEvent
+		desktopEvent,
+		thinkingLevel
 	} from '$lib/stores';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 
@@ -3578,6 +3579,31 @@
 				params: {
 					...$settings?.params,
 					...params,
+					...($thinkingLevel !== 'off'
+						? {
+								reasoning_effort:
+									$thinkingLevel === 'none'
+										? 'none'
+										: $thinkingLevel === 'max'
+											? 'high'
+											: $thinkingLevel,
+								...($thinkingLevel === 'none'
+									? {}
+									: {
+											thinking: {
+												type: 'enabled',
+												budget_tokens:
+													$thinkingLevel === 'low'
+														? 2048
+														: $thinkingLevel === 'medium'
+															? 8192
+															: $thinkingLevel === 'high'
+																? 24576
+																: 65536
+											}
+										})
+							}
+						: {}),
 					stop: getStopTokens()
 				},
 

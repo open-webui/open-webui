@@ -1558,6 +1558,9 @@ async def chat_completion_tools_handler(
 
 
 async def chat_web_search_handler(request: Request, form_data: dict, extra_params: dict, user):
+    messages = form_data.get('messages', [])
+    user_message = get_last_user_message(messages)
+
     event_emitter = extra_params['__event_emitter__']
     await event_emitter(
         {
@@ -1569,9 +1572,6 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
             },
         }
     )
-
-    messages = form_data['messages']
-    user_message = get_last_user_message(messages)
 
     queries = []
     try:
@@ -1850,6 +1850,10 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
     user_message = get_last_user_message(message_list)
 
+    IMAGE_KEYWORDS = {
+        'görsel', 'resim', 'çiz', 'üret', 'çizim', 'foto', 'fotoğraf', 'image', 'picture', 'draw', 'generate', 'photo', 'illustration', 'paint', 'artwork'
+    }
+
     prompt = user_message
     message_images = get_images_from_messages(message_list)
 
@@ -1864,6 +1868,11 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
     # Called directly, bypassing the /images routes that enforce these switches.
     editing = len(input_images) > 0 and await Config.get('images.edit.enable')
+
+    # If not editing and user didn't ask for an image, do not trigger image generation
+    if not editing and not any(kw in str(user_message).lower() for kw in IMAGE_KEYWORDS):
+        return form_data
+
     if not editing and not await Config.get('image_generation.enable'):
         return form_data
 
@@ -2955,6 +2964,44 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         log.debug('direct_tool_servers=%r', direct_tool_servers)
 
         tools_dict = {}
+
+        # Inject Built-in Skills (system prompts) from Tool Servers configured by Admin
+        try:
+            tool_conns = await Config.get('tool_server.connections', []) or []
+            existing_sys_content = ' '.join(
+                [m.get('content', '') for m in form_data.get('messages', []) if m.get('role') == 'system']
+            )
+            for conn in tool_conns:
+                conn_config = conn.get('config') or {}
+                if not conn_config.get('enable', True):
+                    continue
+                info = conn.get('info') or {}
+                conn_id = info.get('id') or ''
+                is_global = conn.get('always_inject') or conn_config.get('always_inject') or info.get('always_inject')
+
+                is_selected = False
+                if tool_ids:
+                    for tid in tool_ids:
+                        if conn_id and (tid == f'server:mcp:{conn_id}' or tid == f'server:{conn_id}' or tid == conn_id):
+                            is_selected = True
+                            break
+                if direct_tool_servers:
+                    for dts in direct_tool_servers:
+                        if conn_id and (dts.get('id') == conn_id or dts.get('id') == f'server:{conn_id}'):
+                            is_selected = True
+                            break
+
+                conn_prompt = conn.get('system_prompt') or info.get('system_prompt') or conn_config.get('system_prompt')
+                if conn_prompt and (is_global or is_selected):
+                    if conn_prompt not in existing_sys_content:
+                        form_data['messages'] = add_or_update_system_message(
+                            conn_prompt,
+                            form_data['messages'],
+                            append=True,
+                        )
+                        existing_sys_content += ' ' + conn_prompt
+        except Exception as e:
+            log.warning(f'Error injecting built-in tool server skills: {e}')
 
         mcp_clients = {}
         mcp_tools_dict = {}
@@ -6418,6 +6465,26 @@ async def streaming_chat_response_handler(response, ctx):
                                             else None
                                         ),
                                         await Config.get('code_interpreter.jupyter.timeout'),
+                                    )
+                                elif ci_engine == 'sandbox':
+                                    from open_webui.utils.code_interpreter import execute_code_sandbox
+                                    ci_output = await execute_code_sandbox(
+                                        await Config.get('code_interpreter.sandbox.url', ''),
+                                        code,
+                                        await Config.get('code_interpreter.sandbox.key', ''),
+                                    )
+                                elif ci_engine == 'docker':
+                                    from open_webui.utils.code_interpreter import execute_code_docker
+                                    ci_output = await execute_code_docker(
+                                        await Config.get('code_interpreter.docker.url', ''),
+                                        code,
+                                        await Config.get('code_interpreter.docker.image', 'python:3.11-slim'),
+                                    )
+                                elif ci_engine == 'e2b':
+                                    from open_webui.utils.code_interpreter import execute_code_e2b
+                                    ci_output = await execute_code_e2b(
+                                        await Config.get('code_interpreter.e2b.api_key', ''),
+                                        code,
                                     )
                                 else:
                                     ci_output = {'stdout': 'Code interpreter engine not configured.'}

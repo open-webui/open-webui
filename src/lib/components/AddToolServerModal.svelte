@@ -59,6 +59,8 @@
 	let id = '';
 	let name = '';
 	let description = '';
+	let icon = '';
+	let auth_instruction = '';
 
 	let oauthClientInfo = null;
 
@@ -69,6 +71,8 @@
 	let oauthResourceParameter = 'auto';
 
 	let enable = true;
+	let system_prompt = '';
+	let always_inject = false;
 	let loading = false;
 	let showAdvanced = false;
 	let showAccessControlModal = false;
@@ -377,6 +381,11 @@
 		const connection = {
 			type,
 			url,
+			icon,
+			auth_instruction: auth_type === 'user_provided' ? auth_instruction : undefined,
+
+			system_prompt: system_prompt || undefined,
+			always_inject,
 
 			spec_type,
 			spec,
@@ -389,6 +398,8 @@
 			key,
 			config: {
 				enable: enable,
+				system_prompt: system_prompt || undefined,
+				always_inject,
 				function_name_filter_list: functionNameFilterList,
 				access_grants: accessGrants
 			},
@@ -396,6 +407,10 @@
 				id: id,
 				name: name,
 				description: description,
+				icon: icon,
+				auth_instruction: auth_instruction,
+				system_prompt: system_prompt || undefined,
+				always_inject,
 				...(type === 'mcp' && oauthAuthTypes.includes(auth_type)
 					? {
 							...(oauthScope ? { oauth_scope: oauthScope } : {}),
@@ -421,6 +436,10 @@
 		// reset form
 		type = 'openapi';
 		url = '';
+		icon = '';
+		auth_instruction = '';
+		system_prompt = '';
+		always_inject = false;
 
 		spec_type = 'url';
 		spec = '';
@@ -464,6 +483,8 @@
 			id = connection.info?.id ?? '';
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
+			icon = connection.info?.icon ?? connection.icon ?? '';
+			auth_instruction = connection.info?.auth_instruction ?? connection.auth_instruction ?? '';
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 			oauthClientId = connection.info?.oauth_client_id ?? '';
 			oauthClientSecret = connection.info?.oauth_client_secret ?? '';
@@ -474,6 +495,21 @@
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessGrants = connection.config?.access_grants ?? [];
+			system_prompt =
+				connection.system_prompt ??
+				connection.info?.system_prompt ??
+				connection.config?.system_prompt ??
+				'';
+			always_inject =
+				connection.always_inject ??
+				connection.info?.always_inject ??
+				connection.config?.always_inject ??
+				false;
+		} else {
+			icon = '';
+			auth_instruction = '';
+			system_prompt = '';
+			always_inject = false;
 		}
 	};
 
@@ -632,6 +668,23 @@
 							</div>
 						</div>
 
+						<div class="flex flex-col w-full mt-1 mb-1.5">
+							<label for="icon" class={`mb-0.5 text-xs text-gray-500`}
+								>{$i18n.t('Icon')} <span class="opacity-50">({$i18n.t('URL or icon name, optional')})</span></label
+							>
+
+							<div class="flex-1">
+								<input
+									id="icon"
+									class={`w-full text-sm ${inputClass}`}
+									type="text"
+									bind:value={icon}
+									placeholder={$i18n.t('e.g. https://... or weather')}
+									autocomplete="off"
+								/>
+							</div>
+						</div>
+
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
@@ -757,6 +810,7 @@
 
 											<option value="bearer">{$i18n.t('Bearer')}</option>
 											<option value="session">{$i18n.t('Session')}</option>
+											<option value="user_provided">{$i18n.t('User Provided')}</option>
 
 											{#if !direct}
 												<option value="system_oauth">{$i18n.t('OAuth')}</option>
@@ -769,7 +823,15 @@
 									</div>
 
 									<div class="flex flex-1 items-center">
-										{#if auth_type === 'bearer'}
+										{#if auth_type === 'user_provided'}
+											<input
+												class={`w-full text-sm ${inputClass}`}
+												type="text"
+												placeholder={$i18n.t('Instruction for user (e.g. Enter your OpenWeather token)')}
+												bind:value={auth_instruction}
+												autocomplete="off"
+											/>
+										{:else if auth_type === 'bearer'}
 											<SensitiveInput
 												bind:value={key}
 												placeholder={$i18n.t('API Key')}
@@ -851,6 +913,33 @@
 									label={$i18n.t('Access Control')}
 								/>
 							{/if}
+						</div>
+
+						<div class="flex flex-col w-full mt-3 p-3 bg-gray-50/75 dark:bg-gray-850/50 rounded-xl border border-gray-100 dark:border-gray-800">
+							<div class="flex items-center justify-between mb-1.5">
+								<div class="flex flex-col">
+									<label for="server-system-prompt" class="text-xs font-semibold text-gray-700 dark:text-gray-200">
+										{$i18n.t('Built-in Skill / Gömülü Sistem Talimatı')}
+									</label>
+									<span class="text-[0.6875rem] text-gray-500 dark:text-gray-400">
+										{$i18n.t('Kullanıcılara skill olarak görünmez; modelin bu aracı nasıl kullanacağını belirler.')}
+									</span>
+								</div>
+								<div class="flex items-center gap-1.5 shrink-0 ml-2">
+									<span class="text-[0.6875rem] text-gray-500">{$i18n.t('Global (Her sohbete ekle)')}</span>
+									<Tooltip content={$i18n.t('Açıksa bu talimat tüm sohbetlerde arka planda aktif olur.')}>
+										<Switch bind:state={always_inject} />
+									</Tooltip>
+								</div>
+							</div>
+
+							<Textarea
+								id="server-system-prompt"
+								className="w-full text-xs outline-hidden"
+								bind:value={system_prompt}
+								placeholder={$i18n.t('Örn: You have access to GitHub tools. When interacting with repositories, always list branches before committing...')}
+								rows={4}
+							/>
 						</div>
 
 						{#if showAdvanced}

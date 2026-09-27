@@ -38,6 +38,10 @@ class ToolMeta(BaseModel):
     description: str | None = None
     manifest: dict | None = {}
     has_user_valves: bool = False
+    icon: str | None = None
+    auth_type: str | None = None
+    auth_instruction: str | None = None
+    model_config = ConfigDict(extra='allow')
 
 
 class ToolModel(BaseModel):

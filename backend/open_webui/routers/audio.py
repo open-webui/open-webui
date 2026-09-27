@@ -396,12 +396,19 @@ async def _write_tts_cache(
 
 async def _tts_openai(request, payload, file_path, file_body_path, user):
     """Generate speech via an OpenAI-compatible TTS endpoint."""
-    payload['model'] = await Config.get('audio.tts.model')
+    payload['model'] = payload.get('model') or await Config.get('audio.tts.model') or 'tts-1'
     if not payload.get('voice'):
-        payload['voice'] = await Config.get('audio.tts.voice')
+        payload['voice'] = await Config.get('audio.tts.voice') or 'alloy'
     payload = {**payload, **(await Config.get('audio.tts.openai.params') or {})}
     api_key = await Config.get('audio.tts.openai.api_key')
     api_base_url = await Config.get('audio.tts.openai.api_base_url')
+
+    if not api_key and user:
+        from open_webui.utils.byok import get_user_openai_credentials
+        user_url, user_key = get_user_openai_credentials(user)
+        if user_key:
+            api_key = user_key
+            api_base_url = user_url or 'https://api.openai.com/v1'
 
     headers = {
         'Content-Type': 'application/json',
@@ -601,6 +608,12 @@ _TTS_ENGINES = {
 @router.post('/speech')
 async def speech(request: Request, user=Depends(get_verified_user)):
     engine = await Config.get('audio.tts.engine')
+    if not engine and user:
+        from open_webui.utils.byok import get_user_openai_credentials
+        _, user_key = get_user_openai_credentials(user)
+        if user_key:
+            engine = 'openai'
+
     if USE_SLIM and engine in ('', 'transformers'):
         raise HTTPException(503, 'Configure an external text-to-speech engine.')
     if engine == '':
@@ -703,6 +716,13 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
         session = await get_session()
         api_key = await Config.get('audio.stt.openai.api_key')
         api_base_url = await Config.get('audio.stt.openai.api_base_url')
+        if not api_key and user:
+            from open_webui.utils.byok import get_user_openai_credentials
+            user_url, user_key = get_user_openai_credentials(user)
+            if user_key:
+                api_key = user_key
+                api_base_url = user_url or 'https://api.openai.com/v1'
+
         request_format = (await Config.get('audio.stt.openai.api_request_format') or 'multipart').lower()
 
         headers = {'Authorization': f'Bearer {api_key}'}
@@ -710,7 +730,7 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
             headers = include_user_info_headers(headers, user)
 
         for language in languages:
-            payload = {'model': await Config.get('audio.stt.model')}
+            payload = {'model': await Config.get('audio.stt.model') or 'whisper-1'}
             if language:
                 payload['language'] = language
 
@@ -971,16 +991,23 @@ async def transcription_handler(request, file_path, metadata, user=None):
         None,  # Always fallback to None in case transcription fails
     ]
 
-    if await Config.get('audio.stt.engine') == '':
-        return await _transcribe_whisper(request, file_path, languages, file_dir, id)
-    elif await Config.get('audio.stt.engine') == 'openai':
-        return await _transcribe_openai(request, file_path, filename, languages, file_dir, id, user)
-    elif await Config.get('audio.stt.engine') == 'deepgram':
-        return await _transcribe_deepgram(request, file_path, languages, file_dir, id)
-    elif await Config.get('audio.stt.engine') == 'azure':
-        return await _transcribe_azure(request, file_path, filename, file_dir, id)
+    stt_engine = await Config.get('audio.stt.engine')
+    if (not stt_engine or stt_engine == 'openai') and user:
+        if not await Config.get('audio.stt.openai.api_key'):
+            from open_webui.utils.byok import get_user_openai_credentials
+            _, user_key = get_user_openai_credentials(user)
+            if user_key:
+                stt_engine = 'openai'
 
-    elif await Config.get('audio.stt.engine') == 'mistral':
+    if stt_engine == '':
+        return await _transcribe_whisper(request, file_path, languages, file_dir, id)
+    elif stt_engine == 'openai':
+        return await _transcribe_openai(request, file_path, filename, languages, file_dir, id, user)
+    elif stt_engine == 'deepgram':
+        return await _transcribe_deepgram(request, file_path, languages, file_dir, id)
+    elif stt_engine == 'azure':
+        return await _transcribe_azure(request, file_path, filename, file_dir, id)
+    elif stt_engine == 'mistral':
         return await _transcribe_mistral(request, file_path, filename, metadata, file_dir, id)
 
 

@@ -195,3 +195,183 @@ async def execute_code_jupyter(
     async with JupyterCodeExecuter(base_url, code, token, password, timeout) as executor:
         result = await executor.run()
         return result.model_dump()
+
+
+async def execute_code_sandbox(
+    base_url: str, code: str, token: str = '', timeout: int = 60
+) -> dict:
+    """Execute code in a custom REST code execution sandbox."""
+    if not base_url:
+        return {'stderr': 'Sandbox URL is not configured.', 'stdout': '', 'result': ''}
+
+    headers = {'Content-Type': 'application/json'}
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+
+    endpoint = base_url.rstrip('/')
+    if not endpoint.endswith('/execute'):
+        endpoint = f'{endpoint}/execute'
+
+    try:
+        async with aiohttp.ClientSession(trust_env=True) as session:
+            async with session.post(
+                endpoint,
+                json={'code': code, 'language': 'python'},
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=timeout),
+            ) as response:
+                if response.status >= 400:
+                    err_text = await response.text()
+                    return {'stderr': f'Sandbox error ({response.status}): {err_text}', 'stdout': '', 'result': ''}
+                data = await response.json()
+                stdout = data.get('stdout', data.get('output', ''))
+                stderr = data.get('stderr', data.get('error', ''))
+                result = data.get('result', '')
+                return {
+                    'stdout': str(stdout).strip() if stdout else '',
+                    'stderr': str(stderr).strip() if stderr else '',
+                    'result': str(result).strip() if result else '',
+                }
+    except Exception as err:
+        logger.exception('Sandbox code execution failed: %s', err)
+        return {'stderr': f'Sandbox execution error: {err}', 'stdout': '', 'result': ''}
+
+
+async def execute_code_docker(
+    docker_url: str = '', code: str = '', image: str = 'python:3.11-slim', timeout: int = 60
+) -> dict:
+    """Execute code in an isolated Docker container."""
+    image = image or 'python:3.11-slim'
+
+    if docker_url and docker_url.startswith(('http://', 'https://')):
+        try:
+            base = docker_url.rstrip('/')
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                create_payload = {
+                    'Image': image,
+                    'Cmd': ['python3', '-c', code],
+                    'NetworkDisabled': True,
+                    'HostConfig': {'AutoRemove': True, 'Memory': 512 * 1024 * 1024},
+                }
+                async with session.post(f'{base}/containers/create', json=create_payload) as resp:
+                    if resp.status >= 400:
+                        err = await resp.text()
+                        return {'stderr': f'Docker container create error: {err}', 'stdout': '', 'result': ''}
+                    container = await resp.json()
+                    cid = container.get('Id')
+
+                async with session.post(f'{base}/containers/{cid}/start') as resp:
+                    pass
+
+                async with session.post(f'{base}/containers/{cid}/wait', timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+                    pass
+
+                async with session.get(f'{base}/containers/{cid}/logs?stdout=1&stderr=1') as resp:
+                    logs = await resp.text()
+                    return {'stdout': logs.strip(), 'stderr': '', 'result': ''}
+        except Exception as err:
+            logger.exception('Docker REST execution error: %s', err)
+            return {'stderr': f'Docker execution error: {err}', 'stdout': '', 'result': ''}
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            'docker',
+            'run',
+            '--rm',
+            '-i',
+            '--net=none',
+            '--memory=512m',
+            image,
+            'python3',
+            '-c',
+            code,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        return {
+            'stdout': stdout.decode('utf-8', errors='replace').strip(),
+            'stderr': stderr.decode('utf-8', errors='replace').strip(),
+            'result': '',
+        }
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        return {'stderr': 'Docker execution timed out.', 'stdout': '', 'result': ''}
+    except Exception as err:
+        logger.exception('Docker subprocess execution failed: %s', err)
+        return {'stderr': f'Docker execution error: {err}', 'stdout': '', 'result': ''}
+
+
+async def execute_code_e2b(api_key: str, code: str, timeout: int = 60) -> dict:
+    """Execute code in an E2B cloud sandbox."""
+    if not api_key:
+        return {'stderr': 'E2B API Key is not configured.', 'stdout': '', 'result': ''}
+
+    try:
+        try:
+            from e2b_code_interpreter import Sandbox
+            sbx = Sandbox(api_key=api_key)
+            execution = sbx.run_code(code)
+            results = []
+            for r in execution.results:
+                if hasattr(r, 'text') and r.text:
+                    results.append(r.text)
+                elif hasattr(r, 'png') and r.png:
+                    results.append(f'data:image/png;base64,{r.png}')
+            stdout = '\n'.join(execution.logs.stdout)
+            stderr = '\n'.join(execution.logs.stderr)
+            if execution.error:
+                stderr += f'\n{execution.error.name}: {execution.error.value}'
+            sbx.kill()
+            return {
+                'stdout': stdout.strip(),
+                'stderr': stderr.strip(),
+                'result': '\n'.join(results).strip(),
+            }
+        except ImportError:
+            pass
+
+        headers = {
+            'X-API-KEY': api_key,
+            'Content-Type': 'application/json',
+        }
+        async with aiohttp.ClientSession(trust_env=True) as session:
+            async with session.post(
+                'https://api.e2b.dev/sandboxes',
+                json={'template': 'code-interpreter'},
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=timeout),
+            ) as resp:
+                if resp.status >= 400:
+                    err = await resp.text()
+                    return {'stderr': f'E2B sandbox creation error: {err}', 'stdout': '', 'result': ''}
+                sbx_data = await resp.json()
+                sbx_id = sbx_data.get('sandboxId', sbx_data.get('id'))
+
+            exec_url = f'https://api.e2b.dev/sandboxes/{sbx_id}/commands'
+            async with session.post(
+                exec_url,
+                json={'cmd': f'python3 -c "{code}"'},
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=timeout),
+            ) as resp:
+                data = await resp.json() if resp.status == 200 else {}
+                stdout = data.get('stdout', '')
+                stderr = data.get('stderr', '')
+
+            try:
+                await session.delete(f'https://api.e2b.dev/sandboxes/{sbx_id}', headers=headers)
+            except Exception:
+                pass
+
+            return {
+                'stdout': str(stdout).strip(),
+                'stderr': str(stderr).strip(),
+                'result': '',
+            }
+    except Exception as err:
+        logger.exception('E2B code execution failed: %s', err)
+        return {'stderr': f'E2B execution error: {err}', 'stdout': '', 'result': ''}

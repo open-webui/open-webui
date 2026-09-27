@@ -420,28 +420,78 @@ export const chatCompletion = async (
 
 export const generateOpenAIChatCompletion = async (
 	token: string = '',
-	body: object,
+	body: Record<string, any>,
 	url: string = `${WEBUI_BASE_URL}/api`
 ) => {
 	let error = null;
 
-	const res = await fetch(`${url}/chat/completions`, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
-		credentials: 'include',
-		body: JSON.stringify(body)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = getErrorMessage(err);
-			return null;
+	const callApi = async (reqBody: any): Promise<any> => {
+		const res = await fetch(`${url}/chat/completions`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			credentials: 'include',
+			body: JSON.stringify(reqBody)
 		});
+
+		if (!res.ok) {
+			const errData = await res.json().catch(() => ({}));
+			const errStr = JSON.stringify(errData).toLowerCase();
+			const isThinkingError =
+				errStr.includes('reasoning') ||
+				errStr.includes('thinking') ||
+				errStr.includes('extra_forbidden') ||
+				errStr.includes('unsupported parameter') ||
+				errStr.includes('unrecognized parameter') ||
+				errStr.includes('unexpected keyword argument');
+
+			if (
+				isThinkingError &&
+				(reqBody?.params?.reasoning_effort ||
+					reqBody?.params?.thinking ||
+					reqBody?.reasoning_effort ||
+					reqBody?.thinking)
+			) {
+				const fallbackBody = { ...reqBody };
+				if (fallbackBody.params) {
+					fallbackBody.params = { ...fallbackBody.params };
+					delete fallbackBody.params.reasoning_effort;
+					delete fallbackBody.params.thinking;
+				}
+				delete fallbackBody.reasoning_effort;
+				delete fallbackBody.thinking;
+
+				const promptAddition = 'Think deeply, comprehensively, and step-by-step before answering.';
+				if (fallbackBody.messages) {
+					fallbackBody.messages = [...fallbackBody.messages];
+					const sysIdx = fallbackBody.messages.findIndex((m: any) => m.role === 'system');
+					if (sysIdx !== -1) {
+						fallbackBody.messages[sysIdx] = {
+							...fallbackBody.messages[sysIdx],
+							content: fallbackBody.messages[sysIdx].content + `\n\n${promptAddition}`
+						};
+					} else {
+						fallbackBody.messages = [
+							{ role: 'system', content: promptAddition },
+							...fallbackBody.messages
+						];
+					}
+				}
+				return callApi(fallbackBody);
+			}
+
+			throw errData;
+		}
+
+		return res.json();
+	};
+
+	const res = await callApi(body).catch((err) => {
+		error = getErrorMessage(err);
+		return null;
+	});
 
 	if (error) {
 		throw error;

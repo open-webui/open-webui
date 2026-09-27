@@ -738,6 +738,44 @@ async def execute_code(
             stderr = output.get('stderr', '')
             result = output.get('result', '')
 
+        elif engine == 'sandbox':
+            from open_webui.utils.code_interpreter import execute_code_sandbox
+
+            output = await execute_code_sandbox(
+                await Config.get('code_interpreter.sandbox.url', ''),
+                code,
+                await Config.get('code_interpreter.sandbox.key', ''),
+            )
+
+            stdout = output.get('stdout', '')
+            stderr = output.get('stderr', '')
+            result = output.get('result', '')
+
+        elif engine == 'docker':
+            from open_webui.utils.code_interpreter import execute_code_docker
+
+            output = await execute_code_docker(
+                await Config.get('code_interpreter.docker.url', ''),
+                code,
+                await Config.get('code_interpreter.docker.image', 'python:3.11-slim'),
+            )
+
+            stdout = output.get('stdout', '')
+            stderr = output.get('stderr', '')
+            result = output.get('result', '')
+
+        elif engine == 'e2b':
+            from open_webui.utils.code_interpreter import execute_code_e2b
+
+            output = await execute_code_e2b(
+                await Config.get('code_interpreter.e2b.api_key', ''),
+                code,
+            )
+
+            stdout = output.get('stdout', '')
+            stderr = output.get('stderr', '')
+            result = output.get('result', '')
+
         else:
             return JSONCodec.dumps({'error': f'Unknown code interpreter engine: {engine}'})
 

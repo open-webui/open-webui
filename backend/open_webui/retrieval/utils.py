@@ -904,6 +904,14 @@ def generate_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
+    if not key and user:
+        from open_webui.utils.byok import get_user_openai_credentials
+        user_url, user_key = get_user_openai_credentials(user)
+        if user_key:
+            key = user_key
+            url = user_url or url
+            model = model or 'text-embedding-3-small'
+
     log.debug('generate_openai_batch_embeddings:model %s batch size: %s', model, len(texts))
     json_data = {'input': texts, 'model': model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
@@ -934,6 +942,14 @@ async def agenerate_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
+    if not key and user:
+        from open_webui.utils.byok import get_user_openai_credentials
+        user_url, user_key = get_user_openai_credentials(user)
+        if user_key:
+            key = user_key
+            url = user_url or url
+            model = model or 'text-embedding-3-small'
+
     log.debug('agenerate_openai_batch_embeddings:model %s batch size: %s', model, len(texts))
     form_data = {'input': texts, 'model': model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
@@ -1216,6 +1232,15 @@ async def generate_embeddings(
     url = kwargs.get('url', '')
     key = kwargs.get('key', '')
     user = kwargs.get('user')
+
+    if not key and user:
+        from open_webui.utils.byok import get_user_openai_credentials
+        user_url, user_key = get_user_openai_credentials(user)
+        if user_key:
+            engine = 'openai'
+            key = user_key
+            url = user_url or 'https://api.openai.com/v1'
+            model = model or 'text-embedding-3-small'
 
     if prefix is not None and RAG_EMBEDDING_PREFIX_FIELD_NAME is None:
         if isinstance(text, list):

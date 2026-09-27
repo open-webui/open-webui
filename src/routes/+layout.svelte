@@ -663,11 +663,61 @@
 								form_data['model'] = form_data['model'].replace(`${prefixId}.`, ``);
 							}
 
-							const [res, controller] = await chatCompletion(
+							let [res, controller] = await chatCompletion(
 								OPENAI_API_KEY,
 								form_data,
 								OPENAI_API_URL
 							);
+
+							if (res && !res.ok) {
+								let errJson = null;
+								try {
+									errJson = await res.json();
+								} catch (e) {
+									errJson = null;
+								}
+								const errStr = JSON.stringify(errJson || '').toLowerCase();
+								const isThinkingError =
+									errStr.includes('reasoning') ||
+									errStr.includes('thinking') ||
+									errStr.includes('extra_forbidden') ||
+									errStr.includes('unsupported parameter') ||
+									errStr.includes('unrecognized parameter') ||
+									errStr.includes('unexpected keyword argument');
+
+								if (
+									isThinkingError &&
+									(form_data?.params?.reasoning_effort ||
+										form_data?.params?.thinking ||
+										form_data?.reasoning_effort ||
+										form_data?.thinking)
+								) {
+									if (form_data.params) {
+										delete form_data.params.reasoning_effort;
+										delete form_data.params.thinking;
+									}
+									delete form_data.reasoning_effort;
+									delete form_data.thinking;
+
+									const promptInstruction = 'Think deeply, comprehensively, and step-by-step before answering.';
+									if (form_data.messages && form_data.messages.length > 0) {
+										const sysIdx = form_data.messages.findIndex((m) => m.role === 'system');
+										if (sysIdx !== -1) {
+											form_data.messages[sysIdx].content += `\n\n${promptInstruction}`;
+										} else {
+											form_data.messages.unshift({ role: 'system', content: promptInstruction });
+										}
+									}
+
+									[res, controller] = await chatCompletion(
+										OPENAI_API_KEY,
+										form_data,
+										OPENAI_API_URL
+									);
+								} else if (errJson) {
+									throw errJson;
+								}
+							}
 
 							if (res) {
 								// raise if the response is not ok

@@ -562,7 +562,9 @@ async def upload_image(request, image_data, content_type, metadata, user, db=Non
 @router.post('/generations')
 async def generate_images(request: Request, form_data: CreateImageForm, user=Depends(get_verified_user)):
     image_config = await get_image_config()
-    if not image_config.ENABLE_IMAGE_GENERATION:
+    from open_webui.utils.byok import get_user_openai_credentials
+    user_url, user_key = get_user_openai_credentials(user) if user else (None, None)
+    if not image_config.ENABLE_IMAGE_GENERATION and not user_key:
         raise HTTPException(
             status_code=403,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -617,17 +619,29 @@ async def image_generations(
 
     model = await get_image_model(request)
 
+    engine = image_config.IMAGE_GENERATION_ENGINE
+    openai_key = image_config.IMAGES_OPENAI_API_KEY
+    openai_url = image_config.IMAGES_OPENAI_API_BASE_URL
+    if (not openai_key or not engine) and user:
+        from open_webui.utils.byok import get_user_openai_credentials
+        user_url, user_key = get_user_openai_credentials(user)
+        if user_key:
+            engine = 'openai'
+            openai_key = user_key
+            openai_url = user_url or 'https://api.openai.com/v1'
+            model = model or 'dall-e-3'
+
     try:
-        if image_config.IMAGE_GENERATION_ENGINE == 'openai':
+        if engine == 'openai':
             headers = {
-                'Authorization': f'Bearer {image_config.IMAGES_OPENAI_API_KEY}',
+                'Authorization': f'Bearer {openai_key}',
                 'Content-Type': 'application/json',
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers = include_user_info_headers(headers, user)
 
-            url = f'{image_config.IMAGES_OPENAI_API_BASE_URL}/images/generations'
+            url = f'{openai_url}/images/generations'
             if image_config.IMAGES_OPENAI_API_VERSION:
                 url = f'{url}?api-version={image_config.IMAGES_OPENAI_API_VERSION}'
 
@@ -862,7 +876,9 @@ async def edit_images(request: Request, form_data: EditImageForm, user=Depends(g
     # callers (edit_image tool, chat middleware) gate themselves and call image_edits()
     # directly, so they are unaffected by this wrapper.
     image_config = await get_image_config()
-    if not image_config.ENABLE_IMAGE_EDIT:
+    from open_webui.utils.byok import get_user_openai_credentials
+    user_url, user_key = get_user_openai_credentials(user) if user else (None, None)
+    if not image_config.ENABLE_IMAGE_EDIT and not user_key:
         raise HTTPException(
             status_code=403,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -974,10 +990,22 @@ async def image_edits(
             detail=ERROR_MESSAGES.DEFAULT(e, 'Error loading image'),
         )
 
+    engine = image_config.IMAGE_EDIT_ENGINE
+    edit_key = image_config.IMAGES_EDIT_OPENAI_API_KEY
+    edit_url = image_config.IMAGES_EDIT_OPENAI_API_BASE_URL
+    if (not edit_key or not engine) and user:
+        from open_webui.utils.byok import get_user_openai_credentials
+        user_url, user_key = get_user_openai_credentials(user)
+        if user_key:
+            engine = 'openai'
+            edit_key = user_key
+            edit_url = user_url or 'https://api.openai.com/v1'
+            model = model or 'dall-e-2'
+
     try:
-        if image_config.IMAGE_EDIT_ENGINE == 'openai':
+        if engine == 'openai':
             headers = {
-                'Authorization': f'Bearer {image_config.IMAGES_EDIT_OPENAI_API_KEY}',
+                'Authorization': f'Bearer {edit_key}',
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:

@@ -160,7 +160,39 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='No model specified for title generation. Please ensure a model is selected for this chat.',
         )
+    title_template = await Config.get('task.title.prompt_template')
+    if title_template != '':
+        template = title_template
+    else:
+        template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
+
+    content = await title_generation_template(template, form_data['messages'], user)
+
     if model_id not in models:
+        from open_webui.utils.byok import get_user_openai_credentials
+        user_url, user_key = get_user_openai_credentials(user, preferred_model=model_id)
+        if user_key:
+            try:
+                session = await get_session()
+                clean_model = model_id.split('/')[-1] if '/' in model_id else model_id
+                if clean_model.startswith('~'):
+                    clean_model = clean_model.lstrip('~')
+                r = await session.post(
+                    f'{user_url}/chat/completions',
+                    json={
+                        'model': clean_model,
+                        'messages': [{'role': 'user', 'content': content}],
+                        'stream': False,
+                        'max_tokens': 100,
+                    },
+                    headers={'Authorization': f'Bearer {user_key}', 'Content-Type': 'application/json'},
+                    timeout=30,
+                )
+                if r.status == 200:
+                    return await r.json()
+            except Exception as e:
+                log.error(f'Direct connection title completion error: {e}')
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
@@ -170,13 +202,6 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
 
     log.debug('generating chat title using model %s for user %s ', task_model_id, user.email)
 
-    title_template = await Config.get('task.title.prompt_template')
-    if title_template != '':
-        template = title_template
-    else:
-        template = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
-
-    content = await title_generation_template(template, form_data['messages'], user)
     task_model_params = task_model_params or {
         'max_tokens': models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
     }
@@ -292,8 +317,39 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
     else:
         models = request.app.state.MODELS
 
-    model_id = form_data['model']
+    tags_template = await Config.get('task.tags.prompt_template')
+    if tags_template != '':
+        template = tags_template
+    else:
+        template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
+
+    content = await tags_generation_template(template, form_data['messages'], user)
+
     if model_id not in models:
+        from open_webui.utils.byok import get_user_openai_credentials
+        user_url, user_key = get_user_openai_credentials(user, preferred_model=model_id)
+        if user_key:
+            try:
+                session = await get_session()
+                clean_model = model_id.split('/')[-1] if '/' in model_id else model_id
+                if clean_model.startswith('~'):
+                    clean_model = clean_model.lstrip('~')
+                r = await session.post(
+                    f'{user_url}/chat/completions',
+                    json={
+                        'model': clean_model,
+                        'messages': [{'role': 'user', 'content': content}],
+                        'stream': False,
+                        'max_tokens': 100,
+                    },
+                    headers={'Authorization': f'Bearer {user_key}', 'Content-Type': 'application/json'},
+                    timeout=30,
+                )
+                if r.status == 200:
+                    return await r.json()
+            except Exception as e:
+                log.error(f'Direct connection tags completion error: {e}')
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
@@ -302,14 +358,6 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
     task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
 
     log.debug('generating chat tags using model %s for user %s ', task_model_id, user.email)
-
-    tags_template = await Config.get('task.tags.prompt_template')
-    if tags_template != '':
-        template = tags_template
-    else:
-        template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
-
-    content = await tags_generation_template(template, form_data['messages'], user)
 
     payload = {
         'model': task_model_id,

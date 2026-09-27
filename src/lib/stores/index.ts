@@ -396,3 +396,5 @@ export type SessionUser = {
 	role: string;
 	profile_image_url: string;
 };
+
+export const thinkingLevel: Writable<'off' | 'none' | 'low' | 'medium' | 'high' | 'max'> = writable('off');

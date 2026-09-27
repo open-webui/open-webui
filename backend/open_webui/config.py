@@ -459,6 +459,12 @@ CODE_INTERPRETER_JUPYTER_TIMEOUT = int(
     )
 )
 
+CODE_INTERPRETER_SANDBOX_URL = os.getenv('CODE_INTERPRETER_SANDBOX_URL', '')
+CODE_INTERPRETER_SANDBOX_KEY = os.getenv('CODE_INTERPRETER_SANDBOX_KEY', '')
+CODE_INTERPRETER_DOCKER_URL = os.getenv('CODE_INTERPRETER_DOCKER_URL', '')
+CODE_INTERPRETER_DOCKER_IMAGE = os.getenv('CODE_INTERPRETER_DOCKER_IMAGE', 'python:3.11-slim')
+CODE_INTERPRETER_E2B_API_KEY = os.getenv('CODE_INTERPRETER_E2B_API_KEY', '')
+
 CODE_INTERPRETER_BLOCKED_MODULES = [
     library.strip() for library in os.getenv('CODE_INTERPRETER_BLOCKED_MODULES', '').split(',') if library.strip()
 ]
@@ -2414,16 +2420,21 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = os.getenv('TOOLS_FUNCTION_CALLING_PROMP
 
 DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
 
-Your task is to choose and return the correct tool(s) from the list of available tools based on the query. Follow these guidelines:
+Your task is to analyze the user request and determine whether invoking one or more tools is necessary. Follow these guidelines:
 
 - Return only the JSON object, without any additional text or explanation.
 
-- If no tools match the query, return an empty array: 
+- Intelligently evaluate whether tools are needed:
+  * Only call a tool when the user's request genuinely requires external actions, live data, calculations, or specialized capabilities provided by the available tools.
+  * Do NOT invoke tools for casual conversational exchanges, greetings, pleasantries, or questions that can be answered accurately using general knowledge without external tools.
+  * When in doubt and no tool invocation is strictly required, do not call any tool.
+
+- If no tools match the query or a tool is not genuinely necessary, return an empty array: 
    {
      "tool_calls": []
    }
 
-- If one or more tools match the query, construct a JSON response containing a "tool_calls" array with objects that include:
+- If one or more tools match the query and are genuinely needed, construct a JSON response containing a "tool_calls" array with objects that include:
    - "name": The tool's name.
    - "parameters": A dictionary of required parameters and their corresponding values.
 
@@ -2854,6 +2865,11 @@ DEFAULT_CONFIG = {
     'code_interpreter.jupyter.auth_token': CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
     'code_interpreter.jupyter.auth_password': CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
     'code_interpreter.jupyter.timeout': CODE_INTERPRETER_JUPYTER_TIMEOUT,
+    'code_interpreter.sandbox.url': CODE_INTERPRETER_SANDBOX_URL,
+    'code_interpreter.sandbox.key': CODE_INTERPRETER_SANDBOX_KEY,
+    'code_interpreter.docker.url': CODE_INTERPRETER_DOCKER_URL,
+    'code_interpreter.docker.image': CODE_INTERPRETER_DOCKER_IMAGE,
+    'code_interpreter.e2b.api_key': CODE_INTERPRETER_E2B_API_KEY,
     'google_drive.enable': ENABLE_GOOGLE_DRIVE_INTEGRATION,
     'google_drive.client_id': GOOGLE_DRIVE_CLIENT_ID,
     'google_drive.api_key': GOOGLE_DRIVE_API_KEY,

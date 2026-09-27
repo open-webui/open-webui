@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import logging
 import re
@@ -1674,6 +1675,40 @@ async def generate_chat_completion(
             # streaming the error back (which hides the error from logs).
             if r.status >= 400:
                 error_body = await r.text()
+                err_text = error_body.lower()
+                is_thinking_error = any(
+                    k in err_text
+                    for k in (
+                        'reasoning',
+                        'thinking',
+                        'extra_forbidden',
+                        'unsupported parameter',
+                        'unrecognized parameter',
+                        'unexpected keyword argument',
+                    )
+                )
+                raw_payload = form_data
+                if is_thinking_error and (
+                    raw_payload.get('reasoning_effort')
+                    or raw_payload.get('thinking')
+                    or (raw_payload.get('params') or {}).get('reasoning_effort')
+                    or (raw_payload.get('params') or {}).get('thinking')
+                ):
+                    fallback_form_data = copy.deepcopy(form_data)
+                    fallback_form_data.pop('reasoning_effort', None)
+                    fallback_form_data.pop('thinking', None)
+                    if 'params' in fallback_form_data and isinstance(fallback_form_data['params'], dict):
+                        fallback_form_data['params'].pop('reasoning_effort', None)
+                        fallback_form_data['params'].pop('thinking', None)
+                    prompt_instr = 'Think deeply, comprehensively, and step-by-step before answering.'
+                    if 'messages' in fallback_form_data and isinstance(fallback_form_data['messages'], list):
+                        sys_msg = next((m for m in fallback_form_data['messages'] if m.get('role') == 'system'), None)
+                        if sys_msg:
+                            sys_msg['content'] = f"{sys_msg.get('content', '')}\n\n{prompt_instr}"
+                        else:
+                            fallback_form_data['messages'].insert(0, {'role': 'system', 'content': prompt_instr})
+                    return await generate_chat_completion(request, fallback_form_data, user)
+
                 log.error(
                     'Provider returned HTTP %d with SSE content-type: %s',
                     r.status,
@@ -1722,6 +1757,40 @@ async def generate_chat_completion(
                 response = await r.text()
 
             if r.status >= 400:
+                err_text = str(response).lower()
+                is_thinking_error = any(
+                    k in err_text
+                    for k in (
+                        'reasoning',
+                        'thinking',
+                        'extra_forbidden',
+                        'unsupported parameter',
+                        'unrecognized parameter',
+                        'unexpected keyword argument',
+                    )
+                )
+                raw_payload = form_data
+                if is_thinking_error and (
+                    raw_payload.get('reasoning_effort')
+                    or raw_payload.get('thinking')
+                    or (raw_payload.get('params') or {}).get('reasoning_effort')
+                    or (raw_payload.get('params') or {}).get('thinking')
+                ):
+                    fallback_form_data = copy.deepcopy(form_data)
+                    fallback_form_data.pop('reasoning_effort', None)
+                    fallback_form_data.pop('thinking', None)
+                    if 'params' in fallback_form_data and isinstance(fallback_form_data['params'], dict):
+                        fallback_form_data['params'].pop('reasoning_effort', None)
+                        fallback_form_data['params'].pop('thinking', None)
+                    prompt_instr = 'Think deeply, comprehensively, and step-by-step before answering.'
+                    if 'messages' in fallback_form_data and isinstance(fallback_form_data['messages'], list):
+                        sys_msg = next((m for m in fallback_form_data['messages'] if m.get('role') == 'system'), None)
+                        if sys_msg:
+                            sys_msg['content'] = f"{sys_msg.get('content', '')}\n\n{prompt_instr}"
+                        else:
+                            fallback_form_data['messages'].insert(0, {'role': 'system', 'content': prompt_instr})
+                    return await generate_chat_completion(request, fallback_form_data, user)
+
                 await publish_model_provider_request_failed(
                     request,
                     actor=user,

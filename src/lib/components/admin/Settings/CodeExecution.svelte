@@ -17,7 +17,7 @@
 
 	let config: any = null;
 
-	let engines = ['pyodide', 'jupyter'];
+	let engines = ['pyodide', 'jupyter', 'sandbox', 'docker', 'e2b'];
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -271,6 +271,77 @@
 								type="number"
 								bind:value={config.CODE_INTERPRETER_JUPYTER_TIMEOUT}
 								placeholder={$i18n.t('e.g. 60')}
+								autocomplete="off"
+							/>
+						</AdminSettingField>
+					{/if}
+
+					{#if config.CODE_INTERPRETER_ENGINE === 'sandbox'}
+						<AdminSettingField
+							label={$i18n.t('Sandbox URL')}
+							description={$i18n.t('REST API endpoint for custom code execution sandbox (e.g. http://localhost:8080)')}
+						>
+							<input
+								class={inputClass}
+								type="text"
+								placeholder={$i18n.t('Enter Sandbox URL')}
+								bind:value={config.CODE_INTERPRETER_SANDBOX_URL}
+								autocomplete="off"
+							/>
+						</AdminSettingField>
+
+						<AdminSettingField
+							label={$i18n.t('Sandbox API Key')}
+							description={$i18n.t('Bearer token or API key for authenticating with the sandbox service')}
+						>
+							<SensitiveInput
+								variant="settings"
+								type="text"
+								placeholder={$i18n.t('Enter Sandbox API Key')}
+								bind:value={config.CODE_INTERPRETER_SANDBOX_KEY}
+								autocomplete="off"
+							/>
+						</AdminSettingField>
+					{/if}
+
+					{#if config.CODE_INTERPRETER_ENGINE === 'docker'}
+						<AdminSettingField
+							label={$i18n.t('Docker Daemon URL')}
+							description={$i18n.t('Docker API endpoint (e.g. http://localhost:2375). Leave blank to use local docker CLI.')}
+						>
+							<input
+								class={inputClass}
+								type="text"
+								placeholder={$i18n.t('Leave empty for local Docker or enter URL')}
+								bind:value={config.CODE_INTERPRETER_DOCKER_URL}
+								autocomplete="off"
+							/>
+						</AdminSettingField>
+
+						<AdminSettingField
+							label={$i18n.t('Docker Image')}
+							description={$i18n.t('Python Docker image to execute code in (defaults to python:3.11-slim)')}
+						>
+							<input
+								class={inputClass}
+								type="text"
+								placeholder="python:3.11-slim"
+								bind:value={config.CODE_INTERPRETER_DOCKER_IMAGE}
+								autocomplete="off"
+							/>
+						</AdminSettingField>
+					{/if}
+
+					{#if config.CODE_INTERPRETER_ENGINE === 'e2b'}
+						<AdminSettingField
+							label={$i18n.t('E2B API Key')}
+							description={$i18n.t('API key for E2B Cloud Sandbox (https://e2b.dev)')}
+						>
+							<SensitiveInput
+								variant="settings"
+								type="text"
+								placeholder={$i18n.t('Enter E2B API Key (e2b_...)')}
+								bind:value={config.CODE_INTERPRETER_E2B_API_KEY}
 								autocomplete="off"
 							/>
 						</AdminSettingField>

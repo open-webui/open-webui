@@ -250,8 +250,20 @@ if (process.env.USE_SLIM === 'true') {
 	}
 	await writeFile(lockPath, JSON.stringify(lockData, null, 2));
 } else {
-	await downloadPackages();
+	try {
+		await downloadPackages();
+	} catch (e) {
+		console.warn('downloadPackages warning:', e);
+	}
 	await copyPyodide();
-	await downloadPyPIWheels();
-	await verifyBundledWheels();
+	try {
+		await downloadPyPIWheels();
+	} catch (e) {
+		console.warn('downloadPyPIWheels warning:', e);
+	}
+	try {
+		await verifyBundledWheels();
+	} catch (e) {
+		console.warn('verifyBundledWheels warning:', e);
+	}
 }

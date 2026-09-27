@@ -124,6 +124,9 @@ async def get_tools(
                     'name': server.get('openapi', {}).get('info', {}).get('title', 'Tool Server'),
                     'meta': {
                         'description': server.get('openapi', {}).get('info', {}).get('description', ''),
+                        'icon': connection.get('icon') or (connection.get('info') or {}).get('icon') or '',
+                        'auth_type': connection.get('auth_type', 'none'),
+                        'auth_instruction': connection.get('auth_instruction') or (connection.get('info') or {}).get('auth_instruction') or '',
                     },
                     'updated_at': int(time.time()),
                     'created_at': int(time.time()),
@@ -133,7 +136,7 @@ async def get_tools(
 
     # MCP Tool Servers
     for server in await Config.get('tool_server.connections', []):
-        if server.get('type', 'openapi') == 'mcp' and (server.get('config') or {}).get('enable'):
+        if server.get('type', 'openapi') == 'mcp' and (server.get('config') or {}).get('enable', True):
             info = server.get('info') or {}
             server_id = info.get('id')
             auth_type = server.get('auth_type', 'none')
@@ -158,6 +161,9 @@ async def get_tools(
                         'name': info.get('name', 'MCP Tool Server'),
                         'meta': {
                             'description': info.get('description', ''),
+                            'icon': info.get('icon') or server.get('icon') or '',
+                            'auth_type': auth_type,
+                            'auth_instruction': info.get('auth_instruction') or server.get('auth_instruction') or '',
                         },
                         'updated_at': int(time.time()),
                         'created_at': int(time.time()),
