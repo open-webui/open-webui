@@ -3522,6 +3522,7 @@ async def view_skill(
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
+    __event_emitter__: callable = None,
 ) -> str:
     """
     Load the full instructions of a skill by its id from the available skills manifest.
@@ -3570,6 +3571,18 @@ async def view_skill(
                 user_group_ids=set(user_group_ids),
             ):
                 return JSONCodec.dumps({'error': 'Access denied'})
+
+        if __event_emitter__:
+            await __event_emitter__(
+                {
+                    'type': 'status',
+                    'data': {
+                        'action': 'skill',
+                        'description': f'⚡ Beceri Okundu: {skill.name}',
+                        'done': True,
+                    },
+                }
+            )
 
         return JSONCodec.dumps(
             {

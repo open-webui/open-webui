@@ -2855,6 +2855,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data['messages'],
                     append=True,
                 )
+                if event_emitter:
+                    await event_emitter(
+                        {
+                            'type': 'status',
+                            'data': {
+                                'action': 'skill',
+                                'description': f'⚡ Beceri Okundu: {skill.name}',
+                                'done': True,
+                            },
+                        }
+                    )
             else:
                 view_skill_ids.append(skill.id)
                 skill_manifest += (
@@ -3000,6 +3011,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             append=True,
                         )
                         existing_sys_content += ' ' + conn_prompt
+                        if event_emitter:
+                            server_label = info.get('name') or conn_id or 'Entegrasyon'
+                            await event_emitter(
+                                {
+                                    'type': 'status',
+                                    'data': {
+                                        'action': 'skill',
+                                        'description': f'⚡ Gömülü Beceri Yüklendi: {server_label}',
+                                        'done': True,
+                                    },
+                                }
+                            )
         except Exception as e:
             log.warning(f'Error injecting built-in tool server skills: {e}')
 
