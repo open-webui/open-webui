@@ -265,7 +265,7 @@ async def get_leaderboard(
     return LeaderboardResponse(entries=entries)
 
 
-@router.get('/leaderboard/{model_id}/history', response_model=ModelHistoryResponse)
+@router.get('/leaderboard/{model_id:path}/history', response_model=ModelHistoryResponse)
 async def get_model_history(
     model_id: str,
     days: int = 30,

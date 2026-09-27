@@ -5,6 +5,7 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import '@xterm/xterm/css/xterm.css';
 	import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
+	import { connectedUserTerminals } from '$lib/stores';
 
 	export let connection: TerminalConnection;
 	export let chatId: string | null = null;
@@ -22,6 +23,17 @@
 	let pingInterval: ReturnType<typeof setInterval>;
 	let destroyed = false;
 	let sessionId = '';
+	const terminalOwner = Symbol();
+
+	function disconnect() {
+		connectedUserTerminals.update((entries) => {
+			entries.delete(terminalOwner);
+			return entries;
+		});
+		connected = false;
+		connecting = false;
+		clearInterval(pingInterval);
+	}
 
 	export function write(output: string) {
 		if (!term || destroyed) return;
@@ -59,9 +71,14 @@
 			ws = new WebSocket(url);
 			ws.binaryType = 'arraybuffer';
 			ws.onopen = () => {
+				if (destroyed) return;
 				ws?.send(
 					JSON.stringify({ type: 'auth', token: connection.key.trim(), chat_id: chatId ?? '' })
 				);
+				if (connection.selector && chatId) {
+					const shell = { terminalId: connection.selector, chatId };
+					connectedUserTerminals.update((entries) => entries.set(terminalOwner, shell));
+				}
 				connected = true;
 				connecting = false;
 				fit();
@@ -72,21 +89,23 @@
 				}, 25000);
 			};
 			ws.onmessage = (event) => {
+				if (destroyed) return;
 				if (event.data instanceof ArrayBuffer) term?.write(new Uint8Array(event.data));
 				else write(event.data);
 			};
 			ws.onclose = () => {
-				connected = false;
-				connecting = false;
-				clearInterval(pingInterval);
+				if (destroyed) return;
+				disconnect();
 				write('\r\n\x1b[90m[Connection closed]\x1b[0m\r\n');
 			};
 			ws.onerror = () => {
-				connecting = false;
+				if (destroyed) return;
+				disconnect();
 				write('\r\n\x1b[31m[Terminal connection failed]\x1b[0m\r\n');
 			};
 		} catch (error) {
-			connecting = false;
+			if (destroyed) return;
+			disconnect();
 			write(`\r\n\x1b[31m[${error}]\x1b[0m\r\n`);
 		}
 	}
@@ -133,7 +152,7 @@
 
 	onDestroy(() => {
 		destroyed = true;
-		clearInterval(pingInterval);
+		disconnect();
 		ws?.close();
 		resizeObserver?.disconnect();
 		term?.dispose();

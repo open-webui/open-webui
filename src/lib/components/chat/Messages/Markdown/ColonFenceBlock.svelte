@@ -14,6 +14,7 @@
 
 	export let done: boolean = true;
 	export let editCodeBlock: boolean = true;
+	export let allowEmbeds: boolean = false;
 	export let sourceIds: string[] = [];
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
@@ -80,6 +81,7 @@
 			id={`${id}-${tokenIdx}-cf`}
 			tokens={token.tokens}
 			{done}
+			{allowEmbeds}
 			{editCodeBlock}
 			{sourceIds}
 			{onTaskClick}

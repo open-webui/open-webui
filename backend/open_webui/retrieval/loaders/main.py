@@ -9,14 +9,6 @@ import ftfy
 import requests
 from fastapi import HTTPException
 from azure.identity import DefaultAzureCredential
-from langchain_community.document_loaders import (
-    AzureAIDocumentIntelligenceLoader,
-    BSHTMLLoader,
-    CSVLoader,
-    Docx2txtLoader,
-    PyPDFLoader,
-    TextLoader,
-)
 from langchain_core.documents import Document
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -27,9 +19,17 @@ from open_webui.env import (
 )
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
+from open_webui.retrieval.loaders.local import (
+    DocumentIntelligenceLoader,
+    DocxLoader,
+    HTMLLoader,
+    TextLoader,
+    UnstructuredLoader,
+)
 from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
+from open_webui.retrieval.loaders.pdf import PDFLoader
 from open_webui.utils.headers import get_user_groups_for_custom_headers
 from open_webui.utils.json_codec import JSONCodec
 
@@ -91,6 +91,7 @@ known_source_ext = [
     'yaml',
     'yml',
     'toml',
+    'svg',
 ]
 
 known_archive_ext = {'docx', 'epub', 'odt', 'pptx', 'xlsx'}
@@ -163,7 +164,21 @@ class CSVLoaderWithSummary:
         self.encoding = encoding
 
     def load(self) -> list[Document]:
-        docs = CSVLoader(self.file_path, encoding=self.encoding).load()
+        docs = []
+        try:
+            with open(self.file_path, newline='', encoding=self.encoding) as file:
+                for index, row in enumerate(csv.DictReader(file)):
+                    fields = []
+                    for key, value in row.items():
+                        if isinstance(value, str):
+                            value = value.strip()
+                        elif isinstance(value, list):
+                            value = ','.join(v.strip() for v in value)
+                        fields.append(f'{key.strip() if key is not None else key}: {value}')
+                    content = '\n'.join(fields)
+                    docs.append(Document(page_content=content, metadata={'source': self.file_path, 'row': index}))
+        except Exception as e:
+            raise RuntimeError(f'Error loading {self.file_path}') from e
         if os.getenv('ENABLE_RAG_CSV_SUMMARY', 'False').lower() == 'true':
             summary = get_csv_summary(self.filename, self.file_path, self.encoding)
             if summary:
@@ -218,7 +233,7 @@ class TikaLoader:
         if self.extract_images == True:
             headers['X-Tika-PDFextractInlineImages'] = 'true'
 
-        endpoint_path = 'tika/json/text' if self.server_version == '4' else 'tika/text'
+        endpoint_path = 'tika/json/md' if self.server_version == '4' else 'tika/text'
         content_key = 'tk:content' if self.server_version == '4' else 'X-TIKA:content'
         endpoint = f'{self.url.rstrip("/")}/{endpoint_path}'
 
@@ -258,7 +273,7 @@ class DoclingLoader:
                 f'{self.url}/v1/convert/file',
                 files={
                     'files': (
-                        self.file_path,
+                        os.path.basename(self.file_path),
                         f,
                         self.mime_type or 'application/octet-stream',
                     )
@@ -276,8 +291,17 @@ class DoclingLoader:
             )
         if r.ok:
             result = r.json()
+            # Docling reports failed and skipped conversions inside HTTP 200 responses.
+            conversion_status = result.get('status')
+            if conversion_status in ['failure', 'skipped']:
+                error_details = (
+                    '; '.join(filter(None, (error.get('error_message') for error in result.get('errors', []))))
+                    or 'no error message provided'
+                )
+                raise Exception(f'Error calling Docling: conversion status {conversion_status} - {error_details}')
+
             document_data = result.get('document', {})
-            md_content = document_data.get('md_content', '')
+            md_content = document_data.get('md_content') or ''
             text = md_content or '<No text content found>'
 
             metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
@@ -403,15 +427,17 @@ class Loader:
             'gbk': 'gb18030',
             'big5': 'big5',
             'euckr': 'euc-kr',
+            'cp949': 'cp949',
             'eucjp': 'euc-jp',
             'iso2022jp': 'euc-jp',
-            'shiftjis': 'shift_jis',
+            'shiftjis': 'cp932',
+            'cp932': 'cp932',
         }
 
         # Build priority list: chardet-hinted codec first, then remaining CJK
         base_order = ['gb18030', 'big5', 'euc-kr', 'euc-jp']
         hinted = _ENC_FAMILY.get(detected_enc)
-        if hinted and hinted in base_order:
+        if hinted:
             ordered = [hinted] + [e for e in base_order if e != hinted]
         else:
             ordered = base_order
@@ -620,14 +646,14 @@ class Loader:
             )
         ):
             if self.kwargs.get('DOCUMENT_INTELLIGENCE_KEY') != '':
-                loader = AzureAIDocumentIntelligenceLoader(
+                loader = DocumentIntelligenceLoader(
                     file_path=file_path,
                     api_endpoint=self.kwargs.get('DOCUMENT_INTELLIGENCE_ENDPOINT'),
                     api_key=self.kwargs.get('DOCUMENT_INTELLIGENCE_KEY'),
                     api_model=self.kwargs.get('DOCUMENT_INTELLIGENCE_MODEL'),
                 )
             else:
-                loader = AzureAIDocumentIntelligenceLoader(
+                loader = DocumentIntelligenceLoader(
                     file_path=file_path,
                     api_endpoint=self.kwargs.get('DOCUMENT_INTELLIGENCE_ENDPOINT'),
                     azure_credential=DefaultAzureCredential(),
@@ -677,7 +703,7 @@ class Loader:
                 if file_ext == 'csv':
                     return CSVLoaderWithSummary(file_path, filename, self._detect_text_encoding(file_path))
                 if file_ext in ['htm', 'html']:
-                    return BSHTMLLoader(file_path, open_encoding=self._detect_text_encoding(file_path))
+                    return HTMLLoader(file_path, encoding=self._detect_text_encoding(file_path))
                 if file_ext in ['txt', 'md', 'markdown', 'rst', 'xml'] or self._is_text_file(
                     file_ext, file_content_type
                 ):
@@ -687,7 +713,7 @@ class Loader:
                     'This file type requires an external document extractor in slim. Configure one that supports it.',
                 )
             if file_ext == 'pdf':
-                loader = PyPDFLoader(
+                loader = PDFLoader(
                     file_path,
                     extract_images=self.kwargs.get('PDF_EXTRACT_IMAGES'),
                     mode=self.kwargs.get('PDF_LOADER_MODE', 'page'),
@@ -700,9 +726,7 @@ class Loader:
                 )
             elif file_ext == 'rst':
                 try:
-                    from langchain_community.document_loaders import UnstructuredRSTLoader
-
-                    loader = UnstructuredRSTLoader(file_path, mode='elements')
+                    loader = UnstructuredLoader(file_path, 'rst', mode='elements')
                 except ImportError:
                     log.warning(
                         "The 'unstructured' package is not installed. "
@@ -712,9 +736,7 @@ class Loader:
                     loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             elif file_ext == 'xml':
                 try:
-                    from langchain_community.document_loaders import UnstructuredXMLLoader
-
-                    loader = UnstructuredXMLLoader(file_path)
+                    loader = UnstructuredLoader(file_path, 'xml')
                 except ImportError:
                     log.warning(
                         "The 'unstructured' package is not installed. "
@@ -723,14 +745,12 @@ class Loader:
                     )
                     loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             elif file_ext in ['htm', 'html']:
-                loader = BSHTMLLoader(file_path, open_encoding='unicode_escape')
+                loader = HTMLLoader(file_path, encoding='unicode_escape')
             elif file_ext == 'md':
                 loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             elif file_content_type == 'application/epub+zip':
                 try:
-                    from langchain_community.document_loaders import UnstructuredEPubLoader
-
-                    loader = UnstructuredEPubLoader(file_path)
+                    loader = UnstructuredLoader(file_path, 'epub')
                 except ImportError:
                     raise ValueError(
                         "Processing .epub files requires the 'unstructured' package. "
@@ -740,12 +760,10 @@ class Loader:
                 file_content_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 or file_ext == 'docx'
             ):
-                loader = Docx2txtLoader(file_path)
+                loader = DocxLoader(file_path)
             elif file_ext == 'doc' or file_content_type == 'application/msword':
                 try:
-                    from langchain_community.document_loaders import UnstructuredWordDocumentLoader
-
-                    loader = UnstructuredWordDocumentLoader(file_path)
+                    loader = UnstructuredLoader(file_path, 'doc')
                 except ImportError:
                     raise ValueError(
                         "Processing .doc files requires the 'unstructured' package. "
@@ -756,9 +774,7 @@ class Loader:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ] or file_ext in ['xls', 'xlsx']:
                 try:
-                    from langchain_community.document_loaders import UnstructuredExcelLoader
-
-                    loader = UnstructuredExcelLoader(file_path)
+                    loader = UnstructuredLoader(file_path, 'xlsx')
                 except ImportError:
                     log.warning(
                         "The 'unstructured' package is not installed. "
@@ -771,9 +787,7 @@ class Loader:
                 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             ] or file_ext in ['ppt', 'pptx']:
                 try:
-                    from langchain_community.document_loaders import UnstructuredPowerPointLoader
-
-                    loader = UnstructuredPowerPointLoader(file_path)
+                    loader = UnstructuredLoader(file_path, 'ppt' if file_ext == 'ppt' else 'pptx')
                 except ImportError:
                     log.warning(
                         "The 'unstructured' package is not installed. "
@@ -783,12 +797,8 @@ class Loader:
                     loader = PptxLoader(file_path)
             elif file_ext == 'msg':
                 try:
-                    from langchain_community.document_loaders import (
-                        UnstructuredEmailLoader,
-                    )
-
                     # unstructured parses .msg via python-oxmsg; avoids extract_msg's beautifulsoup4<4.14 conflict
-                    loader = UnstructuredEmailLoader(file_path, process_attachments=False)
+                    loader = UnstructuredLoader(file_path, 'msg', process_attachments=False)
                 except ImportError:
                     raise ValueError(
                         "Processing .msg files requires the 'unstructured' package. "
@@ -796,9 +806,7 @@ class Loader:
                     )
             elif file_ext == 'odt':
                 try:
-                    from langchain_community.document_loaders import UnstructuredODTLoader
-
-                    loader = UnstructuredODTLoader(file_path)
+                    loader = UnstructuredLoader(file_path, 'odt')
                 except ImportError:
                     raise ValueError(
                         "Processing .odt files requires the 'unstructured' package. "

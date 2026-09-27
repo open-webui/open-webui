@@ -273,7 +273,10 @@ async def get_events(
 async def create_event(request: Request, form_data: CalendarEventForm, user: UserModel = Depends(get_verified_user)):
     await check_calendar_permission(request, user)
     await _check_calendar_access(form_data.calendar_id, user, 'write')
-    event = await CalendarEvents.insert_new_event(user.id, form_data)
+    try:
+        event = await CalendarEvents.insert_new_event(user.id, form_data)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     await publish_event(
         request,
         EVENTS.CALENDAR_EVENT_CREATED,
@@ -325,7 +328,10 @@ async def update_event(
     if form_data.calendar_id is not None and form_data.calendar_id != event.calendar_id:
         await _check_calendar_access(form_data.calendar_id, user, 'write')
 
-    updated = await CalendarEvents.update_event_by_id(event_id, form_data)
+    try:
+        updated = await CalendarEvents.update_event_by_id(event_id, form_data)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     if not updated:
         raise HTTPException(status_code=500, detail='Failed to update')
     await publish_event(

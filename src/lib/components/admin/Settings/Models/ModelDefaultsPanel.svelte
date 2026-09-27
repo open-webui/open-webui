@@ -9,6 +9,7 @@
 	import { getModelsConfig, setModelsConfig, setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { getBackendConfig } from '$lib/apis';
 	import { getLanguages } from '$lib/i18n';
+	import { resolveLocalizedPromptSuggestions } from '$lib/utils/localizedContent';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
@@ -21,7 +22,6 @@
 	export let dirty = false;
 
 	let config = null;
-	let modelIds = [];
 	let loading = false;
 	let expanded = false;
 	let showCapabilities = false;
@@ -34,6 +34,7 @@
 	let defaultParams = {};
 	let builtinTools = {};
 	let promptSuggestions = [];
+	let useDefaultPromptSuggestions = false;
 	let promptSuggestionsI18n = {};
 	let languages = [];
 	let editingLocale = '';
@@ -56,7 +57,9 @@
 			defaultFeatureIds,
 			defaultParams: Object.fromEntries(configuredParams),
 			builtinTools,
-			promptSuggestions: promptSuggestions.filter((p) => p.content !== ''),
+			promptSuggestions: useDefaultPromptSuggestions
+				? null
+				: promptSuggestions.filter((p) => p.content !== ''),
 			promptSuggestionsI18n
 		});
 
@@ -65,11 +68,15 @@
 		dirty = savedSnapshot !== '' && getSnapshot() !== savedSnapshot;
 	};
 
+	const resetPromptSuggestions = () => {
+		useDefaultPromptSuggestions = true;
+		promptSuggestions = resolveLocalizedPromptSuggestions(null, {});
+		updateDirty();
+	};
+
 	const init = async () => {
 		loading = true;
 		config = await getModelsConfig(localStorage.token);
-
-		modelIds = config?.MODEL_ORDER_LIST || [];
 
 		const savedMeta = config?.DEFAULT_MODEL_METADATA;
 		if (savedMeta && Object.keys(savedMeta).length > 0) {
@@ -83,7 +90,11 @@
 		}
 
 		defaultParams = config?.DEFAULT_MODEL_PARAMS ?? {};
-		promptSuggestions = $appConfig?.default_prompt_suggestions ?? [];
+		useDefaultPromptSuggestions = $appConfig?.default_prompt_suggestions == null;
+		promptSuggestions = resolveLocalizedPromptSuggestions(
+			$appConfig?.default_prompt_suggestions,
+			{}
+		);
 		promptSuggestionsI18n = $appConfig?.default_prompt_suggestions_i18n ?? {};
 		languages = await getLanguages();
 		savedSnapshot = getSnapshot();
@@ -102,10 +113,12 @@
 			...(Object.keys(builtinTools).length > 0 ? { builtinTools } : {})
 		};
 
+		config = await getModelsConfig(localStorage.token);
+
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: config?.DEFAULT_MODELS ?? null,
 			DEFAULT_PINNED_MODELS: config?.DEFAULT_PINNED_MODELS ?? null,
-			MODEL_ORDER_LIST: modelIds,
+			MODEL_ORDER_LIST: config?.MODEL_ORDER_LIST ?? [],
 			DEFAULT_MODEL_METADATA: metadata,
 			DEFAULT_MODEL_PARAMS: Object.fromEntries(configuredParams)
 		}).catch((error) => {
@@ -118,7 +131,7 @@
 			promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
 			const suggestionsRes = await setDefaultPromptSuggestions(
 				localStorage.token,
-				promptSuggestions,
+				useDefaultPromptSuggestions ? null : promptSuggestions,
 				promptSuggestionsI18n
 			);
 			promptSuggestions = suggestionsRes?.suggestions ?? promptSuggestions;
@@ -150,7 +163,7 @@
 				expanded = !expanded;
 			}}
 		>
-			{$i18n.t('Model Defaults')}
+			{$i18n.t('settings.admin.models.defaults.modelDefaults.label')}
 		</button>
 
 		<button
@@ -178,7 +191,7 @@
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Model Capabilities')}
+							{$i18n.t('settings.admin.models.defaults.modelCapabilities.label')}
 						</span>
 						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{showCapabilities ? $i18n.t('Close') : $i18n.t('Configure')}
@@ -217,7 +230,7 @@
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Model Parameters')}
+							{$i18n.t('settings.admin.models.defaults.modelParameters.label')}
 						</span>
 						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{showParameters ? $i18n.t('Close') : $i18n.t('Configure')}
@@ -245,7 +258,7 @@
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Prompt Suggestions')}
+							{$i18n.t('settings.admin.models.defaults.promptSuggestions.label')}
 						</span>
 						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{showPromptSuggestions ? $i18n.t('Close') : $i18n.t('Configure')}
@@ -264,8 +277,22 @@
 								bind:localizedPromptSuggestions={promptSuggestionsI18n}
 								locale={editingLocale}
 								localeLabel={editingLocaleLabel}
-								onChange={updateDirty}
+								onChange={() => {
+									if (!editingLocale) useDefaultPromptSuggestions = false;
+									updateDirty();
+								}}
 							>
+								<svelte:fragment slot="label">
+									{#if !editingLocale && !useDefaultPromptSuggestions}
+										<button
+											type="button"
+											class="shrink-0 px-1 py-0.5 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+											on:click={resetPromptSuggestions}
+										>
+											{$i18n.t('Reset to Defaults')}
+										</button>
+									{/if}
+								</svelte:fragment>
 								<LanguageModeSelect
 									slot="language"
 									bind:value={editingLocale}

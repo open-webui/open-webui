@@ -57,7 +57,9 @@
 </script>
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={save}>
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Sub-agents')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.admin.subagents.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if loading}
@@ -66,7 +68,7 @@
 			<div class="flex flex-col gap-2.5">
 				<label class="flex cursor-pointer items-center justify-between">
 					<span class="text-xs text-gray-600 dark:text-gray-400">
-						{$i18n.t('Enable sub-agents')}
+						{$i18n.t('settings.admin.subagents.enableSubAgents.label')}
 					</span>
 					<Switch bind:state={enabled} />
 				</label>
@@ -79,7 +81,7 @@
 				{#if enabled}
 					<div>
 						<label class="text-xs text-gray-600 dark:text-gray-400" for="sa-concurrent">
-							{$i18n.t('Max concurrent')}
+							{$i18n.t('settings.admin.subagents.maxConcurrent.label')}
 						</label>
 						<div class="mt-1 flex items-center gap-1.5">
 							<input
@@ -98,21 +100,19 @@
 					<div>
 						<label class="flex cursor-pointer items-center justify-between">
 							<span class="text-xs text-gray-600 dark:text-gray-400">
-								{$i18n.t('Enable background sub-agents')}
+								{$i18n.t('settings.admin.subagents.enableBackgroundSubAgents.label')}
 							</span>
 							<Switch bind:state={backgroundEnabled} />
 						</label>
 						<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{$i18n.t(
-								'Allow delegated sub-agents to keep running while the parent chat continues.'
-							)}
+							{$i18n.t('settings.admin.subagents.enableBackgroundSubAgents.description')}
 						</p>
 					</div>
 
 					{#if backgroundEnabled}
 						<div>
 							<label class="text-xs text-gray-600 dark:text-gray-400" for="sa-async">
-								{$i18n.t('Max background')}
+								{$i18n.t('settings.admin.subagents.maxBackground.label')}
 							</label>
 							<div class="mt-1 flex items-center gap-1.5">
 								<input
@@ -131,7 +131,7 @@
 
 					<div>
 						<label class="text-xs text-gray-600 dark:text-gray-400" for="sa-iterations">
-							{$i18n.t('Max iterations')}
+							{$i18n.t('settings.admin.subagents.maxIterations.label')}
 						</label>
 						<div class="mt-1 flex items-center gap-1.5">
 							<input
@@ -150,7 +150,7 @@
 
 					<div>
 						<label class="text-xs text-gray-600 dark:text-gray-400" for="sa-output">
-							{$i18n.t('Max output')}
+							{$i18n.t('settings.admin.subagents.maxOutput.label')}
 						</label>
 						<div class="mt-1 flex items-center gap-1.5">
 							<input
@@ -168,7 +168,7 @@
 
 					<div>
 						<label class="text-xs text-gray-600 dark:text-gray-400" for="sa-prompt">
-							{$i18n.t('System prompt')}
+							{$i18n.t('settings.admin.subagents.systemPrompt.label')}
 						</label>
 						<textarea
 							id="sa-prompt"
@@ -178,7 +178,7 @@
 							class="mt-1 w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 font-mono text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 						></textarea>
 						<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{$i18n.t('Leave empty for the built-in default.')}
+							{$i18n.t('settings.admin.subagents.systemPrompt.description')}
 						</p>
 					</div>
 				{/if}

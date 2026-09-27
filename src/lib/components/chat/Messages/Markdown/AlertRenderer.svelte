@@ -75,6 +75,7 @@
 	export let alert: AlertData;
 	export let id = '';
 	export let tokenIdx = 0;
+	export let allowEmbeds = false;
 	export let onTaskClick: ((event: MouseEvent) => void) | undefined = undefined;
 	export let onSourceClick: ((event: MouseEvent) => void) | undefined = undefined;
 </script>
@@ -105,6 +106,12 @@ Renders the following Markdown as alerts:
 		<span class=" font-normal">{alert.type}</span>
 	</div>
 	<div class="pb-2">
-		<MarkdownTokens id={`${id}-${tokenIdx}`} tokens={alert.tokens} {onTaskClick} {onSourceClick} />
+		<MarkdownTokens
+			id={`${id}-${tokenIdx}`}
+			tokens={alert.tokens}
+			{allowEmbeds}
+			{onTaskClick}
+			{onSourceClick}
+		/>
 	</div>
 </div>

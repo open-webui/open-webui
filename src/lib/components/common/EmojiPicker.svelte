@@ -50,7 +50,7 @@
 		// Debounce backend save (avoid API spam on rapid picks)
 		if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		saveDebounceTimer = setTimeout(async () => {
-			await updateUserSettings(localStorage.token, { ui: { ...$settings, recentEmojis: updated } });
+			await updateUserSettings(localStorage.token, { ui: { recentEmojis: updated } });
 		}, 1000);
 	}
 

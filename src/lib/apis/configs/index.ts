@@ -744,7 +744,7 @@ export const setSubagentsConfig = async (token: string, config: object) => {
 
 export const setDefaultPromptSuggestions = async (
 	token: string,
-	promptSuggestions: any[],
+	promptSuggestions: any[] | null,
 	promptSuggestionsI18n: Record<string, any> = {}
 ) => {
 	let error = null;

@@ -59,6 +59,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     USE_SLIM,
+    USER_AGENT,
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db, get_async_session
@@ -115,6 +116,7 @@ from open_webui.retrieval.web.serphouse import search_serphouse
 from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.sougou import search_sougou
+from open_webui.retrieval.web.staan import search_staan
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.yacy import search_yacy
@@ -129,7 +131,7 @@ from open_webui.utils.misc import (
     calculate_sha256_string,
     sanitize_text_for_db,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -297,6 +299,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'ENABLE_WEB_SEARCH_CONFIRMATION': 'web.search.confirmation.enable',
     'WEB_SEARCH_CONFIRMATION_CONTENT': 'web.search.confirmation.content',
     'EXA_API_KEY': 'web.search.exa_api_key',
+    'EXA_MAX_CONTENT_LENGTH': 'web.search.exa_max_content_length',
     'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
     'EXTERNAL_DOCUMENT_LOADER_HEADERS': 'rag.external_document_loader_headers',
     'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
@@ -379,6 +382,9 @@ RETRIEVAL_CONFIG_KEYS = {
     'SERPSTACK_HTTPS': 'web.search.serpstack_https',
     'SOUGOU_API_SID': 'web.search.sougou_api_sid',
     'SOUGOU_API_SK': 'web.search.sougou_api_sk',
+    'STAAN_API_KEY': 'web.search.staan_api_key',
+    'STAAN_MARKET': 'web.search.staan_market',
+    'STAAN_MAX_SNIPPETS': 'web.search.staan_max_snippets',
     'TAVILY_API_KEY': 'web.search.tavily_api_key',
     'TAVILY_EXTRACT_DEPTH': 'web.search.tavily_extract_depth',
     'TEXT_SPLITTER': 'rag.text_splitter',
@@ -736,6 +742,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'DDGS_BACKEND': config.DDGS_BACKEND,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
+            'STAAN_API_KEY': config.STAAN_API_KEY,
+            'STAAN_MARKET': config.STAAN_MARKET,
+            'STAAN_MAX_SNIPPETS': config.STAAN_MAX_SNIPPETS,
             'SEARCHAPI_API_KEY': config.SEARCHAPI_API_KEY,
             'SEARCHAPI_ENGINE': config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': config.SERPAPI_API_KEY,
@@ -745,6 +754,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'BING_SEARCH_V7_ENDPOINT': config.BING_SEARCH_V7_ENDPOINT,
             'BING_SEARCH_V7_SUBSCRIPTION_KEY': config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             'EXA_API_KEY': config.EXA_API_KEY,
+            'EXA_MAX_CONTENT_LENGTH': config.EXA_MAX_CONTENT_LENGTH,
             'PERPLEXITY_API_KEY': config.PERPLEXITY_API_KEY,
             'PERPLEXITY_MODEL': config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -815,6 +825,9 @@ class WebConfig(BaseModel):
     SERPLY_API_KEY: str | None = None
     DDGS_BACKEND: str | None = None
     TAVILY_API_KEY: str | None = None
+    STAAN_API_KEY: str | None = None
+    STAAN_MARKET: str | None = None
+    STAAN_MAX_SNIPPETS: int | None = None
     SEARCHAPI_API_KEY: str | None = None
     SEARCHAPI_ENGINE: str | None = None
     SERPAPI_API_KEY: str | None = None
@@ -824,6 +837,7 @@ class WebConfig(BaseModel):
     BING_SEARCH_V7_ENDPOINT: str | None = None
     BING_SEARCH_V7_SUBSCRIPTION_KEY: str | None = None
     EXA_API_KEY: str | None = None
+    EXA_MAX_CONTENT_LENGTH: int | None = Field(default=None, gt=0, strict=True)
     PERPLEXITY_API_KEY: str | None = None
     PERPLEXITY_MODEL: str | None = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: str | None = None
@@ -1212,7 +1226,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         else config.RAG_RERANKING_BATCH_SIZE
     )
 
-    log.info('Updating reranking model: %s to %s', config.RAG_RERANKING_MODEL, form_data.RAG_RERANKING_MODEL)
+    if form_data.RAG_RERANKING_MODEL is not None:
+        log.info('Updating reranking model: %s to %s', config.RAG_RERANKING_MODEL, form_data.RAG_RERANKING_MODEL)
     try:
         config.RAG_RERANKING_MODEL = (
             form_data.RAG_RERANKING_MODEL if form_data.RAG_RERANKING_MODEL is not None else config.RAG_RERANKING_MODEL
@@ -1333,6 +1348,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.SERPLY_API_KEY = form_data.web.SERPLY_API_KEY
         config.DDGS_BACKEND = form_data.web.DDGS_BACKEND
         config.TAVILY_API_KEY = form_data.web.TAVILY_API_KEY
+        config.STAAN_API_KEY = form_data.web.STAAN_API_KEY
+        config.STAAN_MARKET = form_data.web.STAAN_MARKET
+        config.STAAN_MAX_SNIPPETS = form_data.web.STAAN_MAX_SNIPPETS
         config.SEARCHAPI_API_KEY = form_data.web.SEARCHAPI_API_KEY
         config.SEARCHAPI_ENGINE = form_data.web.SEARCHAPI_ENGINE
         config.SERPAPI_API_KEY = form_data.web.SERPAPI_API_KEY
@@ -1342,6 +1360,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.BING_SEARCH_V7_ENDPOINT = form_data.web.BING_SEARCH_V7_ENDPOINT
         config.BING_SEARCH_V7_SUBSCRIPTION_KEY = form_data.web.BING_SEARCH_V7_SUBSCRIPTION_KEY
         config.EXA_API_KEY = form_data.web.EXA_API_KEY
+        config.EXA_MAX_CONTENT_LENGTH = form_data.web.EXA_MAX_CONTENT_LENGTH
         config.PERPLEXITY_API_KEY = form_data.web.PERPLEXITY_API_KEY
         config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
         config.PERPLEXITY_SEARCH_CONTEXT_USAGE = form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
@@ -1485,6 +1504,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'SERPHOUSE_DOMAIN': config.SERPHOUSE_DOMAIN,
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
+            'STAAN_API_KEY': config.STAAN_API_KEY,
+            'STAAN_MARKET': config.STAAN_MARKET,
+            'STAAN_MAX_SNIPPETS': config.STAAN_MAX_SNIPPETS,
             'SEARCHAPI_API_KEY': config.SEARCHAPI_API_KEY,
             'SEARCHAPI_ENGINE': config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': config.SERPAPI_API_KEY,
@@ -1494,6 +1516,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'BING_SEARCH_V7_ENDPOINT': config.BING_SEARCH_V7_ENDPOINT,
             'BING_SEARCH_V7_SUBSCRIPTION_KEY': config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             'EXA_API_KEY': config.EXA_API_KEY,
+            'EXA_MAX_CONTENT_LENGTH': config.EXA_MAX_CONTENT_LENGTH,
             'PERPLEXITY_API_KEY': config.PERPLEXITY_API_KEY,
             'PERPLEXITY_MODEL': config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -1913,10 +1936,10 @@ async def process_file(
     The session is committed before external API calls, and updates use a fresh session.
     """
     config = await get_retrieval_config()
-    if user.role == 'admin':
-        file = await Files.get_file_by_id(form_data.file_id, db=db)
-    else:
-        file = await Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
+    file = await Files.get_file_by_id(form_data.file_id, db=db)
+    if file and file.user_id != user.id and user.role != 'admin':
+        if not await has_access_to_file(file.id, 'write', user, db=db):
+            file = None
 
     if file:
         try:
@@ -2229,9 +2252,11 @@ async def _fetch_url(url: str, max_size_mb: int | str | None) -> dict:
         except (TypeError, ValueError):
             max_bytes = None
 
+    headers = {'User-Agent': USER_AGENT} if USER_AGENT else None
+
     async with get_ssrf_safe_session() as session:
         async with session.get(
-            url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+            url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
         ) as response:
             response.raise_for_status()
 
@@ -2430,6 +2455,13 @@ async def process_web(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e, f'Could not read content from {form_data.url}'),
+        )
+
+    # web loaders swallow fetch errors and return no documents
+    if not docs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(f'Could not read content from {form_data.url}'),
         )
 
     try:
@@ -2683,6 +2715,19 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No TAVILY_API_KEY found in environment variables')
+    elif engine == 'staan':
+        if config.STAAN_API_KEY:
+            return await asyncio.to_thread(
+                search_staan,
+                config.STAAN_API_KEY,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                market=config.STAAN_MARKET,
+                max_snippets=config.STAAN_MAX_SNIPPETS,
+            )
+        else:
+            raise Exception('No STAAN_API_KEY found in environment variables')
     elif engine == 'exa':
         if config.EXA_API_KEY:
             return await asyncio.to_thread(
@@ -2691,6 +2736,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
                 query,
                 config.WEB_SEARCH_RESULT_COUNT,
                 config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                max_content_length=config.EXA_MAX_CONTENT_LENGTH,
             )
         else:
             raise Exception('No EXA_API_KEY found in environment variables')

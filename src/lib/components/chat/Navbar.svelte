@@ -149,6 +149,19 @@
 									</button>
 								</Menu>
 							{/if}
+
+							{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
+								<button
+									id="delete-chat-button"
+									aria-label={$i18n.t('Delete')}
+									class="hidden"
+									on:click={() => {
+										deleteChatHandler(chat.id);
+									}}
+								>
+									<EllipsisHorizontal className="size-4.5" strokeWidth="1.5" />
+								</button>
+							{/if}
 						</div>
 					{:else}
 						<div class="pointer-events-none invisible flex max-w-full min-w-0 items-center gap-2">
@@ -184,9 +197,9 @@
 
 										// add 'temporary-chat=true' to the URL
 										if ($temporaryChatEnabled) {
-											window.history.replaceState(null, '', '?temporary-chat=true');
+											window.history.replaceState(window.history.state, '', '?temporary-chat=true');
 										} else {
-											window.history.replaceState(null, '', location.pathname);
+											window.history.replaceState(window.history.state, '', location.pathname);
 										}
 									}}
 									aria-label={$i18n.t(`Temporary Chat`)}

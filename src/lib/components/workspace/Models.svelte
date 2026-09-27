@@ -9,7 +9,7 @@
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 	dayjs.extend(relativeTime);
 
 	import {
@@ -25,7 +25,8 @@
 	} from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import {
-		createNewModel,
+		exportModels,
+		importModels,
 		deleteModelById,
 		getModelById,
 		getModelItems as getWorkspaceModels,
@@ -113,7 +114,7 @@
 				id: 'models-export',
 				label: $i18n.t('Export JSON'),
 				onClick: async () => {
-					await downloadModels(models);
+					await downloadModels();
 				},
 				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.models_export
 			}
@@ -282,8 +283,16 @@
 		}
 	};
 
-	const downloadModels = async (models) => {
-		models = await Promise.all(models.map(getFullModel));
+	const downloadModels = async (models = null) => {
+		try {
+			models = await exportModels(
+				localStorage.token,
+				models ? models.map((model: { id: string }) => model.id) : undefined
+			);
+		} catch (error: any) {
+			toast.error(`${error?.detail ?? error}`);
+			return;
+		}
 		let blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
 		});
@@ -291,7 +300,12 @@
 	};
 
 	const exportModelHandler = async (model) => {
-		model = await getFullModel(model);
+		try {
+			[model] = await exportModels(localStorage.token, [model.id]);
+		} catch (error: any) {
+			toast.error(`${error?.detail ?? error}`);
+			return;
+		}
 		let blob = new Blob([JSON.stringify([model])], {
 			type: 'application/json'
 		});
@@ -305,7 +319,7 @@
 				? $pinnedModels.filter((id) => id !== modelId)
 				: [...$pinnedModels, modelId]
 		});
-		await updateUserSettings(localStorage.token, { ui: $settings });
+		await updateUserSettings(localStorage.token, { ui: { pinnedModels: $settings.pinnedModels } });
 	};
 
 	const fetchAllWorkspaceModels = async () => {
@@ -476,27 +490,18 @@
 					return;
 				}
 
-				for (const model of savedModels) {
-					if (model?.info ?? false) {
-						if ($_models.find((m) => m.id === model.id)) {
-							await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-						} else {
-							await createNewModel(localStorage.token, model.info).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-						}
-					} else {
-						if (model?.id && model?.name) {
-							await createNewModel(localStorage.token, model).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-						}
-					}
+				if (!Array.isArray(savedModels)) {
+					toast.error($i18n.t('Invalid JSON file'));
+					return;
+				}
+				try {
+					await importModels(
+						localStorage.token,
+						savedModels.map((model) => model.info ?? model)
+					);
+				} catch (error: any) {
+					toast.error(`${error?.detail ?? error}`);
+					return;
 				}
 
 				await _models.set(

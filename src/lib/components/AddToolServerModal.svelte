@@ -559,15 +559,15 @@
 											class=" text-xs text-gray-700 dark:text-gray-300"
 										>
 											{#if ['', 'openapi'].includes(type)}
-												{$i18n.t('OpenAPI')}
+												{$i18n.t('settings.admin.integrations.openApi.label')}
 											{:else if type === 'mcp'}
-												{$i18n.t('MCP')}
+												{$i18n.t('settings.admin.integrations.mcp.label')}
 												<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
 											{/if}
 										</button>
 									{:else}
 										<div class="text-xs text-gray-700 dark:text-gray-300">
-											{$i18n.t('OpenAPI')}
+											{$i18n.t('settings.personal.tools.openApi.label')}
 										</div>
 									{/if}
 								</div>

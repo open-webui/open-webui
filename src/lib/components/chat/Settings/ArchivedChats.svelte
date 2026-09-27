@@ -20,7 +20,7 @@
 		unarchiveAllChats
 	} from '$lib/apis/chats';
 	import { chatId, showSettings, user } from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
 	import { formatNumber } from '$lib/utils';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -124,7 +124,7 @@
 
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;
-		await refreshChatList(localStorage.token);
+		await refreshChatList(localStorage.token, { refreshPinned: true });
 	};
 
 	const deleteHandler = async () => {
@@ -150,10 +150,11 @@
 	const unarchiveAllHandler = async () => {
 		loading = true;
 		try {
-			await unarchiveAllChats(localStorage.token);
+			const success = await unarchiveAllChats(localStorage.token);
+			if (!success) return;
 			toast.success($i18n.t('All chats have been unarchived.'));
 			await loadChats();
-			await refreshChatList(localStorage.token);
+			await refreshSidebar(localStorage.token);
 		} catch (error) {
 			toast.error(`${error}`);
 		} finally {
@@ -174,7 +175,7 @@
 <ConfirmDialog
 	bind:show={showUnarchiveAllConfirmDialog}
 	message={$i18n.t('Are you sure you want to unarchive all archived chats?')}
-	confirmLabel={$i18n.t('Unarchive All')}
+	confirmLabel={$i18n.t('settings.personal.archivedChats.unarchiveAll.label')}
 	on:confirm={() => {
 		unarchiveAllHandler();
 	}}
@@ -183,7 +184,7 @@
 <div id="tab-archived-chats" class="flex flex-col h-full text-sm">
 	<div class="mb-3 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
-			{$i18n.t('Archived Chats')}
+			{$i18n.t('settings.personal.archivedChats.title')}
 			{#if chatCount !== null}
 				<span class="ml-2 font-normal text-gray-500 dark:text-gray-500">
 					{formatNumber(chatCount)}
@@ -246,7 +247,9 @@
 						{:else}
 							<UndoAction className="size-3.5 shrink-0" strokeWidth="1.5" />
 						{/if}
-						<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Unarchive All')}</div>
+						<div class="min-w-0 flex-1 truncate text-left">
+							{$i18n.t('settings.personal.archivedChats.unarchiveAll.label')}
+						</div>
 					</button>
 
 					<button
@@ -256,7 +259,9 @@
 						on:click={exportChatsHandler}
 					>
 						<Download className="size-3.5 shrink-0" strokeWidth="1.5" />
-						<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Export')}</div>
+						<div class="min-w-0 flex-1 truncate text-left">
+							{$i18n.t('settings.personal.archivedChats.exportArchivedChats.label')}
+						</div>
 					</button>
 				</DropdownMenu>
 			</div>

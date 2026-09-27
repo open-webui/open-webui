@@ -311,6 +311,7 @@ class OpenGaussClient(VectorDBBase):
             results = query.all()
 
             if not results:
+                self.session.rollback()
                 return None
 
             ids = [[result.id for result in results]]
@@ -333,6 +334,7 @@ class OpenGaussClient(VectorDBBase):
             results = query.all()
 
             if not results:
+                self.session.rollback()
                 return None
 
             ids = [[result.id for result in results]]

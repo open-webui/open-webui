@@ -26,7 +26,7 @@
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import { config, user, chatId as currentChatId, tags } from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshSidebar } from '$lib/stores/chatList';
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
 	import EditPencilIcon from './Sidebar/icons/EditPencil.svelte';
@@ -65,10 +65,6 @@
 	};
 	let generating = false;
 
-	const refreshSidebar = async () => {
-		await refreshChatList(localStorage.token, { refreshPinned: true });
-	};
-
 	const cloneChatHandler = async (id) => {
 		const chat = chatList?.find((c) => c.id === id);
 		const res = await cloneChatById(
@@ -83,7 +79,7 @@
 		});
 
 		if (res) {
-			await refreshSidebar();
+			await refreshSidebar(localStorage.token);
 			await searchHandler();
 		}
 	};
@@ -95,13 +91,13 @@
 		});
 
 		if (res) {
-			await refreshSidebar();
+			await refreshSidebar(localStorage.token);
 		}
 	};
 
 	const archiveChatHandler = async (id) => {
 		try {
-			await archiveChatById(localStorage.token, id);
+			const res = await archiveChatById(localStorage.token, id);
 
 			chatList = chatList?.filter((c) => c.id !== id) ?? null;
 
@@ -110,8 +106,8 @@
 				currentChatId.set('');
 			}
 
-			await refreshSidebar();
-			toast.success($i18n.t('Chat archived.'));
+			await refreshSidebar(localStorage.token);
+			toast.success(res?.archived ? $i18n.t('Chat archived.') : $i18n.t('Chat unarchived.'));
 		} catch (error) {
 			toast.error($i18n.t('Failed to archive chat.'));
 		}
@@ -132,7 +128,7 @@
 				currentChatId.set('');
 			}
 
-			await refreshSidebar();
+			await refreshSidebar(localStorage.token);
 		}
 	};
 
@@ -147,7 +143,7 @@
 
 			if (res) {
 				chatList = chatList?.filter((c) => c.id !== chatId) ?? null;
-				await refreshSidebar();
+				await refreshSidebar(localStorage.token);
 				toast.success($i18n.t('Chat moved successfully'));
 			}
 		}
@@ -182,7 +178,7 @@
 
 		editingChatId = null;
 		editingChatTitle = '';
-		await refreshSidebar();
+		await refreshSidebar(localStorage.token);
 	};
 
 	const cancelRename = () => {
@@ -816,6 +812,7 @@
 										<div class="flex items-center">
 											<ChatMenu
 												chatId={chat.id}
+												archived={chat.archived ?? false}
 												shareHandler={() => {
 													menuChatId = chat.id;
 													showShareChatModal = true;
@@ -840,7 +837,7 @@
 												}}
 												onClose={() => {}}
 												onPinChange={async () => {
-													await refreshSidebar();
+													await refreshSidebar(localStorage.token);
 													await searchHandler();
 												}}
 											>

@@ -26,7 +26,7 @@ export default {
 	namespaceSeparator: false,
 	output: 'src/lib/i18n/locales/$LOCALE/$NAMESPACE.json',
 	pluralSeparator: '_',
-	input: 'src/**/*.{js,svelte}',
+	input: 'src/**/*.{js,ts,svelte}',
 	sort: true,
 	verbose: true,
 	failOnWarnings: false,

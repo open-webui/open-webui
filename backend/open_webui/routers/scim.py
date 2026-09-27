@@ -753,31 +753,60 @@ async def patch_user(
         )
 
     update_data = {}
+    fields = {
+        'userName': 'email',
+        'displayName': 'name',
+        'emails[primary eq true].value': 'email',
+        'name.formatted': 'name',
+    }
 
     for operation in patch_data.Operations:
         op = operation.op.lower()
         path = operation.path
-        value = operation.value
 
-        if op == 'replace':
+        if op not in ('add', 'replace', 'remove'):
+            return scim_error(400, f'Unsupported PATCH operation: {operation.op}')
+        if op == 'remove':
+            if not path:
+                return scim_error(400, 'Remove requires a path', 'noTarget')
+            if path != 'externalId':
+                return scim_error(400, f'Removing {path} is not supported', 'mutability')
+            values = {path: None}
+        elif path is None:
+            if not isinstance(operation.value, dict) or not operation.value:
+                return scim_error(400, 'A pathless operation requires an attribute object', 'invalidValue')
+            values = operation.value
+        else:
+            values = {path: operation.value}
+
+        for path, value in values.items():
             if path == 'active':
+                if not isinstance(value, bool):
+                    return scim_error(400, 'active must be a boolean', 'invalidValue')
                 # Same guard as update_user: never demote an existing admin via SCIM.
                 if user.role != 'admin':
                     update_data['role'] = 'user' if value else 'pending'
-            elif path == 'userName':
-                update_data['email'] = value
-            elif path == 'displayName':
-                update_data['name'] = value
-            elif path == 'emails[primary eq true].value':
-                update_data['email'] = value
-            elif path == 'name.formatted':
-                update_data['name'] = value
+            elif path in fields:
+                if not isinstance(value, str):
+                    return scim_error(400, f'{path} must be a string', 'invalidValue')
+                update_data[fields[path]] = value
             elif path == 'externalId':
+                if value is not None and not isinstance(value, str):
+                    return scim_error(400, 'externalId must be a string or null', 'invalidValue')
                 provider = get_scim_provider()
-                await Users.update_user_scim_by_id(user_id, provider, value, db=db)
+                scim = dict(update_data.get('scim', user.scim) or {})
+                scim[provider] = {'external_id': value}
+                update_data['scim'] = scim
+            else:
+                return scim_error(400, f'Unsupported PATCH path: {path}', 'invalidPath')
+
+    # Validate all operations before persisting once, and leave identical writes unchanged.
+    update_data = {key: value for key, value in update_data.items() if value != getattr(user, key)}
+    user_updated_fields = ['externalId' if field == 'scim' else field for field in update_data if field != 'role']
 
     # Update user
     if update_data:
+        update_data['updated_at'] = int(time.time())
         updated_user = await Users.update_user_by_id(user_id, update_data, db=db)
         if not updated_user:
             raise HTTPException(
@@ -788,7 +817,6 @@ async def patch_user(
         updated_user = user
 
     role_changed = updated_user.role != user.role
-    user_updated_fields = [field for field in update_data.keys() if field != 'role']
 
     if user_updated_fields:
         await publish_event(

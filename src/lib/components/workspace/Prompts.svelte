@@ -12,13 +12,15 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_NAME, config, user, workspaceActions, workspaceCounts } from '$lib/stores';
+	import { COMMUNITY_ORIGINS } from '$lib/constants';
 
 	import {
 		createNewPrompt,
 		deletePromptById,
 		togglePromptById,
 		getPromptItems,
-		getPromptTags
+		getPromptTags,
+		getPrompts
 	} from '$lib/apis/prompts';
 	import { capitalizeFirstLetter, slugify, copyToClipboard } from '$lib/utils';
 
@@ -107,7 +109,14 @@
 				id: 'prompts-export',
 				label: $i18n.t('Export JSON'),
 				onClick: async () => {
-					let blob = new Blob([JSON.stringify(prompts)], {
+					const _prompts = await getPrompts(localStorage.token).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
+					if (!_prompts) {
+						return;
+					}
+					let blob = new Blob([JSON.stringify(_prompts)], {
 						type: 'application/json'
 					});
 					saveAs(blob, `prompts-export-${Date.now()}.json`);
@@ -301,11 +310,7 @@
 		loaded = true;
 
 		const onMessage = async (event: MessageEvent) => {
-			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
-					event.origin
-				)
-			) {
+			if (!COMMUNITY_ORIGINS.includes(event.origin)) {
 				return;
 			}
 
@@ -636,9 +641,10 @@
 								{#if shiftKey}
 									<Tooltip content={$i18n.t('Delete')}>
 										<button
-											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
 											type="button"
 											aria-label={$i18n.t('Delete')}
+											disabled={!prompt.write_access}
 											on:click={(e) => {
 												e.preventDefault();
 												e.stopPropagation();
@@ -670,6 +676,7 @@
 
 									<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
 										<PromptMenu
+											writeAccess={prompt.write_access}
 											show={openPromptMenuId === prompt.id}
 											editHandler={() => {
 												goto(`/workspace/prompts/${prompt.id}`);
@@ -708,6 +715,7 @@
 										<button
 											class="flex h-6 items-center"
 											type="button"
+											disabled={!prompt.write_access}
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -720,6 +728,8 @@
 											>
 												<Switch
 													bind:state={prompt.is_active}
+													disabled={!prompt.write_access}
+													ariaLabel={$i18n.t('Enabled')}
 													on:change={async () => {
 														togglePromptById(localStorage.token, prompt.id);
 													}}

@@ -40,7 +40,7 @@ dependencies = [
 
     "pycrdt==0.13.1",
     "redis==8.0.1",
-    "hiredis==3.4.0",
+    "hiredis==3.4.2",
     # "valkey-glide-sync==2.3.1",  # optional: install manually if VECTOR_DB=valkey
 
     "pytz==2026.2",
@@ -50,12 +50,13 @@ dependencies = [
 
     "tiktoken==0.13.0",
     "regex==2026.5.9",
+    "google-re2==1.1.20251105",
     "mcp==1.27.2",
 
     "openai==2.29.0",
     "anthropic==0.86.0",
 
-    "langchain-community==0.4.2",
+    "langchain-core==1.4.8",
     "langchain-classic==1.0.7",
     "langchain-text-splitters==1.1.2",
 

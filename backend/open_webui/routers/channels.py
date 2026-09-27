@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
-from open_webui.env import STATIC_DIR
+from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, STATIC_DIR
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
 from open_webui.models.config import Config
@@ -40,6 +40,7 @@ from open_webui.socket.main import (
     emit_to_users,
     enter_room_for_users,
     get_user_ids_from_room,
+    leave_room_for_users,
     sio,
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
@@ -687,6 +688,8 @@ async def remove_members_by_id(
 
     try:
         deleted = await Channels.remove_members_from_channel(channel.id, form_data.user_ids, db=db)
+        if channel.type in ['group', 'dm']:
+            await leave_room_for_users(f'channel:{channel.id}', form_data.user_ids)
 
         await publish_event(
             request,
@@ -731,8 +734,18 @@ async def update_channel_by_id(
         'sharing.public_channels',
     )
 
+    previous_access_grants = channel.access_grants
+
     try:
         channel = await Channels.update_channel_by_id(id, form_data, db=db)
+        # Group and DM channels use membership instead of access grants.
+        if form_data.access_grants is not None and channel.type not in ['group', 'dm']:
+            revoked_user_ids = await AccessGrants.get_revoked_user_ids_by_resource(
+                'channel', id, previous_access_grants, db=db
+            )
+            revoked_user_ids.discard(channel.user_id)
+            await leave_room_for_users(f'channel:{id}', list(revoked_user_ids))
+
         await publish_event(
             request,
             EVENTS.CHANNEL_UPDATED,
@@ -769,6 +782,7 @@ async def delete_channel_by_id(
 
     try:
         await Channels.delete_channel_by_id(id, db=db)
+        await sio.close_room(f'channel:{id}')
         await publish_event(
             request,
             EVENTS.CHANNEL_DELETED,
@@ -1102,13 +1116,12 @@ async def model_response_handler(request, channel, message, user, db=None):
                 # Resolve model config (same path automations use)
                 from open_webui.utils.automations import _resolve_model_defaults
 
-                tool_ids, features, filter_ids, _ = await _resolve_model_defaults(request.app, model_id)
-
                 # Build full form_data — same shape as frontend POST.
                 # The channel: prefix routes pipeline events to the
                 # channel emitter in socket/main.py instead of the
                 # default chat emitter.
                 form_data = {
+                    **await _resolve_model_defaults(request.app, model_id),
                     'model': model_id,
                     'messages': [
                         system_message,
@@ -1122,12 +1135,6 @@ async def model_response_handler(request, channel, message, user, db=None):
                 }
                 if files:
                     form_data['files'] = files
-                if tool_ids:
-                    form_data['tool_ids'] = tool_ids
-                if features:
-                    form_data['features'] = features
-                if filter_ids:
-                    form_data['filter_ids'] = filter_ids
 
                 # Call the full chat completion pipeline — streaming,
                 # tools, filters, RAG — everything. The pipeline runs as
@@ -1853,10 +1860,12 @@ async def get_webhook_profile_image(
     if webhook.profile_image_url:
         # Check if it's url or base64
         if webhook.profile_image_url.startswith('http'):
-            return Response(
-                status_code=status.HTTP_302_FOUND,
-                headers={'Location': webhook.profile_image_url},
-            )
+            if ENABLE_PROFILE_IMAGE_URL_FORWARDING:
+                return Response(
+                    status_code=status.HTTP_302_FOUND,
+                    headers={'Location': webhook.profile_image_url},
+                )
+            # When forwarding is disabled, fall through to the default image to prevent client-side IP/UA/Referer leaks.
         elif webhook.profile_image_url.startswith('data:image'):
             try:
                 header, base64_data = webhook.profile_image_url.split(',', 1)

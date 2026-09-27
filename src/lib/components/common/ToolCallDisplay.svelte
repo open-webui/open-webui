@@ -35,6 +35,7 @@
 
 	export let open = false;
 	export let grouped = false;
+	export let allowEmbeds = false;
 	export let className = '';
 	export let resolvable = false;
 	export let resolving = false;
@@ -173,7 +174,7 @@
 </script>
 
 <div {id} class={className}>
-	{#if !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
+	{#if allowEmbeds && !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
 			<div class="w-full text-xs text-gray-500">

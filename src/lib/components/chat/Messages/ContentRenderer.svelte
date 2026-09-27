@@ -89,6 +89,7 @@
 
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let allowEmbeds = false;
 
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
@@ -293,6 +294,7 @@
 			{preview}
 			{compactPreview}
 			{done}
+			{allowEmbeds}
 			{editCodeBlock}
 			{topPadding}
 			{sourceIds}
@@ -317,6 +319,7 @@
 				{preview}
 				{compactPreview}
 				{done}
+				{allowEmbeds}
 				{editCodeBlock}
 				{topPadding}
 				{sourceIds}
@@ -343,6 +346,7 @@
 					{preview}
 					{compactPreview}
 					{done}
+					{allowEmbeds}
 					{onToolCallResolved}
 				/>
 			</div>

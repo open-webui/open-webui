@@ -5,7 +5,7 @@
 	import { settings, config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
-	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
+	import { initMermaid, renderMermaidDiagram, sanitizeSvg } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PdfPagesPreview from '../../common/PdfPagesPreview.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
@@ -478,10 +478,7 @@
 			</div>
 		{:else if isSvg && !showRaw && fileContent}
 			<div class="svg-preview w-full h-full flex items-center justify-center overflow-auto p-3">
-				{@html DOMPurify.sanitize(fileContent, {
-					USE_PROFILES: { svg: true, svgFilters: true },
-					ADD_TAGS: ['use']
-				})}
+				{@html sanitizeSvg(fileContent)}
 			</div>
 		{:else if isCode && !showRaw}
 			<div class="absolute inset-0">

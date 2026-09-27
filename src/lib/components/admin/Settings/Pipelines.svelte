@@ -254,7 +254,9 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Pipelines')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.admin.pipelines.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if PIPELINES_LIST !== null}
@@ -267,10 +269,13 @@
 					hidden
 				/>
 
-				<AdminSettingSection title={$i18n.t('Source')} first>
+				<AdminSettingSection
+					title={$i18n.t('settings.admin.pipelines.sections.source.title')}
+					first
+				>
 					<AdminSettingField
-						label={$i18n.t('Pipeline URL')}
-						description={$i18n.t('Select the Pipelines server to manage.')}
+						label={$i18n.t('settings.admin.pipelines.pipelineUrl.label')}
+						description={$i18n.t('settings.admin.pipelines.pipelineUrl.description')}
 					>
 						<SettingsSelect
 							bind:value={selectedPipelinesUrlIdx}
@@ -294,8 +299,8 @@
 					</AdminSettingField>
 
 					<AdminSettingField
-						label={$i18n.t('Upload Pipeline')}
-						description={$i18n.t('Upload a local Python pipeline file to the selected server.')}
+						label={$i18n.t('settings.admin.pipelines.uploadPipeline.label')}
+						description={$i18n.t('settings.admin.pipelines.uploadPipeline.description')}
 					>
 						<div class="flex gap-2">
 							<button
@@ -308,7 +313,7 @@
 								{#if pipelineFiles}
 									{$i18n.t('{{COUNT}} pipeline(s) selected', { COUNT: pipelineFiles.length })}
 								{:else}
-									{$i18n.t('Select a .py file')}
+									{$i18n.t('settings.admin.pipelines.selectAPyFile.label')}
 								{/if}
 							</button>
 
@@ -326,7 +331,7 @@
 					</AdminSettingField>
 
 					<AdminSettingField
-						label={$i18n.t('GitHub URL')}
+						label={$i18n.t('settings.admin.pipelines.githubUrl.label')}
 						description={`${$i18n.t('Pipelines are a plugin system with arbitrary code execution.')} ${$i18n.t("Don't fetch random pipelines from sources you don't trust.")}`}
 					>
 						<div class="flex gap-2">
@@ -343,7 +348,9 @@
 								disabled={downloading}
 								type="button"
 							>
-								{downloading ? $i18n.t('Installing') : $i18n.t('Install')}
+								{downloading
+									? $i18n.t('settings.admin.pipelines.installing.label')
+									: $i18n.t('settings.admin.pipelines.install.label')}
 							</button>
 						</div>
 					</AdminSettingField>
@@ -351,10 +358,12 @@
 
 				{#if pipelines !== null}
 					{#if pipelines.length > 0}
-						<AdminSettingSection title={$i18n.t('Pipelines')}>
+						<AdminSettingSection
+							title={$i18n.t('settings.admin.pipelines.sections.pipelines.title')}
+						>
 							<AdminSettingField
-								label={$i18n.t('Pipeline')}
-								description={$i18n.t('Select an installed pipeline to configure or remove.')}
+								label={$i18n.t('settings.admin.pipelines.pipeline.label')}
+								description={$i18n.t('settings.admin.pipelines.pipeline.description')}
 							>
 								<div class="flex gap-2">
 									<SettingsSelect
@@ -386,7 +395,7 @@
 							</AdminSettingField>
 						</AdminSettingSection>
 
-						<AdminSettingSection title={$i18n.t('Valves')}>
+						<AdminSettingSection title={$i18n.t('settings.admin.pipelines.sections.valves.title')}>
 							{#if pipelines[selectedPipelineIdx ?? 0]?.valves}
 								{#if valves && valves_spec}
 									{#each Object.keys(valves_spec.properties) as property}
@@ -450,7 +459,9 @@
 							{/if}
 						</AdminSettingSection>
 					{:else}
-						<AdminSettingSection title={$i18n.t('Pipelines')}>
+						<AdminSettingSection
+							title={$i18n.t('settings.admin.pipelines.sections.pipelines.title')}
+						>
 							<div class={mutedMessageClass}>{$i18n.t('Pipelines Not Detected')}</div>
 						</AdminSettingSection>
 					{/if}
@@ -460,7 +471,10 @@
 					</div>
 				{/if}
 			{:else}
-				<AdminSettingSection title={$i18n.t('Source')} first>
+				<AdminSettingSection
+					title={$i18n.t('settings.admin.pipelines.sections.source.title')}
+					first
+				>
 					<div class={mutedMessageClass}>{$i18n.t('Pipelines Not Detected')}</div>
 				</AdminSettingSection>
 			{/if}

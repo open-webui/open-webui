@@ -1,10 +1,12 @@
 import logging
 import time
+from string import punctuation
 from typing import Any, Optional
 from urllib.parse import quote
 
 import jwt
 from open_webui.env import (
+    FORWARD_USER_INFO_HEADER_AUTH_TYPE,
     FORWARD_USER_INFO_HEADER_JWT,
     FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS,
     FORWARD_USER_INFO_HEADER_JWT_SECRET,
@@ -47,14 +49,19 @@ def _mint_forward_user_jwt(user: Any) -> str:
     return jwt.encode(payload, FORWARD_USER_INFO_HEADER_JWT_SECRET, algorithm='HS256')
 
 
-def include_user_info_headers(headers: dict, user: Optional[Any] = None) -> dict:
+def include_user_info_headers(headers: dict, user: Optional[Any] = None, *, request=None) -> dict:
     """
     Forward user identity to external backends: signed JWT in
     FORWARD_USER_INFO_HEADER_JWT if FORWARD_USER_INFO_HEADER_JWT_SECRET is set;
     otherwise the legacy X-OpenWebUI-User-* headers.
+    Include the verified incoming auth type when a request provides it.
     """
     if user is None:
         return headers
+
+    auth_type = getattr(getattr(request, 'state', None), 'auth_type', None)
+    if auth_type in ('api_key', 'jwt'):
+        headers = {**headers, FORWARD_USER_INFO_HEADER_AUTH_TYPE: auth_type}
 
     if FORWARD_USER_INFO_HEADER_JWT_SECRET:
         try:
@@ -141,6 +148,7 @@ def parse_custom_headers(
         '{{USER_GROUPS}}': ','.join(group.name.strip() for group in user_groups) if user_groups else '',
         '{{USER_GROUP_IDS}}': ','.join(group.id for group in user_groups) if user_groups else '',
         '{{USER_AGENT}}': user_agent,
+        '{{AUTH_TYPE}}': getattr(getattr(request, 'state', None), 'auth_type', None) or '',
     }
 
     parsed_headers = {}
@@ -149,6 +157,7 @@ def parse_custom_headers(
             value = str(value)
         for token, val in template_vars.items():
             value = value.replace(token, val)
-        parsed_headers[key] = value
+        # Encode Unicode and controls after substitution; preserve ASCII header syntax and existing escapes.
+        parsed_headers[key] = quote(value, safe=punctuation + ' \t')
 
     return parsed_headers

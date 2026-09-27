@@ -1,31 +1,30 @@
 <!--
 Important checks for contributors:
-1. Target the `dev` branch. PRs targeting `main` will be closed.
-2. Code pull requests are not the default contribution path.
-3. Do not open a code PR as the first step. Start with a well-written Issue or Discussion unless a maintainer asked for the PR or the change is only i18n/localization.
-4. Do not delete the Contributor License Agreement section at the bottom. The CLA bot requires it.
+1. DO NOT OPEN A CODE PULL REQUEST unless a maintainer explicitly asked you to, or the change is strictly limited to i18n/localization.
+2. Target the `dev` branch. PRs targeting `main` will be closed.
+3. Do not delete the Contributor License Agreement section at the bottom. The CLA bot requires it.
 -->
 
 # Pull Request
 
-Thanks for wanting to improve Open WebUI. The most useful contribution is usually a clear, well-written Issue, not an unsolicited code pull request.
+**Do not open a code pull request unless a maintainer has explicitly requested it or the change is limited to i18n/localization.**
 
-Open a code pull request only when a maintainer asks for one, or when the change is only i18n/localization. For real, reproducible bugs, start with a well-described [Issue](https://github.com/open-webui/open-webui/issues). For feature requests, UI/UX changes, behavior changes, architecture changes, suspected fixes, or unconfirmed approaches, start with an active [Discussion](https://github.com/open-webui/open-webui/discussions).
+The most useful way to help is to give us a clear understanding of the problem: report reproducible bugs in [Issues](https://github.com/open-webui/open-webui/issues) and share proposals in [Discussions](https://github.com/open-webui/open-webui/discussions). We use that context to evaluate solutions and refine the implementation internally, accounting for the broader codebase and ongoing work. External implementations usually require substantial reworking to fit the project's standards, and coordinating those revisions usually takes more effort than developing the solution internally. Please follow this process before investing time in a pull request. PRs opened outside these guidelines are generally closed without review.
 
-Before continuing, make sure the linked Issue or Discussion explains the user-facing problem, the expected outcome, the affected workflow, and any examples, logs, screenshots, constraints, or reproduction details needed for maintainers to evaluate it.
+## Maintainer Request
 
-If you have implementation notes, include them as reference in the Issue or Discussion. If you want to share code as reference, include it there as a local diff, patch, or branch note. Do not open a pull request for reference code.
-
-Unsolicited PRs may be closed without review, especially when they introduce product, architecture, compatibility, dependency, or maintenance decisions that have not been discussed.
+Link the maintainer's request for this PR, or state that the change is limited to i18n/localization.
 
 ## Checklist
 
+- [ ] I have read and I understand the [contribution policy](https://docs.openwebui.com/contributing/#submit-code).
 - [ ] This PR targets the `dev` branch.
 - [ ] This PR links to a well-described, confirmed Issue or active Discussion: `Closes #___` / `Relates to #___`.
 - [ ] A maintainer explicitly asked me to open this PR, or this PR only updates i18n/localization.
 - [ ] The change is one logical unit with no unrelated commits.
 - [ ] I matched nearby code patterns and avoided unnecessary new settings, abstractions, or dependencies.
 - [ ] I manually tested the changed workflow and any nearby behavior that could be affected.
+- [ ] I have not added or rewritten automated tests, fixtures, snapshots, or testing infrastructure unless a maintainer explicitly requested them.
 - [ ] I updated relevant docs, including the [Open WebUI Docs Repository](https://github.com/open-webui/docs), if needed.
 - [ ] I added screenshots for UI changes, and a recording when motion or interaction matters.
 - [ ] I reviewed any AI-generated code before submitting it.
@@ -50,9 +49,11 @@ Use one of the following prefixes:
 
 Describe the change, the problem it solves, and the impact on users.
 
-## Testing
+## Verification
 
-List the exact manual checks you ran. Include commands, setup details, screenshots, or recordings where helpful.
+Describe how you reproduced the problem and manually checked the behavior before and after the change. Include exact steps, setup details, and relevant logs, screenshots, or recordings. Report results from relevant existing checks and anything you could not verify.
+
+Do not add or rewrite automated tests unless a maintainer explicitly requests them. Tests that repeat an implementation's assumptions can pass while preserving the same mistake; maintainers determine the regression coverage needed. Do not remove, disable, or weaken existing tests to make the change pass.
 
 ## Changelog Entry
 

@@ -28,8 +28,7 @@
 
 	const init = () => {
 		if (selectedUser) {
-			_user = selectedUser;
-			_user.password = '';
+			_user = { ...selectedUser, password: '' };
 			loadUserGroups();
 		}
 	};

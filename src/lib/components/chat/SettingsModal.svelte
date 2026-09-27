@@ -1,6 +1,12 @@
 <script lang="ts">
+	import english from '$lib/i18n/locales/en-US/translation.json';
+	import {
+		buildSettingsSearchIndex,
+		searchSettingsTabs,
+		type SettingsTab
+	} from '$lib/utils/settings-search';
 	import { browser } from '$app/environment';
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings, user } from '$lib/stores';
@@ -93,6 +99,7 @@
 
 	$: if (show !== lastShow) {
 		lastShow = show;
+		search = '';
 		if (show && typeof show === 'object') {
 			selectedTab = show.tab;
 			tabState = show.state ?? null;
@@ -120,15 +127,10 @@
 
 	$: if (!modalShow && show !== false) {
 		show = false;
+		search = '';
 		lastShow = false;
 		selectedTab = 'general';
 		tabState = null;
-	}
-
-	interface SettingsTab {
-		id: string;
-		title: string;
-		keywords: string[];
 	}
 
 	const isAdminTab = (tabId: string) => tabId.startsWith('admin:');
@@ -180,615 +182,184 @@
 			first ? 'mt-0.5' : 'mt-2'
 		} mb-0.5`;
 
-	const allSettings: SettingsTab[] = [
+	let allSettings: SettingsTab[];
+	$: allSettings = [
 		{
 			id: 'general',
-			title: $i18n.t('General'),
-			keywords: [
-				'advancedparams',
-				'advancedparameters',
-				'advanced params',
-				'advanced parameters',
-				'configuration',
-				'defaultparameters',
-				'default parameters',
-				'defaultsettings',
-				'default settings',
-				'general',
-				'keepalive',
-				'keep alive',
-				'languages',
-				'requestmode',
-				'request mode',
-				'systemparameters',
-				'system parameters',
-				'systemprompt',
-				'system prompt',
-				'systemsettings',
-				'system settings',
-				'theme',
-				'translate',
-				'webuisettings',
-				'webui settings'
-			]
+			titleKey: 'settings.personal.general.title',
+			title: $i18n.t('settings.personal.general.title'),
+			searchPrefixes: ['settings.personal.general.']
 		},
 		{
 			id: 'interface',
-			title: $i18n.t('Interface'),
-			keywords: [
-				'allow user location',
-				'allow voice interruption in call',
-				'allowuserlocation',
-				'allowvoiceinterruptionincall',
-				'always collapse codeblocks',
-				'always collapse code blocks',
-				'always expand details',
-				'always on web search',
-				'always play notification sound',
-				'alwayscollapsecodeblocks',
-				'alwaysexpanddetails',
-				'alwaysonwebsearch',
-				'alwaysplaynotificationsound',
-				'android',
-				'auto chat tags',
-				'auto copy response to clipboard',
-				'auto title',
-				'autochattags',
-				'autocopyresponsetoclipboard',
-				'autotitle',
-				'call',
-				'chat background image',
-				'chat bubble ui',
-				'chat direction',
-				'chat tags autogen',
-				'chat tags autogeneration',
-				'chat ui',
-				'chatbackgroundimage',
-				'chatbubbleui',
-				'chatdirection',
-				'chat tags autogeneration',
-				'chattagsautogeneration',
-				'chatui',
-				'copy formatted text',
-				'copyformattedtext',
-				'default model',
-				'defaultmodel',
-				'design',
-				'detect artifacts automatically',
-				'detectartifactsautomatically',
-				'display emoji in call',
-				'display username',
-				'displayemojiincall',
-				'displayusername',
-				'enter key behavior',
-				'enterkeybehavior',
-				'expand mode',
-				'expandmode',
-				'file',
-				'followup autogeneration',
-				'followupautogeneration',
-				'fullscreen',
-				'fullwidthmode',
-				'full width mode',
-				'haptic feedback',
-				'hapticfeedback',
-				'accessibility mode',
-				'accessibilitymode',
-				'high contrast mode',
-				'highcontrastmode',
-				'iframe sandbox allow forms',
-				'iframe sandbox allow same origin',
-				'iframesandboxallowforms',
-				'iframesandboxallowsameorigin',
-				'terminal preview allow same origin',
-				'terminalpreviewallowsameorigin',
-				'imagecompression',
-				'image compression',
-				'imagemaxcompressionsize',
-				'image max compression size',
-				'interface customization',
-				'interface options',
-				'interfacecustomization',
-				'interfaceoptions',
-				'landing page mode',
-				'landingpagemode',
-				'layout',
-				'left to right',
-				'left-to-right',
-				'lefttoright',
-				'ltr',
-				'paste large text as file',
-				'pastelargetextasfile',
-				'reset background',
-				'resetbackground',
-				'disable auto scroll',
-				'disableautoscroll',
-				'response auto copy',
-				'response auto scroll',
-				'response auto-scroll',
-				'responseautocopy',
-				'responseautoscroll',
-				'rich text input for chat',
-				'richtextinputforchat',
-				'right to left',
-				'right-to-left',
-				'righttoleft',
-				'rtl',
-				'scroll behavior',
-				'scroll on branch change',
-				'scrollbehavior',
-				'scrollonbranchchange',
-				'select model',
-				'selectmodel',
-				'settings',
-				'show username',
-				'showusername',
-				'stream large chunks',
-				'streamlargechunks',
-				'stylized pdf export',
-				'stylizedpdfexport',
-				'title autogeneration',
-				'titleautogeneration',
-				'toast notifications for new updates',
-				'toastnotificationsfornewupdates',
-				'upload background',
-				'uploadbackground',
-				'user interface',
-				'user location access',
-				'userinterface',
-				'userlocationaccess',
-				'vibration',
-				'voice control',
-				'voicecontrol',
-				'widescreen mode',
-				'widescreenmode',
-				'whatsnew',
-				'whats new',
-				'websearchinchat',
-				'web search in chat'
-			]
+			titleKey: 'settings.personal.interface.title',
+			title: $i18n.t('settings.personal.interface.title'),
+			searchPrefixes: ['settings.personal.interface.']
 		},
 		{
 			id: 'notifications',
-			title: $i18n.t('Notifications'),
-			keywords: [
-				'browser notifications',
-				'browsernotifications',
-				'chat failed',
-				'chat finished',
-				'notification sound',
-				'notifications',
-				'notify',
-				'webhook',
-				'webhook notifications',
-				'webhooks'
-			]
+			titleKey: 'settings.personal.notifications.title',
+			title: $i18n.t('settings.personal.notifications.title'),
+			searchPrefixes: ['settings.personal.notifications.']
 		},
 		{
 			id: 'shortcuts',
-			title: $i18n.t('Keyboard'),
-			keywords: [
-				'commands',
-				'hotkeys',
-				'keyboard',
-				'keyboard shortcuts',
-				'keybindings',
-				'keys',
-				'shortcut',
-				'shortcuts',
-				'show shortcuts'
-			]
+			titleKey: 'settings.personal.shortcuts.title',
+			title: $i18n.t('settings.personal.shortcuts.title'),
+			searchPrefixes: ['settings.personal.shortcuts.']
 		},
 		{
 			id: 'connections',
-			title: $i18n.t('Connections'),
-			keywords: [
-				'addconnection',
-				'add connection',
-				'manageconnections',
-				'manage connections',
-				'manage direct connections',
-				'managedirectconnections',
-				'settings'
-			]
+			titleKey: 'settings.personal.connections.title',
+			title: $i18n.t('settings.personal.connections.title'),
+			searchPrefixes: ['settings.personal.connections.']
 		},
 		{
 			id: 'tools',
-			title: $i18n.t('Integrations'),
-			keywords: [
-				'addconnection',
-				'add connection',
-				'integrations',
-				'managetools',
-				'manage tools',
-				'manage tool servers',
-				'managetoolservers',
-				'open terminal',
-				'openterminal',
-				'terminal',
-				'settings'
-			]
+			titleKey: 'settings.personal.tools.title',
+			title: $i18n.t('settings.personal.tools.title'),
+			searchPrefixes: ['settings.personal.tools.']
 		},
-
 		{
 			id: 'personalization',
-			title: $i18n.t('Personalization'),
-			keywords: [
-				'account preferences',
-				'account settings',
-				'accountpreferences',
-				'accountsettings',
-				'custom settings',
-				'customsettings',
-				'experimental',
-				'memories',
-				'memory',
-				'personalization',
-				'personalize',
-				'personal settings',
-				'personalsettings',
-				'profile',
-				'user preferences',
-				'userpreferences'
-			]
+			titleKey: 'settings.personal.personalization.title',
+			title: $i18n.t('settings.personal.personalization.title'),
+			searchPrefixes: ['settings.personal.personalization.']
 		},
 		{
 			id: 'audio',
-			title: $i18n.t('Audio'),
-			keywords: [
-				'audio config',
-				'audio control',
-				'audio features',
-				'audio input',
-				'audio output',
-				'audio playback',
-				'audio voice',
-				'audioconfig',
-				'audiocontrol',
-				'audiofeatures',
-				'audioinput',
-				'audiooutput',
-				'audioplayback',
-				'audiovoice',
-				'auto playback response',
-				'autoplaybackresponse',
-				'auto transcribe',
-				'autotranscribe',
-				'instant auto send after voice transcription',
-				'instantautosendaftervoicetranscription',
-				'language',
-				'non local voices',
-				'nonlocalvoices',
-				'save settings',
-				'savesettings',
-				'set voice',
-				'setvoice',
-				'sound settings',
-				'soundsettings',
-				'speech config',
-				'speech mode',
-				'speech playback speed',
-				'speech rate',
-				'speech recognition',
-				'speech settings',
-				'speech speed',
-				'speech synthesis',
-				'speech to text engine',
-				'speechconfig',
-				'speechmode',
-				'speechplaybackspeed',
-				'speechrate',
-				'speechrecognition',
-				'speechsettings',
-				'speechspeed',
-				'speechsynthesis',
-				'speechtotextengine',
-				'speedch playback rate',
-				'speedchplaybackrate',
-				'stt settings',
-				'sttsettings',
-				'text to speech engine',
-				'text to speech',
-				'textospeechengine',
-				'texttospeech',
-				'texttospeechvoice',
-				'text to speech voice',
-				'voice control',
-				'voice modes',
-				'voice options',
-				'voice playback',
-				'voice recognition',
-				'voice speed',
-				'voicecontrol',
-				'voicemodes',
-				'voiceoptions',
-				'voiceplayback',
-				'voicerecognition',
-				'voicespeed',
-				'volume'
-			]
+			titleKey: 'settings.personal.audio.title',
+			title: $i18n.t('settings.personal.audio.title'),
+			searchPrefixes: ['settings.personal.audio.']
 		},
 		{
 			id: 'data_controls',
-			title: $i18n.t('Data Controls'),
-			keywords: [
-				'archive all chats',
-				'archive chats',
-				'archiveallchats',
-				'archivechats',
-				'chat activity',
-				'chat history',
-				'chat settings',
-				'chatactivity',
-				'chathistory',
-				'chatsettings',
-				'conversation activity',
-				'conversation history',
-				'conversationactivity',
-				'conversationhistory',
-				'conversations',
-				'convos',
-				'delete all chats',
-				'delete chats',
-				'deleteallchats',
-				'deletechats',
-				'export chats',
-				'exportchats',
-				'import chats',
-				'importchats',
-				'message activity',
-				'message archive',
-				'message history',
-				'messagearchive',
-				'messagehistory'
-			]
+			titleKey: 'settings.personal.dataControls.title',
+			title: $i18n.t('settings.personal.dataControls.title'),
+			searchPrefixes: ['settings.personal.dataControls.']
 		},
 		{
 			id: 'usage',
-			title: $i18n.t('Usage'),
-			keywords: [
-				'activity',
-				'activity heatmap',
-				'analytics',
-				'chat activity',
-				'heatmap',
-				'model usage',
-				'stats',
-				'streak',
-				'token activity',
-				'token usage',
-				'tokens',
-				'usage'
-			]
+			titleKey: 'settings.personal.usage.title',
+			title: $i18n.t('settings.personal.usage.title'),
+			searchPrefixes: ['settings.personal.usage.']
 		},
 		{
 			id: 'archived_chats',
-			title: $i18n.t('Archived Chats'),
-			keywords: [
-				'archive',
-				'archive chat',
-				'archive chats',
-				'archived',
-				'archived chat',
-				'archived chats',
-				'archivedchat',
-				'archivedchats',
-				'conversation archive',
-				'message archive',
-				'unarchive',
-				'unarchive chat',
-				'unarchive chats'
-			]
+			titleKey: 'settings.personal.archivedChats.title',
+			title: $i18n.t('settings.personal.archivedChats.title'),
+			searchPrefixes: ['settings.personal.archivedChats.']
 		},
 		{
 			id: 'account',
-			title: $i18n.t('Account'),
-			keywords: [
-				'account preferences',
-				'account settings',
-				'accountpreferences',
-				'accountsettings',
-				'api keys',
-				'apikeys',
-				'change password',
-				'changepassword',
-				'jwt token',
-				'jwttoken',
-				'login',
-				'new password',
-				'newpassword',
-				'notification webhook url',
-				'notificationwebhookurl',
-				'personal settings',
-				'personalsettings',
-				'privacy settings',
-				'privacysettings',
-				'profileavatar',
-				'profile avatar',
-				'profile details',
-				'profile image',
-				'profile picture',
-				'profiledetails',
-				'profileimage',
-				'profilepicture',
-				'security settings',
-				'securitysettings',
-				'update account',
-				'update password',
-				'updateaccount',
-				'updatepassword',
-				'user account',
-				'user data',
-				'user preferences',
-				'user profile',
-				'useraccount',
-				'userdata',
-				'username',
-				'userpreferences',
-				'userprofile',
-				'webhook url',
-				'webhookurl'
-			]
+			titleKey: 'settings.personal.account.title',
+			title: $i18n.t('settings.personal.account.title'),
+			searchPrefixes: ['settings.personal.account.']
 		},
 		{
 			id: 'about',
-			title: $i18n.t('About'),
-			keywords: [
-				'about app',
-				'about me',
-				'about open webui',
-				'about page',
-				'about us',
-				'aboutapp',
-				'aboutme',
-				'aboutopenwebui',
-				'aboutpage',
-				'aboutus',
-				'check for updates',
-				'checkforupdates',
-				'contact',
-				'copyright',
-				'details',
-				'discord',
-				'documentation',
-				'github',
-				'help',
-				'information',
-				'license',
-				'redistributions',
-				'release',
-				'see whats new',
-				'seewhatsnew',
-				'settings',
-				'software info',
-				'softwareinfo',
-				'support',
-				'terms and conditions',
-				'terms of use',
-				'termsandconditions',
-				'termsofuse',
-				'timothy jae ryang baek',
-				'timothy j baek',
-				'timothyjaeryangbaek',
-				'timothyjbaek',
-				'twitter',
-				'update info',
-				'updateinfo',
-				'version info',
-				'versioninfo'
-			]
+			titleKey: 'settings.personal.about.title',
+			title: $i18n.t('settings.personal.about.title'),
+			searchPrefixes: ['settings.personal.about.']
 		}
 	];
-
-	const adminSettings: SettingsTab[] = [
+	let adminSettings: SettingsTab[];
+	$: adminSettings = [
 		{
 			id: 'admin:general',
-			title: $i18n.t('General'),
-			keywords: ['general', 'admin', 'settings', 'version', 'update', 'community', 'channels']
+			titleKey: 'settings.admin.general.title',
+			title: $i18n.t('settings.admin.general.title'),
+			searchPrefixes: ['settings.admin.general.', 'settings.personal.interface.']
 		},
 		{
 			id: 'admin:authentication',
-			title: $i18n.t('Authentication'),
-			keywords: [
-				'authentication',
-				'auth',
-				'login',
-				'signup',
-				'ldap',
-				'oauth',
-				'oidc',
-				'sso',
-				'roles'
-			]
+			titleKey: 'settings.admin.authentication.title',
+			title: $i18n.t('settings.admin.authentication.title'),
+			searchPrefixes: ['settings.admin.authentication.']
 		},
 		{
 			id: 'admin:connections',
-			title: $i18n.t('Connections'),
-			keywords: [
-				'connections',
-				'ollama',
-				'openai',
-				'api',
-				'base url',
-				'direct connections',
-				'proxy'
-			]
+			titleKey: 'settings.admin.connections.title',
+			title: $i18n.t('settings.admin.connections.title'),
+			searchPrefixes: ['settings.admin.connections.']
 		},
 		{
 			id: 'admin:models',
-			title: $i18n.t('Models'),
-			keywords: [
-				'models',
-				'pull',
-				'delete',
-				'create',
-				'edit',
-				'modelfile',
-				'gguf',
-				'import',
-				'export'
-			]
+			titleKey: 'settings.admin.models.title',
+			title: $i18n.t('settings.admin.models.title'),
+			searchPrefixes: ['settings.admin.models.', 'settings.personal.general.parameters.']
 		},
 		{
 			id: 'admin:subagents',
-			title: $i18n.t('Sub-agents'),
-			keywords: ['sub-agents', 'subagents', 'delegation', 'background', 'agents']
+			titleKey: 'settings.admin.subagents.title',
+			title: $i18n.t('settings.admin.subagents.title'),
+			searchPrefixes: ['settings.admin.subagents.']
 		},
 		{
 			id: 'admin:interface',
-			title: $i18n.t('Interface'),
-			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks', 'prompt suggestions', 'tags']
+			titleKey: 'settings.admin.interface.title',
+			title: $i18n.t('settings.admin.interface.title'),
+			searchPrefixes: ['settings.admin.interface.', 'settings.personal.general.parameters.']
 		},
 		{
 			id: 'admin:audio',
-			title: $i18n.t('Audio'),
-			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper', 'deepgram', 'azure']
+			titleKey: 'settings.admin.audio.title',
+			title: $i18n.t('settings.admin.audio.title'),
+			searchPrefixes: ['settings.admin.audio.']
 		},
 		{
 			id: 'admin:images',
-			title: $i18n.t('Images'),
-			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
+			titleKey: 'settings.admin.images.title',
+			title: $i18n.t('settings.admin.images.title'),
+			searchPrefixes: ['settings.admin.images.']
 		},
 		{
 			id: 'admin:evaluations',
-			title: $i18n.t('Evaluations'),
-			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
+			titleKey: 'settings.admin.evaluations.title',
+			title: $i18n.t('settings.admin.evaluations.title'),
+			searchPrefixes: ['settings.admin.evaluations.']
 		},
 		{
 			id: 'admin:analytics',
-			title: $i18n.t('Analytics'),
-			keywords: ['analytics', 'usage', 'stats', 'dashboard', 'models', 'users', 'messages']
+			titleKey: 'settings.admin.analytics.title',
+			title: $i18n.t('settings.admin.analytics.title'),
+			searchPrefixes: ['settings.admin.analytics.']
 		},
 		{
 			id: 'admin:integrations',
-			title: $i18n.t('Integrations'),
-			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+			titleKey: 'settings.admin.integrations.title',
+			title: $i18n.t('settings.admin.integrations.title'),
+			searchPrefixes: ['settings.admin.integrations.']
 		},
 		{
 			id: 'admin:documents',
-			title: $i18n.t('Documents'),
-			keywords: ['documents', 'files', 'rag', 'knowledge', 'upload', 'embedding', 'vector db']
+			titleKey: 'settings.admin.documents.title',
+			title: $i18n.t('settings.admin.documents.title'),
+			searchPrefixes: ['settings.admin.documents.']
 		},
 		{
 			id: 'admin:web',
-			title: $i18n.t('Web Search'),
-			keywords: ['web search', 'google', 'bing', 'duckduckgo', 'serp', 'searxng', 'tavily', 'exa']
+			titleKey: 'settings.admin.web.title',
+			title: $i18n.t('settings.admin.web.title'),
+			searchPrefixes: ['settings.admin.web.']
 		},
 		{
 			id: 'admin:code-execution',
-			title: $i18n.t('Code Execution'),
-			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
+			titleKey: 'settings.admin.codeExecution.title',
+			title: $i18n.t('settings.admin.codeExecution.title'),
+			searchPrefixes: ['settings.admin.codeExecution.']
 		},
 		{
 			id: 'admin:pipelines',
-			title: $i18n.t('Pipelines'),
-			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
+			titleKey: 'settings.admin.pipelines.title',
+			title: $i18n.t('settings.admin.pipelines.title'),
+			searchPrefixes: ['settings.admin.pipelines.']
 		},
-
 		{
 			id: 'admin:db',
-			title: $i18n.t('Database'),
-			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
+			titleKey: 'settings.admin.db.title',
+			title: $i18n.t('settings.admin.db.title'),
+			searchPrefixes: ['settings.admin.db.']
 		}
 	];
 	let availableSettings: SettingsTab[] = [];
@@ -797,18 +368,25 @@
 	let filteredAdminSettings: string[] = [];
 
 	let search = '';
-	let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+	let englishRequested = false;
+	$: if (modalShow && !englishRequested) {
+		englishRequested = true;
+		$i18n.loadLanguages('en-US').catch((error: unknown) => {
+			console.error(error);
+		});
+	}
 
-	const getAvailableSettings = () => {
-		const personalSettings = allSettings.filter((tab) => {
+	const getAvailableSettings = (personalTabs: SettingsTab[], administratorTabs: SettingsTab[]) => {
+		const personalSettings = personalTabs.filter((tab) => {
 			if (tab.id === 'connections') {
 				return $config?.features?.enable_direct_connections;
 			}
 
 			if (tab.id === 'tools') {
 				return (
-					$user?.role === 'admin' ||
-					($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)
+					$config?.features?.enable_direct_integrations === true &&
+					($user?.role === 'admin' ||
+						($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers))
 				);
 			}
 
@@ -826,46 +404,50 @@
 			return true;
 		});
 
-		return $user?.role === 'admin' ? [...personalSettings, ...adminSettings] : personalSettings;
+		return (
+			$user?.role === 'admin' ? [...personalSettings, ...administratorTabs] : personalSettings
+		).filter(
+			(tab) => tab.id !== 'admin:analytics' || ($config?.features?.enable_admin_analytics ?? true)
+		);
 	};
 
-	const setFilteredSettings = () => {
-		filteredSettings = availableSettings
-			.filter((tab) => {
-				const query = search.toLowerCase().trim();
-				if (tab.id === 'admin:analytics' && !($config?.features.enable_admin_analytics ?? true)) {
-					return false;
-				}
+	$: searchIndex = buildSettingsSearchIndex(availableSettings, english, $i18n, {
+		user: $user,
+		config: $config
+	});
+	$: filteredSettings = searchSettingsTabs(searchIndex, search);
+	$: filteredPersonalSettings = filteredSettings.filter((id) => !isAdminTab(id));
+	$: filteredAdminSettings = filteredSettings.filter(isAdminTab);
 
-				return (
-					query === '' ||
-					tab.title.toLowerCase().includes(query) ||
-					tab.keywords.some((keyword) => keyword.includes(query))
-				);
-			})
-			.map((tab) => tab.id);
-		filteredPersonalSettings = filteredSettings.filter((tabId) => !isAdminTab(tabId));
-		filteredAdminSettings = filteredSettings.filter((tabId) => isAdminTab(tabId));
+	const selectTab = (id: string) => {
+		if (!availableSettings.some((tab) => tab.id === id)) return;
+		selectedTab = id;
+	};
 
-		if ($user?.role !== 'admin' && isAdminTab(selectedTab)) {
-			selectedTab = 'general';
-		} else if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
-			selectedTab = filteredSettings[0];
+	const searchKeydown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape' && search) {
+			event.preventDefault();
+			event.stopPropagation();
+			search = '';
+		} else if (event.key === 'Enter') {
+			event.preventDefault();
+			if (filteredSettings.length) selectTab(filteredSettings[0]);
 		}
-
-		scrollToSelectedTab();
 	};
 
 	const saveSettings = async (updated: Record<string, any>) => {
-		console.log(updated);
-		await settings.set({ ...$settings, ...updated });
-		await models.set(await getModels());
-		const saved = await updateUserSettings(localStorage.token, { ui: $settings });
+		const saved = await updateUserSettings(localStorage.token, {
+			ui: updated
+		}).catch((error) => {
+			toast.error(`${error}`);
+			throw error;
+		});
 		personalUiSettings =
 			saved?.ui && typeof saved.ui === 'object' && !Array.isArray(saved.ui) ? saved.ui : {};
 		await settings.set(
 			mergeUiSettings($config?.ui?.default_interface_settings ?? {}, personalUiSettings)
 		);
+		await models.set(await getModels());
 	};
 
 	const getModels = async () => {
@@ -879,16 +461,6 @@
 		toast.success($i18n.t('Settings saved successfully!'));
 		await tick();
 		await config.set(await getBackendConfig());
-	};
-
-	const searchDebounceHandler = () => {
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-
-		searchDebounceTimeout = setTimeout(() => {
-			setFilteredSettings();
-		}, 100);
 	};
 
 	const tabButtonClass = (active: boolean) =>
@@ -915,19 +487,22 @@
 		selectedTab = 'general';
 	}
 
+	$: if (
+		$config &&
+		$user &&
+		availableSettings.length &&
+		!availableSettings.some((tab) => tab.id === selectedTab)
+	) {
+		selectedTab = 'general';
+	}
+
 	$: if (modalShow && selectedTab) {
 		scrollToSelectedTab();
 	}
 
-	onMount(() => {
-		availableSettings = getAvailableSettings();
-		setFilteredSettings();
-
-		config.subscribe((configData) => {
-			availableSettings = getAvailableSettings();
-			setFilteredSettings();
-		});
-	});
+	$: if ($config && $user) {
+		availableSettings = getAvailableSettings(allSettings, adminSettings);
+	}
 </script>
 
 <Modal
@@ -938,7 +513,7 @@
 >
 	<nav
 		id="settings-tabs-container"
-		class="shrink-0 min-w-0 md:min-h-0 flex md:flex-col border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
+		class="shrink-0 min-w-0 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
 	>
 		<button
 			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
@@ -952,7 +527,7 @@
 		</button>
 
 		<div
-			class="hidden md:flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
+			class="flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
 		>
 			<div class="self-center rounded-l-xl bg-transparent">
 				<Search className="size-3.5" strokeWidth="1.5" />
@@ -963,13 +538,21 @@
 				class="w-full text-xs bg-transparent py-1 outline-hidden dark:text-gray-300"
 				bind:value={search}
 				id="search-input-settings-modal"
-				on:input={searchDebounceHandler}
+				on:keydown={searchKeydown}
 				placeholder={$i18n.t('Search')}
 			/>
 		</div>
 
+		<div class="sr-only" role="status" aria-live="polite">
+			{search
+				? filteredSettings.length
+					? $i18n.t('Matching tabs: {{count}}', { count: filteredSettings.length })
+					: $i18n.t('No matches')
+				: ''}
+		</div>
+
 		<div
-			class="tabs scrollbar-none flex min-w-0 flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
+			class="tabs scrollbar-none max-h-32 md:max-h-none flex min-w-0 flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
 		>
 			<span
 				class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mt-1.5 mb-0.5"
@@ -992,11 +575,11 @@
 							aria-selected={selectedTab === 'general'}
 							class={tabButtonClass(selectedTab === 'general')}
 							on:click={() => {
-								selectedTab = 'general';
+								selectTab('general');
 							}}
 						>
 							<SettingsAlt className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('General')}</span>
+							<span>{$i18n.t('settings.personal.general.title')}</span>
 						</button>
 					{:else if tabId === 'interface'}
 						<button
@@ -1005,11 +588,11 @@
 							aria-selected={selectedTab === 'interface'}
 							class={tabButtonClass(selectedTab === 'interface')}
 							on:click={() => {
-								selectedTab = 'interface';
+								selectTab('interface');
 							}}
 						>
 							<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Interface')}</span>
+							<span>{$i18n.t('settings.personal.interface.title')}</span>
 						</button>
 					{:else if tabId === 'notifications'}
 						<button
@@ -1018,11 +601,11 @@
 							aria-selected={selectedTab === 'notifications'}
 							class={tabButtonClass(selectedTab === 'notifications')}
 							on:click={() => {
-								selectedTab = 'notifications';
+								selectTab('notifications');
 							}}
 						>
 							<AppNotification className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Notifications')}</span>
+							<span>{$i18n.t('settings.personal.notifications.title')}</span>
 						</button>
 					{:else if tabId === 'shortcuts'}
 						<button
@@ -1031,11 +614,11 @@
 							aria-selected={selectedTab === 'shortcuts'}
 							class={tabButtonClass(selectedTab === 'shortcuts')}
 							on:click={() => {
-								selectedTab = 'shortcuts';
+								selectTab('shortcuts');
 							}}
 						>
 							<Keyboard className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Keyboard')}</span>
+							<span>{$i18n.t('settings.personal.shortcuts.title')}</span>
 						</button>
 					{:else if tabId === 'connections'}
 						{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
@@ -1045,11 +628,11 @@
 								aria-selected={selectedTab === 'connections'}
 								class={tabButtonClass(selectedTab === 'connections')}
 								on:click={() => {
-									selectedTab = 'connections';
+									selectTab('connections');
 								}}
 							>
 								<Link className="size-3.5" strokeWidth="2" />
-								<span>{$i18n.t('Connections')}</span>
+								<span>{$i18n.t('settings.personal.connections.title')}</span>
 							</button>
 						{/if}
 					{:else if tabId === 'tools'}
@@ -1060,11 +643,11 @@
 								aria-selected={selectedTab === 'tools'}
 								class={tabButtonClass(selectedTab === 'tools')}
 								on:click={() => {
-									selectedTab = 'tools';
+									selectTab('tools');
 								}}
 							>
 								<WrenchAlt className="size-3.5" strokeWidth="2" />
-								<span>{$i18n.t('Integrations')}</span>
+								<span>{$i18n.t('settings.personal.tools.title')}</span>
 							</button>
 						{/if}
 					{:else if tabId === 'personalization'}
@@ -1074,11 +657,11 @@
 							aria-selected={selectedTab === 'personalization'}
 							class={tabButtonClass(selectedTab === 'personalization')}
 							on:click={() => {
-								selectedTab = 'personalization';
+								selectTab('personalization');
 							}}
 						>
 							<Face className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Personalization')}</span>
+							<span>{$i18n.t('settings.personal.personalization.title')}</span>
 						</button>
 					{:else if tabId === 'audio'}
 						<button
@@ -1087,11 +670,11 @@
 							aria-selected={selectedTab === 'audio'}
 							class={tabButtonClass(selectedTab === 'audio')}
 							on:click={() => {
-								selectedTab = 'audio';
+								selectTab('audio');
 							}}
 						>
 							<SoundHigh className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Audio')}</span>
+							<span>{$i18n.t('settings.personal.audio.title')}</span>
 						</button>
 					{:else if tabId === 'data_controls'}
 						<button
@@ -1100,11 +683,11 @@
 							aria-selected={selectedTab === 'data_controls'}
 							class={tabButtonClass(selectedTab === 'data_controls')}
 							on:click={() => {
-								selectedTab = 'data_controls';
+								selectTab('data_controls');
 							}}
 						>
 							<DatabaseSettings className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Data Controls')}</span>
+							<span>{$i18n.t('settings.personal.dataControls.title')}</span>
 						</button>
 					{:else if tabId === 'usage'}
 						<button
@@ -1113,11 +696,11 @@
 							aria-selected={selectedTab === 'usage'}
 							class={tabButtonClass(selectedTab === 'usage')}
 							on:click={() => {
-								selectedTab = 'usage';
+								selectTab('usage');
 							}}
 						>
 							<UsageIcon className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Usage')}</span>
+							<span>{$i18n.t('settings.personal.usage.title')}</span>
 						</button>
 					{:else if tabId === 'archived_chats'}
 						<button
@@ -1126,11 +709,11 @@
 							aria-selected={selectedTab === 'archived_chats'}
 							class={tabButtonClass(selectedTab === 'archived_chats')}
 							on:click={() => {
-								selectedTab = 'archived_chats';
+								selectTab('archived_chats');
 							}}
 						>
 							<ArchiveBox className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Archived Chats')}</span>
+							<span>{$i18n.t('settings.personal.archivedChats.title')}</span>
 						</button>
 					{:else if tabId === 'account'}
 						<button
@@ -1139,11 +722,11 @@
 							aria-selected={selectedTab === 'account'}
 							class={tabButtonClass(selectedTab === 'account')}
 							on:click={() => {
-								selectedTab = 'account';
+								selectTab('account');
 							}}
 						>
 							<UserCircle className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Account')}</span>
+							<span>{$i18n.t('settings.personal.account.title')}</span>
 						</button>
 					{:else if tabId === 'about'}
 						<button
@@ -1152,11 +735,11 @@
 							aria-selected={selectedTab === 'about'}
 							class={tabButtonClass(selectedTab === 'about')}
 							on:click={() => {
-								selectedTab = 'about';
+								selectTab('about');
 							}}
 						>
 							<InfoCircle className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('About')}</span>
+							<span>{$i18n.t('settings.personal.about.title')}</span>
 						</button>
 					{/if}
 				{/each}
@@ -1185,7 +768,7 @@
 							aria-selected={selectedTab === tab.id}
 							class={tabButtonClass(selectedTab === tab.id)}
 							on:click={() => {
-								selectedTab = tab.id;
+								selectTab(tab.id);
 							}}
 						>
 							<AdminTabIcon id={adminTabSegment(tab.id)} className="size-3.5" strokeWidth="2" />

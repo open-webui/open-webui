@@ -371,6 +371,9 @@ ENABLE_QUERIES_CACHE = os.getenv('ENABLE_QUERIES_CACHE', 'False').lower() == 'tr
 ENABLE_ADMIN_CHAT_ACCESS = os.getenv('ENABLE_ADMIN_CHAT_ACCESS', 'True').lower() == 'true'
 RAG_SYSTEM_CONTEXT = os.getenv('RAG_SYSTEM_CONTEXT', 'False').lower() == 'true'
 
+# Empty by default: chunk metadata also holds internal bookkeeping (file hashes, collection names, scores).
+RAG_SOURCE_METADATA_KEYS = [key.strip() for key in os.getenv('RAG_SOURCE_METADATA_KEYS', '').split(',') if key.strip()]
+
 ####################################
 # REDIS
 ####################################
@@ -384,6 +387,14 @@ try:
     REDIS_RESPONSE_STREAM_TTL = int(os.getenv('REDIS_RESPONSE_STREAM_TTL', '3600'))
 except ValueError:
     REDIS_RESPONSE_STREAM_TTL = 3600
+
+# Seconds a task survives without a heartbeat. 0 disables expiry.
+try:
+    REDIS_TASK_TTL = int(os.getenv('REDIS_TASK_TTL', '300'))
+    if REDIS_TASK_TTL != 0 and REDIS_TASK_TTL < 60:
+        REDIS_TASK_TTL = 300
+except ValueError:
+    REDIS_TASK_TTL = 300
 
 REDIS_SENTINEL_HOSTS = os.getenv('REDIS_SENTINEL_HOSTS', '')
 REDIS_SENTINEL_PORT = os.getenv('REDIS_SENTINEL_PORT', '26379')
@@ -481,6 +492,12 @@ else:
 
 WEBSOCKET_REDIS_URL = os.getenv('WEBSOCKET_REDIS_URL', REDIS_URL)
 WEBSOCKET_REDIS_CLUSTER = os.getenv('WEBSOCKET_REDIS_CLUSTER', str(REDIS_CLUSTER)).lower() == 'true'
+
+# publishes room-targeted emits on per-room redis channels so instances skip
+# messages for rooms without local members; must be identical across the fleet
+# (toggle with a full restart, not a rolling one), set false for the previous
+# shared-channel-only delivery
+WEBSOCKET_REDIS_ROOM_CHANNELS = os.getenv('WEBSOCKET_REDIS_ROOM_CHANNELS', 'True').lower() == 'true'
 
 websocket_redis_lock_timeout = os.getenv('WEBSOCKET_REDIS_LOCK_TIMEOUT', '60')
 
@@ -983,6 +1000,7 @@ FORWARD_USER_INFO_HEADER_USER_NAME = os.getenv('FORWARD_USER_INFO_HEADER_USER_NA
 FORWARD_USER_INFO_HEADER_USER_ID = os.getenv('FORWARD_USER_INFO_HEADER_USER_ID', 'X-OpenWebUI-User-Id')
 FORWARD_USER_INFO_HEADER_USER_EMAIL = os.getenv('FORWARD_USER_INFO_HEADER_USER_EMAIL', 'X-OpenWebUI-User-Email')
 FORWARD_USER_INFO_HEADER_USER_ROLE = os.getenv('FORWARD_USER_INFO_HEADER_USER_ROLE', 'X-OpenWebUI-User-Role')
+FORWARD_USER_INFO_HEADER_AUTH_TYPE = os.getenv('FORWARD_USER_INFO_HEADER_AUTH_TYPE', 'X-OpenWebUI-Auth-Type')
 FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_MESSAGE_ID', 'X-OpenWebUI-Message-Id')
 FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_CHAT_ID', 'X-OpenWebUI-Chat-Id')
 
@@ -1040,6 +1058,13 @@ ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
     os.getenv('ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION', 'False').lower() == 'true'
 )
 ENABLE_API_OUTLET_FILTERS = os.getenv('ENABLE_API_OUTLET_FILTERS', 'True').lower() == 'true'
+
+# Opt in to CPython's in-place string append optimization for streamed responses.
+# Off by default for a staged rollout. Only a host already out of memory can lose
+# text here; the default path (a full copy per chunk) raises there too.
+ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND = (
+    os.getenv('ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND', 'False').lower() == 'true'
+)
 
 # When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
 # fallback when both mimetypes.guess_type() and file.meta.content_type fail to

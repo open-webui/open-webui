@@ -46,8 +46,8 @@ def _normalize_target(target: dict[str, Any], existing: dict[str, Any] | None = 
 
     target_id = str(target.get('id') or existing.get('id') or '').strip()
     if not target_id:
-        hostname = urlparse(url).hostname or 'webhook'
-        target_id = re.sub(r'[^a-zA-Z0-9_-]+', '-', hostname).strip('-').lower() or 'target'
+        target_id = urlparse(url).hostname or 'webhook'
+    target_id = re.sub(r'[^a-zA-Z0-9_-]+', '-', target_id).strip('-').lower() or 'target'
 
     events = target['events'] if 'events' in target else existing.get('events', [])
     if events is None:

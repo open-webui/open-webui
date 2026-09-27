@@ -8,18 +8,19 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	const featureLabels = {
+	let featureLabels;
+	$: featureLabels = {
 		web_search: {
-			label: $i18n.t('Web Search'),
-			description: $i18n.t('Model can search the web for information')
+			label: $i18n.t('settings.admin.models.defaultFeatures.webSearch.label'),
+			description: $i18n.t('settings.admin.models.defaultFeatures.webSearch.description')
 		},
 		image_generation: {
-			label: $i18n.t('Image Generation'),
-			description: $i18n.t('Model can generate images based on text prompts')
+			label: $i18n.t('settings.admin.models.defaultFeatures.imageGeneration.label'),
+			description: $i18n.t('settings.admin.models.defaultFeatures.imageGeneration.description')
 		},
 		code_interpreter: {
-			label: $i18n.t('Code Interpreter'),
-			description: $i18n.t('Model can execute code and perform calculations')
+			label: $i18n.t('settings.admin.models.defaultFeatures.codeInterpreter.label'),
+			description: $i18n.t('settings.admin.models.defaultFeatures.codeInterpreter.description')
 		}
 	};
 
@@ -42,7 +43,9 @@
 </script>
 
 <div>
-	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Default Features')}</div>
+	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">
+		{$i18n.t('settings.admin.models.defaultFeatures.title')}
+	</div>
 	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
 		{#each availableFeatures as feature}
 			<div class="flex min-h-6 items-center gap-2.5">

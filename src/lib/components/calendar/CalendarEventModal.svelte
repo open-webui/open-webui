@@ -28,6 +28,7 @@
 	let startDate = '';
 	let startTime = '';
 	let endDate = '';
+	let endDayOffset = 0;
 	let endTime = '';
 	let allDay = false;
 	let location = '';
@@ -111,6 +112,12 @@
 			alertMinutes = 10;
 			repeatFrequency = '';
 		}
+		endDayOffset = endDate
+			? Math.round(
+					(dateTimeToNs(endDate, '12:00') - dateTimeToNs(startDate, '12:00')) /
+						(24 * 60 * 60 * 1000 * NS)
+				)
+			: 0;
 	}
 
 	$: if (show) reset();
@@ -129,7 +136,12 @@
 		loading = true;
 		try {
 			const startNs = dateTimeToNs(startDate, allDay ? '00:00' : startTime);
-			let endNs = endDate ? dateTimeToNs(endDate, allDay ? '23:59' : endTime) : undefined;
+			const shiftedEndDate = endDate
+				? nsToDateStr(dateTimeToNs(startDate, '12:00') + endDayOffset * 24 * 60 * 60 * 1000 * NS)
+				: '';
+			let endNs = shiftedEndDate
+				? dateTimeToNs(shiftedEndDate, allDay ? '23:59' : endTime)
+				: undefined;
 			if (endNs !== undefined && endNs < startNs) {
 				const duration =
 					event?.end_at && event.end_at > event.start_at ? event.end_at - event.start_at : 0;
@@ -140,12 +152,12 @@
 				const result = await updateCalendarEvent(localStorage.token, event.id, {
 					calendar_id: calendarId,
 					title: title.trim(),
-					description: description.trim() || undefined,
+					description: description.trim() || null,
 					start_at: startNs,
 					end_at: endNs,
 					all_day: allDay,
-					rrule: getRepeatRrule(),
-					location: location.trim() || undefined,
+					rrule: getRepeatRrule() ?? null,
+					location: location.trim() || null,
 					meta: { alert_minutes: alertMinutes }
 				});
 				if (result) {

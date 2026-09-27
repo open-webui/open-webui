@@ -35,7 +35,7 @@
 	}> = [];
 
 	export let messageDone = true;
-	export let allowEmbeds = true;
+	export let allowEmbeds = false;
 	export let compactPreview = false;
 	export let resolvable = false;
 	export let resolvingCallId = '';

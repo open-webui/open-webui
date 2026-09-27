@@ -94,62 +94,64 @@
 							</div>
 						{:else}
 							<div
-								class="flex flex-col gap-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pt-7 pb-2"
+								class="max-h-[60vh] overflow-y-auto will-change-transform scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pb-2"
 							>
-								{#if pinnedMessages.length === 0}
-									<div class=" text-center text-xs text-gray-500 dark:text-gray-400 py-6">
-										{$i18n.t('No pinned messages')}
-									</div>
-								{:else}
-									{#each pinnedMessages as message, messageIdx (message.id)}
-										<Message
-											id="pinned"
-											className="rounded-xl px-2"
-											{message}
-											{channel}
-											onPin={async (message) => {
-												pinnedMessages = pinnedMessages.filter((m) => m.id !== message.id);
-												onPin(message.id, !message.is_pinned);
+								<div class="flex flex-col gap-2 pt-7">
+									{#if pinnedMessages.length === 0}
+										<div class=" text-center text-xs text-gray-500 dark:text-gray-400 py-6">
+											{$i18n.t('No pinned messages')}
+										</div>
+									{:else}
+										{#each pinnedMessages as message, messageIdx (message.id)}
+											<Message
+												id="pinned"
+												className="rounded-xl px-2"
+												{message}
+												{channel}
+												onPin={async (message) => {
+													pinnedMessages = pinnedMessages.filter((m) => m.id !== message.id);
+													onPin(message.id, !message.is_pinned);
 
-												const updatedMessage = await pinMessage(
-													localStorage.token,
-													message.channel_id,
-													message.id,
-													!message.is_pinned
-												).catch((error) => {
-													toast.error(`${error}`);
-													return null;
-												});
+													const updatedMessage = await pinMessage(
+														localStorage.token,
+														message.channel_id,
+														message.id,
+														!message.is_pinned
+													).catch((error) => {
+														toast.error(`${error}`);
+														return null;
+													});
 
-												init();
-											}}
-											onReaction={false}
-											onThread={false}
-											onReply={false}
-											onEdit={false}
-											onDelete={false}
-										/>
-
-										{#if messageIdx === pinnedMessages.length - 1 && !allItemsLoaded}
-											<Loader
-												on:visible={(e) => {
-													console.log('visible');
-													if (!loading) {
-														page += 1;
-														getPinnedMessages();
-													}
+													init();
 												}}
-											>
-												<div
-													class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+												onReaction={false}
+												onThread={false}
+												onReply={false}
+												onEdit={false}
+												onDelete={false}
+											/>
+
+											{#if messageIdx === pinnedMessages.length - 1 && !allItemsLoaded}
+												<Loader
+													on:visible={(e) => {
+														console.log('visible');
+														if (!loading) {
+															page += 1;
+															getPinnedMessages();
+														}
+													}}
 												>
-													<Spinner className=" size-4" />
-													<div class=" ">{$i18n.t('Loading...')}</div>
-												</div>
-											</Loader>
-										{/if}
-									{/each}
-								{/if}
+													<div
+														class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+													>
+														<Spinner className=" size-4" />
+														<div class=" ">{$i18n.t('Loading...')}</div>
+													</div>
+												</Loader>
+											{/if}
+										{/each}
+									{/if}
+								</div>
 							</div>
 						{/if}
 					</div>

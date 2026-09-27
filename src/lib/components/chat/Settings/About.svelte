@@ -49,16 +49,19 @@
 </script>
 
 <div id="tab-about" class="flex flex-col h-full justify-between text-sm">
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('About')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.personal.about.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<!-- LICENSE covers this Open WebUI About identifier.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
-		<UserSettingSection title={`${$WEBUI_NAME} ${$i18n.t('Version')}`} first>
-			<UserSettingRow
-				description={$i18n.t('View the installed version and check release updates.')}
-			>
+		<UserSettingSection
+			title={`${$WEBUI_NAME} ${$i18n.t('settings.personal.about.sections.version.title')}`}
+			first
+		>
+			<UserSettingRow description={$i18n.t('settings.personal.about.seeWhatSNew.description')}>
 				<div slot="label" class="flex flex-col text-xs text-gray-600 dark:text-gray-400">
 					<div class="flex gap-1">
 						<Tooltip content={WEBUI_BUILD_HASH}>
@@ -89,7 +92,7 @@
 							showChangelog.set(true);
 						}}
 					>
-						<div>{$i18n.t("See what's new")}</div>
+						<div>{$i18n.t('settings.personal.about.seeWhatSNew.label')}</div>
 					</button>
 				</div>
 
@@ -100,21 +103,21 @@
 							checkForVersionUpdates();
 						}}
 					>
-						{$i18n.t('Check for updates')}
+						{$i18n.t('settings.personal.about.checkForUpdates.label')}
 					</button>
 				{/if}
 			</UserSettingRow>
 		</UserSettingSection>
 
 		{#if ollamaVersion}
-			<UserSettingSection title={$i18n.t('Ollama Version')}>
+			<UserSettingSection title={$i18n.t('settings.personal.about.sections.ollamaVersion.title')}>
 				<div class="text-xs text-gray-600 dark:text-gray-400">
 					{ollamaVersion ?? 'N/A'}
 				</div>
 			</UserSettingSection>
 		{/if}
 
-		<UserSettingSection title={$i18n.t('Community')}>
+		<UserSettingSection title={$i18n.t('settings.personal.about.sections.community.title')}>
 			{#if $config?.license_metadata}
 				<!-- LICENSE covers this Open WebUI license attribution.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:

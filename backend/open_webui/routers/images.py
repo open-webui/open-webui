@@ -329,38 +329,34 @@ def get_automatic1111_api_auth(image_config):
         return f'Basic {auth1111_base64_encoded_string}'
 
 
-@router.get('/config/url/verify')
-async def verify_url(request: Request, user=Depends(get_admin_user)):
-    image_config = await get_image_config()
-    if image_config.IMAGE_GENERATION_ENGINE == 'automatic1111':
-        try:
-            session = await get_session()
-            async with session.get(
-                url=f'{image_config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options',
-                headers={'authorization': get_automatic1111_api_auth(image_config)},
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                return True
-        except Exception:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
-    elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
-        headers = None
-        if image_config.COMFYUI_API_KEY:
-            headers = {'Authorization': f'Bearer {image_config.COMFYUI_API_KEY}'}
-        try:
-            session = await get_session()
-            async with session.get(
-                url=f'{image_config.COMFYUI_BASE_URL}/object_info',
-                headers=headers,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                r.raise_for_status()
-                return True
-        except Exception:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
+class ConnectionVerificationForm(BaseModel):
+    engine: str
+    url: str
+    key: str | None = None
+
+
+@router.post('/verify')
+async def verify_connection(form_data: ConnectionVerificationForm, user=Depends(get_admin_user)):
+    url = form_data.url.rstrip('/')
+    headers = {}
+    if form_data.engine == 'automatic1111':
+        url = f'{url}/sdapi/v1/options'
+        if form_data.key is not None:
+            headers['Authorization'] = f'Basic {base64.b64encode(form_data.key.encode("utf-8")).decode("utf-8")}'
+    elif form_data.engine == 'comfyui':
+        url = f'{url}/object_info'
+        if form_data.key:
+            headers['Authorization'] = f'Bearer {form_data.key}'
     else:
-        return True
+        raise HTTPException(status_code=400, detail='Unsupported image engine')
+
+    try:
+        session = await get_session()
+        async with session.get(url=url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
+            r.raise_for_status()
+            return True
+    except Exception:
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
 
 
 @router.get('/models')
@@ -436,7 +432,10 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                 )
             )
     except Exception as e:
-        log.exception(f'Failed to list image generation models: {e}')
+        log.error(
+            f'Failed to list image generation models: {str(e) or type(e).__name__}',
+            exc_info=not isinstance(e, (aiohttp.ClientConnectionError, TimeoutError)),
+        )
         raise HTTPException(
             status_code=400,
             detail=ERROR_MESSAGES.DEFAULT(e, 'Failed to retrieve image generation models'),
@@ -510,8 +509,9 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
                 mime_type = header.split(';')[0].lstrip('data:')
                 img_data = base64.b64decode(encoded)
             else:
-                mime_type = 'image/png'
                 img_data = base64.b64decode(data)
+                with Image.open(io.BytesIO(img_data)) as image:
+                    mime_type = Image.MIME.get(image.format, 'image/png')
             return img_data, mime_type
     except Exception as e:
         log.exception(f'Error loading image data: {e}')
@@ -521,7 +521,7 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
 async def upload_image(request, image_data, content_type, metadata, user, db=None):
     if image_data is None or content_type is None:
         raise ValueError('Failed to retrieve image data from the generation backend')
-    image_format = mimetypes.guess_extension(content_type)
+    image_format = IMAGE_FILE_EXTENSIONS.get(content_type.lower()) or mimetypes.guess_extension(content_type) or '.png'
     file = UploadFile(
         file=io.BytesIO(image_data),
         filename=f'generated-image{image_format}',  # will be converted to a unique ID on upload_file
@@ -668,7 +668,9 @@ async def image_generations(
                 if image_url := image.get('url', None):
                     image_data, content_type = await get_image_data(
                         image_url,
-                        {k: v for k, v in headers.items() if k != 'Content-Type'},
+                        {k: v for k, v in headers.items() if k != 'Content-Type'}
+                        if _is_same_origin(image_url, image_config.IMAGES_OPENAI_API_BASE_URL)
+                        else None,
                     )
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
@@ -919,11 +921,8 @@ async def image_edits(
 
             if data.startswith('http://') or data.startswith('https://'):
                 parsed = urlparse(data)
-                if (
-                    parsed.netloc == urlparse(str(request.base_url)).netloc
-                    and parsed.path.startswith('/api/v1/files/')
-                    and '/content' in parsed.path
-                ):
+                # Fetching /api/v1/files/{id}/content over the network would be unauthenticated.
+                if parsed.path.startswith('/api/v1/files/') and '/content' in parsed.path:
                     return await load_url_image(parsed.path)
 
                 # Validate URL to prevent SSRF attacks against local/private networks.
@@ -1047,7 +1046,9 @@ async def image_edits(
                 if image_url := image.get('url', None):
                     image_data, content_type = await get_image_data(
                         image_url,
-                        {k: v for k, v in headers.items() if k != 'Content-Type'},
+                        {k: v for k, v in headers.items() if k != 'Content-Type'}
+                        if _is_same_origin(image_url, image_config.IMAGES_EDIT_OPENAI_API_BASE_URL)
+                        else None,
                     )
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])

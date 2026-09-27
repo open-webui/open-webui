@@ -12,6 +12,8 @@
 
 	const i18n = getContext('i18n');
 
+	export let writeAccess = true;
+
 	export let editHandler: Function;
 	export let shareHandler: Function;
 	export let cloneHandler: Function;
@@ -42,8 +44,9 @@
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
 				draggable="false"
+				disabled={!writeAccess}
 				on:click={() => {
 					editHandler();
 					closeMenu();
@@ -69,8 +72,9 @@
 
 			{#if $config.features.enable_community_sharing}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
 					draggable="false"
+					disabled={!writeAccess}
 					on:click={() => {
 						shareHandler();
 						closeMenu();
@@ -110,8 +114,9 @@
 			<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
 				draggable="false"
+				disabled={!writeAccess}
 				on:click={() => {
 					deleteHandler();
 					closeMenu();

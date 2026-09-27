@@ -31,6 +31,7 @@
 		channels,
 		channelId,
 		terminalServers,
+		connectedUserTerminals,
 		showControls,
 		showFileNavPath,
 		showFileNavDir,
@@ -62,7 +63,7 @@
 		removeTerminalConnection
 	} from '$lib/utils/connections';
 
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { COMMUNITY_ORIGINS, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import {
 		bestMatchingLanguage,
 		cleanText,
@@ -80,6 +81,7 @@
 	import { getUserSettings } from '$lib/apis/users';
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
+	import { resolveTerminalConnection, terminalRequest } from '$lib/apis/terminal';
 
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
@@ -310,7 +312,11 @@
 			/\bimport\s+seaborn\b|\bfrom\s+seaborn\b/.test(code) ? 'seaborn' : null,
 			/\bimport\s+sympy\b|\bfrom\s+sympy\b/.test(code) ? 'sympy' : null,
 			/\bimport\s+tiktoken\b|\bfrom\s+tiktoken\b/.test(code) ? 'tiktoken' : null,
-			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null
+			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null,
+			/\bimport\s+openpyxl\b|\bfrom\s+openpyxl\b/.test(code) ? 'openpyxl' : null,
+			/\.(read|to)_excel\(|\.Excel(Writer|File)\(/.test(code) ? 'openpyxl' : null,
+			/\bimport\s+pptx\b|\bfrom\s+pptx\b/.test(code) ? 'python-pptx' : null,
+			/\bimport\s+docx\b|\bfrom\s+docx\b/.test(code) ? 'python-docx' : null
 		].filter(Boolean);
 
 		const worker = getOrCreateWorker();
@@ -534,7 +540,7 @@
 			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile) {
 				if (result?.exists !== false) {
 					displayFileHandler(
-						params.path,
+						result?.path ?? params.path,
 						{ showControls, showFileNavPath },
 						{ page: params?.page }
 					);
@@ -556,6 +562,19 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
+		// Answer this session's availability check even when another chat is active.
+		if (
+			event?.data?.type === 'request:terminal:state' &&
+			event.data.data?.session_id === $socket?.id
+		) {
+			cb?.({
+				connected: [...$connectedUserTerminals.values()].some(
+					(shell) =>
+						shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
+				)
+			});
+			return;
+		}
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
 		// Skip events from temporary chats that are not the current chat.
@@ -626,6 +645,21 @@
 			} else if (type === 'execute:tool') {
 				console.log('execute:tool', data);
 				executeTool(data, cb, event.chat_id);
+				return;
+			} else if (type === 'request:terminal') {
+				try {
+					const connection = resolveTerminalConnection(
+						data.terminal_id,
+						[],
+						$settings?.terminalServers ?? [],
+						localStorage.token
+					);
+					if (!connection) throw new Error('Terminal Not Found');
+					const result = await terminalRequest(connection, event.chat_id, data.path);
+					cb?.({ data: result });
+				} catch (error) {
+					cb?.({ error: `${error}` });
+				}
 				return;
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
@@ -864,7 +898,9 @@
 				toast.custom(NotificationToast, {
 					componentProps: {
 						onClick: () => {
-							goto(`/channels/${event.channel_id}`);
+							goto(
+								`/channels/${event.channel_id}${data?.parent_id ? `?thread=${data.parent_id}` : ''}`
+							);
 						},
 						content: data?.content,
 						title: `${title}`
@@ -1047,11 +1083,7 @@
 	};
 
 	const windowMessageEventHandler = async (event) => {
-		if (
-			!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
-				event.origin
-			)
-		) {
+		if (!COMMUNITY_ORIGINS.includes(event.origin)) {
 			return;
 		}
 

@@ -542,6 +542,7 @@ async def get_builtin_tools(
     # Helper to check user-level feature permission (admins always pass)
     user = extra_params.get('__user__', {})
     config = await Config.get_many(
+        'memories.enable',
         'web.search.enable',
         'image_generation.enable',
         'images.edit.enable',
@@ -655,6 +656,7 @@ async def get_builtin_tools(
     # Add memory tools when memory is enabled and the model allows this builtin category.
     if (
         is_builtin_tool_enabled('memory')
+        and config.get('memories.enable')
         and features.get('memory')
         and get_model_capability('memory')
         and await has_user_permission('memories')

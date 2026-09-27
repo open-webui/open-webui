@@ -22,7 +22,7 @@ from open_webui.utils.oauth import (
     get_discovery_urls,
     get_oauth_client_info_with_dynamic_client_registration,
     get_oauth_client_info_with_static_credentials,
-    recover_static_oauth_client_metadata,
+    recover_oauth_client_metadata,
     resolve_oauth_client_info,
 )
 from open_webui.utils.tools import (
@@ -39,6 +39,7 @@ log = logging.getLogger(__name__)
 
 CONNECTIONS_CONFIG_KEYS = {
     'ENABLE_DIRECT_CONNECTIONS': 'direct.enable',
+    'ENABLE_DIRECT_INTEGRATIONS': 'direct.integrations.enable',
     'ENABLE_BASE_MODELS_CACHE': 'models.base_models_cache',
 }
 CODE_EXECUTION_CONFIG_KEYS = {
@@ -131,6 +132,7 @@ async def get_config_namespace(namespace: str, user=Depends(get_admin_user)):
 
 class ConnectionsConfigForm(BaseModel):
     ENABLE_DIRECT_CONNECTIONS: bool
+    ENABLE_DIRECT_INTEGRATIONS: bool = False
     ENABLE_BASE_MODELS_CACHE: bool
 
 
@@ -145,7 +147,7 @@ async def set_connections_config(
     form_data: ConnectionsConfigForm,
     user=Depends(get_admin_user),
 ):
-    await Config.upsert(config_updates(form_data.model_dump(), CONNECTIONS_CONFIG_KEYS))
+    await Config.upsert(config_updates(form_data.model_dump(exclude_unset=True), CONNECTIONS_CONFIG_KEYS))
     values = await get_config_values(CONNECTIONS_CONFIG_KEYS)
     await publish_event(
         request,
@@ -271,7 +273,7 @@ async def set_tool_servers_config(
             if auth_type in ('oauth_2.1', 'oauth_2.1_static') and server_id:
                 try:
                     oauth_client_info = resolve_oauth_client_info(connection)
-                    oauth_client_info = await recover_static_oauth_client_metadata(connection, oauth_client_info)
+                    oauth_client_info = await recover_oauth_client_metadata(connection, oauth_client_info)
                     oauth_client_info = apply_connection_oauth_options(connection, oauth_client_info)
                     request.app.state.oauth_client_manager.add_client(
                         f'{server_type}:{server_id}',
@@ -808,7 +810,7 @@ class PromptSuggestion(BaseModel):
 
 
 class SetDefaultSuggestionsForm(BaseModel):
-    suggestions: list[PromptSuggestion]
+    suggestions: list[PromptSuggestion] | None
     i18n: dict[str, Any] | None = None
 
 

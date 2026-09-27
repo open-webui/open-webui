@@ -312,6 +312,7 @@ class AutomationTable:
             rows = result.scalars().all()
 
             from open_webui.utils.automations import next_run_ns
+            from open_webui.utils.recurrence import RecurrenceEvaluationTimeout
 
             # Batch-fetch user timezones so rescheduling respects each
             # user's local timezone instead of falling back to server time.
@@ -323,13 +324,20 @@ class AutomationTable:
                 tz_result = await db.execute(select(User.id, User.timezone).where(User.id.in_(user_ids)))
                 timezone_by_user_id = {uid: tz for uid, tz in tz_result.all()}
 
+            claimed = []
             for row in rows:
+                try:
+                    next_run_at = await next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id))
+                except RecurrenceEvaluationTimeout:
+                    log.warning('Skipping automation %s: recurrence evaluation timed out', row.id)
+                    continue
                 row.last_run_at = now_ns
-                row.next_run_at = next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id))
+                row.next_run_at = next_run_at
+                claimed.append(row)
 
             await db.commit()
 
-            return [AutomationModel.model_validate(r) for r in rows]
+            return [AutomationModel.model_validate(r) for r in claimed]
 
 
 ####################

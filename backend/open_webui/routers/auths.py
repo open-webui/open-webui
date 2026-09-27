@@ -9,6 +9,7 @@ import urllib
 import uuid
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
+import jwt
 from aiohttp import BasicAuth, ClientSession
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
@@ -75,9 +76,9 @@ from open_webui.utils.auth import (
     verify_password,
 )
 from open_webui.utils.groups import apply_default_group_assignment
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
-from open_webui.utils.redis import get_redis_client
 from pydantic import BaseModel, StrictStr, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,12 +89,11 @@ log = logging.getLogger(__name__)
 
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
-signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+signin_rate_limiter = RateLimiter(limit=5 * 3, window=60 * 3)
 # Best-effort throttle only: there is no caller identity before the provider answers,
 # and deployments may derive request.client from proxy headers.
 token_exchange_rate_limiter = (
     RateLimiter(
-        redis_client=get_redis_client(),
         limit=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT,
         window=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW,
     )
@@ -816,7 +816,7 @@ async def signin(
                 db=db,
             )
     else:
-        if signin_rate_limiter.is_limited(form_data.email.lower()):
+        if await signin_rate_limiter.is_limited(request.app.state.redis, form_data.email.lower()):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
@@ -1465,6 +1465,9 @@ OAUTH_CONFIG_KEYS = {
 
 
 def _format_oauth_form_value(field: str, value):
+    if field == 'OAUTH_BLOCKED_GROUPS' and isinstance(value, list):
+        # Preserve commas in group names and regex patterns when the form is saved.
+        return JSONCodec.dumps(value)
     if field in OAUTH_COMMA_LIST_FIELDS and isinstance(value, list):
         return ','.join(str(item) for item in value)
     return value
@@ -1637,8 +1640,8 @@ async def token_exchange(
             detail='Token exchange is disabled',
         )
 
-    if token_exchange_rate_limiter and token_exchange_rate_limiter.is_limited(
-        request.client.host if request.client else 'unknown'
+    if token_exchange_rate_limiter and await token_exchange_rate_limiter.is_limited(
+        request.app.state.redis, request.client.host if request.client else 'unknown'
     ):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -1749,11 +1752,20 @@ async def token_exchange(
             detail='User not found. Please sign in via the web interface first.',
         )
 
+    # The provider's userinfo endpoint has already accepted this token.
+    # Keep an empty dict for opaque tokens so exchange role checks still apply.
+    token_claims = {}
+    try:
+        token_claims = jwt.decode(form_data.token, options={'verify_signature': False})
+    except jwt.PyJWTError as e:
+        log.debug('Token exchange: cannot decode token claims: %s', e)
+
     user = await oauth_manager.update_user_role_from_oauth(
         request=request,
         user=user,
         user_data=user_data,
         provider=provider,
+        token_claims=token_claims,
         db=db,
     )
     if await Config.get('oauth.enable_group_mapping'):
@@ -1762,6 +1774,7 @@ async def token_exchange(
             user=user,
             user_data=user_data,
             default_permissions=await Config.get('user.permissions'),
+            token_claims=token_claims,
             db=db,
         )
 

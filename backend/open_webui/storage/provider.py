@@ -168,7 +168,9 @@ class S3StorageProvider(StorageProvider):
         try:
             s3_key = self._extract_s3_key(file_path)
             local_file_path = self._get_local_file_path(s3_key)
-            self.s3_client.download_file(self.bucket_name, s3_key, local_file_path)
+            # download_file's temp name caps characters, not bytes, so non-ASCII names can exceed NAME_MAX
+            with open(local_file_path, 'wb') as local_file:
+                self.s3_client.download_fileobj(self.bucket_name, s3_key, local_file)
             return local_file_path
         except ClientError as e:
             raise RuntimeError(f'Error downloading file from S3: {e}')

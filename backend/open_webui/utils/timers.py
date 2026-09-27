@@ -17,6 +17,7 @@ from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chat, ChatForm, Chats
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import has_active_tasks
+from open_webui.utils.auth import VERIFIED_USER_ROLES
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
 from sqlalchemy import select
@@ -256,6 +257,11 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         user = await Users.get_user_by_id(timer.user_id)
         if not user:
             await _set_timer_state(timer_id, 'error', timer_error='timer user no longer exists')
+            return
+
+        # Re-gate the rehydrated owner: a demoted owner must not run.
+        if user.role not in VERIFIED_USER_ROLES:
+            await _set_timer_state(timer_id, 'error', timer_error='owner no longer permitted to run timers')
             return
 
         run = meta.get('run') or {}
