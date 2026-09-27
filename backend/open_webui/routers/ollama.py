@@ -483,9 +483,15 @@ async def get_ollama_tags(
     if url_idx is None:
         result = await get_all_models(request, user=user)
     else:
-        url = (await Config.get('ollama.base_urls', []))[url_idx]
-        key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
-        result = await send_request(f'{url}/api/tags', 'GET', key=key, user=user)
+        url, api_config, key = await get_ollama_connection(url_idx)
+        result = await send_request(
+            f'{url}/api/tags',
+            'GET',
+            key=key,
+            user=user,
+            api_config=api_config,
+            request=request,
+        )
 
     if user.role == 'user' and not BYPASS_MODEL_ACCESS_CONTROL:
         result['models'] = await get_filtered_models(result, user)
@@ -549,8 +555,15 @@ async def get_ollama_versions(
         return {'version': False}
 
     if url_idx is not None:
-        url = (await Config.get('ollama.base_urls', []))[url_idx]
-        return await send_request(f'{url}/api/version', 'GET')
+        url, api_config, key = await get_ollama_connection(url_idx)
+        return await send_request(
+            f'{url}/api/version',
+            'GET',
+            key=key,
+            user=user,
+            api_config=api_config,
+            request=request,
+        )
 
     # Fan-out to every enabled backend
     tasks = []
@@ -626,6 +639,8 @@ async def unload_model(
                 payload=JSONCodec.dumps(payload),
                 key=key,
                 user=user,
+                api_config=api_config,
+                request=request,
             )
             results.append({'url_idx': idx, 'success': True, 'response': res})
         except Exception as e:
@@ -655,17 +670,19 @@ async def pull_model(
     form_data = form_data.model_dump(exclude_none=True)
     form_data['model'] = form_data.get('model', form_data.get('name'))
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
+    url, api_config, key = await get_ollama_connection(url_idx)
     log.info('url: %s', url)
 
     # Admins may pull from any registry
     return await send_request(
         f'{url}/api/pull',
         payload=JSONCodec.dumps({**form_data, 'insecure': True}),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=key,
         user=user,
         stream=True,
         passthrough=True,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -696,16 +713,18 @@ async def push_model(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model))
         url_idx = models[form_data.model]['urls'][0]
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
+    url, api_config, key = await get_ollama_connection(url_idx)
     log.debug('url: %s', url)
 
     return await send_request(
         f'{url}/api/push',
         payload=form_data.model_dump_json(exclude_none=True).encode(),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=key,
         user=user,
         stream=True,
         passthrough=True,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -730,15 +749,17 @@ async def create_model(
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.debug('form_data: %s', form_data)
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
+    url, api_config, key = await get_ollama_connection(url_idx)
 
     return await send_request(
         f'{url}/api/create',
         payload=form_data.model_dump_json(exclude_none=True).encode(),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=key,
         user=user,
         stream=True,
         passthrough=True,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -768,14 +789,15 @@ async def copy_model(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.source))
         url_idx = models[form_data.source]['urls'][0]
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
+    url, api_config, key = await get_ollama_connection(url_idx)
 
     await send_request(
         f'{url}/api/copy',
         payload=form_data.model_dump_json(exclude_none=True).encode(),
         key=key,
         user=user,
+        api_config=api_config,
+        request=request,
     )
     await publish_event(
         request,
@@ -810,8 +832,7 @@ async def delete_model(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model))
         url_idx = models[model]['urls'][0]
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
+    url, api_config, key = await get_ollama_connection(url_idx)
 
     await send_request(
         f'{url}/api/delete',
@@ -819,6 +840,8 @@ async def delete_model(
         payload=JSONCodec.dumps(payload),
         key=key,
         user=user,
+        api_config=api_config,
+        request=request,
     )
     await publish_event(
         request,
@@ -853,14 +876,15 @@ async def show_model_info(
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model))
 
     url_idx = random.choice(models[model]['urls'])
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
+    url, api_config, key = await get_ollama_connection(url_idx)
 
     return await send_request(
         f'{url}/api/show',
         payload=JSONCodec.dumps(payload),
         key=key,
         user=user,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -914,6 +938,8 @@ async def embed(
         payload=form_data.model_dump_json(exclude_none=True).encode(),
         key=key,
         user=user,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -965,6 +991,8 @@ async def embeddings(
         payload=form_data.model_dump_json(exclude_none=True).encode(),
         key=key,
         user=user,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -1022,6 +1050,8 @@ async def generate_completion(
         user=user,
         stream=True,
         passthrough=True,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -1493,8 +1523,15 @@ async def get_openai_models(
         model_list = await get_all_models(request, user=user)
         raw_models = model_list['models']
     else:
-        url = (await Config.get('ollama.base_urls', []))[url_idx]
-        model_list = await send_request(f'{url}/api/tags', 'GET')
+        url, api_config, key = await get_ollama_connection(url_idx)
+        model_list = await send_request(
+            f'{url}/api/tags',
+            'GET',
+            key=key,
+            user=user,
+            api_config=api_config,
+            request=request,
+        )
         raw_models = model_list.get('models', [])
 
     now_ts = int(time.time())
