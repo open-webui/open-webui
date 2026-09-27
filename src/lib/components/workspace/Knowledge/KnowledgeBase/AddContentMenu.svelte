@@ -26,6 +26,7 @@
 </script>
 
 <Dropdown
+	closeOnSelect
 	bind:show
 	onOpenChange={(state) => {
 		if (state === false) {
@@ -62,7 +63,6 @@
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					onUpload({ type: 'new_directory' });
-					show = false;
 				}}
 			>
 				<NewFolderAlt />
@@ -134,7 +134,6 @@
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					onReset();
-					show = false;
 				}}
 			>
 				<ArrowUturnLeft strokeWidth="2" />

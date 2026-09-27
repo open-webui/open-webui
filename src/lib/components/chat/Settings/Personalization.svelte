@@ -185,7 +185,7 @@
 								<div class="min-w-0 flex-1"></div>
 							{/if}
 
-							<Dropdown align="end">
+							<Dropdown closeOnSelect align="end">
 								<Tooltip content={$i18n.t('Actions')}>
 									<button
 										class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
