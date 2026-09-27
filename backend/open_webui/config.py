@@ -2148,6 +2148,10 @@ else:
     for origin in CORS_ALLOW_ORIGIN:
         validate_cors_origin(origin)
 
+URL_PARAMS_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.getenv('URL_PARAMS_TRUSTED_ORIGINS', '').split(';') if origin.strip()
+]
+
 
 class BannerModel(BaseModel):
     i18n: dict[str, dict[str, str]] | None = None
