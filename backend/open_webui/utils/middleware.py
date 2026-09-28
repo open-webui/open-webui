@@ -2979,6 +2979,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 }
                             )
                         continue
+                elif tool_id.startswith('server:'):
+                    # External OpenAPI tool servers are plain HTTP calls to a
+                    # declared endpoint (no in-process code execution), so they
+                    # must stay available when ENABLE_PLUGINS=false.
+                    db_tool_ids.append(tool_id)
                 elif ENABLE_PLUGINS:
                     db_tool_ids.append(tool_id)
 

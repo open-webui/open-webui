@@ -266,9 +266,6 @@ async def get_updated_tool_function(function: Callable, extra_params: dict):
 
 async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extra_params: dict) -> dict[str, dict]:
     """Load tools for the given tool_ids, checking access control."""
-    if not ENABLE_PLUGINS:
-        return {}
-
     if not tool_ids:
         return {}
 
@@ -283,6 +280,12 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     for tool_id in tool_ids:
         tool = tool_models.get(tool_id)
         if tool:
+            if not ENABLE_PLUGINS:
+                # ENABLE_PLUGINS gates in-process plugin tools only; external
+                # OpenAPI tool servers (`server:` ids) are resolved below and
+                # must stay available when plugins are disabled.
+                continue
+
             # Check access control for local tools
             if (
                 not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
