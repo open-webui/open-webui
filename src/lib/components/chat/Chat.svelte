@@ -1240,7 +1240,11 @@
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
-		if (event.chat_id === $chatId) {
+		// A new chat's title can arrive before its id; the response message already exists.
+		if (
+			event.chat_id === $chatId ||
+			(!$chatId && event?.data?.type === 'chat:title' && history.messages[event.message_id])
+		) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			if (type === 'chat:reload') {
