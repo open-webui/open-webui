@@ -8,8 +8,11 @@
 
 	const i18n = getI18n();
 	const getKeyboardEvent = (event: CustomEvent<{ event: KeyboardEvent }>) => event.detail.event;
-	const getClipboardEvent = (event: CustomEvent<{ event: ClipboardEvent }>) => event.detail.event;
 	const hasTouchInput = () => {
+		if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+			return false;
+		}
+
 		const legacyNavigator = navigator as Navigator & { msMaxTouchPoints?: number };
 		return (
 			'ontouchstart' in window ||
@@ -504,10 +507,6 @@
 												submitHandler();
 											}
 										}
-									}}
-									on:paste={async (event) => {
-										const e = getClipboardEvent(event);
-										console.log(e);
 									}}
 								/>
 							</div>
