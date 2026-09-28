@@ -1369,6 +1369,41 @@ def filter_source_metadata(metadata: dict) -> dict:
     return {key: metadata[key] for key in RAG_SOURCE_METADATA_KEYS if metadata.get(key) is not None}
 
 
+def _is_indexed_filename(value) -> bool:
+    return isinstance(value, str) and bool(value) and not value.startswith(('http://', 'https://'))
+
+
+async def apply_current_file_names(metadata_groups: list) -> None:
+    """Point citation metadata at the file's current name after a rename.
+
+    Chunk metadata copies ``name`` and ``source`` when a file is indexed.
+    Renaming updates the file row only, so later retrievals would keep citing
+    the previous filename. URLs, external documents, and deleted files are left
+    as stored.
+    """
+    names: dict[str, str | None] = {}
+
+    for group in metadata_groups:
+        if not isinstance(group, list):
+            continue
+        for meta in group:
+            if not isinstance(meta, dict) or meta.get('external'):
+                continue
+            file_id = meta.get('file_id')
+            if not isinstance(file_id, str) or not file_id or file_id.startswith('external-'):
+                continue
+            if file_id not in names:
+                file = await Files.get_file_by_id(file_id)
+                names[file_id] = file.filename if file and file.filename else None
+            filename = names[file_id]
+            if not filename:
+                continue
+            if _is_indexed_filename(meta.get('name')):
+                meta['name'] = filename
+            if _is_indexed_filename(meta.get('source')):
+                meta['source'] = filename
+
+
 async def get_sources_from_items(
     request,
     items,
@@ -1719,6 +1754,10 @@ async def get_sources_from_items(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
+
+    # Indexed chunks snapshot the filename. Read the current name so a
+    # knowledge-base rename shows up on the next citation.
+    await apply_current_file_names([source.get('metadata') for source in sources])
     return sources
 
 

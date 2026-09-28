@@ -3197,7 +3197,7 @@ async def query_knowledge_files(
         from open_webui.models.knowledge import Knowledges
         from open_webui.models.notes import Notes
         from open_webui.retrieval.external import retrieve_external_knowledge
-        from open_webui.retrieval.utils import query_collection
+        from open_webui.retrieval.utils import apply_current_file_names, query_collection
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -3322,6 +3322,7 @@ async def query_knowledge_files(
                 documents = query_results.get('documents', [[]])[0]
                 metadatas = query_results.get('metadatas', [[]])[0]
                 distances = query_results.get('distances', [[]])[0]
+                await apply_current_file_names([metadatas])
 
                 for idx, doc in enumerate(documents):
                     chunk_info = {
