@@ -116,6 +116,8 @@ class SCIMPhoto(BaseModel):
 class SCIMGroupMember(BaseModel):
     """SCIM Group Member"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     value: str  # User ID
     ref: Optional[str] = Field(None, alias='$ref')
     type: Optional[str] = 'User'
