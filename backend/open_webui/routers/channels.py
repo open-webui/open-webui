@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
-from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, STATIC_DIR
+from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES, STATIC_DIR
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
 from open_webui.models.config import Config
@@ -1857,12 +1857,22 @@ async def get_webhook_profile_image(
                 header, base64_data = webhook.profile_image_url.split(',', 1)
                 image_data = base64.b64decode(base64_data)
                 image_buffer = io.BytesIO(image_data)
-                media_type = header.split(';')[0].lstrip('data:')
+                media_type = header.split(';')[0].lstrip('data:').lower()
+
+                # only serve known-safe raster types inline; reject SVG/unknown (can run script on our origin)
+                if media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+                    # LICENSE covers this Open WebUI fallback logo.
+                    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                    # https://docs.openwebui.com/license.
+                    return FileResponse(f'{STATIC_DIR}/favicon.png')
 
                 return StreamingResponse(
                     image_buffer,
                     media_type=media_type,
-                    headers={'Content-Disposition': 'inline'},
+                    headers={
+                        'Content-Disposition': 'inline',
+                        'X-Content-Type-Options': 'nosniff',
+                    },
                 )
             except Exception as e:
                 pass
