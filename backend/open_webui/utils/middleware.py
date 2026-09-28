@@ -2504,6 +2504,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception:
             log.exception('Context compaction failed; continuing with full chat history')
 
+        metadata['context_start_message_id'] = next(
+            (message.get('id') for message in form_data.get('messages', []) if message.get('role') != 'system'), None
+        )
+
     # Process messages with OR-aligned output items for clean LLM messages
     for message in form_data.get('messages', []):
         output = message.get('output')
@@ -3523,6 +3527,11 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
             assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
             if assistant_message:
                 db_messages.append({k: v for k, v in assistant_message.items() if k in MESSAGE_REPLAY_KEYS})
+            context_start_message_id = metadata.get('context_start_message_id')
+            start_index = next(
+                (index for index, message in enumerate(db_messages) if message.get('id') == context_start_message_id), 0
+            )
+            db_messages = db_messages[start_index:]
             for message in db_messages:
                 output = message.get('output')
                 # reasoning_details can be model/provider-bound, so only replay them
@@ -3534,8 +3543,9 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
                 ):
                     message['output'] = strip_reasoning_details(output)
 
+            system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = process_messages_with_output(
-                db_messages,
+                [system_message, *db_messages] if system_message else db_messages,
                 reasoning_format=get_reasoning_format(model),
                 include_file_context=metadata.get('include_file_context', False),
             )
