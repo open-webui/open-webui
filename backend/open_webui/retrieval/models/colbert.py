@@ -4,10 +4,27 @@ import os
 import numpy as np
 import torch
 from colbert.infra import ColBERTConfig
+from colbert.modeling import base_colbert, hf_colbert
 from colbert.modeling.checkpoint import Checkpoint
 from open_webui.retrieval.models.base_reranker import BaseReranker
+from transformers import PretrainedConfig
 
 log = logging.getLogger(__name__)
+
+
+def class_factory(name_or_path: str) -> type:
+    hf_colbert_class = hf_colbert.class_factory(name_or_path)
+
+    # colbert-ai never calls post_init, which transformers 5 needs to finish setting up the model
+    class HF_ColBERT(hf_colbert_class):
+        def __init__(self, config: PretrainedConfig, colbert_config: ColBERTConfig) -> None:
+            super().__init__(config, colbert_config)
+            self.post_init()
+
+    return HF_ColBERT
+
+
+base_colbert.class_factory = class_factory
 
 
 class ColBERT(BaseReranker):
