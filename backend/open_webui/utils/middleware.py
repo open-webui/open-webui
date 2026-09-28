@@ -2979,7 +2979,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 }
                             )
                         continue
-                elif ENABLE_PLUGINS:
+                elif ENABLE_PLUGINS or tool_id.startswith('server:'):
                     db_tool_ids.append(tool_id)
 
             if db_tool_ids:

@@ -267,7 +267,7 @@ async def get_updated_tool_function(function: Callable, extra_params: dict):
 async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extra_params: dict) -> dict[str, dict]:
     """Load tools for the given tool_ids, checking access control."""
     if not ENABLE_PLUGINS:
-        return {}
+        tool_ids = [tool_id for tool_id in tool_ids if tool_id.startswith('server:')]
 
     if not tool_ids:
         return {}
