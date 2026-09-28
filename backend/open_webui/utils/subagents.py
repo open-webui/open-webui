@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import time
+import weakref
 from datetime import timedelta
 from uuid import uuid4
 
@@ -41,7 +42,7 @@ MUTATING_MEMORY_TOOLS = {
 _background_active: set[str] = set()
 _background_lock = asyncio.Lock()
 _foreground_semaphore: asyncio.Semaphore | None = None
-_parent_locks: dict[str, asyncio.Lock] = {}
+_parent_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
 
 def _build_request(source: Request, user_id: str, *, internal: bool) -> Request:
