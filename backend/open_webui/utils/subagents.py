@@ -14,7 +14,7 @@ from open_webui.models.chats import Chat, ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
-from open_webui.utils.auth import create_token
+from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
 from sqlalchemy import select
@@ -84,7 +84,7 @@ async def process_pending_internal_messages(
             return
 
         user = await Users.get_user_by_id(user_id)
-        if not user:
+        if not user or user.role not in VERIFIED_USER_ROLES:
             return
 
         async with get_async_db() as db:

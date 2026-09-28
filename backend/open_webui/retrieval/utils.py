@@ -30,6 +30,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     BYPASS_RETRIEVAL_ACCESS_CONTROL,
+    ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
     MPS_INFERENCE_LOCK,
@@ -838,6 +839,7 @@ async def query_collection_with_hybrid_search(
             return name, await ASYNC_VECTOR_DB_CLIENT.get(collection_name=name)
         except Exception as e:
             log.exception(f'Failed to fetch collection {name}: {e}')
+            failed_collection_names.add(name)
             return name, None
 
     collection_results = dict(await asyncio.gather(*(_fetch_collection(name) for name in collection_names)))
@@ -1461,7 +1463,9 @@ async def get_sources_from_items(
         elif item.get('type') == 'chat':
             # Chat Attached
             chat = await Chats.get_chat_by_id(item.get('id'))
-            has_read_access = bool(chat and (user.role == 'admin' or chat.user_id == user.id))
+            has_read_access = bool(
+                chat and ((user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS) or chat.user_id == user.id)
+            )
 
             if chat and not has_read_access:
                 has_read_access = await AccessGrants.has_access(

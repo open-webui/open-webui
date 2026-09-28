@@ -510,6 +510,7 @@ def get_citation_source_from_tool_result(
                         },
                         'document': [],
                         'metadata': [],
+                        'distances': [],
                     }
 
                 sources_by_file[key]['document'].append(content)
@@ -521,6 +522,8 @@ def get_citation_source_from_tool_result(
                         **({'note_id': note_id} if note_id else {}),
                     }
                 )
+                if 'distance' in chunk:
+                    sources_by_file[key]['distances'].append(chunk['distance'])
 
             # Return all grouped sources as a list
             if sources_by_file:
@@ -1771,19 +1774,10 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
-async def add_file_context(messages: list, chat_id: str, user) -> list:
+def add_file_context(messages: list) -> list:
     """
     Add file URLs to messages for native function calling.
     """
-    if not is_saved_chat_id(chat_id):
-        return messages
-
-    chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
-    if not chat:
-        return messages
-
-    history = chat.chat.get('history', {})
-    stored_messages = get_message_list(history.get('messages', {}), history.get('currentId'))
 
     def format_file_tag(file):
         # Every file reaching here has a url or a chat id, so id is always set.
@@ -1796,20 +1790,13 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
             attrs += f' name="{file["name"]}"'
         return f'<file {attrs}/>'
 
-    # Pair only user-role messages from both lists to avoid misalignment.
-    # After process_messages_with_output(), assistant messages with tool calls
-    # are expanded into multiple messages (assistant + tool results), making
-    # the payload message list longer than the stored message list. A naive
-    # positional zip() would pair user messages with wrong stored messages,
-    # causing later images to lose their file context (see #21878).
-    user_messages = [m for m in messages if m.get('role') == 'user']
-    stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
-
-    for message, stored_message in zip(user_messages, stored_user_messages):
+    for message in messages:
+        if message.get('role') != 'user':
+            continue
         # Chat references carry no url - they are addressed by id via view_chat.
         attached_files = [
             file
-            for file in stored_message.get('files', [])
+            for file in message.get('files', [])
             if (file.get('url') and not file.get('url').startswith('data:'))
             or (file.get('type') == 'chat' and file.get('id'))
         ]
@@ -2274,6 +2261,7 @@ def strip_reasoning_details(output: list) -> list:
 def process_messages_with_output(
     messages: list[dict],
     reasoning_format: str | None = None,
+    include_file_context: bool = False,
 ) -> list[dict]:
     """
     Process messages with OR-aligned output items for LLM consumption.
@@ -2299,9 +2287,14 @@ def process_messages_with_output(
                 continue
 
         clean_message = dict(message)
-        for key in ('id', 'files', 'output', 'model', 'contextSummary', 'context_summary', 'usage'):
+        for key in ('id', 'output', 'model', 'contextSummary', 'context_summary', 'usage'):
             clean_message.pop(key, None)
         processed.append(clean_message)
+
+    if include_file_context:
+        add_file_context(processed)
+    for message in processed:
+        message.pop('files', None)
 
     return processed
 
@@ -2429,6 +2422,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # which the frontend strips, causing tool calls to be merged into content.
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
+    payload_tools = form_data.get('tools', None)  # snapshot before filters
+    chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
+    is_note_chat = bool(chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
+    use_builtin_tools = is_note_chat or (
+        bool(metadata.get('session_id'))
+        and metadata.get('params', {}).get('function_calling') != 'legacy'
+        and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
+    )
+    metadata['include_file_context'] = bool(
+        chat and chat.user_id == user.id and payload_tools is None and use_builtin_tools
+    )
 
     if is_saved_chat_id(chat_id) and user_message_id:
         db_messages = await load_messages_from_db(chat_id, user_message_id)
@@ -2465,8 +2469,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 if f.get('url')
                             ],
                         ]
-                # Strip files field — it's been incorporated into content
-                message.pop('files', None)
 
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
@@ -2502,6 +2504,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception:
             log.exception('Context compaction failed; continuing with full chat history')
 
+        metadata['context_start_message_id'] = next(
+            (message.get('id') for message in form_data.get('messages', []) if message.get('role') != 'system'), None
+        )
+
     # Process messages with OR-aligned output items for clean LLM messages
     for message in form_data.get('messages', []):
         output = message.get('output')
@@ -2513,6 +2519,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     form_data['messages'] = process_messages_with_output(
         form_data.get('messages', []),
         reasoning_format=get_reasoning_format(model),
+        include_file_context=metadata['include_file_context'],
     )
     form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
 
@@ -2634,7 +2641,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         form_data['files'] = files
 
     variables = form_data.pop('variables', None)
-    payload_tools = form_data.get('tools', None)  # snapshot before filters
 
     # Process the form_data through the pipeline
     try:
@@ -2767,12 +2773,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     available_skills = []
     terminal_skills = []
     view_skill_ids = []
-    chat = None
-    if is_saved_chat_id(metadata.get('chat_id')):
-        chat = await Chats.get_chat_by_id(metadata['chat_id'])
-
-    is_note_chat = bool(chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
-
     if is_note_chat:
         note_id = (chat.meta or {}).get('note_id')
         note = await Notes.get_note_by_id(note_id) if note_id else None
@@ -2795,12 +2795,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             ]
             if note_files:
                 files = [*(files or []), *note_files]
-
-    use_builtin_tools = is_note_chat or (
-        bool(metadata.get('session_id'))
-        and metadata.get('params', {}).get('function_calling') != 'legacy'
-        and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
-    )
 
     if skill_ids or use_builtin_tools:
         from open_webui.models.skills import Skills as SkillsModel
@@ -3039,6 +3033,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for tool_server in direct_tool_servers:
                 if tool_server.get('is_terminal') is True and not terminal_capability:
                     continue
+                # Copy so the pops below keep metadata intact for sub-agents and approval resumes
+                tool_server = dict(tool_server)
                 system_prompt = tool_server.pop('system_prompt', None)
                 if system_prompt:
                     form_data['messages'] = add_or_update_system_message(
@@ -3070,10 +3066,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Only inject when the request originates from the UI (identified by session_id).
         # API callers don't expect hidden tools; they can explicitly request tools via tool_ids.
         if use_builtin_tools:
-            # Add file context to user messages
-            chat_id = metadata.get('chat_id')
-            form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
-
             if (model.get('info', {}).get('meta', {}).get('builtinTools') or {}).get('knowledge', True):
                 from html import escape
 
@@ -3535,6 +3527,11 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
             assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
             if assistant_message:
                 db_messages.append({k: v for k, v in assistant_message.items() if k in MESSAGE_REPLAY_KEYS})
+            context_start_message_id = metadata.get('context_start_message_id')
+            start_index = next(
+                (index for index, message in enumerate(db_messages) if message.get('id') == context_start_message_id), 0
+            )
+            db_messages = db_messages[start_index:]
             for message in db_messages:
                 output = message.get('output')
                 # reasoning_details can be model/provider-bound, so only replay them
@@ -3546,9 +3543,11 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
                 ):
                     message['output'] = strip_reasoning_details(output)
 
+            system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = process_messages_with_output(
-                db_messages,
+                [system_message, *db_messages] if system_message else db_messages,
                 reasoning_format=get_reasoning_format(model),
+                include_file_context=metadata.get('include_file_context', False),
             )
             form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
 
@@ -3603,7 +3602,7 @@ async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[di
             if not has_pending_approval:
                 item['status'] = 'pending'
                 has_pending_approval = True
-            elif item.get('status') == 'in_progress':
+            elif item.get('status') in {'in_progress', 'completed'}:
                 item['status'] = 'queued'
 
     await Chats.upsert_message_to_chat_by_id_and_message_id(

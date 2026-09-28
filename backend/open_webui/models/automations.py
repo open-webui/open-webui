@@ -195,7 +195,7 @@ class AutomationTable:
                 stmt = stmt.filter(
                     or_(
                         Automation.name.ilike(f'%{query}%'),
-                        *(data_text.ilike(f'%{variant}%') for variant in json_text_variants(query)),
+                        *(data_text.icontains(variant, autoescape=True) for variant in json_text_variants(query)),
                     )
                 )
 

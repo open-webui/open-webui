@@ -8,7 +8,7 @@
 
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
-	import equal from 'fast-deep-equal';
+	import { equalEditorJSON } from '$lib/utils/editorJson';
 
 	import { goto, onNavigate } from '$app/navigation';
 
@@ -340,7 +340,7 @@
 	}
 
 	function areContentsEqual(a, b) {
-		return equal(a, b);
+		return equalEditorJSON(a, b);
 	}
 
 	function insertNoteVersion(note) {

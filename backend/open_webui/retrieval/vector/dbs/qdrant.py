@@ -28,6 +28,7 @@ from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
 
 NO_LIMIT = 999999999
+SCROLL_PAGE_SIZE = 1000
 
 log = logging.getLogger(__name__)
 
@@ -91,6 +92,24 @@ class QdrantClient(VectorDBBase):
                 'metadatas': [metadatas],
             }
         )
+
+    def _scroll_points(
+        self, collection_name: str, scroll_filter: Optional[models.Filter] = None, limit: Optional[int] = None
+    ) -> list:
+        # Paged so a strict-mode max_query_limit does not reject the read
+        points = []
+        offset = None
+        while True:
+            page_size = SCROLL_PAGE_SIZE if limit is None else min(SCROLL_PAGE_SIZE, limit - len(points))
+            page, offset = self.client.scroll(
+                collection_name=f'{self.collection_prefix}_{collection_name}',
+                scroll_filter=scroll_filter,
+                limit=page_size,
+                offset=offset,
+            )
+            points.extend(page)
+            if offset is None or len(points) == limit:
+                return points
 
     def _create_collection(self, collection_name: str, dimension: int):
         collection_name_with_prefix = f'{self.collection_prefix}_{collection_name}'
@@ -180,32 +199,22 @@ class QdrantClient(VectorDBBase):
         if not self.has_collection(collection_name):
             return None
         try:
-            if limit is None:
-                limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
-
             field_conditions = []
             for key, value in filter.items():
                 field_conditions.append(
                     models.FieldCondition(key=f'metadata.{key}', match=models.MatchValue(value=value))
                 )
 
-            points = self.client.scroll(
-                collection_name=f'{self.collection_prefix}_{collection_name}',
-                scroll_filter=models.Filter(should=field_conditions),
-                limit=limit,
-            )
-            return self._result_to_get_result(points[0])
+            points = self._scroll_points(collection_name, models.Filter(should=field_conditions), limit)
+            return self._result_to_get_result(points)
         except Exception as e:
             log.exception(f"Error querying a collection '{collection_name}': {e}")
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
-        points = self.client.scroll(
-            collection_name=f'{self.collection_prefix}_{collection_name}',
-            limit=NO_LIMIT,  # otherwise qdrant would set limit to 10!
-        )
-        return self._result_to_get_result(points[0])
+        points = self._scroll_points(collection_name)
+        return self._result_to_get_result(points)
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.

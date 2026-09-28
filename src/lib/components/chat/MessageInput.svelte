@@ -238,6 +238,7 @@
 	}
 
 	let chatInputDraft: any;
+	// Approval mode is persisted in chat parameters and user settings, not input drafts.
 	$: chatInputDraft = {
 		prompt,
 		files: files
@@ -254,8 +255,7 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled,
-		toolApprovalMode
+		codeInterpreterEnabled
 	};
 
 	$: onChange(chatInputDraft);
