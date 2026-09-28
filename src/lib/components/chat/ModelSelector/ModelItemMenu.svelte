@@ -20,6 +20,7 @@
 	export let pinModelHandler: (modelId: string) => void = () => {};
 	export let copyLinkHandler: Function = () => {};
 	export let deleteModelHandler: Function = () => {};
+	export let onEdit: () => void = () => {};
 
 	export let onClose: Function = () => {};
 
@@ -30,6 +31,7 @@
 	bind:show
 	align="end"
 	sideOffset={-2}
+	contentClass="model-selector-child-menu"
 	onOpenChange={(state) => {
 		if (state === false) {
 			onClose();
@@ -61,6 +63,7 @@
 							showSettings.set({ tab: 'admin:models', state: { id: model?.id ?? null } });
 						}
 						show = false;
+						onEdit();
 					}}
 				>
 					<Pencil className="size-3.5" />
