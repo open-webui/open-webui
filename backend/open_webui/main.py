@@ -1644,7 +1644,8 @@ async def chat_completion(
     async def process_chat(request, form_data, user, metadata, model, tasks=None):
         try:
             ctx = None
-            if metadata.get('assistant_message_id'):
+            # Saved chats load the message after approved tool calls run, so their results are kept
+            if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
                 ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
