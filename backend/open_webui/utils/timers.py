@@ -108,7 +108,7 @@ async def create_timer(
         'session_id': metadata.get('session_id'),
         'tool_ids': copy.deepcopy(metadata.get('tool_ids') or []),
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
-        'system_prompt': metadata.get('system_prompt'),
+        'system_prompt': metadata.get('chat_system_prompt'),
         'filter_ids': copy.deepcopy(metadata.get('filter_ids') or []),
         'terminal_id': metadata.get('terminal_id'),
         'features': copy.deepcopy(metadata.get('features') or {}),

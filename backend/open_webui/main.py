@@ -1277,6 +1277,7 @@ async def chat_completion(
             'variables': form_data.get('variables', {}),
             'chat_variables': chat_variables,
             'model': model,
+            'model_system_prompt': model_info_params.get('system'),
             'direct': model_item.get('direct', False),
             'params': {
                 'stream_delta_chunk_size': stream_delta_chunk_size,
@@ -1787,7 +1788,7 @@ async def chat_completion(
                             'session_id': metadata.get('session_id'),
                             'tool_ids': metadata.get('tool_ids') or [],
                             'skill_ids': metadata.get('skill_ids') or [],
-                            'system_prompt': metadata.get('system_prompt'),
+                            'system_prompt': metadata.get('chat_system_prompt'),
                             'filter_ids': metadata.get('filter_ids') or [],
                             'terminal_id': metadata.get('terminal_id'),
                             'features': metadata.get('features') or {},

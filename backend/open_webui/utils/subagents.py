@@ -319,7 +319,8 @@ async def delegate(
         'session_id': metadata.get('session_id'),
         'tool_ids': copy.deepcopy(metadata.get('tool_ids') or []),
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
-        'system_prompt': metadata.get('system_prompt'),
+        'system_prompt': metadata.get('chat_system_prompt'),
+        'delegate_system_prompt': metadata.get('delegate_system_prompt'),
         'tool_servers': [] if background else copy.deepcopy(metadata.get('tool_servers') or []),
         'filter_ids': copy.deepcopy(metadata.get('filter_ids') or []),
         'terminal_id': metadata.get('terminal_id'),
@@ -449,7 +450,7 @@ async def delegate(
         try:
             child_request = _build_request(request, user.id, internal=True)
             child_request.state.max_tool_call_iterations = max_iterations
-            parent_system_prompt = run.get('system_prompt') or ''
+            parent_system_prompt = run.get('delegate_system_prompt') or ''
             subagent_system_prompt = (
                 str(config.get('subagents.system_prompt') or '').strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT
             )
