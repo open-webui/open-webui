@@ -2585,7 +2585,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             folder = None
 
         if folder and folder.data:
-            if 'system_prompt' in folder.data:
+            # A sub-agent already gets it in the parent's system prompt
+            if 'system_prompt' in folder.data and not metadata.get('internal'):
                 form_data = await apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
             if 'files' in folder.data:
                 if metadata.get('params', {}).get('function_calling') == 'legacy':
