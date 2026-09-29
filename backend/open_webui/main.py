@@ -221,6 +221,7 @@ from open_webui.utils.auth import (
     get_http_authorization_cred,
     get_license_data,
     get_verified_user,
+    is_valid_token,
 )
 from open_webui.utils.chat import (
     chat_completed as chat_completed_handler,
@@ -2242,7 +2243,7 @@ async def get_app_config(request: Request):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid token',
             )
-        if data is not None and 'id' in data:
+        if data is not None and 'id' in data and await is_valid_token(data, request.app.state.redis):
             user = await Users.get_user_by_id(data['id'])
 
     onboarding = False
