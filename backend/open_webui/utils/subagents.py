@@ -219,6 +219,7 @@ async def process_pending_internal_messages(
             history['messages'] = messages
             history['currentId'] = assistant_message_id
             chat.chat = {**(chat.chat or {}), 'history': history}
+            chat.current_message_id = assistant_message_id
             chat.updated_at = int(time.time())
             await db.commit()
 
