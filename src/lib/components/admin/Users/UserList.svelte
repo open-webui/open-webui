@@ -72,7 +72,7 @@
 		}
 	};
 
-	const sortState = (key) =>
+	$: sortState = (key) =>
 		orderBy === key ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
 
 	const setSortKey = (key) => {
