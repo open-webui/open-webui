@@ -544,6 +544,11 @@
 			return;
 		}
 
+		if (files.some((file) => file.status === 'uploading')) {
+			toast.error($i18n.t('Please wait until all files are uploaded.'));
+			return;
+		}
+
 		onSubmit({
 			content,
 			data: {
