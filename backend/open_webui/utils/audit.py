@@ -282,11 +282,12 @@ class AuditLoggingMiddleware:
             response_body = context.response_body.decode('utf-8', errors='replace')
 
             # Redact sensitive information
-            if 'password' in request_body:
+            if 'password' in request_body.lower():
                 request_body = re.sub(
-                    r'"password":\s*"(.*?)"',
-                    '"password": "********"',
+                    r'"(\w*password)":\s*".*?"',
+                    r'"\1": "********"',
                     request_body,
+                    flags=re.IGNORECASE,
                 )
 
             entry = AuditLogEntry(
