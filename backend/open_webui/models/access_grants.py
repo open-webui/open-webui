@@ -515,6 +515,22 @@ class AccessGrantsTable:
             grants = result.scalars().all()
             return [AccessGrantModel.model_validate(g) for g in grants]
 
+    async def get_grants_by_group_id(
+        self,
+        group_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> list[AccessGrantModel]:
+        """Get all grants given to a specific group."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(AccessGrant).filter_by(
+                    principal_type=PRINCIPAL_TYPE_GROUP,
+                    principal_id=group_id,
+                )
+            )
+            grants = result.scalars().all()
+            return [AccessGrantModel.model_validate(g) for g in grants]
+
     async def get_grants_by_resources(
         self,
         resource_type: str,

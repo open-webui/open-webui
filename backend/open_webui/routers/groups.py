@@ -21,6 +21,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserInfoResponse, Users
+from open_webui.socket.main import leave_group_rooms_for_users
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -270,6 +271,7 @@ async def remove_users_from_group(
     try:
         group = await Groups.remove_users_from_group(id, form_data.user_ids, db=db)
         if group:
+            await leave_group_rooms_for_users(id, form_data.user_ids)
             await publish_event(
                 request,
                 EVENTS.GROUP_MEMBER_REMOVED,
@@ -306,8 +308,10 @@ async def delete_group_by_id(
     request: Request, id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
 ):
     try:
+        user_ids = await Groups.get_group_user_ids_by_id(id, db=db)
         result = await Groups.delete_group_by_id(id, db=db)
         if result:
+            await leave_group_rooms_for_users(id, user_ids)
             await publish_event(
                 request,
                 EVENTS.GROUP_DELETED,

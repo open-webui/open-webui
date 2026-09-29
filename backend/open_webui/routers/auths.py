@@ -60,6 +60,7 @@ from open_webui.models.users import (
     Users,
     UserStatus,
 )
+from open_webui.socket.main import leave_group_rooms_for_users
 from open_webui.utils.access_control import get_permissions, has_permission
 from open_webui.utils.auth import (
     create_api_key,
@@ -695,7 +696,13 @@ async def ldap_auth(
                     try:
                         if ENABLE_LDAP_GROUP_CREATION:
                             await Groups.create_groups_by_group_names(user.id, user_groups, db=db)
+                        previous_group_ids = {
+                            group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)
+                        }
                         await Groups.sync_groups_by_group_names(user.id, user_groups, db=db)
+                        current_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+                        for group_id in previous_group_ids - current_group_ids:
+                            await leave_group_rooms_for_users(group_id, [user.id])
                         log.info('Successfully synced groups for user %s: %s', user.id, user_groups)
                     except Exception as e:
                         log.error(f'Failed to sync groups for user {user.id}: {e}')
@@ -766,7 +773,11 @@ async def signin(
                 group_names = [name.strip() for name in group_names if name.strip()]
 
                 if group_names:
+                    previous_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
                     await Groups.sync_groups_by_group_names(user.id, group_names, db=db)
+                    current_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+                    for group_id in previous_group_ids - current_group_ids:
+                        await leave_group_rooms_for_users(group_id, [user.id])
 
             if WEBUI_AUTH_TRUSTED_ROLE_HEADER:
                 trusted_role = request.headers.get(WEBUI_AUTH_TRUSTED_ROLE_HEADER, '').lower().strip()
