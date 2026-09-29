@@ -642,6 +642,9 @@ async def add_members_by_id(
     if channel.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
+    if channel.type == 'dm':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
     try:
         memberships = await Channels.add_members_to_channel(
             channel.id, user.id, form_data.user_ids, form_data.group_ids, db=db
@@ -686,9 +689,12 @@ async def remove_members_by_id(
     if channel.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
+    if channel.type == 'dm':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
     try:
         deleted = await Channels.remove_members_from_channel(channel.id, form_data.user_ids, db=db)
-        if channel.type in ['group', 'dm']:
+        if channel.type == 'group':
             await leave_room_for_users(f'channel:{channel.id}', form_data.user_ids)
 
         await publish_event(
