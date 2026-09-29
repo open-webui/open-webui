@@ -1,9 +1,9 @@
-name: Deploy Open WebUI to Cloud Run
+name: Deploy Open WebUI
 
 on:
   push:
     branches:
-      - main
+      - production
 
   workflow_dispatch:
 
@@ -12,54 +12,50 @@ env:
   REGION: us-central1
   SERVICE: openwebui
   AR_REPOSITORY: openwebui-repo
-  IMAGE_NAME: open-webui
-
-permissions:
-  contents: read
-  id-token: write
+  IMAGE_NAME: open-web-ui
 
 jobs:
-
   deploy:
     name: Build and Deploy Open WebUI
     runs-on: ubuntu-latest
 
     steps:
 
-      # ---------------------------------------------------
-      # 1. Checkout source
-      # ---------------------------------------------------
+      # -------------------------------
+      # 1. Checkout
+      # -------------------------------
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      # ---------------------------------------------------
-      # 2. Authenticate to Google Cloud
-      # ---------------------------------------------------
+      # -------------------------------
+      # 2. Authenticate using SA key
+      # -------------------------------
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: github-actions-deployer@employee-ai-508209.iam.gserviceaccount.com
-          project_id: employee-ai-508209
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          project_id: ${{ env.PROJECT_ID }}
 
-      # ---------------------------------------------------
+      # -------------------------------
       # 3. Setup gcloud
-      # ---------------------------------------------------
-      - name: Setup gcloud
+      # -------------------------------
+      - name: Setup Google Cloud
         uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
 
-      # ---------------------------------------------------
-      # 4. Configure Docker authentication
-      # ---------------------------------------------------
+      # -------------------------------
+      # 4. Configure Docker
+      # -------------------------------
       - name: Configure Docker
         run: |
           gcloud auth configure-docker \
             ${REGION}-docker.pkg.dev \
             --quiet
 
-      # ---------------------------------------------------
-      # 5. Create immutable image tag
-      # ---------------------------------------------------
+      # -------------------------------
+      # 5. Create image tag
+      # -------------------------------
       - name: Set image
         id: image
         run: |
@@ -67,52 +63,43 @@ jobs:
 
           echo "IMAGE=${IMAGE}" >> "$GITHUB_OUTPUT"
 
-          echo "Building:"
+          echo "Building image:"
           echo "${IMAGE}"
 
-      # ---------------------------------------------------
-      # 6. Build Docker image
-      # ---------------------------------------------------
+      # -------------------------------
+      # 6. Build
+      # -------------------------------
       - name: Build Docker image
         run: |
           docker build \
-            --tag "${{ steps.image.outputs.IMAGE }}" \
+            -t "${{ steps.image.outputs.IMAGE }}" \
             .
 
-      # ---------------------------------------------------
-      # 7. Push image
-      # ---------------------------------------------------
+      # -------------------------------
+      # 7. Push
+      # -------------------------------
       - name: Push Docker image
         run: |
           docker push "${{ steps.image.outputs.IMAGE }}"
 
-      # ---------------------------------------------------
-      # 8. Deploy to Cloud Run
-      # ---------------------------------------------------
+      # -------------------------------
+      # 8. Deploy directly to existing
+      #    Cloud Run service
+      # -------------------------------
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "${SERVICE}" \
-            --image="${{ steps.image.outputs.IMAGE }}" \
-            --region="${REGION}" \
             --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --image="${{ steps.image.outputs.IMAGE }}" \
             --quiet
 
-      # ---------------------------------------------------
-      # 9. Wait for deployment
-      # ---------------------------------------------------
-      - name: Verify deployment
+      # -------------------------------
+      # 9. Show deployment
+      # -------------------------------
+      - name: Show deployed revision
         run: |
           gcloud run services describe "${SERVICE}" \
-            --region="${REGION}" \
             --project="${PROJECT_ID}" \
-            --format="value(status.latestReadyRevisionName)"
-
-      # ---------------------------------------------------
-      # 10. Show deployed image
-      # ---------------------------------------------------
-      - name: Show deployed image
-        run: |
-          gcloud run services describe "${SERVICE}" \
             --region="${REGION}" \
-            --project="${PROJECT_ID}" \
-            --format="value(spec.template.spec.containers[0].image)"
+            --format="yaml(status.traffic)"
