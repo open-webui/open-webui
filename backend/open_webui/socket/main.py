@@ -666,10 +666,9 @@ async def chat_events(sid, data):
 def normalize_document_id(document_id: str) -> str:
     """Canonicalize document IDs to prevent auth bypass via prefix variants.
 
-    YdocManager normalizes storage keys by replacing ":" with "_", so
-    "note_abc" and "note:abc" resolve to the same underlying document.
-    We must rewrite underscore-prefixed IDs back to the colon form so
-    that authorization checks (which key on "note:") always fire.
+    An underscore-prefixed ID like "note_abc" would skip the authorization
+    checks, which key on "note:". Rewrite it back to the colon form so
+    those checks always fire and both forms reach the same document.
     """
     if document_id.startswith('note_'):
         document_id = 'note:' + document_id[5:]
@@ -709,6 +708,13 @@ async def ydoc_document_join(sid, data):
         user_id = data.get('user_id', sid)
         user_name = data.get('user_name', 'Anonymous')
         user_color = data.get('user_color', '#000000')
+
+        if (
+            sid not in await YDOC_MANAGER.get_users(document_id)
+            and await YDOC_MANAGER.count_documents_for_user(sid) >= YDOC_MANAGER.MAX_DOCUMENTS_PER_SESSION
+        ):
+            log.warning(f'Session {sid} is at the open-document limit. Rejecting join.')
+            return
 
         log.info('User %s joining document %s', user_id, document_id)
         await YDOC_MANAGER.add_user(document_id=document_id, user_id=sid)
@@ -868,23 +874,25 @@ async def yjs_document_update(sid, data):
         if update:
             user_id = data.get('user_id', sid)
 
-            await YDOC_MANAGER.append_to_updates(
+            stored = await YDOC_MANAGER.append_to_updates(
                 document_id=document_id,
                 update=update,  # Convert list of bytes to bytes
             )
-
-            # Broadcast update to all other users in the document
-            await sio.emit(
-                'ydoc:document:update',
-                {
-                    'document_id': document_id,
-                    'user_id': user_id,
-                    'update': update,
-                    'socket_id': sid,  # Add socket_id to match frontend filtering
-                },
-                room=f'doc_{document_id}',
-                skip_sid=sid,
-            )
+            if stored:
+                # Broadcast update to all other users in the document
+                await sio.emit(
+                    'ydoc:document:update',
+                    {
+                        'document_id': document_id,
+                        'user_id': user_id,
+                        'update': update,
+                        'socket_id': sid,  # Add socket_id to match frontend filtering
+                    },
+                    room=f'doc_{document_id}',
+                    skip_sid=sid,
+                )
+            else:
+                log.warning(f'Update for document {document_id} is invalid or over the size limit. Rejecting update.')
 
         async def debounced_save():
             await asyncio.sleep(0.5)
