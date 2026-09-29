@@ -4,7 +4,7 @@
 
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { formatFileSize, getLineCount } from '$lib/utils';
+	import { formatFileSize, getLineCount, safeLinkUrl } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
@@ -264,7 +264,7 @@
 							href="#"
 							class="hover:underline line-clamp-1"
 							on:click|preventDefault={() => {
-								if (item.type === 'file' || item.url) {
+								if (item.type === 'file' || safeLinkUrl(item.url)) {
 									let fileId = item?.id ?? item?.tempId;
 									window.open(
 										item.type === 'file'

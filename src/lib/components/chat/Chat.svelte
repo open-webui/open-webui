@@ -429,6 +429,7 @@
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
 
+	// Chat parameters own the approval mode; chats without an override use the user default.
 	$: toolApprovalMode =
 		(params?.tool_approval_mode ?? $settings?.params?.tool_approval_mode) === 'ask'
 			? 'ask'
@@ -769,9 +770,8 @@
 			webSearchEnabled = input.webSearchEnabled ?? false;
 			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
 			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
-			if (input.toolApprovalMode) {
-				await handleToolApprovalModeChange(input.toolApprovalMode);
-			}
+			// Ignore approval modes in older drafts. Restoring input must not overwrite chat
+			// parameters or invoke the change handler, which can save settings and approve tools.
 			return true;
 		} catch (e) {
 			return false;
@@ -834,6 +834,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -1240,7 +1241,11 @@
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
-		if (event.chat_id === $chatId) {
+		// A new chat's title can arrive before its id; the response message already exists.
+		if (
+			event.chat_id === $chatId ||
+			(!$chatId && event?.data?.type === 'chat:title' && history.messages[event.message_id])
+		) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			if (type === 'chat:reload') {
@@ -4101,8 +4106,7 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled,
-		toolApprovalMode
+		codeInterpreterEnabled
 	});
 
 	const saveDraft = async (draft: any, chatId: string | null = null, debounce = true) => {

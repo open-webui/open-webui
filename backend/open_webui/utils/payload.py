@@ -379,10 +379,6 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if 'tools' in openai_payload:
         ollama_payload['tools'] = openai_payload['tools']
 
-    if 'max_tokens' in openai_payload:
-        ollama_payload['num_predict'] = openai_payload['max_tokens']
-        del openai_payload['max_tokens']
-
     # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get('options'):
         # Copied before key deletions below so the caller's options stay intact
@@ -428,6 +424,11 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if 'stop' in openai_payload:
         ollama_options = ollama_payload.get('options', {})
         ollama_options['stop'] = openai_payload.get('stop')
+        ollama_payload['options'] = ollama_options
+
+    if 'max_tokens' in openai_payload:
+        ollama_options = ollama_payload.get('options', {})
+        ollama_options['num_predict'] = openai_payload['max_tokens']
         ollama_payload['options'] = ollama_options
 
     if 'metadata' in openai_payload:

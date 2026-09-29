@@ -238,6 +238,7 @@
 	}
 
 	let chatInputDraft: any;
+	// Approval mode is persisted in chat parameters and user settings, not input drafts.
 	$: chatInputDraft = {
 		prompt,
 		files: files
@@ -254,8 +255,7 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled,
-		toolApprovalMode
+		codeInterpreterEnabled
 	};
 
 	$: onChange(chatInputDraft);
@@ -305,7 +305,7 @@
 				}
 			}
 
-			text = text.replaceAll('{{CLIPBOARD}}', clipboardText.replaceAll('\r\n', '\n'));
+			text = text.replaceAll('{{CLIPBOARD}}', () => clipboardText.replaceAll('\r\n', '\n'));
 		}
 
 		if (text.includes('{{USER_LOCATION}}')) {
@@ -1452,7 +1452,7 @@
 						.insertContentAt(range, [
 							{
 								type: 'mention',
-								attrs: props
+								attrs: { ...props, mentionSuggestionChar: '/' }
 							},
 							{ type: 'text', text: ' ' }
 						])

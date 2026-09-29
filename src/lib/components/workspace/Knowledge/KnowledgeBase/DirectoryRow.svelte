@@ -34,12 +34,10 @@
 	let editName = '';
 	let editInput: HTMLInputElement;
 	let dragOver = false;
-	let showDropdown = false;
 
 	const startRename = () => {
 		editName = directory.name;
 		editing = true;
-		showDropdown = false;
 		setTimeout(() => editInput?.select(), 0);
 	};
 
@@ -163,7 +161,7 @@
 
 	{#if writeAccess}
 		<div class="flex items-center">
-			<Dropdown bind:show={showDropdown} align="end" sideOffset={4}>
+			<Dropdown closeOnSelect align="end" sideOffset={4}>
 				<button
 					class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 					type="button"
