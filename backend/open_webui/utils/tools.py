@@ -1436,17 +1436,12 @@ async def get_terminal_tools(
         function_name = spec['name']
         tool_spec = clean_openai_tool_schema(add_terminal_display_file_inline_param(spec))
 
-        if function_name == 'run_command' and terminal_cwd:
-            tool_spec['description'] = (
-                tool_spec.get('description', '') + f'\n\nThe current working directory is: {terminal_cwd}'
-            )
-
         async def make_tool_function(fn_name, srv_data, hdrs, cks):
             async def tool_function(**kwargs):
                 params = dict(kwargs)
                 if fn_name == 'display_file':
                     params.pop('page', None)
-                return await execute_tool_server(
+                data, response_headers = await execute_tool_server(
                     url=srv_data['url'],
                     headers=hdrs,
                     cookies=cks,
@@ -1454,6 +1449,11 @@ async def get_terminal_tools(
                     params=params,
                     server_data=srv_data,
                 )
+                # Reported with the result so the tool description, and the cached prompt prefix, stay the same
+                is_command_result = fn_name == 'run_command' and response_headers is not None and isinstance(data, dict)
+                if is_command_result and terminal_cwd and not params.get('cwd'):
+                    data['cwd'] = terminal_cwd
+                return data, response_headers
 
             return tool_function
 
