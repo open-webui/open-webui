@@ -134,7 +134,7 @@ class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
     cache_ok = True
 
     def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
-        return JSONCodec.dumps(value) if value is not None else None
+        return JSONCodec.dumps(value, ensure_ascii=False) if value is not None else None
 
     def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
         return JSONCodec.loads(value) if value is not None else None
@@ -265,7 +265,7 @@ def _json_codec_kwargs(kwargs: dict) -> dict:
     Unlike ``JSONField``, those serialize through the engine, which otherwise uses
     stdlib ``json``. With ``ENABLE_ORJSON`` off JSONCodec is stdlib ``json`` anyway.
     """
-    kwargs.setdefault('json_serializer', JSONCodec.dumps)
+    kwargs.setdefault('json_serializer', lambda value: JSONCodec.dumps(value, ensure_ascii=False))
     kwargs.setdefault('json_deserializer', JSONCodec.loads)
     return kwargs
 
