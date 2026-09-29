@@ -497,7 +497,7 @@ async def lifespan(app: FastAPI):
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
 
-# Opt-in (ENABLE_ORJSON): orjson for request-body parsing and JSONResponse bodies;
+# ENABLE_ORJSON: orjson for request-body parsing and JSONResponse bodies;
 # response_model routes keep FastAPI's Pydantic fast path either way.
 apply_orjson_http_json()
 
