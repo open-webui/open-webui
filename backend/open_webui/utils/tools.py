@@ -101,7 +101,7 @@ from open_webui.tools.builtin import (
     write_note,
 )
 from open_webui.utils.access_control import has_access, has_connection_access, has_permission
-from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.chat_id import is_saved_chat_id, is_temporary_chat_id
 from open_webui.utils.headers import (
     bearer_auth_header,
     get_custom_headers,
@@ -650,6 +650,7 @@ async def get_builtin_tools(
         and config.get('subagents.enable')
         and getattr(request.state, 'internal', False) is not True
         and getattr(request.state, 'direct', False) is not True
+        and not is_temporary_chat_id(metadata.get('chat_id'))
     ):
         builtin_functions.extend([delegate_task, timer])
 
