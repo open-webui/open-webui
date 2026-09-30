@@ -1633,6 +1633,11 @@
 			}
 		});
 
+		// the artifacts pane reads this list when it opens, which can be before the debounced rebuild
+		const showArtifactsSubscribe = showArtifacts.subscribe((value) => {
+			if (value) getContents();
+		});
+
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
 			// Folder default models apply to new chats only.
@@ -1685,6 +1690,7 @@
 				}
 				pageSubscribe();
 				showControlsSubscribe();
+				showArtifactsSubscribe();
 				selectedFolderSubscribe();
 
 				// Clear the selected chat when leaving the chat surface (e.g. navigating
