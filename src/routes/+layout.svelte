@@ -1269,7 +1269,10 @@
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
-		await initI18n(localStorage?.locale, backendConfig?.i18n ?? {});
+		await initI18n(
+			localStorage?.locale ?? backendConfig?.default_locale,
+			backendConfig?.i18n ?? {}
+		);
 		if (!localStorage.locale) {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
