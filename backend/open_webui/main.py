@@ -193,6 +193,7 @@ from open_webui.socket.main import (
     periodic_session_pool_cleanup,
     periodic_usage_pool_cleanup,
     redis_event_listener,
+    sio,
 )
 from open_webui.socket.main import (
     app as socket_app,
@@ -398,6 +399,9 @@ async def lifespan(app: FastAPI):
 
     if WEBSOCKET_MANAGER == 'redis':
         app.state.redis_event_listener = asyncio.create_task(redis_event_listener())
+        # socket.io only starts listening on its first connect; event call answers need it earlier
+        sio.manager_initialized = True
+        sio.manager.initialize()
 
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
