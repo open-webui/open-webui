@@ -2216,6 +2216,8 @@ TOOL_SEARCH_ALWAYS_LOADED = [
     item.strip() for item in os.getenv('TOOL_SEARCH_ALWAYS_LOADED', '').split(',') if item.strip()
 ]
 
+TOOL_SEARCH_DEFER_BUILTIN_TOOLS = os.getenv('TOOL_SEARCH_DEFER_BUILTIN_TOOLS', 'True').lower() == 'true'
+
 TITLE_GENERATION_PROMPT_TEMPLATE = os.getenv('TITLE_GENERATION_PROMPT_TEMPLATE', '')
 
 DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """### Task:
@@ -3150,6 +3152,7 @@ DEFAULT_CONFIG = {
     'chat.tool_search.enable': ENABLE_TOOL_SEARCH,
     'chat.tool_search.defer_threshold': TOOL_SEARCH_DEFER_THRESHOLD,
     'chat.tool_search.always_loaded': TOOL_SEARCH_ALWAYS_LOADED,
+    'chat.tool_search.defer_builtin_tools': TOOL_SEARCH_DEFER_BUILTIN_TOOLS,
     'task.title.prompt_template': TITLE_GENERATION_PROMPT_TEMPLATE,
     'task.tags.prompt_template': TAGS_GENERATION_PROMPT_TEMPLATE,
     'task.image.prompt_template': IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,

@@ -53,8 +53,10 @@
 		ENABLE_TOOL_PERMISSIONS: false,
 		ENABLE_TOOL_SEARCH: false,
 		TOOL_SEARCH_DEFER_THRESHOLD: 400,
-		TOOL_SEARCH_ALWAYS_LOADED: ''
+		TOOL_SEARCH_ALWAYS_LOADED: [] as string[],
+		TOOL_SEARCH_DEFER_BUILTIN_TOOLS: true
 	};
+	let toolSearchAlwaysLoaded = '';
 	let showTaskParameters = false;
 
 	const configuredParams = (params: Record<string, any> = {}) =>
@@ -74,12 +76,13 @@
 			updateTaskConfig(localStorage.token, taskConfigPayload),
 			updateChatConfig(localStorage.token, {
 				...chatConfig,
-				TOOL_SEARCH_ALWAYS_LOADED: chatConfig.TOOL_SEARCH_ALWAYS_LOADED.split(',')
+				TOOL_SEARCH_ALWAYS_LOADED: toolSearchAlwaysLoaded
+					.split(',')
 					.map((item) => item.trim())
 					.filter((item) => item !== '')
 			})
 		]);
-		chatConfig.TOOL_SEARCH_ALWAYS_LOADED = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
+		toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
 		appConfig.update((current) =>
 			current
 				? {
@@ -132,9 +135,7 @@
 				getChatConfig(localStorage.token)
 			]);
 			taskConfig.TASK_MODEL_PARAMS = taskConfig.TASK_MODEL_PARAMS ?? {};
-			chatConfig.TOOL_SEARCH_ALWAYS_LOADED = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(
-				', '
-			);
+			toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
 
 			workspaceModels = await getBaseModels(localStorage.token);
 			baseModels = await getModels(localStorage.token, null, false);
@@ -388,6 +389,17 @@
 				</AdminSettingRow>
 
 				{#if chatConfig.ENABLE_TOOL_SEARCH}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.interface.toolSearchDeferBuiltinTools.label')}
+						description={$i18n.t('settings.admin.interface.toolSearchDeferBuiltinTools.description')}
+						let:labelId
+					>
+						<Switch
+							bind:state={chatConfig.TOOL_SEARCH_DEFER_BUILTIN_TOOLS}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+
 					<AdminSettingField
 						label={$i18n.t('settings.admin.interface.toolSearchThreshold.label')}
 						description={$i18n.t('settings.admin.interface.toolSearchThreshold.description')}
@@ -409,7 +421,7 @@
 							class={inputClass}
 							type="text"
 							placeholder={$i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.placeholder')}
-							bind:value={chatConfig.TOOL_SEARCH_ALWAYS_LOADED}
+							bind:value={toolSearchAlwaysLoaded}
 							autocomplete="off"
 						/>
 					</AdminSettingField>

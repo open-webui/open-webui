@@ -142,15 +142,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
-from open_webui.utils.tool_search import (
-    SEARCH_TOOL_NAME,
-    build_deferred_tools_manifest,
-    collect_called_tool_names,
-    get_tool_search_config,
-    mark_tools_loaded,
-    rebuild_tools_payload,
-    select_deferred_tools,
-)
+from open_webui.utils.tool_search import apply_tool_search
 from open_webui.utils.tools import (
     build_tool_server_headers,
     get_attached_knowledge,
@@ -2930,8 +2922,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         log.debug('tool_ids=%r', tool_ids)
         log.debug('direct_tool_servers=%r', direct_tool_servers)
 
-        tool_search_config = await get_tool_search_config()
-
         tools_dict = {}
 
         mcp_clients = {}
@@ -3104,8 +3094,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     **extra_params,
                     '__event_emitter__': event_emitter,
                     '__skill_ids__': view_skill_ids,
-                    '__tool_search__': tool_search_config['enable']
-                    and metadata.get('params', {}).get('function_calling') != 'legacy',
                 },
                 features,
                 model,
@@ -3165,33 +3153,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             metadata['tools'] = tools_dict
 
             if metadata.get('params', {}).get('function_calling') != 'legacy':
-                # Tool search: withhold large schemas from the provider and let the
-                # model load them on demand via the search_tools builtin.
-                if tools_dict.get(SEARCH_TOOL_NAME, {}).get('type') == 'builtin':
-                    deferred = select_deferred_tools(tools_dict, tool_search_config)
-                    if deferred:
-                        metadata['tool_search'] = {
-                            'deferred': deferred,
-                            # Tools called earlier in this conversation stay loaded.
-                            'loaded': sorted(set(deferred) & collect_called_tool_names(form_data['messages'])),
-                            'extra_tools': inlet_filter_tools or [],
-                        }
-                        form_data['messages'] = add_or_update_system_message(
-                            build_deferred_tools_manifest(tools_dict, deferred),
-                            form_data['messages'],
-                            append=True,
-                        )
-                    else:
-                        # Nothing to defer, so behave as if tool search were off.
-                        tools_dict.pop(SEARCH_TOOL_NAME)
+                deferred = await apply_tool_search(form_data, metadata, tools_dict)
 
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [
-                    {'type': 'function', 'function': tool.get('spec', {})} for tool in tools_dict.values()
+                    {'type': 'function', 'function': tool.get('spec', {})}
+                    for name, tool in tools_dict.items()
+                    if name not in deferred
                 ]
                 if inlet_filter_tools:
                     form_data['tools'].extend(inlet_filter_tools)
-                rebuild_tools_payload(form_data, metadata)
             else:
                 # If the function calling is not native, then call the tools function calling handler
                 try:
@@ -3501,11 +3472,6 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
             }
         )
         changed = True
-
-    if changed and metadata.get('tool_search'):
-        # Approved deferred tools must reach the provider on the next request.
-        mark_tools_loaded(metadata, [item.get('name', '') for item in approved_calls])
-        rebuild_tools_payload(form_data, metadata)
 
     if changed:
         result_call_ids = {
@@ -6073,13 +6039,6 @@ async def streaming_chat_response_handler(response, ctx):
                         )
                     )
 
-                    # A deferred tool called straight from the manifest still runs (it is in
-                    # metadata['tools']); mark it loaded so its schema is sent next iteration.
-                    mark_tools_loaded(
-                        metadata,
-                        [tool_call.get('function', {}).get('name', '') for tool_call in response_tool_calls],
-                    )
-
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call.get('id', '')
                         tool_function_name = tool_call.get('function', {}).get('name', '')
@@ -6268,8 +6227,6 @@ async def streaming_chat_response_handler(response, ctx):
                             'stream': True,
                             'metadata': metadata,
                         }
-                        # Tool search: include tools loaded during this iteration.
-                        rebuild_tools_payload(new_form_data, metadata)
 
                         if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
                             system_message = get_system_message(form_data['messages'])

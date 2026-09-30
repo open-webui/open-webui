@@ -59,6 +59,7 @@ CHAT_CONFIG_KEYS = {
     'ENABLE_TOOL_SEARCH': 'chat.tool_search.enable',
     'TOOL_SEARCH_DEFER_THRESHOLD': 'chat.tool_search.defer_threshold',
     'TOOL_SEARCH_ALWAYS_LOADED': 'chat.tool_search.always_loaded',
+    'TOOL_SEARCH_DEFER_BUILTIN_TOOLS': 'chat.tool_search.defer_builtin_tools',
 }
 
 
@@ -171,6 +172,7 @@ class ChatConfigForm(BaseModel):
     ENABLE_TOOL_SEARCH: bool = False
     TOOL_SEARCH_DEFER_THRESHOLD: int = 400
     TOOL_SEARCH_ALWAYS_LOADED: list[str] = []
+    TOOL_SEARCH_DEFER_BUILTIN_TOOLS: bool = True
 
 
 class CompactChatForm(BaseModel):

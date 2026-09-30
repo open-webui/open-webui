@@ -1,41 +1,39 @@
 """
-Tool search / lazy tool loading.
-
-Large tool schemas are withheld from the provider `tools` array and listed in a
-compact `<available_tools>` manifest instead. The model loads them on demand
-through the `search_tools` builtin. Per-request state lives on `metadata`:
-
-    metadata['tool_search'] = {
-        'deferred': [tool names withheld from the provider],
-        'loaded': [deferred names that have since been loaded],
-        'extra_tools': [tools added by filter inlets, always sent],
-    }
+Tool search: large tool schemas are left out of the provider `tools` array and listed by name in an
+`<available_tools>` system prompt block. `search_tools` returns the full definitions of matching tools,
+which the model then calls by name. The `tools` array never changes during a chat, so prompt caches hold.
 """
 
 import fnmatch
 import re
-
-from rank_bm25 import BM25Okapi
+import unicodedata
 
 from open_webui.models.config import Config
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.misc import add_or_update_system_message
+from rank_bm25 import BM25Okapi
 
 SEARCH_TOOL_NAME = 'search_tools'
 MANIFEST_DESCRIPTION_MAX_CHARS = 100
-MAX_SEARCH_LIMIT = 20
-DEFAULT_SEARCH_LIMIT = 5
+MAX_SEARCH_COUNT = 20
+DEFAULT_SEARCH_COUNT = 5
+
+_MANIFEST_RE = re.compile(r'\n?<available_tools>\n.*?</available_tools>', re.DOTALL)
 
 
-async def get_tool_search_config() -> dict:
+async def get_tool_search_config() -> dict | None:
+    """Tool search settings, or None when the feature is off."""
+    if not await Config.get('chat.tool_search.enable'):
+        return None
     values = await Config.get_many(
-        'chat.tool_search.enable',
         'chat.tool_search.defer_threshold',
         'chat.tool_search.always_loaded',
+        'chat.tool_search.defer_builtin_tools',
     )
     return {
-        'enable': bool(values.get('chat.tool_search.enable', False)),
         'defer_threshold': _to_int(values.get('chat.tool_search.defer_threshold'), 400),
         'always_loaded': values.get('chat.tool_search.always_loaded') or [],
+        'defer_builtin_tools': values.get('chat.tool_search.defer_builtin_tools', True) is not False,
     }
 
 
@@ -47,12 +45,12 @@ def _to_int(value, default: int) -> int:
 
 
 def select_deferred_tools(tools_dict: dict[str, dict], config: dict) -> list[str]:
-    """Sorted names of non-builtin tools whose schema exceeds the threshold and is not always loaded."""
+    """Sorted names of tools whose schema exceeds the threshold and that are not always loaded."""
     patterns = config['always_loaded']
     return sorted(
         name
         for name, tool in tools_dict.items()
-        if tool.get('type') != 'builtin'
+        if (config['defer_builtin_tools'] or tool.get('type') != 'builtin')
         and not any(fnmatch.fnmatchcase(name, pattern) for pattern in patterns)
         and len(JSONCodec.dumps(tool.get('spec') or {})) > config['defer_threshold']
     )
@@ -66,10 +64,6 @@ def _truncate_description(description: str | None) -> str:
 
 
 def build_deferred_tools_manifest(tools_dict: dict[str, dict], deferred: list[str]) -> str:
-    """System prompt block listing every deferred tool (mirrors <available_skills>).
-
-    Loaded tools stay listed so the block is identical across turns and provider prompt caches hold.
-    """
     entries = ''
     for name in deferred:
         description = _truncate_description(tools_dict[name].get('spec', {}).get('description'))
@@ -78,33 +72,55 @@ def build_deferred_tools_manifest(tools_dict: dict[str, dict], deferred: list[st
     return (
         '<available_tools>\n'
         'The following tools are available but their definitions are not loaded. '
-        f'To use one, call `{SEARCH_TOOL_NAME}` with a short keyword query or the exact tool name; '
-        'matching tools become callable immediately afterwards. '
+        f'To use one, call `{SEARCH_TOOL_NAME}` with a short keyword query or the exact tool name to get its '
+        'definition, then call the tool by name with the parameters it defines. '
         'Never tell the user a capability is unavailable without searching first.\n'
         f'{entries}</available_tools>'
     )
 
 
-def build_tools_payload(tools_dict: dict[str, dict], deferred, loaded, extra: list | None = None) -> list[dict]:
-    """OpenAI `tools` array: every tool that is not deferred, plus deferred tools that are loaded, plus extras."""
-    deferred_set = set(deferred) - set(loaded)
-    tools = [
-        {'type': 'function', 'function': tool.get('spec', {})}
-        for name, tool in tools_dict.items()
-        if name not in deferred_set
-    ]
-    if extra:
-        tools.extend(extra)
-    return tools
+async def apply_tool_search(form_data: dict, metadata: dict, tools_dict: dict[str, dict]) -> set[str]:
+    """Add search_tools and the manifest when tools can be deferred; returns the names to leave out of `tools`."""
+    config = SEARCH_TOOL_NAME not in tools_dict and await get_tool_search_config()
+    deferred = select_deferred_tools(tools_dict, config) if config else []
+    if not deferred:
+        return set()
+
+    from open_webui.tools.builtin import search_tools
+    from open_webui.utils.tools import get_builtin_tool
+
+    metadata['deferred_tools'] = deferred
+    form_data['messages'] = add_or_update_system_message(
+        build_deferred_tools_manifest(tools_dict, deferred),
+        form_data['messages'],
+        append=True,
+    )
+    tools_dict[SEARCH_TOOL_NAME] = await get_builtin_tool(search_tools, {'__metadata__': metadata})
+    return set(deferred)
 
 
-_SPLIT_RE = re.compile(r'[^0-9a-zA-Z]+')
+def strip_deferred_tools_manifest(system_prompt: str | None) -> str | None:
+    """Remove the manifest from a system prompt that is reused by a request which builds its own."""
+    return _MANIFEST_RE.sub('', system_prompt) if system_prompt else system_prompt
+
+
+_WORD_RE = re.compile(r'[^\W_]+')
 _CAMEL_RE = re.compile(r'(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])')
+# Scripts written without spaces between words: Han, Hiragana, Katakana and Hangul.
+_CJK_RE = re.compile(r'([\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]+)')
 
 
 def tokenize(text: str | None) -> list[str]:
-    """Lowercase tokens split on non-alphanumerics and camelCase boundaries."""
-    return [part.lower() for chunk in _SPLIT_RE.split(text or '') for part in _CAMEL_RE.split(chunk) if part]
+    """Lowercase word tokens split on camelCase boundaries, with CJK runs split into character bigrams."""
+    tokens = []
+    for word in _WORD_RE.findall(unicodedata.normalize('NFKC', text or '')):
+        for part in _CAMEL_RE.split(word):
+            for chunk in _CJK_RE.split(part.casefold()):
+                if _CJK_RE.fullmatch(chunk):
+                    tokens.extend([chunk[i : i + 2] for i in range(len(chunk) - 1)] or [chunk])
+                elif chunk:
+                    tokens.append(chunk)
+    return tokens
 
 
 def _document_text(name: str, spec: dict) -> str:
@@ -112,7 +128,7 @@ def _document_text(name: str, spec: dict) -> str:
     return ' '.join([name, str(spec.get('description') or ''), *properties.keys()])
 
 
-def search_deferred_tools(query: str, candidates: dict[str, dict], limit: int = DEFAULT_SEARCH_LIMIT) -> list[str]:
+def search_deferred_tools(query: str, candidates: dict[str, dict], count: int = DEFAULT_SEARCH_COUNT) -> list[str]:
     """Rank candidate tools (name -> spec) against the query; an exact tool name wins outright."""
     query = (query or '').strip()
     if query in candidates:
@@ -133,30 +149,4 @@ def search_deferred_tools(query: str, candidates: dict[str, dict], limit: int = 
     }
 
     ranked = sorted((name for name in names if scores[name] > 0), key=lambda name: (-scores[name], name))
-    return ranked[: max(1, min(_to_int(limit, DEFAULT_SEARCH_LIMIT), MAX_SEARCH_LIMIT))]
-
-
-def collect_called_tool_names(messages: list[dict]) -> set[str]:
-    """Tools the conversation already called, so they stay loaded on later turns."""
-    return {
-        (tool_call.get('function') or {}).get('name')
-        for message in messages
-        if message.get('role') == 'assistant'
-        for tool_call in message.get('tool_calls') or []
-    }
-
-
-def mark_tools_loaded(metadata: dict, names: list[str]) -> None:
-    """Record deferred tools as loaded on metadata['tool_search']; no-op when tool search is inactive."""
-    state = metadata.get('tool_search')
-    if state:
-        state['loaded'] = sorted(set(state['loaded']) | (set(names) & set(state['deferred'])))
-
-
-def rebuild_tools_payload(form_data: dict, metadata: dict) -> None:
-    """Refresh form_data['tools'] from metadata when tool search is active; no-op otherwise."""
-    state = metadata.get('tool_search')
-    if state:
-        form_data['tools'] = build_tools_payload(
-            metadata['tools'], state['deferred'], state['loaded'], state['extra_tools']
-        )
+    return ranked[: max(1, min(_to_int(count, DEFAULT_SEARCH_COUNT), MAX_SEARCH_COUNT))]
