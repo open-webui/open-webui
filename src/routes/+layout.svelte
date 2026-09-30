@@ -882,6 +882,10 @@
 
 			if (type === 'message') {
 				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
+				const content = data?.content?.replace(
+					/<([@#])([^|>\s]+)(?:\|([^>]*))?>/g,
+					(_, trigger, id, label) => trigger + (label || id)
+				);
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
@@ -889,7 +893,7 @@
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
 						new Notification(`${title} / Open WebUI`, {
-							body: data?.content,
+							body: content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
 					}
@@ -902,7 +906,7 @@
 								`/channels/${event.channel_id}${data?.parent_id ? `?thread=${data.parent_id}` : ''}`
 							);
 						},
-						content: data?.content,
+						content,
 						title: `${title}`
 					},
 					duration: 15000,
