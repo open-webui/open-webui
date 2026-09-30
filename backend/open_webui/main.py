@@ -1006,6 +1006,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                         data=payload,
                         headers=headers,
                         cookies=cookies,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
                         if not r.ok:
                             errors.append({'url_idx': idx, 'error': await r.text()})
@@ -1045,6 +1046,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                         json={'model': actual_model},
                         headers=headers,
                         cookies=cookies,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
                         if not r.ok:
                             detail = await r.text()
