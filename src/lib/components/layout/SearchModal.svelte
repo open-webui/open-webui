@@ -255,7 +255,7 @@
 		{
 			label: $i18n.t('Start a new conversation'),
 			onClick: async () => {
-				await goto(`/${query ? `?q=${query}` : ''}`);
+				await goto(`/${query ? `?q=${encodeURIComponent(query)}` : ''}`);
 				show = false;
 				onClose();
 			},
