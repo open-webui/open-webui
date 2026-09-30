@@ -212,7 +212,7 @@ class WeaviateClient(VectorDBBase):
 
                 # Weaviate has cosine distance, 2 (worst) -> 0 (best). Re-ordering to 0 -> 1
                 raw_distances = [
-                    (obj.metadata.distance if obj.metadata and obj.metadata.distance else 2.0)
+                    (obj.metadata.distance if obj.metadata and obj.metadata.distance is not None else 2.0)
                     for obj in response.objects
                 ]
                 distances = [(2 - dist) / 2 for dist in raw_distances]
