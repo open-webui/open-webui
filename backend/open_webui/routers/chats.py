@@ -32,9 +32,10 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.shared_chats import SharedChatResponse, SharedChats
 from open_webui.models.tags import TagModel, Tags
+from open_webui.models.users import UserModel
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission, is_temporary_chat_enforced
 from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
 from open_webui.utils.chat_fork import build_fork_history
@@ -226,6 +227,14 @@ async def get_chat_config_values() -> dict:
 
 def chat_config_updates(data: dict) -> dict:
     return {CHAT_CONFIG_KEYS[field]: value for field, value in data.items() if field in CHAT_CONFIG_KEYS}
+
+
+async def require_temporary_chat_not_enforced(user: UserModel, db: AsyncSession) -> None:
+    if await is_temporary_chat_enforced(user, await Config.get('user.permissions'), db=db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
 
 async def require_chat_import_permission(request: Request, user, db: AsyncSession):
@@ -780,6 +789,8 @@ async def create_new_chat(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await require_temporary_chat_not_enforced(user, db)
+
     if form_data.folder_id is not None and not await has_folder_write_access(user.id, form_data.folder_id, db=db):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -813,6 +824,7 @@ async def import_chats(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await require_temporary_chat_not_enforced(user, db)
     await require_chat_import_permission(request, user, db)
 
     try:
@@ -1687,6 +1699,7 @@ async def fork_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await require_temporary_chat_not_enforced(user, db)
     await require_chat_import_permission(request, user, db)
 
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
@@ -1790,6 +1803,7 @@ async def clone_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await require_temporary_chat_not_enforced(user, db)
     await require_chat_import_permission(request, user, db)
 
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
@@ -1848,6 +1862,7 @@ async def clone_shared_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await require_temporary_chat_not_enforced(user, db)
     await require_chat_import_permission(request, user, db)
 
     # Enforce access grants (owner and admins bypass)
