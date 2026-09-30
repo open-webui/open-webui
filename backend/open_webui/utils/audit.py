@@ -113,6 +113,17 @@ class AuditContext:
             self.response_body.extend(chunk[: self.max_body_size - len(self.response_body)])
 
 
+def redact_passwords(body: str) -> str:
+    if 'password' not in body.lower():
+        return body
+    return re.sub(
+        r'"(\w*password)"\s*:\s*"(?:[^"\\]|\\.)*"',
+        r'"\1": "********"',
+        body,
+        flags=re.IGNORECASE,
+    )
+
+
 class AuditLoggingMiddleware:
     """
     ASGI middleware that intercepts HTTP requests and responses to perform audit logging. It captures request/response bodies (depending on audit level), headers, HTTP methods, and user information, then logs a structured audit entry at the end of the request cycle.
@@ -282,13 +293,8 @@ class AuditLoggingMiddleware:
             response_body = context.response_body.decode('utf-8', errors='replace')
 
             # Redact sensitive information
-            if 'password' in request_body.lower():
-                request_body = re.sub(
-                    r'"(\w*password)"\s*:\s*"(?:[^"\\]|\\.)*"',
-                    r'"\1": "********"',
-                    request_body,
-                    flags=re.IGNORECASE,
-                )
+            request_body = redact_passwords(request_body)
+            response_body = redact_passwords(response_body)
 
             entry = AuditLogEntry(
                 id=str(uuid.uuid4()),
