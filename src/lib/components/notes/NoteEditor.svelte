@@ -21,7 +21,7 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { compressImage, copyToClipboard, convertHeicToJpeg } from '$lib/utils';
+	import { compressImage, copyToClipboard, convertHeicToJpeg, isHeicImage } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getFileById, uploadFile } from '$lib/apis/files';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
@@ -627,7 +627,7 @@ ${content}
 			return;
 		}
 
-		if (file['type'].startsWith('image/')) {
+		if (file['type'].startsWith('image/') || isHeicImage(file)) {
 			const uploadImagePromise = new Promise(async (resolve, reject) => {
 				let reader = new FileReader();
 				reader.onload = async (event) => {
@@ -654,7 +654,7 @@ ${content}
 					}
 				};
 
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+				reader.readAsDataURL(isHeicImage(file) ? await convertHeicToJpeg(file) : file);
 			});
 
 			return await uploadImagePromise;

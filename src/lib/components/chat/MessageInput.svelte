@@ -46,6 +46,7 @@
 
 	import {
 		convertHeicToJpeg,
+		isHeicImage,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -1123,7 +1124,7 @@
 				return;
 			}
 
-			if (isRasterImageContentType(file['type'])) {
+			if (isRasterImageContentType(file['type']) || isHeicImage(file)) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
@@ -1165,6 +1166,7 @@
 					return imageUrl;
 				};
 
+				const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
@@ -1183,13 +1185,13 @@
 						];
 					} else {
 						const blob = await (await fetch(imageUrl)).blob();
-						const compressedFile = new File([blob], file.name, { type: file.type });
+						const compressedFile = new File([blob], imageFile.name, { type: imageFile.type });
 
 						uploadFileHandler(compressedFile, false);
 					}
 				};
 
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+				reader.readAsDataURL(imageFile);
 			} else {
 				uploadFileHandler(file);
 			}

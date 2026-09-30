@@ -2107,10 +2107,18 @@ export const getAge = (birthDate) => {
 	return age.toString();
 };
 
+const HEIC_EXTENSION_PATTERN = /\.(heic|heif)$/i;
+
+// Browsers label HEIC photos inconsistently (Firefox uses image/heif, some leave it empty).
+export const isHeicImage = (file: File) =>
+	['image/heic', 'image/heif'].includes(file.type) || HEIC_EXTENSION_PATTERN.test(file.name);
+
 export const convertHeicToJpeg = async (file: File) => {
 	const { default: heic2any } = await import('heic2any');
 	try {
-		return await heic2any({ blob: file, toType: 'image/jpeg' });
+		const jpegBlob = (await heic2any({ blob: file, toType: 'image/jpeg' })) as Blob;
+		const jpegName = `${file.name.replace(HEIC_EXTENSION_PATTERN, '')}.jpg`;
+		return new File([jpegBlob], jpegName, { type: 'image/jpeg' });
 	} catch (err: any) {
 		if (err?.message?.includes('already browser readable')) {
 			return file;

@@ -9,6 +9,7 @@
 	import { config, mobile, settings, socket, user } from '$lib/stores';
 	import {
 		convertHeicToJpeg,
+		isHeicImage,
 		compressImage,
 		extractInputVariables,
 		getAge,
@@ -377,7 +378,7 @@
 				return;
 			}
 
-			if (file['type'].startsWith('image/')) {
+			if (file['type'].startsWith('image/') || isHeicImage(file)) {
 				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
 					// Quick shortcut so we don’t do unnecessary work.
 					const settingsCompression =
@@ -415,6 +416,7 @@
 					return imageUrl;
 				};
 
+				const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
@@ -424,12 +426,12 @@
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					const blob = await (await fetch(imageUrl)).blob();
-					const compressedFile = new File([blob], file.name, { type: file.type });
+					const compressedFile = new File([blob], imageFile.name, { type: imageFile.type });
 
 					uploadFileHandler(compressedFile, false);
 				};
 
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+				reader.readAsDataURL(imageFile);
 			} else {
 				uploadFileHandler(file);
 			}
