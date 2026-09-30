@@ -55,6 +55,7 @@
 
 	const onKeyDown = (event: KeyboardEvent) => {
 		if (!['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(event.key)) return false;
+		if ((filteredItems ?? []).length === 0) return false;
 
 		if (event.key === 'ArrowUp') {
 			suggestionElement?.selectUp();
@@ -89,7 +90,10 @@
 	}
 </script>
 
-<div class={(filteredItems ?? []).length > 0 ? '' : 'hidden'} id="suggestions-container">
+<div
+	class={(filteredItems ?? []).length > 0 ? '' : 'hidden'}
+	id={(filteredItems ?? []).length > 0 ? 'suggestions-container' : undefined}
+>
 	<DropdownMenu className="w-72 max-w-[calc(100vw-1rem)] overflow-x-hidden font-sans text-xs">
 		<div class="max-h-60 overflow-y-auto overflow-x-hidden scrollbar-thin">
 			{#if char === '/'}

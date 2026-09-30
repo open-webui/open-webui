@@ -159,8 +159,8 @@
 		}
 	};
 
-	const handlePointerDown = (e: PointerEvent) => {
-		if (!show) return;
+	const handleWindowClick = (e: MouseEvent) => {
+		if (!show || e.detail === 0) return;
 		const target = e.target as Node;
 		if (
 			(triggerElement && triggerElement.contains(target)) ||
@@ -169,6 +169,8 @@
 		) {
 			return;
 		}
+		e.preventDefault();
+		e.stopPropagation();
 		show = false;
 		document.getElementById(`model-selector-${id}-button`)?.blur();
 	};
@@ -808,6 +810,7 @@
 	let deleteModelTarget: any = null;
 
 	const deleteModelHandler = async (model: any) => {
+		show = false;
 		deleteModelTarget = model;
 		showDeleteConfirm = true;
 	};
@@ -901,7 +904,7 @@
 	}}
 />
 
-<svelte:window on:pointerdown={handlePointerDown} on:keydown={handleKeydown} />
+<svelte:window on:click|capture={handleWindowClick} on:keydown={handleKeydown} />
 
 <div class="relative w-full">
 	<button
@@ -1105,6 +1108,9 @@
 										{selectedValues}
 										onClick={() => {
 											selectItem(item, index);
+										}}
+										onEdit={() => {
+											show = false;
 										}}
 									/>
 								{/each}

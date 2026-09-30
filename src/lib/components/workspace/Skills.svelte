@@ -584,7 +584,8 @@
 													<Switch
 														bind:state={skill.is_active}
 														on:change={async () => {
-															toggleSkillById(localStorage.token, skill.id);
+															await toggleSkillById(localStorage.token, skill.id);
+															_skills.set(await getSkills(localStorage.token));
 														}}
 													/>
 												</Tooltip>

@@ -745,7 +745,7 @@ class Loader:
                     )
                     loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             elif file_ext in ['htm', 'html']:
-                loader = HTMLLoader(file_path, encoding='unicode_escape')
+                loader = HTMLLoader(file_path, encoding=self._detect_text_encoding(file_path))
             elif file_ext == 'md':
                 loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             elif file_content_type == 'application/epub+zip':

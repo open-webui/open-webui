@@ -370,6 +370,8 @@
 					parentId: parentId,
 					childrenIds: [],
 					files: undefined,
+					annotation: undefined,
+					feedbackId: undefined,
 					content: output !== undefined ? '' : content,
 					...(output !== undefined ? { output } : {}),
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch

@@ -579,6 +579,20 @@
 								/>
 							</div>
 						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('settings.admin.web.tavilySearchDepth.label')}
+								</div>
+								<SettingsSelect bind:value={webConfig.TAVILY_SEARCH_DEPTH} className="w-full">
+									<option value="ultra-fast">{$i18n.t('Ultra-fast')}</option>
+									<option value="fast">{$i18n.t('Fast')}</option>
+									<option value="basic">{$i18n.t('Basic')}</option>
+									<option value="advanced">{$i18n.t('Advanced')}</option>
+								</SettingsSelect>
+							</div>
+						</div>
 					{:else if webConfig.WEB_SEARCH_ENGINE === 'staan'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>
