@@ -301,6 +301,18 @@
 		</Tooltip>
 		<span
 			><span class="font-normal text-gray-900 dark:text-gray-300"
+				>{formatNumber(totalTokens.input)}</span
+			>
+			{$i18n.t('input')}</span
+		>
+		<span
+			><span class="font-normal text-gray-900 dark:text-gray-300"
+				>{formatNumber(totalTokens.output)}</span
+			>
+			{$i18n.t('output')}</span
+		>
+		<span
+			><span class="font-normal text-gray-900 dark:text-gray-300"
 				>{summary.total_chats.toLocaleString()}</span
 			>
 			{$i18n.t('chats')}</span
