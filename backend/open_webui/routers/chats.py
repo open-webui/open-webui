@@ -854,6 +854,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
     token_cap = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_CAP or threshold))
     retention_percentage = min(50, max(10, int(form_data.CONTEXT_COMPACTION_RETENTION_PERCENTAGE)))
     tool_search_defer_threshold = max(0, int(form_data.TOOL_SEARCH_DEFER_THRESHOLD))
+    tool_search_always_loaded = [item.strip() for item in form_data.TOOL_SEARCH_ALWAYS_LOADED if item.strip()]
     await Config.upsert(
         chat_config_updates(
             {
@@ -863,6 +864,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
                 'CONTEXT_COMPACTION_TOKEN_CAP': token_cap,
                 'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': retention_percentage,
                 'TOOL_SEARCH_DEFER_THRESHOLD': tool_search_defer_threshold,
+                'TOOL_SEARCH_ALWAYS_LOADED': tool_search_always_loaded,
             }
         )
     )

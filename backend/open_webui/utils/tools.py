@@ -770,7 +770,7 @@ async def get_builtin_tools(
         builtin_functions = [func for func in builtin_functions if func.__name__ not in MUTATING_MEMORY_TOOLS]
 
     for func in builtin_functions:
-        tools_dict[func.__name__] = await get_builtin_tool(
+        callable = await get_async_tool_function_and_apply_extra_params(
             func,
             {
                 '__request__': request,
@@ -783,26 +783,24 @@ async def get_builtin_tools(
                 '__message_id__': extra_params.get('__message_id__'),
                 '__model_knowledge__': model_knowledge,
             },
+            get_builtin_function_introspection(func),
         )
 
+        spec = get_builtin_tool_spec(func)
         if func.__name__ == 'delegate_task' and not config.get('subagents.background_enabled'):
-            parameters = tools_dict[func.__name__]['spec'].get('parameters', {})
+            parameters = spec.get('parameters', {})
             parameters.get('properties', {}).pop('background', None)
             if isinstance(parameters.get('required'), list):
                 parameters['required'] = [name for name in parameters['required'] if name != 'background']
 
+        tools_dict[func.__name__] = {
+            'tool_id': f'builtin:{func.__name__}',
+            'callable': callable,
+            'spec': spec,
+            'type': 'builtin',
+        }
+
     return tools_dict
-
-
-async def get_builtin_tool(func, extra_params: dict) -> dict:
-    return {
-        'tool_id': f'builtin:{func.__name__}',
-        'callable': await get_async_tool_function_and_apply_extra_params(
-            func, extra_params, get_builtin_function_introspection(func)
-        ),
-        'spec': get_builtin_tool_spec(func),
-        'type': 'builtin',
-    }
 
 
 def parse_description(docstring: str | None) -> str:

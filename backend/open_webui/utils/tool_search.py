@@ -8,10 +8,10 @@ import fnmatch
 import re
 import unicodedata
 
+import regex
 from open_webui.models.config import Config
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message
-from rank_bm25 import BM25Okapi
 
 SEARCH_TOOL_NAME = 'search_tools'
 MANIFEST_DESCRIPTION_MAX_CHARS = 100
@@ -31,17 +31,10 @@ async def get_tool_search_config() -> dict | None:
         'chat.tool_search.defer_builtin_tools',
     )
     return {
-        'defer_threshold': _to_int(values.get('chat.tool_search.defer_threshold'), 400),
-        'always_loaded': values.get('chat.tool_search.always_loaded') or [],
-        'defer_builtin_tools': values.get('chat.tool_search.defer_builtin_tools', True) is not False,
+        'defer_threshold': values['chat.tool_search.defer_threshold'],
+        'always_loaded': values['chat.tool_search.always_loaded'],
+        'defer_builtin_tools': values['chat.tool_search.defer_builtin_tools'],
     }
-
-
-def _to_int(value, default: int) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
 
 
 def select_deferred_tools(tools_dict: dict[str, dict], config: dict) -> list[str]:
@@ -87,7 +80,11 @@ async def apply_tool_search(form_data: dict, metadata: dict, tools_dict: dict[st
         return set()
 
     from open_webui.tools.builtin import search_tools
-    from open_webui.utils.tools import get_builtin_tool
+    from open_webui.utils.tools import (
+        get_async_tool_function_and_apply_extra_params,
+        get_builtin_function_introspection,
+        get_builtin_tool_spec,
+    )
 
     metadata['deferred_tools'] = deferred
     form_data['messages'] = add_or_update_system_message(
@@ -95,7 +92,14 @@ async def apply_tool_search(form_data: dict, metadata: dict, tools_dict: dict[st
         form_data['messages'],
         append=True,
     )
-    tools_dict[SEARCH_TOOL_NAME] = await get_builtin_tool(search_tools, {'__metadata__': metadata})
+    tools_dict[SEARCH_TOOL_NAME] = {
+        'tool_id': f'builtin:{SEARCH_TOOL_NAME}',
+        'callable': await get_async_tool_function_and_apply_extra_params(
+            search_tools, {'__metadata__': metadata}, get_builtin_function_introspection(search_tools)
+        ),
+        'spec': get_builtin_tool_spec(search_tools),
+        'type': 'builtin',
+    }
     return set(deferred)
 
 
@@ -104,7 +108,8 @@ def strip_deferred_tools_manifest(system_prompt: str | None) -> str | None:
     return _MANIFEST_RE.sub('', system_prompt) if system_prompt else system_prompt
 
 
-_WORD_RE = re.compile(r'[^\W_]+')
+# Letters, digits and combining marks, so vowel signs in scripts like Devanagari stay attached to their word.
+_WORD_RE = regex.compile(r'[\p{L}\p{N}\p{M}]+')
 _CAMEL_RE = re.compile(r'(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])')
 # Scripts written without spaces between words: Han, Hiragana, Katakana and Hangul.
 _CJK_RE = re.compile(r'([\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]+)')
@@ -130,6 +135,8 @@ def _document_text(name: str, spec: dict) -> str:
 
 def search_deferred_tools(query: str, candidates: dict[str, dict], count: int = DEFAULT_SEARCH_COUNT) -> list[str]:
     """Rank candidate tools (name -> spec) against the query; an exact tool name wins outright."""
+    from rank_bm25 import BM25Okapi
+
     query = (query or '').strip()
     if query in candidates:
         return [query]
@@ -149,4 +156,4 @@ def search_deferred_tools(query: str, candidates: dict[str, dict], count: int = 
     }
 
     ranked = sorted((name for name in names if scores[name] > 0), key=lambda name: (-scores[name], name))
-    return ranked[: max(1, min(_to_int(count, DEFAULT_SEARCH_COUNT), MAX_SEARCH_COUNT))]
+    return ranked[: max(1, min(count, MAX_SEARCH_COUNT))]

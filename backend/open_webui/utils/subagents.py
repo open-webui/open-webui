@@ -187,7 +187,7 @@ async def process_pending_internal_messages(
 
             assistant_message_id = str(uuid4())
             message_list = get_message_list(messages, parent_id)
-            system_prompt = run.get('system_prompt')
+            system_prompt = strip_deferred_tools_manifest(run.get('system_prompt'))
             user_message = {
                 'id': user_message_id,
                 'parentId': parent_id,

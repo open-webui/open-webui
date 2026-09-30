@@ -3568,22 +3568,14 @@ async def search_tools(
     """
     from open_webui.utils.tool_search import search_deferred_tools
 
-    metadata = __metadata__ or {}
-    tools = metadata.get('tools') or {}
-    deferred = [name for name in metadata.get('deferred_tools') or [] if name in tools]
-    if not deferred:
-        return JSONCodec.dumps({'error': 'Tool search is not active for this request'})
-
-    try:
-        matches = search_deferred_tools(query, {name: tools[name]['spec'] for name in deferred}, count)
-        if not matches:
-            return JSONCodec.dumps(
-                {'tools': [], 'message': 'No matching tools found. Try different keywords or the exact tool name.'}
-            )
-        return JSONCodec.dumps({'tools': [tools[name]['spec'] for name in matches]})
-    except Exception as e:
-        log.exception(f'search_tools error: {e}')
-        return JSONCodec.dumps({'error': str(e)})
+    tools = __metadata__['tools']
+    candidates = {name: tools[name]['spec'] for name in __metadata__['deferred_tools']}
+    matches = search_deferred_tools(query, candidates, count)
+    if not matches:
+        return JSONCodec.dumps(
+            {'tools': [], 'message': 'No matching tools found. Try different keywords or the exact tool name.'}
+        )
+    return JSONCodec.dumps({'tools': [candidates[name] for name in matches]})
 
 
 # =============================================================================
