@@ -84,6 +84,7 @@ from open_webui.tools.builtin import (
     search_knowledge_files,
     search_memories,
     search_notes,
+    search_tools,
     search_web,
     timer,
     toggle_automation,
@@ -735,6 +736,10 @@ async def get_builtin_tools(
     # Skills tools - view_skill allows model to load full skill instructions on demand
     if extra_params.get('__skill_ids__'):
         builtin_functions.append(view_skill)
+
+    # Tool search - lets the model load deferred (large-schema) tools on demand
+    if extra_params.get('__tool_search__'):
+        builtin_functions.append(search_tools)
 
     # Task management - break down complex work into trackable steps
     # Task state is stored on the chats row; local/channel IDs do not have one.

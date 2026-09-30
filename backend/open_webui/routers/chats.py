@@ -56,6 +56,9 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
     'ENABLE_TOOL_PERMISSIONS': 'chat.tool_permissions.enable',
+    'ENABLE_TOOL_SEARCH': 'chat.tool_search.enable',
+    'TOOL_SEARCH_DEFER_THRESHOLD': 'chat.tool_search.defer_threshold',
+    'TOOL_SEARCH_ALWAYS_LOADED': 'chat.tool_search.always_loaded',
 }
 
 
@@ -165,6 +168,9 @@ class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int = 40
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
     ENABLE_TOOL_PERMISSIONS: bool = False
+    ENABLE_TOOL_SEARCH: bool = False
+    TOOL_SEARCH_DEFER_THRESHOLD: int = 400
+    TOOL_SEARCH_ALWAYS_LOADED: list[str] = []
 
 
 class CompactChatForm(BaseModel):
@@ -845,6 +851,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
     threshold = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD))
     token_cap = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_CAP or threshold))
     retention_percentage = min(50, max(10, int(form_data.CONTEXT_COMPACTION_RETENTION_PERCENTAGE)))
+    tool_search_defer_threshold = max(0, int(form_data.TOOL_SEARCH_DEFER_THRESHOLD))
     await Config.upsert(
         chat_config_updates(
             {
@@ -853,6 +860,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
                 'CONTEXT_COMPACTION_TOKEN_THRESHOLD': threshold,
                 'CONTEXT_COMPACTION_TOKEN_CAP': token_cap,
                 'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': retention_percentage,
+                'TOOL_SEARCH_DEFER_THRESHOLD': tool_search_defer_threshold,
             }
         )
     )

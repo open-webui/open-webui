@@ -3549,6 +3549,45 @@ async def view_skill(
 
 
 # =============================================================================
+# TOOL SEARCH
+# =============================================================================
+
+
+async def search_tools(
+    query: str,
+    limit: int = 5,
+    __metadata__: dict = None,
+) -> str:
+    """
+    Search the tools listed in <available_tools> and load the matches so you can call them in your next step.
+    Pass the exact tool name when you already know it.
+
+    :param query: Keywords describing the capability you need (e.g. "jira create issue"), or an exact tool name
+    :param limit: Maximum number of tools to load (default 5, max 20)
+    :return: JSON with the names of the loaded tools
+    """
+    from open_webui.utils.tool_search import mark_tools_loaded, search_deferred_tools
+
+    metadata = __metadata__ or {}
+    state = metadata.get('tool_search')
+    if not state:
+        return JSONCodec.dumps({'error': 'Tool search is not active for this request'})
+
+    try:
+        tools = metadata['tools']
+        matches = search_deferred_tools(query, {name: tools[name]['spec'] for name in state['deferred']}, limit)
+        mark_tools_loaded(metadata, matches)
+        if not matches:
+            return JSONCodec.dumps(
+                {'loaded': [], 'message': 'No matching tools found. Try different keywords or the exact tool name.'}
+            )
+        return JSONCodec.dumps({'loaded': matches})
+    except Exception as e:
+        log.exception(f'search_tools error: {e}')
+        return JSONCodec.dumps({'error': str(e)})
+
+
+# =============================================================================
 # TASK MANAGEMENT TOOLS
 # =============================================================================
 
