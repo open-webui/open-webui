@@ -559,6 +559,11 @@ async def join_note(sid, data):
     if not user:
         return
 
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions')
+    ):
+        return
+
     note = await Notes.get_note_by_id(data['note_id'])
     if not note:
         log.error(f'Note {data["note_id"]} not found for user {user.id}')
@@ -692,6 +697,11 @@ async def ydoc_document_join(sid, data):
         document_id = normalize_document_id(data['document_id'])
 
         if document_id.startswith('note:'):
+            if user.get('role') != 'admin' and not await has_permission(
+                user.get('id'), 'features.notes', await Config.get('user.permissions')
+            ):
+                return
+
             note_id = document_id.split(':')[1]
             note = await Notes.get_note_by_id(note_id)
             if not note:
