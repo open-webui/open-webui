@@ -114,7 +114,7 @@ pgvector==0.4.2
 PyMySQL==1.2.0
 boto3==1.42.62
 # mariadb==1.1.14 should be added if you want to support MariaDB
-# valkey-glide-sync==2.3.1 # optional: install manually if VECTOR_DB=valkey
+# valkey-glide-sync>=2.5.2 # optional: install manually if VECTOR_DB=valkey
 
 pymilvus==2.6.14
 qdrant-client==1.18.0

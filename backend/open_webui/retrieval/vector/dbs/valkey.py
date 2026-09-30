@@ -56,7 +56,7 @@ def _import_glide():
         )
     except ImportError as e:
         raise ImportError(
-            'valkey-glide-sync is required when VECTOR_DB=valkey. Install it with: pip install valkey-glide-sync==2.3.1'
+            'valkey-glide-sync is required when VECTOR_DB=valkey. Install it with: pip install "valkey-glide-sync>=2.5.2"'
         ) from e
     return {
         'Batch': Batch,
@@ -193,6 +193,7 @@ class ValkeyClient(VectorDBBase):
             database_id=db if db else None,
             request_timeout=5000,
             client_name='open_webui_vector_store_client',
+            client_info_tag='open-webui',
         )
         try:
             self.client = GlideClient.create(config)
@@ -206,6 +207,7 @@ class ValkeyClient(VectorDBBase):
             database_id=db if db else None,
             request_timeout=10000,  # 10s — HNSW indexing can take 1-4s per vector
             client_name='open_webui_vector_store_batch_client',
+            client_info_tag='open-webui',
         )
         try:
             self.batch_client = GlideClient.create(batch_config)
