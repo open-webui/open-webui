@@ -1,3 +1,5 @@
+import { encode } from 'html-entities';
+
 export type OutputContentPart = {
 	type?: string;
 	text?: unknown;
@@ -228,9 +230,10 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 			name,
 			done: isDone ? 'true' : 'false',
 			status,
-			arguments: stringifyAttribute(item.arguments ?? ''),
-			files: stringifyAttribute(resultItem?.files),
-			embeds: stringifyAttribute(resultItem?.embeds)
+			// ToolCallDisplay HTML-decodes these, like legacy <details> attributes.
+			arguments: encode(stringifyAttribute(item.arguments ?? '')),
+			files: encode(stringifyAttribute(resultItem?.files)),
+			embeds: encode(stringifyAttribute(resultItem?.embeds))
 		}
 	};
 }
