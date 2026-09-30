@@ -2330,8 +2330,10 @@
 											onClose={async () => {
 												await tick();
 
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
+												if (!$mobile) {
+													const chatInput = document.getElementById('chat-input');
+													chatInput?.focus();
+												}
 											}}
 										>
 											<button
