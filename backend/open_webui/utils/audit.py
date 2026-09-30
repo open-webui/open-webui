@@ -284,7 +284,7 @@ class AuditLoggingMiddleware:
             # Redact sensitive information
             if 'password' in request_body.lower():
                 request_body = re.sub(
-                    r'"(\w*password)":\s*".*?"',
+                    r'"(\w*password)"\s*:\s*"(?:[^"\\]|\\.)*"',
                     r'"\1": "********"',
                     request_body,
                     flags=re.IGNORECASE,
