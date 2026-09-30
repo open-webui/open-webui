@@ -987,8 +987,9 @@
 	/** Check whether a terminal ID references an available system or direct terminal. */
 	const isTerminalAvailable = (tid: string): boolean => {
 		return (
-			($terminalServers ?? []).some((t) => t.id && t.id === tid) ||
-			($settings?.terminalServers ?? []).some((s) => s.url === tid)
+			$config?.features?.enable_tool_servers === true &&
+			(($terminalServers ?? []).some((t) => t.id && t.id === tid) ||
+				($settings?.terminalServers ?? []).some((s) => s.url === tid))
 		);
 	};
 
@@ -3634,7 +3635,8 @@
 		const skillIds = [...selectedSkillIds];
 
 		// Only send terminal_id if the model has terminal capability enabled
-		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
+		const terminalEnabled =
+			$config?.features?.enable_tool_servers && (model.info?.meta?.capabilities?.terminal ?? true);
 		const useChatVariablesFallback =
 			!_chatId || $temporaryChatEnabled || isTemporaryChatId(_chatId);
 
@@ -3652,21 +3654,30 @@
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 
-				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
-				tool_ids: toolIds.length > 0 ? toolIds : undefined,
+				filter_ids:
+					$config?.features?.enable_functions && selectedFilterIds.length > 0
+						? selectedFilterIds
+						: undefined,
+				tool_ids: toolIds.filter((id) =>
+					id.startsWith('server:')
+						? $config?.features?.enable_tool_servers
+						: $config?.features?.enable_tools
+				),
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
 				terminal_id: terminalEnabled && $selectedTerminalId ? $selectedTerminalId : undefined,
-				tool_servers: [
-					...($toolServers ?? []).filter(
-						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-					),
-					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
-					...(terminalEnabled
-						? ($terminalServers ?? [])
-								.filter((server) => !server.id)
-								.map((server) => ({ ...server, is_terminal: true }))
-						: [])
-				],
+				tool_servers: $config?.features?.enable_tool_servers
+					? [
+							...($toolServers ?? []).filter(
+								(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
+							),
+							// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
+							...(terminalEnabled
+								? ($terminalServers ?? [])
+										.filter((server) => !server.id)
+										.map((server) => ({ ...server, is_terminal: true }))
+								: [])
+						]
+					: [],
 				features: getFeatures(),
 				variables: {
 					...getPromptVariables(

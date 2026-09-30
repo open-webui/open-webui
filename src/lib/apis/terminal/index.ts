@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+import { config } from '$lib/stores';
 export type FileEntry = {
 	name: string;
 	type: 'file' | 'directory';
@@ -98,7 +100,7 @@ export const resolveTerminalConnection = (
 	directServers: any[],
 	token: string
 ): TerminalConnection | null => {
-	if (!selector) return null;
+	if (!get(config)?.features?.enable_tool_servers || !selector) return null;
 	if (servers.some((server) => server.id === selector)) {
 		return {
 			selector,
@@ -119,6 +121,7 @@ export const terminalRequest = async <T>(
 	path: string,
 	options: RequestInit = {}
 ): Promise<T> => {
+	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 	const response = await fetch(`${connection.baseUrl}${path}`, {
 		...options,
 		headers: {
@@ -131,9 +134,10 @@ export const terminalRequest = async <T>(
 	return response.json();
 };
 
-const bearerHeaders = (apiKey: string): Record<string, string> => ({
-	Authorization: `Bearer ${apiKey.trim()}`
-});
+const bearerHeaders = (apiKey: string): Record<string, string> => {
+	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
+	return { Authorization: `Bearer ${apiKey.trim()}` };
+};
 
 export const joinTerminalPath = (base: string, child: string) => {
 	if (!child) return base;
@@ -162,6 +166,7 @@ export type TerminalServer = {
 };
 
 export const getTerminalServers = async (token: string): Promise<TerminalServer[]> => {
+	if (!get(config)?.features?.enable_tool_servers) return [];
 	const res = await fetch(`${WEBUI_API_BASE_URL}/terminals/`, {
 		headers: {
 			Authorization: `Bearer ${token}`
@@ -622,6 +627,7 @@ export const getListeningPorts = async (
 };
 
 export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''): string => {
+	if (!get(config)?.features?.enable_tool_servers) return '';
 	return `${baseUrl.replace(/\/$/, '')}/proxy/${port}/${path}`;
 };
 

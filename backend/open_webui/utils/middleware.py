@@ -37,10 +37,11 @@ from open_webui.env import (
     ENABLE_API_OUTLET_FILTERS,
     ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
     ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND,
-    ENABLE_PLUGINS,
+    ENABLE_FUNCTIONS,
     ENABLE_QUERIES_CACHE,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_RESPONSES_API_STATEFUL,
+    ENABLE_TOOL_SERVERS,
     GLOBAL_LOG_LEVEL,
     RAG_SYSTEM_CONTEXT,
 )
@@ -116,8 +117,8 @@ from open_webui.utils.misc import (
     get_message_list,
     get_output_text,
     get_paired_tool_call_ids,
-    get_response_error_detail,
     get_reasoning_details,
+    get_response_error_detail,
     get_system_message,
     is_raster_image_content_type,
     is_string_allowed,
@@ -2331,6 +2332,10 @@ async def connect_mcp_server(
 
     Returns None if the server is not found or access is denied.
     """
+    if not ENABLE_TOOL_SERVERS:
+        log.debug('MCP resolution skipped: external plugins are disabled')
+        return None
+
     mcp_server_connection = None
     for server_connection in await Config.get('tool_server.connections', []):
         if server_connection.get('type', '') == 'mcp' and (server_connection.get('info') or {}).get('id') == server_id:
@@ -2649,8 +2654,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         raise e
 
     filter_functions = []
-    filter_context = get_filter_context(request) if ENABLE_PLUGINS else None
-    if ENABLE_PLUGINS:
+    filter_context = get_filter_context(request) if ENABLE_FUNCTIONS else None
+    if ENABLE_FUNCTIONS:
         try:
             filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
 
@@ -2748,6 +2753,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     tool_ids = form_data.pop('tool_ids', None)
     terminal_id = form_data.pop('terminal_id', None)
+    if not ENABLE_TOOL_SERVERS:
+        if terminal_id or metadata.get('tool_servers'):
+            log.debug('Excluded external plugins disabled by plugin configuration')
+        terminal_id = None
+        metadata['tool_servers'] = None
     files = form_data.pop('files', None)
     form_data.pop('folder_id', None)
     metadata['terminal_id'] = terminal_id
@@ -2927,7 +2937,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         mcp_tools_dict = {}
 
         if tool_ids:
-            db_tool_ids = []
+            resolved_tool_ids = []
             for tool_id in tool_ids:
                 if tool_id.startswith('server:mcp:'):
                     try:
@@ -2979,13 +2989,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 }
                             )
                         continue
-                elif ENABLE_PLUGINS:
-                    db_tool_ids.append(tool_id)
+                else:
+                    resolved_tool_ids.append(tool_id)
 
-            if db_tool_ids:
+            if resolved_tool_ids:
                 tools_dict = await get_tools(
                     request,
-                    db_tool_ids,
+                    resolved_tool_ids,
                     user,
                     {
                         **extra_params,
@@ -3223,7 +3233,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
-    if ENABLE_PLUGINS:
+    if ENABLE_FUNCTIONS:
         try:
             form_data, _ = await process_filter_functions(
                 request=request,
@@ -3551,7 +3561,7 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
             )
             form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
 
-        if not paused and ENABLE_PLUGINS:
+        if not paused and ENABLE_FUNCTIONS:
             filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
             if filter_functions:
                 filtered_form_data, _ = await process_filter_functions(
@@ -4050,7 +4060,7 @@ async def outlet_filter_handler(ctx):
     is_unsaved_chat = not is_saved_chat_id(chat_id)
     try:
         filter_functions = (
-            await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_PLUGINS else []
+            await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_FUNCTIONS else []
         )
         model_id = model.get('id') if isinstance(model, dict) else model
         models = request.app.state.MODELS
@@ -4432,7 +4442,7 @@ async def streaming_chat_response_handler(response, ctx):
     }
 
     filter_functions = (
-        await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_PLUGINS else []
+        await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_FUNCTIONS else []
     )
 
     # Standard streaming response handler

@@ -90,6 +90,11 @@
 	};
 
 	const setToolServers = async () => {
+		if (!$config?.features?.enable_tool_servers) {
+			toolServers.set([]);
+			terminalServers.set([]);
+			return;
+		}
 		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
 		toolServersData = toolServersData.filter((data) => {
 			if (!data || data.error) {
@@ -234,7 +239,9 @@
 			return;
 		}
 
-		selectedTerminalId.set(localStorage.selectedTerminalId ?? null);
+		selectedTerminalId.set(
+			$config?.features?.enable_tool_servers ? (localStorage.selectedTerminalId ?? null) : null
+		);
 
 		const loadToolServers = setToolServers().catch((e) => {
 			console.error('Failed to load tool servers:', e);
@@ -389,6 +396,7 @@
 
 		// Persist selectedTerminalId across page loads
 		selectedTerminalId.subscribe((value) => {
+			if (!$config?.features?.enable_tool_servers) return;
 			if (value === null) {
 				delete localStorage.selectedTerminalId;
 			} else {

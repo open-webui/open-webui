@@ -75,6 +75,7 @@
 		chatContextAvailable(selectedSystemTerminal) &&
 		!(chatContextNeedsSavedChat(selectedSystemTerminal) && !isSavedChatId(chatId));
 	$: terminalFilesAvailable = !!(
+		$config?.features?.enable_tool_servers &&
 		$selectedTerminalId &&
 		(selectedSystemTerminalAvailable ||
 			(!selectedSystemTerminal &&

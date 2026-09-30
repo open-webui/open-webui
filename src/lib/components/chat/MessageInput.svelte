@@ -803,6 +803,7 @@
 	$: hasDirectToolServerAccess =
 		$_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true);
 	$: showTerminalSelector =
+		$config?.features?.enable_tool_servers &&
 		terminalCapableModels.length > 0 &&
 		(($terminalServers ?? []).some((t) => t.id) ||
 			(hasDirectToolServerAccess &&

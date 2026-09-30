@@ -7,7 +7,7 @@
 	import Functions from '$lib/components/admin/Functions.svelte';
 
 	onMount(async () => {
-		if (!$config?.features?.enable_plugins) {
+		if (!$config?.features?.enable_functions) {
 			await goto('/admin', { replaceState: true });
 			return;
 		}

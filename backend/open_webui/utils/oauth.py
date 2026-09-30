@@ -70,6 +70,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_OAUTH_EMAIL_FALLBACK,
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
+    ENABLE_TOOL_SERVERS,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
     OAUTH_MAX_SESSIONS_PER_USER,
     REDIS_KEY_PREFIX,
@@ -85,8 +86,8 @@ from open_webui.models.users import Users
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import (
     create_token,
-    get_password_hash,
     get_optional_verified_user_from_request,
+    get_password_hash,
     get_verified_user_by_id,
     revoke_user_tokens,
 )
@@ -896,6 +897,9 @@ class OAuthClientManager:
         Lazy-load an OAuth client from the current TOOL_SERVER_CONNECTIONS
         config if it hasn't been registered on this node yet.
         """
+        if not ENABLE_TOOL_SERVERS:
+            raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
         if client_id in self.clients:
             return self.clients[client_id]['client']
 
@@ -1028,6 +1032,9 @@ class OAuthClientManager:
         return True
 
     async def get_client(self, client_id):
+        if not ENABLE_TOOL_SERVERS:
+            raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
         if client_id not in self.clients:
             await self.ensure_client_from_config(client_id)
 
@@ -1035,6 +1042,9 @@ class OAuthClientManager:
         return client['client'] if client else None
 
     async def get_client_info(self, client_id):
+        if not ENABLE_TOOL_SERVERS:
+            raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
         if client_id not in self.clients:
             await self.ensure_client_from_config(client_id)
 

@@ -34,7 +34,8 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     ENABLE_FORWARD_USER_INFO_HEADERS,
-    ENABLE_PLUGINS,
+    ENABLE_TOOL_SERVERS,
+    ENABLE_TOOLS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
     REDIS_KEY_PREFIX,
@@ -266,9 +267,17 @@ async def get_updated_tool_function(function: Callable, extra_params: dict):
 
 async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extra_params: dict) -> dict[str, dict]:
     """Load tools for the given tool_ids, checking access control."""
-    if not ENABLE_PLUGINS:
+    if not tool_ids:
         return {}
 
+    enabled_ids = [
+        tool_id
+        for tool_id in tool_ids
+        if (ENABLE_TOOL_SERVERS if tool_id.startswith('server:') else ENABLE_TOOLS)
+    ]
+    if len(enabled_ids) != len(tool_ids):
+        log.debug('Excluded tools disabled by plugin configuration')
+    tool_ids = enabled_ids
     if not tool_ids:
         return {}
 
@@ -278,7 +287,8 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
     # Batch-fetch all DB tools in one query instead of one per tool_id
-    tool_models = await Tools.get_tools_by_ids(tool_ids)
+    local_tool_ids = [tool_id for tool_id in tool_ids if not tool_id.startswith('server:')]
+    tool_models = await Tools.get_tools_by_ids(local_tool_ids) if local_tool_ids else {}
 
     for tool_id in tool_ids:
         tool = tool_models.get(tool_id)
@@ -1169,6 +1179,9 @@ def convert_openapi_to_tool_payload(openapi_spec):
 
 
 async def set_tool_servers(request: Request):
+    if not ENABLE_TOOL_SERVERS:
+        return []
+
     try:
         request.app.state.TOOL_SERVERS = await get_tool_servers_data(await Config.get('tool_server.connections', []))
     except Exception as e:
@@ -1187,6 +1200,9 @@ async def set_tool_servers(request: Request):
 
 
 async def get_tool_servers(request: Request):
+    if not ENABLE_TOOL_SERVERS:
+        return []
+
     try:
         tool_servers = None
         if request.app.state.redis is not None:
@@ -1271,6 +1287,9 @@ async def get_terminal_system_prompt(
 
 async def set_terminal_servers(request: Request):
     """Load and cache OpenAPI specs from all TERMINAL_SERVER_CONNECTIONS."""
+    if not ENABLE_TOOL_SERVERS:
+        return []
+
     connections = await Config.get('terminal_server.connections', []) or []
 
     # Build server configs compatible with get_tool_servers_data
@@ -1333,6 +1352,9 @@ async def set_terminal_servers(request: Request):
 
 async def get_terminal_servers(request: Request):
     """Return cached terminal server specs, loading if needed."""
+    if not ENABLE_TOOL_SERVERS:
+        return []
+
     terminal_servers = None
     if request.app.state.redis is not None:
         try:
@@ -1368,6 +1390,9 @@ async def get_terminal_tools(
     - Loads specs from cache
     - Builds callables that route through the terminal proxy
     """
+    if not ENABLE_TOOL_SERVERS:
+        return {}
+
     connections = await Config.get('terminal_server.connections', []) or []
     connection = next(
         (terminal_connection for terminal_connection in connections if terminal_connection.get('id') == terminal_id),
@@ -1472,6 +1497,9 @@ async def get_terminal_tools(
 
 
 async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]:
+    if not ENABLE_TOOL_SERVERS:
+        raise RuntimeError('Tool servers are disabled')
+
     _headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -1519,6 +1547,9 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
 
 async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str, Any]]:
     # Prepare list of enabled servers along with their original index
+
+    if not ENABLE_TOOL_SERVERS:
+        return []
 
     tasks = []
     server_entries = []
@@ -1626,6 +1657,9 @@ async def execute_tool_server(
     params: dict[str, Any],
     server_data: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any | None]]:
+    if not ENABLE_TOOL_SERVERS:
+        raise RuntimeError('Tool servers are disabled')
+
     error = None
     try:
         openapi = server_data.get('openapi', {})

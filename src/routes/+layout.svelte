@@ -501,6 +501,10 @@
 	};
 
 	const executeTool = async (data, cb, chatId) => {
+		if (!$config?.features?.enable_tool_servers) {
+			cb?.({ error: 'Tool servers are disabled' });
+			return;
+		}
 		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 		const defaultInline =
 			data?.name === 'display_file' &&
@@ -568,10 +572,12 @@
 			event.data.data?.session_id === $socket?.id
 		) {
 			cb?.({
-				connected: [...$connectedUserTerminals.values()].some(
-					(shell) =>
-						shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
-				)
+				connected:
+					$config?.features?.enable_tool_servers &&
+					[...$connectedUserTerminals.values()].some(
+						(shell) =>
+							shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
+					)
 			});
 			return;
 		}
@@ -648,6 +654,7 @@
 				return;
 			} else if (type === 'request:terminal') {
 				try {
+					if (!$config?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 					const connection = resolveTerminalConnection(
 						data.terminal_id,
 						[],

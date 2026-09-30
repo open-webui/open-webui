@@ -10,7 +10,12 @@ import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_PLUGINS
+from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_TIMEOUT,
+    ENABLE_TOOL_SERVERS,
+    ENABLE_TOOLS,
+)
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
@@ -33,8 +38,8 @@ from open_webui.utils.access_control import (
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.plugin import (
     get_tool_contents_cache,
-    get_tools_cache,
     get_tool_module_from_cache,
+    get_tools_cache,
     load_tool_module_by_id,
     replace_imports,
     resolve_valves_schema_options,
@@ -78,7 +83,7 @@ async def get_tools(
     )
 
     # Local Tools
-    if ENABLE_PLUGINS:
+    if ENABLE_TOOLS:
         tools_cache = get_tools_cache(request)
         for tool in await Tools.get_tools(
             defer_content=True,
@@ -132,7 +137,7 @@ async def get_tools(
         )
 
     # MCP Tool Servers
-    for server in await Config.get('tool_server.connections', []):
+    for server in (await Config.get('tool_server.connections', [])) if ENABLE_TOOL_SERVERS else []:
         if server.get('type', 'openapi') == 'mcp' and (server.get('config') or {}).get('enable'):
             info = server.get('info') or {}
             server_id = info.get('id')
@@ -198,7 +203,7 @@ async def get_tools(
 
 @router.get('/list', response_model=list[ToolAccessResponse])
 async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    if not ENABLE_PLUGINS:
+    if not ENABLE_TOOLS:
         return []
 
     bypass_access_control = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
