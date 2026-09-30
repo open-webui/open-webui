@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { tick } from 'svelte';
+	import { mobile } from '$lib/stores';
 
 	/** Whether the dropdown is open */
 	export let show = false;
@@ -275,7 +276,7 @@
 		if (show) {
 			closeDropdown();
 		} else {
-			openDropdown(true);
+			openDropdown(!$mobile);
 		}
 	}
 
