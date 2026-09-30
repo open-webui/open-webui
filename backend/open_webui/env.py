@@ -159,7 +159,7 @@ ENABLE_DB_MIGRATIONS = os.getenv('ENABLE_DB_MIGRATIONS', 'True').lower() == 'tru
 # Swap the JSON encoder/decoder used across the app (HTTP request bodies, JSONResponse
 # bodies, upstream provider responses, socket.io payloads) from the stdlib `json` module
 # to orjson. Faster, but stricter: see open_webui/utils/json_codec.py for the differences.
-ENABLE_ORJSON = os.getenv('ENABLE_ORJSON', 'False').lower() == 'true'
+ENABLE_ORJSON = os.getenv('ENABLE_ORJSON', 'True').lower() == 'true'
 
 
 # Function to parse each section
