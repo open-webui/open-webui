@@ -244,6 +244,15 @@ class AutomationTable:
             await db.commit()
             return AutomationModel.model_validate(row)
 
+    async def update_last_run_at(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id)
+            if not row:
+                return None
+            row.last_run_at = int(time.time_ns())
+            await db.commit()
+            return AutomationModel.model_validate(row)
+
     async def clear_folder_ids(
         self,
         user_id: str,

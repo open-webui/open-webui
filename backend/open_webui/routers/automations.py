@@ -341,6 +341,7 @@ async def run_automation_by_id(
     await check_automations_permission(request, user)
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
+    automation = await Automations.update_last_run_at(automation.id, db=db)
     asyncio.create_task(execute_automation(request.app, automation))
     await publish_event(
         request,
