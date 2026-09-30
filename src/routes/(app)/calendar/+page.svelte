@@ -6,6 +6,7 @@
 	import {
 		getCalendars,
 		getCalendarEvents,
+		getCalendarEventById,
 		deleteCalendar,
 		type CalendarModel,
 		type CalendarEventModel
@@ -134,7 +135,7 @@
 		showEventModal = true;
 	}
 
-	function handleEventClick(e: CustomEvent<CalendarEventModel>) {
+	async function handleEventClick(e: CustomEvent<CalendarEventModel>) {
 		const evt = e.detail;
 		if (evt.meta?.automation_id) {
 			if (evt.meta?.chat_id) {
@@ -144,7 +145,9 @@
 			}
 			return;
 		}
-		editEvent = evt;
+		editEvent = evt.instance_id
+			? ((await getCalendarEventById(localStorage.token, evt.id)) ?? evt)
+			: evt;
 		defaultStartAt = null;
 		showEventModal = true;
 	}
