@@ -41,7 +41,7 @@ redis==8.0.1
 hiredis==3.4.2
 
 python-dateutil==2.9.0.post0
-pytz==2026.2
+pytz==2026.4
 
 loguru==0.7.3
 asgiref==3.11.1
