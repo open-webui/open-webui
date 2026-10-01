@@ -122,6 +122,7 @@ async def send_request(
         )
 
         if not r.ok:
+            retry_headers = {k: v for k, v in r.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')}
             try:
                 res = await r.json(loads=JSONCodec.loads)
                 await publish_model_provider_request_failed(
@@ -133,7 +134,7 @@ async def send_request(
                     upstream_error=res,
                 )
                 if 'error' in res:
-                    raise HTTPException(status_code=r.status, detail=res['error'])
+                    raise HTTPException(status_code=r.status, detail=res['error'], headers=retry_headers)
             except HTTPException:
                 raise
             except Exception as e:
@@ -148,6 +149,7 @@ async def send_request(
             raise HTTPException(
                 status_code=r.status,
                 detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
+                headers=retry_headers,
             )
 
         r.raise_for_status()

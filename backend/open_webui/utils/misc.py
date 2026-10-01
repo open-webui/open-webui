@@ -48,9 +48,13 @@ def get_response_error_detail(response: object) -> str:
         body = response.body
         if not isinstance(body, str):
             body = body.decode('utf-8', 'replace')
-        detail = JSONCodec.loads(body)
     except Exception:
         return fallback
+
+    try:
+        detail = JSONCodec.loads(body)
+    except JSONCodec.JSONDecodeError:
+        return body.strip() or fallback
 
     while isinstance(detail, dict):
         next_detail = None

@@ -248,9 +248,9 @@ from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
     background_tasks_handler,
     build_chat_response_context,
-    drain_approved_tool_calls,
     process_chat_payload,
     process_chat_response,
+    resume_tool_calls,
 )
 from open_webui.utils.misc import get_response_error_detail, merge_model_params
 from open_webui.utils.model_ids import strip_provider_model_prefix
@@ -1654,82 +1654,79 @@ async def chat_completion(
         )
 
     async def process_chat(request, form_data, user, metadata, model, tasks=None):
+        error_detail = None
         try:
-            ctx = None
-            # Saved chats load the message after approved tool calls run, so their results are kept
-            if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
-                ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
-            form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
-
-            if await drain_approved_tool_calls(request, form_data, user, model, metadata):
-                return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
-
-            response = await chat_completion_handler(request, form_data, user)
-
-            # When the upstream provider returns an error (e.g. HTTP 400
-            # content-filter, quota exceeded), generate_chat_completion
-            # returns a JSONResponse instead of raising.  Detect this and
-            # raise so the except-block below emits a terminal
-            # chat:message:error, unblocking the frontend.
-            if isinstance(response, JSONResponse) and response.status_code >= 400:
-                raise Exception(get_response_error_detail(response))
-
-            if ctx is None:
-                ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
-            else:
-                ctx.update(form_data=form_data, metadata=metadata, events=events)
-
-            return await process_chat_response(response, ctx)
-        except asyncio.CancelledError:
-            log.info('Chat processing was cancelled')
             try:
+                ctx = None
+                # Saved chats load the message after approved tool calls run, so their results are kept
+                if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
+                    ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
+                form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
-                async def emit_cancel_event():
-                    event_emitter = await get_event_emitter(metadata)
-                    if event_emitter:
-                        await event_emitter({'type': 'chat:tasks:cancel'})
+                paused = await resume_tool_calls(request, form_data, user, model, metadata)
+                if paused:
+                    return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
 
-                await asyncio.shield(emit_cancel_event())
-            except Exception:
-                pass
-            raise  # re-raise to ensure proper task cancellation handling
-        except Exception as e:
-            error_detail = e.detail if isinstance(e, HTTPException) else str(e)
-            log.error('Error processing chat payload: %s', error_detail)
-            if metadata.get('chat_id') and metadata.get('message_id'):
-                # Update the chat message with the error
+                response = await chat_completion_handler(request, form_data, user)
+
+                if isinstance(response, Response) and response.status_code >= 400:
+                    error_detail = get_response_error_detail(response)
+                    if metadata.get('session_id') and metadata.get('chat_id'):
+                        return None
+                    return response
+
+                if ctx is None:
+                    ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+                else:
+                    ctx.update(form_data=form_data, metadata=metadata, events=events)
+
+                return await process_chat_response(response, ctx)
+            except asyncio.CancelledError:
+                log.info('Chat processing was cancelled')
                 try:
-                    if is_saved_chat_id(metadata.get('chat_id')):
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {
-                                'parentId': metadata.get('user_message_id', None),
-                                'error': {'content': error_detail},
-                                'done': True,
-                            },
-                        )
 
-                    event_emitter = await get_event_emitter(metadata)
-                    if event_emitter:
-                        await event_emitter(
-                            {
-                                'type': 'chat:message:error',
-                                'data': {'error': {'content': error_detail}, 'done': True},
-                            }
-                        )
+                    async def emit_cancel_event():
+                        event_emitter = await get_event_emitter(metadata)
+                        if event_emitter:
+                            await event_emitter({'type': 'chat:tasks:cancel'})
 
+                    await asyncio.shield(emit_cancel_event())
                 except Exception:
                     pass
-            else:
-                # No chat_id/message_id → legacy/direct API path with no
-                # WebSocket error channel.  We must surface the error as
-                # a proper HTTP response; without this the function would
-                # return None which FastAPI serializes as null.  #23924
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=error_detail,
-                )
+                raise  # re-raise to ensure proper task cancellation handling
+            except Exception as e:
+                error_detail = e.detail if isinstance(e, HTTPException) else str(e)
+                if not (metadata.get('session_id') and metadata.get('chat_id')):
+                    raise
+            finally:
+                if error_detail is not None:
+                    log.error('Error processing chat payload: %s', error_detail)
+                    if metadata.get('chat_id') and metadata.get('message_id'):
+                        if is_saved_chat_id(metadata['chat_id']):
+                            try:
+                                await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata['chat_id'],
+                                    metadata['message_id'],
+                                    {
+                                        'parentId': metadata.get('user_message_id'),
+                                        'error': {'content': error_detail},
+                                        'done': True,
+                                    },
+                                )
+                            except Exception:
+                                log.exception('Failed to save chat error')
+
+                        try:
+                            event_emitter = await get_event_emitter(metadata)
+                            if event_emitter:
+                                await event_emitter(
+                                    {
+                                        'type': 'chat:message:error',
+                                        'data': {'error': {'content': error_detail}, 'done': True},
+                                    }
+                                )
+                        except Exception:
+                            log.exception('Failed to emit chat error')
         finally:
             # Clean up MCP clients.  Each client is isolated so one
             # failure doesn't skip the rest.
@@ -1895,7 +1892,12 @@ async def chat_completion(
     else:
         # Legacy/direct: single model, synchronous
         metadata['message_id'] = message_ids[0]['message_id']
-        return await process_chat(request, form_data, user, metadata, model, tasks)
+        try:
+            return await process_chat(request, form_data, user, metadata, model, tasks)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 # Alias for chat_completion (Legacy)
@@ -1997,9 +1999,12 @@ async def passthrough_anthropic_messages(request: Request, form_data: dict, user
                 requested_model=requested_model,
                 upstream_error=response_data,
             )
+            retry_headers = {
+                k: v for k, v in response.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')
+            }
             if isinstance(response_data, (dict, list)):
-                return JSONResponse(status_code=response.status, content=response_data)
-            return Response(status_code=response.status, content=response_data)
+                return JSONResponse(status_code=response.status, content=response_data, headers=retry_headers)
+            return Response(status_code=response.status, content=response_data, headers=retry_headers)
 
         return response_data
     except HTTPException:
