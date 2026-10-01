@@ -30,6 +30,7 @@
 		playingNotificationSound,
 		channels,
 		channelId,
+		channelRequestQueues,
 		terminalServers,
 		connectedUserTerminals,
 		showControls,
@@ -1245,7 +1246,12 @@
 		};
 		window.addEventListener('resize', onResize);
 
-		user.subscribe(async (value) => {
+		let queueUserId = $user?.id;
+		const unsubscribeQueueUser = user.subscribe(async (value) => {
+			if (queueUserId !== value?.id) {
+				channelRequestQueues.set({});
+				queueUserId = value?.id;
+			}
 			if (value) {
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
@@ -1263,6 +1269,15 @@
 				$socket?.off('events:channel', channelEventHandler);
 			}
 		});
+
+		/** @param {BeforeUnloadEvent} event */
+		const beforeUnloadHandler = (event) => {
+			if (Object.values($channelRequestQueues).some((queue) => queue.length)) {
+				event.preventDefault();
+				event.returnValue = '';
+			}
+		};
+		window.addEventListener('beforeunload', beforeUnloadHandler);
 
 		let backendConfig = null;
 		try {
@@ -1399,6 +1414,8 @@
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			window.removeEventListener('pagehide', handlePageHidden);
 			window.removeEventListener('pageshow', handlePageVisible);
+			window.removeEventListener('beforeunload', beforeUnloadHandler);
+			unsubscribeQueueUser();
 		};
 	});
 

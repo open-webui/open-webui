@@ -124,6 +124,19 @@ export const chatRequestQueues: Writable<
 	Record<string, { id: string; prompt: string; files: any[] }[]>
 > = writable({});
 
+export type ChannelQueuedMessage = {
+	id: string;
+	prompt: string;
+	files: any[];
+	user_id: string;
+	channel_id: string;
+	parent_id: string | null;
+	reply_to_message: any;
+	sending?: boolean;
+	error?: string;
+};
+export const channelRequestQueues = writable<Record<string, ChannelQueuedMessage[]>>({});
+
 export const sidebarWidth = writable(245);
 
 export type SettingsModalRequest = {
