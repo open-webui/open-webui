@@ -70,7 +70,7 @@ docx2txt==0.9
 python-docx==1.2.0
 python-pptx==1.0.2
 msoffcrypto-tool==6.0.0
-unstructured==0.22.31
+unstructured==0.27.10
 
 Markdown==3.10.2
 beautifulsoup4==4.14.3

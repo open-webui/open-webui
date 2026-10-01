@@ -137,7 +137,7 @@ mariadb = [
     "mariadb==1.1.14",
 ]
 unstructured = [
-    "unstructured==0.22.31",
+    "unstructured==0.27.10",
 ]
 
 all = [
@@ -155,7 +155,7 @@ all = [
     "colbert-ai==0.2.22",
 
     "azure-search-documents==12.0.0",
-    "unstructured==0.22.31",
+    "unstructured==0.27.10",
 ]
 
 [project.scripts]
