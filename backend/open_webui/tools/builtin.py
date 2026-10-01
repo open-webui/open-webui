@@ -4413,10 +4413,10 @@ async def update_calendar_event(
             return JSONCodec.dumps({'error': 'Event not found'})
 
         # Check write access to the event's calendar
-        if event.user_id != user_id and __user__.get('role') != 'admin':
-            cal = await Calendars.get_calendar_by_id(event.calendar_id)
-            if not cal:
-                return JSONCodec.dumps({'error': 'Access denied'})
+        cal = await Calendars.get_calendar_by_id(event.calendar_id)
+        if not cal:
+            return JSONCodec.dumps({'error': 'Access denied'})
+        if cal.user_id != user_id and __user__.get('role') != 'admin':
             user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
             if not await AccessGrants.has_access(
                 user_id=user_id,
@@ -4517,10 +4517,10 @@ async def delete_calendar_event(
             return JSONCodec.dumps({'error': 'Event not found'})
 
         # Check write access
-        if event.user_id != user_id and __user__.get('role') != 'admin':
-            cal = await Calendars.get_calendar_by_id(event.calendar_id)
-            if not cal:
-                return JSONCodec.dumps({'error': 'Access denied'})
+        cal = await Calendars.get_calendar_by_id(event.calendar_id)
+        if not cal:
+            return JSONCodec.dumps({'error': 'Access denied'})
+        if cal.user_id != user_id and __user__.get('role') != 'admin':
             user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
             if not await AccessGrants.has_access(
                 user_id=user_id,

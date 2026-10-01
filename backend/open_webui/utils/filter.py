@@ -1,7 +1,7 @@
 import inspect
 import logging
 
-from open_webui.env import ENABLE_PLUGINS
+from open_webui.env import ENABLE_FUNCTIONS
 from open_webui.models.functions import Functions
 from open_webui.utils.plugin import get_function_module_from_cache
 
@@ -66,7 +66,7 @@ def get_model_filter_ids(model, active_filters):
 
 
 async def resolve_filter_pipeline(request, model: dict, enabled_filter_ids: list = None):
-    if not ENABLE_PLUGINS:
+    if not ENABLE_FUNCTIONS:
         return [], []
 
     active_filters = await get_filter_context(request).get_active_filters()
@@ -217,7 +217,7 @@ async def process_filter_functions(
     form_data,
     extra_params,
 ):
-    if not ENABLE_PLUGINS:
+    if not ENABLE_FUNCTIONS:
         return form_data, {}
 
     skip_files = None

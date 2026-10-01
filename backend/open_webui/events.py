@@ -8,9 +8,10 @@ import uuid
 from types import SimpleNamespace
 from typing import Any
 
-from open_webui.env import ENABLE_PLUGINS, VERSION
-from open_webui.models.config import Config
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from open_webui.env import ENABLE_FUNCTIONS, VERSION
+from open_webui.models.config import Config
 from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.webhook import post_webhook
 
@@ -1103,7 +1104,7 @@ class SocketSessionEventSink:
 async def dispatch_event_functions(
     app: Any, event: Event, request: Any | None = None, extra_function_ids: list[str] | None = None
 ) -> None:
-    if not ENABLE_PLUGINS:
+    if not ENABLE_FUNCTIONS:
         return
 
     from open_webui.models.functions import Functions

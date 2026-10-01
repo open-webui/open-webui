@@ -500,6 +500,10 @@
 	};
 
 	const executeTool = async (data, cb, chatId) => {
+		if (!$config?.features?.enable_tool_servers) {
+			cb?.({ error: 'Tool servers are disabled' });
+			return;
+		}
 		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 		const defaultInline =
 			data?.name === 'display_file' &&
@@ -634,6 +638,7 @@
 				return;
 			} else if (type === 'request:terminal') {
 				try {
+					if (!$config?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 					const connection = resolveTerminalConnection(
 						data.terminal_id,
 						[],
@@ -868,6 +873,10 @@
 
 			if (type === 'message') {
 				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
+				const content = data?.content?.replace(
+					/<([@#])([^|>\s]+)(?:\|([^>]*))?>/g,
+					(_, trigger, id, label) => trigger + (label || id)
+				);
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
@@ -875,7 +884,7 @@
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
 						new Notification(`${title} / Open WebUI`, {
-							body: data?.content,
+							body: content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
 					}
@@ -888,7 +897,7 @@
 								`/channels/${event.channel_id}${data?.parent_id ? `?thread=${data.parent_id}` : ''}`
 							);
 						},
-						content: data?.content,
+						content,
 						title: `${title}`
 					},
 					duration: 15000,
@@ -1255,7 +1264,10 @@
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
-		await initI18n(localStorage?.locale, backendConfig?.i18n ?? {});
+		await initI18n(
+			localStorage?.locale ?? backendConfig?.default_locale,
+			backendConfig?.i18n ?? {}
+		);
 		if (!localStorage.locale) {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages

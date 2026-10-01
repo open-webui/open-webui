@@ -40,7 +40,6 @@ def expand_recurring_event(
 
     range_start = to_local_datetime(range_start_ns)
     range_end = to_local_datetime(range_end_ns)
-    scan_start = range_start - dt.timedelta(days=1)
 
     original_start_ns = event_dict['start_at']
     original_start = to_local_datetime(original_start_ns)
@@ -55,24 +54,30 @@ def expand_recurring_event(
 
     original_end_ns = event_dict.get('end_at')
     duration_ns = (original_end_ns - original_start_ns) if original_end_ns else None
+    # Look back by the event length so occurrences still running at range start are found
+    event_length = dt.timedelta(microseconds=max(duration_ns or 0, 0) // 1000)
+    scan_start = range_start - dt.timedelta(days=1) - event_length
 
     instances = []
     previous_start = None
-    for occurrence_start in rule.xafter(scan_start, count=max_instances, inc=True):
+    for occurrence_start in rule.xafter(scan_start, inc=True):
         if occurrence_start >= range_end or occurrence_start == previous_start:
             break
         previous_start = occurrence_start
 
         instance_start_ns = int(occurrence_start.replace(tzinfo=user_timezone).timestamp() * 1_000_000_000)
+        instance_end_ns = (instance_start_ns + duration_ns) if duration_ns else None
 
-        if instance_start_ns >= range_start_ns:
+        if instance_start_ns >= range_start_ns or (instance_end_ns and instance_end_ns > range_start_ns):
             instance = {
                 **event_dict,
                 'start_at': instance_start_ns,
-                'end_at': (instance_start_ns + duration_ns) if duration_ns else None,
+                'end_at': instance_end_ns,
                 'instance_id': f'{event_dict["id"]}_{instance_start_ns}',
             }
             instances.append(instance)
+            if len(instances) >= max_instances:
+                break
 
     return instances
 

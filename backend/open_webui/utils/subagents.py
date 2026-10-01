@@ -219,6 +219,7 @@ async def process_pending_internal_messages(
             history['messages'] = messages
             history['currentId'] = assistant_message_id
             chat.chat = {**(chat.chat or {}), 'history': history}
+            chat.current_message_id = assistant_message_id
             chat.updated_at = int(time.time())
             await db.commit()
 
@@ -614,10 +615,16 @@ async def delegate(
                 updated_chat = copy.deepcopy(parent.chat or {})
                 updated_history = updated_chat.setdefault('history', {})
                 updated_messages = updated_history.setdefault('messages', {})
+                parent_message = updated_messages.get(parent_message_id)
                 done_assistants = [
                     message
-                    for message in updated_messages.values()
-                    if message.get('role') == 'assistant' and message.get('done') is not False
+                    for message_id, message in updated_messages.items()
+                    if message.get('role') == 'assistant'
+                    and message.get('done') is not False
+                    and (
+                        parent_message is None
+                        or any(entry is parent_message for entry in get_message_list(updated_messages, message_id))
+                    )
                 ]
                 result_parent_id = (
                     max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')

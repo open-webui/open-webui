@@ -26,6 +26,7 @@ from open_webui.models.users import UserModel
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.calendar import expand_recurring_event
+from open_webui.utils.recurrence import schedule_start_ns
 
 log = logging.getLogger(__name__)
 
@@ -206,13 +207,22 @@ async def get_events(
                 if not rrule_str:
                     continue
 
+                start_at = auto.next_run_at or 0
+                upper_rrule = rrule_str.upper()
+                if 'COUNT=' in upper_rrule and 'DTSTART' in upper_rrule:
+                    # COUNT runs from DTSTART, anchoring on the next run would restart it
+                    try:
+                        start_at = schedule_start_ns(rrule_str, user.timezone)
+                    except ValueError:
+                        pass
+
                 virtual = {
                     'id': f'auto_{auto.id}',
                     'calendar_id': SCHEDULED_TASKS_CALENDAR_ID,
                     'user_id': user.id,
                     'title': auto.name,
                     'description': auto.data.get('prompt', '') if auto.data else '',
-                    'start_at': auto.next_run_at or 0,
+                    'start_at': start_at,
                     'end_at': None,
                     'all_day': False,
                     'rrule': rrule_str,

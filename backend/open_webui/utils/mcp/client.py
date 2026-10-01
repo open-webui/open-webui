@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from contextlib import AsyncExitStack
+from datetime import timedelta
 from typing import Optional
 
 log = logging.getLogger(__name__)
@@ -116,7 +117,11 @@ class MCPClient:
         if not self.session:
             raise RuntimeError('MCP client is not connected.')
 
-        result = await self.session.call_tool(function_name, function_args)
+        tool_call_timeout = None
+        if AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER is not None and AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER > 0:
+            tool_call_timeout = timedelta(seconds=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
+
+        result = await self.session.call_tool(function_name, function_args, read_timeout_seconds=tool_call_timeout)
         if not result:
             raise Exception('No result returned from MCP tool call.')
 

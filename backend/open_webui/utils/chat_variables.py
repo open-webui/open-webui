@@ -185,7 +185,7 @@ def validate_user_variables(variables: Any) -> dict[str, str]:
         raise ChatVariablesError('User variables must be an object.')
 
     try:
-        if len(JSONCodec.dumps(variables)) > MAX_VARIABLES_JSON_LENGTH:
+        if len(JSONCodec.dumps(variables, ensure_ascii=False)) > MAX_VARIABLES_JSON_LENGTH:
             raise ChatVariablesError('User variables are too large.')
     except TypeError:
         raise ChatVariablesError('User variables must be JSON serializable.')
@@ -214,7 +214,7 @@ def validate_chat_variables(
     variables = normalize_chat_variables(variables)
 
     try:
-        if len(JSONCodec.dumps(variables)) > MAX_VARIABLES_JSON_LENGTH:
+        if len(JSONCodec.dumps(variables, ensure_ascii=False)) > MAX_VARIABLES_JSON_LENGTH:
             raise ChatVariablesError('Chat variables are too large.')
     except TypeError:
         raise ChatVariablesError('Chat variables must be JSON serializable.')

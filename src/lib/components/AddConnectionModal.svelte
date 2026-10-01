@@ -219,6 +219,7 @@
 				}
 				headers = JSON.stringify(_headers, null, 2);
 			} catch (error) {
+				loading = false;
 				toast.error($i18n.t('Headers must be a valid JSON object'));
 				return;
 			}

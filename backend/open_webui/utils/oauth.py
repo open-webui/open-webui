@@ -70,6 +70,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_OAUTH_EMAIL_FALLBACK,
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
+    ENABLE_TOOL_SERVERS,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
     OAUTH_MAX_SESSIONS_PER_USER,
     REDIS_KEY_PREFIX,
@@ -85,8 +86,8 @@ from open_webui.models.users import Users
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import (
     create_token,
-    get_password_hash,
     get_optional_verified_user_from_request,
+    get_password_hash,
     get_verified_user_by_id,
     revoke_user_tokens,
 )
@@ -789,6 +790,11 @@ def should_send_oauth_resource(client_info: OAuthClientInformationFull | None) -
     return not scope_has_resource_indicator(client_info.scope)
 
 
+def uses_google_authorization_server(client_info: OAuthClientInformationFull) -> bool:
+    server_metadata = client_info.server_metadata
+    return server_metadata is not None and server_metadata.authorization_endpoint.host == 'accounts.google.com'
+
+
 def build_oauth_request_params(client_info: OAuthClientInformationFull | None) -> dict:
     if not client_info:
         return {}
@@ -798,6 +804,10 @@ def build_oauth_request_params(client_info: OAuthClientInformationFull | None) -
         params['scope'] = client_info.scope
     if should_send_oauth_resource(client_info):
         params['resource'] = client_info.resource
+    # Google only issues a refresh token for offline access, and only re-issues it on a fresh consent.
+    if uses_google_authorization_server(client_info):
+        params['access_type'] = 'offline'
+        params['prompt'] = 'consent'
     return params
 
 
@@ -887,6 +897,9 @@ class OAuthClientManager:
         Lazy-load an OAuth client from the current TOOL_SERVER_CONNECTIONS
         config if it hasn't been registered on this node yet.
         """
+        if not ENABLE_TOOL_SERVERS:
+            raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
         if client_id in self.clients:
             return self.clients[client_id]['client']
 
@@ -1019,6 +1032,9 @@ class OAuthClientManager:
         return True
 
     async def get_client(self, client_id):
+        if not ENABLE_TOOL_SERVERS:
+            raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
         if client_id not in self.clients:
             await self.ensure_client_from_config(client_id)
 
@@ -1026,6 +1042,9 @@ class OAuthClientManager:
         return client['client'] if client else None
 
     async def get_client_info(self, client_id):
+        if not ENABLE_TOOL_SERVERS:
+            raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
         if client_id not in self.clients:
             await self.ensure_client_from_config(client_id)
 
@@ -1917,7 +1936,7 @@ class OAuthManager:
                         detailed_error,
                         exc_info=True,
                     )
-                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                    raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
             except Exception as e:
                 detailed_error = _build_oauth_callback_error_message(e)
                 log.warning(
@@ -1926,7 +1945,7 @@ class OAuthManager:
                     detailed_error,
                     exc_info=True,
                 )
-                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
 
             # Try to get userinfo from the token first, some providers include it there
             user_data: UserInfo = token.get('userinfo')
@@ -1949,7 +1968,7 @@ class OAuthManager:
                 user_data = user_data['data']
             if not user_data:
                 log.warning('OAuth callback failed for provider %s, user data is missing', provider)
-                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
 
             # Extract the "sub" claim, using custom claim if configured
             if auth_config.OAUTH_SUB_CLAIM:
@@ -1959,7 +1978,7 @@ class OAuthManager:
                 sub = user_data.get(OAUTH_PROVIDERS[provider].get('sub_claim', 'sub'))
             if not sub:
                 log.warning(f'OAuth callback failed, sub is missing: {user_data}')
-                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
             sub = str(sub)
 
             oauth_data = {}
@@ -1994,18 +2013,18 @@ class OAuthManager:
                                         email = primary_email
                                     else:
                                         log.warning('No primary email found in GitHub response')
-                                        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                                        raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
                                 else:
                                     log.warning('Failed to fetch GitHub email')
-                                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                                    raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
                     except Exception as e:
                         log.warning(f'Error fetching GitHub email: {e}')
-                        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                        raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
                 elif ENABLE_OAUTH_EMAIL_FALLBACK:
                     email = f'{provider}@{sub}.local'
                 else:
                     log.warning(f'OAuth callback failed, email is missing: {user_data}')
-                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                    raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
 
             email = email.lower()
             # If allowed domains are configured, check if the email domain is in the list
@@ -2014,7 +2033,7 @@ class OAuthManager:
                 and email.split('@')[-1] not in auth_config.OAUTH_ALLOWED_DOMAINS
             ):
                 log.warning(f'OAuth callback failed, e-mail domain is not in the list of allowed domains: {user_data}')
-                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
 
             # Check if the user exists
             user = await Users.get_user_by_oauth_sub(provider, sub, db=db)

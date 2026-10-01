@@ -167,6 +167,7 @@
 			return null;
 		});
 		if (res) {
+			automation = res;
 			toast.success($i18n.t('Automation triggered'));
 			setTimeout(() => loadRuns(false), 2000);
 		}

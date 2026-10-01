@@ -9,6 +9,7 @@
 	import { config, mobile, settings, socket, user } from '$lib/stores';
 	import {
 		convertHeicToJpeg,
+		isHeicImage,
 		compressImage,
 		extractInputVariables,
 		getAge,
@@ -24,7 +25,7 @@
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import { uploadFile } from '$lib/apis/files';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
@@ -377,7 +378,7 @@
 				return;
 			}
 
-			if (file['type'].startsWith('image/')) {
+			if (file['type'].startsWith('image/') || isHeicImage(file)) {
 				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
 					// Quick shortcut so we don’t do unnecessary work.
 					const settingsCompression =
@@ -415,6 +416,7 @@
 					return imageUrl;
 				};
 
+				const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
@@ -424,12 +426,12 @@
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					const blob = await (await fetch(imageUrl)).blob();
-					const compressedFile = new File([blob], file.name, { type: file.type });
+					const compressedFile = new File([blob], imageFile.name, { type: imageFile.type });
 
 					uploadFileHandler(compressedFile, false);
 				};
 
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+				reader.readAsDataURL(imageFile);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -971,10 +973,26 @@
 
 												if (clipboardData && clipboardData.items) {
 													for (const item of clipboardData.items) {
-														const file = item.getAsFile();
-														if (file) {
-															await inputFilesHandler([file]);
-															e.preventDefault();
+														if (item.type === 'text/plain') {
+															if ($settings?.largeTextAsFile ?? false) {
+																const text = clipboardData.getData('text/plain');
+
+																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																	e.preventDefault();
+																	const blob = new Blob([text], { type: 'text/plain' });
+																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																		type: 'text/plain'
+																	});
+
+																	await uploadFileHandler(file);
+																}
+															}
+														} else {
+															const file = item.getAsFile();
+															if (file) {
+																await inputFilesHandler([file]);
+																e.preventDefault();
+															}
 														}
 													}
 												}

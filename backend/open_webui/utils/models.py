@@ -8,22 +8,22 @@ from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
 )
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FUNCTIONS, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
 from open_webui.functions import get_function_models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
-from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.models.users import UserModel
 from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.plugin import (
-    get_functions_cache,
     get_function_module_from_cache,
+    get_functions_cache,
 )
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -150,7 +150,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # One query per type: the global sets are subsets of the active sets, so
     # deriving them from the same rows halves the function-table queries.
-    if ENABLE_PLUGINS:
+    if ENABLE_FUNCTIONS:
         active_actions = await Functions.get_active_function_ids_by_type('action')
         global_action_ids = {function_id for function_id, is_global in active_actions if is_global}
         enabled_action_ids = {function_id for function_id, _ in active_actions}
@@ -205,7 +205,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
                     if 'info' in model:
                         if 'meta' in model['info']:
-                            if ENABLE_PLUGINS:
+                            if ENABLE_FUNCTIONS:
                                 action_ids.extend(model['info']['meta'].get('actionIds', []))
                                 filter_ids.extend(model['info']['meta'].get('filterIds', []))
 
@@ -265,10 +265,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             if custom_model.meta:
                 meta = custom_model.meta.model_dump()
 
-                if ENABLE_PLUGINS and 'actionIds' in meta:
+                if ENABLE_FUNCTIONS and 'actionIds' in meta:
                     action_ids.extend(meta['actionIds'])
 
-                if ENABLE_PLUGINS and 'filterIds' in meta:
+                if ENABLE_FUNCTIONS and 'filterIds' in meta:
                     filter_ids.extend(meta['filterIds'])
 
             model['action_ids'] = action_ids

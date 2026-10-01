@@ -19,7 +19,7 @@ from starlette.responses import Response, StreamingResponse
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FUNCTIONS, GLOBAL_LOG_LEVEL
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
@@ -69,7 +69,7 @@ async def get_function_module_by_id(request: Request, pipe_id: str):
 
 
 async def get_function_models(request):
-    if not ENABLE_PLUGINS:
+    if not ENABLE_FUNCTIONS:
         return []
 
     pipes = await Functions.get_functions_by_type('pipe', active_only=True)
