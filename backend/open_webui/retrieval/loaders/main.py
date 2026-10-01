@@ -342,7 +342,12 @@ class Loader:
         docs = loader.load()
         # ftfy's auto mode unescapes entities on every line before the first literal '<', rewriting the document.
         return [
-            Document(page_content=ftfy.fix_text(doc.page_content, unescape_html=False), metadata=doc.metadata)
+            Document(
+                page_content=ftfy.fix_text(
+                    doc.page_content, unescape_html=False, fix_character_width=False, uncurl_quotes=False
+                ),
+                metadata=doc.metadata,
+            )
             for doc in docs
         ]
 
