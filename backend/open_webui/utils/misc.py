@@ -479,7 +479,7 @@ def convert_output_to_messages(
 
     for item in output:
         item_type = item.get('type', '')
-        if item_type not in {'function_call', 'function_call_output'}:
+        if item_type != 'function_call_output':
             flush_tool_outputs()
             flush_tool_images()
 
