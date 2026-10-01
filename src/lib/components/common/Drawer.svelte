@@ -2,16 +2,24 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { fade, fly, slide } from 'svelte/transition';
+	import { settings } from '$lib/stores';
+	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 
 	export let show = false;
 	export let className = '';
+	export let zIndexClass = 'z-999';
 	export let onClose = () => {};
 
 	let modalElement = null;
 	let mounted = false;
 
 	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape' && isTopModal()) {
+		if (
+			(event.key === 'Escape' ||
+				($settings?.keyboardShortcuts !== false &&
+					matchKeybinding(event) === Shortcut.CLOSE_MODAL)) &&
+			isTopModal()
+		) {
 			console.log('Escape');
 			show = false;
 		}
@@ -57,7 +65,7 @@
 {#if show}
 	<div
 		bind:this={modalElement}
-		class="modal fixed right-0 bottom-0 left-0 z-999 flex h-screen max-h-[100dvh] w-full justify-center overflow-hidden overscroll-contain bg-black/60"
+		class="modal fixed right-0 bottom-0 left-0 {zIndexClass} flex h-screen max-h-[100dvh] w-full justify-center overflow-hidden overscroll-contain bg-black/60"
 		in:fly={{ y: 100, duration: 100 }}
 		on:mousedown={() => {
 			show = false;

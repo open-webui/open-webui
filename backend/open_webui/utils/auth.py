@@ -8,6 +8,8 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta
+from threading import Lock
+from time import monotonic
 from typing import Optional, Union
 
 import bcrypt
@@ -40,7 +42,9 @@ from open_webui.models.config import Config
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.misc import parse_duration
 from pytz import UTC
+from redis.exceptions import RedisError
 
 log = logging.getLogger(__name__)
 
@@ -247,14 +251,41 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
+class RateLimitFilter(logging.Filter):
+    """Limit a logger to one record per interval per process."""
+
+    def __init__(self, interval=60):
+        super().__init__()
+        self.interval = interval
+        self.next_allowed = float('-inf')
+        self.lock = Lock()
+
+    def filter(self, record):
+        with self.lock:
+            now = monotonic()
+            if now < self.next_allowed:
+                return False
+            self.next_allowed = now + self.interval
+        return True
+
+
+revocation_log = logging.getLogger(f'{__name__}.revocation')
+revocation_log.addFilter(RateLimitFilter())
+
+
 async def is_valid_token(decoded, redis=None) -> bool:
     """
     Check whether a JWT has been revoked. Two mechanisms:
     1. Per-token (jti) — used by user-initiated sign-out (known jti).
-    2. Per-user (revoked_at) — used by OIDC back-channel logout when
-       individual jti values are unknown; rejects tokens with iat <= revoked_at.
+    2. Per-user (revoked_at) — used by password changes and OIDC back-channel
+       logout when individual jti values are unknown; rejects tokens with iat <= revoked_at.
+
+    Fail open on Redis errors to preserve availability; revoked tokens may be accepted.
     """
-    if redis:
+    if not redis:
+        return True
+
+    try:
         # Per-token revocation
         jti = decoded.get('jti')
         if jti:
@@ -262,7 +293,7 @@ async def is_valid_token(decoded, redis=None) -> bool:
             if revoked:
                 return False
 
-        # Per-user revocation (OIDC back-channel logout)
+        # Per-user revocation (password change, OIDC back-channel logout)
         user_id = decoded.get('id')
         if user_id:
             revoked_at = await redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
@@ -275,6 +306,8 @@ async def is_valid_token(decoded, redis=None) -> bool:
                         return False
                 except (ValueError, TypeError):
                     pass
+    except RedisError as e:
+        revocation_log.warning('Revocation check failed; accepting token: %s', e)
 
     return True
 
@@ -295,12 +328,47 @@ async def invalidate_token(request, token):
             ttl = exp - int(datetime.now(UTC).timestamp())  # Calculate time-to-live for the token
 
             if ttl > 0:
+                # Revoked tokens must not be able to disconnect newer sessions.
+                if not await is_valid_token(decoded, request.app.state.redis):
+                    return
+
                 # Store the revoked token in Redis with an expiration time
                 await request.app.state.redis.set(
                     f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked',
                     '1',
                     ex=ttl,
                 )
+
+                user_id = decoded.get('id')
+                if user_id:
+                    from open_webui.socket.main import disconnect_user_sessions
+
+                    await disconnect_user_sessions(user_id)
+
+
+async def revoke_user_tokens(request, user_id: str):
+    """Reject every token already issued to a user. Requires Redis."""
+    redis = request.app.state.redis
+
+    if not redis:
+        log.warning(
+            'Cannot revoke tokens for user %s: Redis is not configured, existing sessions stay valid until expiry.',
+            user_id,
+        )
+        return
+
+    # The marker has to outlive every token it revokes, so it never expires when tokens do not
+    expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
+
+    await redis.set(
+        f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at',
+        str(int(datetime.now(UTC).timestamp())),
+        ex=int(expires_delta.total_seconds()) if expires_delta else None,
+    )
+
+    from open_webui.socket.main import disconnect_user_sessions
+
+    await disconnect_user_sessions(user_id)
 
 
 def extract_token_from_auth_header(auth_header: str):
@@ -364,6 +432,7 @@ async def get_current_user(
 
         # Scope-backed, so outer middleware (audit) can reuse the resolved user
         request.state.user = user
+        request.state.auth_type = 'api_key'
         return user
 
     # auth by jwt token
@@ -415,6 +484,7 @@ async def get_current_user(
 
             # Scope-backed, so outer middleware (audit) can reuse the resolved user
             request.state.user = user
+            request.state.auth_type = 'jwt'
             return user
         else:
             raise HTTPException(

@@ -7,11 +7,13 @@ import mimetypes
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
 import aiohttp
 import anyio.to_thread
+from cryptography.fernet import InvalidToken
 from fastapi import (
     Depends,
     FastAPI,
@@ -64,6 +66,7 @@ from open_webui.config import (
     ONEDRIVE_SHAREPOINT_URL,
     STATIC_DIR,
     THREAD_POOL_SIZE,
+    THREAD_POOL_THREAD_NAME_PREFIX,
     WEBUI_AUTH,
     WEBUI_NAME,
     async_reset_config,
@@ -83,6 +86,7 @@ from open_webui.env import (
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_CUSTOM_MODEL_FALLBACK,
     ENABLE_EASTER_EGGS,
+    ENABLE_FUNCTIONS,
     # OAuth Back-Channel Logout
     ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
     ENABLE_OTEL,
@@ -93,6 +97,8 @@ from open_webui.env import (
     ENABLE_SCIM,
     ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
+    ENABLE_TOOL_SERVERS,
+    ENABLE_TOOLS,
     ENABLE_VERSION_UPDATE_CHECK,
     ENABLE_WEBSOCKET_SUPPORT,
     EXTERNAL_PWA_MANIFEST_URL,
@@ -103,11 +109,15 @@ from open_webui.env import (
     MAX_BODY_LOG_SIZE,
     # Redis
     REDIS_KEY_PREFIX,
+    REDIS_TASK_TTL,
     REDIS_URL,
     RESET_CONFIG_ON_START,
     SAFE_MODE,
     SCIM_TOKEN,
+    USE_SLIM,
     VERSION,
+    WEBSOCKET_HEARTBEAT_INTERVAL,
+    WEBSOCKET_MANAGER,
     # Admin Account Runtime Creation
     WEBUI_ADMIN_EMAIL,
     WEBUI_ADMIN_NAME,
@@ -136,7 +146,7 @@ from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.messages import Messages
-from open_webui.models.models import Models
+from open_webui.models.models import Models, normalize_model_tags
 from open_webui.models.users import Users
 from open_webui.routers import (
     analytics,
@@ -184,6 +194,8 @@ from open_webui.socket.main import (
     get_user_id_from_session_pool,
     periodic_session_pool_cleanup,
     periodic_usage_pool_cleanup,
+    redis_event_listener,
+    sio,
 )
 from open_webui.socket.main import (
     app as socket_app,
@@ -195,6 +207,7 @@ from open_webui.tasks import (
     list_task_ids_by_item_id,
     list_tasks,
     redis_task_command_listener,
+    redis_task_heartbeat,
     stop_item_tasks,
     stop_task,
 )  # Import from tasks.py
@@ -202,12 +215,7 @@ from open_webui.utils import logger
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.actions import chat_action as chat_action_handler
-from open_webui.utils.asgi_middleware import (
-    AuthTokenMiddleware,
-    CommitSessionMiddleware,
-    RedirectMiddleware,
-    WebsocketUpgradeGuardMiddleware,
-)
+from open_webui.utils.asgi_middleware import AppHTTPMiddleware
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.auth import (
     create_admin_user,
@@ -216,6 +224,7 @@ from open_webui.utils.auth import (
     get_http_authorization_cred,
     get_license_data,
     get_verified_user,
+    is_valid_token,
 )
 from open_webui.utils.chat import (
     chat_completed as chat_completed_handler,
@@ -232,17 +241,18 @@ from open_webui.utils.chat_variables import (
     normalize_chat_variables,
 )
 from open_webui.utils.embeddings import generate_embeddings
+from open_webui.utils.headers import get_headers_and_cookies
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.json_response import apply_orjson_http_json
 from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
     background_tasks_handler,
     build_chat_response_context,
-    drain_approved_tool_calls,
     process_chat_payload,
     process_chat_response,
+    resume_tool_calls,
 )
-from open_webui.utils.misc import merge_model_params
+from open_webui.utils.misc import get_response_error_detail, merge_model_params
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
@@ -259,13 +269,13 @@ from open_webui.utils.oauth import (
     encrypt_data,
     get_oauth_client_info_with_dynamic_client_registration,
     get_oauth_client_info_with_static_credentials,
-    recover_static_oauth_client_metadata,
+    recover_oauth_client_metadata,
     resolve_oauth_client_info,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
+from open_webui.utils.recurrence import RecurrenceEvaluationTimeout
 from open_webui.utils.redis import get_redis_client
-from open_webui.utils.security_headers import SecurityHeadersMiddleware
-from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
+from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
 from open_webui.utils.tool_approval import (
     ResolveToolCallForm,
     build_tool_approval_resume_payload,
@@ -343,6 +353,16 @@ async def lifespan(app: FastAPI):
     # This allows sync functions to schedule work on the main loop without blocking health checks
     app.state.main_loop = asyncio.get_running_loop()
 
+    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
+        # asyncio offloads bypass AnyIO's limiter, so configure both before the first offload.
+        anyio.to_thread.current_default_thread_limiter().total_tokens = THREAD_POOL_SIZE
+        app.state.main_loop.set_default_executor(
+            ThreadPoolExecutor(
+                max_workers=THREAD_POOL_SIZE,
+                thread_name_prefix=THREAD_POOL_THREAD_NAME_PREFIX,
+            )
+        )
+
     app.state.instance_id = INSTANCE_ID
     start_logger()
 
@@ -377,17 +397,21 @@ async def lifespan(app: FastAPI):
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
+        if REDIS_TASK_TTL > 0:
+            app.state.redis_task_heartbeat = asyncio.create_task(redis_task_heartbeat(app))
 
-    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
-        limiter = anyio.to_thread.current_default_thread_limiter()
-        limiter.total_tokens = THREAD_POOL_SIZE
+    if WEBSOCKET_MANAGER == 'redis':
+        app.state.redis_event_listener = asyncio.create_task(redis_event_listener())
+        # socket.io only starts listening on its first connect; event call answers need it earlier
+        sio.manager_initialized = True
+        sio.manager.initialize()
 
-    asyncio.create_task(periodic_usage_pool_cleanup())
-    asyncio.create_task(periodic_session_pool_cleanup())
+    app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
+    app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
 
     from open_webui.utils.automations import scheduler_worker_loop
 
-    asyncio.create_task(scheduler_worker_loop(app))
+    app.state.scheduler_worker_loop = asyncio.create_task(scheduler_worker_loop(app))
 
     if await Config.get('models.base_models_cache'):
         try:
@@ -414,7 +438,9 @@ async def lifespan(app: FastAPI):
             log.warning(f'Failed to pre-fetch models at startup: {e}')
 
     # Pre-fetch tool server specs so the first request doesn't pay the latency cost
-    if len(await Config.get('tool_server.connections', []) or []) > 0:
+    if ENABLE_TOOL_SERVERS and (
+        await Config.get('tool_server.connections', []) or await Config.get('terminal_server.connections', [])
+    ):
         mock_request = Request(
             {
                 'type': 'http',
@@ -468,10 +494,20 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
 
+    if hasattr(app.state, 'redis_task_heartbeat'):
+        app.state.redis_task_heartbeat.cancel()
+
+    if hasattr(app.state, 'redis_event_listener'):
+        app.state.redis_event_listener.cancel()
+
+    app.state.periodic_usage_pool_cleanup.cancel()
+    app.state.periodic_session_pool_cleanup.cancel()
+    app.state.scheduler_worker_loop.cancel()
+
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
 
-# Opt-in (ENABLE_ORJSON): orjson for request-body parsing and JSONResponse bodies;
+# ENABLE_ORJSON: orjson for request-body parsing and JSONResponse bodies;
 # response_model routes keep FastAPI's Pydantic fast path either way.
 apply_orjson_http_json()
 
@@ -485,6 +521,12 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RecurrenceEvaluationTimeout)
+async def recurrence_timeout_handler(request: Request, exc: RecurrenceEvaluationTimeout):
+    return JSONResponse(status_code=400, content={'detail': str(exc)})
+
 
 # Used by readiness checks to gate traffic until startup work is done.
 app.state.startup_complete = False
@@ -597,7 +639,7 @@ async def initialize_runtime_config(app: FastAPI):
             migrate_access_control(connection.get('config', {}))
         await Config.upsert({'tool_server.connections': connections})
 
-    for tool_server_connection in connections:
+    for tool_server_connection in connections if ENABLE_TOOL_SERVERS else []:
         if tool_server_connection.get('type', 'openapi') == 'mcp':
             server_id = (tool_server_connection.get('info') or {}).get('id')
             auth_type = tool_server_connection.get('auth_type', 'none')
@@ -605,16 +647,24 @@ async def initialize_runtime_config(app: FastAPI):
             if server_id and auth_type in ('oauth_2.1', 'oauth_2.1_static'):
                 try:
                     oauth_client_info = resolve_oauth_client_info(tool_server_connection)
-                    oauth_client_info = await recover_static_oauth_client_metadata(
-                        tool_server_connection, oauth_client_info
-                    )
+                    oauth_client_info = await recover_oauth_client_metadata(tool_server_connection, oauth_client_info)
                     oauth_client_info = apply_connection_oauth_options(tool_server_connection, oauth_client_info)
                     app.state.oauth_client_manager.add_client(
                         f'mcp:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
                     )
+                except InvalidToken:
+                    log.error(
+                        'Error adding OAuth client for MCP tool server %s: InvalidToken. '
+                        'Stored OAuth client data is invalid; reconnect this tool server.',
+                        server_id,
+                    )
                 except Exception as e:
-                    log.error(f'Error adding OAuth client for MCP tool server {server_id}: {e}')
+                    log.error(
+                        'Error adding OAuth client for MCP tool server %s: %s',
+                        server_id,
+                        f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
+                    )
 
     arena_models = await Config.get('evaluation.arena.models', []) or []
     if any('access_control' in m.get('meta', {}) for m in arena_models):
@@ -784,11 +834,7 @@ if ENABLE_COMPRESSION_MIDDLEWARE:
 # `terminate_force_close` tracebacks under aiosqlite and as random
 # CancelledError storms across the request path. See
 # `open_webui.utils.asgi_middleware` for the rationale.
-app.add_middleware(RedirectMiddleware)
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(CommitSessionMiddleware)
-app.add_middleware(AuthTokenMiddleware, fastapi_app=app)
-app.add_middleware(WebsocketUpgradeGuardMiddleware)
+app.add_middleware(AppHTTPMiddleware)
 
 
 app.add_middleware(
@@ -876,19 +922,17 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
     models = await get_filtered_models(models, user)
 
     for model in models:
+        info = model.get('info') if isinstance(model.get('info'), dict) else {}
+        meta = info.get('meta') if isinstance(info.get('meta'), dict) else {}
+
         # Remove profile image URL to reduce payload size
-        if model.get('info', {}).get('meta', {}).get('profile_image_url'):
-            model['info']['meta'].pop('profile_image_url', None)
+        meta.pop('profile_image_url', None)
 
-        try:
-            model_tags = [tag.get('name') for tag in model.get('info', {}).get('meta', {}).get('tags', [])]
-            tags = [tag.get('name') for tag in model.get('tags', [])]
+        if 'tags' in meta:
+            meta['tags'] = normalize_model_tags(meta['tags'])
 
-            tags = list(set(model_tags + tags))
-            model['tags'] = [{'name': tag} for tag in tags]
-        except Exception as e:
-            log.debug('Error processing model tags: %s', e)
-            model['tags'] = []
+        tags = normalize_model_tags(meta.get('tags')) + normalize_model_tags(model.get('tags'))
+        model['tags'] = list({tag['name']: tag for tag in tags}.values())
 
     model_order_list = await Config.get('ui.model_order_list')
     if model_order_list:
@@ -961,14 +1005,13 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
             try:
                 timeout = aiohttp.ClientTimeout(total=30)
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-                    headers = {
-                        'Content-Type': 'application/json',
-                        **({'Authorization': f'Bearer {key}'} if key else {}),
-                    }
+                    headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
                     async with session.post(
                         f'{url}/api/generate',
                         data=payload,
                         headers=headers,
+                        cookies=cookies,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
                         if not r.ok:
                             errors.append({'url_idx': idx, 'error': await r.text()})
@@ -1002,14 +1045,13 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
             try:
                 timeout = aiohttp.ClientTimeout(total=30)
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-                    headers = {
-                        'Content-Type': 'application/json',
-                        **({'Authorization': f'Bearer {key}'} if key else {}),
-                    }
+                    headers, cookies = await get_headers_and_cookies(request, base_url, key, api_config, user=user)
                     async with session.post(
                         f'{root_url}/models/unload',
                         json={'model': actual_model},
                         headers=headers,
+                        cookies=cookies,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
                         if not r.ok:
                             detail = await r.text()
@@ -1087,17 +1129,41 @@ async def chat_completion(
     metadata = {}
     try:
         model_info = None
+        fallback_model = None
+        missing_base_model = False
         if not model_item.get('direct', False):
             if model_id not in request.app.state.MODELS:
                 raise Exception('Model not found')
 
             model = request.app.state.MODELS[model_id]
             model_info = await Models.get_model_by_id(model_id)
+            missing_base_model = bool(
+                model_info and model_info.base_model_id and model_info.base_model_id not in request.app.state.MODELS
+            )
+
+            if missing_base_model and ENABLE_CUSTOM_MODEL_FALLBACK:
+                fallback_model_id = next(
+                    (
+                        model_id.strip()
+                        for model_id in ((await Config.get('ui.default_models')) or '').split(',')
+                        if model_id.strip()
+                    ),
+                    None,
+                )
+                if fallback_model_id:
+                    fallback_model = request.app.state.MODELS.get(fallback_model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
                 try:
-                    await check_model_access(user, model, model_info=model_info)
+                    access_model_info = (
+                        model_info.model_copy(update={'base_model_id': None})
+                        if fallback_model is not None
+                        else model_info
+                    )
+                    await check_model_access(user, model, model_info=access_model_info)
+                    if fallback_model is not None:
+                        await check_model_access(user, fallback_model)
                 except Exception as e:
                     raise e
         else:
@@ -1118,22 +1184,12 @@ async def chat_completion(
             form_data['params'] = merge_model_params(model_info_params, request_params)
 
         # Check base model existence for custom models
-        if model_info and model_info.base_model_id:
-            base_model_id = model_info.base_model_id
-            if base_model_id not in request.app.state.MODELS:
-                if ENABLE_CUSTOM_MODEL_FALLBACK:
-                    default_models = ((await Config.get('ui.default_models')) or '').split(',')
-
-                    fallback_model_id = default_models[0].strip() if default_models[0] else None
-
-                    if fallback_model_id and fallback_model_id in request.app.state.MODELS:
-                        # Update model and form_data so routing uses the fallback model's type
-                        model = request.app.state.MODELS[fallback_model_id]
-                        form_data['model'] = fallback_model_id
-                    else:
-                        raise Exception('Model not found')
-                else:
-                    raise Exception('Model not found')
+        if missing_base_model:
+            if fallback_model is None:
+                raise Exception('Model not found')
+            # Update model and form_data so routing uses the fallback model's type
+            model = fallback_model
+            form_data['model'] = fallback_model['id']
 
         # Chat Params
         stream_delta_chunk_size = form_data.get('params', {}).get('stream_delta_chunk_size')
@@ -1257,8 +1313,8 @@ async def chat_completion(
         if metadata.get('chat_id') and user:
             chat_id = metadata['chat_id']
 
-            # Gate channel: branch — caller needs write access on the channel
-            # and the supplied message_id must belong to that channel.
+            # Gate channel: branch — caller needs write access on the channel, and the
+            # supplied message_id must belong to that channel and be the caller's own.
             if chat_id.startswith('channel:'):
                 channel_id = chat_id.removeprefix('channel:')
                 channel = await Channels.get_channel_by_id(channel_id)
@@ -1290,7 +1346,11 @@ async def chat_completion(
                     if not target_message_id:
                         continue
                     target_message = await Messages.get_message_by_id(target_message_id)
-                    if target_message and target_message.channel_id != channel.id:
+                    if target_message and (
+                        target_message.channel_id != channel.id
+                        # Write access is not authorship — block cross-member edits.
+                        or (user.role != 'admin' and target_message.user_id != user.id)
+                    ):
                         raise HTTPException(
                             status_code=status.HTTP_403_FORBIDDEN,
                             detail=ERROR_MESSAGES.DEFAULT(),
@@ -1433,13 +1493,15 @@ async def chat_completion(
                         async def run_initial_title_generation():
                             try:
                                 await background_tasks_handler(title_ctx)
-                            except Exception as e:
-                                log.debug('Error generating initial chat title: %s', e)
+                            except Exception:
+                                log.exception('Error generating initial chat title')
 
                         asyncio.create_task(run_initial_title_generation())
                 else:
                     # Existing chat — verify ownership
-                    if not await Chats.is_chat_owner(chat_id, user.id) and user.role != 'admin':
+                    if not await Chats.is_chat_owner(chat_id, user.id) and not (
+                        user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS
+                    ):
                         raise HTTPException(
                             status_code=status.HTTP_404_NOT_FOUND,
                             detail=ERROR_MESSAGES.DEFAULT(),
@@ -1454,15 +1516,13 @@ async def chat_completion(
                     # The old frontend saveChatHandler did this on every message;
                     # now the backend owns persistence.
                     chat_files = metadata.get('files')
-                    if chat_files is not None or selected_chat_models:
-                        existing_chat = await Chats.get_chat_by_id(chat_id)
-                        if existing_chat:
-                            updated = {**existing_chat.chat}
-                            if chat_files is not None:
-                                updated['files'] = chat_files
-                            if selected_chat_models:
-                                updated['models'] = selected_chat_models
-                            await Chats.update_chat_by_id(chat_id, updated, touch=False)
+                    chat_fields = {}
+                    if chat_files is not None:
+                        chat_fields['files'] = chat_files
+                    if selected_chat_models:
+                        chat_fields['models'] = selected_chat_models
+                    if chat_fields:
+                        await Chats.update_chat_by_id(chat_id, chat_fields, touch=False)
 
                     await Chats.update_chat_variables_by_id(chat_id, chat_variables)
 
@@ -1594,84 +1654,79 @@ async def chat_completion(
         )
 
     async def process_chat(request, form_data, user, metadata, model, tasks=None):
+        error_detail = None
         try:
-            form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
-
-            if await drain_approved_tool_calls(request, form_data, user, model, metadata):
-                return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
-
-            response = await chat_completion_handler(request, form_data, user)
-
-            # When the upstream provider returns an error (e.g. HTTP 400
-            # content-filter, quota exceeded), generate_chat_completion
-            # returns a JSONResponse instead of raising.  Detect this and
-            # raise so the except-block below emits chat:message:error +
-            # chat:tasks:cancel, unblocking the frontend.
-            if isinstance(response, JSONResponse) and response.status_code >= 400:
-                try:
-                    error_body = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
-                    detail = error_body.get('error', error_body) if isinstance(error_body, dict) else error_body
-                    if isinstance(detail, dict):
-                        detail = detail.get('message', detail.get('detail', str(detail)))
-                except Exception:
-                    detail = f'Provider returned HTTP {response.status_code}'
-                raise Exception(detail)
-
-            ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
-
-            return await process_chat_response(response, ctx)
-        except asyncio.CancelledError:
-            log.info('Chat processing was cancelled')
             try:
+                ctx = None
+                # Saved chats load the message after approved tool calls run, so their results are kept
+                if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
+                    ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
+                form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
-                async def emit_cancel_event():
-                    event_emitter = await get_event_emitter(metadata)
-                    if event_emitter:
-                        await event_emitter({'type': 'chat:tasks:cancel'})
+                paused = await resume_tool_calls(request, form_data, user, model, metadata)
+                if paused:
+                    return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
 
-                await asyncio.shield(emit_cancel_event())
-            except Exception:
-                pass
-            raise  # re-raise to ensure proper task cancellation handling
-        except Exception as e:
-            error_detail = e.detail if isinstance(e, HTTPException) else str(e)
-            log.error('Error processing chat payload: %s', error_detail)
-            if metadata.get('chat_id') and metadata.get('message_id'):
-                # Update the chat message with the error
+                response = await chat_completion_handler(request, form_data, user)
+
+                if isinstance(response, Response) and response.status_code >= 400:
+                    error_detail = get_response_error_detail(response)
+                    if metadata.get('session_id') and metadata.get('chat_id'):
+                        return None
+                    return response
+
+                if ctx is None:
+                    ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+                else:
+                    ctx.update(form_data=form_data, metadata=metadata, events=events)
+
+                return await process_chat_response(response, ctx)
+            except asyncio.CancelledError:
+                log.info('Chat processing was cancelled')
                 try:
-                    if is_saved_chat_id(metadata.get('chat_id')):
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {
-                                'parentId': metadata.get('user_message_id', None),
-                                'error': {'content': error_detail},
-                            },
-                        )
 
-                    event_emitter = await get_event_emitter(metadata)
-                    if event_emitter:
-                        await event_emitter(
-                            {
-                                'type': 'chat:message:error',
-                                'data': {'error': {'content': error_detail}},
-                            }
-                        )
-                        await event_emitter(
-                            {'type': 'chat:tasks:cancel'},
-                        )
+                    async def emit_cancel_event():
+                        event_emitter = await get_event_emitter(metadata)
+                        if event_emitter:
+                            await event_emitter({'type': 'chat:tasks:cancel'})
 
+                    await asyncio.shield(emit_cancel_event())
                 except Exception:
                     pass
-            else:
-                # No chat_id/message_id → legacy/direct API path with no
-                # WebSocket error channel.  We must surface the error as
-                # a proper HTTP response; without this the function would
-                # return None which FastAPI serializes as null.  #23924
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=error_detail,
-                )
+                raise  # re-raise to ensure proper task cancellation handling
+            except Exception as e:
+                error_detail = e.detail if isinstance(e, HTTPException) else str(e)
+                if not (metadata.get('session_id') and metadata.get('chat_id')):
+                    raise
+            finally:
+                if error_detail is not None:
+                    log.error('Error processing chat payload: %s', error_detail)
+                    if metadata.get('chat_id') and metadata.get('message_id'):
+                        if is_saved_chat_id(metadata['chat_id']):
+                            try:
+                                await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata['chat_id'],
+                                    metadata['message_id'],
+                                    {
+                                        'parentId': metadata.get('user_message_id'),
+                                        'error': {'content': error_detail},
+                                        'done': True,
+                                    },
+                                )
+                            except Exception:
+                                log.exception('Failed to save chat error')
+
+                        try:
+                            event_emitter = await get_event_emitter(metadata)
+                            if event_emitter:
+                                await event_emitter(
+                                    {
+                                        'type': 'chat:message:error',
+                                        'data': {'error': {'content': error_detail}, 'done': True},
+                                    }
+                                )
+                        except Exception:
+                            log.exception('Failed to emit chat error')
         finally:
             # Clean up MCP clients.  Each client is isolated so one
             # failure doesn't skip the rest.
@@ -1764,6 +1819,9 @@ async def chat_completion(
             if not assistant_message_id:
                 continue
 
+            if fallback_model is not None and target_model_id == model_id:
+                target_model_id = fallback_model['id']
+
             # Per-model metadata: own message_id + model
             per_model_metadata = {
                 **metadata,
@@ -1834,12 +1892,18 @@ async def chat_completion(
     else:
         # Legacy/direct: single model, synchronous
         metadata['message_id'] = message_ids[0]['message_id']
-        return await process_chat(request, form_data, user, metadata, model, tasks)
+        try:
+            return await process_chat(request, form_data, user, metadata, model, tasks)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
 
 @app.post('/api/v1/chats/{id}/messages/{message_id}/resolve')
 async def resolve_chat_message_tool_call(
@@ -1892,7 +1956,7 @@ async def count_message_tokens(
 
 
 async def passthrough_anthropic_messages(request: Request, form_data: dict, user) -> Response | dict:
-    requested_model, payload, url, key, headers, cookies = await openai.get_anthropic_token_count_target(
+    requested_model, payload, url, key, headers, cookies = await openai.get_anthropic_request_target(
         request, form_data, user
     )
     request_url = f'{url.rstrip("/")}/messages'
@@ -1908,7 +1972,7 @@ async def passthrough_anthropic_messages(request: Request, form_data: dict, user
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=openai.AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=bool(payload.get('stream'))),
         )
 
         if 'text/event-stream' in response.headers.get('Content-Type', ''):
@@ -1935,9 +1999,12 @@ async def passthrough_anthropic_messages(request: Request, form_data: dict, user
                 requested_model=requested_model,
                 upstream_error=response_data,
             )
+            retry_headers = {
+                k: v for k, v in response.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')
+            }
             if isinstance(response_data, (dict, list)):
-                return JSONResponse(status_code=response.status, content=response_data)
-            return Response(status_code=response.status, content=response_data)
+                return JSONResponse(status_code=response.status, content=response_data, headers=retry_headers)
+            return Response(status_code=response.status, content=response_data, headers=retry_headers)
 
         return response_data
     except HTTPException:
@@ -2031,7 +2098,7 @@ async def verify_chat_ownership(chat_id: str | None, user) -> None:
             detail='Channel chats are not supported on this endpoint',
         )
 
-    if user.role != 'admin' and not await Chats.is_chat_owner(chat_id, user.id):
+    if not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS) and not await Chats.is_chat_owner(chat_id, user.id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.DEFAULT(),
@@ -2095,11 +2162,11 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
     socket_id = get_temporary_chat_session_id(chat_id)
     if socket_id:
         owner_id = get_user_id_from_session_pool(socket_id)
-        if owner_id != user.id and user.role != 'admin':
+        if owner_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS):
             return {'task_ids': []}
     else:
         chat = await Chats.get_chat_by_id(chat_id)
-        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+        if chat is None or (chat.user_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS)):
             return {'task_ids': []}
 
     task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
@@ -2114,11 +2181,11 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
     chat = None
     if socket_id:
         owner_id = get_user_id_from_session_pool(socket_id)
-        if owner_id != user.id and user.role != 'admin':
+        if owner_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     else:
         chat = await Chats.get_chat_by_id(chat_id)
-        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+        if chat is None or (chat.user_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS)):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     result = await stop_item_tasks(request.app.state.redis, chat_id)
 
@@ -2195,7 +2262,7 @@ async def get_app_config(request: Request):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid token',
             )
-        if data is not None and 'id' in data:
+        if data is not None and 'id' in data and await is_valid_token(data, request.app.state.redis):
             user = await Users.get_user_by_id(data['id'])
 
     onboarding = False
@@ -2213,6 +2280,7 @@ async def get_app_config(request: Request):
         'auth.enable_api_keys',
         'ui.enable_password_change_form',
         'direct.enable',
+        'direct.integrations.enable',
         'folders.enable',
         'folders.max_file_count',
         'channels.enable',
@@ -2238,7 +2306,9 @@ async def get_app_config(request: Request):
         'ui.default_models',
         'ui.default_pinned_models',
         'ui.default_interface_settings',
+        'ui.i18n',
         'ui.prompt_suggestions',
+        'ui.prompt_suggestions_i18n',
         'code_execution.engine',
         'code_interpreter.engine',
         'audio.tts.engine',
@@ -2261,6 +2331,7 @@ async def get_app_config(request: Request):
         'name': app.state.WEBUI_NAME,
         'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
+        'i18n': config.get('ui.i18n') or {},
         'oauth': {
             # Hide providers (and thus the login buttons / auto-redirect) when OAuth
             # is disabled, without clearing the admin's provider configuration.
@@ -2272,6 +2343,7 @@ async def get_app_config(request: Request):
             'auto_redirect': config.get('oauth.auto_redirect'),
         },
         'features': {
+            'slim': USE_SLIM,
             # --- Public: required by login/signup page pre-auth ---
             'auth': WEBUI_AUTH,
             'auth_trusted_header': bool(WEBUI_AUTH_TRUSTED_EMAIL_HEADER),
@@ -2280,6 +2352,11 @@ async def get_app_config(request: Request):
             'enable_signup': config.get('ui.enable_signup'),
             'enable_login_form': config.get('ui.enable_login_form'),
             'enable_websocket': ENABLE_WEBSOCKET_SUPPORT,
+            **(
+                {'websocket_heartbeat_interval': WEBSOCKET_HEARTBEAT_INTERVAL}
+                if WEBSOCKET_HEARTBEAT_INTERVAL is not None
+                else {}
+            ),
             # --- Authenticated: only consumed by logged-in frontend ---
             **(
                 {
@@ -2290,7 +2367,12 @@ async def get_app_config(request: Request):
                     'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
                     'enable_easter_eggs': ENABLE_EASTER_EGGS,
                     'enable_direct_connections': config.get('direct.enable'),
+                    'enable_direct_integrations': ENABLE_TOOL_SERVERS
+                    and config.get('direct.integrations.enable', False),
                     'enable_plugins': ENABLE_PLUGINS,
+                    'enable_tools': ENABLE_TOOLS,
+                    'enable_functions': ENABLE_FUNCTIONS,
+                    'enable_tool_servers': ENABLE_TOOL_SERVERS,
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),
@@ -2334,6 +2416,7 @@ async def get_app_config(request: Request):
                 'default_models': config.get('ui.default_models'),
                 'default_pinned_models': config.get('ui.default_pinned_models'),
                 'default_prompt_suggestions': config.get('ui.prompt_suggestions'),
+                'default_prompt_suggestions_i18n': config.get('ui.prompt_suggestions_i18n'),
                 **({'user_count': user_count} if user_count is not None else {}),
                 'code': {
                     'engine': config.get('code_execution.engine'),
@@ -2548,8 +2631,8 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 
                 return {'current': VERSION, 'latest': latest_version[1:]}
     except Exception as e:
-        log.debug(e)
-        return {'current': VERSION, 'latest': VERSION}
+        log.warning(f'Version update check failed: {e}')
+        return {'current': VERSION, 'latest': None}
 
 
 @app.get('/api/changelog')
@@ -2614,6 +2697,9 @@ except Exception as e:
 
 
 async def register_client(request, client_id: str) -> bool:
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
     server_type, server_id = client_id.split(':', 1)
 
     connection = None
@@ -2670,8 +2756,19 @@ async def register_client(request, client_id: str) -> bool:
                 oauth_server_key,
                 oauth_scope=oauth_scope,
             )
+    except InvalidToken:
+        log.error(
+            'OAuth client re-registration failed for %s: InvalidToken. '
+            'Stored OAuth client data is invalid; reconnect this tool server.',
+            client_id,
+        )
+        return False
     except Exception as e:
-        log.error(f'OAuth client re-registration failed for {client_id}: {e}')
+        log.error(
+            'OAuth client re-registration failed for %s: %s',
+            client_id,
+            f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
+        )
         return False
 
     try:
@@ -2705,6 +2802,9 @@ async def oauth_client_authorize(
     user=Depends(get_verified_user),
 ):
     # ensure_valid_client_registration
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
     client = await oauth_client_manager.get_client(client_id)
     client_info = await oauth_client_manager.get_client_info(client_id)
     if client is None or client_info is None:
@@ -2746,6 +2846,9 @@ async def oauth_client_callback(
     request: Request,
     response: Response,
 ):
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
     return await oauth_client_manager.handle_callback(
         request,
         client_id=client_id,
@@ -2868,7 +2971,7 @@ def _sync_db_ping() -> None:
     """Verify the database is reachable with a simple SELECT 1.
 
     Uses a raw connection from the engine pool instead of the thread-local
-    ScopedSession.  This is necessary because CommitSessionMiddleware
+    ScopedSession.  This is necessary because AppHTTPMiddleware
     deliberately skips healthcheck paths (/health, /ready, /health/db),
     so any ScopedSession opened on a healthcheck worker thread is never
     rolled back or removed.  If the session ever enters an invalid state
@@ -2942,6 +3045,11 @@ async def check_db_health():
 
 
 # --- static assets & files ---
+# Windows registry entries can override these with text/plain, which breaks module and wasm loading
+mimetypes.add_type('text/javascript', '.js')
+mimetypes.add_type('text/javascript', '.mjs')
+mimetypes.add_type('application/wasm', '.wasm')
+
 # Serve build-time static assets (CSS, JS, images, favicon, etc.)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 
@@ -2987,7 +3095,6 @@ def swagger_ui_html(*args, **kwargs):
 applications.get_swagger_ui_html = swagger_ui_html
 
 if os.path.exists(FRONTEND_BUILD_DIR):
-    mimetypes.add_type('text/javascript', '.js')
     pyodide_dir = FRONTEND_BUILD_DIR / 'pyodide'
     if os.path.exists(pyodide_dir):
         app.mount('/pyodide', CORSStaticFiles(directory=pyodide_dir), name='pyodide')

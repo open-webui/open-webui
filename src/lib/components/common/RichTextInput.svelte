@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
-	import equal from 'fast-deep-equal';
+	import { equalEditorJSON } from '$lib/utils/editorJson';
+	import { showCallOverlay, skills, terminalSkills } from '$lib/stores';
 
 	marked.use({
 		breaks: true,
@@ -77,6 +78,7 @@
 					let cellContent = turndownService.turndown(cell.innerHTML).trim();
 					// Remove extra paragraph tags that might be added
 					cellContent = cellContent.replace(/^\n+|\n+$/g, '');
+					cellContent = cellContent.replace(/\n/g, '<br>');
 					return cellContent;
 				});
 
@@ -94,6 +96,12 @@
 		}
 	});
 
+	// Registered after use(gfm) to override its checkbox rule; taskListItems owns the marker.
+	turndownService.addRule('taskItemCheckbox', {
+		filter: (node) => node.nodeName === 'INPUT' && node.getAttribute('type') === 'checkbox',
+		replacement: () => ''
+	});
+
 	turndownService.addRule('taskListItems', {
 		filter: (node) =>
 			node.nodeName === 'LI' &&
@@ -101,7 +109,8 @@
 				node.getAttribute('data-checked') === 'false'),
 		replacement: function (content, node) {
 			const checked = node.getAttribute('data-checked') === 'true';
-			content = content.replace(/^\s+/, '');
+			// Trim TipTap's block wrapper; 4-space continuation keeps sublists and fences nested.
+			content = content.trim().replace(/\n(?=.)/g, '\n    ');
 			return `- [${checked ? 'x' : ' '}] ${content}\n`;
 		}
 	});
@@ -118,6 +127,11 @@
 		}
 	});
 
+	turndownService.addRule('underline', {
+		filter: 'u',
+		replacement: (content) => `<u>${content}</u>`
+	});
+
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -129,7 +143,7 @@
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension, markInputRule, mergeAttributes } from '@tiptap/core';
 
-	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
+	import { AIAutocompletion, setFollowUpSuggestion } from './RichTextInput/AutoCompletion.js';
 
 	import StarterKit from '@tiptap/starter-kit';
 
@@ -227,6 +241,7 @@
 	};
 
 	export let richText = true;
+	export let autoFormat = true;
 	export let dragHandle = false;
 	export let link = false;
 	export let image = false;
@@ -304,11 +319,20 @@
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
 	export let autocomplete = false;
+	export let followUpSuggestion = '';
+
+	$: if (editor && !editor.isDestroyed) {
+		setFollowUpSuggestion(editor.view, followUpSuggestion);
+	}
+
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
 	export let floatingMenuPlacement = 'bottom-start';
+
+	// Keep focus off the chat input during a call so the call overlay's M shortcut works
+	$: suppressAutoFocus = messageInput && $showCallOverlay;
 
 	let content = null;
 	let htmlValue = '';
@@ -322,6 +346,7 @@
 	let element: Element | null = null;
 
 	let pendingUpdate = null;
+	let destroyed = false;
 
 	const options = {
 		throwOnError: false
@@ -485,10 +510,18 @@
 					const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 					// Now replace the escaped mention patterns back into real spans
 					const withMentions = escaped.replace(
-						/&lt;([@#$])([\w.\-:/]+)(?:\|([^&]*?))?&gt;|&lt;\/([\w.\-:/]+)\|([^&]*?)&gt;/g,
-						(_, ch, id, label, slashSkillId, slashSkillLabel) => {
+						/&lt;([@#$])([^|&\s]+)(?:\|([^&]*?))?&gt;|&lt;\/([\w.\-:/]+)\|([^&]*?)&gt;/g,
+						(match, ch, id, label, slashSkillId, slashSkillLabel) => {
 							const mentionChar = ch || '$';
 							const mentionId = id || slashSkillId;
+							if (
+								mentionChar === '$' &&
+								![...($skills ?? []), ...($terminalSkills ?? [])].some(
+									(skill) => skill.id === mentionId && skill.is_active
+								)
+							) {
+								return match;
+							}
 							const display = (label || slashSkillLabel)?.length
 								? label || slashSkillLabel
 								: mentionId;
@@ -505,7 +538,9 @@
 		selectNextTemplate(editor.view.state, editor.view.dispatch);
 
 		// Ensure the editor is still valid before trying to focus
-		focus();
+		if (!suppressAutoFocus) {
+			focus();
+		}
 	};
 
 	export const insertContent = (content) => {
@@ -665,7 +700,7 @@
 			// After updating the state, try to find and select the next template
 			setTimeout(() => {
 				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
-				if (!templateFound) {
+				if (!templateFound && !suppressAutoFocus) {
 					editor.commands.focus('end');
 				}
 			}, 0);
@@ -681,9 +716,9 @@
 					props: {
 						decorations: (state) => {
 							const { selection } = state;
-							const { focused } = this.editor;
+							const { isFocused } = this.editor;
 
-							if (focused || selection.empty) {
+							if (isFocused || selection.empty) {
 								return null;
 							}
 
@@ -753,15 +788,17 @@
 			}
 		}
 
-		if (collaboration && documentId && socket && user) {
+		if (collaboration && editable && documentId && socket && user) {
 			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
+			if (destroyed) return;
 			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
 		}
+		if (destroyed) return;
 		editor = new Editor({
 			element: element,
 			extensions: [
 				StarterKit.configure({
-					link: link,
+					link: link ? { autolink: autoFormat, linkOnPaste: autoFormat } : false,
 					code: false, // Disabled in favor of FixedCode (see workaround above)
 					...(messageInput ? { italic: false } : {}),
 					// When rich text is on, ListKit + CodeBlockLowlight provide these.
@@ -785,7 +822,7 @@
 				...(messageInput ? [PromptItalic] : []),
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
-				SelectionDecoration,
+				...(messageInput ? [] : [SelectionDecoration]),
 
 				...(richText
 					? [
@@ -828,11 +865,11 @@
 							})
 						]
 					: []),
-				...(autocomplete
+				...(autocomplete || messageInput
 					? [
 							AIAutocompletion.configure({
 								generateCompletion: async (text) => {
-									if (text.trim().length === 0) {
+									if (!autocomplete || text.trim().length === 0) {
 										return null;
 									}
 
@@ -897,8 +934,8 @@
 					: []),
 				...(collaboration && provider ? [provider.getEditorExtension()] : [])
 			],
-			content: collaboration ? undefined : content,
-			autofocus: messageInput ? true : false,
+			content: provider ? undefined : content,
+			autofocus: messageInput && !$showCallOverlay,
 			onTransaction: () => {
 				if (!editor) return;
 
@@ -991,8 +1028,8 @@
 					return false;
 				},
 				handlePaste: (view, event) => {
-					// Force plain-text pasting when richText === false
-					if (!richText) {
+					// Paste literal text when automatic formatting is disabled.
+					if (!richText || !autoFormat) {
 						// swallow HTML completely
 						event.preventDefault();
 						const { state, dispatch } = view;
@@ -1001,6 +1038,11 @@
 							/\r\n/g,
 							'\n'
 						);
+
+						if (state.selection.$from.parent.type.spec.code) {
+							dispatch(state.tr.insertText(plainText).scrollIntoView());
+							return true;
+						}
 
 						const lines = plainText.split('\n');
 						const nodes = [];
@@ -1015,7 +1057,11 @@
 						});
 
 						const fragment = Fragment.fromArray(nodes);
-						dispatch(state.tr.replaceSelectionWith(fragment, false).scrollIntoView());
+						dispatch(
+							state.tr
+								.replaceWith(state.selection.from, state.selection.to, fragment)
+								.scrollIntoView()
+						);
 
 						return true; // handled
 					}
@@ -1267,8 +1313,8 @@
 					floatingMenuElement.style.opacity = '0';
 				}
 			},
-			enableInputRules: richText,
-			enablePasteRules: richText
+			enableInputRules: richText && autoFormat,
+			enablePasteRules: richText && autoFormat
 		});
 
 		provider?.setEditor(editor, () => ({ md: mdValue, html: htmlValue, json: jsonValue }));
@@ -1279,6 +1325,7 @@
 	});
 
 	onDestroy(() => {
+		destroyed = true;
 		if (pendingUpdate) {
 			cancelAnimationFrame(pendingUpdate);
 		}
@@ -1318,7 +1365,7 @@
 		}
 
 		if (json) {
-			if (!equal(value, jsonValue)) {
+			if (!equalEditorJSON(value, jsonValue)) {
 				editor.commands.setContent(value);
 				selectTemplate();
 			}

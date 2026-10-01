@@ -62,9 +62,18 @@
 		return (
 			target instanceof Element &&
 			!!target.closest(
-				'input, textarea, select, [role="menu"], [contenteditable="true"], [data-sidebar-no-gesture]'
+				'input, textarea, select, [role="dialog"], [role="menu"], [contenteditable="true"], [data-sidebar-no-gesture]'
 			)
 		);
+	};
+
+	const hasTextSelection = () => {
+		if (typeof window === 'undefined') {
+			return false;
+		}
+
+		const selection = window.getSelection();
+		return !!selection && !selection.isCollapsed;
 	};
 
 	const canScrollHorizontally = (target: EventTarget | null, dx: number) => {
@@ -161,7 +170,7 @@
 	};
 
 	const onTouchStart = (e: TouchEvent) => {
-		if (!enabled || e.touches.length !== 1 || shouldSkipSwipe(e.target)) {
+		if (!enabled || e.touches.length !== 1 || shouldSkipSwipe(e.target) || hasTextSelection()) {
 			return;
 		}
 
@@ -205,6 +214,11 @@
 		const absY = Math.abs(dy);
 
 		if (!locked) {
+			if (hasTextSelection()) {
+				cancelSwipe();
+				return;
+			}
+
 			if ((direction === 'open' && dx > 0) || (direction === 'close' && dx < 0)) {
 				swipeProgress = Math.max(0, Math.min(1, startProgress + dx / panelWidth));
 			}

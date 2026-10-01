@@ -22,7 +22,7 @@
 		socket,
 		config,
 		isApp,
-		models,
+		visiblePinnedModels,
 		selectedFolder,
 		WEBUI_NAME,
 		sidebarWidth
@@ -37,7 +37,7 @@
 	} from '$lib/stores/chatList';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	$: canImportChats = $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true);
 
@@ -120,9 +120,7 @@
 
 	let showCreateFolderModal = false;
 
-	let pinnedModels = [];
-
-	let showPinnedModels = false;
+	let showPinnedModels = true;
 	let showPinnedNotes = false;
 	let showChannels = false;
 	let showFolders = false;
@@ -191,11 +189,11 @@
 
 	const getMenuItemMeta = (id) => {
 		const items = {
-			notes: { label: 'Notes', href: '/notes', iconType: 'note' },
-			workspace: { label: 'Workspace', href: '/workspace', iconType: 'workspace' },
-			automations: { label: 'Automations', href: '/automations', iconType: 'automations' },
-			calendar: { label: 'Calendar', href: '/calendar', iconType: 'calendar' },
-			playground: { label: 'Playground', href: '/playground', iconType: 'playground' }
+			notes: { label: $i18n.t('Notes'), href: '/notes', iconType: 'note' },
+			workspace: { label: $i18n.t('Workspace'), href: '/workspace', iconType: 'workspace' },
+			automations: { label: $i18n.t('Automations'), href: '/automations', iconType: 'automations' },
+			calendar: { label: $i18n.t('Calendar'), href: '/calendar', iconType: 'calendar' },
+			playground: { label: $i18n.t('Playground'), href: '/playground', iconType: 'playground' }
 		};
 		return items[id];
 	};
@@ -233,7 +231,7 @@
 					current.splice(oldIndex, 1);
 					current.splice(newIndex, 0, itemId);
 					settings.set({ ...$settings, pinnedMenuItems: current });
-					await updateUserSettings(localStorage.token, { ui: $settings });
+					await updateUserSettings(localStorage.token, { ui: { pinnedMenuItems: current } });
 				}
 			});
 		}
@@ -308,11 +306,7 @@
 		folders = folderMap;
 	};
 
-	const initSharedFolders = async () => {
-		await initFolders();
-	};
-
-	const createFolder = async ({ name, data, parent_id }) => {
+	const createFolder = async ({ name, data, meta, parent_id }) => {
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
@@ -349,6 +343,7 @@
 		const res = await createNewFolder(localStorage.token, {
 			name,
 			data,
+			meta,
 			parent_id
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -384,8 +379,6 @@
 		allChatsLoaded = false;
 		chatListReady = false;
 
-		initFolders();
-		initSharedFolders();
 		await Promise.all([
 			(async () => {
 				console.log('Init tags');
@@ -608,13 +601,20 @@
 	const MAX_WIDTH = 480;
 
 	let isResizing = false;
+	let activePointerId: number | null = null;
+	let activeResizer: HTMLElement | null = null;
 
 	let startWidth = 0;
 	let startClientX = 0;
 
-	const resizeStartHandler = (e: MouseEvent) => {
+	const resizeStartHandler = (e: PointerEvent) => {
 		if ($mobile) return;
+
+		e.preventDefault();
 		isResizing = true;
+		activePointerId = e.pointerId;
+		activeResizer = e.currentTarget as HTMLElement;
+		activeResizer.setPointerCapture?.(e.pointerId);
 
 		startClientX = e.clientX;
 		startWidth = $sidebarWidth ?? 245;
@@ -622,21 +622,35 @@
 		document.body.style.userSelect = 'none';
 	};
 
-	const resizeEndHandler = () => {
+	const resizeEndHandler = (e?: PointerEvent) => {
 		if (!isResizing) return;
+		if (e && activePointerId !== null && e.pointerId !== activePointerId) return;
+
 		isResizing = false;
+
+		if (activePointerId !== null && activeResizer?.hasPointerCapture?.(activePointerId)) {
+			activeResizer.releasePointerCapture(activePointerId);
+		}
+		activePointerId = null;
+		activeResizer = null;
 
 		document.body.style.userSelect = '';
 		localStorage.setItem('sidebarWidth', String($sidebarWidth));
 	};
 
-	const resizeSidebarHandler = (endClientX) => {
+	const resizeSidebarHandler = (endClientX: number) => {
 		const dx = endClientX - startClientX;
 		const newSidebarWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
 
 		sidebarWidth.set(newSidebarWidth);
 		document.documentElement.style.setProperty('--sidebar-width', `${newSidebarWidth}px`);
 	};
+
+	onDestroy(() => {
+		if (isResizing) {
+			document.body.style.userSelect = '';
+		}
+	});
 
 	onMount(async () => {
 		try {
@@ -683,12 +697,6 @@
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
 				}
-			}),
-			settings.subscribe((value) => {
-				if (pinnedModels != value?.pinnedModels ?? []) {
-					pinnedModels = value?.pinnedModels ?? [];
-					showPinnedModels = pinnedModels.length > 0;
-				}
 			})
 		];
 
@@ -709,7 +717,12 @@
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
-		const unregisterFolderRefreshHandler = registerFolderRefreshHandler((folderId, chat) => {
+		const unregisterFolderRefreshHandler = registerFolderRefreshHandler(async (folderId, chat) => {
+			// null refreshes the folder tree; undefined refreshes all folder chat lists.
+			if (folderId === null) {
+				return initFolders();
+			}
+
 			if (folderId) {
 				if (chat) {
 					return folderRegistry[folderId]?.upsertChat?.(chat);
@@ -870,13 +883,13 @@
 />
 
 <svelte:window
-	on:mousemove={(e) => {
+	on:pointermove={(e) => {
 		if (!isResizing) return;
+		if (activePointerId !== null && e.pointerId !== activePointerId) return;
 		resizeSidebarHandler(e.clientX);
 	}}
-	on:mouseup={() => {
-		resizeEndHandler();
-	}}
+	on:pointerup={resizeEndHandler}
+	on:pointercancel={resizeEndHandler}
 />
 
 <MobileSwipePanel
@@ -949,7 +962,7 @@
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 						>
 							<div
-								class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+								class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 							>
 								<!-- LICENSE covers this Open WebUI sidebar logo.
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -983,7 +996,7 @@
 								aria-label={$i18n.t('New Chat')}
 							>
 								<div
-									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 								>
 									<EditPencilIcon className="size-4" strokeWidth="1.5" />
 								</div>
@@ -1005,7 +1018,7 @@
 								aria-label={$i18n.t('Search')}
 							>
 								<div
-									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 								>
 									<SearchIcon className="size-4" strokeWidth="1.5" />
 								</div>
@@ -1036,7 +1049,7 @@
 												? ($settings?.highContrastMode ?? false)
 													? 'bg-black/[0.035] dark:bg-white/[0.06]'
 													: 'bg-black/[0.035] dark:bg-white/[0.045]'
-												: 'group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}"
+												: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-900'}"
 										>
 											{#if itemId === 'notes'}
 												<NotesIcon className="size-4" strokeWidth="1.5" />
@@ -1069,7 +1082,7 @@
 									aria-label={$i18n.t('User menu')}
 								>
 									<div
-										class="self-center relative flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+										class="self-center relative flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 									>
 										<img
 											src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
@@ -1132,7 +1145,7 @@
 					class="sidebar px-1 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
 				>
 					<a
-						class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-50 dark:hover:bg-gray-900 transition no-drag-region"
+						class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 						href="/"
 						draggable="false"
 						on:click={newChatHandler}
@@ -1164,7 +1177,7 @@
 						placement="bottom"
 					>
 						<button
-							class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition {isWindows
+							class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {isWindows
 								? 'cursor-pointer'
 								: 'cursor-[w-resize]'}"
 							on:click={() => {
@@ -1199,7 +1212,7 @@
 						<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 							<a
 								id="sidebar-new-chat-button"
-								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900 transition outline-none"
+								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 								href="/"
 								draggable="false"
 								on:click={newChatHandler}
@@ -1220,7 +1233,7 @@
 						<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 							<button
 								id="sidebar-search-button"
-								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900 transition outline-none"
+								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 								on:click={() => {
 									showSearch.set(true);
 								}}
@@ -1253,7 +1266,7 @@
 												? ($settings?.highContrastMode ?? false)
 													? 'bg-black/[0.035] dark:bg-white/[0.06]'
 													: 'bg-black/[0.035] dark:bg-white/[0.045]'
-												: 'hover:bg-gray-50 dark:hover:bg-gray-900'}"
+												: 'hover:bg-gray-100 dark:hover:bg-gray-900'}"
 											href={meta.href}
 											on:click={itemClickHandler}
 											draggable="false"
@@ -1285,7 +1298,7 @@
 						</div>
 					</div>
 
-					{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
+					{#if $visiblePinnedModels.length > 0}
 						<SidebarSection
 							id="sidebar-models"
 							bind:open={showPinnedModels}
@@ -1436,6 +1449,10 @@
 
 								if (chat) {
 									console.log(chat);
+									if (!chat.folder_id && !chat.pinned) {
+										return;
+									}
+
 									if (chat.folder_id) {
 										const res = await updateChatFolderIdById(
 											localStorage.token,
@@ -1447,6 +1464,10 @@
 										});
 
 										folderRegistry[chat.folder_id]?.setFolderItems();
+
+										if (res) {
+											chat = res;
+										}
 									}
 
 									if (chat.pinned) {
@@ -1488,7 +1509,7 @@
 								<div slot="content">
 									<DropdownMenu className="min-w-[10.625rem]">
 										<button
-											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
 											on:click={markAllChatsReadHandler}
 										>
 											<CheckIcon className="size-3.5" />
@@ -1544,6 +1565,10 @@
 															toast.error(`${error}`);
 															return null;
 														});
+
+														if (res) {
+															chat = res;
+														}
 													}
 
 													if (!chat.pinned) {
@@ -1697,7 +1722,7 @@
 							>
 								<button
 									type="button"
-									class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+									class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 									aria-label={$i18n.t('User menu')}
 								>
 									<div class=" self-center mr-3 relative flex-shrink-0">
@@ -1731,14 +1756,15 @@
 
 		{#if !$mobile && visible}
 			<div
-				class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20"
+				class="relative flex items-center justify-center group border-r border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20 bg-transparent p-0 appearance-none"
 				id="sidebar-resizer"
-				on:mousedown={resizeStartHandler}
+				on:pointerdown={resizeStartHandler}
 				role="separator"
 			>
 				<div
 					class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"
-				/>
+					style="touch-action: none;"
+				></div>
 			</div>
 		{/if}
 	{/if}

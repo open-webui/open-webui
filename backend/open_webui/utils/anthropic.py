@@ -12,6 +12,8 @@ from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
+ANTHROPIC_VERSION = '2023-06-01'
+
 ANTHROPIC_CONVERTED_REQUEST_PARAMS = {
     'model',
     'messages',
@@ -48,7 +50,7 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             headers = {
                 'x-api-key': key,
-                'anthropic-version': '2023-06-01',
+                'anthropic-version': ANTHROPIC_VERSION,
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS and user:
@@ -200,7 +202,9 @@ def convert_anthropic_to_openai_payload(
                         )
                     )
                 elif block_type in ('thinking', 'redacted_thinking'):
-                    openai_content.append(_copy_cache_control(block, dict(block)))
+                    # Unsigned thinking cannot be replayed upstream
+                    if block_type == 'redacted_thinking' or block.get('signature'):
+                        openai_content.append(_copy_cache_control(block, dict(block)))
                 elif block_type == 'image':
                     source = block.get('source', {})
                     if source.get('type') == 'base64':
@@ -367,7 +371,7 @@ def convert_anthropic_to_openai_payload(
                     msg_dict['content'] = ''
                 msg_dict['tool_calls'] = tool_calls
                 messages.append(msg_dict)
-            elif openai_content:
+            elif openai_content or role == 'assistant':
                 messages.append({'role': role, 'content': _finalize_openai_content(openai_content)})
         else:
             messages.append({'role': role, 'content': str(content) if content else ''})
@@ -428,8 +432,8 @@ def convert_anthropic_to_openai_payload(
             else:
                 openai_payload[param] = anthropic_payload[param]
 
-    # Tools conversion: Anthropic → OpenAI
-    if 'tools' in anthropic_payload:
+    # Tools conversion: Anthropic → OpenAI (backends reject an empty tools array)
+    if anthropic_payload.get('tools'):
         openai_tools = []
         for tool in anthropic_payload['tools']:
             openai_tools.append(
@@ -448,7 +452,7 @@ def convert_anthropic_to_openai_payload(
         openai_payload['tools'] = openai_tools
 
     # tool_choice
-    if 'tool_choice' in anthropic_payload:
+    if 'tool_choice' in anthropic_payload and 'tools' in openai_payload:
         tool_choice = anthropic_payload['tool_choice']
         if isinstance(tool_choice, dict):
             tool_choice_type = tool_choice.get('type', 'auto')
@@ -612,6 +616,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     server_tool_use = None
     service_tier = None
     stop_reason = 'end_turn'
+    error_message = None
 
     # Track content blocks with a running index.
     # Each text block or tool_use block gets its own index.
@@ -666,6 +671,13 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     data = JSONCodec.loads(data_string)
                 except (JSONCodec.JSONDecodeError, TypeError):
                     continue
+
+                error = data.get('error')
+                if error:
+                    error_message = (
+                        error.get('message') if isinstance(error, dict) else error
+                    ) or 'Chat completion stream failed'
+                    break
 
                 usage_data = data.get('usage')
                 if isinstance(usage_data, dict):
@@ -875,7 +887,11 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                                 yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
                             # Close the block once arguments form complete JSON
-                            if tool['started'] and not tool['stopped']:
+                            if (
+                                tool['started']
+                                and not tool['stopped']
+                                and (tool['arguments'].rstrip()[-1:] == '}' or tool['arguments'].lstrip()[:1] != '{')
+                            ):
                                 try:
                                     JSONCodec.loads(tool['arguments'])
                                     tool['stopped'] = True
@@ -896,8 +912,18 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     }
                     stop_reason = stop_reason_map.get(finish_reason, 'end_turn')
 
+            if error_message:
+                break
+
     except Exception as e:
         log.error(f'Error in Anthropic stream conversion: {e}')
+        error_message = 'Chat completion stream failed'
+
+    # Skip message_stop so a failed stream is not reported as complete.
+    if error_message:
+        error_event = {'type': 'error', 'error': {'type': 'api_error', 'message': error_message}}
+        yield f'event: error\ndata: {JSONCodec.dumps(error_event)}\n\n'.encode()
+        return
 
     # Close any open thinking block
     if thinking_block_open:

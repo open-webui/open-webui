@@ -428,6 +428,8 @@
 	});
 
 	onDestroy(() => {
+		delete folderRegistry[folderId];
+
 		if (folderElement) {
 			folderElement.removeEventListener('dragover', onDragOver);
 			folderElement.removeEventListener('drop', onDrop);
@@ -456,14 +458,14 @@
 	};
 
 	const updateHandler = async ({ name, meta, data }) => {
-		if (name === '') {
+		name = name?.trim();
+		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
 		const currentName = folders[folderId].name;
 
-		name = name.trim();
 		folders[folderId].name = name;
 
 		const res = await updateFolderById(localStorage.token, folderId, {
@@ -650,12 +652,11 @@
 	};
 
 	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
-		if (name === '') {
+		name = name?.trim();
+		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
-
-		name = name.trim();
 
 		const res = await createNewFolder(localStorage.token, {
 			name,
@@ -742,7 +743,7 @@
 		<div class="w-full group">
 			<div
 				id="folder-{folderId}-button"
-				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition {$selectedFolder?.id ===
+				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
 				folderId
 					? 'bg-gray-100/80 dark:bg-gray-850/50 selected'
 					: ''}"
@@ -778,7 +779,7 @@
 				}}
 			>
 				<button
-					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-lg"
+					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg"
 					on:click={(e) => {
 						e.stopPropagation();
 						e.stopImmediatePropagation();
@@ -834,8 +835,7 @@
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Enter') {
-									updateHandler({ name });
-									edit = false;
+									e.currentTarget.blur();
 								}
 							}}
 							class="w-full h-full bg-transparent outline-hidden"
@@ -929,7 +929,7 @@
 					{/if}
 
 					{#if chats === null && chatsLoading}
-						<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+						<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
 							<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
 							<span
 								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
@@ -972,7 +972,7 @@
 							on:click={() => setFolderItems(true)}
 						>
 							{#if chatsLoading}
-								<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+								<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
 									<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"
 									></span>
 									<span

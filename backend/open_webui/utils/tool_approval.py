@@ -5,7 +5,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
+from open_webui.models.users import Users
 from open_webui.socket.main import get_event_emitter
 from open_webui.utils.json_codec import JSONCodec
 
@@ -25,7 +28,7 @@ async def resolve_tool_call_output(
     db: AsyncSession | None = None,
 ) -> dict:
     chat = await Chats.get_chat_by_id(chat_id, db=db)
-    if not chat or (chat.user_id != user.id and user.role != 'admin'):
+    if not chat or (chat.user_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -43,8 +46,7 @@ async def resolve_tool_call_output(
         (
             item
             for item in output
-            if item.get('type') == 'function_call'
-            and (item.get('call_id') or item.get('id')) == form_data.call_id
+            if item.get('type') == 'function_call' and (item.get('call_id') or item.get('id')) == form_data.call_id
         ),
         None,
     )
@@ -145,10 +147,14 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
 
     chat_data = chat.chat or {}
     message_meta = assistant_message.get('meta') if isinstance(assistant_message.get('meta'), dict) else {}
+    chat_params = chat_data.get('params') if isinstance(chat_data.get('params'), dict) else {}
     params = {
-        **(chat_data.get('params') or {}),
+        **chat_params,
         **(message_meta.get('params') if isinstance(message_meta.get('params'), dict) else {}),
     }
+    current_approval_mode = chat_params.get('tool_approval_mode')
+    if current_approval_mode in {'ask', 'full'}:
+        params['tool_approval_mode'] = current_approval_mode
     if 'tool_approval_mode' not in params:
         params['tool_approval_mode'] = 'ask'
 
@@ -157,8 +163,17 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Tool call message model is missing.')
 
     messages = []
-    if params.get('system'):
-        messages.append({'role': 'system', 'content': params.get('system')})
+    system_prompt = params.get('system')
+    if not system_prompt:
+        # Mirror the chat UI's system prompt fallback
+        user = await Users.get_user_by_id(chat.user_id)
+        ui_settings = (user.settings.ui if user and user.settings else None) or {}
+        system_prompt = ui_settings.get('system')
+        if system_prompt is None:
+            default_interface_settings = await Config.get('ui.default_interface_settings') or {}
+            system_prompt = default_interface_settings.get('system')
+    if system_prompt:
+        messages.append({'role': 'system', 'content': system_prompt})
 
     return {
         'stream': params.get('stream_response', True),

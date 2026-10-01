@@ -35,7 +35,7 @@
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import UserPreviewModal from '$lib/components/admin/UserPreviewModal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	let page = 1;
 
@@ -72,7 +72,7 @@
 		}
 	};
 
-	const sortState = (key) =>
+	const sortState = (key, orderBy, direction) =>
 		orderBy === key ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
 
 	const setSortKey = (key) => {
@@ -166,9 +166,10 @@
 			className="mx-0"
 			banner={{
 				type: 'error',
-				title: 'License Error',
-				content:
+				title: $i18n.t('License Error'),
+				content: $i18n.t(
 					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
+				)
 			}}
 		/>
 	</div>
@@ -224,7 +225,11 @@
 		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
-					<th scope="col" class="font-normal select-none" aria-sort={sortState('name')}>
+					<th
+						scope="col"
+						class="font-normal select-none"
+						aria-sort={sortState('name', orderBy, direction)}
+					>
 						<button
 							type="button"
 							class="flex w-full gap-1.5 items-center px-2.5 py-1.5"
@@ -247,7 +252,11 @@
 							{/if}
 						</button>
 					</th>
-					<th scope="col" class="font-normal select-none" aria-sort={sortState('role')}>
+					<th
+						scope="col"
+						class="font-normal select-none"
+						aria-sort={sortState('role', orderBy, direction)}
+					>
 						<button
 							type="button"
 							class="flex w-full gap-1.5 items-center px-2.5 py-1.5"
@@ -270,7 +279,11 @@
 							{/if}
 						</button>
 					</th>
-					<th scope="col" class="font-normal select-none" aria-sort={sortState('email')}>
+					<th
+						scope="col"
+						class="font-normal select-none"
+						aria-sort={sortState('email', orderBy, direction)}
+					>
 						<button
 							type="button"
 							class="flex w-full gap-1.5 items-center px-2.5 py-1.5"
@@ -294,7 +307,11 @@
 						</button>
 					</th>
 
-					<th scope="col" class="font-normal select-none" aria-sort={sortState('last_active_at')}>
+					<th
+						scope="col"
+						class="font-normal select-none"
+						aria-sort={sortState('last_active_at', orderBy, direction)}
+					>
 						<button
 							type="button"
 							class="flex w-full gap-1.5 items-center px-2.5 py-1.5"
@@ -318,7 +335,11 @@
 							{/if}
 						</button>
 					</th>
-					<th scope="col" class="font-normal select-none" aria-sort={sortState('created_at')}>
+					<th
+						scope="col"
+						class="font-normal select-none"
+						aria-sort={sortState('created_at', orderBy, direction)}
+					>
 						<button
 							type="button"
 							class="flex w-full gap-1.5 items-center px-2.5 py-1.5"

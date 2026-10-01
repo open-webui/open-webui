@@ -16,7 +16,7 @@ async def search_brave(
     api_key: str,
     query: str,
     count: int,
-    filter_list: list[str | None] | None = None,
+    filter_list: list[str] | None = None,
 ) -> list[SearchResult]:
     """Query the Brave Web Search API and return normalised results.
 

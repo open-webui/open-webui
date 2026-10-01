@@ -15,7 +15,12 @@
 
 	export let show = false;
 
-	type ProviderConnection = { idx: number; url: string; provider: string; config: Record<string, any> };
+	type ProviderConnection = {
+		idx: number;
+		url: string;
+		provider: string;
+		config: Record<string, any>;
+	};
 	const MANAGEMENT_PROVIDERS = new Set(['llama.cpp', 'lmstudio']);
 
 	let selected: '' | 'ollama' | 'provider' | null = null;
@@ -38,27 +43,31 @@
 				})()
 			]);
 
-			providerConnections =
-				openaiConfig?.ENABLE_OPENAI_API
-					? (openaiConfig.OPENAI_API_BASE_URLS ?? [])
-							.map((url: string, idx: number) => ({
-								idx,
-								url,
-								provider:
-									(openaiConfig.OPENAI_API_CONFIGS?.[idx] ??
-										openaiConfig.OPENAI_API_CONFIGS?.[String(idx)] ??
-										openaiConfig.OPENAI_API_CONFIGS?.[url] ??
-										{})?.provider ?? '',
-								config:
+			providerConnections = openaiConfig?.ENABLE_OPENAI_API
+				? (openaiConfig.OPENAI_API_BASE_URLS ?? [])
+						.map((url: string, idx: number) => ({
+							idx,
+							url,
+							provider:
+								(
 									openaiConfig.OPENAI_API_CONFIGS?.[idx] ??
 									openaiConfig.OPENAI_API_CONFIGS?.[String(idx)] ??
 									openaiConfig.OPENAI_API_CONFIGS?.[url] ??
 									{}
-							}))
-							.filter((connection: ProviderConnection) => MANAGEMENT_PROVIDERS.has(connection.provider))
-					: [];
+								)?.provider ?? '',
+							config:
+								openaiConfig.OPENAI_API_CONFIGS?.[idx] ??
+								openaiConfig.OPENAI_API_CONFIGS?.[String(idx)] ??
+								openaiConfig.OPENAI_API_CONFIGS?.[url] ??
+								{}
+						}))
+						.filter((connection: ProviderConnection) =>
+							MANAGEMENT_PROVIDERS.has(connection.provider)
+						)
+				: [];
 
-			const hasOllama = ollamaConfig?.ENABLE_OLLAMA_API && (ollamaConfig?.OLLAMA_BASE_URLS ?? []).length > 0;
+			const hasOllama =
+				ollamaConfig?.ENABLE_OLLAMA_API && (ollamaConfig?.OLLAMA_BASE_URLS ?? []).length > 0;
 			const hasProvider = providerConnections.length > 0;
 
 			if (hasOllama) {

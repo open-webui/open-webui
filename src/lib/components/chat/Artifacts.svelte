@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -109,6 +109,8 @@
 				selectedContentIdx = 0;
 			} else if (newContents.length > contents.length) {
 				selectedContentIdx = newContents.length - 1;
+			} else if (selectedContentIdx > newContents.length - 1) {
+				selectedContentIdx = newContents.length - 1;
 			}
 
 			contents = newContents;
@@ -188,7 +190,7 @@
 
 					<div class="flex items-center gap-1.5">
 						<button
-							class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							class="bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 							on:click={() => {
 								copyToClipboard(contents[selectedContentIdx].content);
 								copied = true;
@@ -245,13 +247,17 @@
 						{#if contents[selectedContentIdx].type === 'iframe'}
 							<iframe
 								bind:this={iframeElement}
-								title="Content"
+								title={$i18n.t('Content')}
 								srcdoc={injectCsp(
 									contents[selectedContentIdx].content,
 									$config?.ui?.iframe_csp ?? ''
 								)}
 								class="w-full border-0 h-full rounded-none"
-								sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+								sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+									? 'allow-scripts'
+									: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+									? ' allow-downloads'
+									: ''}{($settings?.iframeSandboxAllowForms ?? true)
 									? ' allow-forms'
 									: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
 									? ' allow-same-origin'

@@ -10,6 +10,7 @@ import asyncio
 import logging
 import time
 from typing import Literal, Optional
+from urllib.parse import unquote
 
 from fastapi import HTTPException, Request
 
@@ -28,7 +29,7 @@ from open_webui.models.memories import Memories
 from open_webui.models.messages import Message, Messages
 from open_webui.models.notes import Notes
 from open_webui.models.users import UserModel
-from open_webui.retrieval.utils import get_content_from_url
+from open_webui.retrieval.utils import filter_source_metadata, get_content_from_url
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
     CreateImageForm,
@@ -103,11 +104,12 @@ async def _emit_note_updated(request: Request, user: dict, note) -> None:
 
 async def _has_read_access_to_file(
     file,
-    user_id: str,
-    user_role: str,
+    user: dict,
     model_knowledge: Optional[list[dict]] = None,
 ) -> bool:
     """Check if a user can read a file via ownership, admin role, model attachment, or access grants."""
+    user_id = user.get('id')
+    user_role = user.get('role', 'user')
     if file.user_id == user_id or user_role == 'admin':
         return True
     if model_knowledge and any(item.get('type') == 'file' and item.get('id') == file.id for item in model_knowledge):
@@ -117,7 +119,7 @@ async def _has_read_access_to_file(
     return await has_access_to_file(
         file_id=file.id,
         access_type='read',
-        user=UserModel(**{'id': user_id, 'role': user_role}),
+        user=UserModel(**user),
     )
 
 
@@ -388,11 +390,16 @@ async def generate_image(
         images = await image_generations(
             request=__request__,
             form_data=CreateImageForm(prompt=prompt),
+            metadata=(
+                {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
+                if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')
+                else None
+            ),
             user=user,
         )
 
         # Prepare file entries for the images
-        image_files = [{'type': 'image', 'url': img['url']} for img in images]
+        image_files = [{'type': 'image', **img} for img in images]
 
         # Persist files to DB if chat context is available
         if is_saved_chat_id(__chat_id__) and __message_id__ and images:
@@ -456,11 +463,16 @@ async def edit_image(
         images = await image_edits(
             request=__request__,
             form_data=EditImageForm(prompt=prompt, image=image_urls),
+            metadata=(
+                {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
+                if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')
+                else None
+            ),
             user=user,
         )
 
         # Prepare file entries for the images
-        image_files = [{'type': 'image', 'url': img['url']} for img in images]
+        image_files = [{'type': 'image', **img} for img in images]
 
         # Persist files to DB if chat context is available
         if is_saved_chat_id(__chat_id__) and __message_id__ and images:
@@ -514,6 +526,7 @@ async def ask_user(
     Use this when the next step depends on user intent, preference, or a tradeoff that cannot be inferred safely.
 
     :param questions: 1-3 question objects, each with id, header, question, and 2-3 options. Each option needs label and description.
+        List the option you recommend first; the UI labels the first option Recommended.
     :param allow_other: Whether users may enter a free-form answer instead of choosing one of the options
     :param timeout_ms: How long the browser should keep the prompt open before cancelling it
     :return: JSON with status and answers keyed by question id
@@ -1330,6 +1343,14 @@ async def replace_note_content(
     """
     Update an existing note by replacing the whole markdown content or applying range operations.
 
+    Prefer "replace_range" when only part of the note changes.
+    A "replace" operation must be the only operation in the request.
+    start and end are 0-indexed character offsets into the markdown content from view_note.
+    end is exclusive.
+    Offsets never shift as operations are applied.
+    Ranges must not overlap.
+    expected is optional. When set, the request is rejected if the range's current text does not match it.
+
     :param note_id: The ID of the note to update
     :param content: The new markdown content for a whole-note update
     :param operations: Optional note operations:
@@ -1558,9 +1579,7 @@ async def search_chats(
                         start = max(0, idx - 50)
                         end = min(len(content), idx + len(needle) + 100)
                         snippet = (
-                            ('...' if start > 0 else '')
-                            + content[start:end]
-                            + ('...' if end < len(content) else '')
+                            ('...' if start > 0 else '') + content[start:end] + ('...' if end < len(content) else '')
                         )
                         break
                 if snippet:
@@ -2314,8 +2333,6 @@ async def _get_accessible_chat_files(
 ) -> list[tuple[dict, object]]:
     from open_webui.models.files import Files
 
-    user_id = user.get('id')
-    user_role = user.get('role', 'user')
     accessible = []
     seen = set()
 
@@ -2337,7 +2354,7 @@ async def _get_accessible_chat_files(
         seen.add(fid)
 
         file = await Files.get_file_by_id(fid)
-        if file and await _has_read_access_to_file(file, user_id, user_role):
+        if file and await _has_read_access_to_file(file, user):
             accessible.append((normalized, file))
 
     return accessible
@@ -2445,6 +2462,7 @@ async def grep_chat_files(
     """
     Search exact text across files attached to the current chat.
     Pass file_id from the attached_files block to search one file.
+    Auto-detected regex uses RE2 syntax; no lookarounds/backreferences, and shorthand classes are ASCII-only.
 
     :param pattern: The text pattern to search for
     :param file_id: Optional attached file ID to search within a single file
@@ -2482,7 +2500,7 @@ async def grep_chat_files(
         if not files_to_search:
             return JSONCodec.dumps({'error': 'No accessible files found'})
 
-        return _grep_file_models(files_to_search, pattern, case_insensitive, count_only)
+        return await asyncio.to_thread(_grep_file_models, files_to_search, pattern, case_insensitive, count_only)
     except Exception as e:
         log.exception(f'grep_chat_files error: {e}')
         return JSONCodec.dumps({'error': str(e)})
@@ -2559,10 +2577,7 @@ async def query_chat_files(
         if not embedding_function and not full_context:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
 
-        user_model = UserModel.model_construct(
-            id=__user__.get('id'),
-            role=__user__.get('role', 'user'),
-        )
+        user_model = UserModel(**__user__)
         sources = await get_sources_from_items(
             request=__request__,
             items=file_items,
@@ -2596,6 +2611,7 @@ async def query_chat_files(
             for idx, doc in enumerate(documents):
                 metadata = metadatas[idx] if idx < len(metadatas) and isinstance(metadatas[idx], dict) else {}
                 chunk = {
+                    **filter_source_metadata(metadata),
                     'content': doc,
                     'source': metadata.get('source', metadata.get('name', source_info.get('name', 'Unknown'))),
                     'file_id': metadata.get('file_id', source_info.get('id', '')),
@@ -2623,6 +2639,7 @@ async def grep_knowledge_files(
     Search for exact text across knowledge files. Returns matching lines with line numbers.
     Unlike query_knowledge_files (semantic/vector search), this performs exact string matching.
     Automatically detects regex patterns (e.g. "error|warn", "version \\d+").
+    Regex uses RE2 syntax; no lookarounds/backreferences, and shorthand character classes are ASCII-only.
     Helpful for literal strings, identifiers, error messages, or regex-style searches.
 
     :param pattern: The text pattern to search for (regex auto-detected)
@@ -2655,7 +2672,7 @@ async def grep_knowledge_files(
             # Single file mode — verify access
             file = await Files.get_file_by_id(file_id)
             if file:
-                if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+                if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
                     return JSONCodec.dumps({'error': 'File not found'})
                 files_to_search.append(file)
         elif __model_knowledge__:
@@ -2723,7 +2740,7 @@ async def grep_knowledge_files(
         if not files_to_search:
             return JSONCodec.dumps({'error': 'No accessible files found'})
 
-        return _grep_file_models(files_to_search, pattern, case_insensitive, count_only)
+        return await asyncio.to_thread(_grep_file_models, files_to_search, pattern, case_insensitive, count_only)
 
     except Exception as e:
         log.exception(f'grep_knowledge_files error: {e}')
@@ -2777,14 +2794,11 @@ async def view_file(
     try:
         from open_webui.models.files import Files
 
-        user_id = __user__.get('id')
-        user_role = __user__.get('role', 'user')
-
         file = await Files.get_file_by_id(file_id)
         if not file:
             return JSONCodec.dumps({'error': 'File not found'})
 
-        if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+        if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
             return JSONCodec.dumps({'error': 'File not found'})
 
         content = ''
@@ -3192,7 +3206,7 @@ async def query_knowledge_files(
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
-        user_model = UserModel.model_construct(id=user_id, role=user_role)
+        user_model = UserModel(**__user__)
 
         collection_names = []
         external_knowledges = []
@@ -3311,6 +3325,7 @@ async def query_knowledge_files(
 
                 for idx, doc in enumerate(documents):
                     chunk_info = {
+                        **filter_source_metadata(metadatas[idx]),
                         'content': doc,
                         'source': metadatas[idx].get('source', metadatas[idx].get('name', 'Unknown')),
                         'file_id': metadatas[idx].get('file_id', ''),
@@ -3334,6 +3349,7 @@ async def query_knowledge_files(
             for idx, doc in enumerate(documents):
                 metadata = metadatas[idx] if idx < len(metadatas) else {}
                 chunk_info = {
+                    **filter_source_metadata(metadata),
                     'content': doc,
                     'source': metadata.get('source', metadata.get('name', knowledge.name)),
                     'file_id': metadata.get('file_id', f'external-{knowledge.id}'),
@@ -3386,7 +3402,7 @@ async def query_knowledge_bases(
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
-        user_model = UserModel.model_construct(id=user_id, role=__user__.get('role', 'user'))
+        user_model = UserModel(**__user__)
         query_embedding = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user_model)
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
@@ -3467,6 +3483,8 @@ async def view_skill(
     id: str,
     __request__: Request = None,
     __user__: dict = None,
+    __metadata__: dict = None,
+    __event_call__: callable = None,
 ) -> str:
     """
     Load the full instructions of a skill by its id from the available skills manifest.
@@ -3482,6 +3500,18 @@ async def view_skill(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
+        terminal_skill_prefix = 'terminal:'
+        if isinstance(id, str) and id.startswith(terminal_skill_prefix):
+            from open_webui.utils.terminals import get_terminal_skill
+
+            skill_name = unquote(id.removeprefix(terminal_skill_prefix))
+            skill = await get_terminal_skill(
+                __request__, __user__, __metadata__ or {}, skill_name, {'__event_call__': __event_call__}
+            )
+            if not skill:
+                return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
+            return JSONCodec.dumps(skill, ensure_ascii=False)
+
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.skills import Skills
 
@@ -3741,7 +3771,7 @@ async def create_automation(
 
         # Validate the RRULE
         try:
-            validate_rrule(rrule, tz=user.timezone)
+            await validate_rrule(rrule, tz=user.timezone)
         except ValueError as e:
             return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
@@ -3767,7 +3797,7 @@ async def create_automation(
             is_active=True,
         )
 
-        automation = await Automations.insert(user_id, form, next_run_ns(rrule, tz=tz))
+        automation = await Automations.insert(user_id, form, await next_run_ns(rrule, tz=tz))
 
         return JSONCodec.dumps(
             {
@@ -3778,7 +3808,7 @@ async def create_automation(
                 'model_id': model_id,
                 'target': automation.data.get('target'),
                 'is_active': automation.is_active,
-                'next_runs': next_n_runs_ns(rrule, tz=tz),
+                'next_runs': await next_n_runs_ns(rrule, tz=tz),
             },
             ensure_ascii=False,
         )
@@ -3849,7 +3879,7 @@ async def update_automation(
         # Validate RRULE if changed
         if rrule is not None:
             try:
-                validate_rrule(new_rrule, tz=user.timezone)
+                await validate_rrule(new_rrule, tz=user.timezone)
             except ValueError as e:
                 return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
@@ -3871,7 +3901,7 @@ async def update_automation(
             is_active=automation.is_active,
         )
 
-        updated = await Automations.update_by_id(automation_id, form, next_run_ns(new_rrule, tz=tz))
+        updated = await Automations.update_by_id(automation_id, form, await next_run_ns(new_rrule, tz=tz))
 
         return JSONCodec.dumps(
             {
@@ -3882,7 +3912,7 @@ async def update_automation(
                 'model_id': new_model_id,
                 'target': updated.data.get('target'),
                 'is_active': updated.is_active,
-                'next_runs': next_n_runs_ns(new_rrule, tz=tz),
+                'next_runs': await next_n_runs_ns(new_rrule, tz=tz),
             },
             ensure_ascii=False,
         )
@@ -3950,7 +3980,7 @@ async def list_automations(
                     'rrule': rrule,
                     'is_active': item.is_active,
                     'last_run_at': item.last_run_at,
-                    'next_runs': next_n_runs_ns(rrule, tz=user.timezone if user else None),
+                    'next_runs': await next_n_runs_ns(rrule, tz=user.timezone if user else None),
                 }
             )
 
@@ -3997,7 +4027,7 @@ async def toggle_automation(
         rrule = automation.data.get('rrule', '')
         toggled = await Automations.toggle(
             automation_id,
-            next_run_ns(rrule, tz=user.timezone if user else None),
+            await next_run_ns(rrule, tz=user.timezone if user else None),
         )
 
         return JSONCodec.dumps(
@@ -4061,6 +4091,9 @@ async def delete_automation(
 # =============================================================================
 # CALENDAR TOOLS
 # =============================================================================
+
+
+MAX_CALENDAR_RANGE_END_NS = 2**63 - 1
 
 
 def _get_user_tz(user_dict: dict):
@@ -4162,11 +4195,7 @@ async def search_calendar_events(
                 return JSONCodec.dumps({'error': f'Invalid start datetime: {e}'})
 
             try:
-                end_ns = (
-                    _dt_to_ns(end, tz)
-                    if end
-                    else int(time.time() * 1_000) * 1_000_000 + 365 * 86400 * 1_000_000_000_000
-                )
+                end_ns = _dt_to_ns(end, tz) if end else MAX_CALENDAR_RANGE_END_NS
             except (ValueError, TypeError) as e:
                 return JSONCodec.dumps({'error': f'Invalid end datetime: {e}'})
 
@@ -4384,10 +4413,10 @@ async def update_calendar_event(
             return JSONCodec.dumps({'error': 'Event not found'})
 
         # Check write access to the event's calendar
-        if event.user_id != user_id and __user__.get('role') != 'admin':
-            cal = await Calendars.get_calendar_by_id(event.calendar_id)
-            if not cal:
-                return JSONCodec.dumps({'error': 'Access denied'})
+        cal = await Calendars.get_calendar_by_id(event.calendar_id)
+        if not cal:
+            return JSONCodec.dumps({'error': 'Access denied'})
+        if cal.user_id != user_id and __user__.get('role') != 'admin':
             user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
             if not await AccessGrants.has_access(
                 user_id=user_id,
@@ -4488,10 +4517,10 @@ async def delete_calendar_event(
             return JSONCodec.dumps({'error': 'Event not found'})
 
         # Check write access
-        if event.user_id != user_id and __user__.get('role') != 'admin':
-            cal = await Calendars.get_calendar_by_id(event.calendar_id)
-            if not cal:
-                return JSONCodec.dumps({'error': 'Access denied'})
+        cal = await Calendars.get_calendar_by_id(event.calendar_id)
+        if not cal:
+            return JSONCodec.dumps({'error': 'Access denied'})
+        if cal.user_id != user_id and __user__.get('role') != 'admin':
             user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
             if not await AccessGrants.has_access(
                 user_id=user_id,

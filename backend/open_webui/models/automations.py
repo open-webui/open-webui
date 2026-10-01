@@ -4,6 +4,7 @@ from typing import Literal, Optional
 from uuid import uuid4
 
 from open_webui.internal.db import Base, get_async_db_context
+from open_webui.utils.misc import json_text_variants
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Boolean, Column, Index, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -189,12 +190,12 @@ class AutomationTable:
                 stmt = stmt.filter(Automation.folder_id == folder_id)
 
             if query:
-                search = f'%{query}%'
-                # Search in name and prompt inside JSON data
+                # Search the name column and the prompt inside the JSON data.
+                data_text = cast(Automation.data, String)
                 stmt = stmt.filter(
                     or_(
-                        Automation.name.ilike(search),
-                        cast(Automation.data, String).ilike(search),
+                        Automation.name.ilike(f'%{query}%'),
+                        *(data_text.icontains(variant, autoescape=True) for variant in json_text_variants(query)),
                     )
                 )
 
@@ -240,6 +241,15 @@ class AutomationTable:
                 row.is_active = form.is_active
             row.next_run_at = next_run_at
             row.updated_at = int(time.time_ns())
+            await db.commit()
+            return AutomationModel.model_validate(row)
+
+    async def update_last_run_at(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id)
+            if not row:
+                return None
+            row.last_run_at = int(time.time_ns())
             await db.commit()
             return AutomationModel.model_validate(row)
 
@@ -311,6 +321,7 @@ class AutomationTable:
             rows = result.scalars().all()
 
             from open_webui.utils.automations import next_run_ns
+            from open_webui.utils.recurrence import RecurrenceEvaluationTimeout
 
             # Batch-fetch user timezones so rescheduling respects each
             # user's local timezone instead of falling back to server time.
@@ -322,13 +333,20 @@ class AutomationTable:
                 tz_result = await db.execute(select(User.id, User.timezone).where(User.id.in_(user_ids)))
                 timezone_by_user_id = {uid: tz for uid, tz in tz_result.all()}
 
+            claimed = []
             for row in rows:
+                try:
+                    next_run_at = await next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id))
+                except RecurrenceEvaluationTimeout:
+                    log.warning('Skipping automation %s: recurrence evaluation timed out', row.id)
+                    continue
                 row.last_run_at = now_ns
-                row.next_run_at = next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id))
+                row.next_run_at = next_run_at
+                claimed.append(row)
 
             await db.commit()
 
-            return [AutomationModel.model_validate(r) for r in rows]
+            return [AutomationModel.model_validate(r) for r in claimed]
 
 
 ####################

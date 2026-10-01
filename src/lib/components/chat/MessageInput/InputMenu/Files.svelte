@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 
+	import { isRasterImageContentType } from '$lib/utils';
+
 	import { searchFiles } from '$lib/apis/files';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -71,7 +73,7 @@
 			...items,
 			...(res ?? []).map((file) => ({
 				...file,
-				type: file?.meta?.content_type?.startsWith('image/') ? 'image' : 'file',
+				type: isRasterImageContentType(file?.meta?.content_type) ? 'image' : 'file',
 				name: file.filename,
 				url: file.id,
 				content_type: file?.meta?.content_type,

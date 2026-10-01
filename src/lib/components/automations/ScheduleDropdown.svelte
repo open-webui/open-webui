@@ -105,10 +105,10 @@
 	};
 
 	export const parseRrule = (s: string) => {
+		const match = s.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 		// Detect ONCE (COUNT=1 with DTSTART)
-		if (s.includes('COUNT=1')) {
+		if (/COUNT=1(?!\d)/.test(s)) {
 			frequency = 'ONCE';
-			const match = s.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
 			if (match) {
 				onceDate = `${match[1]}-${match[2]}-${match[3]}`;
 				onceTime = `${match[4]}:${match[5]}`;
@@ -116,7 +116,10 @@
 			return;
 		}
 		const parts: Record<string, string> = {};
-		s.replace('RRULE:', '')
+		s.split(/\s+/)
+			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
+			.join('')
+			.replace('RRULE:', '')
 			.split(';')
 			.forEach((p) => {
 				const [k, v] = p.split('=');
@@ -125,13 +128,14 @@
 		const freq = parts.FREQ || 'DAILY';
 		if (!['HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY'].includes(freq)) {
 			frequency = 'CUSTOM';
+			prevFrequency = 'CUSTOM';
 			customRrule = s;
 			return;
 		}
 		frequency = freq;
 		interval = parseInt(parts.INTERVAL || '1');
-		hour = parseInt(parts.BYHOUR || '9');
-		minute = parseInt(parts.BYMINUTE || '0');
+		hour = parseInt(parts.BYHOUR || match?.[4] || '9');
+		minute = parseInt(parts.BYMINUTE || match?.[5] || '0');
 		selectedDays = parts.BYDAY ? parts.BYDAY.split(',') : [];
 		monthDay = parseInt(parts.BYMONTHDAY || '1');
 	};

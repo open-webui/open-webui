@@ -2,7 +2,6 @@
 	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { onMount, getContext, onDestroy, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
@@ -47,6 +46,7 @@
 		testExternalKnowledgeRetrieval
 	} from '$lib/apis/knowledge';
 	import { processUrl } from '$lib/apis/retrieval';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import { blobToFile, copyToClipboard } from '$lib/utils';
 	import { computeFileHash } from '$lib/utils/hash';
@@ -77,11 +77,6 @@
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
 
-	let largeScreen = true;
-
-	let pane;
-	let showSidepanel = true;
-
 	let showAddWebpageModal = false;
 	let showAddTextContentModal = false;
 	let showNewDirectoryModal = false;
@@ -92,7 +87,6 @@
 	let showAccessControlModal = false;
 	let showResetConfirm = false;
 
-	let minSize = 0;
 	type DirectoryFileEntry = { path: string; filename: string; file: File };
 	type DirectoryManifestEntry = DirectoryFileEntry & { checksum: string; size: number };
 
@@ -334,10 +328,7 @@
 		for (const fileItem of newFileItems) {
 			try {
 				console.log(fileItem);
-				const res = await processUrl(localStorage.token, fileItem.url).catch((e) => {
-					console.error('Error processing URL:', e);
-					return null;
-				});
+				const res = await processUrl(localStorage.token, fileItem.url);
 
 				if (res) {
 					console.log(res);
@@ -357,9 +348,6 @@
 							knowledge_id: knowledge.id,
 							directory_id: currentDirectoryId,
 							source_url: fileItem.url
-						}).catch((e) => {
-							toast.error(`${e}`);
-							return null;
 						});
 					} else if (uploadedFile?.id) {
 						const linkedKnowledge = await addFileToKnowledgeById(
@@ -506,7 +494,7 @@
 		if (error.name === 'AbortError') {
 			toast.info($i18n.t('Directory selection was cancelled'));
 		} else {
-			toast.error($i18n.t('Error accessing directory'));
+			toast.error(`${$i18n.t('Error accessing directory')}: ${error.message}`);
 			console.error('Directory access error:', error);
 		}
 	};
@@ -527,7 +515,12 @@
 						if (hasHiddenFolder(entryPath)) continue;
 
 						if (entry.kind === 'file') {
-							const file = await entry.getFile();
+							let file: File;
+							try {
+								file = await entry.getFile();
+							} catch (error) {
+								throw new Error(`"${entryPath}": ${error}`);
+							}
 							collected.push({ path: dirPath, filename: entry.name, file });
 						} else if (entry.kind === 'directory') {
 							await traverse(entry, entryPath);
@@ -625,6 +618,51 @@
 		return currentPath && path ? `${currentPath}/${path}` : currentPath || path;
 	};
 
+	const uploadManifestEntries = async (
+		entries: DirectoryManifestEntry[],
+		resolveDirectoryId: (entry: DirectoryManifestEntry) => string | null | undefined
+	) => {
+		let failedCount = 0;
+
+		for (const [index, entry] of entries.entries()) {
+			const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
+			syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
+				current: index + 1,
+				total: entries.length,
+				file: displayPath
+			});
+
+			const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
+			const uploadedFile = await uploadFile(localStorage.token, fileObject, {
+				knowledge_id: knowledge.id,
+				file_hash: entry.checksum,
+				directory_id: resolveDirectoryId(entry)
+			}).catch((error) => ({ error }));
+
+			if (!uploadedFile || uploadedFile.error) {
+				const error = uploadedFile?.error;
+				const reason =
+					typeof error === 'string'
+						? error
+						: (error?.detail ?? error?.message ?? $i18n.t('Failed to upload file.'));
+
+				failedCount++;
+				console.error('Upload failed:', displayPath, reason);
+			}
+		}
+
+		if (failedCount > 0) {
+			toast.error(
+				$i18n.t('Upload failed for {{failed}} of {{total}} files.', {
+					failed: failedCount,
+					total: entries.length
+				})
+			);
+		}
+
+		return failedCount;
+	};
+
 	const uploadDirectoryEntries = async (entries: DirectoryFileEntry[]) => {
 		if (!knowledge) return;
 
@@ -651,30 +689,14 @@
 
 			const directoryIdByPath = await createMissingDirectories(diff);
 
-			let uploadedCount = 0;
-			for (const entry of manifest) {
-				uploadedCount++;
-				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
-				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
-					current: uploadedCount,
-					total: manifest.length,
-					file: displayPath
-				});
+			const failedCount = await uploadManifestEntries(manifest, (entry) =>
+				entry.path ? directoryIdByPath[getDirectoryUploadPath(entry.path)] : currentDirectoryId
+			);
 
-				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-				await uploadFile(localStorage.token, fileObject, {
-					knowledge_id: knowledge.id,
-					file_hash: entry.checksum,
-					directory_id: entry.path
-						? directoryIdByPath[getDirectoryUploadPath(entry.path)]
-						: currentDirectoryId
-				}).catch((e) => {
-					toast.error(`${e}`);
-					return null;
-				});
+			if (failedCount === 0) {
+				toast.success($i18n.t('File uploaded successfully'));
 			}
 
-			toast.success($i18n.t('File uploaded successfully'));
 			init();
 		} catch (e) {
 			toast.error(`${e}`);
@@ -729,36 +751,24 @@
 					diff.modified.some((m: any) => m.filename === entry.filename && m.path === entry.path)
 			);
 
-			let uploadedCount = 0;
-			for (const entry of filesToUpload) {
-				uploadedCount++;
-				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
-				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
-					current: uploadedCount,
-					total: filesToUpload.length,
-					file: displayPath
-				});
-
-				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-				await uploadFile(localStorage.token, fileObject, {
-					knowledge_id: knowledge.id,
-					file_hash: entry.checksum,
-					directory_id: entry.path ? directoryIdByPath[entry.path] : null
-				}).catch(() => null);
-			}
+			const failedCount = await uploadManifestEntries(filesToUpload, (entry) =>
+				entry.path ? directoryIdByPath[entry.path] : null
+			);
 
 			// ── 7. Report ──
-			toast.success(
-				$i18n.t(
-					'Sync complete: {{added}} added, {{modified}} modified, {{deleted}} deleted, {{unmodified}} unmodified',
-					{
-						added: diff.added.length,
-						modified: diff.modified.length,
-						deleted: diff.deleted.length,
-						unmodified: diff.unmodified_count
-					}
-				)
-			);
+			if (failedCount === 0) {
+				toast.success(
+					$i18n.t(
+						'Sync complete: {{added}} added, {{modified}} modified, {{deleted}} deleted, {{unmodified}} unmodified',
+						{
+							added: diff.added.length,
+							modified: diff.modified.length,
+							deleted: diff.deleted.length,
+							unmodified: diff.unmodified_count
+						}
+					)
+				);
+			}
 			init();
 		} catch (e) {
 			toast.error(`${e}`);
@@ -916,8 +926,11 @@
 		}
 	};
 
+	const openFileHandler = (fileId: string) => {
+		window.open(`${WEBUI_API_BASE_URL}/files/${encodeURIComponent(fileId)}/content`, '_blank');
+	};
+
 	let debounceTimeout = null;
-	let mediaQuery;
 
 	let dragged = false;
 	let isSaving = false;
@@ -980,14 +993,6 @@
 		}, 1000);
 	};
 
-	const handleMediaQuery = async (e) => {
-		if (e.matches) {
-			largeScreen = true;
-		} else {
-			largeScreen = false;
-		}
-	};
-
 	const readDirectoryEntries = async (reader: any) => {
 		const entries: any[] = [];
 
@@ -1015,9 +1020,14 @@
 		}
 
 		if (entry.isFile) {
-			const file = await new Promise<File>((resolve, reject) => {
-				entry.file(resolve, reject);
-			});
+			let file: File;
+			try {
+				file = await new Promise<File>((resolve, reject) => {
+					entry.file(resolve, reject);
+				});
+			} catch (error) {
+				throw new Error(`"${entryPath}": ${error}`);
+			}
 			const parts = entryPath.split('/');
 			const filename = parts.pop() || file.name;
 			return [{ path: parts.join('/'), filename, file }];
@@ -1072,7 +1082,12 @@
 						const entry = item.webkitGetAsEntry?.();
 
 						if (entry?.isDirectory) {
-							directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
+							try {
+								directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
+							} catch (error) {
+								handleUploadError(error);
+								return;
+							}
 						} else {
 							const file = item.getAsFile();
 							if (file) {
@@ -1096,42 +1111,6 @@
 	};
 
 	onMount(async () => {
-		// listen to resize 1024px
-		mediaQuery = window.matchMedia('(min-width: 1024px)');
-
-		mediaQuery.addEventListener('change', handleMediaQuery);
-		handleMediaQuery(mediaQuery);
-
-		// Select the container element you want to observe
-		const container = document.getElementById('collection-container');
-
-		// initialize the minSize based on the container width
-		minSize = !largeScreen ? 100 : Math.floor((300 / container.clientWidth) * 100);
-
-		// Create a new ResizeObserver instance
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
-				const width = entry.contentRect.width;
-				// calculate the percentage of 300
-				const percentage = (300 / width) * 100;
-				// set the minSize to the percentage, must be an integer
-				minSize = !largeScreen ? 100 : Math.floor(percentage);
-
-				if (showSidepanel) {
-					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-						pane.resize(minSize);
-					}
-				}
-			}
-		});
-
-		// Start observing the container's size changes
-		resizeObserver.observe(container);
-
-		if (pane) {
-			pane.expand();
-		}
-
 		id = $page.params.id;
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
 			toast.error(`${e}`);
@@ -1160,7 +1139,6 @@
 			clearInterval(pendingPollTimer);
 			pendingPollTimer = null;
 		}
-		mediaQuery?.removeEventListener('change', handleMediaQuery);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
@@ -1245,6 +1223,8 @@
 			share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
 			sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 			shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) ||
+				$user?.role === 'admin'}
+			allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
 				$user?.role === 'admin'}
 			onChange={async () => {
 				try {
@@ -1452,14 +1432,10 @@
 										type="button"
 										on:click={() => {
 											includeContent = !includeContent;
+											currentPage = 1;
 										}}
 									>
-										<Checkbox
-											state={includeContent ? 'checked' : 'unchecked'}
-											on:change={(e) => {
-												includeContent = e.detail === 'checked';
-											}}
-										/>
+										<Checkbox state={includeContent ? 'checked' : 'unchecked'} />
 										{$i18n.t('File content')}
 									</button>
 								</DropdownMenu>
@@ -1525,6 +1501,7 @@
 									} else {
 										delete localStorage.workspaceViewOption;
 									}
+									currentPage = 1;
 								}}
 							/>
 
@@ -1668,8 +1645,18 @@
 													<ChevronLeft strokeWidth="2.5" />
 												</button>
 											</div>
-											<div class=" flex-1 text-sm line-clamp-1">
-												{selectedFile?.meta?.name}
+											<div class="flex-1 text-sm line-clamp-1">
+												<a
+													href="#"
+													class="hover:underline line-clamp-1"
+													on:click|preventDefault={() => {
+														if (selectedFile?.id) {
+															openFileHandler(selectedFile.id);
+														}
+													}}
+												>
+													{selectedFile?.meta?.name}
+												</a>
 											</div>
 
 											{#if knowledge?.write_access}

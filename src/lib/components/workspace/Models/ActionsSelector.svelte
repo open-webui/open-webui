@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -61,11 +62,11 @@
 
 		<div class="flex flex-col">
 			<div class=" flex items-center flex-wrap mt-1">
-				{#each selectedActions as action, actionIdx}
+				{#each selectedActions as action, actionIdx (action.id)}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								ariaLabel={action.name}
+								ariaLabel={resolveLocalizedResource(action, $i18n.language)}
 								state="checked"
 								disabled={action.is_global}
 								on:change={(e) => {
@@ -77,8 +78,11 @@
 						</div>
 
 						<div class=" py-0.5 text-xs capitalize">
-							<Tooltip content={action.meta?.description ?? action.id}>
-								{action.name}
+							<Tooltip
+								content={resolveLocalizedResource(action, $i18n.language, 'description') ||
+									action.id}
+							>
+								{resolveLocalizedResource(action, $i18n.language)}
 							</Tooltip>
 						</div>
 					</div>

@@ -2,7 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
-	import { getAdminDetails, userSignOut } from '$lib/apis/auths';
+	import { getAdminDetails, getLogoutRedirectUrl, userSignOut } from '$lib/apis/auths';
 	import { onMount, tick, getContext } from 'svelte';
 	import { config } from '$lib/stores';
 
@@ -75,7 +75,7 @@
 								return null;
 							});
 							localStorage.removeItem('token');
-							location.href = res?.redirect_url ?? '/auth';
+							location.href = getLogoutRedirectUrl(res?.redirect_url);
 						}}>{$i18n.t('Sign Out')}</button
 					>
 				</div>

@@ -4,7 +4,7 @@
 
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { formatFileSize, getLineCount } from '$lib/utils';
+	import { formatFileSize, getLineCount, safeLinkUrl } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
@@ -13,7 +13,7 @@
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	const CONTENT_PREVIEW_LIMIT = 10000;
 	let expandedContent = false;
@@ -264,7 +264,7 @@
 							href="#"
 							class="hover:underline line-clamp-1"
 							on:click|preventDefault={() => {
-								if (item.type === 'file' || item.url) {
+								if (item.type === 'file' || safeLinkUrl(item.url)) {
 									let fileId = item?.id ?? item?.tempId;
 									window.open(
 										item.type === 'file'
@@ -545,7 +545,7 @@
 									{@html excelHtml}
 								</div>
 							{:else}
-								<div class="text-gray-500 text-sm p-4">No content available</div>
+								<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
 							{/if}
 						{/if}
 					{:else if isCode}
@@ -569,9 +569,9 @@
 						{#if docxError}
 							<div class="text-red-500 text-sm p-4">{docxError}</div>
 						{:else if docxData}
-							<DocxPreview data={docxData} className="max-h-[60vh]" />
+							<DocxPreview data={docxData} className="h-[60vh]" />
 						{:else}
-							<div class="text-gray-500 text-sm p-4">No content available</div>
+							<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
 						{/if}
 					{:else if isPptx}
 						{#if pptxError}
@@ -583,7 +583,7 @@
 								className="h-[60vh]"
 							/>
 						{:else}
-							<div class="text-gray-500 text-sm p-4">No content available</div>
+							<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
 						{/if}
 					{:else}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">

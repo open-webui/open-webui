@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import random
 import sys
 import time
+from contextlib import suppress
+from typing import Any
 
 import pycrdt as Y
 import socketio
@@ -16,10 +19,12 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     REDIS_KEY_PREFIX,
     WEBSOCKET_EVENT_CALLER_TIMEOUT,
+    WEBSOCKET_HEARTBEAT_INTERVAL,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_CLUSTER,
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_REDIS_OPTIONS,
+    WEBSOCKET_REDIS_ROOM_CHANNELS,
     WEBSOCKET_REDIS_URL,
     WEBSOCKET_SENTINEL_HOSTS,
     WEBSOCKET_SENTINEL_PORT,
@@ -31,21 +36,30 @@ from open_webui.env import (
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
-from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
-from open_webui.tasks import create_task, stop_item_tasks
+from open_webui.socket.redis_room_channels import AsyncRedisRoomChannelManager
+from open_webui.socket.utils import CachedRedisDict, RedisDict, RedisLock, YdocManager
+from open_webui.tasks import (
+    REDIS_PUBSUB_MAX_RECONNECT_INTERVAL,
+    REDIS_PUBSUB_RECONNECT_INTERVAL,
+    create_task,
+    stop_item_tasks,
+)
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.json_codec import SOCKETIO_JSON
+from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
     get_sentinels_from_env,
 )
+from redis.exceptions import RedisError
+from socketio.packet import Packet
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -64,6 +78,17 @@ def get_room_sid_map(manager, namespace: str, room: str):
     return manager.rooms.get(namespace, {}).get(room)
 
 
+class JSONOnlyPacket(Packet):
+    """Packet class for JSON-serializable payloads only, skipping python-socketio's per-emit binary scan."""
+
+    uses_binary_events = False
+
+    @classmethod
+    def reconstruct_binary(cls, data: Any, attachments: list[bytes]):
+        """Normalize client attachments to int lists, the form the Yjs handlers store and apply."""
+        return super().reconstruct_binary(data, [list(attachment) for attachment in attachments])
+
+
 if WEBSOCKET_MANAGER == 'redis':
     sentinel_hosts = WEBSOCKET_SENTINEL_HOSTS or ''
     ws_redis_url = (
@@ -71,11 +96,13 @@ if WEBSOCKET_MANAGER == 'redis':
         if sentinel_hosts
         else WEBSOCKET_REDIS_URL
     )
-    redis_manager = socketio.AsyncRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS, json=SOCKETIO_JSON)
+    manager_class = AsyncRedisRoomChannelManager if WEBSOCKET_REDIS_ROOM_CHANNELS else socketio.AsyncRedisManager
+    redis_manager = manager_class(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS, json=SOCKETIO_JSON)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
         json=SOCKETIO_JSON,
+        serializer=JSONOnlyPacket,
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
@@ -90,6 +117,7 @@ else:
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
         json=SOCKETIO_JSON,
+        serializer=JSONOnlyPacket,
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
@@ -102,7 +130,7 @@ else:
 
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
-SESSION_POOL_TIMEOUT = 120  # seconds without heartbeat before session is reaped
+SESSION_POOL_TIMEOUT = max(WEBSOCKET_HEARTBEAT_INTERVAL * 4, 120) if WEBSOCKET_HEARTBEAT_INTERVAL is not None else 120
 
 # Dictionary to maintain the user pool
 
@@ -116,7 +144,7 @@ if WEBSOCKET_MANAGER == 'redis':
         async_mode=True,
     )
 
-    MODELS = RedisDict(
+    MODELS = CachedRedisDict(
         f'{REDIS_KEY_PREFIX}:models',
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=ws_sentinels,
@@ -172,93 +200,116 @@ YDOC_MANAGER = YdocManager(
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
 
+REDIS_EVENT_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
+
+EVENT_QUEUES: dict[str, asyncio.Queue] = {}
+EVENT_PUBLISH_LOCK = asyncio.Lock()
+
+
+def get_session_pool_batches():
+    """All session pool entries, in bounded batches for the Redis backing."""
+    if WEBSOCKET_MANAGER == 'redis':
+        return SESSION_POOL.scan_batches()
+    return [list(SESSION_POOL.items())]
+
 
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
     renew_interval = max(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, 0.5)
     while True:
-        if not session_aquire_func():
-            log.debug('Session cleanup lock held by another node. Retrying.')
-            await asyncio.sleep(retry_delay)
-            continue
-
         try:
-            while True:
-                if not session_renew_func():
-                    log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
-                    break
+            if not session_aquire_func():
+                log.debug('Session cleanup lock held by another node. Retrying.')
+                await asyncio.sleep(retry_delay)
+                continue
 
-                now = int(time.time())
-                for sid in list(SESSION_POOL.keys()):
-                    entry = SESSION_POOL.get(sid)
-                    if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT:
-                        log.warning(f'Reaping orphaned session {sid} (user {entry.get("id")})')
-                        try:
-                            del SESSION_POOL[sid]
-                        except KeyError:
-                            pass
-
-                next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
-                lock_lost = False
+            try:
                 while True:
-                    sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
-                    if sleep_for <= 0:
-                        break
-                    await asyncio.sleep(sleep_for)
                     if not session_renew_func():
                         log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
-                        lock_lost = True
                         break
 
-                if lock_lost:
-                    break
-        finally:
-            session_release_func()
+                    now = int(time.time())
+                    for batch in get_session_pool_batches():
+                        expired = [
+                            sid
+                            for sid, entry in batch
+                            if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT
+                        ]
+                        if expired:
+                            log.warning('Reaping %d orphaned session(s) from the session pool', len(expired))
+                            if WEBSOCKET_MANAGER == 'redis':
+                                SESSION_POOL.delete_many(*expired)
+                            else:
+                                for sid in expired:
+                                    SESSION_POOL.pop(sid, None)
+                        await asyncio.sleep(0)  # don't hold the loop for the whole sweep
+
+                    next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
+                    lock_lost = False
+                    while True:
+                        sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
+                        if sleep_for <= 0:
+                            break
+                        await asyncio.sleep(sleep_for)
+                        if not session_renew_func():
+                            log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
+                            lock_lost = True
+                            break
+
+                    if lock_lost:
+                        break
+            finally:
+                session_release_func()
+        except Exception:
+            log.exception('Session pool cleanup failed. Retrying.')
+            await asyncio.sleep(retry_delay)
 
 
 async def periodic_usage_pool_cleanup():
-    max_retries = 2
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
-    for attempt in range(max_retries + 1):
-        if aquire_func():
-            break
-        else:
-            if attempt < max_retries:
-                log.debug('Cleanup lock already exists. Retry %s after %ss...', attempt + 1, retry_delay)
+    while True:
+        try:
+            if not aquire_func():
+                log.debug('Usage cleanup lock held by another node. Retrying.')
                 await asyncio.sleep(retry_delay)
-            else:
-                log.warning('Failed to acquire cleanup lock after retries. Skipping cleanup.')
-                return
+                continue
 
-    log.debug('Running periodic_cleanup')
-    try:
-        while True:
-            if not renew_func():
-                log.error('Unable to renew cleanup lock. Exiting usage pool cleanup.')
-                raise Exception('Unable to renew usage pool cleanup lock.')
+            try:
+                while True:
+                    if not renew_func():
+                        log.warning('Unable to renew usage cleanup lock. Retrying cleanup ownership.')
+                        break
 
-            now = int(time.time())
-            for model_id, connections in list(USAGE_POOL.items()):
-                # Creating a list of sids to remove if they have timed out
-                expired_sids = [
-                    sid for sid, details in connections.items() if now - details['updated_at'] > TIMEOUT_DURATION
-                ]
+                    now = int(time.time())
+                    for model_id, connections in list(USAGE_POOL.items()):
+                        expired_sids = [
+                            sid
+                            for sid, details in connections.items()
+                            if now - details['updated_at'] > TIMEOUT_DURATION
+                        ]
 
-                if connections and not expired_sids:
-                    continue
+                        if connections and not expired_sids:
+                            continue
 
-                for sid in expired_sids:
-                    del connections[sid]
+                        for sid in expired_sids:
+                            del connections[sid]
 
-                if not connections:
-                    log.debug('Cleaning up model %s from usage pool', model_id)
-                    del USAGE_POOL[model_id]
-                else:
-                    USAGE_POOL[model_id] = connections
-            await asyncio.sleep(TIMEOUT_DURATION)
-    finally:
-        release_func()
+                        if not connections:
+                            log.debug('Cleaning up model %s from usage pool', model_id)
+                            try:
+                                del USAGE_POOL[model_id]
+                            except KeyError:
+                                pass
+                        else:
+                            USAGE_POOL[model_id] = connections
+                    await asyncio.sleep(TIMEOUT_DURATION)
+            finally:
+                release_func()
+        except Exception:
+            log.exception('Usage pool cleanup failed. Retrying.')
+            await asyncio.sleep(retry_delay)
 
 
 app = socketio.ASGIApp(
@@ -280,6 +331,14 @@ def get_user_id_from_session_pool(sid):
     return None
 
 
+async def get_socket_session_user(sid: str) -> dict | None:
+    """Session user from this worker's local Socket.IO store; only locally connected sids are ever looked up."""
+    try:
+        return (await sio.get_session(sid)).get('user')
+    except KeyError:
+        return None
+
+
 def get_session_ids_from_room(room):
     """Get all session IDs from a specific room."""
     members = get_room_sid_map(sio.manager, '/', room)
@@ -288,24 +347,26 @@ def get_session_ids_from_room(room):
 
 def get_session_ids_by_user_id(user_id: str) -> list[str]:
     """Get known session IDs for a user across the local rooms and shared session pool."""
-    session_ids = set(get_session_ids_from_room(f'user:{user_id}'))
-    session_ids.update(sid for sid, entry in SESSION_POOL.items() if entry and entry.get('id') == user_id)
+    return get_session_ids_by_user_ids([user_id])
+
+
+def get_session_ids_by_user_ids(user_ids: list[str]) -> list[str]:
+    """Get known session IDs for users across the local rooms and shared session pool."""
+    if not user_ids:
+        return []
+
+    user_ids = set(user_ids)
+    session_ids = set()
+    for user_id in user_ids:
+        session_ids.update(get_session_ids_from_room(f'user:{user_id}'))
+    for batch in get_session_pool_batches():
+        session_ids.update(sid for sid, user in batch if user and user.get('id') in user_ids)
     return list(session_ids)
 
 
-def get_user_ids_from_room(room):
-    active_session_ids = get_session_ids_from_room(room)
-
-    # Single pool lookup per session (each .get is a Redis round trip
-    # when the session pool is Redis-backed).
-    active_user_ids = list(
-        {
-            entry['id']
-            for entry in (SESSION_POOL.get(session_id) for session_id in active_session_ids)
-            if entry is not None
-        }
-    )
-    return active_user_ids
+async def get_user_ids_from_room(room) -> set[str]:
+    users = [await get_socket_session_user(session_id) for session_id in get_session_ids_from_room(room)]
+    return {user['id'] for user in users if user}
 
 
 async def emit_to_users(event: str, data: dict, user_ids: list[str]):
@@ -332,12 +393,25 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
         user_ids (list[str]): The target user's IDs.
     """
     try:
-        for user_id in user_ids:
-            session_ids = get_session_ids_from_room(f'user:{user_id}')
+        default_permissions = await Config.get('user.permissions')
+        for user in await Users.get_users_by_user_ids(user_ids):
+            if user.role != 'admin' and not await has_permission(user.id, 'features.channels', default_permissions):
+                continue
+
+            session_ids = get_session_ids_from_room(f'user:{user.id}')
             for sid in session_ids:
                 await sio.enter_room(sid, room)
     except Exception as e:
         log.debug('Failed to make users %s join room %s: %s', user_ids, room, e)
+
+
+async def leave_room_for_users(room: str, user_ids: list[str]):
+    """Make all sessions of each user leave a room, including sessions on other workers."""
+    for sid in get_session_ids_by_user_ids(user_ids):
+        try:
+            await sio.leave_room(sid, room)
+        except Exception as e:
+            log.debug('Failed to make session %s leave room %s: %s', sid, room, e)
 
 
 async def disconnect_user_sessions(user_id: str):
@@ -361,7 +435,7 @@ async def disconnect_user_sessions(user_id: str):
 
 @sio.on('usage')
 async def usage(sid, data):
-    if sid in SESSION_POOL:
+    if await get_socket_session_user(sid):
         model_id = data['model']
         # Record the timestamp for the last update
         current_time = int(time.time())
@@ -432,7 +506,7 @@ async def user_join(sid, data):
     await sio.enter_room(sid, f'user:{user.id}')
 
     # Join all the channels only if user has channels permission
-    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
+    if user.role == 'admin' or await has_permission(user.id, 'features.channels', await Config.get('user.permissions')):
         channels = await Channels.get_channels_by_user_id(user.id)
         log.debug('channels=%r', channels)
         for channel in channels:
@@ -443,7 +517,7 @@ async def user_join(sid, data):
 
 @sio.on('heartbeat')
 async def heartbeat(sid, data):
-    user = SESSION_POOL.get(sid)
+    user = await get_socket_session_user(sid)
     if user:
         SESSION_POOL[sid] = {**user, 'last_seen_at': int(time.time())}
         await Users.update_last_active_by_id(user['id'])
@@ -464,7 +538,7 @@ async def join_channel(sid, data):
         return
 
     # Join all the channels only if user has channels permission
-    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
+    if user.role == 'admin' or await has_permission(user.id, 'features.channels', await Config.get('user.permissions')):
         channels = await Channels.get_channels_by_user_id(user.id)
         log.debug('channels=%r', channels)
         for channel in channels:
@@ -483,6 +557,11 @@ async def join_note(sid, data):
     redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
     user = await get_verified_user_by_token(auth['token'], redis)
     if not user:
+        return
+
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions')
+    ):
         return
 
     note = await Notes.get_note_by_id(data['note_id'])
@@ -516,7 +595,7 @@ async def channel_events(sid, data):
     event_data = data['data']
     event_type = event_data['type']
 
-    user = SESSION_POOL.get(sid)
+    user = await get_socket_session_user(sid)
 
     if not user:
         return
@@ -556,15 +635,7 @@ async def get_folder_unread_counts(user_id: str) -> dict[str, int]:
 
 @sio.on('events:chat')
 async def chat_events(sid, data):
-    try:
-        session = await sio.get_session(sid)
-        user = session.get('user')
-    except KeyError:
-        user = None
-
-    if not user:
-        user = SESSION_POOL.get(sid)
-
+    user = await get_socket_session_user(sid)
     if not user:
         return
 
@@ -618,7 +689,7 @@ def normalize_document_id(document_id: str) -> str:
 @sio.on('ydoc:document:join')
 async def ydoc_document_join(sid, data):
     """Handle user joining a document"""
-    user = SESSION_POOL.get(sid)
+    user = await get_socket_session_user(sid)
     if not user:
         return
 
@@ -626,6 +697,11 @@ async def ydoc_document_join(sid, data):
         document_id = normalize_document_id(data['document_id'])
 
         if document_id.startswith('note:'):
+            if user.get('role') != 'admin' and not await has_permission(
+                user.get('id'), 'features.notes', await Config.get('user.permissions')
+            ):
+                return
+
             note_id = document_id.split(':')[1]
             note = await Notes.get_note_by_id(note_id)
             if not note:
@@ -778,7 +854,7 @@ async def yjs_document_update(sid, data):
             return
 
         # Verify write permission — room membership only proves read access
-        user = SESSION_POOL.get(sid)
+        user = await get_socket_session_user(sid)
         if not user:
             return
 
@@ -802,38 +878,44 @@ async def yjs_document_update(sid, data):
                 log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
                 return
 
-        try:
-            await stop_item_tasks(REDIS, document_id)
-        except Exception:
-            pass
+        update = data.get('update')  # List of bytes from frontend
 
-        user_id = data.get('user_id', sid)
+        if update:
+            user_id = data.get('user_id', sid)
 
-        update = data['update']  # List of bytes from frontend
+            await YDOC_MANAGER.append_to_updates(
+                document_id=document_id,
+                update=update,  # Convert list of bytes to bytes
+            )
 
-        await YDOC_MANAGER.append_to_updates(
-            document_id=document_id,
-            update=update,  # Convert list of bytes to bytes
-        )
-
-        # Broadcast update to all other users in the document
-        await sio.emit(
-            'ydoc:document:update',
-            {
-                'document_id': document_id,
-                'user_id': user_id,
-                'update': update,
-                'socket_id': sid,  # Add socket_id to match frontend filtering
-            },
-            room=f'doc_{document_id}',
-            skip_sid=sid,
-        )
+            # Broadcast update to all other users in the document
+            await sio.emit(
+                'ydoc:document:update',
+                {
+                    'document_id': document_id,
+                    'user_id': user_id,
+                    'update': update,
+                    'socket_id': sid,  # Add socket_id to match frontend filtering
+                },
+                room=f'doc_{document_id}',
+                skip_sid=sid,
+            )
 
         async def debounced_save():
             await asyncio.sleep(0.5)
             await document_save_handler(document_id, data.get('data', {}), user)
 
-        if data.get('data'):
+        if document_id.startswith('note:') and data.get('data'):
+            # Only drop the pending save when a new one takes its place.
+            # Updates without a content snapshot (the resync a client sends
+            # after rejoining a document) would otherwise cancel the pending
+            # save without scheduling a replacement, so the edits made just
+            # before the resync never reach the database.
+            try:
+                await stop_item_tasks(REDIS, document_id)
+            except Exception:
+                pass
+
             await create_task(REDIS, debounced_save(), document_id)
 
     except Exception as e:
@@ -843,7 +925,7 @@ async def yjs_document_update(sid, data):
 @sio.on('ydoc:document:leave')
 async def yjs_document_leave(sid, data):
     """Handle user leaving a document"""
-    user = SESSION_POOL.get(sid)
+    user = await get_socket_session_user(sid)
     if not user:  # authenticated session required (parity with sibling handlers)
         return
     try:
@@ -875,7 +957,7 @@ async def yjs_document_leave(sid, data):
 @sio.on('ydoc:awareness:update')
 async def yjs_awareness_update(sid, data):
     """Handle awareness updates (cursors, selections, etc.)"""
-    user = SESSION_POOL.get(sid)
+    user = await get_socket_session_user(sid)
     if not user:  # authenticated session required (parity with sibling handlers)
         return
     try:
@@ -903,9 +985,8 @@ async def disconnect(sid, reason=None):
         del SESSION_POOL[sid]
 
         # Clean up USAGE_POOL entries for this session
-        for model_id in list(USAGE_POOL.keys()):
-            connections = USAGE_POOL.get(model_id)
-            if connections and sid in connections:
+        for model_id, connections in list(USAGE_POOL.items()):
+            if sid in connections:
                 del connections[sid]
                 if not connections:
                     del USAGE_POOL[model_id]
@@ -916,6 +997,62 @@ async def disconnect(sid, reason=None):
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")
+
+
+async def redis_event_listener() -> None:
+    """Route events received over Redis to their local queues."""
+    reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+    while True:
+        pubsub = None
+        try:
+            # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+            await REDIS.initialize()
+
+            pubsub = REDIS.pubsub()
+            await pubsub.subscribe(REDIS_EVENT_CHANNEL)
+            reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                event = JSONCodec.loads(message['data'])
+                queue = EVENT_QUEUES.get(event['channel'])
+                if queue is not None:
+                    await queue.put(event['data'])
+            log.warning('Redis event listener stopped. Retrying.')
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception('Redis event listener failed. Retrying.')
+        finally:
+            if pubsub:
+                with suppress(Exception):
+                    await pubsub.aclose()
+
+        await asyncio.sleep(reconnect_interval)
+        reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
+
+
+@sio.on('*')
+async def socket_event_handler(event: Any, sid: str, *args: Any) -> None:
+    """Route user-owned stream events to a local queue or another worker."""
+    if not isinstance(event, str) or event.count(':') != 2 or not args:
+        return
+
+    user = await get_socket_session_user(sid)
+    if not user or user.get('id') != event.split(':', 1)[0]:
+        return
+
+    queue = EVENT_QUEUES.get(event)
+    if queue is not None:
+        await queue.put(args[0])
+    elif WEBSOCKET_MANAGER == 'redis':
+        try:
+            async with EVENT_PUBLISH_LOCK:
+                await REDIS.publish(REDIS_EVENT_CHANNEL, dumps_bytes({'channel': event, 'data': args[0]}))
+        except RedisError as e:
+            log.debug('Failed to relay socket event %s: %s', event, e)
 
 
 async def _make_channel_emitter(request_info):
@@ -930,20 +1067,26 @@ async def _make_channel_emitter(request_info):
     state = {'last_emit_at': 0.0, 'output': []}
     THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
 
-    async def _emit_channel_update(content: str, done: bool = False, output: list | None = None):
+    async def _emit_channel_update(
+        content: str,
+        done: bool = False,
+        output: list | None = None,
+        data: dict | None = None,
+    ):
         from open_webui.models.messages import MessageForm, Messages
 
         msg = await Messages.get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
             return
 
-        update_form = MessageForm(content=content, data={'output': output} if output else None)
+        update_data = data or ({'output': output} if output else None)
+        update_form = MessageForm(content=content, data=update_data)
         if done:
             # Merge done flag into existing meta (preserve model_id etc.)
             existing_meta = msg.meta or {}
             update_form = MessageForm(
                 content=content,
-                data={'output': output} if output else None,
+                data=update_data,
                 meta={**existing_meta, 'done': True},
             )
 
@@ -975,8 +1118,12 @@ async def _make_channel_emitter(request_info):
             if not content and not output and not done:
                 return
 
+            if isinstance(output, list):
+                state['output'] = copy.deepcopy(output)
+
             now = time.time()
-            if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+            # Tool boundaries must publish all results before waiting on the next model response.
+            if done or data.get('flush') or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, done, output if isinstance(output, list) else None)
 
@@ -991,6 +1138,29 @@ async def _make_channel_emitter(request_info):
             if content and (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, False, state['output'])
+
+        elif event_type in ('files', 'chat:message:files'):
+            from open_webui.models.messages import Messages
+
+            files = event_data.get('data', {}).get('files', [])
+            if not files:
+                return
+
+            msg = await Messages.get_message_by_id(message_id)
+            if not msg or msg.channel_id != channel_id:
+                return
+
+            existing_files = (msg.data or {}).get('files')
+            for file in files:
+                if isinstance(file, dict) and file.get('id'):
+                    file['url'] = file['id']
+                    await Channels.add_file_to_channel_by_id(channel_id, file['id'], msg.user_id)
+                    await Channels.set_file_message_id_in_channel_by_id(channel_id, file['id'], message_id)
+
+            if isinstance(existing_files, list):
+                files.extend(existing_files)
+
+            await _emit_channel_update(msg.content, data={'files': files})
 
         elif event_type == 'chat:message:error':
             error = event_data.get('data', {}).get('error', {})
@@ -1073,15 +1243,13 @@ async def get_event_emitter(request_info, update_db=True):
                 embeds = event_payload.get('embeds', [])
 
                 if not event_payload.get('replace', False):
-                    message = await Chats.get_message_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
-                    )
-                    embeds.extend(message.get('embeds', []))
+                    existing_embeds = await Chats.get_message_metadata(chat_id, message_id, 'embeds')
+                    if isinstance(existing_embeds, list):
+                        embeds.extend(existing_embeds)
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
+                    chat_id,
+                    message_id,
                     {
                         'embeds': embeds,
                     },
@@ -1089,17 +1257,14 @@ async def get_event_emitter(request_info, update_db=True):
                 )
 
             elif event_type == 'files':
-                message = await Chats.get_message_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
-                )
-
                 files = event_data.get('data', {}).get('files', [])
-                files.extend(message.get('files', []))
+                existing_files = await Chats.get_message_metadata(chat_id, message_id, 'files')
+                if isinstance(existing_files, list):
+                    files.extend(existing_files)
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
+                    chat_id,
+                    message_id,
                     {
                         'files': files,
                     },
@@ -1109,17 +1274,14 @@ async def get_event_emitter(request_info, update_db=True):
             elif event_type in ('source', 'citation'):
                 data = event_data.get('data', {})
                 if data.get('type') is None:
-                    message = await Chats.get_message_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
-                    )
-
-                    sources = message.get('sources', [])
+                    sources = await Chats.get_message_metadata(chat_id, message_id, 'sources')
+                    if not isinstance(sources, list):
+                        sources = []
                     sources.append(data)
 
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
+                        chat_id,
+                        message_id,
                         {
                             'sources': sources,
                         },

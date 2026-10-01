@@ -5,7 +5,7 @@
 	import Drawer from './Drawer.svelte';
 	import RichTextInput from './RichTextInput.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let id = 'input-modal';
 
@@ -32,7 +32,7 @@
 			</div>
 			<button
 				class="self-center"
-				aria-label="Close"
+				aria-label={$i18n.t('Close')}
 				onclick={() => {
 					show = false;
 					onClose();

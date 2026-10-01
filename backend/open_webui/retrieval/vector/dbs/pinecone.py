@@ -35,7 +35,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.retrieval.vector.utils import normalize_filter, process_metadata
 
 NO_LIMIT = 10000  # Reasonable limit to avoid overwhelming the system
 BATCH_SIZE = 100  # Recommended batch size for Pinecone operations
@@ -372,13 +372,15 @@ class PineconeClient(VectorDBBase):
         try:
             # Search using the first vector (assuming this is the intended behavior)
             query_vector = vectors[0]
+            pinecone_filter = normalize_filter(filter)
+            pinecone_filter['collection_name'] = collection_name_with_prefix
 
             # Perform the search
             query_response = self.index.query(
                 vector=query_vector,
                 top_k=limit,
                 include_metadata=True,
-                filter={'collection_name': collection_name_with_prefix},
+                filter=pinecone_filter,
             )
 
             matches = getattr(query_response, 'matches', []) or []

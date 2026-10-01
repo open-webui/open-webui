@@ -13,8 +13,6 @@ IF /I "%WEB_LOADER_ENGINE%" == "playwright" (
         playwright install chromium
         playwright install-deps chromium
     )
-
-    python -c "import nltk; nltk.download('punkt_tab')"
 )
 
 SET "KEY_FILE=.webui_secret_key"
@@ -55,5 +53,6 @@ IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
 :: Execute uvicorn
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 IF "%UVICORN_WORKERS%"=="" SET UVICORN_WORKERS=1
-uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips %FORWARDED_ALLOW_IPS% --workers %UVICORN_WORKERS% --ws auto
+if "%UVICORN_WS_PER_MESSAGE_DEFLATE%" == "" set "UVICORN_WS_PER_MESSAGE_DEFLATE=true"
+uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips %FORWARDED_ALLOW_IPS% --workers %UVICORN_WORKERS% --ws auto --ws-per-message-deflate %UVICORN_WS_PER_MESSAGE_DEFLATE%
 :: For ssl user uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --ssl-keyfile "key.pem" --ssl-certfile "cert.pem" --ws auto

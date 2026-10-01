@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onDestroy, onMount } from 'svelte';
+	import { getAbortSignal, getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { channels, models } from '$lib/stores';
@@ -40,21 +40,34 @@
 			.map((u) => ({ type: 'user', id: u.id, label: u.name }))
 			.sort((a, b) => a.label.localeCompare(b.label));
 
-	const getUserList = async () => {
+	const getUserList = async (requestQuery: string, requestChannelId: string | null) => {
+		const signal = getAbortSignal();
 		const [channelMembers, searchResults] = await Promise.all([
-			channelId
-				? getChannelMembersById(localStorage.token, channelId, query, 'name', 'asc').catch(
-						(error) => {
-							console.error('Error loading channel members:', error);
-							return null;
-						}
-					)
+			requestChannelId
+				? getChannelMembersById(
+						localStorage.token,
+						requestChannelId,
+						requestQuery,
+						'name',
+						'asc',
+						1,
+						signal
+					).catch((error) => {
+						if (signal.aborted) return null;
+						console.error('Error loading channel members:', error);
+						return null;
+					})
 				: Promise.resolve(null),
-			searchUsers(localStorage.token, query).catch((error) => {
-				console.error('Error searching users:', error);
-				return null;
-			})
+			searchUsers(localStorage.token, requestQuery, undefined, undefined, 1, signal).catch(
+				(error) => {
+					if (signal.aborted) return null;
+					console.error('Error searching users:', error);
+					return null;
+				}
+			)
 		]);
+
+		if (signal.aborted) return;
 
 		const memberUsers = (channelMembers?.users ?? []) as UserSuggestion[];
 		const searchedUsers = (searchResults?.users ?? []) as UserSuggestion[];
@@ -65,7 +78,7 @@
 	};
 
 	$: if (query !== null && userSuggestions) {
-		getUserList();
+		getUserList(query, channelId);
 	}
 
 	const select = (index: number) => {

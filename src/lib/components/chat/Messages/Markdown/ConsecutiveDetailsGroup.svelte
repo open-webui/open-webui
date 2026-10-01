@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
@@ -14,11 +16,12 @@
 
 	import { settings } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let id = '';
 	export let tokens: Array<{
 		summary?: string;
+		text?: string;
 		attributes?: {
 			type?: string;
 			name?: string;
@@ -32,7 +35,7 @@
 	}> = [];
 
 	export let messageDone = true;
-	export let allowEmbeds = true;
+	export let allowEmbeds = false;
 	export let compactPreview = false;
 	export let resolvable = false;
 	export let resolvingCallId = '';
@@ -48,14 +51,74 @@
 		}
 	}
 
+	function isToolResultError(value: unknown): boolean {
+		if (typeof value === 'string') {
+			const text = value.trim().toLowerCase();
+			if (
+				text.startsWith('error:') ||
+				text.startsWith('exception:') ||
+				text.startsWith('traceback') ||
+				text.startsWith('http error!')
+			) {
+				return true;
+			}
+		}
+
+		let parsed = value;
+		while (typeof parsed === 'string') {
+			try {
+				parsed = JSON.parse(parsed);
+			} catch {
+				break;
+			}
+		}
+		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return false;
+
+		const result = parsed as Record<string, unknown>;
+		const error = result.error;
+		if (
+			(typeof error === 'string' && error.trim().length > 0) ||
+			(typeof error === 'object' && error !== null)
+		) {
+			return true;
+		}
+
+		const status = typeof result.status === 'string' ? result.status.trim().toLowerCase() : '';
+		if (status === 'error' || status === 'failed') return true;
+
+		const message = result.message;
+		return (
+			(result.success === false || result.ok === false) &&
+			((typeof message === 'string' && message.trim().length > 0) ||
+				(typeof message === 'object' && message !== null))
+		);
+	}
+
 	$: toolCallCount = tokens.filter((t) => t?.attributes?.type === 'tool_calls').length;
 	$: reasoningCount = tokens.filter((t) => t?.attributes?.type === 'reasoning').length;
 	$: pendingToolTokens = tokens.filter(
 		(t) => t?.attributes?.type === 'tool_calls' && t?.attributes?.status === 'pending'
 	);
-	$: hasPending = pendingToolTokens.length > 0;
+	$: hasActiveDetails = tokens.some((token) => {
+		const attributes = token?.attributes;
+		if (attributes?.type === 'tool_calls') {
+			return (
+				attributes.status !== 'rejected' &&
+				attributes.status !== 'failed' &&
+				attributes.status !== 'incomplete' &&
+				attributes.done !== 'true'
+			);
+		}
+		return !messageDone && attributes?.done && attributes.done !== 'true';
+	});
 	$: hasRejected = tokens.some(
 		(t) => t?.attributes?.type === 'tool_calls' && t?.attributes?.status === 'rejected'
+	);
+	$: hasError = tokens.some(
+		(t) =>
+			t?.attributes?.type === 'tool_calls' &&
+			(t?.attributes?.status === 'failed' ||
+				(t?.attributes?.done === 'true' && isToolResultError(decode(t?.text ?? ''))))
 	);
 
 	$: codeInterpreterCount = tokens.filter((t) => t?.attributes?.type === 'code_interpreter').length;
@@ -89,7 +152,7 @@
 
 		if (toolCallCount > 0) {
 			// Group by tool name and show counts
-			const nameCounts = {};
+			const nameCounts: Record<string, number> = {};
 			tokens
 				.filter((t) => t?.attributes?.type === 'tool_calls')
 				.forEach((t) => {
@@ -115,7 +178,7 @@
 		return detail;
 	})();
 
-	$: prefixText = hasPending ? $i18n.t('Exploring') : $i18n.t('Explored');
+	$: prefixText = hasActiveDetails ? $i18n.t('Exploring') : $i18n.t('Explored');
 </script>
 
 <div {id} class="w-full min-w-0">
@@ -140,12 +203,16 @@
 		>
 			<div class="flex items-center gap-1.5 min-w-0">
 				<!-- Status icon -->
-				{#if hasPending}
+				{#if hasActiveDetails}
 					<div>
 						<Spinner className="size-4" />
 					</div>
 				{:else if hasRejected}
 					<div class="text-red-400 dark:text-red-500">
+						<XMark className="size-4" strokeWidth="2.5" />
+					</div>
+				{:else if toolCallCount > 0 && hasError}
+					<div class="text-red-500 dark:text-red-400">
 						<XMark className="size-4" strokeWidth="2.5" />
 					</div>
 				{:else if toolCallCount > 0}
@@ -160,7 +227,7 @@
 
 				<!-- Summary text -->
 				<div class="flex-1 line-clamp-1">
-					<span class="text-gray-600 dark:text-gray-300 {hasPending ? 'shimmer' : ''}"
+					<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
 						>{prefixText}</span
 					>
 					{#if summaryText}
@@ -173,7 +240,7 @@
 					<span class="flex gap-1 shrink-0">
 						<button
 							type="button"
-							class="text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
 							disabled={!pendingCallId || resolvingCallId === pendingCallId}
 							on:click|stopPropagation={() => onResolve(pendingCallId, true)}
 						>
@@ -181,7 +248,7 @@
 						</button>
 						<button
 							type="button"
-							class="text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
 							disabled={!pendingCallId || resolvingCallId === pendingCallId}
 							on:click|stopPropagation={() => onResolve(pendingCallId, false)}
 						>
@@ -214,7 +281,7 @@
 						<span class="flex gap-1 shrink-0">
 							<button
 								type="button"
-								class="text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+								class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
 								disabled={!pendingCallId || resolvingCallId === pendingCallId}
 								on:click={() => onResolve(pendingCallId, true)}
 							>
@@ -222,7 +289,7 @@
 							</button>
 							<button
 								type="button"
-								class="text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+								class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
 								disabled={!pendingCallId || resolvingCallId === pendingCallId}
 								on:click={() => onResolve(pendingCallId, false)}
 							>

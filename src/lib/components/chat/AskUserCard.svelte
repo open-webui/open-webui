@@ -87,7 +87,7 @@
 			return answer?.type === 'option' || (answer?.type === 'other' && answer.text.trim() !== '');
 		});
 
-	$: complete = hasAnswers();
+	$: complete = hasAnswers(answers);
 
 	const submit = (selected = answers) => {
 		if (!hasAnswers(selected)) {

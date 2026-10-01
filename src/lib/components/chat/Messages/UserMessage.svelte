@@ -7,7 +7,8 @@
 	import {
 		copyToClipboard as _copyToClipboard,
 		formatMessageTimestamp,
-		formatMessageTimestampFull
+		formatMessageTimestampFull,
+		isRasterImageContentType
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
@@ -77,7 +78,7 @@
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message?.content ?? '';
-		editedFiles = message.files;
+		editedFiles = [...(message.files ?? [])];
 
 		await tick();
 
@@ -183,7 +184,7 @@
 									? file.url
 									: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 							<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
-								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+								{#if file.type === 'image' || isRasterImageContentType(file?.content_type)}
 									<Image src={fileUrl} imageClassName=" max-h-96 rounded-lg" />
 								{:else}
 									<FileItem
@@ -202,11 +203,16 @@
 			{/if}
 
 			{#if edit === true}
-				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-4 py-3 mb-2">
+				<div
+					class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-4 py-3 mb-2 {($settings?.highContrastMode ??
+					false)
+						? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500'
+						: ''}"
+				>
 					{#if (editedFiles ?? []).length > 0}
 						<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
 							{#each editedFiles as file, fileIdx}
-								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+								{#if file.type === 'image' || isRasterImageContentType(file?.content_type)}
 									{@const fileUrl =
 										file.url?.startsWith('data') || file.url?.startsWith('http')
 											? file.url
@@ -273,7 +279,7 @@
 						<textarea
 							id="message-edit-{message.id}"
 							bind:this={messageEditTextAreaElement}
-							class=" bg-transparent outline-hidden w-full resize-none text-[0.9375rem]"
+							class=" bg-transparent outline-hidden focus-visible:outline-none! w-full resize-none text-[0.9375rem]"
 							bind:value={editedContent}
 							on:input={(e) => {
 								const messagesContainer = document.getElementById('messages-container');

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -16,26 +18,90 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
+	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
+	type GroupUser = {
+		id: string;
+		name: string;
+		email: string;
+		role: string;
+		last_active_at: number;
+		group_ids?: string[];
+	};
+
+	type CsvImportRow = {
+		idx: number;
+		email: string;
+	};
+
+	type CsvParseResult = {
+		validRows: CsvImportRow[];
+		invalidRows: number[];
+	};
+
+	type GroupMemberUpdate = {
+		member_count?: number;
+	};
+
+	const BATCH_SIZE = 10;
+
+	const isPresent = <T,>(value: T | null | undefined): value is T => value != null;
+
+	const chunk = <T,>(items: T[], size: number) =>
+		Array.from({ length: Math.ceil(items.length / size) }, (_, idx) =>
+			items.slice(idx * size, idx * size + size)
+		);
+
+	const unique = <T,>(items: T[]) => [...new Set(items)];
+
+	const parseCsvRows = (csv: string): CsvParseResult =>
+		csv
+			.split(/\r?\n/)
+			.slice(1)
+			.map((row, index) => ({ row, idx: index + 1 }))
+			.reduce<CsvParseResult>(
+				(acc, { row, idx }) => {
+					const columns = row.split(',').map((col) => col.trim());
+					const isBlank = columns.length === 1 && columns[0] === '';
+					const email = columns[1]?.toLowerCase();
+
+					if (isBlank) return acc;
+					if (columns.length !== 2 || !email) {
+						return { ...acc, invalidRows: [...acc.invalidRows, idx] };
+					}
+
+					return { ...acc, validRows: [...acc.validRows, { idx, email }] };
+				},
+				{ validRows: [], invalidRows: [] }
+			);
+
 	export let groupId: string;
 	export let userCount = 0;
+	export let onMemberChange: Function = () => {};
 
-	let users = null;
-	let total = null;
+	let users: GroupUser[] | null = null;
+	let total: number | null = null;
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let inputFiles: FileList | null = null;
+	let fileInputElement: HTMLInputElement;
+	let importing = false;
+	let showImportMenu = false;
 	let orderBy = groupId ? `group_id:${groupId}` : 'last_active_at'; // default sort key
 	let direction = 'desc'; // default sort order
 
 	let page = 1;
 
-	const setSortKey = (key) => {
+	const setSortKey = (key: string) => {
 		if (orderBy === key) {
 			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {
@@ -45,7 +111,7 @@
 		page = 1;
 	};
 
-	const roleClass = (role) => {
+	const roleClass = (role: string) => {
 		if (role === 'admin') {
 			return 'text-[#4f6f93] dark:text-[#8ba6c6]';
 		}
@@ -73,20 +139,126 @@
 		}
 	};
 
-	const toggleMember = async (userId, state) => {
+	const toggleMember = async (userId: string, state: string) => {
+		let res = null;
+
 		if (state === 'checked') {
-			await addUserToGroup(localStorage.token, groupId, [userId]).catch((error) => {
+			res = await addUserToGroup(localStorage.token, groupId, [userId]).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
 		} else {
-			await removeUserFromGroup(localStorage.token, groupId, [userId]).catch((error) => {
+			res = await removeUserFromGroup(localStorage.token, groupId, [userId]).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
 		}
 
-		getUserList();
+		if (res) {
+			userCount = res.member_count ?? userCount;
+			onMemberChange(res);
+		}
+
+		await getUserList();
+	};
+
+	const clearFileInput = () => {
+		inputFiles = null;
+		if (fileInputElement) {
+			fileInputElement.value = '';
+		}
+	};
+
+	const getExactUserIdByEmail = async ({ idx, email }: CsvImportRow) =>
+		getUsers(localStorage.token, email)
+			.then((res) => {
+				const user = ((res?.users ?? []) as { id?: string; email?: string }[]).find(
+					(u) => u.email?.toLowerCase() === email
+				);
+
+				if (user?.id) return user.id;
+
+				toast.error(`Row ${idx + 1}: ${$i18n.t('User not found.')}`);
+				return null;
+			})
+			.catch((error) => {
+				toast.error(`Row ${idx + 1}: ${error}`);
+				return null;
+			});
+
+	const resolveUserIds = async (rows: CsvImportRow[]) => {
+		const resolvedUserIds: (string | null)[] = [];
+
+		for (const rowsBatch of chunk(rows, BATCH_SIZE)) {
+			resolvedUserIds.push(...(await Promise.all(rowsBatch.map(getExactUserIdByEmail))));
+		}
+
+		return unique(resolvedUserIds.filter(isPresent));
+	};
+
+	const addUserIdToCurrentGroup = async (userId: string) =>
+		addUserToGroup(localStorage.token, groupId, [userId]).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+	const addUserIdsToCurrentGroup = (userIds: string[]) =>
+		userIds.reduce<Promise<GroupMemberUpdate | null>>(async (lastGroupPromise, userId) => {
+			const lastGroup = await lastGroupPromise;
+			const group = await addUserIdToCurrentGroup(userId);
+
+			if (!group) return lastGroup;
+
+			userCount = group.member_count ?? userCount;
+			return group;
+		}, Promise.resolve(null));
+
+	const importCsv = async (file: File) => {
+		if (!groupId || importing) return;
+
+		importing = true;
+
+		try {
+			const { validRows, invalidRows } = parseCsvRows(await file.text());
+			const initialCount = userCount;
+			invalidRows.forEach((idx) => toast.error(`Row ${idx + 1}: ${$i18n.t('Invalid format.')}`));
+
+			const lastGroup = await addUserIdsToCurrentGroup(await resolveUserIds(validRows));
+
+			if (lastGroup) {
+				onMemberChange(lastGroup);
+			}
+
+			const importedCount = Math.max(0, userCount - initialCount);
+			if (importedCount > 0) {
+				toast.success(
+					$i18n.t('Successfully imported {{userCount}} users.', { userCount: importedCount })
+				);
+			}
+
+			await getUserList();
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			clearFileInput();
+			importing = false;
+		}
+	};
+
+	const handleFileChange = async () => {
+		const file = inputFiles?.[0];
+		if (!file) return;
+
+		await importCsv(file);
+	};
+
+	const downloadCsvTemplate = () => {
+		const url = URL.createObjectURL(new Blob(['Name,Email\n'], { type: 'text/csv;charset=utf-8' }));
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'group-import.csv';
+		a.click();
+		URL.revokeObjectURL(url);
 	};
 
 	$: if (page !== null && orderBy !== null && direction !== null) {
@@ -111,16 +283,74 @@
 
 <div class=" max-h-full h-full w-full flex flex-col overflow-y-hidden">
 	<div class="w-full h-fit mb-1.5">
-		<div class="flex flex-1 h-fit">
-			<div class=" self-center mr-3">
-				<Search />
+		<input
+			bind:this={fileInputElement}
+			hidden
+			bind:files={inputFiles}
+			type="file"
+			accept=".csv"
+			disabled={importing}
+			on:change={handleFileChange}
+		/>
+
+		<div class="flex flex-1 h-fit items-center gap-2">
+			<div class="flex min-w-0 flex-1 items-center">
+				<div class=" self-center mr-3">
+					<Search />
+				</div>
+				<input
+					class=" w-full text-sm pr-4 rounded-r-xl outline-hidden bg-transparent"
+					bind:value={query}
+					on:input={handleSearchInput}
+					placeholder={$i18n.t('Search')}
+				/>
 			</div>
-			<input
-				class=" w-full text-sm pr-4 rounded-r-xl outline-hidden bg-transparent"
-				bind:value={query}
-				on:input={handleSearchInput}
-				placeholder={$i18n.t('Search')}
-			/>
+
+			<Dropdown bind:show={showImportMenu} align="end" sideOffset={6}>
+				<button
+					class="ml-1 flex shrink-0 items-center gap-0.5 rounded-lg px-1 py-0.5 text-xs font-normal text-gray-500 transition hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-gray-400 dark:hover:text-gray-200"
+					type="button"
+					disabled={importing || !groupId}
+					aria-label={$i18n.t('Import CSV')}
+					title={$i18n.t('Import CSV')}
+				>
+					{#if importing}
+						<Spinner className="size-3" />
+						<span class="truncate">{$i18n.t('Importing...')}</span>
+					{:else}
+						<span class="truncate">{$i18n.t('Import')}</span>
+						<ChevronDown className="size-2.5" strokeWidth="2.5" />
+					{/if}
+				</button>
+
+				<div slot="content">
+					<DropdownMenu className="min-w-[12rem]">
+						<button
+							on:click={() => {
+								fileInputElement?.click();
+								showImportMenu = false;
+							}}
+						>
+							<ArrowUpTray className="size-3.5" />
+							<span class="self-center truncate">{$i18n.t('Import CSV')}</span>
+						</button>
+
+						<button
+							on:click={() => {
+								downloadCsvTemplate();
+								showImportMenu = false;
+							}}
+						>
+							<ArrowDownTray className="size-3.5" />
+							<span class="self-center truncate">{$i18n.t('Download CSV Template')}</span>
+						</button>
+
+						<div class="px-2 py-0.5 text-[0.625rem] leading-3 text-gray-400 dark:text-gray-500">
+							{$i18n.t('CSV: Name,Email')}
+						</div>
+					</DropdownMenu>
+				</div>
+			</Dropdown>
 		</div>
 	</div>
 

@@ -24,13 +24,9 @@ def normalize_usage(usage: dict) -> dict:
         return {}
 
     # Map various field names to standard names
-    input_tokens = (
-        usage.get('input_tokens')  # Already standard
-        or usage.get('prompt_tokens')  # OpenAI
-        or usage.get('prompt_eval_count')  # Ollama
-        or usage.get('prompt_n')  # llama.cpp
-        or 0
-    )
+    input_tokens = usage.get('input_tokens') or usage.get('prompt_tokens') or usage.get('prompt_eval_count')
+    if input_tokens is None:
+        input_tokens = int(usage.get('prompt_n') or 0) + int(usage.get('cache_n') or 0)
 
     output_tokens = (
         usage.get('output_tokens')  # Already standard

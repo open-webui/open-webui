@@ -32,6 +32,7 @@ from open_webui.storage.provider import Storage
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r'!\[(.*?)\]\((.+?)\)', re.IGNORECASE)
+FILE_CONTENT_URL_PATTERN = re.compile(r'^/api/v1/files/([^/?#]+)/content(?:[?#]|$)')
 
 # Extension-based MIME fallback, only used when ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK is True.
 _IMAGE_MIME_FALLBACK = {
@@ -54,6 +55,16 @@ _IMAGE_MIME_FALLBACK = {
 async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
     try:
         if url.startswith('http'):
+            from open_webui.models.config import Config
+
+            max_bytes = None
+            try:
+                max_size_mb = int(await Config.get('rag.file.max_size') or 0)
+            except (TypeError, ValueError):
+                max_size_mb = 0
+            if max_size_mb > 0:
+                max_bytes = max_size_mb * 1024 * 1024
+
             # Validate URL to prevent SSRF attacks against local/private networks.
             # allow_redirects=False prevents redirect-based SSRF: validate_url() is
             # called only on the originally-submitted URL; following 3xx redirects
@@ -64,17 +75,31 @@ async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
             # rebinding DNS answer that passed validate_url cannot reach an internal address.
             async with get_ssrf_safe_session() as session:
                 async with session.get(
-                    url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+                    url,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                    headers={'Accept-Encoding': 'identity'},
                 ) as response:
                     response.raise_for_status()
-                    image_data = await response.read()
+                    # Accept-Encoding is only a request; the sender can still compress and pick our decompressed size.
+                    encodings = response.headers.getall('Content-Encoding', ())
+                    if any(encoding.lower() not in ('', 'identity') for encoding in encodings):
+                        return None
+                    image_data = bytearray()
+                    total = 0
+                    async for chunk in response.content.iter_chunked(64 * 1024):
+                        total += len(chunk)
+                        if max_bytes is not None and total > max_bytes:
+                            return None
+                        image_data.extend(chunk)
                     encoded_string = base64.b64encode(image_data).decode('utf-8')
                     content_type = response.headers.get('Content-Type', 'image/png')
                     return f'data:{content_type};base64,{encoded_string}'
         else:
             # Non-URL string — treat as file_id. Delegate to the canonical
             # file-ID resolver which enforces ownership/access checks.
-            return await get_image_base64_from_file_id(url, user=user)
+            file_id_match = FILE_CONTENT_URL_PATTERN.match(url)
+            return await get_image_base64_from_file_id(file_id_match.group(1) if file_id_match else url, user=user)
 
     except Exception:
         return None
@@ -86,13 +111,14 @@ async def get_image_url_from_base64(request, base64_image_string, metadata, user
         # Extract base64 image data from the line
         image_data, content_type = await get_image_data(base64_image_string)
         if image_data is not None:
-            _, image_url = await upload_image(
+            _, image_file = await upload_image(
                 request,
                 image_data,
                 content_type,
                 metadata,
                 user,
             )
+            image_url = image_file['url']
 
         return image_url
     return None

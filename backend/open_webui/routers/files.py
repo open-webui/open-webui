@@ -224,6 +224,15 @@ async def process_uploaded_file(
                             f'{knowledge_id}: user {user.id} lacks write access'
                         )
                     else:
+                        directory_id = file_metadata.get('directory_id') or None
+                        if directory_id:
+                            directory = await Knowledges.get_directory_by_id(directory_id, db=db_session)
+                            if not directory or directory.knowledge_id != knowledge_id:
+                                log.warning(
+                                    'Ignoring directory %s: not a directory of knowledge %s', directory_id, knowledge_id
+                                )
+                                directory_id = None
+
                         # Keep the generic file status stream open until the
                         # KB-specific vector write and durable link both finish.
                         await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
@@ -237,7 +246,7 @@ async def process_uploaded_file(
                             knowledge_id=knowledge_id,
                             file_id=file_item.id,
                             user_id=user.id,
-                            directory_id=file_metadata.get('directory_id'),
+                            directory_id=directory_id,
                             db=db_session,
                         )
                         if not knowledge_file:
@@ -461,7 +470,11 @@ async def upload_file_handler(
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT('Error uploading file'),
+            detail=(
+                ERROR_MESSAGES.EMPTY_CONTENT
+                if isinstance(e, ValueError) and e.args == (ERROR_MESSAGES.EMPTY_CONTENT,)
+                else ERROR_MESSAGES.DEFAULT('Error uploading file')
+            ),
         )
 
 
@@ -613,9 +626,12 @@ async def get_file_process_status(
     id: str,
     stream: bool = Query(False),
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
-    file = await Files.get_file_by_id(id, db=db)
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
+    # Database operations manage their own short-lived sessions internally.
+    # Holding a session here would keep a connection for the entire stream
+    # (up to two hours) and exhaust the connection pool under concurrent load.
+    file = await Files.get_file_by_id(id)
 
     if not file:
         raise HTTPException(
@@ -623,16 +639,13 @@ async def get_file_process_status(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
+    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user):
         if stream:
             MAX_FILE_PROCESSING_DURATION = 3600 * 2
 
             async def event_stream(file_id):
-                # NOTE: We intentionally do NOT capture the request's db session here.
-                # Each poll creates its own short-lived session to avoid holding a
-                # connection for hours. A WebSocket push would be more efficient.
                 for _ in range(MAX_FILE_PROCESSING_DURATION):
-                    file_item = await Files.get_file_by_id(file_id)  # Creates own session
+                    file_item = await Files.get_file_by_id(file_id)
                     if file_item:
                         data = file_item.model_dump().get('data', {})
                         status = data.get('status')

@@ -97,16 +97,32 @@ async def get_folders(
     await check_folders_permission(request, user, db=db)
 
     folders = await Folders.get_folders_by_user_id(user.id, db=db)
-    folder_ids = {folder.id for folder in folders}
+    parent_by_id = {folder.id: folder.parent_id for folder in folders}
+
+    def is_in_parent_cycle(folder_id):
+        seen_ids = {folder_id}
+        current_id = parent_by_id.get(folder_id)
+        while current_id and current_id not in seen_ids:
+            seen_ids.add(current_id)
+            current_id = parent_by_id.get(current_id)
+        return current_id == folder_id
+
+    user_group_ids = None
+    if user.role != 'admin' and any(folder.data and 'files' in folder.data for folder in folders):
+        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
 
     # Verify folder data integrity
     folder_list = []
     for folder in folders:
-        if folder.parent_id and folder.parent_id not in folder_ids:
+        # A missing or looping parent hides the folder from the tree, so put it back at the root
+        if folder.parent_id and (folder.parent_id not in parent_by_id or is_in_parent_cycle(folder.id)):
+            parent_by_id[folder.id] = None
             folder = await Folders.update_folder_parent_id_by_id_and_user_id(folder.id, user.id, None, db=db)
 
         if folder.data and 'files' in folder.data:
-            accessible_files = await get_accessible_folder_files(folder.data['files'], user, db=db)
+            accessible_files = await get_accessible_folder_files(
+                folder.data['files'], user, db=db, user_group_ids=user_group_ids
+            )
             if len(accessible_files) != len(folder.data.get('files', [])):
                 folder.data['files'] = accessible_files
                 await Folders.update_folder_by_id_and_user_id(
@@ -144,6 +160,16 @@ async def create_folder(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
+        )
+
+    if (
+        form_data.data
+        and 'files' in form_data.data
+        and not await can_read_all_folder_files(form_data.data['files'], user, db=db)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
     # Check if creating a subfolder in a shared folder
@@ -186,16 +212,6 @@ async def create_folder(
                     detail=ERROR_MESSAGES.DEFAULT('Error creating folder'),
                 )
 
-    if (
-        form_data.data
-        and 'files' in form_data.data
-        and not await can_read_all_folder_files(form_data.data['files'], user, db=db)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
     try:
         folder = await Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
         await publish_event(
@@ -233,43 +249,35 @@ async def get_shared_folders(
 
     folder_perms = await Folders.get_shared_folder_ids_for_user(user.id, group_ids, db=db)
 
-    # Filter out folders owned by the user
-    results = []
-    owner_cache = {}
-    for folder_id, permission in folder_perms.items():
-        folder = await Folders.get_folder_by_id(folder_id, db=db)
-        if not folder or folder.user_id == user.id:
-            continue
+    folders = await Folders.get_folders_by_ids(list(folder_perms.keys()), db=db)
+    shared_folders = [folder for folder in folders if folder.user_id != user.id]
 
-        # Get owner name (cached)
-        if folder.user_id not in owner_cache:
-            owner = await Users.get_user_by_id(folder.user_id, db=db)
-            owner_cache[folder.user_id] = owner.name if owner else 'Unknown'
+    owners = await Users.get_users_by_user_ids([folder.user_id for folder in shared_folders], db=db)
+    owner_names = {owner.id: owner.name for owner in owners}
 
-        results.append(
-            {
-                **folder.model_dump(),
-                'owner_name': owner_cache[folder.user_id],
-                'permission': permission,
-            }
-        )
+    results = [
+        {
+            **folder.model_dump(),
+            'owner_name': owner_names.get(folder.user_id, 'Unknown'),
+            'permission': folder_perms[folder.id],
+        }
+        for folder in shared_folders
+    ]
 
     # Also include child folders of shared folders (inheritance)
-    shared_root_ids = {r['id'] for r in results}
-    for root_id in list(shared_root_ids):
-        root_folder = await Folders.get_folder_by_id(root_id, db=db)
-        if root_folder:
-            children = await Folders.get_children_folders_by_id_and_user_id(root_id, root_folder.user_id, db=db)
-            if children:
-                for child in children:
-                    if child.id not in {r['id'] for r in results}:
-                        results.append(
-                            {
-                                **child.model_dump(),
-                                'owner_name': owner_cache.get(child.user_id, 'Unknown'),
-                                'permission': folder_perms.get(root_id, 'read'),
-                            }
-                        )
+    seen_ids = {folder.id for folder in shared_folders}
+    for folder in shared_folders:
+        children = await Folders.get_children_folders_by_id_and_user_id(folder.id, folder.user_id, db=db)
+        for child in children or []:
+            if child.id not in seen_ids:
+                seen_ids.add(child.id)
+                results.append(
+                    {
+                        **child.model_dump(),
+                        'owner_name': owner_names.get(child.user_id, 'Unknown'),
+                        'permission': folder_perms[folder.id],
+                    }
+                )
 
     return results
 
@@ -279,7 +287,12 @@ async def get_shared_folders(
 ############################
 
 
-@router.get('/{id}', response_model=None)
+class FolderResponse(FolderModel):
+    access_grants: list[dict] = []
+    write_access: bool = False
+
+
+@router.get('/{id}', response_model=FolderResponse)
 async def get_folder_by_id(
     request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -287,13 +300,21 @@ async def get_folder_by_id(
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
         grants = await AccessGrants.get_grants_by_resource('folder', id, db=db)
-        return {**folder.model_dump(), 'access_grants': [g.model_dump() for g in grants]}
+        return FolderResponse(
+            **folder.model_dump(),
+            access_grants=[g.model_dump() for g in grants],
+            write_access=True,
+        )
 
     # Check shared access
     folder = await Folders.get_folder_by_id(id, db=db)
     if folder and (user.role == 'admin' or await _has_folder_access(user.id, folder, 'read', db)):
         grants = await AccessGrants.get_grants_by_resource('folder', id, db=db)
-        return {**folder.model_dump(), 'access_grants': [g.model_dump() for g in grants]}
+        return FolderResponse(
+            **folder.model_dump(),
+            access_grants=[g.model_dump() for g in grants],
+            write_access=user.role == 'admin' or await _has_folder_access(user.id, folder, 'write', db),
+        )
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -350,6 +371,15 @@ async def update_folder_name_by_id(
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
 
+            # Editors send back the owner's existing entries, so only new ones are checked against the editor.
+            existing_files = (folder.data or {}).get('files') or []
+            added_files = [entry for entry in form_data.data['files'] or [] if entry not in existing_files]
+            if not await can_read_all_folder_files(added_files, user, db=db):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
+
         try:
             folder = await Folders.update_folder_by_id_and_user_id(id, folder.user_id, form_data, db=db)
             await publish_event(
@@ -393,10 +423,18 @@ async def update_folder_parent_id_by_id(
             form_data.parent_id, user.id, folder.name, db=db
         )
 
-        if existing_folder:
+        if existing_folder and existing_folder.id != id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
+            )
+
+        if form_data.parent_id and form_data.parent_id in await Folders.get_folder_ids_by_id_and_user_id_in_subtree(
+            id, user.id, db=db
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Cannot move a folder into itself or one of its subfolders'),
             )
 
         try:
@@ -667,7 +705,7 @@ async def delete_folder_by_id(
     folder_owner_id = folder.user_id
 
     folder_ids = await Folders.get_folder_ids_by_id_and_user_id_in_subtree(id, folder_owner_id, db=db)
-    if await Chats.count_chats_by_folder_ids_and_user_id(folder_ids, folder_owner_id, db=db):
+    if delete_contents and await Chats.count_chats_by_folder_ids_and_user_id(folder_ids, folder_owner_id, db=db):
         chat_delete_permission = await has_permission(
             user.id, 'chat.delete', await Config.get('user.permissions'), db=db
         )
@@ -688,8 +726,8 @@ async def delete_folder_by_id(
                 for folder_id in folder_ids:
                     if delete_contents:
                         await Chats.delete_chats_by_user_id_and_folder_id(folder_owner_id, folder_id, db=db)
-                    else:
-                        await Chats.move_chats_by_user_id_and_folder_id(folder_owner_id, folder_id, None, db=db)
+
+                    await Chats.move_chats_by_folder_id(folder_id, None, db=db)
 
                     # Clean up access grants for this folder
                     await AccessGrants.revoke_all_access('folder', folder_id, db=db)

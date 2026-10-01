@@ -3,7 +3,6 @@ from __future__ import annotations
 import errno
 from enum import Enum
 
-
 _ERRNO_MESSAGES = {
     errno.ENAMETOOLONG: 'File name is too long.',
     errno.ENOSPC: 'The server is out of storage space.',
@@ -59,6 +58,7 @@ class ERROR_MESSAGES(str, Enum):
 
     INVALID_TOKEN = 'Your session has expired or the token is invalid. Please sign in again.'
     INVALID_CRED = 'The email or password provided is incorrect. Please check for typos and try logging in again.'
+    OAUTH_LOGIN_FAILED = 'Sign-in with your identity provider failed. Please contact your administrator for assistance.'
     INVALID_EMAIL_FORMAT = "The email format you entered is invalid. Please double-check and make sure you're using a valid email address (e.g., yourname@example.com)."
     INCORRECT_PASSWORD = 'The password provided is incorrect. Please check for typos and try again.'
     INVALID_TRUSTED_HEADER = (
@@ -99,7 +99,7 @@ class ERROR_MESSAGES(str, Enum):
 
     INVALID_URL = 'The URL you provided is invalid. Please double-check and try again.'
 
-    WEB_SEARCH_ERROR = lambda err='': err if err else 'Something went wrong while searching the web.'
+    WEB_SEARCH_ERROR = 'Something went wrong while searching the web.'
 
     OLLAMA_API_DISABLED = 'The Ollama API is disabled. Please enable it to use this feature.'
 
@@ -121,6 +121,7 @@ class ERROR_MESSAGES(str, Enum):
     AUTOMATION_COUNT_REQUIRES_DTSTART = (
         'RRULE with COUNT requires an explicit DTSTART line to anchor the occurrence window'
     )
+    CALENDAR_RRULE_TOO_FREQUENT = 'Recurring events cannot repeat more often than daily'
 
     FEATURE_DISABLED = lambda name='': f'{name} is disabled'
     INPUT_TOO_LONG = lambda size='': f'Input prompt exceeds maximum length of {size}'

@@ -5,8 +5,8 @@
 	const defaultOpts: PanZoomOptions = {
 		bounds: true,
 		boundsPadding: 0.1,
-		zoomSpeed: 0.18,
-		pinchSpeed: 3.5
+		pinchSpeed: 3.5,
+		beforeWheel: () => true
 	};
 
 	export let className = '';
@@ -18,6 +18,27 @@
 
 	const updateZoomLevel = () => {
 		zoomLevel = instance?.getTransform().scale ?? 1;
+	};
+
+	const handleWheel = (e: WheelEvent) => {
+		if (!instance || !containerElement) return;
+
+		if (!e.ctrlKey && !e.metaKey) {
+			const transform = instance.getTransform();
+			if (Math.abs(transform.scale - 1) < 0.01) return;
+			if (Math.abs(e.deltaY) >= Math.abs(e.deltaX)) return;
+
+			e.preventDefault();
+			instance.moveBy(-e.deltaX, -e.deltaY);
+			updateZoomLevel();
+			return;
+		}
+
+		e.preventDefault();
+
+		const rect = containerElement.getBoundingClientRect();
+		instance.zoomTo(e.clientX - rect.left, e.clientY - rect.top, Math.exp(-e.deltaY * 0.002));
+		updateZoomLevel();
 	};
 
 	const center = () => ({
@@ -56,6 +77,6 @@
 	});
 </script>
 
-<div bind:this={containerElement} class={className}>
+<div bind:this={containerElement} class={className} on:wheel|nonpassive={handleWheel}>
 	<slot />
 </div>

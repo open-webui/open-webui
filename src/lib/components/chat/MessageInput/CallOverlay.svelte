@@ -15,7 +15,7 @@
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let eventTarget: EventTarget;
 	export let submitPrompt: Function;
@@ -44,6 +44,7 @@
 	let mediaRecorder;
 	let audioStream = null;
 	let audioChunks = [];
+	let destroyed = false;
 
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
@@ -57,7 +58,7 @@
 				...videoInputDevices,
 				{
 					deviceId: 'screen',
-					label: 'Screen Share'
+					label: $i18n.t('Screen Share')
 				}
 			];
 		}
@@ -184,7 +185,8 @@
 	};
 
 	const stopRecordingCallback = async (_continue = true) => {
-		if ($showCallOverlay) {
+		// $showCallOverlay stays true when the chat page unmounts
+		if ($showCallOverlay && !destroyed) {
 			console.log('%c%s', 'color: red; font-size: 20px;', '🚨 stopRecordingCallback 🚨');
 
 			// deep copy the audioChunks array
@@ -231,7 +233,7 @@
 	};
 
 	const startRecording = async () => {
-		if ($showCallOverlay) {
+		if ($showCallOverlay && !destroyed) {
 			if (!audioStream) {
 				audioStream = await navigator.mediaDevices.getUserMedia({
 					audio: {
@@ -379,8 +381,9 @@
 	};
 
 	let finishedMessages = {};
+	let failedMessages = {};
 	let currentMessageId = null;
-	let currentUtterance = null;
+	let currentUtterance: SpeechSynthesisUtterance | null = null;
 
 	// Get voice: model-specific > user settings > config default
 	const getVoiceId = () => {
@@ -427,30 +430,43 @@
 		}
 	};
 
-	const playAudio = (audio) => {
+	const playAudio = (audio: HTMLAudioElement) => {
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
 				const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
 
-				if (audioElement) {
-					audioElement.src = audio.src;
-					audioElement.muted = true;
-					audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					audioElement
-						.play()
-						.then(() => {
-							audioElement.muted = false;
-						})
-						.catch((error) => {
-							console.error(error);
-						});
-
-					audioElement.onended = async (e) => {
-						await new Promise((r) => setTimeout(r, 100));
-						resolve(e);
-					};
+				if (!audioElement) {
+					resolve(null);
+					return;
 				}
+
+				let settled = false;
+				const finish = async (e: Event | Error | null = null) => {
+					if (settled) {
+						return;
+					}
+
+					settled = true;
+					audioElement.onended = null;
+					audioElement.onerror = null;
+					audioElement.onpause = null;
+
+					await new Promise((r) => setTimeout(r, 100));
+					resolve(e);
+				};
+
+				audioElement.src = audio.src;
+				// stopAllAudio mutes it; unmuting after play() outside a gesture makes WebKit pause it
+				audioElement.muted = false;
+				audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+				audioElement.onended = finish;
+				audioElement.onerror = () => finish();
+				audioElement.onpause = finish;
+
+				audioElement.play().catch((error) => {
+					console.error(error);
+					finish(error);
+				});
 			});
 		} else {
 			return Promise.resolve();
@@ -470,7 +486,7 @@
 			currentUtterance = null;
 		}
 
-		const audioElement = document.getElementById('audioElement');
+		const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
 		if (audioElement) {
 			audioElement.muted = true;
 			audioElement.pause();
@@ -485,11 +501,18 @@
 	const emojiCache = new Map();
 
 	const fetchAudio = async (content) => {
-		if (!audioCache.has(content)) {
+		const id = currentMessageId;
+
+		if (!audioCache.has(content) && !failedMessages[id]) {
 			try {
 				// Set the emoji for the content if needed
 				if ($settings?.showEmojiInCall ?? false) {
-					const emoji = await generateEmoji(localStorage.token, modelId, content, chatId);
+					const emoji = await generateEmoji(localStorage.token, modelId, content, chatId).catch(
+						(error) => {
+							console.error(error);
+							return null;
+						}
+					);
 					if (emoji) {
 						emojiCache.set(content, emoji);
 					}
@@ -513,6 +536,10 @@
 					const res = await synthesizeOpenAISpeech(localStorage.token, getVoiceId(), content).catch(
 						(error) => {
 							console.error(error);
+							if (!failedMessages[id]) {
+								failedMessages[id] = true;
+								toast.error(`${error}`);
+							}
 							return null;
 						}
 					);
@@ -527,6 +554,10 @@
 				}
 			} catch (error) {
 				console.error('Error synthesizing speech:', error);
+			}
+
+			if (!audioCache.has(content)) {
+				failedMessages[id] = true;
 			}
 		}
 
@@ -569,7 +600,7 @@
 					} else {
 						await speakSpeechSynthesisHandler(content);
 					}
-				} else {
+				} else if (!failedMessages[id]) {
 					// If not available in the cache, push it back to the queue and delay
 					messages[id].unshift(content); // Re-queue the content at the start
 					console.log(`Audio for "${content}" not yet available in the cache, re-queued...`);
@@ -743,6 +774,7 @@
 	});
 
 	onDestroy(async () => {
+		destroyed = true;
 		await stopAllAudio();
 		await stopRecordingCallback(false);
 		await stopCamera();

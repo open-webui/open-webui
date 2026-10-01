@@ -95,8 +95,8 @@
 	};
 
 	const formatSchedule = (rrule: string): string => {
-		if (rrule.includes('COUNT=1')) {
-			const match = rrule.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+		const match = rrule.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
+		if (/COUNT=1(?!\d)/.test(rrule)) {
 			if (match) {
 				const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`);
 				return `${$i18n.t('Once')} · ${d.toLocaleDateString(undefined, {
@@ -109,6 +109,9 @@
 
 		const parts: Record<string, string> = {};
 		rrule
+			.split(/\s+/)
+			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
+			.join('')
 			.replace('RRULE:', '')
 			.split(';')
 			.forEach((part) => {
@@ -117,8 +120,8 @@
 			});
 
 		const freq = parts.FREQ || '';
-		const hour = parseInt(parts.BYHOUR || '0');
-		const minute = (parts.BYMINUTE || '0').padStart(2, '0');
+		const hour = parseInt(parts.BYHOUR || match?.[4] || '0');
+		const minute = (parts.BYMINUTE || match?.[5] || '0').padStart(2, '0');
 		const interval = parseInt(parts.INTERVAL || '1');
 		const ampm = hour >= 12 ? 'PM' : 'AM';
 		const hour12 = hour % 12 || 12;
@@ -164,6 +167,7 @@
 			return null;
 		});
 		if (res) {
+			automation = res;
 			toast.success($i18n.t('Automation triggered'));
 			setTimeout(() => loadRuns(false), 2000);
 		}

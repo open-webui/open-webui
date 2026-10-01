@@ -3,7 +3,9 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -33,6 +35,7 @@
 
 	export let open = false;
 	export let grouped = false;
+	export let allowEmbeds = false;
 	export let className = '';
 	export let resolvable = false;
 	export let resolving = false;
@@ -88,6 +91,49 @@
 		}
 	}
 
+	function isToolResultError(value: unknown): boolean {
+		if (typeof value === 'string') {
+			const text = value.trim().toLowerCase();
+			if (
+				text.startsWith('error:') ||
+				text.startsWith('exception:') ||
+				text.startsWith('traceback') ||
+				text.startsWith('http error!')
+			) {
+				return true;
+			}
+		}
+
+		let parsed = value;
+		while (typeof parsed === 'string') {
+			try {
+				parsed = JSON.parse(parsed);
+			} catch {
+				break;
+			}
+		}
+		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return false;
+
+		const result = parsed as Record<string, unknown>;
+		const error = result.error;
+		if (
+			(typeof error === 'string' && error.trim().length > 0) ||
+			(typeof error === 'object' && error !== null)
+		) {
+			return true;
+		}
+
+		const status = typeof result.status === 'string' ? result.status.trim().toLowerCase() : '';
+		if (status === 'error' || status === 'failed') return true;
+
+		const message = result.message;
+		return (
+			(result.success === false || result.ok === false) &&
+			((typeof message === 'string' && message.trim().length > 0) ||
+				(typeof message === 'object' && message !== null))
+		);
+	}
+
 	export let resultContent: string = '';
 
 	$: result = resultContent || decode(attributes?.result ?? '');
@@ -100,9 +146,15 @@
 		open || needsApproval || needsInput || (Array.isArray(embeds) && embeds.length > 0)
 			? decode(attributes?.arguments ?? '')
 			: '';
-	$: isDone = attributes?.done === 'true';
 	$: isRejected = attributes?.status === 'rejected';
-	$: isExecuting = !needsApproval && !needsInput && attributes?.done && attributes?.done !== 'true';
+	$: isDone =
+		attributes?.done === 'true' ||
+		attributes?.status === 'failed' ||
+		attributes?.status === 'incomplete';
+	$: isExecuting = !isDone && !isRejected && attributes?.status === 'completed';
+	$: isPreparing = !isDone && !isRejected && !needsApproval && !needsInput && !isExecuting;
+	$: isActive = isPreparing || isExecuting;
+	$: isError = attributes?.status === 'failed' || (isDone && isToolResultError(result));
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
@@ -122,7 +174,7 @@
 </script>
 
 <div {id} class={className}>
-	{#if !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
+	{#if allowEmbeds && !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
 			<div class="w-full text-xs text-gray-500">
@@ -151,17 +203,21 @@
 			on:keydown={toggleOpenOnKeydown}
 		>
 			<div
-				class="w-full min-w-0 max-w-full font-normal flex items-center gap-1.5 {isExecuting
+				class="w-full min-w-0 max-w-full font-normal flex items-center gap-1.5 {isActive
 					? 'shimmer'
 					: ''}"
 			>
 				<!-- Status icon -->
-				{#if isExecuting}
+				{#if isActive}
 					<div>
 						<Spinner className="size-4" />
 					</div>
 				{:else if isRejected}
 					<div class="text-red-400 dark:text-red-500">
+						<XMark className="size-4" strokeWidth="2.5" />
+					</div>
+				{:else if isError}
+					<div class="text-red-500 dark:text-red-400">
 						<XMark className="size-4" strokeWidth="2.5" />
 					</div>
 				{:else if isDone}
@@ -180,14 +236,16 @@
 					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
 					<!-- Full label (md and above) -->
 					<span class="hidden @md:inline font-normal">
-						{#if isDone}
+						{#if isRejected}
+							{$i18n.t('Denied {{NAME}}', { NAME: attributes.name })}
+						{:else if isDone}
 							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
 						{:else if needsInput}
 							{$i18n.t('Input needed')}
 						{:else if needsApproval}
 							{$i18n.t('Allow {{NAME}}?', { NAME: attributes.name })}
-						{:else if isRejected}
-							{$i18n.t('Denied {{NAME}}', { NAME: attributes.name })}
+						{:else if isPreparing}
+							{$i18n.t('Preparing {{NAME}}...', { NAME: attributes.name })}
 						{:else}
 							{$i18n.t('Executing {{NAME}}...', { NAME: attributes.name })}
 						{/if}
@@ -198,7 +256,7 @@
 					<span class="flex gap-1 shrink-0">
 						<button
 							type="button"
-							class="text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
 							disabled={resolving}
 							on:click|stopPropagation={() => onResolve(true)}
 						>
@@ -206,7 +264,7 @@
 						</button>
 						<button
 							type="button"
-							class="text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
 							disabled={resolving}
 							on:click|stopPropagation={() => onResolve(false)}
 						>

@@ -74,11 +74,21 @@
 			contentEl.style.bottom = 'auto';
 		}
 
+		const contentWidth = contentEl.offsetWidth || 0;
+
 		if (align === 'end') {
-			contentEl.style.right = `${window.innerWidth - rect.right}px`;
+			let right = window.innerWidth - rect.right;
+			if (right + contentWidth > window.innerWidth) {
+				right = window.innerWidth - contentWidth - 16;
+			}
+			contentEl.style.right = `${Math.max(16, right)}px`;
 			contentEl.style.left = 'auto';
 		} else {
-			contentEl.style.left = `${rect.left}px`;
+			let left = rect.left;
+			if (left + contentWidth + 16 > window.innerWidth) {
+				left = window.innerWidth - contentWidth - 16;
+			}
+			contentEl.style.left = `${Math.max(16, left)}px`;
 			contentEl.style.right = 'auto';
 		}
 	}

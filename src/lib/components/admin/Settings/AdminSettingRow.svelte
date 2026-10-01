@@ -14,7 +14,7 @@
 		<slot name="label">{label}</slot>
 	</div>
 
-	<div class="shrink-0">
+	<div class="min-w-0">
 		<slot {labelId} />
 	</div>
 </div>

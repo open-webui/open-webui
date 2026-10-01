@@ -797,11 +797,11 @@
 <div class="flex w-full flex-col justify-between text-xs">
 	<div class="mb-2 flex items-center justify-between">
 		<div class="flex items-center gap-2 leading-none text-gray-600 dark:text-gray-400">
-			<div>{$i18n.t('External Knowledge Sources')}</div>
+			<div>{$i18n.t('settings.admin.integrations.externalKnowledge.title')}</div>
 			<ExperimentalBadge />
 		</div>
 
-		<Tooltip content={$i18n.t('Add Connection')}>
+		<Tooltip content={$i18n.t('settings.admin.integrations.externalKnowledge.addConnection.label')}>
 			<button
 				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 				on:click={openCreateSource}

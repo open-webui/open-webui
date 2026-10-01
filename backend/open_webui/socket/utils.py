@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 
 import pycrdt as Y
 from open_webui.env import REDIS_KEY_PREFIX
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.redis import get_redis_connection
+from redis.exceptions import RedisClusterException, RedisError
+
+log = logging.getLogger(__name__)
 
 YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
+SCAN_BATCH_SIZE = 200
 
 
 class RedisLock:
@@ -57,16 +62,23 @@ class RedisLock:
         return bool(self.redis.eval(self._RENEW_SCRIPT, 1, self.lock_name, self.lock_id, self.timeout_secs))
 
     def release_lock(self):
-        self.redis.eval(self._RELEASE_SCRIPT, 1, self.lock_name, self.lock_id)
+        try:
+            self.redis.eval(self._RELEASE_SCRIPT, 1, self.lock_name, self.lock_id)
+        except (RedisClusterException, RedisError) as e:
+            log.warning('Failed to release lock %s; it expires on its own: %s', self.lock_name, e)
 
 
 class RedisDict:
-    def __init__(self, name, redis_url, redis_sentinels=[], redis_cluster=False):
+    def __init__(
+        self,
+        name,
+        redis_url,
+        redis_sentinels=[],
+        redis_cluster=False,
+        cache_set_signature=False,
+    ):
         self.name = name
-        # Per-process cache of the last payload fingerprint written by set().
-        # Used to skip redundant HSET round-trips when the model list hasn't
-        # changed — the dominant Redis write source on busy multi-pod setups.
-        self._last_signature: str | None = None
+        self._signature_name = f'{name}:signature' if cache_set_signature else None
         self.redis = get_redis_connection(
             redis_url,
             redis_sentinels,
@@ -77,6 +89,8 @@ class RedisDict:
     def __setitem__(self, key, value):
         serialized_value = JSONCodec.dumps(value)
         self.redis.hset(self.name, key, serialized_value)
+        if self._signature_name:
+            self.redis.delete(self._signature_name)
 
     def __getitem__(self, key):
         value = self.redis.hget(self.name, key)
@@ -88,6 +102,8 @@ class RedisDict:
         result = self.redis.hdel(self.name, key)
         if result == 0:
             raise KeyError(key)
+        if self._signature_name:
+            self.redis.delete(self._signature_name)
 
     def __contains__(self, key):
         return self.redis.hexists(self.name, key)
@@ -104,10 +120,26 @@ class RedisDict:
     def items(self):
         return [(k, JSONCodec.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
+    def scan_batches(self):
+        """Yield lists of (key, value) pairs via incremental HSCAN; a field may repeat across batches."""
+        cursor = 0
+        while True:
+            cursor, batch = self.redis.hscan(self.name, cursor, count=SCAN_BATCH_SIZE)
+            if batch:
+                yield [(k, JSONCodec.loads(v)) for k, v in batch.items()]
+            if cursor == 0:
+                break
+
+    def delete_many(self, *keys):
+        """Delete fields in one HDEL; no keys is a no-op (HDEL rejects an empty field list)."""
+        if keys:
+            self.redis.hdel(self.name, *keys)
+            if self._signature_name:
+                self.redis.delete(self._signature_name)
+
     def set(self, mapping: dict):
         if not mapping:
-            self.redis.delete(self.name)
-            self._last_signature = None
+            self.clear()
             return
 
         # Serialize values once — reused for both the fingerprint and the write.
@@ -118,14 +150,14 @@ class RedisDict:
             digest.update(b'\0')
             digest.update(serialized[key].encode())
             digest.update(b'\0')
-        signature = digest.hexdigest()
+        content_digest = digest.hexdigest()
 
-        # Skip the write when the prepared mapping is identical to the last one
-        # this process wrote.  The check is per-instance (not distributed), but
-        # still eliminates the majority of redundant writes because each pod
-        # typically produces the same model list on consecutive refreshes.
-        if signature == self._last_signature:
-            return
+        if self._signature_name:
+            stored_signature = self.redis.get(self._signature_name)
+            if stored_signature and stored_signature.startswith(f'{content_digest}:'):
+                return
+            # Cleared first so readers refetch while the hash is being rewritten.
+            self.redis.delete(self._signature_name)
 
         # Fetch existing keys before writing so we know which ones to remove.
         # HKEYS is cheap — it transfers only short key strings, not large JSON values.
@@ -140,7 +172,8 @@ class RedisDict:
         if keys_to_remove:
             self.redis.hdel(self.name, *keys_to_remove)
 
-        self._last_signature = signature
+        if self._signature_name:
+            self.redis.set(self._signature_name, f'{content_digest}:{uuid.uuid4().hex}')
 
     def get(self, key, default=None):
         try:
@@ -149,8 +182,11 @@ class RedisDict:
             return default
 
     def clear(self):
-        self.redis.delete(self.name)
-        self._last_signature = None
+        if self._signature_name:
+            self.redis.delete(self.name)
+            self.redis.delete(self._signature_name)
+        else:
+            self.redis.delete(self.name)
 
     def update(self, other=None, **kwargs):
         if other is not None:
@@ -163,6 +199,43 @@ class RedisDict:
         if key not in self:
             self[key] = default
         return self[key]
+
+
+class CachedRedisDict(RedisDict):
+    """Answers reads from a per-worker cache of the hash, refetched whenever its signature changes."""
+
+    def __init__(self, name: str, redis_url: str, redis_sentinels: list = [], redis_cluster: bool = False):
+        super().__init__(name, redis_url, redis_sentinels, redis_cluster, cache_set_signature=True)
+        self._cache: dict = {}
+        self._cached_signature: str | None = None
+
+    def _refresh_cache(self) -> dict:
+        stored_signature = self.redis.get(self._signature_name)
+        if stored_signature is None or stored_signature != self._cached_signature:
+            self._cache = self.redis.hgetall(self.name)
+            self._cached_signature = stored_signature
+        return self._cache
+
+    def __getitem__(self, key):
+        value = self._refresh_cache().get(key)
+        if value is None:
+            raise KeyError(key)
+        return JSONCodec.loads(value)
+
+    def __contains__(self, key):
+        return key in self._refresh_cache()
+
+    def __len__(self):
+        return len(self._refresh_cache())
+
+    def keys(self):
+        return list(self._refresh_cache().keys())
+
+    def values(self):
+        return [JSONCodec.loads(v) for v in self._refresh_cache().values()]
+
+    def items(self):
+        return [(k, JSONCodec.loads(v)) for k, v in self._refresh_cache().items()]
 
 
 class YdocManager:

@@ -46,8 +46,8 @@ def _normalize_target(target: dict[str, Any], existing: dict[str, Any] | None = 
 
     target_id = str(target.get('id') or existing.get('id') or '').strip()
     if not target_id:
-        hostname = urlparse(url).hostname or 'webhook'
-        target_id = re.sub(r'[^a-zA-Z0-9_-]+', '-', hostname).strip('-').lower() or 'target'
+        target_id = urlparse(url).hostname or 'webhook'
+    target_id = re.sub(r'[^a-zA-Z0-9_-]+', '-', target_id).strip('-').lower() or 'target'
 
     events = target['events'] if 'events' in target else existing.get('events', [])
     if events is None:
@@ -268,9 +268,6 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
         title = str(data.get('title') or event.message or 'Chat finished')
         content = str(data.get('message') or '')
         url = str(data.get('url') or '')
-        chat_id = str(data.get('chat_id') or '')
-        if chat_id and url.endswith(f'/c/{chat_id}'):
-            url = f'{url[: -len(f"/c/{chat_id}")].rstrip("/")}/{chat_id}'
         body = '\n'.join(part for part in (content, url) if part)
         return (
             f'**{title}**',
@@ -288,9 +285,6 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
         title = str(event.message or 'Chat failed')
         content = str(data.get('message') or '')
         url = str(data.get('url') or '')
-        chat_id = str(data.get('chat_id') or '')
-        if chat_id and url.endswith(f'/c/{chat_id}'):
-            url = f'{url[: -len(f"/c/{chat_id}")].rstrip("/")}/{chat_id}'
         body = '\n'.join(part for part in (content, url) if part)
         return (
             f'**{title}**',

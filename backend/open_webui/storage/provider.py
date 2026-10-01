@@ -5,14 +5,6 @@ import shutil
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Dict, Tuple
 
-import boto3
-from azure.core.exceptions import ResourceNotFoundError
-from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient
-from botocore.config import Config
-from botocore.exceptions import ClientError
-from google.cloud import storage
-from google.cloud.exceptions import GoogleCloudError, NotFound
 from open_webui.config import (
     AZURE_STORAGE_CONTAINER_NAME,
     AZURE_STORAGE_ENDPOINT,
@@ -33,6 +25,18 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.json_codec import JSONCodec
+
+from open_webui.env import USE_SLIM
+
+if not USE_SLIM:
+    import boto3
+    from azure.core.exceptions import ResourceNotFoundError
+    from azure.identity import DefaultAzureCredential
+    from azure.storage.blob import BlobServiceClient
+    from botocore.config import Config
+    from botocore.exceptions import ClientError
+    from google.cloud import storage
+    from google.cloud.exceptions import GoogleCloudError, NotFound
 
 log = logging.getLogger(__name__)
 
@@ -164,7 +168,9 @@ class S3StorageProvider(StorageProvider):
         try:
             s3_key = self._extract_s3_key(file_path)
             local_file_path = self._get_local_file_path(s3_key)
-            self.s3_client.download_file(self.bucket_name, s3_key, local_file_path)
+            # download_file's temp name caps characters, not bytes, so non-ASCII names can exceed NAME_MAX
+            with open(local_file_path, 'wb') as local_file:
+                self.s3_client.download_fileobj(self.bucket_name, s3_key, local_file)
             return local_file_path
         except ClientError as e:
             raise RuntimeError(f'Error downloading file from S3: {e}')
@@ -332,6 +338,10 @@ class AzureStorageProvider(StorageProvider):
 
 
 def get_storage_provider(storage_provider: str):
+    if USE_SLIM and storage_provider != 'local':
+        raise RuntimeError(
+            'Slim requires local file storage. Set STORAGE_PROVIDER=local, or use the standard image to access cloud storage.'
+        )
     if storage_provider == 'local':
         Storage = LocalStorageProvider()
     elif storage_provider == 's3':

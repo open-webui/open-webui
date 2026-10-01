@@ -21,13 +21,14 @@
 	let evaluationConfig = null;
 	let showAddModel = false;
 
-	const submitHandler = async () => {
-		evaluationConfig = await updateConfig(localStorage.token, evaluationConfig).catch((err) => {
+	const submitHandler = async (nextConfig = evaluationConfig) => {
+		const result = await updateConfig(localStorage.token, nextConfig).catch((err) => {
 			toast.error(err);
 			return null;
 		});
 
-		if (evaluationConfig) {
+		if (result) {
+			evaluationConfig = result;
 			toast.success($i18n.t('Settings saved successfully!'));
 			models.set(
 				await getModels(
@@ -38,32 +39,23 @@
 				)
 			);
 		}
+		return !!result;
 	};
 
 	const addModelHandler = async (model) => {
-		evaluationConfig.EVALUATION_ARENA_MODELS.push(model);
-		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
-
-		await submitHandler();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
-		);
+		return submitHandler({
+			...evaluationConfig,
+			EVALUATION_ARENA_MODELS: [...evaluationConfig.EVALUATION_ARENA_MODELS, model]
+		});
 	};
 
 	const editModelHandler = async (model, modelIdx) => {
-		evaluationConfig.EVALUATION_ARENA_MODELS[modelIdx] = model;
-		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
-
-		await submitHandler();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+		return submitHandler({
+			...evaluationConfig,
+			EVALUATION_ARENA_MODELS: evaluationConfig.EVALUATION_ARENA_MODELS.map((item, index) =>
+				index === modelIdx ? model : item
 			)
-		);
+		});
 	};
 
 	const deleteModelHandler = async (modelIdx) => {
@@ -90,12 +82,7 @@
 	});
 </script>
 
-<ArenaModelModal
-	bind:show={showAddModel}
-	on:submit={async (e) => {
-		addModelHandler(e.detail);
-	}}
-/>
+<ArenaModelModal bind:show={showAddModel} onSubmit={addModelHandler} />
 
 <form
 	class="flex flex-col h-full justify-between text-sm"
@@ -104,14 +91,16 @@
 		dispatch('save');
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Evaluations')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.admin.evaluations.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if evaluationConfig !== null}
 			<AdminSettingSection first>
 				<AdminSettingRow
-					label={$i18n.t('Arena Models')}
-					description={$i18n.t('Message rating should be enabled to use this feature')}
+					label={$i18n.t('settings.admin.evaluations.arenaModels.label')}
+					description={$i18n.t('settings.admin.evaluations.arenaModels.description')}
 					let:labelId
 				>
 					<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
@@ -124,11 +113,13 @@
 			</AdminSettingSection>
 
 			{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
-				<AdminSettingSection title={$i18n.t('Models')}>
+				<AdminSettingSection title={$i18n.t('settings.admin.evaluations.sections.models.title')}>
 					<div class="mb-2 flex items-center justify-between">
-						<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Arena Models')}</div>
+						<div class="text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('settings.admin.evaluations.arenaModels.label')}
+						</div>
 
-						<Tooltip content={$i18n.t('Add Arena Model')}>
+						<Tooltip content={$i18n.t('settings.admin.evaluations.addArenaModel.label')}>
 							<button
 								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 								type="button"
@@ -146,9 +137,7 @@
 							{#each evaluationConfig.EVALUATION_ARENA_MODELS as model, index}
 								<Model
 									{model}
-									on:edit={(e) => {
-										editModelHandler(e.detail, index);
-									}}
+									onEdit={(model) => editModelHandler(model, index)}
 									on:delete={(e) => {
 										deleteModelHandler(index);
 									}}

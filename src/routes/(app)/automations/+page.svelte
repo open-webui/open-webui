@@ -33,6 +33,7 @@
 	import Search from '$lib/components/icons/Search.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Select from '$lib/components/common/Select.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -57,6 +58,7 @@
 	let cloneFrom: AutomationResponse | null = null;
 
 	let showDeleteConfirm = false;
+	let shiftKey = false;
 	let deleteTarget: AutomationResponse | null = null;
 	let openAutomationMenuId: string | null = null;
 
@@ -171,19 +173,21 @@
 	};
 
 	const bulkToggleHandler = async (enable: boolean) => {
-		const targets = (automations ?? []).filter((a) => a.is_active !== enable);
-		if (targets.length === 0) return;
+		const allAutomations = await getAllAutomations(query, statusFilter).catch((err) => {
+			toast.error(`${err}`);
+			return null;
+		});
+		if (!allAutomations) return;
 
-		// Optimistic UI update via map for proper Svelte reactivity
-		automations = (automations ?? []).map((a) =>
-			targets.some((t) => t.id === a.id) ? { ...a, is_active: enable } : a
-		);
+		const targets = allAutomations.filter((a) => a.is_active !== enable);
+		if (targets.length === 0) return;
 
 		try {
 			await Promise.all(targets.map((a) => toggleAutomationById(localStorage.token, a.id)));
+			if (statusFilter !== 'all') page = 1;
+			await getAutomationList();
 		} catch (err) {
 			toast.error(`${err}`);
-			// Refresh from server to restore consistent state
 			await getAutomationList();
 		}
 	};
@@ -235,13 +239,13 @@
 		return automation.folder_id ? $i18n.t('Folder') : $i18n.t('New chat');
 	};
 
-	const getAllAutomations = async () => {
+	const getAllAutomations = async (query: string | null = null, status = 'all') => {
 		let currentPage = 1;
 		let allAutomations: AutomationResponse[] = [];
 		let totalAutomations = 0;
 
 		do {
-			const res = await getAutomationItems(localStorage.token, null, 'all', currentPage);
+			const res = await getAutomationItems(localStorage.token, query, status, currentPage);
 			const pageItems = res?.items ?? [];
 			totalAutomations = res?.total ?? pageItems.length;
 			allAutomations = [...allAutomations, ...pageItems];
@@ -304,9 +308,9 @@
 	};
 
 	const formatRRule = (rrule: string): string => {
+		const match = rrule.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 		// Detect one-time schedule (ONCE)
-		if (rrule.includes('COUNT=1')) {
-			const match = rrule.match(/DTSTART:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+		if (/COUNT=1(?!\d)/.test(rrule)) {
 			if (match) {
 				const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`);
 				return `Once · ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
@@ -315,6 +319,9 @@
 		}
 		const parts: Record<string, string> = {};
 		rrule
+			.split(/\s+/)
+			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
+			.join('')
 			.replace('RRULE:', '')
 			.split(';')
 			.forEach((p) => {
@@ -322,8 +329,8 @@
 				if (k && v) parts[k] = v;
 			});
 		const freq = parts.FREQ || '';
-		const hour = parseInt(parts.BYHOUR || '0');
-		const min = (parts.BYMINUTE || '0').padStart(2, '0');
+		const hour = parseInt(parts.BYHOUR || match?.[4] || '0');
+		const min = (parts.BYMINUTE || match?.[5] || '0').padStart(2, '0');
 		const iv = parseInt(parts.INTERVAL || '1');
 		const ampm = hour >= 12 ? 'PM' : 'AM';
 		const h12 = hour % 12 || 12;
@@ -362,8 +369,33 @@
 		syncHeader();
 		ensureChannels();
 
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				shiftKey = true;
+				openAutomationMenuId = null;
+			}
+		};
+
+		const onKeyUp = (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onBlur = () => {
+			shiftKey = false;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
+
 		return () => {
 			clearTimeout(searchDebounceTimer);
+
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
 		};
 	});
 
@@ -612,60 +644,79 @@
 								</Tooltip>
 							</div>
 
-							<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
-								<AutomationMenu
-									show={openAutomationMenuId === automation.id}
-									editHandler={() => {
-										goto(`/automations/${automation.id}`);
-									}}
-									cloneHandler={() => {
-										cloneHandler(automation);
-									}}
-									runHandler={() => {
-										runNowHandler(automation);
-									}}
-									deleteHandler={() => {
-										deleteTarget = automation;
-										showDeleteConfirm = true;
-									}}
-									onClose={() => {
-										openAutomationMenuId = null;
-									}}
-								>
-									<button
-										class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-										type="button"
-										aria-label={$i18n.t('Automation Menu')}
-										on:click={(e) => {
-											e.preventDefault();
-											e.stopPropagation();
-											openAutomationMenuId =
-												openAutomationMenuId === automation.id ? null : automation.id;
-										}}
-									>
-										<EllipsisHorizontal className="size-4" />
-									</button>
-								</AutomationMenu>
-
-								<button
-									class="flex h-6 items-center"
-									type="button"
-									on:click={(e) => {
-										e.stopPropagation();
-										e.preventDefault();
-									}}
-								>
-									<Tooltip
-										content={automation.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-									>
-										<Switch
-											bind:state={automation.is_active}
-											on:change={() => {
-												toggleHandler(automation);
+							<div class="flex shrink-0 flex-row items-center self-center">
+								{#if shiftKey}
+									<Tooltip content={$i18n.t('Delete')}>
+										<button
+											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+											type="button"
+											aria-label={$i18n.t('Delete')}
+											on:click={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												deleteHandler(automation);
 											}}
-										/>
+										>
+											<GarbageBin className="size-4" />
+										</button>
 									</Tooltip>
-								</button>
+								{:else}
+									<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
+										<AutomationMenu
+											show={openAutomationMenuId === automation.id}
+											editHandler={() => {
+												goto(`/automations/${automation.id}`);
+											}}
+											cloneHandler={() => {
+												cloneHandler(automation);
+											}}
+											runHandler={() => {
+												runNowHandler(automation);
+											}}
+											deleteHandler={() => {
+												deleteTarget = automation;
+												showDeleteConfirm = true;
+											}}
+											onClose={() => {
+												openAutomationMenuId = null;
+											}}
+										>
+											<button
+												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+												type="button"
+												aria-label={$i18n.t('Automation Menu')}
+												on:click={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													openAutomationMenuId =
+														openAutomationMenuId === automation.id ? null : automation.id;
+												}}
+											>
+												<EllipsisHorizontal className="size-4" />
+											</button>
+										</AutomationMenu>
+
+										<button
+											class="flex h-6 items-center"
+											type="button"
+											on:click={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+											}}
+										>
+											<Tooltip
+												content={automation.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+											>
+												<Switch
+													bind:state={automation.is_active}
+													on:change={() => {
+														toggleHandler(automation);
+													}}
+												/>
+											</Tooltip>
+										</button>
+									</div>
+								{/if}
 							</div>
 						</div>
 					{/each}

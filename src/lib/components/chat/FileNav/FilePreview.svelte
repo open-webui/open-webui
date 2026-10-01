@@ -5,9 +5,9 @@
 	import { settings, config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
-	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
+	import { initMermaid, renderMermaidDiagram, sanitizeSvg } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
-	import PDFViewer from '../../common/PDFViewer.svelte';
+	import PdfPagesPreview from '../../common/PdfPagesPreview.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
 	import DocxPreview from '../../common/DocxPreview.svelte';
 	import PptxPreview from '../../common/PptxPreview.svelte';
@@ -16,10 +16,10 @@
 	import SqliteView from './SqliteView.svelte';
 	import FileCodeEditor from './FileCodeEditor.svelte';
 
-	let pdfViewerRef: PDFViewer;
+	let pdfPagesPreviewRef: PdfPagesPreview;
 	let fileCodeEditorRef: FileCodeEditor;
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let selectedFile: string | null = null;
 	export let fileLoading = false;
@@ -39,6 +39,7 @@
 	export let fileOfficeHtml: string | null = null;
 	export let fileOfficeSlides: string[] | null = null;
 	export let currentSlide = 0;
+	export let targetPage: number | null = null;
 	export let excelSheetNames: string[] = [];
 	export let selectedExcelSheet = '';
 	export let onSheetChange: ((sheet: string) => void) | null = null;
@@ -47,6 +48,12 @@
 	export let readOnly = false;
 
 	export let onSave: ((content: string) => Promise<void>) | null = null;
+	export let searchTarget: {
+		line: number;
+		column: number;
+		length: number;
+		requestId: number;
+	} | null = null;
 
 	export let editing = false;
 	let editContent = '';
@@ -109,6 +116,7 @@
 	$: isNotebook = getExt(selectedFile) === 'ipynb';
 	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
+	$: isPptx = getExt(selectedFile) === 'pptx';
 
 	// For HTML files on system terminals (proxy URL), use path-based serving
 	// so the iframe can resolve relative CSS/JS/image references via cookie auth.
@@ -234,7 +242,7 @@
 			jsonError = null;
 		} catch (e) {
 			parsedJson = undefined;
-			jsonError = e instanceof Error ? e.message : 'Invalid JSON';
+			jsonError = e instanceof Error ? e.message : $i18n.t('Invalid JSON');
 		}
 	} else {
 		parsedJson = undefined;
@@ -272,13 +280,14 @@
 	};
 
 	export const resetPdfView = () => {
-		pdfViewerRef?.resetView();
+		pdfPagesPreviewRef?.resetView();
 	};
 </script>
 
 <div
 	class="flex-1 {fileImageUrl !== null ||
 	fileDocxData !== null ||
+	filePdfData !== null ||
 	(fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
 		: 'overflow-y-auto'} min-h-0 min-w-0 relative h-full"
@@ -314,11 +323,20 @@
 			</audio>
 		</div>
 	{:else if filePdfData !== null}
-		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
+		<PdfPagesPreview
+			bind:this={pdfPagesPreviewRef}
+			data={filePdfData}
+			bind:currentSlide
+			{targetPage}
+			singlePage={isPptx}
+			itemLabel={isPptx ? 'Slide' : 'Page'}
+			listLabel={isPptx ? 'Slides' : 'Pages'}
+			className="w-full h-full"
+		/>
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
 	{:else if fileDocxData !== null}
-		<DocxPreview data={fileDocxData} className="w-full h-full" />
+		<DocxPreview data={fileDocxData} {targetPage} className="w-full h-full" />
 	{:else if fileOfficeHtml !== null}
 		<div class="flex flex-col h-full">
 			<div class="office-preview overflow-auto flex-1 min-h-0">
@@ -347,20 +365,35 @@
 			bind:this={pptxPreviewRef}
 			slides={fileOfficeSlides}
 			bind:currentSlide
+			{targetPage}
 			className="w-full h-full"
 		/>
 	{:else if fileContent !== null}
-		{#if isHtml && !showRaw && serveUrl}
+		{#if searchTarget}
+			<div class="absolute inset-0">
+				<FileCodeEditor
+					bind:this={fileCodeEditorRef}
+					value={fileContent ?? ''}
+					filePath={selectedFile}
+					onSave={readOnly ? null : onSave}
+					{searchTarget}
+				/>
+			</div>
+		{:else if isHtml && !showRaw && serveUrl}
 			{#if overlay}
 				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 			{/if}
 			<iframe
 				src={serveUrl}
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
-				title="HTML Preview"
+				title={$i18n.t('HTML Preview')}
 			/>
 		{:else if isHtml && !showRaw}
 			{#if overlay}
@@ -368,11 +401,15 @@
 			{/if}
 			<iframe
 				srcdoc={injectCsp(fileContent, $config?.ui?.iframe_csp ?? '')}
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
-				title="HTML Preview"
+				title={$i18n.t('HTML Preview')}
 			/>
 		{:else if isHtml && showRaw}
 			<div class="absolute inset-0">
@@ -433,16 +470,15 @@
 			</div>
 		{:else if isJson && !showRaw && jsonError}
 			<div class="p-3 text-xs">
-				<div class="text-red-500 mb-2">JSON parse error: {jsonError}</div>
+				<div class="text-red-500 mb-2">
+					{$i18n.t('JSON parse error: {{error}}', { error: jsonError })}
+				</div>
 				<pre
 					class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed">{fileContent}</pre>
 			</div>
 		{:else if isSvg && !showRaw && fileContent}
 			<div class="svg-preview w-full h-full flex items-center justify-center overflow-auto p-3">
-				{@html DOMPurify.sanitize(fileContent, {
-					USE_PROFILES: { svg: true, svgFilters: true },
-					ADD_TAGS: ['use']
-				})}
+				{@html sanitizeSvg(fileContent)}
 			</div>
 		{:else if isCode && !showRaw}
 			<div class="absolute inset-0">
@@ -478,9 +514,10 @@
 		<div
 			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-gray-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-gray-700/60 dark:bg-gray-850/90"
 		>
+			<!-- Pinch covers in/out on coarse pointers; reset has no gesture, so it stays -->
 			<button
 				type="button"
-				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
 				on:click={() => panzoomRef?.zoomOut()}
 				aria-label={$i18n.t('Zoom out')}
 			>
@@ -507,7 +544,7 @@
 			</button>
 			<button
 				type="button"
-				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
 				on:click={() => panzoomRef?.zoomIn()}
 				aria-label={$i18n.t('Zoom in')}
 			>

@@ -1,16 +1,38 @@
 import datetime as dt
 from typing import Any
 
+from open_webui.env import RAG_METADATA_MAX_VALUE_CHARS
 from open_webui.retrieval.vector.main import SearchResult
 from open_webui.utils.misc import sanitize_text_for_db
 
-KEYS_TO_EXCLUDE = ['content', 'pages', 'tables', 'paragraphs', 'sections', 'figures']
+KEYS_TO_EXCLUDE = [
+    'content',
+    'pages',
+    'tables',
+    'paragraphs',
+    'sections',
+    'figures',
+    'documents',
+    'keyValuePairs',
+    'styles',
+    'languages',
+]
 
 
 def filter_metadata(metadata: dict[str, any]) -> dict[str, any]:
     # Removes large/redundant fields from metadata dict.
-    metadata = {key: value for key, value in metadata.items() if key not in KEYS_TO_EXCLUDE}
-    return metadata
+    result = {}
+    for key, value in metadata.items():
+        if key in KEYS_TO_EXCLUDE:
+            continue
+        if RAG_METADATA_MAX_VALUE_CHARS is not None and isinstance(value, (list, dict)):
+            try:
+                if len(str(value)) > RAG_METADATA_MAX_VALUE_CHARS:
+                    continue
+            except (MemoryError, RecursionError, ValueError):
+                continue
+        result[key] = value
+    return result
 
 
 def process_metadata(
@@ -25,12 +47,45 @@ def process_metadata(
             continue
         if value is None:
             continue
+        if RAG_METADATA_MAX_VALUE_CHARS is not None and isinstance(value, (list, dict)):
+            try:
+                if len(str(value)) > RAG_METADATA_MAX_VALUE_CHARS:
+                    continue
+            except (MemoryError, RecursionError, ValueError):
+                continue
         # Convert non-serializable fields to strings
         if isinstance(value, (dt.datetime, list, dict)):
             result[key] = sanitize_text_for_db(str(value))
         else:
             result[key] = sanitize_text_for_db(value)
     return result
+
+
+def iter_filter_conditions(filter: dict[str, Any] | None):
+    for key, value in (filter or {}).items():
+        if isinstance(value, dict):
+            if set(value) != {'$in'}:
+                raise ValueError(f"Unsupported metadata filter for '{key}': {value}")
+            yield key, '$in', list(value['$in'])
+        else:
+            yield key, '$eq', value
+
+
+def normalize_filter(filter: dict[str, Any] | None) -> dict[str, Any]:
+    return {key: {'$in': value} if op == '$in' else value for key, op, value in iter_filter_conditions(filter)}
+
+
+def metadata_matches_filter(metadata: dict[str, Any], filter: dict[str, Any] | None) -> bool:
+    if not isinstance(metadata, dict):
+        return False
+    for key, op, value in iter_filter_conditions(filter):
+        actual = metadata.get(key)
+        if op == '$in':
+            if actual not in value:
+                return False
+        elif actual != value:
+            return False
+    return True
 
 
 def merge_hybrid_search_results(

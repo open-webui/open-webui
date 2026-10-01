@@ -1,8 +1,10 @@
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
-import DOMPurify from 'dompurify';
+import DOMPurify, { type UponSanitizeAttributeHookEvent } from 'dompurify';
 import { WEBUI_BASE_URL } from '$lib/constants';
+import type { FileNavOpenRequest } from '$lib/stores';
+import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -656,7 +658,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 };
 
 export const compareVersion = (latest, current) => {
-	return current === '0.0.0'
+	return !latest || current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
 				numeric: true,
@@ -967,6 +969,11 @@ export const convertOpenAIChats = (_chats) => {
 	return chats;
 };
 
+export const isRasterImageContentType = (contentType: string | null | undefined) => {
+	const baseContentType = (contentType ?? '').split(';')[0].trim().toLowerCase();
+	return baseContentType.startsWith('image/') && baseContentType !== 'image/svg+xml';
+};
+
 export const isValidHttpUrl = (string: string) => {
 	let url;
 
@@ -977,6 +984,20 @@ export const isValidHttpUrl = (string: string) => {
 	}
 
 	return url.protocol === 'http:' || url.protocol === 'https:';
+};
+
+const SAFE_LINK_PROTOCOLS = ['http:', 'https:', 'mailto:', 'tel:'];
+
+export const safeLinkUrl = (url: string): string | undefined => {
+	let protocol;
+	try {
+		protocol = new URL(url).protocol;
+	} catch (_) {
+		// No scheme to parse, so the browser resolves it against our own origin.
+		return url;
+	}
+
+	return SAFE_LINK_PROTOCOLS.includes(protocol) ? url : undefined;
 };
 
 export const isYoutubeUrl = (url: string) => {
@@ -1417,6 +1438,54 @@ export const createMessagesList = (history, messageId) => {
 	return list.reverse();
 };
 
+export const getDeepestChildId = (history, messageId) => {
+	let deepestId = messageId;
+	const visitedMessageIds = new Set([deepestId]);
+	let childrenIds =
+		deepestId === null
+			? Object.keys(history.messages).filter((id) => history.messages[id].parentId === null)
+			: (history.messages[deepestId]?.childrenIds ?? []);
+
+	while (childrenIds.length !== 0) {
+		const childId = childrenIds.at(-1);
+		if (visitedMessageIds.has(childId)) {
+			console.warn('Circular dependency detected in message history', childId);
+			break;
+		}
+
+		visitedMessageIds.add(childId);
+		deepestId = childId;
+		childrenIds = history.messages[deepestId]?.childrenIds ?? [];
+	}
+
+	return deepestId;
+};
+
+const toTokenCount = (value: unknown) => {
+	const parsed = Number(value || 0);
+	return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
+};
+
+export const getUsageTokenCount = (usage?: Record<string, unknown> | null) => {
+	if (!usage) {
+		return 0;
+	}
+
+	let promptTokens = toTokenCount(usage.prompt_tokens || usage.prompt_eval_count || 0);
+	if (!promptTokens && (usage.prompt_n != null || usage.cache_n != null)) {
+		promptTokens = toTokenCount(usage.prompt_n || 0) + toTokenCount(usage.cache_n || 0);
+	}
+	if (!promptTokens) {
+		promptTokens = toTokenCount(usage.input_tokens || 0);
+	}
+
+	const completionTokens = toTokenCount(
+		usage.completion_tokens || usage.output_tokens || usage.eval_count || usage.predicted_n || 0
+	);
+
+	return promptTokens + completionTokens;
+};
+
 export const formatFileSize = (size) => {
 	if (size == null) return 'Unknown size';
 	if (typeof size !== 'number' || size < 0) return 'Invalid size';
@@ -1437,7 +1506,11 @@ export const getLineCount = (text) => {
 };
 
 // Helper function to recursively resolve OpenAPI schema into JSON schema format
-function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
+export function resolveSchema(
+	schemaRef,
+	components,
+	resolvedSchemas = new Set()
+): Record<string, any> {
 	if (!schemaRef) return {};
 
 	if (schemaRef['$ref']) {
@@ -1881,6 +1954,95 @@ export const extractContentFromFile = async (file: File) => {
 		});
 	}
 
+	async function extractOdsText(file: File) {
+		const [arrayBuffer, XLSX] = await Promise.all([file.arrayBuffer(), import('xlsx')]);
+		const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+		return workbook.SheetNames.map((name) =>
+			XLSX.utils.sheet_to_csv(workbook.Sheets[name], { FS: '\t' }).trim()
+		)
+			.filter(Boolean)
+			.join('\n\n');
+	}
+
+	async function extractOdfText(file: File) {
+		const [arrayBuffer, { default: JSZip }] = await Promise.all([
+			file.arrayBuffer(),
+			import('jszip')
+		]);
+
+		const content = await JSZip.loadAsync(arrayBuffer).then((zip) =>
+			zip.file('content.xml')?.async('string')
+		);
+		if (!content) {
+			throw new Error('content.xml not found');
+		}
+
+		const doc = new DOMParser().parseFromString(content, 'application/xml');
+		if (doc.getElementsByTagName('parsererror').length > 0) {
+			throw new Error('content.xml is not well-formed');
+		}
+
+		const TEXT_NS = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
+		const TABLE_NS = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0';
+		const textOf = (node: Node): string => {
+			if (node.nodeType === Node.TEXT_NODE) {
+				return node.textContent ?? '';
+			}
+			if (node.nodeType !== Node.ELEMENT_NODE) {
+				return '';
+			}
+
+			const element = node as Element;
+			if (element.namespaceURI === TEXT_NS) {
+				if (element.localName === 's') {
+					const count = Number(
+						element.getAttributeNS(TEXT_NS, 'c') ?? element.getAttribute('text:c')
+					);
+					return ' '.repeat(Number.isFinite(count) && count > 0 ? count : 1);
+				}
+				if (element.localName === 'tab') {
+					return '\t';
+				}
+				if (element.localName === 'line-break') {
+					return '\n';
+				}
+			}
+
+			return Array.from(element.childNodes).map(textOf).join('');
+		};
+
+		const blocks: string[] = [];
+		const walk = (node: Element) => {
+			if (node.namespaceURI === TABLE_NS && node.localName === 'table-row') {
+				const row = Array.from(node.getElementsByTagNameNS(TABLE_NS, 'table-cell'))
+					.map((cell) => textOf(cell).trim())
+					.join('\t')
+					.trimEnd();
+
+				if (row.length > 0) {
+					blocks.push(row);
+				}
+				return;
+			}
+
+			if (node.namespaceURI === TEXT_NS && (node.localName === 'p' || node.localName === 'h')) {
+				const text = textOf(node).trim();
+				if (text.length > 0) {
+					blocks.push(text);
+				}
+				return;
+			}
+
+			for (const child of Array.from(node.children)) {
+				walk(child);
+			}
+		};
+
+		walk(doc.documentElement);
+		return blocks.join('\n');
+	}
+
 	async function extractDocxText(file: File) {
 		const [arrayBuffer, { default: mammoth }] = await Promise.all([
 			file.arrayBuffer(),
@@ -1904,6 +2066,20 @@ export const extractContentFromFile = async (file: File) => {
 		ext === '.docx'
 	) {
 		return await extractDocxText(file);
+	}
+
+	// OpenDocument spreadsheet check
+	if (type === 'application/vnd.oasis.opendocument.spreadsheet' || ext === '.ods') {
+		return await extractOdsText(file);
+	}
+
+	// OpenDocument text/presentation check
+	if (
+		type === 'application/vnd.oasis.opendocument.text' ||
+		type === 'application/vnd.oasis.opendocument.presentation' ||
+		['.odt', '.odp'].includes(ext)
+	) {
+		return await extractOdfText(file);
 	}
 
 	// Text check (plain or common text-based)
@@ -1931,10 +2107,18 @@ export const getAge = (birthDate) => {
 	return age.toString();
 };
 
+const HEIC_EXTENSION_PATTERN = /\.(heic|heif)$/i;
+
+// Browsers label HEIC photos inconsistently (Firefox uses image/heif, some leave it empty).
+export const isHeicImage = (file: File) =>
+	['image/heic', 'image/heif'].includes(file.type) || HEIC_EXTENSION_PATTERN.test(file.name);
+
 export const convertHeicToJpeg = async (file: File) => {
 	const { default: heic2any } = await import('heic2any');
 	try {
-		return await heic2any({ blob: file, toType: 'image/jpeg' });
+		const jpegBlob = (await heic2any({ blob: file, toType: 'image/jpeg' })) as Blob;
+		const jpegName = `${file.name.replace(HEIC_EXTENSION_PATTERN, '')}.jpg`;
+		return new File([jpegBlob], jpegName, { type: 'image/jpeg' });
 	} catch (err: any) {
 		if (err?.message?.includes('already browser readable')) {
 			return file;
@@ -1957,7 +2141,8 @@ export const initMermaid = async () => {
 		startOnLoad: false, // Should be false when using render API
 		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
 		securityLevel: 'loose',
-		htmlLabels: false
+		htmlLabels: false,
+		secure: ['htmlLabels']
 	});
 	return mermaid;
 };
@@ -1972,43 +2157,133 @@ const cleanupMermaidTempElements = (id: string) => {
 	document.getElementById(`i${id}`)?.remove();
 };
 
+const isLocalResourceUrl = (url: string): boolean => {
+	try {
+		const resolved = new URL(url, document.baseURI);
+		return resolved.protocol === 'data:' || resolved.origin === location.origin;
+	} catch {
+		return false;
+	}
+};
+
+// Escapes and image-set() read as a plain url() to a browser, so match the parsed CSS, not the text.
+const CSS_URL_SYNTAX = /url\(|image-set\(|@import|\\/i;
+
+const cssRules = (css: string): string[] => {
+	const parsed = new DOMParser().parseFromString(`<style>${css}</style>`, 'text/html');
+	return [...(parsed.querySelector('style')?.sheet?.cssRules ?? [])].map((rule) => rule.cssText);
+};
+
+const referencesExternalCss = (css: string): boolean => {
+	if (!CSS_URL_SYNTAX.test(css)) {
+		return false;
+	}
+
+	// A value arrives as a stylesheet, a declaration list or a bare presentation value.
+	return [css, `a{${css}}`, `a{background-image:${css}}`].some((stylesheet) => {
+		const urls = cssRules(stylesheet)
+			.join('')
+			.matchAll(/url\(["']?([^"')]*)/g);
+		return [...urls].some(([, url]) => !isLocalResourceUrl(url));
+	});
+};
+
+const dropExternalResourceRefs = (node: Node, data: UponSanitizeAttributeHookEvent) => {
+	const tagName = node.nodeName.toLowerCase();
+	const isImageRef =
+		(tagName === 'image' || tagName === 'feimage') &&
+		(data.attrName === 'href' || data.attrName === 'xlink:href');
+
+	if (isImageRef && !isLocalResourceUrl(data.attrValue)) {
+		data.keepAttr = false;
+	}
+	if (!isImageRef && referencesExternalCss(data.attrValue)) {
+		data.keepAttr = false;
+	}
+};
+
+// use hrefs point at defs inside the same document (#id) or fetch another file, keep only the former.
+const dropExternalUseRefs = (node: Node, data: UponSanitizeAttributeHookEvent) => {
+	if (node.nodeName.toLowerCase() !== 'use') {
+		return;
+	}
+	if (data.attrName !== 'href' && data.attrName !== 'xlink:href') {
+		return;
+	}
+	if (!data.attrValue.trim().startsWith('#')) {
+		data.keepAttr = false;
+	}
+};
+
+const dropExternalStyleRules = (node: Node) => {
+	if (node.nodeName.toLowerCase() !== 'style') {
+		return;
+	}
+
+	const css = node.textContent ?? '';
+	if (!referencesExternalCss(css)) {
+		return;
+	}
+
+	node.textContent = cssRules(css)
+		.filter((rule) => !referencesExternalCss(rule))
+		.join('');
+};
+
 // Mermaid runs with securityLevel:'loose', which emits unsanitized SVG (raw javascript: hrefs,
 // HTML labels); strip active content before it reaches any innerHTML/{@html} sink.
-export const sanitizeSvg = (svg: string): string =>
-	DOMPurify.sanitize(svg, {
-		USE_PROFILES: { svg: true, svgFilters: true },
-		WHOLE_DOCUMENT: false,
-		ADD_TAGS: ['style', 'foreignObject'],
-		ADD_ATTR: [
-			'class',
-			'style',
-			'id',
-			'data-*',
-			'viewBox',
-			'preserveAspectRatio',
-			'markerWidth',
-			'markerHeight',
-			'markerUnits',
-			'refX',
-			'refY',
-			'orient',
-			'href',
-			'xlink:href',
-			'dominant-baseline',
-			'text-anchor',
-			'clipPathUnits',
-			'filterUnits',
-			'patternUnits',
-			'patternContentUnits',
-			'maskUnits',
-			'role',
-			'aria-label',
-			'aria-labelledby',
-			'aria-hidden',
-			'tabindex'
-		],
-		SANITIZE_DOM: true
-	});
+export const sanitizeSvg = (svg: string): string => {
+	DOMPurify.addHook('uponSanitizeAttribute', dropExternalResourceRefs);
+	DOMPurify.addHook('uponSanitizeElement', dropExternalStyleRules);
+	DOMPurify.addHook('uponSanitizeAttribute', dropExternalUseRefs);
+	try {
+		return DOMPurify.sanitize(svg, {
+			USE_PROFILES: { svg: true, svgFilters: true },
+			WHOLE_DOCUMENT: false,
+			ADD_TAGS: ['style', 'foreignObject', 'use'],
+			ADD_ATTR: [
+				'class',
+				'style',
+				'id',
+				'data-*',
+				'viewBox',
+				'preserveAspectRatio',
+				'markerWidth',
+				'markerHeight',
+				'markerUnits',
+				'refX',
+				'refY',
+				'orient',
+				'href',
+				'xlink:href',
+				'dominant-baseline',
+				'text-anchor',
+				'clipPathUnits',
+				'filterUnits',
+				'patternUnits',
+				'patternContentUnits',
+				'maskUnits',
+				'role',
+				'aria-label',
+				'aria-labelledby',
+				'aria-hidden',
+				'tabindex'
+			],
+			SANITIZE_DOM: true
+		});
+	} finally {
+		DOMPurify.removeHook('uponSanitizeAttribute', dropExternalResourceRefs);
+		DOMPurify.removeHook('uponSanitizeElement', dropExternalStyleRules);
+		DOMPurify.removeHook('uponSanitizeAttribute', dropExternalUseRefs);
+	}
+};
+
+const configStrings = (value: any): string[] => {
+	if (typeof value === 'string') {
+		return [value];
+	}
+	return value && typeof value === 'object' ? Object.values(value).flatMap(configStrings) : [];
+};
 
 export const renderMermaidDiagram = async (
 	mermaid: typeof import('mermaid').default,
@@ -2017,12 +2292,28 @@ export const renderMermaidDiagram = async (
 ) => {
 	const id = renderId ?? `mermaid-${uuidv4()}`;
 	try {
-		const parseResult = await mermaid.parse(code, { suppressErrors: false });
-		if (parseResult) {
-			const { svg } = await mermaid.render(id, code);
-			return sanitizeSvg(svg);
+		// Mermaid renders into a live document, so its own fetches have to be ruled out beforehand.
+		const { config } = (await mermaid.parse(code, { suppressErrors: false })) as any;
+		const diagram: any = await mermaid.mermaidAPI.getDiagramFromText(code);
+		const imageUrls = [
+			...[...(diagram.db.getVertices?.() ?? []).values()].map((vertex: any) => vertex.img),
+			...[...(diagram.db.getActors?.() ?? []).values()].map((actor: any) => actor.properties?.icon)
+		];
+		const classStyles = [...(diagram.db.getClasses?.() ?? []).values()].flatMap((classDef: any) => [
+			...(classDef.styles ?? []),
+			...(classDef.textStyles ?? [])
+		]);
+
+		if (
+			imageUrls.some((url) => url && !isLocalResourceUrl(url)) ||
+			classStyles.some(referencesExternalCss) ||
+			configStrings(config).some(referencesExternalCss)
+		) {
+			throw new Error('External resource loading is disabled for rendered diagrams');
 		}
-		return '';
+
+		const { svg } = await mermaid.render(id, code);
+		return sanitizeSvg(svg);
 	} finally {
 		// Mermaid can leave temporary d*/i* wrappers on error paths.
 		cleanupMermaidTempElements(id);
@@ -2193,10 +2484,12 @@ export const formatSkillName = (name) => {
  */
 export const displayFileHandler = (
 	path: string,
-	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<string | null> }
+	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<FileNavOpenRequest | null> },
+	options: { page?: unknown } = {}
 ) => {
 	if (path) {
 		stores.showControls.set(true);
-		stores.showFileNavPath.set(path);
+		const page = normalizeDocumentTargetPage(options.page);
+		stores.showFileNavPath.set(page ? { path, page } : path);
 	}
 };

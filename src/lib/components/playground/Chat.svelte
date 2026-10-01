@@ -37,7 +37,7 @@
 	import Download from '../icons/Download.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	let loaded = false;
 
@@ -261,7 +261,7 @@
 
 		const exportData = {
 			chat: {
-				title: 'Playground Chat',
+				title: $i18n.t('Playground Chat'),
 				models: [selectedModelId],
 				params: system ? { system } : {},
 				history: {

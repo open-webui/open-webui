@@ -3,6 +3,8 @@
 
 	import { onMount, getContext, createEventDispatcher, onDestroy, tick } from 'svelte';
 	import * as FocusTrap from 'focus-trap';
+	import { settings } from '$lib/stores';
+	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -45,7 +47,10 @@
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape') {
+		if (
+			event.key === 'Escape' ||
+			($settings?.keyboardShortcuts !== false && matchKeybinding(event) === Shortcut.CLOSE_MODAL)
+		) {
 			cancelHandler();
 		}
 
@@ -113,7 +118,7 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			cancelHandler();

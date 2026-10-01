@@ -10,7 +10,7 @@
 	dayjs.extend(isYesterday);
 	dayjs.extend(localizedFormat);
 
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -49,7 +49,7 @@
 
 	export let showUserProfile = true;
 	export let thread = false;
-	export let id = null;
+	export let id: string | null = null;
 
 	export let replyToMessage = false;
 	export let disabled = false;
@@ -146,11 +146,9 @@
 		}
 	};
 
-	onMount(async () => {
-		if (message && message?.data === true) {
-			await loadMessageData();
-		}
-	});
+	$: if (message?.data === true) {
+		loadMessageData();
+	}
 
 	$: messageOutput = Array.isArray(message?.data?.output) ? message.data.output : [];
 	$: hasStructuredOutput = buildOutputDisplayItems(messageOutput).length > 0;
@@ -209,7 +207,7 @@
 				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
 		>
 			{#if !edit && !disabled}
-				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-2 z-10">
+				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-7 z-30">
 					<div
 						class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 					>
@@ -454,7 +452,6 @@
 					{/if}
 
 					{#if message?.data === true}
-						<!-- loading indicator -->
 						<div class=" my-2">
 							<Skeleton />
 						</div>
@@ -540,7 +537,7 @@
 									id={renderedMessageId}
 									output={messageOutput}
 									done={message?.meta?.done ?? false}
-									editCodeBlock={false}
+									allowEmbeds={false}
 								/>
 							{:else if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
 								<Skeleton />
@@ -550,7 +547,7 @@
 										id={renderedMessageId}
 										content={message.content}
 										paragraphTag="span"
-										allowEmbeds={!!message?.meta?.model_id}
+										allowEmbeds={false}
 									/>
 								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
 										class="text-gray-500 text-[0.625rem] pl-1 self-center"
@@ -598,6 +595,7 @@
 											})}
 										>
 											<button
+												{disabled}
 												class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.users
 													.map((u) => u.id)
 													.includes($user?.id)
@@ -620,7 +618,7 @@
 										</Tooltip>
 									{/each}
 
-									{#if onReaction}
+									{#if onReaction && !disabled}
 										<EmojiPicker
 											onSubmit={(name) => {
 												onReaction(name);

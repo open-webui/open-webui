@@ -2,6 +2,7 @@ import DOMPurify from 'dompurify';
 import { toast } from 'svelte-sonner';
 
 import { createNewNote } from '$lib/apis/notes';
+import { safeImageUrl } from '$lib/utils/safeImageUrl';
 
 export const downloadPdf = async (note) => {
 	const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
@@ -38,6 +39,14 @@ export const downloadPdf = async (note) => {
 		const contentNode = document.createElement('div');
 
 		contentNode.innerHTML = html;
+
+		for (const img of contentNode.querySelectorAll('img[src^="data://"]')) {
+			const fileId = img.getAttribute('src').replace('data://', '');
+			const file = (note.data?.files ?? []).find((f) => f.id === fileId);
+			if (file) {
+				img.setAttribute('src', safeImageUrl(file.url || ''));
+			}
+		}
 
 		node.appendChild(contentNode);
 

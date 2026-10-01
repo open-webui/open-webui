@@ -9,7 +9,7 @@ from typing import Optional
 import bcrypt
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
-from open_webui.utils.validate import validate_profile_image_url
+from open_webui.utils.validate import validate_image_url
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Boolean, Column, String, Text, delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -87,7 +87,7 @@ class SignupForm(BaseModel):
     @classmethod
     def check_profile_image_url(cls, v: str | None) -> str | None:
         if v is not None:
-            return validate_profile_image_url(v)
+            return validate_image_url(v)
         return v
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import time
+import weakref
 from datetime import timedelta
 from uuid import uuid4
 
@@ -14,7 +15,7 @@ from open_webui.models.chats import Chat, ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
-from open_webui.utils.auth import create_token
+from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
 from sqlalchemy import select
@@ -41,7 +42,7 @@ MUTATING_MEMORY_TOOLS = {
 _background_active: set[str] = set()
 _background_lock = asyncio.Lock()
 _foreground_semaphore: asyncio.Semaphore | None = None
-_parent_locks: dict[str, asyncio.Lock] = {}
+_parent_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
 
 def get_subagent_model_ids(
@@ -91,7 +92,7 @@ async def process_pending_internal_messages(
             return
 
         user = await Users.get_user_by_id(user_id)
-        if not user:
+        if not user or user.role not in VERIFIED_USER_ROLES:
             return
 
         async with get_async_db() as db:
@@ -236,6 +237,7 @@ async def process_pending_internal_messages(
             history['messages'] = messages
             history['currentId'] = assistant_message_id
             chat.chat = {**(chat.chat or {}), 'history': history}
+            chat.current_message_id = assistant_message_id
             chat.updated_at = int(time.time())
             await db.commit()
 
@@ -336,6 +338,7 @@ async def delegate(
         metadata.get('model_id') or (metadata.get('model') or {}).get('id'),
         config.get('subagents.model_id'),
     )
+    folder_id = await Chats.get_chat_folder_id(parent_chat_id, user_data['id']) or metadata.get('folder_id')
     run = {
         'parent_model_id': parent_model_id,
         'subagent_model_id': subagent_model_id,
@@ -350,6 +353,7 @@ async def delegate(
         'files': copy.deepcopy(metadata.get('files') or []),
         'variables': copy.deepcopy(metadata.get('variables') or {}),
         'direct': bool(metadata.get('direct')),
+        'folder_id': folder_id,
     }
     if not run.get('subagent_model_id'):
         return 'Error: model context is required.'
@@ -362,10 +366,7 @@ async def delegate(
             for file in metadata.get('files') or []
             if str(file.get('id') or '') in requested_file_ids
             or str(file.get('url') or '') in requested_file_ids
-            or (
-                isinstance(file.get('file'), dict)
-                and str(file.get('file', {}).get('id') or '') in requested_file_ids
-            )
+            or (isinstance(file.get('file'), dict) and str(file.get('file', {}).get('id') or '') in requested_file_ids)
         ]
         found_file_ids = {
             str(value)
@@ -505,6 +506,7 @@ async def delegate(
                 'features': run.get('features') or {},
                 'files': run.get('files') or [],
                 'variables': run.get('variables') or {},
+                'folder_id': run.get('folder_id'),
             }
             if run.get('terminal_id'):
                 form_data['terminal_id'] = run['terminal_id']
@@ -642,10 +644,16 @@ async def delegate(
                 updated_chat = copy.deepcopy(parent.chat or {})
                 updated_history = updated_chat.setdefault('history', {})
                 updated_messages = updated_history.setdefault('messages', {})
+                parent_message = updated_messages.get(parent_message_id)
                 done_assistants = [
                     message
-                    for message in updated_messages.values()
-                    if message.get('role') == 'assistant' and message.get('done') is not False
+                    for message_id, message in updated_messages.items()
+                    if message.get('role') == 'assistant'
+                    and message.get('done') is not False
+                    and (
+                        parent_message is None
+                        or any(entry is parent_message for entry in get_message_list(updated_messages, message_id))
+                    )
                 ]
                 result_parent_id = (
                     max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')

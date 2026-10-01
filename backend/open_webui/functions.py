@@ -19,7 +19,7 @@ from starlette.responses import Response, StreamingResponse
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FUNCTIONS, GLOBAL_LOG_LEVEL
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
@@ -69,7 +69,7 @@ async def get_function_module_by_id(request: Request, pipe_id: str):
 
 
 async def get_function_models(request):
-    if not ENABLE_PLUGINS:
+    if not ENABLE_FUNCTIONS:
         return []
 
     pipes = await Functions.get_functions_by_type('pipe', active_only=True)
@@ -212,6 +212,9 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
         return params
 
+    # Set server-side by utils/chat.py, never by client input. Mirrors the routers.
+    bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
+
     # Copy so the base-model substitution below doesn't leak into the caller's
     # payload, which the tool-call continuation re-submits. Mirrors the routers.
     form_data = {**form_data}
@@ -291,7 +294,8 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         if params:
             system = params.pop('system', None)
             form_data = apply_model_params_to_body_openai(params, form_data)
-            form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
+            if not bypass_system_prompt:
+                form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
 
     pipe_id = get_pipe_id(form_data)
     function_module = await get_function_module_by_id(request, pipe_id)

@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { models, settings, user } from '$lib/stores';
+	import { models, pinnedModels, settings, user } from '$lib/stores';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 
 	import { updateUserSettings } from '$lib/apis/users';
+	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 	import equal from 'fast-deep-equal';
 	const i18n = getContext('i18n');
 
@@ -29,22 +30,19 @@
 			return;
 		}
 		settings.set({ ...$settings, models: selectedModels });
-		await updateUserSettings(localStorage.token, { ui: $settings });
+		await updateUserSettings(localStorage.token, { ui: { models: selectedModels } });
 
 		toast.success($i18n.t('Default model updated'));
 	};
 
 	const pinModelHandler = async (modelId) => {
-		let pinnedModels = $settings?.pinnedModels ?? [];
-
-		if (pinnedModels.includes(modelId)) {
-			pinnedModels = pinnedModels.filter((id) => id !== modelId);
-		} else {
-			pinnedModels = [...new Set([...pinnedModels, modelId])];
-		}
-
-		settings.set({ ...$settings, pinnedModels: pinnedModels });
-		await updateUserSettings(localStorage.token, { ui: $settings });
+		settings.set({
+			...$settings,
+			pinnedModels: $pinnedModels.includes(modelId)
+				? $pinnedModels.filter((id) => id !== modelId)
+				: [...$pinnedModels, modelId]
+		});
+		await updateUserSettings(localStorage.token, { ui: { pinnedModels: $settings.pinnedModels } });
 	};
 
 	$: if (selectedModels.length > 0 && $models.length > 0) {
@@ -72,7 +70,7 @@
 					placeholder={$i18n.t('Select a model')}
 					items={$models.map((model) => ({
 						value: model.id,
-						label: model.name,
+						label: resolveLocalizedModelName(model, $i18n.language),
 						model: model
 					}))}
 					{pinModelHandler}

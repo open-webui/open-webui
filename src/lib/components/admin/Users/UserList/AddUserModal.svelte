@@ -12,7 +12,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
@@ -78,7 +78,7 @@
 						const columns = row.split(',').map((col) => col.trim());
 						console.debug(idx, columns);
 
-						if (idx > 0) {
+						if (idx > 0 && !(columns.length === 1 && columns[0] === '')) {
 							if (
 								columns.length === 4 &&
 								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
@@ -275,7 +275,7 @@
 										}}
 									>
 										{#if inputFiles}
-											{inputFiles.length > 0 ? `${inputFiles.length}` : ''} document(s) selected.
+											{$i18n.t('{{COUNT}} document(s) selected.', { COUNT: inputFiles.length })}
 										{:else}
 											{$i18n.t('Click here to select a csv file.')}
 										{/if}

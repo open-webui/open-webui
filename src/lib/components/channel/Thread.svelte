@@ -71,7 +71,7 @@
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === threadId) {
 					if (messages) {
-						messages = [data, ...messages];
+						messages = [{ ...data, temp_id: null }, ...messages];
 
 						if (typingUsers.find((user) => user.id === event.user.id)) {
 							typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
@@ -92,7 +92,17 @@
 				}
 
 				if (messages) {
-					messages = messages.filter((message) => message.id !== data.id);
+					messages = messages
+						.filter((message) => message.id !== data.id)
+						.map((message) =>
+							message?.reply_to_message?.id === data.id
+								? { ...message, reply_to_message: null }
+								: message
+						);
+				}
+
+				if (replyToMessage?.id === data.id) {
+					replyToMessage = null;
 				}
 			} else if (type.includes('message:reaction')) {
 				if (messages) {
@@ -131,22 +141,32 @@
 		}
 	};
 
-	const submitHandler = async ({ content, data }) => {
+	const submitHandler = async ({
+		content,
+		data,
+		channel_id,
+		parent_id,
+		reply_to_message
+	}: {
+		content: string;
+		data: any;
+		channel_id: string;
+		parent_id: string | null;
+		reply_to_message: any;
+	}) => {
 		if (!content && (data?.files ?? []).length === 0) {
 			return;
 		}
 
-		const res = await sendMessage(localStorage.token, channel.id, {
-			parent_id: threadId,
-			reply_to_id: replyToMessage?.id ?? null,
+		const res = await sendMessage(localStorage.token, channel_id, {
+			parent_id: parent_id ?? undefined,
+			reply_to_id: reply_to_message?.id ?? null,
 			content: content,
 			data: data
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
-
-		replyToMessage = null;
 	};
 
 	const onChange = async () => {
@@ -188,43 +208,48 @@
 			</div>
 		</div>
 
-		<div class="flex-1 min-h-0 w-full overflow-y-auto" bind:this={messagesContainerElement}>
-			{#if messages !== null}
-				<Messages
-					id={threadId}
-					{channel}
-					{top}
-					{messages}
-					{replyToMessage}
-					thread={true}
-					{onPin}
-					onReply={async (message) => {
-						replyToMessage = message;
+		<div
+			class="flex-1 min-h-0 w-full overflow-y-auto will-change-transform"
+			bind:this={messagesContainerElement}
+		>
+			<div class="pt-7">
+				{#if messages !== null}
+					<Messages
+						id={threadId}
+						{channel}
+						{top}
+						{messages}
+						{replyToMessage}
+						thread={true}
+						{onPin}
+						onReply={async (message) => {
+							replyToMessage = message;
 
-						await tick();
-						chatInputElement?.focus();
-					}}
-					onLoad={async () => {
-						const newMessages = await getChannelThreadMessages(
-							localStorage.token,
-							channel.id,
-							threadId,
-							messages.length
-						);
+							await tick();
+							chatInputElement?.focus();
+						}}
+						onLoad={async () => {
+							const newMessages = await getChannelThreadMessages(
+								localStorage.token,
+								channel.id,
+								threadId,
+								messages.length
+							);
 
-						messages = [...messages, ...newMessages];
+							messages = [...messages, ...newMessages];
 
-						if (newMessages.length < 50) {
-							top = true;
-							return;
-						}
-					}}
-				/>
-			{:else}
-				<div class="w-full flex justify-center pt-5 pb-10">
-					<Spinner />
-				</div>
-			{/if}
+							if (newMessages.length < 50) {
+								top = true;
+								return;
+							}
+						}}
+					/>
+				{:else}
+					<div class="w-full flex justify-center pt-5 pb-10">
+						<Spinner />
+					</div>
+				{/if}
+			</div>
 		</div>
 
 		<div class=" pb-[1rem] px-2.5 w-full">

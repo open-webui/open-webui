@@ -3,6 +3,7 @@
 	import { config, knowledge, settings, user } from '$lib/stores';
 
 	import KnowledgeSelector from './Knowledge/KnowledgeSelector.svelte';
+	import FileItemModal from '$lib/components/common/FileItemModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
@@ -27,7 +28,10 @@
 	let filesInputElement = null;
 	let inputFiles = null;
 
-	$: if (selectedItems === null) {
+	let showItemModal = false;
+	let selectedItemIdx = null;
+
+	$: if (selectedItems == null) {
 		selectedItems = [];
 	}
 
@@ -143,6 +147,10 @@
 	});
 </script>
 
+{#if showItemModal && selectedItemIdx !== null && selectedItems[selectedItemIdx]}
+	<FileItemModal bind:show={showItemModal} bind:item={selectedItems[selectedItemIdx]} edit={true} />
+{/if}
+
 <input
 	bind:this={filesInputElement}
 	bind:files={inputFiles}
@@ -222,25 +230,35 @@
 						<div
 							class="flex max-w-56 items-center gap-1.5 py-0.5 pr-2 text-xs text-gray-700 dark:text-gray-200"
 						>
-							<div class="shrink-0 text-gray-500 dark:text-gray-400">
-								{#if file.status === 'uploading'}
-									<Spinner className="size-3.5" />
-								{:else if file.type === 'collection'}
-									<Database className="size-3.5" />
-								{:else if file.type === 'note'}
-									<PageEdit className="size-3.5" />
-								{:else if file.type === 'chat'}
-									<ChatBubble className="size-3.5" />
-								{:else if file.type === 'folder'}
-									<Folder className="size-3.5" />
-								{:else}
-									<DocumentPage className="size-3.5" />
-								{/if}
-							</div>
+							<button
+								type="button"
+								class="flex min-w-0 items-center gap-1.5"
+								aria-label={$i18n.t('Edit')}
+								on:click={() => {
+									selectedItemIdx = fileIdx;
+									showItemModal = true;
+								}}
+							>
+								<div class="shrink-0 text-gray-500 dark:text-gray-400">
+									{#if file.status === 'uploading'}
+										<Spinner className="size-3.5" />
+									{:else if file.type === 'collection'}
+										<Database className="size-3.5" />
+									{:else if file.type === 'note'}
+										<PageEdit className="size-3.5" />
+									{:else if file.type === 'chat'}
+										<ChatBubble className="size-3.5" />
+									{:else if file.type === 'folder'}
+										<Folder className="size-3.5" />
+									{:else}
+										<DocumentPage className="size-3.5" />
+									{/if}
+								</div>
 
-							<div class="min-w-0 truncate">
-								{file.name || file.id}
-							</div>
+								<div class="min-w-0 truncate">
+									{file.name || file.id}
+								</div>
+							</button>
 
 							{#if file.status === 'uploading'}
 								<div class="shrink-0 text-gray-400 dark:text-gray-500">

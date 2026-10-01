@@ -88,7 +88,9 @@
 			: period === 'year' || period === 'all'
 				? 'M/D/YY'
 				: 'M/D'}
-		<div class="absolute inset-x-0 bottom-0 flex justify-between px-0.5 text-[0.625rem] text-gray-400">
+		<div
+			class="absolute inset-x-0 bottom-0 flex justify-between px-0.5 text-[0.625rem] text-gray-400"
+		>
 			{#each Array(labelCount) as _, i}
 				{@const idx = i === labelCount - 1 ? data.length - 1 : Math.min(i * step, data.length - 1)}
 				{#if data[idx]}

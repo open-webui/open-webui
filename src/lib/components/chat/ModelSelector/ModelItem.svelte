@@ -9,6 +9,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { copyToClipboard, sanitizeResponseContent } from '$lib/utils';
+	import { resolveLocalizedModelDescription } from '$lib/utils/localizedContent';
 	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import ModelItemMenu from './ModelItemMenu.svelte';
@@ -32,6 +33,9 @@
 	export let selectionOnly = false;
 
 	export let onClick: () => void = () => {};
+	export let onEdit: () => void = () => {};
+
+	$: localizedDescription = resolveLocalizedModelDescription(item.model, $i18n.language);
 
 	const copyLinkHandler = async (model) => {
 		const baseUrl = window.location.origin;
@@ -54,10 +58,19 @@
 	role="option"
 	aria-selected={isSelected}
 	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}
-	class="focus-ring group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {index ===
-		selectedModelIdx && !compareEnabled
-		? 'bg-gray-50/70 dark:bg-gray-800/60'
-		: ''} {isSelected ? 'bg-gray-50/70 dark:bg-gray-800/60' : ''}"
+	class="focus-ring group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {($settings?.highContrastMode ??
+	false)
+		? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+		: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'} {index === selectedModelIdx &&
+	!compareEnabled
+		? ($settings?.highContrastMode ?? false)
+			? 'bg-gray-200 dark:bg-gray-800'
+			: 'bg-gray-50/70 dark:bg-gray-800/60'
+		: ''} {isSelected
+		? ($settings?.highContrastMode ?? false)
+			? 'bg-gray-200 dark:bg-gray-800'
+			: 'bg-gray-50/70 dark:bg-gray-800/60'
+		: ''}"
 	data-arrow-selected={index === selectedModelIdx}
 	data-value={item.value}
 	on:click={() => {
@@ -131,7 +144,8 @@
 						</div>
 					{/if}
 				{:else if item.model.provider === 'lmstudio' || item.model.provider === 'llama.cpp'}
-					{@const parameterSize = item.model.params_string ?? item.model.details?.parameter_size ?? ''}
+					{@const parameterSize =
+						item.model.params_string ?? item.model.details?.parameter_size ?? ''}
 					{@const quantization =
 						item.model.quantization?.name ?? item.model.details?.quantization_level ?? ''}
 					{@const size = item.model.size_bytes ?? item.model.size}
@@ -141,7 +155,9 @@
 								content={`${quantization ? `${quantization} ` : ''}${formatSize(size)}`}
 								className="self-end"
 							>
-								<span class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400">
+								<span
+									class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
+								>
 									{parameterSize || quantization || formatSize(size)}
 								</span>
 							</Tooltip>
@@ -235,10 +251,10 @@
 					</Tooltip>
 				{/if}
 
-				{#if item.model?.info?.meta?.description}
+				{#if localizedDescription}
 					<Tooltip
 						content={`${marked.parse(
-							sanitizeResponseContent(item.model?.info?.meta?.description).replaceAll('\n', '<br>')
+							sanitizeResponseContent(localizedDescription).replaceAll('\n', '<br>')
 						)}`}
 					>
 						<div class=" translate-y-[1px]">
@@ -275,7 +291,7 @@
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
-						unloadModelHandler(item.model);
+						unloadModelHandler(item.value);
 					}}
 				>
 					<ArrowUpTray className="size-3" />
@@ -289,6 +305,7 @@
 				model={item.model}
 				{pinModelHandler}
 				{deleteModelHandler}
+				{onEdit}
 				copyLinkHandler={() => {
 					copyLinkHandler(item.model);
 				}}

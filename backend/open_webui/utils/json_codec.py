@@ -3,7 +3,10 @@
 Every module that would otherwise reach for stdlib ``json`` imports ``JSONCodec``
 from here, so the whole app switches implementation from a single flag. With the
 flag off these are stdlib ``json`` and engineio's codec verbatim, so the default
-behaviour is exactly what it was before orjson entered the picture.
+behaviour is exactly what it was before orjson entered the picture. ``dumps_bytes``
+returns UTF-8 bytes for sinks that re-parse the payload; under orjson it skips
+both the str round trip and the line-separator escaping ``dumps`` applies, so
+never feed it to line-framed output such as SSE.
 """
 
 from __future__ import annotations
@@ -16,11 +19,6 @@ from open_webui.env import ENABLE_ORJSON
 if ENABLE_ORJSON:
     import orjson
 
-    # orjson emits these raw and Python treats all three as line boundaries: one raw
-    # separator splits an SSE frame reassembled with ``splitlines()``. Escaped even
-    # where stdlib would not.
-    LINE_SEPARATOR_ESCAPES = str.maketrans({'\u2028': '\\u2028', '\u2029': '\\u2029', '\x85': '\\u0085'})
-
     # Module-level because CPython rebuilds these dicts on every call.
     FAST_PATH_KWARGS = ({'separators': (',', ':')}, {'ensure_ascii': False})
 
@@ -29,7 +27,7 @@ if ENABLE_ORJSON:
 
         The fast path is not byte-for-byte stdlib: it is always compact, formats
         floats orjson's way (``1e16``, not ``1e+16``), and is raw UTF-8 apart from
-        the three line separators escaped above, so a ``separators`` caller loses
+        the three line separators ``dumps`` escapes, so a ``separators`` caller loses
         stdlib's ASCII escaping and an ``ensure_ascii=False`` caller loses its
         spacing. ``dumps`` also serializes ``datetime``/``UUID``/dataclasses that
         stdlib refuses, and encodes ``NaN``/``Infinity`` as ``null``. ``loads``
@@ -51,8 +49,10 @@ if ENABLE_ORJSON:
                 serialized = orjson.dumps(obj).decode('utf-8')
             except (TypeError, ValueError):
                 return engineio_json.dumps(obj, *args, **kwargs)
+            # Raw, these three split an SSE frame reassembled with ``splitlines()``.
+            # A dict-table translate walks char by char; chained replace runs on C fast paths.
             if '\u2028' in serialized or '\u2029' in serialized or '\x85' in serialized:
-                return serialized.translate(LINE_SEPARATOR_ESCAPES)
+                return serialized.replace('\u2028', '\\u2028').replace('\u2029', '\\u2029').replace('\x85', '\\u0085')
             return serialized
 
         @staticmethod
@@ -68,6 +68,17 @@ if ENABLE_ORJSON:
     JSONCodec = ORJSONCodec
     # Codec handed to the socket.io/engineio managers, which default to their own.
     SOCKETIO_JSON = ORJSONCodec
+
+    def dumps_bytes(obj) -> bytes:
+        """JSON as UTF-8 bytes, skipping the str round trip and the escaping ``dumps`` does."""
+        try:
+            return orjson.dumps(obj)
+        except (TypeError, ValueError):
+            return engineio_json.dumps(obj).encode('utf-8')
 else:
     JSONCodec = stdlib_json
     SOCKETIO_JSON = engineio_json
+
+    def dumps_bytes(obj) -> bytes:
+        """JSON as UTF-8 bytes; here simply ``dumps`` encoded."""
+        return stdlib_json.dumps(obj).encode('utf-8')

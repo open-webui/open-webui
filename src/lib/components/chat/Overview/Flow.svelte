@@ -56,10 +56,16 @@
 				<PinSlash />
 			{/if}
 		</ControlButton>
-		<ControlButton on:click={() => setLayoutDirection('vertical')} title="Vertical Layout">
+		<ControlButton
+			on:click={() => setLayoutDirection('vertical')}
+			title={$i18n.t('Vertical Layout')}
+		>
 			<AlignVertical className="size-4" />
 		</ControlButton>
-		<ControlButton on:click={() => setLayoutDirection('horizontal')} title="Horizontal Layout">
+		<ControlButton
+			on:click={() => setLayoutDirection('horizontal')}
+			title={$i18n.t('Horizontal Layout')}
+		>
 			<AlignHorizontal className="size-4" />
 		</ControlButton>
 	</Controls>

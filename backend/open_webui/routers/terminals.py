@@ -5,6 +5,7 @@ Routes:
   *    /{server_id}/{path:path}  — proxy request to terminal server
 """
 
+import asyncio
 import logging
 import posixpath
 from urllib.parse import unquote
@@ -13,31 +14,38 @@ import aiohttp
 from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_TOOL_SERVERS
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_verified_user, get_verified_user_by_token
+from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.terminals import (
     TERMINAL_CONTEXT_HEADER,
     get_terminal_server_url,
     is_terminal_orchestrator,
+    terminal_chat_uploads,
     terminal_context_available,
     terminal_context_config,
     terminal_context_id,
     terminal_contexts,
 )
-from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
 from starlette.background import BackgroundTask
+from starlette.requests import ClientDisconnect
+from yarl import URL
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
 
 STREAMING_CONTENT_TYPES = ('application/octet-stream', 'image/', 'application/pdf')
-STRIPPED_RESPONSE_HEADERS = frozenset(('transfer-encoding', 'connection', 'content-encoding', 'content-length'))
+ADMIN_API_PATHS = ('api/v1/policies', 'api/v1/status', 'api/v1/terminals')
+# Drop the upstream's server and date: uvicorn adds its own and forwarding both duplicates them.
+STRIPPED_RESPONSE_HEADERS = frozenset(
+    ('transfer-encoding', 'connection', 'content-encoding', 'content-length', 'server', 'date')
+)
 
 
 def _sanitize_proxy_path(path: str) -> str | None:
@@ -60,7 +68,8 @@ def _sanitize_proxy_path(path: str) -> str | None:
         return None
     # posixpath splits on '/' only, so 'a/..\..\b' survives normpath as one component.
     # Upstreams that treat '\' as a separator would resolve it, so reject outright.
-    if '\\' in decoded:
+    # URL parsers also remove tabs/newlines, which can turn '.\t.' into '..'.
+    if any(char in decoded for char in '\\\t\r\n'):
         return None
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
@@ -78,6 +87,9 @@ def _sanitize_proxy_path(path: str) -> str | None:
 @router.get('/')
 async def list_terminal_servers(request: Request, user=Depends(get_verified_user)):
     """Return terminal servers the authenticated user has access to."""
+    if not ENABLE_TOOL_SERVERS:
+        return []
+
     connections = await Config.get('terminal_server.connections', []) or []
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
@@ -87,6 +99,7 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
             'url': connection.get('url', ''),
             'name': connection.get('name', ''),
             'contexts': terminal_contexts(connection),
+            'config': {'chat_uploads': terminal_chat_uploads(connection)},
         }
         for connection in connections
         if connection.get('enabled', True) and await has_connection_access(user, connection, user_group_ids)
@@ -104,6 +117,9 @@ async def proxy_terminal(
     user=Depends(get_verified_user),
 ):
     """Proxy a request to the admin terminal server identified by *server_id*."""
+    if not ENABLE_TOOL_SERVERS:
+        return JSONResponse({'error': 'Tool servers are disabled'}, status_code=403)
+
     connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
@@ -127,6 +143,15 @@ async def proxy_terminal(
 
     target_url = f'{base_url}/{safe_path}'
 
+    # Check the path aiohttp will send, relative to the configured server root.
+    base_path = URL(str(connection.get('url') or '')).path.rstrip('/')
+    target_path = URL(target_url).path
+    if any(
+        target_path == f'{base_path}/{prefix}' or target_path.startswith(f'{base_path}/{prefix}/')
+        for prefix in ADMIN_API_PATHS
+    ):
+        return JSONResponse({'error': 'Path not allowed'}, status_code=403)
+
     if request.query_params:
         target_url += f'?{request.query_params}'
 
@@ -142,16 +167,14 @@ async def proxy_terminal(
             return JSONResponse({'error': 'A saved chat is required for this terminal'}, status_code=409)
         if context_id:
             headers[TERMINAL_CONTEXT_HEADER] = context_id
-    cookies = {}
+    cookies = getattr(request, 'cookies', {}) if connection.get('forward_cookies', False) else {}
     auth_type = connection.get('auth_type', 'bearer')
 
     if auth_type == 'bearer':
         headers.update(bearer_auth_header(connection.get('key', '')))
     elif auth_type == 'session':
-        cookies = request.cookies
         headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
-        cookies = request.cookies
         # Resolve the token server-side from the caller's OAuth session; never trust a client header.
         oauth_token = None
         try:
@@ -170,13 +193,14 @@ async def proxy_terminal(
     if content_type:
         headers['Content-Type'] = content_type
 
-    body = await request.body()
     session = aiohttp.ClientSession(
         timeout=aiohttp.ClientTimeout(total=300, connect=10),
         trust_env=True,
     )
 
     try:
+        body = await request.body()
+
         upstream_response = await session.request(
             method=request.method,
             url=target_url,
@@ -184,6 +208,7 @@ async def proxy_terminal(
             cookies=cookies,
             data=body or None,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            allow_redirects=False,
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
@@ -217,6 +242,13 @@ async def proxy_terminal(
 
         return Response(content=response_body, status_code=status_code, headers=filtered_headers)
 
+    except ClientDisconnect:
+        await session.close()
+        return Response(status_code=499)
+    except (aiohttp.ClientConnectionError, TimeoutError) as error:
+        await session.close()
+        log.error('Terminal proxy error: %s', str(error) or type(error).__name__)
+        return JSONResponse({'error': f'Terminal proxy error: {error}'}, status_code=502)
     except Exception as error:
         await session.close()
         log.exception('Terminal proxy error: %s', error)
@@ -237,10 +269,6 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     Returns ``(user, connection, chat_id, token)`` on success, or ``None`` after
     closing *ws* with an appropriate error code.
     """
-    import asyncio
-
-    from open_webui.utils.auth import get_verified_user_by_token
-
     # First-message authentication
     try:
         raw = await asyncio.wait_for(ws.receive_text(), timeout=10.0)
@@ -249,13 +277,32 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
             await ws.close(code=4001, reason='Expected auth message')
             return None
         token = payload.get('token', '')
+    except (TimeoutError, JSONCodec.JSONDecodeError):
+        await ws.close(code=4001, reason='Auth timeout or invalid payload')
+        return None
+    except Exception:
+        await ws.close(code=4001, reason='Invalid token')
+        return None
+
+    result = await _resolve_terminal_access(ws, server_id, token)
+    if result is None:
+        return None
+    user, connection = result
+    chat_id = payload.get('chat_id', '')
+    return user, connection, chat_id if isinstance(chat_id, str) else '', token
+
+
+async def _resolve_terminal_access(ws: WebSocket, server_id: str, token: str):
+    """Resolve current access for both the handshake and an open terminal session."""
+    if not ENABLE_TOOL_SERVERS:
+        await ws.close(code=4003, reason='Tool servers are disabled')
+        return None
+
+    try:
         user = await get_verified_user_by_token(token, getattr(ws.app.state, 'redis', None))
         if user is None:
             await ws.close(code=4001, reason='Invalid token')
             return None
-    except (asyncio.TimeoutError, JSONCodec.JSONDecodeError):
-        await ws.close(code=4001, reason='Auth timeout or invalid payload')
-        return None
     except Exception:
         await ws.close(code=4001, reason='Invalid token')
         return None
@@ -272,16 +319,14 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         await ws.close(code=4003, reason='Terminal server disabled')
         return None
 
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
-    if not await has_connection_access(user, connection, user_group_ids):
+    if not await has_connection_access(user, connection):
         await ws.close(code=4003, reason='Access denied')
         return None
 
-    chat_id = payload.get('chat_id', '')
     if not terminal_context_available(connection, 'chat'):
         await ws.close(code=4003, reason='Terminal server is not available in chats')
         return None
-    return user, connection, chat_id if isinstance(chat_id, str) else '', token
+    return user, connection
 
 
 @router.websocket('/{server_id}/api/terminals/{session_id}')
@@ -315,7 +360,7 @@ async def ws_terminal(
     # For orchestrator-backed servers, pass user_id
     upstream_params['user_id'] = user.id
     context_id = terminal_context_id(connection, {'chat_id': chat_id}, 'chat')
-    upstream_headers = {}
+    upstream_headers = {'X-User-Id': user.id, 'X-Session-Id': chat_id}
     if terminal_context_config(connection, 'chat').get('context_id') == 'chat_id' and not context_id:
         await ws.close(code=4003, reason='A saved chat is required for this terminal')
         return
@@ -341,7 +386,6 @@ async def ws_terminal(
             headers=upstream_headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         ) as upstream:
-            import asyncio
             import json as _json
 
             # First-message auth to upstream terminal server
@@ -351,6 +395,8 @@ async def ws_terminal(
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': key}))
             elif auth_type == 'session' and is_terminal_orchestrator(connection):
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': token}))
+            else:
+                await upstream.send_str(_json.dumps({'type': 'auth', 'token': ''}))
 
             await publish_event(
                 app,
@@ -392,20 +438,30 @@ async def ws_terminal(
                 except Exception:
                     pass
 
-            # End the proxy as soon as either direction finishes (e.g. a
-            # graceful upstream CLOSE) and cancel the sibling, which would
+            async def _watch_access():
+                try:
+                    while True:
+                        # Poll current state so revocation also works across workers.
+                        await asyncio.sleep(10)
+                        if await _resolve_terminal_access(ws, server_id, token) is None:
+                            return
+                except Exception:
+                    log.exception('Terminal access recheck failed')
+
+            # End the proxy as soon as any task finishes (e.g. a
+            # graceful upstream CLOSE) and cancel the rest, which would
             # otherwise hang on a blocked ws.receive() until the browser leaves.
             tasks = [
                 asyncio.create_task(_client_to_upstream()),
                 asyncio.create_task(_upstream_to_client()),
+                asyncio.create_task(_watch_access()),
             ]
-            _done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-            for task in pending:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
+            try:
+                await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            finally:
+                for task in tasks:
+                    task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
     except Exception as e:
         log.exception('Terminal WebSocket proxy error: %s', e)
     finally:

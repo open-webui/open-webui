@@ -10,7 +10,7 @@
 	import UserSettingRow from './UserSettingRow.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	let ollamaVersion = '';
 
@@ -27,7 +27,7 @@
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
 				current: WEBUI_VERSION,
-				latest: WEBUI_VERSION
+				latest: null
 			};
 		});
 
@@ -49,16 +49,19 @@
 </script>
 
 <div id="tab-about" class="flex flex-col h-full justify-between text-sm">
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('About')}</h2>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.personal.about.title')}
+	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<!-- LICENSE covers this Open WebUI About identifier.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
-		<UserSettingSection title={`${$WEBUI_NAME} ${$i18n.t('Version')}`} first>
-			<UserSettingRow
-				description={$i18n.t('View the installed version and check release updates.')}
-			>
+		<UserSettingSection
+			title={`${$WEBUI_NAME} ${$i18n.t('settings.personal.about.sections.version.title')}`}
+			first
+		>
+			<UserSettingRow description={$i18n.t('settings.personal.about.seeWhatSNew.description')}>
 				<div slot="label" class="flex flex-col text-xs text-gray-600 dark:text-gray-400">
 					<div class="flex gap-1">
 						<Tooltip content={WEBUI_BUILD_HASH}>
@@ -66,26 +69,30 @@
 						</Tooltip>
 
 						{#if $config?.features?.enable_version_update_check}
-							<a
-								href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-								target="_blank"
-							>
-								{updateAvailable === null
-									? $i18n.t('Checking for updates...')
-									: updateAvailable
-										? `(v${version.latest} ${$i18n.t('available!')})`
-										: $i18n.t('(latest)')}
-							</a>
+							{#if version.latest === null}
+								<span>{$i18n.t('Could not check for updates')}</span>
+							{:else}
+								<a
+									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+									target="_blank"
+								>
+									{updateAvailable === null
+										? $i18n.t('Checking for updates...')
+										: updateAvailable
+											? `(v${version.latest} ${$i18n.t('available!')})`
+											: $i18n.t('(latest)')}
+								</a>
+							{/if}
 						{/if}
 					</div>
 
 					<button
-						class={actionButtonClass}
+						class="self-start {actionButtonClass}"
 						on:click={() => {
 							showChangelog.set(true);
 						}}
 					>
-						<div>{$i18n.t("See what's new")}</div>
+						<div>{$i18n.t('settings.personal.about.seeWhatSNew.label')}</div>
 					</button>
 				</div>
 
@@ -96,21 +103,21 @@
 							checkForVersionUpdates();
 						}}
 					>
-						{$i18n.t('Check for updates')}
+						{$i18n.t('settings.personal.about.checkForUpdates.label')}
 					</button>
 				{/if}
 			</UserSettingRow>
 		</UserSettingSection>
 
 		{#if ollamaVersion}
-			<UserSettingSection title={$i18n.t('Ollama Version')}>
+			<UserSettingSection title={$i18n.t('settings.personal.about.sections.ollamaVersion.title')}>
 				<div class="text-xs text-gray-600 dark:text-gray-400">
 					{ollamaVersion ?? 'N/A'}
 				</div>
 			</UserSettingSection>
 		{/if}
 
-		<UserSettingSection title={$i18n.t('Community')}>
+		<UserSettingSection title={$i18n.t('settings.personal.about.sections.community.title')}>
 			{#if $config?.license_metadata}
 				<!-- LICENSE covers this Open WebUI license attribution.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -120,7 +127,8 @@
 						<span>{$WEBUI_NAME}</span> -
 					{/if}
 
-					<span class="capitalize">{$config?.license_metadata?.type}</span> license purchased by
+					<span class="capitalize">{$config?.license_metadata?.type}</span>
+					{$i18n.t('license purchased by')}
 					<span class="capitalize">{$config?.license_metadata?.organization_name}</span>
 				</div>
 			{:else}
@@ -144,8 +152,10 @@
 			{/if}
 
 			<div class="text-xs text-gray-400 dark:text-gray-500">
-				Emoji graphics provided by
-				<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, licensed under
+				{$i18n.t('Emoji graphics provided by')}
+				<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, {$i18n.t(
+					'licensed under'
+				)}
 				<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
 			</div>
 
@@ -153,10 +163,11 @@
 				<!-- LICENSE covers this Open WebUI copyright attribution.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
-				Copyright (c) {new Date().getFullYear()}
+				{$i18n.t('Copyright (c)')}
+				{new Date().getFullYear()}
 				<a href="https://openwebui.com" target="_blank" class="underline">Open WebUI Inc.</a>
 				<a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
-					>All rights reserved.</a
+					>{$i18n.t('All rights reserved.')}</a
 				>
 			</div>
 

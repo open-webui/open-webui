@@ -61,10 +61,7 @@ export const refreshChatList = async (
 	return { accepted: true, allLoaded };
 };
 
-// The sidebar's folders keep their chat lists in local component state, refreshed
-// through a registry of per-folder callbacks that only the sidebar can reach.
-// Handlers registered here let other components (e.g. the open chat's menu)
-// request that refresh without a reference to the sidebar.
+// The sidebar owns folder state. This bridge lets other components refresh it.
 type FolderRefreshHandler = (folderId?: string | null, chat?: ChatListItem | null) => unknown;
 const folderRefreshHandlers = new Set<FolderRefreshHandler>();
 
@@ -80,6 +77,14 @@ export const refreshFolderChatLists = async (
 	chat?: ChatListItem | null
 ) => {
 	await Promise.all([...folderRefreshHandlers].map((handler) => handler(folderId, chat)));
+};
+
+export const refreshSidebar = async (token: string = '') => {
+	await Promise.all([
+		refreshChatList(token, { refreshPinned: true }),
+		refreshFolderChatLists(null),
+		refreshFolderChatLists()
+	]);
 };
 
 export const loadNextChatListPage = async (token: string = ''): Promise<ChatListResult> => {

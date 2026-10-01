@@ -5,7 +5,6 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 
@@ -105,7 +104,7 @@
 					document.body.appendChild(clonedElement);
 
 					// Override content-visibility so html2canvas can capture all messages
-					clonedElement.querySelectorAll('.message-listitem').forEach((el) => {
+					clonedElement.querySelectorAll('.message-virtualized').forEach((el) => {
 						el.style.contentVisibility = 'visible';
 					});
 
@@ -279,6 +278,7 @@
 {/if}
 
 <Dropdown
+	closeOnSelect
 	onOpenChange={(state) => {
 		if (state === false) {
 			onClose();
@@ -502,7 +502,8 @@
 
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
-				<div class="flex max-h-28 overflow-y-auto px-2 py-1">
+				<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+				<div class="flex max-h-28 overflow-y-auto px-2 py-1" on:click={(e) => e.preventDefault()}>
 					<Tags chatId={chat.id} />
 				</div>
 			{/if}

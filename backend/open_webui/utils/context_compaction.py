@@ -11,7 +11,6 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
 from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
-    get_task_model_id,
     prompt_template,
     prompt_variables_template,
     replace_messages_variable,
@@ -235,6 +234,23 @@ def _resolve_token_threshold(global_threshold: int, global_cap: int, metadata: d
     return min(configured_threshold or global_threshold, global_cap)
 
 
+def _usage_token_count(usage: dict) -> int:
+    prompt_tokens = int(usage.get('prompt_tokens') or usage.get('prompt_eval_count') or 0)
+    if not prompt_tokens and (usage.get('prompt_n') is not None or usage.get('cache_n') is not None):
+        prompt_tokens = int(usage.get('prompt_n') or 0) + int(usage.get('cache_n') or 0)
+    if not prompt_tokens:
+        prompt_tokens = int(usage.get('input_tokens') or 0)
+
+    completion_tokens = int(
+        usage.get('completion_tokens')
+        or usage.get('output_tokens')
+        or usage.get('eval_count')
+        or usage.get('predicted_n')
+        or 0
+    )
+    return prompt_tokens + completion_tokens
+
+
 async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict | None:
     chat_data = chat.chat or {}
     history = chat_data.get('history') or {}
@@ -263,25 +279,7 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (
-            tokens := (
-                int(
-                    usage.get('prompt_tokens')
-                    or usage.get('input_tokens')
-                    or usage.get('prompt_eval_count')
-                    or usage.get('prompt_n')
-                    or 0
-                )
-                + int(
-                    usage.get('completion_tokens')
-                    or usage.get('output_tokens')
-                    or usage.get('eval_count')
-                    or usage.get('predicted_n')
-                    or 0
-                )
-                + int(usage.get('cache_n') or 0)
-            )
-        ):
+        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
             return _build_context_usage(tokens, threshold)
 
@@ -320,25 +318,7 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (
-            tokens := (
-                int(
-                    usage.get('prompt_tokens')
-                    or usage.get('input_tokens')
-                    or usage.get('prompt_eval_count')
-                    or usage.get('prompt_n')
-                    or 0
-                )
-                + int(
-                    usage.get('completion_tokens')
-                    or usage.get('output_tokens')
-                    or usage.get('eval_count')
-                    or usage.get('predicted_n')
-                    or 0
-                )
-                + int(usage.get('cache_n') or 0)
-            )
-        ):
+        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
             return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
@@ -366,24 +346,11 @@ async def _generate_summary(
     from open_webui.utils.chat import generate_chat_completion
 
     task_config = await Config.get_many(
-        'task.model.default',
-        'task.model.external',
         'task.model.params',
         'chat.context_compaction.model',
     )
     context_compaction_model = task_config.get('chat.context_compaction.model')
-    task_model_id = (
-        context_compaction_model
-        if context_compaction_model in models
-        else get_task_model_id(
-            model_id,
-            task_config.get('task.model.default'),
-            task_config.get('task.model.external'),
-            models,
-        )
-    )
-    if task_model_id not in models:
-        task_model_id = model_id
+    task_model_id = context_compaction_model if context_compaction_model in models else model_id
     if task_model_id not in models:
         raise ValueError('No available model for context compaction')
 

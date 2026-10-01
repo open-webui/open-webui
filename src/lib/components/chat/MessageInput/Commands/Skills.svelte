@@ -1,6 +1,19 @@
 <script lang="ts">
+	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext, onDestroy } from 'svelte';
 	import { getSkillItems } from '$lib/apis/skills';
+	import {
+		listTerminalSkills,
+		resolveTerminalConnection,
+		type TerminalSkill
+	} from '$lib/apis/terminal';
+	import {
+		chatId,
+		selectedTerminalId,
+		settings,
+		terminalServers,
+		terminalSkills
+	} from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
 
@@ -26,10 +39,26 @@
 	});
 
 	const getItems = async () => {
-		const res = await getSkillItems(localStorage.token, query).catch(() => null);
-		if (res) {
-			filteredItems = res.items;
-		}
+		const [res, terminalItems] = await Promise.all([
+			getSkillItems(localStorage.token, query).catch(() => null),
+			getTerminalItems(query)
+		]);
+		filteredItems = [...(res?.items ?? []), ...terminalItems];
+	};
+
+	const getTerminalItems = async (query = ''): Promise<TerminalSkill[]> => {
+		const connection = resolveTerminalConnection(
+			$selectedTerminalId,
+			$terminalServers ?? [],
+			$settings?.terminalServers ?? [],
+			localStorage.token
+		);
+		const items = await listTerminalSkills(connection, $chatId || null).catch(() => []);
+		terminalSkills.set(items);
+		const q = query.trim().toLowerCase();
+		return q
+			? items.filter((skill) => `${skill.name} ${skill.description}`.toLowerCase().includes(q))
+			: items;
 	};
 
 	$: if (query) {
@@ -60,8 +89,10 @@
 			.replaceAll("'", '&#39;');
 
 	const getTooltipContent = (skill) => {
-		const name = escapeTooltipText(skill.name);
-		const description = escapeTooltipText(skill.description);
+		const name = escapeTooltipText(resolveLocalizedResource(skill, $i18n.language));
+		const description = escapeTooltipText(
+			resolveLocalizedResource(skill, $i18n.language, 'description')
+		);
 
 		return `<div class="max-w-80 whitespace-normal text-left leading-snug">
 			<span class="break-words font-normal">${name}</span>${description ? `: <span class="break-words opacity-80">${description}</span>` : ''}
@@ -100,10 +131,10 @@
 						<Cube className="size-3.5" />
 					</div>
 					<div class="truncate min-w-0 flex-1">
-						{skill.name}
+						{resolveLocalizedResource(skill, $i18n.language)}
 					</div>
 					<div class="ml-2 max-w-24 shrink-0 truncate text-xs text-gray-500 dark:text-gray-400">
-						{skill.id}
+						{skill.source === 'terminal' ? $i18n.t('Terminal') : skill.id}
 					</div>
 				</div>
 			</button>
