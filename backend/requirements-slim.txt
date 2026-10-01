@@ -61,7 +61,7 @@ fake-useragent==2.2.0
 ftfy==6.3.1
 chardet==7.4.3
 
-Markdown==3.10.2
+Markdown==3.11
 beautifulsoup4==4.14.3
 lxml==6.1.1
 validators==0.35.0
