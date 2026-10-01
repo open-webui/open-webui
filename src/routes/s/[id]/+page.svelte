@@ -52,8 +52,10 @@
 			if (await loadSharedChat()) {
 				await tick();
 				loaded = true;
-			} else {
+			} else if (localStorage.token) {
 				await goto('/');
+			} else {
+				await goto(`/auth?redirect=${encodeURIComponent($page.url.pathname)}`);
 			}
 		})();
 	}
@@ -102,10 +104,7 @@
 				: []
 		);
 		await chatId.set(shareId);
-		chat = await getChatByShareId(token, shareId).catch(async (error) => {
-			await goto('/');
-			return null;
-		});
+		chat = await getChatByShareId(token, shareId).catch(() => null);
 
 		if (chat) {
 			user = token
