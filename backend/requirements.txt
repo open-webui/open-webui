@@ -9,7 +9,7 @@ orjson==3.11.9
 cryptography==48.0.0
 bcrypt==5.0.0
 argon2-cffi==25.1.0
-PyJWT[crypto]==2.13.0
+PyJWT[crypto]==2.15.0
 authlib==1.7.2
 joserfc==1.7.4
 
