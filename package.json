@@ -121,7 +121,7 @@
 		"marked": "^9.1.0",
 		"mermaid": "^11.10.1",
 		"panzoom": "^9.4.3",
-		"pdfjs-dist": "^5.4.149",
+		"pdfjs-dist": "^6.3.289",
 		"prosemirror-collab": "^1.3.1",
 		"prosemirror-commands": "^1.6.0",
 		"prosemirror-example-setup": "^1.2.3",
