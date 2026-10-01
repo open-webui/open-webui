@@ -1893,14 +1893,14 @@ wheels = [
 
 [[package]]
 name = "joserfc"
-version = "1.7.4"
+version = "1.7.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c7/e0/27a6a081ae25420eda6768ceae05d7022a7f2447f420588843f2a44e4298/joserfc-1.7.4.tar.gz", hash = "sha256:b3bc561672ae541b17a9237053b48a03dacddd92d68047b3ecdfb4b5714a88ed", size = 234027, upload-time = "2026-07-19T15:43:02.739Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/94/80fea1514b7c6d7d37804d3fe9ca81455f633347fc98731bd71ffe1faa17/joserfc-1.7.5.tar.gz", hash = "sha256:d5ff536e658e17664f8c1b1ab60dc4aa62aa973fcef1edd33cc44bda45d6f5ea", size = 234990, upload-time = "2026-08-29T13:05:42.057Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f9/bf/249dcd99b3376375910b7fa922383b57792975c8758f50d44612e749226c/joserfc-1.7.4-py3-none-any.whl", hash = "sha256:32d46c2cd5e3203c13e87a6c61333cab310b1ba80cd54b4c4f386a848a122463", size = 71000, upload-time = "2026-07-19T15:43:01.299Z" },
+    { url = "https://files.pythonhosted.org/packages/67/c5/82addfd375e5ee6520644e0553e4aadde92d668c4fc99cc716d337fe7bb3/joserfc-1.7.5-py3-none-any.whl", hash = "sha256:add2c2c84e8373b084d526a8b53daba5d7a513a118cd2dcd9fc9f979d0922159", size = 71269, upload-time = "2026-08-29T13:05:40.718Z" },
 ]
 
 [[package]]
@@ -2921,7 +2921,7 @@ requires-dist = [
     { name = "hiredis", specifier = "==3.4.2" },
     { name = "httpx", extras = ["brotli", "cli", "http2", "socks", "zstd"], specifier = "==0.28.1" },
     { name = "itsdangerous", specifier = "==2.2.0" },
-    { name = "joserfc", specifier = "==1.7.4" },
+    { name = "joserfc", specifier = "==1.7.5" },
     { name = "langchain-classic", specifier = "==1.0.7" },
     { name = "langchain-core", specifier = "==1.4.8" },
     { name = "langchain-text-splitters", specifier = "==1.1.2" },
