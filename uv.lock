@@ -365,7 +365,7 @@ wheels = [
 
 [[package]]
 name = "azure-storage-blob"
-version = "12.29.0"
+version = "12.30.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
@@ -373,9 +373,9 @@ dependencies = [
     { name = "isodate" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/25/fdcf1e381922dbab8ba23d6fd78d397fe6cbac6b480310218834b7bc91fe/azure_storage_blob-12.29.0.tar.gz", hash = "sha256:2824ddd7ebc9056034ebc76b17971a38e9aa5835abb0d565b9700493f2a6c657", size = 611359, upload-time = "2026-05-15T03:34:59.865Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/f0/3fb4ec2d4b3798e3bb8fefb1096d5728f2501c2ed52e0cb729a2c956cf00/azure_storage_blob-12.30.3.tar.gz", hash = "sha256:31760221ceff36b7ceed741ba0093d08ec857911b92294dce3e4efe8fa40245e", size = 625235, upload-time = "2026-09-22T21:50:04.985Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/2c/6ddee6a3e42d0236ba9259e4df7fa97fdc415ff0802b736c634baaf4b285/azure_storage_blob-12.29.0-py3-none-any.whl", hash = "sha256:ccf8a1bcd5e49df83ab85aab793b579e5ba2eeea2ad8900b2f62ca3a37dc391f", size = 434823, upload-time = "2026-05-15T03:35:01.837Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/20/6530bbc13fea536a1f2c0194034ae3f6880fbc0c1e7c229e3569450f7aef/azure_storage_blob-12.30.3-py3-none-any.whl", hash = "sha256:80729a5397e5f0a63dbbdff74da675c5db1eacaf25fd5db0074b7ba6c17e2498", size = 438390, upload-time = "2026-09-22T21:50:06.395Z" },
 ]
 
 [[package]]
@@ -2896,7 +2896,7 @@ requires-dist = [
     { name = "azure-ai-documentintelligence", specifier = "==1.0.2" },
     { name = "azure-identity", specifier = "==1.25.3" },
     { name = "azure-search-documents", marker = "extra == 'all'", specifier = "==12.0.0" },
-    { name = "azure-storage-blob", specifier = "==12.29.0" },
+    { name = "azure-storage-blob", specifier = "==12.30.3" },
     { name = "bcrypt", specifier = "==5.0.0" },
     { name = "beautifulsoup4", specifier = "==4.14.3" },
     { name = "black", specifier = "==26.5.1" },
