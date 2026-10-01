@@ -56,6 +56,7 @@
 
 	const chatCompletionHandler = async () => {
 		const model = $models.find((model) => model.id === selectedModelId);
+		if (!model) return;
 
 		const [res, controller] = await chatCompletion(
 			getRequestToken(),
@@ -91,6 +92,9 @@
 		const textareaElement = document.getElementById(`assistant-${messages.length - 1}-textarea`);
 
 		if (res && res.ok) {
+			if (!res.body) {
+				return;
+			}
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))

@@ -58,8 +58,18 @@ export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 
 type ChatActionForm = {
 	model: string;
-	messages: string[];
+	messages: {
+		id: string;
+		role: string;
+		content: unknown;
+		info?: unknown;
+		timestamp: number;
+		sources?: unknown;
+	}[];
 	chat_id: string;
+	id: string;
+	session_id?: string;
+	event?: unknown;
 };
 
 export const chatAction = async (token: string, action_id: string, body: ChatActionForm) => {

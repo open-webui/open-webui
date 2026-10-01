@@ -37,7 +37,7 @@
 	import { getRequestToken } from '$lib/services/auth';
 
 	export let placeholder = $i18n.t('Send a Message');
-	export let transparentBackground = false;
+	export const transparentBackground = false;
 
 	export let id: any = null;
 
@@ -64,7 +64,7 @@
 		try {
 			// Request screen media
 			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-				video: { cursor: 'never' },
+				video: { cursor: 'never' } as any,
 				audio: false
 			});
 			// Once the user selects a screen, temporarily create a video element
@@ -78,7 +78,7 @@
 			canvas.height = video.videoHeight;
 			// Grab a single frame from the video stream using the canvas
 			const context = canvas.getContext('2d');
-			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			context?.drawImage(video, 0, 0, canvas.width, canvas.height);
 			// Stop all video tracks (stop screen sharing) after capturing the image
 			mediaStream.getTracks().forEach((track) => track.stop());
 
@@ -119,14 +119,22 @@
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
-					let imageUrl = event.target.result;
+					let imageUrl = event.target?.result;
 
 					if ($settings?.imageCompression ?? false) {
 						const width = $settings?.imageCompressionSize?.width ?? null;
 						const height = $settings?.imageCompressionSize?.height ?? null;
 
 						if (width || height) {
-							imageUrl = await compressImage(imageUrl, width, height);
+							const compressed =
+								typeof imageUrl === 'string'
+									? await compressImage(
+											imageUrl,
+											width ? Number(width) : null,
+											height ? Number(height) : null
+										)
+									: null;
+							imageUrl = typeof compressed === 'string' ? compressed : null;
 						}
 					}
 

@@ -51,7 +51,9 @@
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
 		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
+		if (element) {
+			element.scrollTop = element.scrollTop + 100;
+		}
 
 		messagesLoading = true;
 		messagesCount += 20;
@@ -84,7 +86,9 @@
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		if (element) {
+			element.scrollTop = element.scrollHeight;
+		}
 	};
 
 	const updateChat = async () => {
@@ -118,8 +122,8 @@
 			}
 		} else {
 			let childrenIds = Object.values(history.messages)
-				.filter((message) => message.parentId === null)
-				.map((message) => message.id);
+				.filter((message: any) => message.parentId === null)
+				.map((message: any) => message.id);
 			let messageId = childrenIds[Math.max(childrenIds.indexOf(message.id) - 1, 0)];
 
 			if (message.id !== messageId) {
@@ -138,6 +142,7 @@
 
 		if ($settings?.scrollOnBranchChange ?? true) {
 			const element = document.getElementById('messages-container');
+			if (!element) return;
 			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
 			setTimeout(() => {
@@ -169,8 +174,8 @@
 			}
 		} else {
 			let childrenIds = Object.values(history.messages)
-				.filter((message) => message.parentId === null)
-				.map((message) => message.id);
+				.filter((message: any) => message.parentId === null)
+				.map((message: any) => message.id);
 			let messageId =
 				childrenIds[Math.min(childrenIds.indexOf(message.id) + 1, childrenIds.length - 1)];
 
@@ -190,6 +195,7 @@
 
 		if ($settings?.scrollOnBranchChange ?? true) {
 			const element = document.getElementById('messages-container');
+			if (!element) return;
 			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
 			setTimeout(() => {
@@ -332,6 +338,7 @@
 	const triggerScroll = () => {
 		if (autoScroll) {
 			const element = document.getElementById('messages-container');
+			if (!element) return;
 			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 			setTimeout(() => {
 				scrollToBottom();

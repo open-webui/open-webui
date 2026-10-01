@@ -36,7 +36,7 @@
 	export let autoScroll = false;
 
 	export let atSelectedModel: Model | undefined;
-	export let selectedModels: [''];
+	export let selectedModels: string[];
 
 	export let history: any;
 

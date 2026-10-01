@@ -129,6 +129,8 @@
 			return null;
 		}
 
+		if (!knowledge) return null;
+
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		// Check if the file is an audio file and transcribe/convert it to text file
@@ -388,8 +390,9 @@
 		const fileId = selectedFile.id;
 		const content = selectedFile.data.content;
 
-		const res = updateFileDataContentById(getRequestToken(), fileId, content).catch((e) => {
+		const res = await updateFileDataContentById(getRequestToken(), fileId, content).catch((e) => {
 			toast.error(e);
+			return null;
 		});
 
 		const updatedKnowledge = await updateFileFromKnowledgeById(getRequestToken(), id, fileId).catch(
@@ -410,7 +413,7 @@
 		}
 
 		debounceTimeout = setTimeout(async () => {
-			if (knowledge.name.trim() === '' || knowledge.description.trim() === '') {
+			if (!knowledge || knowledge.name.trim() === '' || knowledge.description.trim() === '') {
 				toast.error($i18n.t('Please fill in all fields.'));
 				return;
 			}
@@ -482,6 +485,7 @@
 
 		// Select the container element you want to observe
 		const container = document.getElementById('collection-container');
+		if (!container) return;
 
 		// initialize the minSize based on the container width
 		minSize = !largeScreen ? 100 : Math.floor((300 / container.clientWidth) * 100);
@@ -822,7 +826,7 @@
 											} else if (e.detail.type === 'text') {
 												showAddTextContentModal = true;
 											} else {
-												document.getElementById('files-input').click();
+												document.getElementById('files-input')?.click();
 											}
 										}}
 										on:sync={(e) => {

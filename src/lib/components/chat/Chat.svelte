@@ -220,7 +220,7 @@
 
 	const setToolIds = async () => {
 		if (!$tools) {
-			tools.set(await getTools(getRequestToken()));
+			tools.set((await getTools(getRequestToken())) as any);
 		}
 
 		if (selectedModels.length !== 1) {
@@ -229,7 +229,7 @@
 		const model = $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
 			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id: any) =>
-				$tools.find((t: any) => t.id === id)
+				($tools as { id: string }[] | null)?.some((tool) => tool.id === id)
 			);
 		}
 	};
@@ -322,7 +322,7 @@
 		}
 	};
 
-	const chatEventHandler = async (event, cb) => {
+	const chatEventHandler = async (event: any, cb: any) => {
 		if (event.chat_id === $chatId) {
 			await tick();
 			let message = history.messages[event.message_id];
@@ -718,9 +718,9 @@
 		}
 
 		if ($page.url.searchParams.get('models')) {
-			selectedModels = $page.url.searchParams.get('models')?.split(',');
+			selectedModels = $page.url.searchParams.get('models')!.split(',');
 		} else if ($page.url.searchParams.get('model')) {
-			const urlModels = $page.url.searchParams.get('model')?.split(',');
+			const urlModels = $page.url.searchParams.get('model')!.split(',');
 
 			if (urlModels.length === 1) {
 				const m = $models.find((m) => m.id === urlModels[0]);
@@ -794,17 +794,11 @@
 		}
 
 		if ($page.url.searchParams.get('tools')) {
-			selectedToolIds = $page.url.searchParams
-				.get('tools')
-				?.split(',')
-				.map((id) => id.trim())
-				.filter((id) => id);
+			selectedToolIds = $page.url.searchParams.get('tools')?.split(',') ?? [];
+			selectedToolIds = selectedToolIds.map((id) => id.trim()).filter((id) => id);
 		} else if ($page.url.searchParams.get('tool-ids')) {
-			selectedToolIds = $page.url.searchParams
-				.get('tool-ids')
-				?.split(',')
-				.map((id) => id.trim())
-				.filter((id) => id);
+			selectedToolIds = $page.url.searchParams.get('tool-ids')?.split(',') ?? [];
+			selectedToolIds = selectedToolIds.map((id) => id.trim()).filter((id) => id);
 		}
 
 		if ($page.url.searchParams.get('call') === 'true') {
@@ -828,7 +822,7 @@
 		const userSettings = await getUserSettings(getRequestToken());
 
 		if (userSettings) {
-			settings.set(userSettings.ui);
+			settings.set(userSettings.ui as Parameters<typeof settings.set>[0]);
 		} else {
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
@@ -844,9 +838,8 @@
 		});
 
 		if (chat) {
-			tags = await getTagsById(getRequestToken(), $chatId).catch(async (error) => {
-				return [];
-			});
+			const chatTags = await getTagsById(getRequestToken(), $chatId).catch(() => []);
+			tags = Array.isArray(chatTags) ? chatTags : [];
 
 			const chatContent = chat.chat;
 
@@ -865,7 +858,7 @@
 				const userSettings = await getUserSettings(getRequestToken());
 
 				if (userSettings) {
-					await settings.set(userSettings.ui);
+					await settings.set(userSettings.ui as Parameters<typeof settings.set>[0]);
 				} else {
 					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 				}
@@ -925,8 +918,7 @@
 				...(m.sources ? { sources: m.sources } : {})
 			})),
 			chat_id: chatId,
-			session_id: $socket?.id,
-			id: responseMessageId
+			session_id: $socket?.id ?? ''
 		}).catch((error) => {
 			toast.error(`${error}`);
 			messages.at(-1).error = { content: error };
@@ -1068,7 +1060,7 @@
 				done: true,
 
 				model: modelId,
-				modelName: model.name ?? model.id,
+				modelName: model?.name ?? modelId,
 				modelIdx: 0,
 				timestamp: Math.floor(Date.now() / 1000)
 			};
@@ -1127,8 +1119,8 @@
 					parentId: currentParentId,
 					childrenIds: [],
 					done: true,
-					model: model.id,
-					modelName: model.name ?? model.id,
+					model: modelId,
+					modelName: model?.name ?? modelId,
 					modelIdx: 0,
 					timestamp: Math.floor(Date.now() / 1000),
 					...message
@@ -1331,13 +1323,11 @@
 			);
 			return;
 		}
-		if (
-			($config?.file?.max_count ?? null) !== null &&
-			files.length + chatFiles.length > $config?.file?.max_count
-		) {
+		const maxFileCount = $config?.file?.max_count;
+		if (maxFileCount != null && files.length + chatFiles.length > maxFileCount) {
 			toast.error(
 				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
-					maxCount: $config?.file?.max_count
+					maxCount: maxFileCount
 				})
 			);
 			return;
@@ -1679,13 +1669,18 @@
 							// Get user's timezone preference
 							const { timezoneService } = await import('$lib/services/timezone');
 							const userTimezone = timezoneService.getUserTimezone();
+							const userLocation = $settings?.userLocation
+								? await getAndUpdateUserLocation(getRequestToken())
+								: undefined;
 
 							return promptTemplate(
 								params?.system ?? $settings?.system ?? '',
-								$user.name,
-								$settings?.userLocation
-									? await getAndUpdateUserLocation(getRequestToken())
-									: undefined,
+								$user?.name,
+								typeof userLocation === 'string'
+									? userLocation
+									: userLocation
+										? `${userLocation.latitude.toFixed(3)}, ${userLocation.longitude.toFixed(3)} (lat, long)`
+										: undefined,
 								userTimezone
 							);
 						})()}${
@@ -1703,7 +1698,7 @@
 			.filter((message) => message?.content?.trim())
 			.map((message, idx, arr) => ({
 				role: message.role,
-				...((message.files?.filter((file: any) => file.type === 'image').length > 0 ?? false) &&
+				...((message.files?.some((file: any) => file.type === 'image') ?? false) &&
 				message.role === 'user'
 					? {
 							content: [
@@ -1742,7 +1737,8 @@
 					stop:
 						(params?.stop ?? $settings?.params?.stop ?? undefined)
 							? (
-									params?.stop.split(',').map((token: any) => token.trim()) ?? $settings.params.stop
+									params?.stop.split(',').map((token: any) => token.trim()) ??
+									$settings?.params?.stop
 								).map((str: any) =>
 									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 								)
@@ -1971,7 +1967,10 @@
 			);
 
 			if (res && res.ok && res.body) {
-				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+				const textStream = await createOpenAITextStream(
+					res.body,
+					$settings.splitLargeChunks ?? false
+				);
 				for await (const update of textStream) {
 					const { value, done, sources, error, usage } = update;
 					if (error || done) {

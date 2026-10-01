@@ -346,6 +346,9 @@ export const canvasPixelTest = () => {
 		}
 	}
 
+	if (!ctx) {
+		return false;
+	}
 	ctx.putImageData(imageData, 0, 0);
 	const p = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
@@ -368,8 +371,12 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
-export const compressImage = async (imageUrl: any, maxWidth: any, maxHeight: any) => {
-	return new Promise((resolve, reject) => {
+export const compressImage = async (
+	imageUrl: string,
+	maxWidth: any,
+	maxHeight: any
+): Promise<string> => {
+	return new Promise<string>((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => {
 			const canvas = document.createElement('canvas');
@@ -419,6 +426,10 @@ export const compressImage = async (imageUrl: any, maxWidth: any, maxHeight: any
 			canvas.height = height;
 
 			const context = canvas.getContext('2d');
+			if (!context) {
+				reject(new Error('Failed to get canvas context'));
+				return;
+			}
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
@@ -441,7 +452,10 @@ export const generateInitialsImage = (name: any) => {
 		);
 		return '/user.png';
 	}
-
+	if (!ctx) {
+		console.log('generateInitialsImage: failed to get canvas context. Using default image.');
+		return '/user.png';
+	}
 	ctx.fillStyle = '#F39C12';
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -607,8 +621,8 @@ export const calculateSHA256 = async (file: any) => {
 	const reader = new FileReader();
 
 	// Define a promise to handle the file reading
-	const readFile = new Promise((resolve, reject) => {
-		reader.onload = () => resolve(reader.result);
+	const readFile = new Promise<ArrayBuffer>((resolve, reject) => {
+		reader.onload = () => resolve(reader.result as ArrayBuffer);
 		reader.onerror = reject;
 	});
 
