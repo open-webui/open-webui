@@ -315,6 +315,7 @@ async def delegate(
         and await Config.get('code_interpreter.engine', 'pyodide') != 'jupyter'
     ):
         features.pop('code_interpreter')
+    folder_id = await Chats.get_chat_folder_id(parent_chat_id, user_data['id']) or metadata.get('folder_id')
     run = {
         'model_id': metadata.get('model_id') or (metadata.get('model') or {}).get('id'),
         'session_id': metadata.get('session_id'),
@@ -328,6 +329,7 @@ async def delegate(
         'files': copy.deepcopy(metadata.get('files') or []),
         'variables': copy.deepcopy(metadata.get('variables') or {}),
         'direct': bool(metadata.get('direct')),
+        'folder_id': folder_id,
     }
     if not run.get('model_id'):
         return 'Error: model context is required.'
@@ -480,6 +482,7 @@ async def delegate(
                 'features': run.get('features') or {},
                 'files': run.get('files') or [],
                 'variables': run.get('variables') or {},
+                'folder_id': run.get('folder_id'),
             }
             if run.get('terminal_id'):
                 form_data['terminal_id'] = run['terminal_id']
