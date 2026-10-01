@@ -51,7 +51,7 @@ dependencies = [
     "tiktoken==0.13.0",
     "regex==2026.5.9",
     "google-re2==1.1.20251105",
-    "mcp==1.27.2",
+    "mcp==2.2.0",
 
     "openai==2.29.0",
     "anthropic==0.86.0",
