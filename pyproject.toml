@@ -108,7 +108,7 @@ dependencies = [
     "ddgs==9.14.4",
 
     "googleapis-common-protos==1.75.0",
-    "google-cloud-storage==3.9.0",
+    "google-cloud-storage==3.15.0",
 
     "azure-identity==1.25.3",
     "azure-storage-blob==12.29.0",
