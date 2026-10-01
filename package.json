@@ -129,7 +129,7 @@
 		"prosemirror-keymap": "^1.2.2",
 		"prosemirror-markdown": "^1.13.1",
 		"prosemirror-model": "^1.23.0",
-		"prosemirror-schema-basic": "^1.2.3",
+		"prosemirror-schema-basic": "^1.2.5",
 		"prosemirror-schema-list": "^1.5.1",
 		"prosemirror-state": "^1.4.3",
 		"prosemirror-tables": "^1.7.1",
