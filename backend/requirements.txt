@@ -108,7 +108,7 @@ googleapis-common-protos==1.75.0
 google-cloud-storage==3.9.0
 
 ## Databases
-psycopg2-binary==2.9.12
+psycopg2-binary==2.9.13
 pgvector==0.4.2
 
 PyMySQL==1.2.0

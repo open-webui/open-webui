@@ -130,7 +130,7 @@ classifiers = [
 
 [project.optional-dependencies]
 postgres = [
-    "psycopg2-binary==2.9.12",
+    "psycopg2-binary==2.9.13",
     "pgvector==0.4.2",
 ]
 mariadb = [
@@ -141,7 +141,7 @@ unstructured = [
 ]
 
 all = [
-    "psycopg2-binary==2.9.12",
+    "psycopg2-binary==2.9.13",
     "pgvector==0.4.2",
     "playwright==1.60.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
     "elasticsearch==9.4.1",

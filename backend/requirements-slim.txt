@@ -78,7 +78,7 @@ azure-identity==1.25.3
 azure-search-documents==12.0.0
 
 ## Databases
-psycopg2-binary==2.9.12
+psycopg2-binary==2.9.13
 pgvector==0.4.2
 
 ## LDAP
