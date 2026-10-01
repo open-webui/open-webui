@@ -1,7 +1,7 @@
 # Slim: external AI services, SQLite/PostgreSQL app data, pgvector, local file storage.
 # No Playwright, cloud-storage SDKs, or other database clients.
 # Keep shared package pins aligned with requirements.txt. NumPy is used for cosine scoring.
-numpy==2.4.6
+numpy==2.5.3
 typer==0.25.1
 fastapi==0.136.3
 uvicorn[standard]==0.51.0
