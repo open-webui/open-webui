@@ -2,7 +2,7 @@
 # No Playwright, cloud-storage SDKs, or other database clients.
 # Keep shared package pins aligned with requirements.txt. NumPy is used for cosine scoring.
 numpy==2.4.6
-typer==0.25.1
+typer==0.27.2
 fastapi==0.136.3
 uvicorn[standard]==0.51.0
 pydantic==2.13.4
