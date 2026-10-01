@@ -1019,6 +1019,8 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                 log.exception(f'Failed to unload model on Ollama node {idx}: {e}')
                 errors.append({'url_idx': idx, 'error': str(e)})
 
+        await ollama.clear_ollama_model_cache(request)
+
         if errors:
             raise HTTPException(
                 status_code=500,
@@ -1056,12 +1058,14 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                         if not r.ok:
                             detail = await r.text()
                             raise HTTPException(status_code=r.status, detail=detail)
-                        return await r.json()
+                        result = await r.json()
             except HTTPException:
                 raise
             except Exception as e:
                 log.exception(f'Failed to unload model via llama.cpp: {e}')
                 raise HTTPException(status_code=500, detail=str(e))
+            await openai.clear_openai_model_cache(request)
+            return result
         else:
             raise HTTPException(
                 status_code=400,
