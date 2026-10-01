@@ -107,7 +107,7 @@ dependencies = [
     "pydub==0.25.1",
     "ddgs==9.14.4",
 
-    "googleapis-common-protos==1.75.0",
+    "googleapis-common-protos==1.75.4",
     "google-cloud-storage==3.9.0",
 
     "azure-identity==1.25.3",
