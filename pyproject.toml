@@ -143,7 +143,7 @@ unstructured = [
 all = [
     "psycopg2-binary==2.9.12",
     "pgvector==0.4.2",
-    "playwright==1.60.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
+    "playwright==1.63.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
     "elasticsearch==9.4.1",
 
     "qdrant-client==1.18.0",
