@@ -2060,6 +2060,20 @@
 	//////////////////////////
 
 	const openCallOverlay = () => {
+		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.call ?? true))) {
+			return;
+		}
+
+		if (selectedModels.length > 1) {
+			toast.error($i18n.t('Select only one model to call'));
+			return;
+		}
+
+		if ($config.audio.stt.engine === 'web') {
+			toast.error($i18n.t('Call feature is not supported when using Web STT engine'));
+			return;
+		}
+
 		setTimeout(() => {
 			showCallOverlay.set(true);
 			showControls.set(true);
