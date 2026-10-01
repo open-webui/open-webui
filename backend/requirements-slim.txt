@@ -50,7 +50,7 @@ asgiref==3.11.1
 tiktoken==0.13.0
 mcp==1.27.2
 
-openai==2.29.0
+openai==3.19.2
 
 langchain-core==1.4.8
 langchain-classic==1.0.7

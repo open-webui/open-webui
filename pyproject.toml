@@ -53,7 +53,7 @@ dependencies = [
     "google-re2==1.1.20251105",
     "mcp==1.27.2",
 
-    "openai==2.29.0",
+    "openai==3.19.2",
     "anthropic==0.86.0",
 
     "langchain-core==1.4.8",
