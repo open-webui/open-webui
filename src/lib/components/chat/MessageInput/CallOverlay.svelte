@@ -744,6 +744,21 @@
 
 		model = $models.find((m) => m.id === modelId);
 
+		if ($settings.audio?.tts?.engine === 'browser-kokoro' && !$TTSWorker) {
+			try {
+				await TTSWorker.set(
+					new KokoroWorker({
+						dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+					})
+				);
+
+				await $TTSWorker.init();
+			} catch (error) {
+				console.error(error);
+				toast.error(`${error}`);
+			}
+		}
+
 		startRecording();
 
 		eventTarget.addEventListener('chat:start', chatStartHandler);
