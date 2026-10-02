@@ -543,6 +543,7 @@
 
 		await tick();
 		if (open) {
+			const pendingAtStart = pendingUpsertChats;
 			// Always use getSharedFolderChats so owners also see chats
 			// created by users who have write access to this folder.
 			const nextPage = append ? chatsPage + 1 : 1;
@@ -552,6 +553,11 @@
 				});
 				const nextChats = res?.chats ?? [];
 				const merged = append ? mergeFolderChats(chats ?? [], nextChats) : nextChats;
+				if (!append) {
+					pendingUpsertChats = pendingUpsertChats.filter(
+						(pendingChat) => !pendingAtStart.includes(pendingChat)
+					);
+				}
 				chats = mergeFolderChats(merged, pendingUpsertChats);
 				pendingUpsertChats = pendingUpsertChats.filter(
 					(pendingChat) => !nextChats.some((chat) => chat.id === pendingChat.id)
@@ -568,6 +574,11 @@
 				);
 				const fallbackChats = fallback ?? [];
 				const merged = append ? mergeFolderChats(chats ?? [], fallbackChats) : fallbackChats;
+				if (!append) {
+					pendingUpsertChats = pendingUpsertChats.filter(
+						(pendingChat) => !pendingAtStart.includes(pendingChat)
+					);
+				}
 				chats = mergeFolderChats(merged, pendingUpsertChats);
 				pendingUpsertChats = pendingUpsertChats.filter(
 					(pendingChat) => !fallbackChats.some((chat) => chat.id === pendingChat.id)
