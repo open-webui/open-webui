@@ -37,7 +37,7 @@
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
-	import { extractInputVariables } from '$lib/utils';
+	import { copyToClipboard, extractInputVariables } from '$lib/utils';
 	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
 
 	const i18n: any = getContext('i18n');
@@ -1317,19 +1317,33 @@
 							<div class="flex w-full justify-between mb-2">
 								<div class=" self-center text-sm font-normal">{$i18n.t('JSON Preview')}</div>
 
-								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										showPreview = !showPreview;
-									}}
-								>
-									{#if showPreview}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-									{/if}
-								</button>
+								<div class="flex items-center">
+									<button
+										class="p-1 px-3 text-xs flex rounded-sm transition"
+										type="button"
+										on:click={async () => {
+											const copied = await copyToClipboard(JSON.stringify(info, null, 2));
+											if (copied) {
+												toast.success($i18n.t('Copied to clipboard'));
+											}
+										}}
+									>
+										{$i18n.t('Copy')}
+									</button>
+									<button
+										class="p-1 px-3 text-xs flex rounded-sm transition"
+										type="button"
+										on:click={() => {
+											showPreview = !showPreview;
+										}}
+									>
+										{#if showPreview}
+											<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+										{:else}
+											<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+										{/if}
+									</button>
+								</div>
 							</div>
 
 							{#if showPreview}
