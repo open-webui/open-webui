@@ -280,12 +280,131 @@
 		);
 	};
 
+	$: modelInfo = (() => {
+		const modelInfo = structuredClone(info);
+
+		modelInfo.id = id;
+		modelInfo.name = name;
+
+		modelInfo.params = { ...modelInfo.params, ...params };
+
+		modelInfo.access_grants = accessGrants;
+		modelInfo.meta.capabilities = capabilities;
+
+		if (enableDescription) {
+			modelInfo.meta.description =
+				(modelInfo.meta.description ?? '').trim() === '' ? null : modelInfo.meta.description;
+		} else {
+			modelInfo.meta.description = null;
+		}
+
+		if (knowledge.length > 0) {
+			modelInfo.meta.knowledge = knowledge.map(toModelKnowledgeReference);
+		} else {
+			if (modelInfo.meta.knowledge) {
+				delete modelInfo.meta.knowledge;
+			}
+		}
+
+		if (toolIds.length > 0) {
+			modelInfo.meta.toolIds = toolIds;
+		} else {
+			if (modelInfo.meta.toolIds) {
+				delete modelInfo.meta.toolIds;
+			}
+		}
+
+		if (skillIds.length > 0) {
+			modelInfo.meta.skillIds = skillIds;
+		} else {
+			if (modelInfo.meta.skillIds) {
+				delete modelInfo.meta.skillIds;
+			}
+		}
+
+		if (filterIds.length > 0) {
+			modelInfo.meta.filterIds = filterIds;
+		} else {
+			if (modelInfo.meta.filterIds) {
+				delete modelInfo.meta.filterIds;
+			}
+		}
+
+		if (defaultFilterIds.length > 0) {
+			modelInfo.meta.defaultFilterIds = defaultFilterIds;
+		} else {
+			if (modelInfo.meta.defaultFilterIds) {
+				delete modelInfo.meta.defaultFilterIds;
+			}
+		}
+
+		if (actionIds.length > 0) {
+			modelInfo.meta.actionIds = actionIds;
+		} else {
+			if (modelInfo.meta.actionIds) {
+				delete modelInfo.meta.actionIds;
+			}
+		}
+
+		if (defaultFeatureIds.length > 0) {
+			modelInfo.meta.defaultFeatureIds = defaultFeatureIds;
+		} else {
+			if (modelInfo.meta.defaultFeatureIds) {
+				delete modelInfo.meta.defaultFeatureIds;
+			}
+		}
+
+		if (Object.keys(builtinTools).length > 0) {
+			modelInfo.meta.builtinTools = builtinTools;
+		} else {
+			if (modelInfo.meta.builtinTools) {
+				delete modelInfo.meta.builtinTools;
+			}
+		}
+
+		modelInfo.meta.i18n = pruneEmptyLocaleEntries(modelInfo.meta.i18n);
+		if (Object.keys(modelInfo.meta.i18n).length === 0) {
+			delete modelInfo.meta.i18n;
+		}
+
+		if (terminalId) {
+			modelInfo.meta.terminalId = terminalId;
+		} else {
+			if (modelInfo.meta.terminalId) {
+				delete modelInfo.meta.terminalId;
+			}
+		}
+
+		if (tts.voice !== '') {
+			if (!modelInfo.meta.tts) modelInfo.meta.tts = {};
+			modelInfo.meta.tts.voice = tts.voice;
+		} else {
+			if (modelInfo.meta.tts?.voice) {
+				delete modelInfo.meta.tts.voice;
+				if (Object.keys(modelInfo.meta.tts).length === 0) {
+					delete modelInfo.meta.tts;
+				}
+			}
+		}
+
+		modelInfo.params.system = system.trim() === '' ? null : system;
+		modelInfo.params.stop = params.stop
+			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
+					s.trim()
+				)
+			: null;
+		Object.keys(modelInfo.params).forEach((key) => {
+			if (modelInfo.params[key] === '' || modelInfo.params[key] === null) {
+				delete modelInfo.params[key];
+			}
+		});
+
+		return modelInfo;
+	})();
+
 	const submitHandler = async () => {
 		if (loading) return;
 		loading = true;
-
-		info.id = id;
-		info.name = name;
 
 		if (id === '') {
 			toast.error($i18n.t('Model ID is required.'));
@@ -322,118 +441,7 @@
 			return;
 		}
 
-		info.params = { ...info.params, ...params };
-
-		info.access_grants = accessGrants;
-		info.meta.capabilities = capabilities;
-
-		if (enableDescription) {
-			info.meta.description =
-				(info.meta.description ?? '').trim() === '' ? null : info.meta.description;
-		} else {
-			info.meta.description = null;
-		}
-
-		if (knowledge.length > 0) {
-			info.meta.knowledge = knowledge.map(toModelKnowledgeReference);
-		} else {
-			if (info.meta.knowledge) {
-				delete info.meta.knowledge;
-			}
-		}
-
-		if (toolIds.length > 0) {
-			info.meta.toolIds = toolIds;
-		} else {
-			if (info.meta.toolIds) {
-				delete info.meta.toolIds;
-			}
-		}
-
-		if (skillIds.length > 0) {
-			info.meta.skillIds = skillIds;
-		} else {
-			if (info.meta.skillIds) {
-				delete info.meta.skillIds;
-			}
-		}
-
-		if (filterIds.length > 0) {
-			info.meta.filterIds = filterIds;
-		} else {
-			if (info.meta.filterIds) {
-				delete info.meta.filterIds;
-			}
-		}
-
-		if (defaultFilterIds.length > 0) {
-			info.meta.defaultFilterIds = defaultFilterIds;
-		} else {
-			if (info.meta.defaultFilterIds) {
-				delete info.meta.defaultFilterIds;
-			}
-		}
-
-		if (actionIds.length > 0) {
-			info.meta.actionIds = actionIds;
-		} else {
-			if (info.meta.actionIds) {
-				delete info.meta.actionIds;
-			}
-		}
-
-		if (defaultFeatureIds.length > 0) {
-			info.meta.defaultFeatureIds = defaultFeatureIds;
-		} else {
-			if (info.meta.defaultFeatureIds) {
-				delete info.meta.defaultFeatureIds;
-			}
-		}
-
-		if (Object.keys(builtinTools).length > 0) {
-			info.meta.builtinTools = builtinTools;
-		} else {
-			if (info.meta.builtinTools) {
-				delete info.meta.builtinTools;
-			}
-		}
-
-		info.meta.i18n = pruneEmptyLocaleEntries(info.meta.i18n);
-		if (Object.keys(info.meta.i18n).length === 0) {
-			delete info.meta.i18n;
-		}
-
-		if (terminalId) {
-			info.meta.terminalId = terminalId;
-		} else {
-			if (info.meta.terminalId) {
-				delete info.meta.terminalId;
-			}
-		}
-
-		if (tts.voice !== '') {
-			if (!info.meta.tts) info.meta.tts = {};
-			info.meta.tts.voice = tts.voice;
-		} else {
-			if (info.meta.tts?.voice) {
-				delete info.meta.tts.voice;
-				if (Object.keys(info.meta.tts).length === 0) {
-					delete info.meta.tts;
-				}
-			}
-		}
-
-		info.params.system = system.trim() === '' ? null : system;
-		info.params.stop = params.stop
-			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
-					s.trim()
-				)
-			: null;
-		Object.keys(info.params).forEach((key) => {
-			if (info.params[key] === '' || info.params[key] === null) {
-				delete info.params[key];
-			}
-		});
+		info = structuredClone(modelInfo);
 
 		let uploadedId: string | null = null;
 		const previousBackground = info.meta.background_image_url;
@@ -1351,7 +1359,7 @@
 									<textarea
 										class="text-sm w-full bg-transparent outline-hidden resize-none"
 										rows="10"
-										value={JSON.stringify(info, null, 2)}
+										value={JSON.stringify(modelInfo, null, 2)}
 										disabled
 										readonly
 									/>
