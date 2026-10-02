@@ -1338,7 +1338,6 @@
 										class="text-sm w-full bg-transparent outline-hidden resize-none"
 										rows="10"
 										value={JSON.stringify(info, null, 2)}
-										disabled
 										readonly
 									/>
 								</div>
