@@ -101,6 +101,9 @@
 	on:keyup={(e) => {
 		if (e.key === 'Shift') shiftKey = false;
 	}}
+	on:blur={() => {
+		shiftKey = false;
+	}}
 />
 
 <UserStatusModal
