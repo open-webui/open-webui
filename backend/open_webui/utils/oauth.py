@@ -1410,8 +1410,10 @@ class OAuthManager:
             id_token = session.token.get('id_token')
             if id_token and expires_at is not None:
                 try:
-                    exp = jwt.decode(id_token, options={'verify_signature': False}).get('exp')
-                    if exp is not None:
+                    id_token_claims = jwt.decode(id_token, options={'verify_signature': False})
+                    exp = id_token_claims.get('exp')
+                    # id_tokens under twice the refresh lead (GitLab: 120s) would refresh on every call
+                    if exp is not None and exp - id_token_claims.get('iat', 0) > 600:
                         expires_at = min(expires_at, int(exp))
                 except Exception as e:
                     log.debug('Could not read exp from id_token: %s', e)
