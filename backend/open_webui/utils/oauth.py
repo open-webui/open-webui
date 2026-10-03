@@ -494,6 +494,16 @@ def _build_well_known_urls(server_url: str) -> list[str]:
     return urls
 
 
+def _build_default_oauth_metadata(server_url: str) -> OAuthMetadata:
+    """MCP spec 2025-03-26 default endpoints for servers that advertise no authorization server."""
+    _, base_url = get_parsed_and_base_url(server_url)
+    return OAuthMetadata(
+        issuer=base_url,
+        authorization_endpoint=urllib.parse.urljoin(base_url, '/authorize'),
+        token_endpoint=urllib.parse.urljoin(base_url, '/token'),
+    )
+
+
 async def get_discovery_urls(server_url) -> list[str]:
     """Convenience: get all OAuth discovery URLs for a server URL."""
     metadata = await get_protected_resource_metadata(server_url)
@@ -569,6 +579,9 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                         except Exception as e:
                             log.error(f'Error parsing OAuth metadata from {url}: {e}')
                             continue
+
+        if oauth_server_metadata is None and not resource_metadata.authorization_servers:
+            oauth_server_metadata = _build_default_oauth_metadata(oauth_server_url)
 
         # Fail fast if authorization server metadata discovery did not resolve an
         # authorization endpoint. Otherwise registration can still "succeed" (via
@@ -684,6 +697,9 @@ async def get_oauth_client_info_with_static_credentials(
                         except Exception as e:
                             log.error(f'Error parsing OAuth metadata from {url}: {e}')
                             continue
+
+        if oauth_server_metadata is None and not resource_metadata.authorization_servers:
+            oauth_server_metadata = _build_default_oauth_metadata(oauth_server_url)
 
         # Use scopes from the Protected Resource Metadata (RFC 9728) if available.
         # Unlike the Authorization Server's scopes_supported (which is a full catalog
@@ -1150,13 +1166,17 @@ class OAuthClientManager:
                 return None
 
             token_endpoint = None
-            async with aiohttp.ClientSession(trust_env=True) as session_http:
-                async with session_http.get(await self.get_server_metadata_url(client_id)) as r:
-                    if r.status == 200:
-                        openid_data = await r.json()
-                        token_endpoint = openid_data.get('token_endpoint')
-                    else:
-                        log.error(f'Failed to fetch OpenID configuration for client_id {client_id}')
+            server_metadata_url = await self.get_server_metadata_url(client_id)
+            if server_metadata_url:
+                async with aiohttp.ClientSession(trust_env=True) as session_http:
+                    async with session_http.get(server_metadata_url) as r:
+                        if r.status == 200:
+                            openid_data = await r.json()
+                            token_endpoint = openid_data.get('token_endpoint')
+                        else:
+                            log.error(f'Failed to fetch OpenID configuration for client_id {client_id}')
+            else:
+                token_endpoint = client.access_token_url
             if not token_endpoint:
                 log.error(f'No token endpoint found for client_id {client_id}')
                 return None
