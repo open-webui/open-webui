@@ -809,8 +809,11 @@ async def get_model_profile_image(
         for arena_model in arena_models:
             if arena_model.get('id') == id:
                 arena_meta = arena_model.get('meta', {})
-                if bypass_access_control or await has_access(
-                    user.id, permission='read', access_grants=arena_meta.get('access_grants', []), db=db
+                access_grants = arena_meta.get('access_grants', [])
+                if (
+                    bypass_access_control
+                    or (not access_grants and user.role == 'admin')
+                    or await has_access(user.id, permission='read', access_grants=access_grants, db=db)
                 ):
                     profile_image_url = arena_meta.get('profile_image_url')
                 break
