@@ -9,6 +9,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import aiohttp
@@ -24,7 +25,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -67,6 +68,7 @@ from open_webui.config import (
     STATIC_DIR,
     THREAD_POOL_SIZE,
     THREAD_POOL_THREAD_NAME_PREFIX,
+    URL_PARAMS_TRUSTED_ORIGINS,
     WEBUI_AUTH,
     WEBUI_NAME,
     async_reset_config,
@@ -303,17 +305,49 @@ async def emit_chat_list_event(metadata: dict, chat_id: str):
 
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
+        request = Request(scope)
+        has_same_site_cookie = 'owui-same-site' in request.cookies
+        fetch_site = request.headers.get('sec-fetch-site')
+        # Insecure origins get no Sec-Fetch-Site, so the SameSite=Strict cookie stands in
+        is_cross_site = fetch_site == 'cross-site' if fetch_site else not has_same_site_cookie
+        referer = urlparse(request.headers.get('referer', ''))
+        is_trusted_origin = (
+            '*' in URL_PARAMS_TRUSTED_ORIGINS or f'{referer.scheme}://{referer.netloc}' in URL_PARAMS_TRUSTED_ORIGINS
+        )
+        if is_cross_site and not is_trusted_origin:
+            if path == os.path.join('notes', 'new'):
+                return RedirectResponse(url='/notes')
+
+            safe_url = request.url.remove_query_params(
+                ['load-url', 'youtube', 'v', 'call', 'title', 'content', 'redirect']
+            )
+            if 'q' in request.query_params:
+                safe_url = safe_url.include_query_params(submit='false')
+            if safe_url != request.url:
+                return RedirectResponse(url=f'?{safe_url.query}')
+
         try:
-            return await super().get_response(path, scope)
+            response = await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
                 if path.endswith('.js'):
                     # Return 404 for javascript files
                     raise ex
                 else:
-                    return await super().get_response('index.html', scope)
+                    response = await super().get_response('index.html', scope)
             else:
                 raise ex
+
+        if not has_same_site_cookie:
+            response.set_cookie(
+                key='owui-same-site',
+                value='1',
+                max_age=365 * 24 * 60 * 60,
+                httponly=True,
+                samesite='strict',
+                secure=WEBUI_SESSION_COOKIE_SECURE,
+            )
+        return response
 
 
 class CORSStaticFiles(StaticFiles):
