@@ -1886,6 +1886,7 @@ async def sync_knowledge_diff(
     await _verify_knowledge_write_access(id, user, db)
 
     # ── Index existing state ──
+    pending_files = await Files.get_pending_files_for_knowledge(id, db=db)
     knowledge_files = await Knowledges.get_files_with_directory_ids(id, db=db)
     existing_directories = await Knowledges.get_all_directories(id, db=db)
 
@@ -1915,6 +1916,15 @@ async def sync_knowledge_diff(
             'checksum': stored_checksum,
         }
 
+    pending_file_keys: set[tuple[str, str, str | None]] = set()
+    for pending_file in pending_files:
+        # Uploads cut off by a restart stay pending forever, so let sync retry them after an hour
+        if pending_file.created_at < int(time.time()) - 3600:
+            continue
+        file_meta = pending_file.meta.model_dump()
+        file_path = directory_path_by_id.get(file_meta['data'].get('directory_id'), '')
+        pending_file_keys.add((file_path, pending_file.filename, file_meta.get('file_hash')))
+
     # ── Diff files ──
     added: list[dict] = []
     modified: list[dict] = []
@@ -1927,7 +1937,10 @@ async def sync_knowledge_diff(
         manifest_keys.add(key)
 
         if key not in indexed_files:
-            added.append({'filename': entry.filename, 'path': entry.path})
+            if (entry.path, entry.filename, entry.checksum) in pending_file_keys:
+                unmodified_count += 1
+            else:
+                added.append({'filename': entry.filename, 'path': entry.path})
         elif indexed_files[key]['checksum'] != entry.checksum:
             modified.append(
                 {
