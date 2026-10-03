@@ -31,9 +31,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 ####################
 
 
-def _normalize_timestamp(timestamp: int) -> float:
+def _normalize_timestamp(timestamp: Optional[int]) -> float:
     """Normalize and validate timestamp. Returns current time if invalid."""
     now = time.time()
+    if timestamp is None:
+        return now
 
     # Convert milliseconds to seconds if needed
     if timestamp > 10_000_000_000:
@@ -263,7 +265,7 @@ class ChatMessageTable:
             error=data.get('error'),
             usage=get_usage(data),
             context_summary=data.get('context_summary') or data.get('contextSummary'),
-            created_at=data.get('timestamp', now),
+            created_at=data.get('timestamp') or now,
             updated_at=now,
         )
 
