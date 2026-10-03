@@ -1223,29 +1223,6 @@ async def get_tool_servers(request: Request):
         return getattr(request.app.state, 'TOOL_SERVERS', None) or []
 
 
-async def get_terminal_cwd(
-    base_url: str,
-    headers: dict,
-    cookies: dict | None = None,
-) -> str | None:
-    """Fetch the current working directory from a terminal server."""
-    try:
-        cwd_url = f'{base_url.rstrip("/")}/files/cwd'
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=5),
-            trust_env=True,
-        ) as session:
-            async with session.get(
-                cwd_url, headers=headers, cookies=cookies or {}, ssl=AIOHTTP_CLIENT_SESSION_SSL
-            ) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return data.get('cwd')
-    except Exception as e:
-        log.debug('Failed to fetch terminal CWD: %s', e)
-    return None
-
-
 async def get_terminal_system_prompt(
     base_url: str,
     headers: dict,
@@ -1450,10 +1427,7 @@ async def get_terminal_tools(
         headers[TERMINAL_CONTEXT_HEADER] = context_id
 
     # Fetch live with the user's credentials so prompt changes apply without a restart
-    terminal_cwd, system_prompt = await asyncio.gather(
-        get_terminal_cwd(server_data['url'], headers, cookies),
-        get_terminal_system_prompt(server_data['url'], headers, cookies),
-    )
+    system_prompt = await get_terminal_system_prompt(server_data['url'], headers, cookies)
     if not system_prompt:
         system_prompt = server_data.get('system_prompt')
 
@@ -1461,11 +1435,6 @@ async def get_terminal_tools(
     for spec in specs:
         function_name = spec['name']
         tool_spec = clean_openai_tool_schema(add_terminal_display_file_inline_param(spec))
-
-        if function_name == 'run_command' and terminal_cwd:
-            tool_spec['description'] = (
-                tool_spec.get('description', '') + f'\n\nThe current working directory is: {terminal_cwd}'
-            )
 
         async def make_tool_function(fn_name, srv_data, hdrs, cks):
             async def tool_function(**kwargs):
