@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.11.5] - 2026-10-02
+## [0.11.5] - 2026-10-03
 
 ### Added
 
@@ -196,6 +196,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧊 **Chats with tool calls reopen on some Responses API providers.** Reopening a chat where the model wrote text, called a tool and then answered no longer freezes the browser tab with providers that reuse output item ids in every response, such as OpenVINO Model Server, including chats saved before this fix. [#31838](https://github.com/open-webui/open-webui/pull/31838), [#31837](https://github.com/open-webui/open-webui/issues/31837)
 - 👓 **Model JSON Preview shows unsaved changes.** The JSON Preview in the model editor now updates as you edit the name, system prompt, advanced parameters, capabilities, tools and other settings, showing exactly what will be saved, where most changes only appeared after saving and reopening the model. [#31851](https://github.com/open-webui/open-webui/pull/31851), [#31848](https://github.com/open-webui/open-webui/issues/31848)
 - 📌 **User menu pin buttons.** The Pin to Sidebar button in the user menu now switches its icon and tooltip as soon as it is clicked, and the pin buttons shown while holding Shift now hide when the window loses focus, where they stayed visible after Shift was released in another window. [#31843](https://github.com/open-webui/open-webui/pull/31843), [#31842](https://github.com/open-webui/open-webui/issues/31842), [#31841](https://github.com/open-webui/open-webui/pull/31841), [#31840](https://github.com/open-webui/open-webui/issues/31840)
+- 📓 **Large pastes into notes are saved.** Pasting a large block of text, around 150 KB or more, into a note no longer drops the note's live connection and loses the text on reload, as the server now accepts edit messages up to 16 MiB, so notes with up to about 2 MB of text save again. [#31893](https://github.com/open-webui/open-webui/pull/31893), [#26140](https://github.com/open-webui/open-webui/issues/26140)
+- 🍪 **MCP OAuth sign-in with long scope lists.** Connecting an MCP tool server over OAuth 2.1 no longer fails with an "invalid or expired state" error after signing in when the server asks for many scopes, such as the Google Workspace MCP server, as the session cookie no longer grows past the browser's size limit. [#31894](https://github.com/open-webui/open-webui/pull/31894), [#26382](https://github.com/open-webui/open-webui/issues/26382)
+- ⏳ **Older responses stop loading on chat open.** Opening a chat with no generation running now shows every unfinished response as finished, with its copy and regenerate buttons, where only the newest one was repaired and older ones from cancelled or interrupted generations kept a loading cursor forever; responses waiting for the user to answer a tool's question are left as they are. [#31895](https://github.com/open-webui/open-webui/pull/31895), [#14806](https://github.com/open-webui/open-webui/issues/14806)
 
 ### Changed
 
