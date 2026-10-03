@@ -2229,9 +2229,7 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     return [
         {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS}
         for msg in db_messages
-        if not (
-            msg.get('role') == 'assistant' and msg.get('error') and not msg.get('content') and not msg.get('output')
-        )
+        if not (msg.get('role') == 'assistant' and not msg.get('content') and not msg.get('output'))
     ]
 
 
