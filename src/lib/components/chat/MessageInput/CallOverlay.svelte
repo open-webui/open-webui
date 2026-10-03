@@ -476,6 +476,7 @@
 	const stopAllAudio = async () => {
 		assistantSpeaking = false;
 		interrupted = true;
+		audioAbortController.abort();
 
 		if (chatStreaming) {
 			stopResponse();
