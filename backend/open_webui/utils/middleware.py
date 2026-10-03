@@ -2537,6 +2537,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )  # Required to handle system prompt variables
         except Exception:
             pass
+    chat_system_prompt = get_content_from_message(system_message) if system_message else None
 
     form_data = await convert_url_images_to_base64(form_data, user=user)
 
@@ -2671,6 +2672,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
         except Exception as e:
             raise Exception(f'{e}')
+
+    delegate_system_prompt = get_content_from_message(get_system_message(form_data['messages']) or {})
 
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
@@ -2835,10 +2838,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         skill_manifest = ''
         for skill in available_skills:
             if skill.id in mentioned_skill_ids or not use_builtin_tools:
+                skill_context = f'<skill name="{skill.name}">\n{skill.content}\n</skill>'
                 form_data['messages'] = add_or_update_system_message(
-                    f'<skill name="{skill.name}">\n{skill.content}\n</skill>',
+                    skill_context,
                     form_data['messages'],
                     append=True,
+                )
+                delegate_system_prompt = (
+                    f'{delegate_system_prompt}\n{skill_context}' if delegate_system_prompt else skill_context
                 )
             else:
                 view_skill_ids.append(skill.id)
@@ -2867,10 +2874,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 skill_name = unquote(sid.removeprefix(terminal_skill_prefix))
                 loaded = await get_terminal_skill(request, user.model_dump(), metadata, skill_name, extra_params)
                 if loaded:
+                    skill_context = format_terminal_skill_context(loaded)
                     form_data['messages'] = add_or_update_system_message(
-                        format_terminal_skill_context(loaded),
+                        skill_context,
                         form_data['messages'],
                         append=True,
+                    )
+                    delegate_system_prompt = (
+                        f'{delegate_system_prompt}\n{skill_context}' if delegate_system_prompt else skill_context
                     )
             else:
                 view_skill_ids.append(sid)
@@ -3210,6 +3221,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             f'{resolved_model_system_prompt}\n{system_content}' if system_content else resolved_model_system_prompt
         )
     metadata['system_prompt'] = system_content or None
+    # Timers/follow-ups continue this chat, sub-agents start their own; the model's own prompt is added in each run
+    sent_with_request = model_system_prompt != metadata.get('model_system_prompt')
+    already_in_chat = resolved_model_system_prompt == chat_system_prompt
+    if resolved_model_system_prompt and sent_with_request and not already_in_chat:
+        chat_system_prompt = (
+            f'{resolved_model_system_prompt}\n{chat_system_prompt}'
+            if chat_system_prompt
+            else resolved_model_system_prompt
+        )
+        delegate_system_prompt = (
+            f'{resolved_model_system_prompt}\n{delegate_system_prompt}'
+            if delegate_system_prompt
+            else resolved_model_system_prompt
+        )
+    metadata['chat_system_prompt'] = chat_system_prompt
+    metadata['delegate_system_prompt'] = delegate_system_prompt
     metadata['user_prompt'] = get_last_user_message(form_data['messages'])
     metadata['sources'] = sources[:] if sources else []
 
