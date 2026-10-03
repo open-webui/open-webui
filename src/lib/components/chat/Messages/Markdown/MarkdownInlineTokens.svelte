@@ -74,11 +74,15 @@
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'link'}
-		{@const noteId = getNoteIdFromHref(token.href)}
-		{@const safeHref = safeLinkUrl(token.href)}
+		<!-- marked HTML-escapes autolink text, and the href of <url> autolinks -->
+		{@const isAutolink = !token.raw.startsWith('[')}
+		{@const isBracketed = token.raw.startsWith('<')}
+		{@const href = isBracketed ? unescapeHtml(token.href) : token.href}
+		{@const noteId = getNoteIdFromHref(href)}
+		{@const safeHref = safeLinkUrl(href)}
 		{#if noteId}
-			<NoteLinkToken {noteId} href={token.href} />
-		{:else if token.tokens}
+			<NoteLinkToken {noteId} {href} />
+		{:else if token.tokens && !isAutolink}
 			<a
 				href={safeHref}
 				target="_blank"
@@ -94,7 +98,8 @@
 				target="_blank"
 				rel="nofollow"
 				title={token.title}
-				on:click={(e) => handleLinkClick(e, token.href)}>{token.text}</a
+				on:click={(e) => handleLinkClick(e, href)}
+				>{isBracketed ? unescapeHtml(token.text) : token.raw}</a
 			>
 		{/if}
 	{:else if token.type === 'image'}
