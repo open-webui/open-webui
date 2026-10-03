@@ -74,17 +74,18 @@
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'link'}
-		{@const noteId = getNoteIdFromHref(token.href)}
-		{@const safeHref = safeLinkUrl(token.href)}
+		{@const href = unescapeHtml(token.href)}
+		{@const noteId = getNoteIdFromHref(href)}
+		{@const safeHref = safeLinkUrl(href)}
 		{#if noteId}
-			<NoteLinkToken {noteId} href={token.href} />
-		{:else if token.tokens}
+			<NoteLinkToken {noteId} {href} />
+		{:else if token.tokens && token.raw.startsWith('[')}
 			<a
 				href={safeHref}
 				target="_blank"
 				rel="nofollow"
 				title={token.title}
-				on:click={(e) => handleLinkClick(e, token.href)}
+				on:click={(e) => handleLinkClick(e, href)}
 			>
 				<svelte:self id={`${id}-a`} tokens={token.tokens} {sourceIds} {onSourceClick} {done} />
 			</a>
@@ -94,7 +95,7 @@
 				target="_blank"
 				rel="nofollow"
 				title={token.title}
-				on:click={(e) => handleLinkClick(e, token.href)}>{token.text}</a
+				on:click={(e) => handleLinkClick(e, href)}>{unescapeHtml(token.text)}</a
 			>
 		{/if}
 	{:else if token.type === 'image'}
