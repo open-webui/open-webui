@@ -212,7 +212,7 @@ from open_webui.tasks import (
     stop_task,
 )  # Import from tasks.py
 from open_webui.utils import logger
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, is_temporary_chat_enforced
 from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.actions import chat_action as chat_action_handler
 from open_webui.utils.asgi_middleware import AppHTTPMiddleware
@@ -1218,6 +1218,8 @@ async def chat_completion(
         #   value  → follow-up (user message's parentId = prev assistant)
         #   absent → legacy caller, no chat management
         is_new_chat = 'parent_id' in form_data and form_data['parent_id'] is None and not form_data.get('chat_id')
+        if is_new_chat and await is_temporary_chat_enforced(user, await Config.get('user.permissions')):
+            is_new_chat = False  # Enforced temporary chats are not saved.
         parent_id = form_data.pop('parent_id', None)
         form_data.pop('new_chat', None)  # Legacy field
 

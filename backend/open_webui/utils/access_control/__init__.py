@@ -108,6 +108,18 @@ async def has_permission(
     return get_permission(default_permissions, permission_hierarchy)
 
 
+async def is_temporary_chat_enforced(
+    user: UserModel,
+    default_permissions: dict[str, Any],
+    db: AsyncSession | None = None,
+) -> bool:
+    if user.role == 'admin':
+        return False
+    return await has_permission(user.id, 'chat.temporary', default_permissions, db=db) and await has_permission(
+        user.id, 'chat.temporary_enforced', default_permissions, db=db
+    )
+
+
 async def has_access(
     user_id: str,
     permission: str = 'read',
