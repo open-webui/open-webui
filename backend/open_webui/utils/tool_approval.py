@@ -55,9 +55,11 @@ async def resolve_tool_call_output(
     function_call.setdefault('call_id', form_data.call_id)
     tool_name = function_call.get('name')
 
-    if any(
-        item.get('type') == 'function_call_output' and item.get('call_id') == form_data.call_id for item in output
-    ) or function_call.get('status') not in {'pending', 'queued', 'requires_approval'}:
+    if (
+        any(item.get('type') == 'function_call_output' and item.get('call_id') == form_data.call_id for item in output)
+        or function_call.get('status') not in {'pending', 'queued', 'requires_approval'}
+        or function_call.get('approved') is True
+    ):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Tool call has already been resolved.')
 
     if form_data.action == 'approve':

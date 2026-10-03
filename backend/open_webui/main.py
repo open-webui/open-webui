@@ -1905,6 +1905,9 @@ generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
 
 
+_tool_call_resolve_locks: dict[str, asyncio.Lock] = {}
+
+
 @app.post('/api/v1/chats/{id}/messages/{message_id}/resolve')
 async def resolve_chat_message_tool_call(
     request: Request,
@@ -1914,7 +1917,14 @@ async def resolve_chat_message_tool_call(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    resolution = await resolve_tool_call_output(id, message_id, form_data, user, db=db)
+    redis = request.app.state.redis
+    if redis:
+        resolve_lock = redis.lock(f'{REDIS_KEY_PREFIX}:tool_call:resolve_lock:{message_id}', timeout=60)
+    else:
+        resolve_lock = _tool_call_resolve_locks.setdefault(message_id, asyncio.Lock())
+
+    async with resolve_lock:
+        resolution = await resolve_tool_call_output(id, message_id, form_data, user, db=db)
     payload = await build_tool_approval_resume_payload(id, message_id, chat=resolution['chat'])
     result = await chat_completion(request, payload, user)
     return {
