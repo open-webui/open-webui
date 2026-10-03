@@ -505,11 +505,10 @@ class ChatTable:
             and current_message.get('role')
             and not current_is_bad_leaf
         ):
-            if current_message.get('contextSummary') or current_message.get('context_summary'):
-                last_descendant_id = self._last_descendant_id(messages, current_id)
-                if last_descendant_id != current_id:
-                    history['currentId'] = last_descendant_id
-                    return True
+            last_descendant_id = self._last_descendant_id(messages, current_id)
+            if last_descendant_id != current_id:
+                history['currentId'] = last_descendant_id
+                return True
 
             return changed
 
