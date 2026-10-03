@@ -5,7 +5,6 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import '@xterm/xterm/css/xterm.css';
 	import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
-	import { connectedUserTerminals } from '$lib/stores';
 
 	export let connection: TerminalConnection;
 	export let chatId: string | null = null;
@@ -23,13 +22,8 @@
 	let pingInterval: ReturnType<typeof setInterval>;
 	let destroyed = false;
 	let sessionId = '';
-	const terminalOwner = Symbol();
 
 	function disconnect() {
-		connectedUserTerminals.update((entries) => {
-			entries.delete(terminalOwner);
-			return entries;
-		});
 		connected = false;
 		connecting = false;
 		clearInterval(pingInterval);
@@ -75,10 +69,6 @@
 				ws?.send(
 					JSON.stringify({ type: 'auth', token: connection.key.trim(), chat_id: chatId ?? '' })
 				);
-				if (connection.selector && chatId) {
-					const shell = { terminalId: connection.selector, chatId };
-					connectedUserTerminals.update((entries) => entries.set(terminalOwner, shell));
-				}
 				connected = true;
 				connecting = false;
 				fit();

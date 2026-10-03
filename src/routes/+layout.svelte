@@ -32,7 +32,6 @@
 		channelId,
 		channelRequestQueues,
 		terminalServers,
-		connectedUserTerminals,
 		showControls,
 		showFileNavPath,
 		showFileNavDir,
@@ -567,21 +566,6 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		// Answer this session's availability check even when another chat is active.
-		if (
-			event?.data?.type === 'request:terminal:state' &&
-			event.data.data?.session_id === $socket?.id
-		) {
-			cb?.({
-				connected:
-					$config?.features?.enable_tool_servers &&
-					[...$connectedUserTerminals.values()].some(
-						(shell) =>
-							shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
-					)
-			});
-			return;
-		}
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
 		// Skip events from temporary chats that are not the current chat.

@@ -3119,7 +3119,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
 
-        # Only advertise user-shell tools when the originating browser has a connected shell.
+        # Automations and sub-agents never have a user's browser shell, so they never get these tools.
         shell_tools = {
             name: tool
             for name, tool in tools_dict.items()
@@ -3135,32 +3135,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
             )
         }
-        connected = False
-        if (
-            selected
-            and event_caller
-            and metadata.get('session_id')
-            and metadata.get('chat_id')
-            and not metadata.get('automation_id')
-            and not metadata.get('internal')
-        ):
-            try:
-                state = await asyncio.wait_for(
-                    event_caller(
-                        {
-                            'type': 'request:terminal:state',
-                            'data': {'terminal_id': terminal_id, 'session_id': metadata['session_id']},
-                        }
-                    ),
-                    timeout=2,
-                )
-                connected = isinstance(state, dict) and state.get('connected') is True
-            except Exception:
-                # Old/disconnected browsers cannot confirm availability; other tools still work.
-                pass
-
         for name in shell_tools:
-            if not connected or name not in selected:
+            if name not in selected or metadata.get('automation_id') or metadata.get('internal'):
                 tools_dict.pop(name)
 
         if tools_dict:
