@@ -2470,12 +2470,16 @@
 				} else {
 					taskIds = null;
 					// No active tasks and message incomplete → generation was interrupted
-					if (
-						currentMessage?.role === 'assistant' &&
-						!currentMessage.done &&
-						!messageHasPendingAskUser(currentMessage)
-					) {
-						currentMessage.done = true;
+					if (pendingTaskIds.length === 0) {
+						for (const message of Object.values(history.messages)) {
+							if (
+								message?.role === 'assistant' &&
+								!message.done &&
+								!messageHasPendingAskUser(message)
+							) {
+								message.done = true;
+							}
+						}
 					}
 				}
 
