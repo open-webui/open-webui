@@ -2226,6 +2226,13 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
+    for idx, msg in enumerate(db_messages):
+        skills_create = (msg.get('meta') or {}).get('skills_create')
+        # Resend the first expansion to keep the cached prefix, unless the message was edited since.
+        if not skills_create or skills_create.get('original_text') != msg.get('content'):
+            continue
+        db_messages[idx] = {**msg, 'content': skills_create['expanded_text']}
+
     return [
         {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS}
         for msg in db_messages
@@ -2765,11 +2772,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata['terminal_id'] = terminal_id
     skill_authoring_allowed = bool(terminal_id) and has_prior_real_chat_content(form_data.get('messages', []))
     skill_create_denial_reason = 'empty_chat' if terminal_id else 'disabled'
-    apply_skills_create_prompt(
+    skills_create_text = get_last_user_message(form_data.get('messages', []))
+    skills_create_applied = apply_skills_create_prompt(
         form_data.get('messages', []),
         allowed=skill_authoring_allowed,
         denial_reason=skill_create_denial_reason,
     )
+    if skills_create_applied and is_saved_chat_id(chat_id) and user_message_id:
+        stored_user_message = await Chats.get_message_by_id_and_message_id(chat_id, user_message_id) or {}
+        await Chats.upsert_message_to_chat_by_id_and_message_id(
+            chat_id,
+            user_message_id,
+            {
+                'meta': {
+                    **(stored_user_message.get('meta') or {}),
+                    'skills_create': {
+                        'original_text': skills_create_text,
+                        'expanded_text': get_last_user_message(form_data['messages']),
+                    },
+                }
+            },
+            touch=False,
+        )
 
     # If the original caller provided tools, use them as-is (skip resolution).
     # Otherwise, save any tools that filter inlets added for merging later.
