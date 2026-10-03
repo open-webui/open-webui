@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging.config
 import logging
 import alembic.context
-from open_webui.env import DATABASE_PASSWORD, DATABASE_URL, LOG_FORMAT
+from open_webui.env import DATABASE_PASSWORD, DATABASE_SCHEMA, DATABASE_URL, LOG_FORMAT
 from open_webui.internal.db import enable_iam_token_auth, extract_ssl_params_from_url, reattach_ssl_params_to_url
 from open_webui.models.auths import Auth
 from open_webui.models.calendar import Calendar, CalendarEvent, CalendarEventAttendee  # noqa: F401
 from open_webui.models.chat_messages import ChatMessage  # noqa: F401
 from open_webui.models.chats import Chat  # noqa: F401
-from sqlalchemy import create_engine, engine_from_config, pool
+from sqlalchemy import create_engine, engine_from_config, pool, text
 
 alembic_config = alembic.context.config
 if alembic_config.config_file_name:
@@ -72,6 +72,10 @@ def run_migrations_online() -> None:
     live_connectable = _get_engine_connectable()
     enable_iam_token_auth(live_connectable)
     with live_connectable.connect() as live_connection:
+        if DATABASE_SCHEMA and live_connection.dialect.name == 'postgresql':
+            # Migrations use unqualified table names, so point them at the configured schema.
+            live_connection.execute(text(f'SET search_path TO "{DATABASE_SCHEMA}"'))
+            live_connection.commit()
         alembic.context.configure(
             connection=live_connection,
             target_metadata=migration_metadata,
