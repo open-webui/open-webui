@@ -144,6 +144,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
+from open_webui.utils.tool_search import apply_tool_search
 from open_webui.utils.tools import (
     build_tool_server_headers,
     get_attached_knowledge,
@@ -3169,9 +3170,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             metadata['tools'] = tools_dict
 
             if metadata.get('params', {}).get('function_calling') != 'legacy':
+                deferred = await apply_tool_search(form_data, metadata, tools_dict)
+
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [
-                    {'type': 'function', 'function': tool.get('spec', {})} for tool in tools_dict.values()
+                    {'type': 'function', 'function': tool.get('spec', {})}
+                    for name, tool in tools_dict.items()
+                    if name not in deferred
                 ]
                 if inlet_filter_tools:
                     form_data['tools'].extend(inlet_filter_tools)

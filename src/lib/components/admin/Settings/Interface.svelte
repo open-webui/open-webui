@@ -50,8 +50,13 @@
 		CONTEXT_COMPACTION_TOKEN_CAP: 80000,
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: '',
-		ENABLE_TOOL_PERMISSIONS: false
+		ENABLE_TOOL_PERMISSIONS: false,
+		ENABLE_TOOL_SEARCH: false,
+		TOOL_SEARCH_DEFER_THRESHOLD: 400,
+		TOOL_SEARCH_ALWAYS_LOADED: [] as string[],
+		TOOL_SEARCH_DEFER_BUILTIN_TOOLS: true
 	};
+	let toolSearchAlwaysLoaded = '';
 	let showTaskParameters = false;
 
 	const configuredParams = (params: Record<string, any> = {}) =>
@@ -69,8 +74,15 @@
 
 		[taskConfig, chatConfig] = await Promise.all([
 			updateTaskConfig(localStorage.token, taskConfigPayload),
-			updateChatConfig(localStorage.token, chatConfig)
+			updateChatConfig(localStorage.token, {
+				...chatConfig,
+				TOOL_SEARCH_ALWAYS_LOADED: toolSearchAlwaysLoaded
+					.split(',')
+					.map((item) => item.trim())
+					.filter((item) => item !== '')
+			})
 		]);
+		toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
 		appConfig.update((current) =>
 			current
 				? {
@@ -123,6 +135,7 @@
 				getChatConfig(localStorage.token)
 			]);
 			taskConfig.TASK_MODEL_PARAMS = taskConfig.TASK_MODEL_PARAMS ?? {};
+			toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
 
 			workspaceModels = await getBaseModels(localStorage.token);
 			baseModels = await getModels(localStorage.token, null, false);
@@ -360,6 +373,57 @@
 							<code>{'{{MESSAGES}}'}</code>,
 							<code>{'{{CURRENT_DATE}}'}</code>
 						</div>
+					</AdminSettingField>
+				{/if}
+
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.interface.toolSearch.label')}
+					description={$i18n.t('settings.admin.interface.toolSearch.description')}
+					let:labelId
+				>
+					<div slot="label" class="flex items-center gap-2">
+						<span>{$i18n.t('settings.admin.interface.toolSearch.label')}</span>
+						<ExperimentalBadge />
+					</div>
+					<Switch bind:state={chatConfig.ENABLE_TOOL_SEARCH} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
+				{#if chatConfig.ENABLE_TOOL_SEARCH}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.interface.toolSearchDeferBuiltinTools.label')}
+						description={$i18n.t('settings.admin.interface.toolSearchDeferBuiltinTools.description')}
+						let:labelId
+					>
+						<Switch
+							bind:state={chatConfig.TOOL_SEARCH_DEFER_BUILTIN_TOOLS}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+
+					<AdminSettingField
+						label={$i18n.t('settings.admin.interface.toolSearchThreshold.label')}
+						description={$i18n.t('settings.admin.interface.toolSearchThreshold.description')}
+					>
+						<input
+							type="number"
+							min="0"
+							step="1"
+							class={inputClass}
+							bind:value={chatConfig.TOOL_SEARCH_DEFER_THRESHOLD}
+						/>
+					</AdminSettingField>
+
+					<AdminSettingField
+						label={$i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.label')}
+						description={$i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.description')}
+					>
+						<input
+							class={inputClass}
+							type="text"
+							placeholder={$i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.placeholder')}
+							bind:value={toolSearchAlwaysLoaded}
+							autocomplete="off"
+						/>
 					</AdminSettingField>
 				{/if}
 			</AdminSettingSection>
