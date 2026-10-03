@@ -84,6 +84,7 @@ from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateF
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import Users
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
+from open_webui.socket.main import leave_group_rooms_for_users
 from open_webui.utils.auth import (
     create_token,
     get_optional_verified_user_from_request,
@@ -1765,6 +1766,7 @@ class OAuthManager:
                 # Remove group from user
                 log.debug('Removing user from group %s as it is no longer in their oauth groups', group_model.name)
                 if await Groups.remove_users_from_group(group_model.id, [user.id], db=db):
+                    await leave_group_rooms_for_users(group_model.id, [user.id])
                     await publish_event(
                         request,
                         EVENTS.GROUP_MEMBER_REMOVED,

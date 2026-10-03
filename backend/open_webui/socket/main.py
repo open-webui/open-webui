@@ -38,6 +38,7 @@ from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
+from open_webui.models.groups import Groups
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.redis_room_channels import AsyncRedisRoomChannelManager
@@ -412,6 +413,44 @@ async def leave_room_for_users(room: str, user_ids: list[str]):
             await sio.leave_room(sid, room)
         except Exception as e:
             log.debug('Failed to make session %s leave room %s: %s', sid, room, e)
+
+
+async def leave_group_rooms_for_users(group_id: str, user_ids: list[str]):
+    """Make users leave the note and channel rooms they could only read through a group."""
+    users = await Users.get_users_by_user_ids(user_ids)
+    non_admin_user_ids = [user.id for user in users if user.role != 'admin']
+    group_ids_by_user_id = {
+        user_id: {group.id for group in groups}
+        for user_id, groups in (await Groups.get_groups_by_member_ids(non_admin_user_ids)).items()
+    }
+
+    for grant in await AccessGrants.get_grants_by_group_id(group_id):
+        if grant.permission != 'read':
+            continue
+        if grant.resource_type == 'note':
+            resource = await Notes.get_note_by_id(grant.resource_id)
+            rooms = [f'note:{grant.resource_id}', f'doc_note:{grant.resource_id}']
+        elif grant.resource_type == 'channel':
+            resource = await Channels.get_channel_by_id(grant.resource_id)
+            # Group and DM channels use membership instead of access grants.
+            if resource and resource.type in ['group', 'dm']:
+                continue
+            rooms = [f'channel:{grant.resource_id}']
+        else:
+            continue
+        if not resource:
+            continue
+
+        revoked_user_ids = [
+            user_id
+            for user_id in non_admin_user_ids
+            if user_id != resource.user_id
+            and not await AccessGrants.has_access(
+                user_id, grant.resource_type, grant.resource_id, user_group_ids=group_ids_by_user_id[user_id]
+            )
+        ]
+        for room in rooms:
+            await leave_room_for_users(room, revoked_user_ids)
 
 
 async def disconnect_user_sessions(user_id: str):

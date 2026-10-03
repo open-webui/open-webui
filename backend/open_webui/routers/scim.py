@@ -21,6 +21,7 @@ from open_webui.env import SCIM_AUTH_PROVIDER
 from open_webui.internal.db import get_async_session
 from open_webui.models.groups import GroupModel, Groups
 from open_webui.models.users import UserModel, Users
+from open_webui.socket.main import leave_group_rooms_for_users
 from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
@@ -1066,6 +1067,7 @@ async def update_group(
             data={'member_ids': added_member_ids, 'count': len(added_member_ids)},
         )
     if removed_member_ids:
+        await leave_group_rooms_for_users(group_id, removed_member_ids)
         await publish_event(
             request,
             EVENTS.GROUP_MEMBER_REMOVED,
@@ -1158,6 +1160,7 @@ async def patch_group(
             data={'member_ids': sorted(set(added_member_ids)), 'count': len(set(added_member_ids))},
         )
     if removed_member_ids:
+        await leave_group_rooms_for_users(group_id, removed_member_ids)
         await publish_event(
             request,
             EVENTS.GROUP_MEMBER_REMOVED,
@@ -1184,12 +1187,14 @@ async def delete_group(
             detail=f'Group {group_id} not found',
         )
 
+    member_ids = await Groups.get_group_user_ids_by_id(group_id, db=db)
     success = await Groups.delete_group_by_id(group_id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to delete group',
         )
+    await leave_group_rooms_for_users(group_id, member_ids)
 
     await publish_event(
         request,
