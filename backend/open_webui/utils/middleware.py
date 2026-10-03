@@ -2331,7 +2331,7 @@ async def connect_mcp_server(
 ) -> tuple[MCPClient, list[dict]] | None:
     """Resolve an MCP server connection, authenticate, and return (client, tool_specs).
 
-    Returns None if the server is not found or access is denied.
+    Returns None if the server is not found, disabled or access is denied.
     """
     if not ENABLE_TOOL_SERVERS:
         log.debug('MCP resolution skipped: external plugins are disabled')
@@ -2345,6 +2345,10 @@ async def connect_mcp_server(
 
     if not mcp_server_connection:
         log.error(f'MCP server with id {server_id} not found')
+        return None
+
+    if not (mcp_server_connection.get('config') or {}).get('enable'):
+        log.debug('MCP server with id %s is disabled', server_id)
         return None
 
     if not await has_connection_access(user, mcp_server_connection):
