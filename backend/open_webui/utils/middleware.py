@@ -4881,6 +4881,8 @@ async def streaming_chat_response_handler(response, ctx):
                     joined_content = ''
                     joined_part_count = 0
 
+                    streamed_reasoning_content = False
+
                     async def save_current_response_stream(stream_output: list | None = None):
                         nonlocal joined_content
                         nonlocal joined_part_count
@@ -5400,6 +5402,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                     if reasoning_content and not isinstance(reasoning_content, str):
                                         reasoning_content = f'{reasoning_content}'
+                                    if reasoning_content:
+                                        streamed_reasoning_content = True
                                     reasoning_details = get_reasoning_details(delta)
                                     reasoning_detail_items = (
                                         [item for item in reasoning_details if isinstance(item, dict)]
@@ -5619,11 +5623,12 @@ async def streaming_chat_response_handler(response, ctx):
                                         tag_output = None
 
                                         if DETECT_REASONING_TAGS:
-                                            tag_output, _ = tag_output_handler(
-                                                'reasoning',
-                                                reasoning_tags,
-                                                output,
-                                            )
+                                            if not streamed_reasoning_content:
+                                                tag_output, _ = tag_output_handler(
+                                                    'reasoning',
+                                                    reasoning_tags,
+                                                    output,
+                                                )
 
                                             solution_output, _ = tag_output_handler(
                                                 'solution',
