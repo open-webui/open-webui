@@ -72,6 +72,9 @@ REDIS = None
 # Configure CORS for Socket.IO
 SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
 
+# Large notes outgrow the 1 MB default; match uvicorn's 16 MiB websocket limit
+SOCKETIO_MAX_HTTP_BUFFER_SIZE = 16 * 1024 * 1024
+
 
 def get_room_sid_map(manager, namespace: str, room: str):
     """Return this process's Socket.IO sid map for a room, without copying it."""
@@ -110,6 +113,7 @@ if WEBSOCKET_MANAGER == 'redis':
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
         ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        max_http_buffer_size=SOCKETIO_MAX_HTTP_BUFFER_SIZE,
         engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 else:
@@ -124,6 +128,7 @@ else:
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
         ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        max_http_buffer_size=SOCKETIO_MAX_HTTP_BUFFER_SIZE,
         engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 
