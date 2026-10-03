@@ -2347,6 +2347,10 @@ async def connect_mcp_server(
         log.error(f'MCP server with id {server_id} not found')
         return None
 
+    if not (mcp_server_connection.get('config') or {}).get('enable'):
+        log.warning(f'MCP server {server_id} is disabled')
+        return None
+
     if not await has_connection_access(user, mcp_server_connection):
         log.warning(f'Access denied to MCP server {server_id} for user {user.id}')
         return None
