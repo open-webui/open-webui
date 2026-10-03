@@ -1232,9 +1232,11 @@ class OAuthClientManager:
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail='OAuth authorization state was not generated',
                 )
+            # Keep the URL out of the session cookie; long scope lists push it past the browser size limit
+            authorization_url = auth_data.pop('url')
             auth_data['user_id'] = user_id
             await client.save_authorize_data(request, redirect_uri=redirect_uri_str, **auth_data)
-            return RedirectResponse(auth_data['url'], status_code=302)
+            return RedirectResponse(authorization_url, status_code=302)
         except RuntimeError as e:
             # authlib raises RuntimeError('Missing "authorize_url" value') when the
             # authorization endpoint could not be resolved from server metadata.
