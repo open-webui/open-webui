@@ -308,6 +308,8 @@
 
 					// Set continuous to true for continuous recognition
 					speechRecognition.continuous = true;
+					// Interim results keep the inactivity timeout from firing mid-sentence
+					speechRecognition.interimResults = true;
 
 					// Set the timeout for turning off the recognition after inactivity (in milliseconds)
 					const inactivityTimeout = 2000; // 3 seconds
@@ -323,9 +325,11 @@
 
 						// Handle recognized speech
 						console.log(event);
-						const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
-
-						transcription = `${transcription}${transcript}`;
+						for (const result of Array.from(event.results).slice(event.resultIndex)) {
+							if (result.isFinal) {
+								transcription = `${transcription}${result[0].transcript}`;
+							}
+						}
 
 						await tick();
 						document.getElementById('chat-input')?.focus();
