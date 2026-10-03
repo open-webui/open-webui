@@ -5261,6 +5261,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                     if delta_tool_call['function'].get('name') is None:
                                                         delta_tool_call['function']['name'] = ''
                                                     delta_tool_call['id'] = delta_tool_call.get('id') or output_id('fc')
+                                                    # Some providers restart tool call ids on every round
+                                                    if any(
+                                                        item.get('type') == 'function_call'
+                                                        and item.get('call_id') == delta_tool_call['id']
+                                                        for item in full_output()
+                                                    ):
+                                                        delta_tool_call['id'] = output_id('fc')
                                                     delta_arguments = delta_tool_call['function'].get('arguments')
                                                     if not isinstance(delta_arguments, str):
                                                         delta_tool_call['function']['arguments'] = (
