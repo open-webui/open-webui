@@ -588,10 +588,11 @@ async def get_builtin_tools(
     if is_builtin_tool_enabled('time'):
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
-    if is_builtin_tool_enabled('user_input', True):
+    metadata = extra_params.get('__metadata__') or {}
+
+    if is_builtin_tool_enabled('user_input', True) and not is_temporary_chat_id(metadata.get('chat_id')):
         builtin_functions.append(ask_user)
 
-    metadata = extra_params.get('__metadata__') or {}
     chat_files = metadata.get('files') or extra_params.get('__files__') or []
     has_chat_files = any(
         isinstance(item, dict)
