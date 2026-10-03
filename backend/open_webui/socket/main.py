@@ -6,6 +6,7 @@ import logging
 import random
 import sys
 import time
+import weakref
 from contextlib import suppress
 from typing import Any
 
@@ -204,6 +205,7 @@ REDIS_EVENT_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
 
 EVENT_QUEUES: dict[str, asyncio.Queue] = {}
 EVENT_PUBLISH_LOCK = asyncio.Lock()
+DOCUMENT_UPDATE_LOCKS: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
 
 def get_session_pool_batches():
@@ -840,6 +842,18 @@ async def yjs_document_state(sid, data):
 
 @sio.on('ydoc:document:update')
 async def yjs_document_update(sid, data):
+    try:
+        document_id = normalize_document_id(data['document_id'])
+    except Exception as e:
+        log.error('Error in yjs_document_update: %s', e)
+        return
+
+    # Keep per-document updates in arrival order
+    async with DOCUMENT_UPDATE_LOCKS.setdefault(document_id, asyncio.Lock()):
+        await handle_yjs_document_update(sid, data)
+
+
+async def handle_yjs_document_update(sid, data):
     """Handle Yjs document updates"""
     try:
         document_id = data['document_id']
