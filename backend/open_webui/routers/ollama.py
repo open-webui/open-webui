@@ -1632,11 +1632,28 @@ async def download_file_stream(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 timeout=aiohttp.ClientTimeout(total=30),
             ) as blob_resp:
-                if blob_resp.ok:
-                    await asyncio.to_thread(os.remove, file_path)
-                    yield f'data: {JSONCodec.dumps({"done": done, "blob": f"sha256:{hashed}", "name": file_name})}\n\n'
-                else:
+                if not blob_resp.ok:
                     raise RuntimeError('Ollama: Could not create blob, Please try again.')
+
+            await asyncio.to_thread(os.remove, file_path)
+
+            model, _ext = os.path.splitext(file_name)
+            async with session.post(
+                f'{ollama_url}/api/create',
+                headers=ollama_headers,
+                cookies=ollama_cookies,
+                data=JSONCodec.dumps({'model': model, 'files': {file_name: f'sha256:{hashed}'}, 'stream': False}),
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=get_client_timeout(),
+            ) as create_resp:
+                resp_text = await create_resp.text()
+                if not create_resp.ok:
+                    raise RuntimeError(f'Failed to create model in Ollama. {resp_text}')
+
+            event = JSONCodec.dumps(
+                {'done': done, 'blob': f'sha256:{hashed}', 'name': file_name, 'model_created': model}
+            )
+            yield f'data: {event}\n\n'
 
 
 @router.post('/models/download')
@@ -1743,6 +1760,7 @@ async def upload_model(
             create_payload = {
                 'model': model,
                 'files': {filename: f'sha256:{file_hash}'},
+                'stream': False,
             }
             log.info('Model Payload: %s', create_payload)
 
@@ -1754,6 +1772,7 @@ async def upload_model(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 timeout=get_client_timeout(),
             ) as create_resp:
+                resp_text = await create_resp.text()
                 if create_resp.ok:
                     log.info('API SUCCESS!')
                     event = JSONCodec.dumps(
@@ -1761,7 +1780,6 @@ async def upload_model(
                     )
                     yield f'data: {event}\n\n'
                 else:
-                    resp_text = await create_resp.text()
                     raise Exception(f'Failed to create model in Ollama. {resp_text}')
 
         except Exception as exc:
