@@ -120,6 +120,7 @@
 
 	function handleDayClick(day: Date) {
 		currentDate = day;
+		dispatch('navigate', { date: currentDate });
 		const ms = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9).getTime();
 		dispatch('createEvent', { start_at: ms * NS });
 	}
