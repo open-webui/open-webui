@@ -8,6 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import { deleteChatMessageById, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, extractCurlyBraceWords, getDeepestChildId } from '$lib/utils';
+	import { getOutputText } from './Messages/structuredOutput';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -372,7 +373,7 @@
 					files: undefined,
 					annotation: undefined,
 					feedbackId: undefined,
-					content: output !== undefined ? '' : content,
+					content: output !== undefined ? getOutputText(output) : content,
 					...(output !== undefined ? { output } : {}),
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
@@ -397,7 +398,7 @@
 				}
 				if (output !== undefined) {
 					history.messages[messageId].output = output;
-					history.messages[messageId].content = '';
+					history.messages[messageId].content = getOutputText(output);
 				}
 				await updateChat();
 			}
