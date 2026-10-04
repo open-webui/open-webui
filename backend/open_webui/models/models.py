@@ -334,6 +334,14 @@ class ModelsTable:
                 for model in all_models
             ]
 
+    async def get_referenced_base_model_ids(self, ids: list[str], db: AsyncSession | None = None) -> set[str]:
+        """Return the subset of `ids` referenced by another model row as its base model."""
+        if not ids:
+            return set()
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Model.base_model_id).filter(Model.base_model_id.in_(ids)))
+            return {row[0] for row in result.all() if row[0]}
+
     def _has_permission(self, db, query, filter: dict, permission: str = 'read'):
         return AccessGrants.has_permission_filter(
             db=db,

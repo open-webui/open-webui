@@ -19,6 +19,7 @@ from fastapi.responses import (
 )
 from open_webui.config import (
     CACHE_DIR,
+    DEFAULT_ARENA_MODEL,
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
@@ -27,6 +28,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_OPENAI_API_PASSTHROUGH,
+    ENABLE_PLUGINS,
     MODELS_CACHE_TTL,
     REDIS_KEY_PREFIX,
 )
@@ -34,6 +36,7 @@ from open_webui.events import EVENTS, publish_event, publish_model_provider_requ
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
+from open_webui.models.functions import Functions
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
@@ -470,6 +473,77 @@ class OpenAIConfigForm(BaseModel):
     OPENAI_API_CONFIGS: dict
 
 
+async def delete_models_removed_from_allowlists(
+    request: Request,
+    old_api_configs: dict,
+    new_api_configs: dict,
+    api_base_urls: list[str],
+    actor: UserModel | None = None,
+) -> None:
+    """Delete `model` rows for models that stopped being served by an allowlist change.
+
+    Removing a model id from a connection's Model IDs allowlist stops serving
+    it, but a row created earlier for it (e.g. by an access-control toggle in
+    the admin panel) keeps rendering in Admin -> Settings -> Models as a
+    phantom model. A row is deleted only when the id provably cannot be served
+    by anything else; when in doubt, it is kept.
+    """
+    old_allowed: set[str] = set()
+    new_allowed: set[str] = set()
+    for configs, allowed in ((old_api_configs, old_allowed), (new_api_configs, new_allowed)):
+        for cfg in configs.values():
+            allowed.update((cfg or {}).get('model_ids') or [])
+    removed_ids = old_allowed - new_allowed
+    if not removed_ids:
+        return
+
+    # A connection without an explicit allowlist serves whatever the upstream
+    # returns, so no id can be proven unserved.
+    for idx in range(len(api_base_urls)):
+        cfg = new_api_configs.get(str(idx)) or {}
+        if cfg.get('enable', True) and not (cfg.get('model_ids') or []):
+            return
+
+    keep_ids = set(new_allowed)
+
+    if await Config.get('ollama.enable'):
+        ollama_base_urls = await Config.get('ollama.base_urls') or []
+        ollama_configs = await Config.get('ollama.api_configs') or {}
+        for idx, url in enumerate(ollama_base_urls):
+            cfg = ollama_configs.get(str(idx), ollama_configs.get(url) or {})
+            if cfg.get('enable', True) and not (cfg.get('model_ids') or []):
+                return
+            keep_ids.update(cfg.get('model_ids') or [])
+
+    if await Config.get('direct.enable'):
+        # Per-user connections can serve arbitrary model ids.
+        return
+
+    if ENABLE_PLUGINS and await Functions.get_functions_by_type('pipe', active_only=True):
+        # Pipe models are enumerated dynamically; their ids cannot be proven unserved.
+        return
+
+    if await Config.get('evaluation.arena.enable'):
+        keep_ids.update(
+            model['id']
+            for model in await Config.get('evaluation.arena.models') or []
+            if isinstance(model, dict) and model.get('id')
+        )
+        keep_ids.add(DEFAULT_ARENA_MODEL['id'])
+
+    keep_ids.update(await Models.get_referenced_base_model_ids(list(removed_ids)))
+
+    deleted_ids = [model_id for model_id in removed_ids - keep_ids if await Models.delete_model_by_id(model_id)]
+    if deleted_ids:
+        await publish_event(
+            request,
+            EVENTS.MODEL_DELETED,
+            actor=actor,
+            subject_type='model',
+            data={'ids': deleted_ids, 'provider': 'openai'},
+        )
+
+
 @router.post('/config/update')
 async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depends(get_admin_user)):
     api_keys = form_data.OPENAI_API_KEYS
@@ -482,6 +556,8 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
     valid_keys = set(map(str, range(len(form_data.OPENAI_API_BASE_URLS))))
     api_configs = {key: value for key, value in form_data.OPENAI_API_CONFIGS.items() if key in valid_keys}
 
+    old_api_configs = await Config.get('openai.api_configs') or {}
+
     await Config.upsert(
         {
             'openai.enable': form_data.ENABLE_OPENAI_API,
@@ -492,6 +568,13 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
     )
 
     await clear_openai_model_cache(request)
+
+    try:
+        await delete_models_removed_from_allowlists(
+            request, old_api_configs, api_configs, form_data.OPENAI_API_BASE_URLS, actor=user
+        )
+    except Exception:
+        log.exception('Failed to delete models removed from connection allowlists')
 
     await publish_event(
         request,
