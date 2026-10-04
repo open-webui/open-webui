@@ -276,15 +276,24 @@ def _build_sentinel(
 ) -> SentinelRedisProxy:
     """Create a SentinelRedisProxy from a redis URL and sentinel list."""
     cfg = parse_redis_url(url)
+    socket_opts = {k: v for k, v in _socket_options().items() if k != 'socket_connect_timeout'}
     sentinel = redis_module.sentinel.Sentinel(
         sentinels,
+        # Sentinel connections only inherit socket_* options by default, so
+        # authenticate them with the same credentials as the master.
+        sentinel_kwargs={
+            'username': cfg['username'],
+            'password': cfg['password'],
+            'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT,
+            **{k: v for k, v in socket_opts.items() if k.startswith('socket_')},
+        },
         port=cfg['port'],
         db=cfg['db'],
         username=cfg['username'],
         password=cfg['password'],
         decode_responses=decode_responses,
         socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
-        **{k: v for k, v in _socket_options().items() if k != 'socket_connect_timeout'},
+        **socket_opts,
     )
     return SentinelRedisProxy(sentinel, cfg['service'], async_mode=async_mode)
 
