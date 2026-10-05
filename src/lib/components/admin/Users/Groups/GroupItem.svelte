@@ -103,6 +103,7 @@
 					<div
 						class="shrink-0 rounded-md bg-gray-500/10 px-1.5 py-0.5 text-[0.6875rem] font-normal leading-none text-gray-600 dark:text-gray-300"
 					>
+						<!-- {$i18n.t('{{COUNT}} members', { COUNT: group?.member_count ?? 0 })} -->
 						{$i18n.t('{{COUNT}} direct members', { COUNT: group?.member_count ?? 0 })}
 					</div>
 				</div>

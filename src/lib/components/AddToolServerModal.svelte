@@ -154,6 +154,7 @@
 		});
 
 		if (res) {
+			// $i18n.t('Please save the connection to persist the OAuth client information and do not change the ID');
 			toast.warning(
 				$i18n.t('Save the connection to keep the OAuth details. Keep the Connection ID unchanged.')
 			);

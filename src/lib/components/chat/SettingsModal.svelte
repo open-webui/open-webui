@@ -154,6 +154,7 @@
 		account: $i18n.t('Profile'),
 		about: $i18n.t('Profile')
 	};
+	// $i18n.t('Experience');
 	$: adminSettingGroups = {
 		'admin:general': $i18n.t('System'),
 		'admin:authentication': $i18n.t('System'),
