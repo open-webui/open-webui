@@ -5,6 +5,10 @@ import shutil
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Dict, Tuple
 
+import boto3
+from botocore.config import Config
+from botocore.exceptions import ClientError
+
 from open_webui.config import (
     AZURE_STORAGE_CONTAINER_NAME,
     AZURE_STORAGE_ENDPOINT,
@@ -29,12 +33,9 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.env import USE_SLIM
 
 if not USE_SLIM:
-    import boto3
     from azure.core.exceptions import ResourceNotFoundError
     from azure.identity import DefaultAzureCredential
     from azure.storage.blob import BlobServiceClient
-    from botocore.config import Config
-    from botocore.exceptions import ClientError
     from google.cloud import storage
     from google.cloud.exceptions import GoogleCloudError, NotFound
 
@@ -338,9 +339,10 @@ class AzureStorageProvider(StorageProvider):
 
 
 def get_storage_provider(storage_provider: str):
-    if USE_SLIM and storage_provider != 'local':
+    if USE_SLIM and storage_provider not in ('local', 's3'):
         raise RuntimeError(
-            'Slim requires local file storage. Set STORAGE_PROVIDER=local, or use the standard image to access cloud storage.'
+            'Slim supports local and S3 file storage. Set STORAGE_PROVIDER=local or s3, '
+            'or use the standard image for other storage providers.'
         )
     if storage_provider == 'local':
         Storage = LocalStorageProvider()
