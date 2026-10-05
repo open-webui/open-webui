@@ -30,7 +30,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install --force
+        run: npm ci --force
 
       - name: Verify code formatting
         run: npm run format
