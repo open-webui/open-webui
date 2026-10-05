@@ -262,7 +262,7 @@
 			<div class="w-full px-6 min-h-screen flex flex-col text-center">
 				{#if mfaChallenge}
 					<div
-						class="my-auto mx-auto w-full max-w-sm shrink-0 border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-950"
+						class="my-auto mx-auto w-full max-w-sm shrink-0 p-5"
 					>
 						<MfaChallengeForm
 							challenge={mfaChallenge}
