@@ -106,7 +106,6 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
 	import { initiateOAuthRedirect } from '$lib/apis/configs';
-	import { updateFolderById } from '$lib/apis/folders';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -1548,24 +1547,6 @@
 		}
 	};
 
-	const savedModelIds = async () => {
-		if (
-			$selectedFolder &&
-			selectedModels.filter((modelId) => modelId !== '').length > 0 &&
-			!equal($selectedFolder?.data?.model_ids, selectedModels)
-		) {
-			const res = await updateFolderById(localStorage.token, $selectedFolder.id, {
-				data: {
-					model_ids: selectedModels
-				}
-			});
-		}
-	};
-
-	$: if (selectedModels !== null) {
-		savedModelIds();
-	}
-
 	const stopAudio = () => {
 		try {
 			speechSynthesis.cancel();
@@ -1646,14 +1627,11 @@
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
 			// Folder default models apply to new chats only.
-			if (
-				!history.currentId &&
-				folder?.data?.model_ids &&
-				!equal(selectedModels, folder.data.model_ids)
-			) {
-				selectedModels = folder.data.model_ids;
-
-				console.log('Set selectedModels from folder data:', selectedModels);
+			if (!history.currentId && folder) {
+				const folderModels = normalizeSelectedModels(folder.data?.model_ids ?? []);
+				if (!equal(selectedModels, folderModels)) {
+					selectedModels = folderModels;
+				}
 			}
 		});
 
@@ -2162,9 +2140,9 @@
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
-			if ($selectedFolder?.data?.model_ids) {
-				// Set from folder model IDs
-				selectedModels = $selectedFolder?.data?.model_ids;
+			if ($selectedFolder) {
+				// Folder defaults are explicit; never inherit a previous chat's selection.
+				selectedModels = normalizeSelectedModels($selectedFolder.data?.model_ids ?? []);
 			} else {
 				if (sessionStorage.selectedModels) {
 					// Set from session storage (temporary selection)

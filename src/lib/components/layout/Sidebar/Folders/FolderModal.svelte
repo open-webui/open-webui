@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as I18n } from 'i18next';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -8,12 +10,13 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { user, config } from '$lib/stores';
+	import { user, config, models } from '$lib/stores';
+	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import { getFolderById } from '$lib/apis/folders';
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<I18n>>('i18n');
 
 	export let show = false;
 	export let onSubmit: Function = (e) => {};
@@ -28,11 +31,13 @@
 		background_image_url: null
 	};
 	let data = {
+		model_ids: null as string[] | null,
 		system_prompt: '',
 		files: []
 	};
 
 	let loading = false;
+	$: availableModels = $models.filter((model) => !(model?.info?.meta?.hidden ?? false));
 
 	const submitHandler = async () => {
 		loading = true;
@@ -75,6 +80,7 @@
 				background_image_url: null
 			};
 			data = folder.data || {
+				model_ids: null,
 				system_prompt: '',
 				files: []
 			};
@@ -102,6 +108,7 @@
 			background_image_url: null
 		};
 		data = {
+			model_ids: null,
 			system_prompt: '',
 			files: []
 		};
@@ -212,6 +219,33 @@
 					</div>
 
 					<hr class=" border-gray-50 dark:border-gray-850/30 my-2.5 w-full" />
+
+					<div class="my-1">
+						<label for="folder-default-model" class="block mb-2 text-xs text-gray-500">
+							{$i18n.t('Default Model')}
+						</label>
+						<select
+							id="folder-default-model"
+							class="w-full rounded-lg px-2 py-1.5 text-sm bg-gray-50 dark:bg-gray-850"
+							value={data.model_ids?.[0] ?? ''}
+							on:change={(event) => {
+								data.model_ids = event.currentTarget.value ? [event.currentTarget.value] : null;
+							}}
+						>
+							<option value="">{$i18n.t('Use default')}</option>
+							{#if data.model_ids?.[0] && !availableModels.some((model) => model.id === data.model_ids?.[0])}
+								<option value={data.model_ids[0]} disabled>{data.model_ids[0]}</option>
+							{/if}
+							{#each availableModels as model (model.id)}
+								<option value={model.id}>{resolveLocalizedModelName(model, $i18n.language)}</option>
+							{/each}
+						</select>
+						<p class="mt-1 text-xs text-gray-500">
+							{$i18n.t(
+								"Used for new chats in this folder. Changing a chat's model does not change this default."
+							)}
+						</p>
+					</div>
 
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
 						<div class="my-1">

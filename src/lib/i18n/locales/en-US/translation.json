@@ -3400,6 +3400,7 @@
 	"Use segmented retrieval for focused context.": "",
 	"Use these in model system prompts as {{example}}.": "",
 	"Use Web Search?": "",
+	"Used for new chats in this folder. Changing a chat's model does not change this default.": "",
 	"user": "",
 	"User": "",
 	"User Activity": "",
