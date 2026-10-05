@@ -234,6 +234,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📂 **File browser stays in your folder.** When the agent runs a command in the terminal, the file browser panel now stays in the folder you picked and keeps the open file in view, where it jumped back to the top folder after every command, so the next command also ran there. [#31878](https://github.com/open-webui/open-webui/pull/31878), [#30051](https://github.com/open-webui/open-webui/issues/30051)
 - 🧷 **Tool calls with reused ids.** With providers that number tool calls from zero again each time the model calls tools within one reply, such as Kimi K3 on OpenRouter, each call now keeps its own arguments and result, where later calls overwrote earlier ones in the saved chat and the model got earlier results next to the wrong arguments. [#31887](https://github.com/open-webui/open-webui/pull/31887), [#28305](https://github.com/open-webui/open-webui/issues/28305)
 - 📤 **Unarchive from the chat menu.** The menu in the chat header now offers Unarchive for an archived chat and confirms it with a matching message, where it always showed Archive. [#31857](https://github.com/open-webui/open-webui/pull/31857), [#31473](https://github.com/open-webui/open-webui/issues/31473)
+- 🔈 **Read Aloud after a Voice mode call.** Read Aloud now plays with sound after a Voice mode call has ended, where it stayed muted until the page was reloaded. [#31875](https://github.com/open-webui/open-webui/pull/31875), [#31874](https://github.com/open-webui/open-webui/issues/31874)
 
 ### Changed
 
