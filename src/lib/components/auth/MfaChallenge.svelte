@@ -75,24 +75,20 @@
 	{:else}
 		<div>
 			<h2 class="text-base font-medium tracking-tight text-gray-700 dark:text-gray-300">
-				{$i18n.t(
-					challenge.next_step === 'enroll'
-						? 'Set up your authenticator'
-						: challenge.next_step === 'recover'
-							? 'Recover your authenticator'
-							: 'Verify your sign-in'
-				)}
+				{challenge.next_step === 'enroll'
+					? $i18n.t('Set up your authenticator')
+					: challenge.next_step === 'recover'
+						? $i18n.t('Recover your authenticator')
+						: $i18n.t('Verify your sign-in')}
 			</h2>
 			<p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
-				{$i18n.t(
-					challenge.next_step === 'enroll'
-						? 'Scan the QR code, then enter the six-digit code from your authenticator app.'
-						: challenge.next_step === 'recover'
-							? 'Enter the recovery token from your operator.'
-							: recovery
-								? 'Enter one of your saved recovery codes.'
-								: 'Enter the six-digit code from your authenticator app.'
-				)}
+				{challenge.next_step === 'enroll'
+					? $i18n.t('Scan the QR code, then enter the six-digit code from your authenticator app.')
+					: challenge.next_step === 'recover'
+						? $i18n.t('Enter the recovery token from your operator.')
+						: recovery
+							? $i18n.t('Enter one of your saved recovery codes.')
+							: $i18n.t('Enter the six-digit code from your authenticator app.')}
 			</p>
 		</div>
 		{#if challenge.next_step === 'enroll'}
@@ -126,24 +122,20 @@
 		<label
 			class="block text-[0.8125rem] leading-5 font-normal text-left text-gray-600 dark:text-gray-400"
 		>
-			{$i18n.t(
-				challenge.next_step === 'recover'
-					? 'Operator recovery token'
-					: recovery
-						? 'Recovery code'
-						: 'Authenticator code'
-			)}
+			{challenge.next_step === 'recover'
+				? $i18n.t('Operator recovery token')
+				: recovery
+					? $i18n.t('Recovery code')
+					: $i18n.t('Authenticator code')}
 			<input
 				class="my-0.5 w-full text-[0.8125rem] leading-5 outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
 				bind:value={code}
 				readonly={busy}
-				placeholder={$i18n.t(
-					challenge.next_step === 'recover'
-						? 'Enter your recovery token'
-						: recovery
-							? 'Enter your recovery code'
-							: 'Enter your authenticator code'
-				)}
+				placeholder={challenge.next_step === 'recover'
+					? $i18n.t('Enter your recovery token')
+					: recovery
+						? $i18n.t('Enter your recovery code')
+						: $i18n.t('Enter your authenticator code')}
 				autocomplete="one-time-code"
 				inputmode={recovery || challenge.next_step === 'recover' ? 'text' : 'numeric'}
 				maxlength={challenge.next_step === 'recover' ? 160 : recovery ? 128 : 6}
@@ -168,7 +160,7 @@
 				aria-busy={busy}
 				on:click={verify}
 			>
-				{$i18n.t(busy ? 'Verifying…' : 'Continue')}
+				{busy ? $i18n.t('Verifying…') : $i18n.t('Continue')}
 				{#if busy}<Spinner />{/if}
 			</button>
 		</div>
@@ -189,7 +181,10 @@
 						recovery = !recovery;
 						code = '';
 						error = '';
-					}}>{$i18n.t(recovery ? 'Use an authenticator code' : 'Use a recovery code')}</button
+					}}
+					>{recovery
+						? $i18n.t('Use an authenticator code')
+						: $i18n.t('Use a recovery code')}</button
 				>{/if}
 		</div>
 	{/if}
