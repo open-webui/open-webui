@@ -10,6 +10,7 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -88,16 +89,18 @@
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</button>
 
-			<button
-				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
-				on:click={() => {
-					shareHandler();
-					closeMenu();
-				}}
-			>
-				<Share />
-				<div class="flex items-center">{$i18n.t('Share')}</div>
-			</button>
+			{#if $config?.features.enable_community_sharing}
+				<button
+					class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
+					on:click={() => {
+						shareHandler();
+						closeMenu();
+					}}
+				>
+					<Share />
+					<div class="flex items-center">{$i18n.t('Share')}</div>
+				</button>
+			{/if}
 
 			<button
 				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
