@@ -275,31 +275,7 @@
 					{/if}
 				</div>
 			</AdminSettingSection>
-			<AdminSettingSection title={$i18n.t('Multi-factor authentication')}>
-				<AdminSettingRow label={$i18n.t('Require an authenticator for all users')}>
-					<Switch
-						bind:state={adminConfig.ENABLE_MFA}
-						ariaLabel={$i18n.t('Require an authenticator for all users')}
-					/>
-				</AdminSettingRow>
-				<p class="-mt-1 text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600">
-					{$i18n.t('Changes sign out all devices. Users enroll on their next sign-in.')}
-				</p>
-				{#if adminConfig.ENABLE_MFA}
-					<AdminSettingRow label={$i18n.t('Allow OAuth sign-in without an authenticator')}
-						><Switch
-							bind:state={adminConfig.MFA_ALLOW_OAUTH_BYPASS}
-							ariaLabel={$i18n.t('Allow OAuth sign-in without an authenticator')}
-						/></AdminSettingRow
-					>
-					<AdminSettingRow label={$i18n.t('Allow trusted-header sign-in without an authenticator')}
-						><Switch
-							bind:state={adminConfig.MFA_ALLOW_TRUSTED_HEADER_BYPASS}
-							ariaLabel={$i18n.t('Allow trusted-header sign-in without an authenticator')}
-						/></AdminSettingRow
-					>
-				{/if}
-			</AdminSettingSection>
+
 
 			<AdminSettingSection title={$i18n.t('settings.admin.general.sections.features.title')}>
 				<AdminSettingRow

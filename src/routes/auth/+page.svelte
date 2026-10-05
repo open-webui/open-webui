@@ -274,7 +274,9 @@
 						/>
 					</div>
 				{:else if pendingApproval}
-					<p class="my-auto">{$i18n.t('Your account is awaiting administrator approval.')}</p>
+					<p class="my-auto text-sm text-gray-500 dark:text-gray-400">
+						{$i18n.t('Your account is awaiting administrator approval.')}
+					</p>
 				{:else if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full sm:max-w-md">
 						<div

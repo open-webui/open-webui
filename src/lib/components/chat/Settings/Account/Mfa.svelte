@@ -15,7 +15,7 @@
 	let reauthenticate = false;
 	let show = false;
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-40 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-40 dark:text-gray-500 dark:hover:text-gray-200';
 	onMount(async () => {
 		try {
 			status = await mfaRequest('status', undefined, localStorage.token);

@@ -73,7 +73,7 @@
 		/>
 	{:else}
 		<div>
-			<h2 class="text-base font-medium tracking-tight text-gray-900 dark:text-white">
+			<h2 class="text-base font-medium tracking-tight text-gray-700 dark:text-gray-300">
 				{$i18n.t(
 					challenge.next_step === 'enroll'
 						? 'Set up your authenticator'
@@ -103,7 +103,7 @@
 				/>
 				<details class="group text-[0.6875rem] text-gray-500 dark:text-gray-400">
 					<summary
-						class="flex cursor-pointer list-none items-center gap-1 hover:text-gray-900 dark:hover:text-white [&::-webkit-details-marker]:hidden"
+						class="flex cursor-pointer list-none items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 [&::-webkit-details-marker]:hidden"
 					>
 						{$i18n.t('Enter the key manually')}
 						<ChevronRight className="size-2.5 shrink-0 transition-transform group-open:rotate-90" />
@@ -118,11 +118,11 @@
 				</p>
 			{:else}<button
 					type="button"
-					class="text-gray-500 hover:text-gray-900 dark:hover:text-white"
+					class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
 					on:click={loadSetup}>{$i18n.t('Retry setup')}</button
 				>{/if}
 		{/if}
-		<label class="block text-[0.8125rem] leading-5 font-normal text-left text-black dark:text-white">
+		<label class="block text-[0.8125rem] leading-5 font-normal text-left text-gray-600 dark:text-gray-400">
 			{$i18n.t(
 				challenge.next_step === 'recover'
 					? 'Operator recovery token'
@@ -156,10 +156,10 @@
 		{#if error}<p role="alert" class="text-xs leading-4 text-red-600 dark:text-red-400">
 				{error}
 			</p>{/if}
-		<div class="flex justify-end text-black dark:text-white">
+		<div class="flex justify-end text-gray-700 dark:text-gray-300">
 			<button
 				type="button"
-				class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex justify-center"
+				class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-gray-200 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex justify-center"
 				disabled={busy || !code.trim() || (challenge.next_step === 'enroll' && !setup)}
 				on:click={verify}>{$i18n.t(busy ? 'Verifying…' : 'Continue')}</button
 			>
@@ -169,13 +169,13 @@
 		>
 			<button
 				type="button"
-				class="transition-colors hover:text-gray-900 dark:hover:text-white"
+				class="transition-colors hover:text-gray-700 dark:hover:text-gray-200"
 				disabled={busy}
 				on:click={onCancel}>{$i18n.t('Back to sign in')}</button
 			>
 			{#if challenge.next_step === 'verify'}<button
 					type="button"
-					class="transition-colors hover:text-gray-900 dark:hover:text-white"
+					class="transition-colors hover:text-gray-700 dark:hover:text-gray-200"
 					disabled={busy}
 					on:click={() => {
 						recovery = !recovery;
