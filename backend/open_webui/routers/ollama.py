@@ -291,6 +291,20 @@ class OllamaConfigForm(BaseModel):
     OLLAMA_API_CONFIGS: dict
 
 
+async def clear_models_cache(request: Request):
+    await get_all_models.cache.clear()
+    redis = getattr(request.app.state, 'redis', None)
+    if redis is not None:
+        await redis.delete(BASE_MODELS_CACHE_KEY)
+    request.app.state.BASE_MODELS = []
+    request.app.state.OLLAMA_MODELS = {}
+    models = getattr(request.app.state, 'MODELS', None)
+    if hasattr(models, 'clear'):
+        models.clear()
+    else:
+        request.app.state.MODELS = {}
+
+
 @router.post('/config/update')
 async def update_config(
     request: Request,
@@ -309,17 +323,7 @@ async def update_config(
         }
     )
 
-    await get_all_models.cache.clear()
-    redis = getattr(request.app.state, 'redis', None)
-    if redis is not None:
-        await redis.delete(BASE_MODELS_CACHE_KEY)
-    request.app.state.BASE_MODELS = []
-    request.app.state.OLLAMA_MODELS = {}
-    models = getattr(request.app.state, 'MODELS', None)
-    if hasattr(models, 'clear'):
-        models.clear()
-    else:
-        request.app.state.MODELS = {}
+    await clear_models_cache(request)
 
     await publish_event(
         request,
@@ -648,6 +652,8 @@ async def unload_model(
         except Exception as e:
             log.exception(f'Failed to unload model on node {idx}: {e}')
             errors.append({'url_idx': idx, 'success': False, 'error': str(e)})
+
+    await clear_models_cache(request)
 
     if len(errors) > 0:
         raise HTTPException(

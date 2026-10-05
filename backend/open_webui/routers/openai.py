@@ -260,7 +260,7 @@ async def get_openai_connection(idx: int) -> tuple[str, str, dict]:
     return url, key, api_config
 
 
-async def clear_openai_model_cache(request: Request):
+async def clear_models_cache(request: Request):
     await get_all_models.cache.clear()
     redis = getattr(request.app.state, 'redis', None)
     if redis is not None:
@@ -491,7 +491,7 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
         }
     )
 
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
 
     await publish_event(
         request,
@@ -880,7 +880,7 @@ async def download_provider_model(
     payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
 
     result = await send_model_management_request(request, url_idx, 'download', 'POST', payload, user=user)
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
     await publish_event(
         request,
         EVENTS.MODEL_PROVIDER_MODEL_CREATED,
@@ -919,7 +919,7 @@ async def load_provider_model(
     payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
 
     result = await send_model_management_request(request, url_idx, 'load', 'POST', payload, user=user)
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
     return result
 
 
@@ -935,7 +935,7 @@ async def unload_provider_model(
     payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
 
     result = await send_model_management_request(request, url_idx, 'unload', 'POST', payload, user=user)
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
     return result
 
 
@@ -962,7 +962,7 @@ async def delete_provider_model(
         query={'model': actual_model},
         user=user,
     )
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
     await publish_event(
         request,
         EVENTS.MODEL_PROVIDER_MODEL_DELETED,
