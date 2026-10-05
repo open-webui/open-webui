@@ -934,7 +934,8 @@ class OAuthClientManager:
             except InvalidToken:
                 log.error(
                     'Failed to lazily add OAuth client %s from config: InvalidToken. '
-                    'Stored OAuth client data is invalid; reconnect this tool server.',
+                    'Stored OAuth client data is invalid; reconnect this tool server. '
+                    'Is WEBUI_SECRET_KEY set and unchanged?',
                     expected_client_id,
                 )
                 continue
