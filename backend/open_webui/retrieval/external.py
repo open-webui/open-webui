@@ -2,6 +2,7 @@ import asyncio
 import logging
 import re
 import time
+from collections import OrderedDict
 from typing import Any, Optional
 
 from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
@@ -86,6 +87,35 @@ def _safe_identifier(value: str, label: str) -> str:
     return value
 
 
+# Process-wide cache for external-KB query vectors (bounded LRU).
+#
+# External-KB retrieval embeds the same query once per selected knowledge base
+# (one _retrieve_* call per KB per query). The embedding model is a single
+# process-global EMBEDDING_FUNCTION, so the vector for a given (query, prefix)
+# is identical across KBs. Caching it avoids re-embedding the same query on the
+# GPU for every KB. A concurrent first-flight duplicate may compute twice
+# (harmless).
+_QUERY_EMBED_CACHE = None
+
+
+async def _query_embedding_cached(embedding_function, query, prefix):
+    global _QUERY_EMBED_CACHE
+    if embedding_function is None:
+        return None
+    if _QUERY_EMBED_CACHE is None:
+        _QUERY_EMBED_CACHE = OrderedDict()
+    key = (query, prefix)
+    cached = _QUERY_EMBED_CACHE.get(key)
+    if cached is not None:
+        _QUERY_EMBED_CACHE.move_to_end(key)
+        return cached
+    vec = await embedding_function(query, prefix=prefix)
+    _QUERY_EMBED_CACHE[key] = vec
+    while len(_QUERY_EMBED_CACHE) > 256:
+        _QUERY_EMBED_CACHE.popitem(last=False)
+    return vec
+
+
 async def _retrieve_qdrant(connection, auth_config, knowledge, query, count, embedding_function) -> list[dict]:
     try:
         from qdrant_client import QdrantClient
@@ -104,7 +134,7 @@ async def _retrieve_qdrant(connection, auth_config, knowledge, query, count, emb
     source_config = _source_config(knowledge)
     vector_field = source_config.get('vector_field') or None
 
-    vector = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+    vector = await _query_embedding_cached(embedding_function, query, RAG_EMBEDDING_QUERY_PREFIX)
 
     def _search():
         client = QdrantClient(
@@ -153,7 +183,7 @@ async def _retrieve_milvus(connection, auth_config, knowledge, query, count, emb
     content_field = source_config.get('content_field') or 'data.text'
     metadata_field = source_config.get('metadata_field') or 'metadata'
 
-    vector = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+    vector = await _query_embedding_cached(embedding_function, query, RAG_EMBEDDING_QUERY_PREFIX)
 
     def _search():
         client_kwargs = {
@@ -230,7 +260,7 @@ async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, e
     metadata_field = source_config.get('metadata_field') or 'vmetadata'
     document_id_field = source_config.get('document_id_field') or 'id'
 
-    vector = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+    vector = await _query_embedding_cached(embedding_function, query, RAG_EMBEDDING_QUERY_PREFIX)
 
     def _search():
         from psycopg import sql
