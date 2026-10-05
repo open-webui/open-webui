@@ -3039,6 +3039,12 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 'loaded_count': len(docs),
             }
         else:
+            if not any(doc.page_content.strip() for doc in docs):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.DEFAULT('None of the web search results could be loaded'),
+                )
+
             # Create a single collection for all documents
             # Bind the ephemeral collection to its owner so filter_accessible_collections can scope it per-user.
             collection_name = f'web-search-{user.id}-{calculate_sha256_string("-".join(form_data.queries))}'[:63]
