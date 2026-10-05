@@ -53,6 +53,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
+		resolveDefaultModelIds,
 		convertMessagesToHistory,
 		copyToClipboard,
 		getMessageContentParts,
@@ -196,28 +197,14 @@
 	let serverContextUsage = null;
 	let contextUsage = null;
 
-	const getAvailableModelIds = () =>
-		$models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
-	const getDefaultModelIds = () =>
-		$config?.default_models ? $config.default_models.split(',') : [];
 	const normalizeSelectedModels = (modelIds: string[] = []) => {
-		const availableModels = getAvailableModelIds();
-		const defaultModels = getDefaultModelIds();
-		let normalized = (modelIds ?? []).filter(
-			(modelId) => modelId && availableModels.includes(modelId)
+		const selected = resolveDefaultModelIds(
+			$models,
+			modelIds,
+			$settings?.models,
+			$config?.default_models?.split(',')
 		);
-
-		if (normalized.length === 0 && $settings?.models?.length) {
-			normalized = $settings.models.filter((modelId) => availableModels.includes(modelId));
-		}
-		if (normalized.length === 0 && defaultModels.length > 0) {
-			normalized = defaultModels.filter((modelId) => availableModels.includes(modelId));
-		}
-		if (normalized.length === 0) {
-			normalized = availableModels.length > 0 ? [availableModels[0]] : [''];
-		}
-
-		return normalized;
+		return selected.length ? selected : [''];
 	};
 
 	$: {
@@ -2097,7 +2084,7 @@
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
 
-		const defaultModels = $config?.default_models ? $config?.default_models.split(',') : [];
+		const defaultModels = normalizeSelectedModels();
 
 		const openModelSelectorWithSearch = async (modelId: string) => {
 			const modelSelectorButton = document.getElementById('model-selector-model-button');
@@ -2160,7 +2147,7 @@
 			}
 
 			// Unavailable & hidden models filtering
-			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
+			selectedModels = normalizeSelectedModels(selectedModels);
 		}
 
 		// Ensure at least one model is selected

@@ -21,7 +21,13 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { compressImage, copyToClipboard, convertHeicToJpeg, isHeicImage } from '$lib/utils';
+	import {
+		resolveDefaultModelIds,
+		compressImage,
+		copyToClipboard,
+		convertHeicToJpeg,
+		isHeicImage
+	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getFileById, uploadFile } from '$lib/apis/files';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
@@ -930,28 +936,9 @@ ${content}
 	onMount(async () => {
 		await tick();
 
-		if ($settings?.models) {
-			selectedModelId = $settings?.models[0];
-		} else if ($config?.default_models) {
-			selectedModelId = $config?.default_models.split(',')[0];
-		} else {
-			selectedModelId = '';
-		}
-
-		if (selectedModelId) {
-			const model = $models
-				.filter((model) => model.id === selectedModelId && !(model?.info?.meta?.hidden ?? false))
-				.find((model) => model.id === selectedModelId);
-
-			if (!model) {
-				selectedModelId = '';
-			}
-		}
-
-		if (!selectedModelId) {
-			selectedModelId =
-				$models.filter((model) => !(model?.info?.meta?.hidden ?? false)).at(0)?.id || '';
-		}
+		selectedModelId =
+			resolveDefaultModelIds($models, $settings?.models, $config?.default_models?.split(','))[0] ??
+			'';
 
 		const dropzoneElement = document.getElementById('note-editor');
 

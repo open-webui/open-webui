@@ -3559,5 +3559,9 @@
 	"Move to top level": "Move to top level",
 	"Expand {{name}}": "Expand {{name}}",
 	"Collapse {{name}}": "Collapse {{name}}",
-	"Group moved successfully": "Group moved successfully"
+	"Group moved successfully": "Group moved successfully",
+	"Default models": "Default models",
+	"Global defaults": "Global defaults",
+	"Inherit": "Inherit",
+	"Leave unset to inherit default models. Personal model selections take precedence.": "Leave unset to inherit default models. Personal model selections take precedence."
 }

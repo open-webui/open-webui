@@ -903,7 +903,7 @@
 	}}
 />
 
-<svelte:window on:click|capture={handleWindowClick} on:keydown={handleKeydown} />
+<svelte:window on:click|capture={handleWindowClick} on:keydown|capture={handleKeydown} />
 
 <div class="relative flex w-full">
 	<button

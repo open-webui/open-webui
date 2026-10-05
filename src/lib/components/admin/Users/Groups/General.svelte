@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { getModelsConfig } from '$lib/apis/configs';
+	import { models } from '$lib/stores';
+	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -31,6 +35,45 @@
 					group.path.toLowerCase().includes(parentSearch.toLowerCase()))
 		)
 		.sort((a, b) => a.path.localeCompare(b.path));
+	$: if (!Array.isArray(data?.config?.default_models)) {
+		data = { ...data, config: { ...data?.config, default_models: [] } };
+	}
+	$: modelItems = [
+		...$models.map((model) => ({ value: model.id, label: model.name || model.id, model })),
+		...(data?.config?.default_models ?? [])
+			.filter((id: string) => !$models.some((model) => model.id === id))
+			.map((id: string) => ({
+				value: id,
+				label: id,
+				model: { id, name: id, owned_by: 'openai' as const, external: false }
+			}))
+	];
+	let globalDefaultModels: string[] = [];
+	onMount(async () => {
+		try {
+			const modelConfig = await getModelsConfig(localStorage.token);
+			globalDefaultModels = modelConfig.DEFAULT_MODELS?.split(',').filter(Boolean) ?? [];
+		} catch (error) {
+			toast.error(String(error));
+		}
+	});
+	$: {
+		inheritedModelIds = globalDefaultModels;
+		inheritedModelSource = $i18n.t('Global defaults');
+		const seen = new Set<string>();
+		let parent = groups.find((group) => group.id === parent_group_id);
+		while (parent && !seen.has(parent.id)) {
+			seen.add(parent.id);
+			if (parent.data?.config?.default_models?.length) {
+				inheritedModelIds = parent.data.config.default_models;
+				inheritedModelSource = parent.path;
+				break;
+			}
+			parent = groups.find((group) => group.id === parent?.parent_group_id);
+		}
+	}
+	let inheritedModelIds: string[] = [];
+	let inheritedModelSource = '';
 	export let onDelete: Function = () => {};
 </script>
 
@@ -130,6 +173,53 @@
 			</div>
 		</Dropdown>
 	</div>
+</div>
+
+<div class="mb-3 space-y-1">
+	<div class="flex items-center justify-between gap-3">
+		<Tooltip
+			content={$i18n.t(
+				'Leave unset to inherit default models. Personal model selections take precedence.'
+			)}
+		>
+			<label for="model-selector-group-defaults-button" class="shrink-0 text-xs text-gray-500"
+				>{$i18n.t('Default models')}</label
+			>
+		</Tooltip>
+		<div class="flex min-w-0 max-w-[65%] items-center gap-2">
+			{#if data?.config?.default_models?.length}
+				<button
+					type="button"
+					class="shrink-0 whitespace-nowrap text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					on:click={() => {
+						data = { ...data, config: { ...data.config, default_models: [] } };
+					}}
+				>
+					{$i18n.t('Inherit')}
+				</button>
+			{/if}
+			<div class="min-w-0 flex-1">
+				<ModelSelector
+					id="group-defaults"
+					items={modelItems}
+					bind:values={data.config.default_models}
+					compareEnabled={true}
+					selectionOnly={true}
+					includeHidden={true}
+					placeholder={$i18n.t('Inherit')}
+					triggerClassName="text-sm"
+					align="end"
+				/>
+			</div>
+		</div>
+	</div>
+	{#if !data?.config?.default_models?.length}
+		<p class="text-xs text-gray-500">
+			{inheritedModelSource}{inheritedModelIds.length ? ': ' : ''}{inheritedModelIds
+				.map((id) => $models.find((model) => model.id === id)?.name || id)
+				.join(', ')}
+		</p>
+	{/if}
 </div>
 
 <!-- <div class="flex flex-col w-full mt-2">

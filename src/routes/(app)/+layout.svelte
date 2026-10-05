@@ -6,7 +6,7 @@
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
+	import { getBackendConfig, getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
 	import { getSessionUser } from '$lib/apis/auths';
@@ -177,6 +177,7 @@
 		try {
 			user.set(await getSessionUser(localStorage.token));
 			const results = await Promise.allSettled([
+				getBackendConfig().then((value) => config.set(value)),
 				setModels(),
 				setTools(),
 				setToolServers(),

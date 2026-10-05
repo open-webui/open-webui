@@ -1,5 +1,5 @@
 <script context="module">
-	/** @typedef {{ id: string, name: string, parent_group_id?: string | null, path: string, ancestor_ids: string[] }} GroupListItem */
+	/** @typedef {{ id: string, name: string, parent_group_id?: string | null, path: string, ancestor_ids: string[], data?: { config?: { default_models?: string[] | null } } }} GroupListItem */
 </script>
 
 <script>

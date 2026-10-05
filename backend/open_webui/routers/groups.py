@@ -12,6 +12,8 @@ from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import (
     GroupForm,
+    group_default_models,
+    resolve_group_default_models,
     GroupHierarchyError,
     Group,
     GroupMember,
@@ -423,8 +425,19 @@ async def preview_group_access(
         JSONCodec.loads(JSONCodec.dumps(inherited_permissions)), group.permissions or {}
     )
 
+    default_models, source_group_id = resolve_group_default_models([group, *ancestors])
+    if default_models is None:
+        default_models = [
+            model.strip() for model in (await Config.get('ui.default_models') or '').split(',') if model.strip()
+        ]
+
     return {
         'group': {'id': group.id, 'name': group.name},
+        'default_models': {
+            'local': group_default_models(group),
+            'effective': default_models,
+            'source_group_id': source_group_id,
+        },
         'models': {
             'items': [{'id': m.id, 'name': m.name} for m in active_models if m.id in accessible_model_ids],
             'total': len(active_models),

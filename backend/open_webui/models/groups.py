@@ -8,7 +8,7 @@ from open_webui.env import DEFAULT_GROUP_SHARE_PERMISSION
 from open_webui.internal.db import Base, JSONField, get_async_db_context, get_async_db
 from open_webui.models.access_grants import AccessGrant
 from open_webui.models.files import FileMetadataResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -129,6 +129,21 @@ class GroupForm(BaseModel):
     permissions: Optional[dict] = None
     data: Optional[dict] = None
 
+    @field_validator('data')
+    @classmethod
+    def validate_default_models(cls, data):
+        if data is None or 'config' not in data:
+            return data
+        config = data['config']
+        if not isinstance(config, dict):
+            raise ValueError('Group config must be an object.')
+        if 'default_models' not in config or config['default_models'] is None:
+            return data
+        models = config['default_models']
+        if not isinstance(models, list) or any(not isinstance(model, str) or not model.strip() for model in models):
+            raise ValueError('Default models must be a list of non-empty model IDs.')
+        return {**data, 'config': {**config, 'default_models': list(dict.fromkeys(model.strip() for model in models))}}
+
 
 class UserIdsForm(BaseModel):
     user_ids: Optional[list[str]] = None
@@ -147,6 +162,33 @@ class GroupHierarchyError(ValueError):
     def __init__(self, message: str, status_code: int = 400):
         super().__init__(message)
         self.status_code = status_code
+
+
+def group_default_models(group):
+    return ((group.data or {}).get('config') or {}).get('default_models') or None
+
+
+def resolve_group_default_models(groups):
+    """Resolve an ancestor-complete group list by depth, then creation time and ID."""
+    by_id = {group.id: group for group in groups}
+    depths = {}
+    for group in groups:
+        path = []
+        seen = set()
+        current = group
+        while current and current.id not in depths and current.id not in seen:
+            seen.add(current.id)
+            path.append(current.id)
+            current = by_id.get(current.parent_group_id)
+        depth = depths.get(current.id, -1) if current else -1
+        for group_id in reversed(path):
+            depth += 1
+            depths[group_id] = depth
+    configured = [group for group in groups if group_default_models(group)]
+    if not configured:
+        return None, None
+    winner = min(configured, key=lambda group: (-depths[group.id], group.created_at, group.id))
+    return group_default_models(winner), winner.id
 
 
 def ancestor_groups(group_ids):
@@ -504,13 +546,28 @@ class GroupTable:
             if 'parent_group_id' in form_data.model_fields_set:
                 await validate_parent(session, id, form_data.parent_group_id)
                 values['parent_group_id'] = form_data.parent_group_id
+            if 'data' in values:
+                old_data = group.data or {}
+                new_data = values['data']
+                values['data'] = {
+                    **old_data,
+                    **new_data,
+                    'config': {**(old_data.get('config') or {}), **(new_data.get('config') or {})},
+                }
+            defaults_changed = 'data' in values and (
+                (values['data'].get('config') or {}).get('default_models') or None
+            ) != group_default_models(group)
             parent_changed = values.get('parent_group_id', group.parent_group_id) != group.parent_group_id
             if changes is not None:
                 changes.update(
                     old_parent_group_id=group.parent_group_id,
                     parent_group_id=values.get('parent_group_id', group.parent_group_id),
                 )
-            if parent_changed or ('permissions' in values and values['permissions'] != group.permissions):
+            if (
+                parent_changed
+                or defaults_changed
+                or ('permissions' in values and values['permissions'] != group.permissions)
+            ):
                 members = group_user_memberships([id], True)
                 affected = list((await session.execute(select(members.c.user_id))).scalars())
             for key, value in values.items():
