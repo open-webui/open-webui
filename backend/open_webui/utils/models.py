@@ -476,11 +476,14 @@ async def check_model_access(user, model, model_info=None, db=None):
     if model.get('arena'):
         meta = model.get('info', {}).get('meta', {})
         access_grants = meta.get('access_grants', [])
-        if not await has_access(
-            user.id,
-            permission='read',
-            access_grants=access_grants,
-            db=db,
+        if not (
+            (not access_grants and user.role == 'admin')
+            or await has_access(
+                user.id,
+                permission='read',
+                access_grants=access_grants,
+                db=db,
+            )
         ):
             log.warning(
                 'Model access denied: user_id=%r model_id=%r reason=arena_read_denied',
@@ -561,7 +564,7 @@ async def get_filtered_models(models, user, db=None):
             if model.get('arena'):
                 meta = model.get('info', {}).get('meta', {})
                 access_grants = meta.get('access_grants', [])
-                if await has_access(
+                if (not access_grants and user.role == 'admin') or await has_access(
                     user.id,
                     permission='read',
                     access_grants=access_grants,
