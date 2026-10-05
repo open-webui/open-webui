@@ -905,7 +905,7 @@
 
 <svelte:window on:click|capture={handleWindowClick} on:keydown={handleKeydown} />
 
-<div class="relative w-full">
+<div class="relative flex w-full">
 	<button
 		bind:this={triggerElement}
 		class="focus-ring relative w-full {($settings?.highContrastMode ?? false)
