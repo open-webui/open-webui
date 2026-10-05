@@ -444,7 +444,20 @@ class ChatTable:
             message = messages[message_id]
             child_ids = message.get('childrenIds') if isinstance(message, dict) else []
             child_ids = child_ids if isinstance(child_ids, list) else []
-            next_id = next((child_id for child_id in reversed(child_ids) if child_id in messages), None)
+            # Skip malformed messages and stale links when recovering the branch.
+            next_id = next(
+                (
+                    child_id
+                    for child_id in reversed(child_ids)
+                    if isinstance(child_id, str)
+                    and child_id not in seen_ids
+                    and isinstance(child := messages.get(child_id), dict)
+                    and child.get('id') == child_id
+                    and child.get('role')
+                    and child.get('parentId') == message_id
+                ),
+                None,
+            )
             if not next_id:
                 break
             message_id = next_id
@@ -505,11 +518,10 @@ class ChatTable:
             and current_message.get('role')
             and not current_is_bad_leaf
         ):
-            if current_message.get('contextSummary') or current_message.get('context_summary'):
-                last_descendant_id = self._last_descendant_id(messages, current_id)
-                if last_descendant_id != current_id:
-                    history['currentId'] = last_descendant_id
-                    return True
+            last_descendant_id = self._last_descendant_id(messages, current_id)
+            if last_descendant_id != current_id:
+                history['currentId'] = last_descendant_id
+                return True
 
             return changed
 
