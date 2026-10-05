@@ -1640,7 +1640,12 @@
 	});
 </script>
 
-<ToolServersModal bind:show={showTools} {selectedToolIds} />
+<ToolServersModal
+	bind:show={showTools}
+	{selectedToolIds}
+	onConnect={(id) =>
+		oauthRedirectHandler({ id, serverId: id.split(':').at(-1), authType: 'mcp' }, chatInputDraft)}
+/>
 <SkillsModal bind:show={showSkills} {selectedSkillIds} />
 
 <InputVariablesModal

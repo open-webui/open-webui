@@ -83,7 +83,7 @@ from open_webui.socket.main import (
     get_event_emitter,
 )
 from open_webui.tasks import clear_response_stream, save_response_stream
-from open_webui.utils.access_control import has_connection_access, has_permission
+from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.ask_user import stage_ask_user_tool_calls
@@ -104,7 +104,6 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.memory import add_memory_context, review_memory_after_turn
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -122,7 +121,6 @@ from open_webui.utils.misc import (
     get_response_error_detail,
     get_system_message,
     is_raster_image_content_type,
-    is_string_allowed,
     merge_system_messages,
     prepend_to_first_user_message_content,
     replace_system_message_content,
@@ -145,7 +143,7 @@ from open_webui.utils.task import (
     tools_function_calling_generation_template,
 )
 from open_webui.utils.tools import (
-    build_tool_server_headers,
+    connect_mcp_server,
     get_attached_knowledge,
     get_builtin_tools,
     get_terminal_tools,
@@ -2318,61 +2316,6 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
             sanitized.append(message)
 
     return sanitized
-
-
-async def connect_mcp_server(
-    request,
-    server_id: str,
-    user,
-    metadata: dict,
-    extra_params: dict,
-) -> tuple[MCPClient, list[dict]] | None:
-    """Resolve an MCP server connection, authenticate, and return (client, tool_specs).
-
-    Returns None if the server is not found or access is denied.
-    """
-    if not ENABLE_TOOL_SERVERS:
-        log.debug('MCP resolution skipped: external plugins are disabled')
-        return None
-
-    mcp_server_connection = None
-    for server_connection in await Config.get('tool_server.connections', []):
-        if server_connection.get('type', '') == 'mcp' and (server_connection.get('info') or {}).get('id') == server_id:
-            mcp_server_connection = server_connection
-            break
-
-    if not mcp_server_connection:
-        log.error(f'MCP server with id {server_id} not found')
-        return None
-
-    if not await has_connection_access(user, mcp_server_connection):
-        log.warning(f'Access denied to MCP server {server_id} for user {user.id}')
-        return None
-
-    headers, _ = await build_tool_server_headers(
-        mcp_server_connection,
-        request,
-        user,
-        server_id=server_id,
-        metadata=metadata,
-        extra_params=extra_params,
-    )
-
-    client = MCPClient()
-    await client.connect(
-        url=mcp_server_connection.get('url', ''),
-        headers=headers if headers else None,
-    )
-
-    function_name_filter_list = mcp_server_connection.get('config', {}).get('function_name_filter_list', '')
-    if isinstance(function_name_filter_list, str):
-        function_name_filter_list = function_name_filter_list.split(',')
-
-    tool_specs = await client.list_tool_specs()
-    if function_name_filter_list:
-        tool_specs = [spec for spec in tool_specs if is_string_allowed(spec['name'], function_name_filter_list)]
-
-    return client, tool_specs
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):

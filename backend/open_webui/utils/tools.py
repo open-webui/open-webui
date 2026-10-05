@@ -21,7 +21,7 @@ from urllib.parse import quote, urlencode
 
 import aiohttp
 import yaml
-from fastapi import Request
+from fastapi import HTTPException, Request
 from langchain_core.utils.function_calling import (
     convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
 )
@@ -110,6 +110,7 @@ from open_webui.utils.headers import (
     normalize_bearer_token,
 )
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
 from open_webui.utils.terminals import (
@@ -183,6 +184,75 @@ async def build_tool_server_headers(
             headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata['message_id']
 
     return headers, cookies
+
+
+async def connect_mcp_server(
+    request,
+    server_id: str,
+    user,
+    metadata: dict,
+    extra_params: dict,
+) -> tuple[MCPClient, list[dict]] | None:
+    """Resolve an MCP server connection, authenticate, and return (client, tool_specs).
+
+    Returns None if the server is not found or access is denied.
+    """
+    if not ENABLE_TOOL_SERVERS:
+        log.debug('MCP resolution skipped: external plugins are disabled')
+        return None
+
+    mcp_server_connection = None
+    for server_connection in await Config.get('tool_server.connections', []):
+        if server_connection.get('type', '') == 'mcp' and (server_connection.get('info') or {}).get('id') == server_id:
+            mcp_server_connection = server_connection
+            break
+
+    if not mcp_server_connection or not (mcp_server_connection.get('config') or {}).get('enable'):
+        log.error(f'MCP server with id {server_id} not found')
+        return None
+
+    if not await has_connection_access(user, mcp_server_connection):
+        log.warning(f'Access denied to MCP server {server_id} for user {user.id}')
+        return None
+
+    if mcp_server_connection.get('auth_type') == 'system_oauth' and not extra_params.get('__oauth_token__'):
+        session_id = request.cookies.get('oauth_session_id')
+        if session_id:
+            extra_params = {
+                **extra_params,
+                '__oauth_token__': await request.app.state.oauth_manager.get_oauth_token(user.id, session_id),
+            }
+
+    headers, _ = await build_tool_server_headers(
+        mcp_server_connection,
+        request,
+        user,
+        server_id=server_id,
+        metadata=metadata,
+        extra_params=extra_params,
+    )
+
+    if mcp_server_connection.get('auth_type') in ('oauth_2.1', 'oauth_2.1_static') and not headers.get('Authorization'):
+        raise HTTPException(status_code=401, detail='Auth required')
+
+    client = MCPClient()
+    try:
+        await client.connect(
+            url=mcp_server_connection.get('url', ''),
+            headers=headers if headers else None,
+        )
+        function_name_filter_list = (mcp_server_connection.get('config') or {}).get('function_name_filter_list', '')
+        if isinstance(function_name_filter_list, str):
+            function_name_filter_list = function_name_filter_list.split(',')
+
+        tool_specs = await client.list_tool_specs()
+        if function_name_filter_list:
+            tool_specs = [spec for spec in tool_specs if is_string_allowed(spec['name'], function_name_filter_list)]
+        return client, tool_specs
+    except BaseException:
+        # MCP sessions must be closed in the same task that opened them.
+        await client.disconnect()
+        raise
 
 
 # Let no function be called without need, and let what
@@ -271,9 +341,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
         return {}
 
     enabled_ids = [
-        tool_id
-        for tool_id in tool_ids
-        if (ENABLE_TOOL_SERVERS if tool_id.startswith('server:') else ENABLE_TOOLS)
+        tool_id for tool_id in tool_ids if (ENABLE_TOOL_SERVERS if tool_id.startswith('server:') else ENABLE_TOOLS)
     ]
     if len(enabled_ids) != len(tool_ids):
         log.debug('Excluded tools disabled by plugin configuration')

@@ -1,4 +1,9 @@
 {
+	"1 tool": "",
+	"{{COUNT}} tools": "",
+	"Reconnect": "",
+	"Loading tools...": "",
+	"Unable to load tools": "",
 	"-1 for no limit, or a positive integer for a specific limit": "",
 	"(latest)": "",
 	"(leave blank for to use commercial endpoint)": "",
