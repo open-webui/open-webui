@@ -3,6 +3,7 @@
 	import { mfaRequest, type MfaChallenge } from '$lib/apis/auths/mfa';
 	import MfaRecoveryCodes from './MfaRecoveryCodes.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	const i18n: any = getContext('i18n');
 	export let challenge: MfaChallenge;
 	export let onComplete: (result: any) => void | Promise<void>;
@@ -48,10 +49,10 @@
 						recovery
 					}
 				);
-				code = '';
-				setup = null;
 				if (response.recovery_codes) result = response;
 				else await onComplete(response);
+				code = '';
+				setup = null;
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -65,10 +66,10 @@
 	{#if result}
 		<MfaRecoveryCodes
 			codes={result.recovery_codes}
-			onContinue={() => {
+			onContinue={async () => {
 				const { recovery_codes, ...completed } = result;
+				await onComplete(completed);
 				result = null;
-				onComplete(completed);
 			}}
 		/>
 	{:else}
@@ -122,7 +123,9 @@
 					on:click={loadSetup}>{$i18n.t('Retry setup')}</button
 				>{/if}
 		{/if}
-		<label class="block text-[0.8125rem] leading-5 font-normal text-left text-gray-600 dark:text-gray-400">
+		<label
+			class="block text-[0.8125rem] leading-5 font-normal text-left text-gray-600 dark:text-gray-400"
+		>
 			{$i18n.t(
 				challenge.next_step === 'recover'
 					? 'Operator recovery token'
@@ -133,6 +136,7 @@
 			<input
 				class="my-0.5 w-full text-[0.8125rem] leading-5 outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
 				bind:value={code}
+				readonly={busy}
 				placeholder={$i18n.t(
 					challenge.next_step === 'recover'
 						? 'Enter your recovery token'
@@ -159,10 +163,14 @@
 		<div class="flex justify-end text-gray-700 dark:text-gray-300">
 			<button
 				type="button"
-				class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-gray-200 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex justify-center"
+				class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-gray-200 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex items-center justify-center gap-1.5"
 				disabled={busy || !code.trim() || (challenge.next_step === 'enroll' && !setup)}
-				on:click={verify}>{$i18n.t(busy ? 'Verifying…' : 'Continue')}</button
+				aria-busy={busy}
+				on:click={verify}
 			>
+				{$i18n.t(busy ? 'Verifying…' : 'Continue')}
+				{#if busy}<Spinner />{/if}
+			</button>
 		</div>
 		<div
 			class="flex flex-wrap items-center justify-between gap-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"

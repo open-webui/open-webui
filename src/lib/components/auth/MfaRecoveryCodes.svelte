@@ -1,9 +1,25 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	const i18n: any = getContext('i18n');
 	export let codes: string[];
-	export let onContinue: () => void;
+	export let onContinue: () => void | Promise<void>;
 	let saved = false;
+	let busy = false;
+	let error = '';
+
+	const continueHandler = async () => {
+		if (busy || !saved) return;
+		busy = true;
+		error = '';
+		try {
+			await onContinue();
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		} finally {
+			busy = false;
+		}
+	};
 
 	const download = () => {
 		const url = URL.createObjectURL(new Blob([codes.join('\n') + '\n'], { type: 'text/plain' }));
@@ -39,14 +55,22 @@
 			class="size-3 rounded-sm accent-gray-900 dark:accent-gray-100"
 			type="checkbox"
 			bind:checked={saved}
+			disabled={busy}
 		/>{$i18n.t('I have saved my recovery codes')}</label
 	>
+	{#if error}<p role="alert" class="text-xs leading-4 text-red-600 dark:text-red-400">
+			{error}
+		</p>{/if}
 	<div class="flex justify-end text-gray-700 dark:text-gray-300">
 		<button
 			type="button"
-			class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-gray-200 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex justify-center"
-			disabled={!saved}
-			on:click={onContinue}>{$i18n.t('Continue')}</button
+			class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-gray-200 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex items-center justify-center gap-1.5"
+			disabled={busy || !saved}
+			aria-busy={busy}
+			on:click={continueHandler}
 		>
+			{$i18n.t('Continue')}
+			{#if busy}<Spinner />{/if}
+		</button>
 	</div>
 </div>

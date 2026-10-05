@@ -54,9 +54,9 @@
 
 <div class="space-y-2.5 text-xs">
 	{#if codes.length}
-		<div class="max-w-sm"><MfaRecoveryCodes {codes} onContinue={signIn} /></div>
+		<div class="w-full sm:max-w-md"><MfaRecoveryCodes {codes} onContinue={signIn} /></div>
 	{:else if challenge}
-		<div class="max-w-sm">
+		<div class="w-full sm:max-w-md">
 			<MfaChallengeForm
 				{challenge}
 				onComplete={signIn}
@@ -86,7 +86,7 @@
 				: $i18n.t('Managed by your administrator.')}
 		</p>
 		{#if show && status.required && status.enabled}
-			<div class="max-w-sm space-y-2.5 py-1">
+			<div class="w-full sm:max-w-md space-y-2.5 py-1">
 				<p class="text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-500">
 					{$i18n.t('Verify with a fresh code. Changes sign out all devices.')}
 				</p>
