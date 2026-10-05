@@ -160,13 +160,13 @@
 		'admin:connections': $i18n.t('AI'),
 		'admin:models': $i18n.t('AI'),
 		'admin:subagents': $i18n.t('AI'),
-		'admin:evaluations': $i18n.t('Quality'),
-		'admin:analytics': $i18n.t('Quality'),
 		'admin:integrations': $i18n.t('Tools'),
 		'admin:documents': $i18n.t('Tools'),
 		'admin:web': $i18n.t('Tools'),
 		'admin:code-execution': $i18n.t('Tools'),
 		'admin:pipelines': $i18n.t('Tools'),
+		'admin:evaluations': $i18n.t('Quality'),
+		'admin:analytics': $i18n.t('Quality'),
 		'admin:interface': $i18n.t('Experience'),
 		'admin:audio': $i18n.t('Experience'),
 		'admin:images': $i18n.t('Experience'),
@@ -314,18 +314,6 @@
 			searchPrefixes: ['settings.admin.images.']
 		},
 		{
-			id: 'admin:evaluations',
-			titleKey: 'settings.admin.evaluations.title',
-			title: $i18n.t('settings.admin.evaluations.title'),
-			searchPrefixes: ['settings.admin.evaluations.']
-		},
-		{
-			id: 'admin:analytics',
-			titleKey: 'settings.admin.analytics.title',
-			title: $i18n.t('settings.admin.analytics.title'),
-			searchPrefixes: ['settings.admin.analytics.']
-		},
-		{
 			id: 'admin:integrations',
 			titleKey: 'settings.admin.integrations.title',
 			title: $i18n.t('settings.admin.integrations.title'),
@@ -354,6 +342,18 @@
 			titleKey: 'settings.admin.pipelines.title',
 			title: $i18n.t('settings.admin.pipelines.title'),
 			searchPrefixes: ['settings.admin.pipelines.']
+		},
+		{
+			id: 'admin:evaluations',
+			titleKey: 'settings.admin.evaluations.title',
+			title: $i18n.t('settings.admin.evaluations.title'),
+			searchPrefixes: ['settings.admin.evaluations.']
+		},
+		{
+			id: 'admin:analytics',
+			titleKey: 'settings.admin.analytics.title',
+			title: $i18n.t('settings.admin.analytics.title'),
+			searchPrefixes: ['settings.admin.analytics.']
 		},
 		{
 			id: 'admin:db',
