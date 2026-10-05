@@ -82,7 +82,7 @@
 		</div>
 		<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{status.enabled
-				? $i18n.t('{{count}} recovery codes remaining', { count: status.recovery_codes_remaining })
+				? $i18n.t('{{COUNT}} recovery codes remaining', { COUNT: status.recovery_codes_remaining })
 				: $i18n.t('Managed by your administrator.')}
 		</p>
 		{#if show && status.required && status.enabled}
