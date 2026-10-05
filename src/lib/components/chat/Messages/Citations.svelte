@@ -124,7 +124,10 @@
 				}
 
 				if (id.startsWith('http://') || id.startsWith('https://')) {
-					_source = { ..._source, name: id, url: id };
+					// Keep the display name (the page title set from
+					// metadata.name) and only set the URL. Overwriting name with
+					// the URL made external-KB citation chips show the raw URL.
+					_source = { ..._source, url: id };
 				}
 
 				const existingSource = acc.find((item) => item.id === id);

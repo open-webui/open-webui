@@ -105,14 +105,25 @@
 
 	const getSourceIds = (sources) => {
 		const result = [];
+		// Deduplicate by citation id (metadata.source), not by the display name.
+		// The server numbers citations ([n]) by first appearance of the citation
+		// id, so deduping by name desyncs the label list from that numbering
+		// whenever two different sources share the same display name (e.g. the
+		// same page in two release trees) — every chip from that point on shows
+		// the wrong title, and [n] beyond the list end renders nothing.
+		const seenIds = new Set();
 		for (const source of sources ?? []) {
 			for (let index = 0; index < (source.document ?? []).length; index++) {
+				const metadata = source.metadata?.[index];
+				const id = metadata?.source ?? 'N/A';
+				if (seenIds.has(id)) {
+					continue;
+				}
+				seenIds.add(id);
 				if (model?.info?.meta?.capabilities?.citations == false) {
 					result.push('N/A');
 					continue;
 				}
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
 				if (metadata?.name) {
 					result.push(metadata.name);
 				} else if (id.startsWith('http://') || id.startsWith('https://')) {
@@ -122,7 +133,7 @@
 				}
 			}
 		}
-		sourceIds = [...new Set(result)];
+		sourceIds = result;
 	};
 
 	/** @param {string} messageContent */
