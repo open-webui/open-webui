@@ -36,6 +36,7 @@ export class AudioQueue {
 	}
 
 	setPlaybackRate(rate: number) {
+		this.audio.defaultPlaybackRate = rate;
 		this.audio.playbackRate = rate;
 	}
 
