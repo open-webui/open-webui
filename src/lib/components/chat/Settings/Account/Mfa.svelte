@@ -68,16 +68,16 @@
 	{:else if status}
 		<div class="flex items-center justify-between gap-2.5">
 			<span class="text-gray-600 dark:text-gray-400"
-				>{$i18n.t(
-					status.enabled ? 'Authenticator configured' : 'Authenticator not configured'
-				)}</span
+				>{status.enabled
+					? $i18n.t('Authenticator configured')
+					: $i18n.t('Authenticator not configured')}</span
 			>
 			{#if status.required && status.enabled}<button
 					type="button"
 					class={actionButtonClass}
 					on:click={() => {
 						show = !show;
-					}}>{$i18n.t(show ? 'Hide' : 'Manage')}</button
+					}}>{show ? $i18n.t('Hide') : $i18n.t('Manage')}</button
 				>{/if}
 		</div>
 		<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
@@ -91,7 +91,7 @@
 					{$i18n.t('Verify with a fresh code. Changes sign out all devices.')}
 				</p>
 				<label class="block text-gray-600 dark:text-gray-400"
-					>{$i18n.t(recovery ? 'Recovery code' : 'Authenticator code')}<input
+					>{recovery ? $i18n.t('Recovery code') : $i18n.t('Authenticator code')}<input
 						class="mt-1 h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 						autocomplete="one-time-code"
 						bind:value={code}
