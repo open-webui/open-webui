@@ -424,8 +424,8 @@
 		})
 		.sort((a, b) => a.name.localeCompare(b.name));
 
-	$: accessGroups = groups
-		.filter((group) => readGroupIds.includes(group.id) || writeGroupIds.includes(group.id))
+	$: accessGroups = Array.from(new Set([...readGroupIds, ...writeGroupIds]))
+		.map((id) => groups.find((group) => group.id === id) ?? { id, name: id })
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: if (selectedUserIds.length > 0) {
@@ -599,9 +599,11 @@
 
 						<div class="truncate text-sm flex items-center gap-2">
 							{group.name}
-							<span class="text-xs text-gray-400 font-normal"
-								>{group?.member_count} {$i18n.t('members')}</span
-							>
+							{#if group.member_count != null}
+								<span class="text-xs text-gray-400 font-normal"
+									>{group.member_count} {$i18n.t('members')}</span
+								>
+							{/if}
 						</div>
 					</div>
 

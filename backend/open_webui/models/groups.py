@@ -5,6 +5,7 @@ from typing import Optional
 
 from open_webui.env import DEFAULT_GROUP_SHARE_PERMISSION
 from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.models.access_grants import AccessGrant
 from open_webui.models.files import FileMetadataResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
@@ -433,22 +434,26 @@ class GroupTable:
             return None
 
     async def delete_group_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
-        try:
-            async with get_async_db_context(db) as db:
+        async with get_async_db_context(db) as db:
+            try:
                 await db.execute(delete(Group).filter_by(id=id))
+                await db.execute(delete(AccessGrant).filter_by(principal_type='group', principal_id=id))
                 await db.commit()
                 return True
-        except Exception:
-            return False
+            except Exception:
+                await db.rollback()
+                return False
 
     async def delete_all_groups(self, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:
             try:
                 await db.execute(delete(Group))
+                await db.execute(delete(AccessGrant).filter_by(principal_type='group'))
                 await db.commit()
 
                 return True
             except Exception:
+                await db.rollback()
                 return False
 
     async def remove_user_from_all_groups(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
