@@ -1,5 +1,9 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
+	import MfaChallengeForm from '$lib/components/auth/MfaChallenge.svelte';
+	import { mfaRequest, type MfaChallenge } from '$lib/apis/auths/mfa';
+	let mfaChallenge: MfaChallenge | null = null;
+	let pendingApproval = false;
 	import { marked } from 'marked';
 
 	import { toast } from 'svelte-sonner';
@@ -46,7 +50,16 @@
 
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
-			console.log(sessionUser);
+			if (sessionUser.next_step === 'pending') {
+				pendingApproval = true;
+				return;
+			}
+			if (sessionUser.challenge_token) {
+				mfaChallenge = sessionUser;
+				password = '';
+				confirmPassword = '';
+				return;
+			}
 			toast.success($i18n.t(`You're now logged in.`));
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
@@ -170,7 +183,22 @@
 			toast.error(error);
 		}
 
-		await oauthCallbackHandler();
+		if ($page.url.searchParams.has('mfa')) {
+			localStorage.removeItem('token');
+			try {
+				mfaChallenge = await mfaRequest('challenge');
+			} catch (error) {
+				toast.error(error instanceof Error ? error.message : String(error));
+			}
+			loaded = true;
+			return;
+		}
+		if ($page.url.searchParams.has('pending')) {
+			pendingApproval = true;
+			loaded = true;
+			return;
+		}
+		if (!logout) await oauthCallbackHandler();
 		form = $page.url.searchParams.get('form');
 
 		// Auto-redirect to SSO when OAUTH_AUTO_REDIRECT is enabled and the
@@ -231,8 +259,23 @@
 			class="fixed bg-transparent min-h-screen w-full flex justify-center z-50 text-black dark:text-white"
 			id="auth-container"
 		>
-			<div class="w-full px-10 min-h-screen flex flex-col text-center">
-				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
+			<div class="w-full px-6 min-h-screen flex flex-col text-center">
+				{#if mfaChallenge}
+					<div
+						class="my-auto mx-auto w-full max-w-sm shrink-0 border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-950"
+					>
+						<MfaChallengeForm
+							challenge={mfaChallenge}
+							onComplete={setSessionUser}
+							onCancel={() => {
+								mfaChallenge = null;
+								window.location.href = '/auth?state=logout&form=signin';
+							}}
+						/>
+					</div>
+				{:else if pendingApproval}
+					<p class="my-auto">{$i18n.t('Your account is awaiting administrator approval.')}</p>
+				{:else if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full sm:max-w-md">
 						<div
 							class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-normal dark:text-gray-200"

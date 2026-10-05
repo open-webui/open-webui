@@ -2455,6 +2455,10 @@ Responses from models: {{responses}}"""
 
 ENABLE_API_KEYS = os.getenv('ENABLE_API_KEYS', 'False').lower() == 'true'
 
+ENABLE_MFA = os.getenv('ENABLE_MFA', 'False').lower() == 'true'
+MFA_ALLOW_OAUTH_BYPASS = os.getenv('MFA_ALLOW_OAUTH_BYPASS', 'False').lower() == 'true'
+MFA_ALLOW_TRUSTED_HEADER_BYPASS = os.getenv('MFA_ALLOW_TRUSTED_HEADER_BYPASS', 'False').lower() == 'true'
+
 ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = (
     os.getenv(
         'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS',
@@ -3159,6 +3163,9 @@ DEFAULT_CONFIG = {
     'auth.api_key.endpoint_restrictions': ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     'auth.api_key.allowed_endpoints': API_KEYS_ALLOWED_ENDPOINTS,
     'auth.jwt_expiry': JWT_EXPIRES_IN,
+    'auth.mfa.enable': ENABLE_MFA,
+    'auth.mfa.allow_oauth_bypass': MFA_ALLOW_OAUTH_BYPASS,
+    'auth.mfa.allow_trusted_header_bypass': MFA_ALLOW_TRUSTED_HEADER_BYPASS,
     'oauth.enable': ENABLE_OAUTH,
     'oauth.enable_signup': ENABLE_OAUTH_SIGNUP,
     'oauth.auto_redirect': OAUTH_AUTO_REDIRECT,

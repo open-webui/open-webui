@@ -85,7 +85,6 @@ from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import Users
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import (
-    create_token,
     get_optional_verified_user_from_request,
     get_password_hash,
     get_verified_user_by_id,
@@ -2182,10 +2181,6 @@ class OAuthManager:
                         detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                     )
 
-            jwt_token = create_token(
-                data={'id': user.id},
-                expires_delta=parse_duration(auth_config.JWT_EXPIRES_IN),
-            )
             if auth_config.ENABLE_OAUTH_GROUP_MANAGEMENT:
                 await self.update_user_groups(
                     request=request,
@@ -2217,37 +2212,7 @@ class OAuthManager:
         expires_delta = parse_duration(auth_config.JWT_EXPIRES_IN)
         cookie_max_age = int(expires_delta.total_seconds()) if expires_delta else None
 
-        # Set the cookie token
-        # Redirect back to the frontend with the JWT token
-        response.set_cookie(
-            key='token',
-            value=jwt_token,
-            httponly=False,  # Required for frontend access
-            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-            secure=WEBUI_AUTH_COOKIE_SECURE,
-            **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
-        )
-
-        await publish_event(
-            request,
-            EVENTS.AUTH_LOGIN,
-            actor=user,
-            subject_id=user.id,
-            subject_type='user',
-            source='oauth',
-            data={'auth_method': 'oauth', 'provider': provider},
-        )
-
-        # Legacy cookies for compatibility with older frontend versions
-        if ENABLE_OAUTH_ID_TOKEN_COOKIE:
-            response.set_cookie(
-                key='oauth_id_token',
-                value=token.get('id_token'),
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-                **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
-            )
+        session = None
 
         try:
             _normalize_token_expiry(token)
@@ -2272,21 +2237,56 @@ class OAuthManager:
                 db=db,
             )
 
+        except Exception as e:
+            log.error(f'Failed to store OAuth session server-side: {e}')
+
+        from open_webui.routers.mfa import CHALLENGE_COOKIE
+        from open_webui.utils.auth import create_signin_response
+
+        result = await create_signin_response(
+            request, user, db=db, source='oauth', oauth_session_id=session.id if session else None, provider=provider
+        )
+        response.headers['Cache-Control'] = 'no-store'
+        if result.get('next_step'):
+            response.delete_cookie('token')
+            if result['next_step'] == 'pending':
+                response.headers['location'] = f'{redirect_url}?pending=1'
+            else:
+                response.set_cookie(
+                    CHALLENGE_COOKIE,
+                    result['challenge_token'],
+                    max_age=300,
+                    httponly=True,
+                    path='/api/v1/auths/mfa',
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                )
+                response.headers['location'] = f'{redirect_url}?mfa=1'
+        else:
+            response.set_cookie(
+                'token',
+                result['token'],
+                httponly=False,
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
+                **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
+            )
             if session:
                 response.set_cookie(
-                    key='oauth_session_id',
-                    value=session.id,
+                    'oauth_session_id',
+                    session.id,
                     httponly=True,
                     samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                     secure=WEBUI_AUTH_COOKIE_SECURE,
-                    **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
                 )
-
-                log.info('Stored OAuth session server-side for user %s, provider %s', user.id, provider)
-            else:
-                log.warning(f'Failed to create OAuth session for user {user.id}, provider {provider}')
-        except Exception as e:
-            log.error(f'Failed to store OAuth session server-side: {e}')
+            if ENABLE_OAUTH_ID_TOKEN_COOKIE and token.get('id_token'):
+                response.set_cookie(
+                    'oauth_id_token',
+                    token['id_token'],
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
 
         return response
 

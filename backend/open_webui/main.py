@@ -165,6 +165,7 @@ from open_webui.routers import (
     images,
     knowledge,
     memories,
+    mfa,
     models,
     notes,
     notifications,
@@ -193,6 +194,7 @@ from open_webui.socket.main import (
     get_models_in_use,
     get_user_id_from_session_pool,
     periodic_session_pool_cleanup,
+    periodic_socket_authentication,
     periodic_usage_pool_cleanup,
     redis_event_listener,
     sio,
@@ -371,6 +373,9 @@ async def lifespan(app: FastAPI):
 
     await import_legacy_config_json()
     await seed_registered_defaults()
+    from open_webui.utils.mfa import validate_mfa_configuration
+
+    await validate_mfa_configuration()
     await initialize_runtime_config(app)
     await migrate_legacy_webhook_config()
     await publish_event(app, EVENTS.SYSTEM_STARTUP_STARTED, source='system')
@@ -406,6 +411,7 @@ async def lifespan(app: FastAPI):
         sio.manager_initialized = True
         sio.manager.initialize()
 
+    app.state.periodic_socket_authentication = asyncio.create_task(periodic_socket_authentication())
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
 
@@ -500,6 +506,7 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, 'redis_event_listener'):
         app.state.redis_event_listener.cancel()
 
+    app.state.periodic_socket_authentication.cancel()
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
     app.state.scheduler_worker_loop.cancel()
@@ -863,6 +870,7 @@ app.include_router(retrieval.router, prefix='/api/v1/retrieval', tags=['retrieva
 app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
+app.include_router(mfa.router, prefix='/api/v1/auths/mfa', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
 
 

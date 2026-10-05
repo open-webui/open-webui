@@ -184,10 +184,13 @@ class AuditLoggingMiddleware:
         if self._should_skip_auditing(request):
             return await self.app(scope, receive, send)
 
+        capture_body = not (request.url.path.startswith('/api/v1/auths') or request.url.path.startswith('/oauth/'))
         async with self._audit_context(request) as context:
 
             async def send_wrapper(message: ASGISendEvent) -> None:
-                if self.audit_level == AuditLevel.REQUEST_RESPONSE:
+                if self.audit_level == AuditLevel.REQUEST_RESPONSE and (
+                    capture_body or message['type'] == 'http.response.start'
+                ):
                     await self._capture_response(message, context)
 
                 await send(message)
@@ -198,7 +201,7 @@ class AuditLoggingMiddleware:
                 nonlocal original_receive
                 message = await original_receive()
 
-                if self.audit_level in (
+                if capture_body and self.audit_level in (
                     AuditLevel.REQUEST,
                     AuditLevel.REQUEST_RESPONSE,
                 ):
@@ -241,6 +244,7 @@ class AuditLoggingMiddleware:
         '/api/v1/auths/signin',
         '/api/v1/auths/signout',
         '/api/v1/auths/signup',
+        '/api/v1/auths/mfa',
     )
 
     def _should_skip_auditing(self, request: Request) -> bool:

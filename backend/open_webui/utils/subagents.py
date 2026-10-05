@@ -13,6 +13,7 @@ from open_webui.internal.db import get_async_db
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chat, ChatForm, Chats
 from open_webui.models.config import Config
+from open_webui.models.auths import Auths
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
@@ -45,7 +46,7 @@ _foreground_semaphore: asyncio.Semaphore | None = None
 _parent_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
 
-def _build_request(source: Request, user_id: str, *, internal: bool) -> Request:
+async def _build_request(source: Request, user_id: str, *, internal: bool) -> Request:
     scope = {
         'type': 'http',
         'asgi': {'version': '3.0', 'spec_version': '2.0'},
@@ -59,8 +60,11 @@ def _build_request(source: Request, user_id: str, *, internal: bool) -> Request:
         'app': source.app,
     }
     request = Request(scope)
+    auth = await Auths.get_auth_by_id(user_id)
+    if auth is None or not auth.active:
+        raise ValueError('Subagent owner is no longer active')
     token = create_token(
-        data={'id': user_id, 'typ': 'subagent'},
+        data={'id': user_id, 'typ': 'subagent', 'session_stamp': auth.session_stamp},
         expires_delta=timedelta(hours=1),
     )
     request.state.token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=token)
@@ -265,7 +269,7 @@ async def process_pending_internal_messages(
         if run.get('terminal_id'):
             form_data['terminal_id'] = run['terminal_id']
 
-        request = _build_request(source_request, user.id, internal=False)
+        request = await _build_request(source_request, user.id, internal=False)
         await source_request.app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
 
@@ -451,7 +455,7 @@ async def delegate(
 
     async def run_reserved() -> dict:
         try:
-            child_request = _build_request(request, user.id, internal=True)
+            child_request = await _build_request(request, user.id, internal=True)
             child_request.state.max_tool_call_iterations = max_iterations
             parent_system_prompt = run.get('system_prompt') or ''
             subagent_system_prompt = (

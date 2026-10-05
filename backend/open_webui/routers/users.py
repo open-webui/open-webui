@@ -912,6 +912,21 @@ async def get_user_active_status_by_id(
 ############################
 
 
+@router.post('/{user_id}/sessions/revoke', response_model=bool)
+async def revoke_user_sessions(request: Request, user_id: str, session_user=Depends(get_admin_user)):
+    target = await Users.get_user_by_id(user_id)
+    if target is None:
+        raise HTTPException(404, 'User not found.')
+    first_user = await Users.get_first_user()
+    if first_user and first_user.id == user_id and session_user.id != user_id:
+        raise HTTPException(403, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+    await revoke_user_tokens(request, user_id)
+    await publish_event(
+        request, EVENTS.AUTH_SESSIONS_REVOKED, actor=session_user, subject_id=user_id, subject_type='user'
+    )
+    return True
+
+
 @router.post('/{user_id}/update', response_model=UserModel | None)
 async def update_user_by_id(
     request: Request,
@@ -967,7 +982,9 @@ async def update_user_by_id(
 
             hashed = await get_password_hash(form_data.password)
             if await Auths.update_user_password_by_id(user_id, hashed, db=db):
-                await revoke_user_tokens(request, user_id)
+                from open_webui.socket.main import disconnect_user_sessions
+
+                await disconnect_user_sessions(user_id)
 
         # Build update dict from only the provided fields
         update_data = {}

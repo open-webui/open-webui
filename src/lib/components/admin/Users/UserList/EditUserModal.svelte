@@ -6,9 +6,11 @@
 
 	import { goto } from '$app/navigation';
 
-	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
+	import { updateUserById, getUserGroupsById, revokeUserSessions } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	let showRevokeConfirmation = false;
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -64,6 +66,20 @@
 		});
 	};
 </script>
+
+<ConfirmDialog
+	bind:show={showRevokeConfirmation}
+	title={$i18n.t('Sign out all devices?')}
+	message={$i18n.t('This user will need to sign in again on every device. API keys remain active.')}
+	on:confirm={async () => {
+		try {
+			await revokeUserSessions(localStorage.token, selectedUser.id);
+			toast.success($i18n.t('All sessions revoked'));
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : String(error));
+		}
+	}}
+/>
 
 <Modal size="sm" bind:show>
 	<div>
@@ -217,7 +233,14 @@
 							</div>
 						</div>
 
-						<div class="flex justify-end pt-3 text-sm font-normal">
+						<div class="flex justify-between pt-3 text-sm font-normal">
+							<button
+								type="button"
+								class="text-sm text-red-500"
+								on:click={() => {
+									showRevokeConfirmation = true;
+								}}>{$i18n.t('Sign out all devices')}</button
+							>
 							<button
 								class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="submit"
