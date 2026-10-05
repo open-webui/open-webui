@@ -2053,7 +2053,7 @@ ENABLE_NOTES = os.getenv('ENABLE_NOTES', 'True').lower() == 'true'
 
 ENABLE_USER_STATUS = os.getenv('ENABLE_USER_STATUS', 'True').lower() == 'true'
 
-ENABLE_EVALUATION_ARENA_MODELS = os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'True').lower() == 'true'
+ENABLE_EVALUATION_ARENA_MODELS = os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'False').lower() == 'true'
 try:
     evaluation_arena_models = JSONCodec.loads(os.getenv('EVALUATION_ARENA_MODELS', '[]'))
     if not isinstance(evaluation_arena_models, list) or not all(
