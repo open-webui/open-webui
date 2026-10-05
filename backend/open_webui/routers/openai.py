@@ -683,7 +683,9 @@ async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     model_ids = [model['id'] for model in models.get('data', [])]
     model_infos = {model_info.id: model_info for model_info in await Models.get_models_by_ids(model_ids, db=db)}
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+    user_group_ids = {
+        group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+    }
 
     # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
     accessible_model_ids = await AccessGrants.get_accessible_resource_ids(

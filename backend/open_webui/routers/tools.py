@@ -81,7 +81,9 @@ async def get_tools(
     tools = []
     bypass_access_control = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
     user_group_ids = (
-        set() if bypass_access_control else {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        set()
+        if bypass_access_control
+        else {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)}
     )
 
     # Local Tools
@@ -236,7 +238,9 @@ async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depe
 
     bypass_access_control = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
     user_group_ids = (
-        set() if bypass_access_control else {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        set()
+        if bypass_access_control
+        else {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)}
     )
     tools = await Tools.get_tools(
         defer_content=True,

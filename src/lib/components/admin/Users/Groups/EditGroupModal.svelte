@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<import('svelte/store').Writable<import('i18next').i18n>>('i18n');
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import General from './General.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
+	import InheritedMembers from './InheritedMembers.svelte';
+	import { getGroupPreview } from '$lib/apis/groups';
 	import GroupPreviewPanel from './GroupPreviewPanel.svelte';
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
 	import { getUserDefaultPermissions, getUserDefaultPermissionsDefaults } from '$lib/apis/users';
@@ -24,8 +26,38 @@
 	export let show = false;
 	export let edit = false;
 
-	export let group = null;
-	export let defaultPermissions = {};
+	export let group: any = null;
+	export let groups: import('../Groups.svelte').GroupListItem[] = [];
+	let parent_group_id: string | null = null;
+	let membershipTab = 'direct';
+	let inheritedPermissions: Record<string, any> = {};
+	let loadedParent: string | null | undefined = undefined;
+	let inheritanceRequest = 0;
+	async function loadInheritance(parentId: string | null) {
+		loadedParent = parentId;
+		const request = ++inheritanceRequest;
+		inheritedPermissions = defaultPermissions;
+		if (!parentId) return;
+		try {
+			const preview = await getGroupPreview(localStorage.token, parentId);
+			if (request === inheritanceRequest) inheritedPermissions = preview.effective_permissions;
+		} catch (e) {
+			if (request === inheritanceRequest && show) toast.error(String(e));
+		}
+	}
+	$: deleteMessage = group?.parent_group_id
+		? $i18n.t(
+				'Delete {{name}}? Its child groups will move to {{parent}}. Permissions and direct memberships belonging to this group will be removed.',
+				{
+					name: group?.name,
+					parent: groups.find((item) => item.id === group.parent_group_id)?.path
+				}
+			)
+		: $i18n.t(
+				'Delete {{name}}? Its child groups will become top-level groups. Permissions and direct memberships belonging to this group will be removed.',
+				{ name: group?.name }
+			);
+	export let defaultPermissions: Record<string, any> = {};
 
 	export let custom = true;
 
@@ -40,7 +72,7 @@
 
 	export let name = '';
 	export let description = '';
-	export let data = {};
+	export let data: Record<string, any> = {};
 
 	export let permissions = DEFAULT_PERMISSIONS;
 
@@ -51,13 +83,17 @@
 			name,
 			description,
 			data,
-			permissions
+			permissions,
+			...(custom ? { parent_group_id } : {})
 		};
 
-		await onSubmit(group);
-
-		loading = false;
-		show = false;
+		try {
+			if (await onSubmit(group)) show = false;
+		} catch (error) {
+			toast.error(String(error));
+		} finally {
+			loading = false;
+		}
 	};
 
 	const resetToDefaultsHandler = async () => {
@@ -86,8 +122,9 @@
 	const init = () => {
 		if (group) {
 			name = group.name;
+			parent_group_id = group.parent_group_id ?? null;
 			description = group.description;
-			const loadedPermissions = group?.permissions ?? {};
+			const loadedPermissions: Record<string, any> = group?.permissions ?? {};
 			// Create fresh object from defaults, then overlay loaded values
 			permissions = {
 				workspace: { ...DEFAULT_PERMISSIONS.workspace, ...loadedPermissions.workspace },
@@ -106,6 +143,13 @@
 	$: if (show) {
 		init();
 	}
+	$: if (!show) {
+		loadedParent = undefined;
+		inheritanceRequest++;
+		membershipTab = 'direct';
+	}
+
+	$: if (show && parent_group_id !== loadedParent) loadInheritance(parent_group_id);
 
 	onMount(() => {
 		selectedTab = tabs[0];
@@ -115,9 +159,14 @@
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
-	on:confirm={() => {
-		onDelete();
-		show = false;
+	title={$i18n.t('Delete group')}
+	message={deleteMessage}
+	on:confirm={async () => {
+		try {
+			if (await onDelete()) show = false;
+		} catch (error) {
+			toast.error(String(error));
+		}
 	}}
 />
 
@@ -172,7 +221,7 @@
 						>
 							{#if tabs.includes('general')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'general'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -201,7 +250,7 @@
 
 							{#if tabs.includes('permissions')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'permissions'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -219,7 +268,7 @@
 
 							{#if tabs.includes('users')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'users'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -237,7 +286,7 @@
 
 							{#if tabs.includes('preview')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'preview'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -270,6 +319,9 @@
 							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
 								{#if selectedTab == 'general'}
 									<General
+										{groups}
+										groupId={group?.id}
+										bind:parent_group_id
 										bind:name
 										bind:description
 										bind:data
@@ -279,9 +331,37 @@
 										}}
 									/>
 								{:else if selectedTab == 'permissions'}
-									<Permissions bind:permissions {defaultPermissions} />
+									{#if custom && parent_group_id}
+										<p class="text-xs text-gray-500 mb-3">
+											{$i18n.t(
+												'Parent permissions are inherited. Disabling a local permission does not revoke inherited access.'
+											)}
+										</p>
+									{/if}
+									<Permissions
+										bind:permissions
+										defaultPermissions={custom ? inheritedPermissions : defaultPermissions}
+									/>
 								{:else if selectedTab == 'users'}
-									<Users bind:userCount groupId={group?.id} {onMemberChange} />
+									<div class="flex gap-3 mb-3 text-sm">
+										<button
+											type="button"
+											class:underline={membershipTab === 'direct'}
+											on:click={() => (membershipTab = 'direct')}
+											>{$i18n.t('Direct members')}</button
+										>
+										<button
+											type="button"
+											class:underline={membershipTab === 'inherited'}
+											on:click={() => (membershipTab = 'inherited')}
+											>{$i18n.t('Inherited members')}</button
+										>
+									</div>
+									{#if membershipTab === 'direct'}
+										<Users bind:userCount groupId={group?.id} {onMemberChange} />
+									{:else}
+										<InheritedMembers groupId={group?.id} {groups} />
+									{/if}
 								{:else if selectedTab == 'preview'}
 									<GroupPreviewPanel groupId={group?.id} />
 								{/if}

@@ -455,7 +455,7 @@ async def get_filtered_models(models, user, db=None):
     """Return only the models the given *user* is allowed to access."""
     model_ids = [m['model'] for m in models.get('models', [])]
     model_infos = {mi.id: mi for mi in await Models.get_models_by_ids(model_ids, db=db)}
-    user_group_ids = {g.id for g in await Groups.get_groups_by_member_id(user.id, db=db)}
+    user_group_ids = {g.id for g in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)}
 
     accessible_ids = await AccessGrants.get_accessible_resource_ids(
         user_id=user.id,
@@ -1548,7 +1548,7 @@ async def get_openai_models(
     if user.role == 'user' and not BYPASS_MODEL_ACCESS_CONTROL:
         model_ids = [m['id'] for m in models]
         model_infos = {mi.id: mi for mi in await Models.get_models_by_ids(model_ids, db=db)}
-        user_group_ids = {g.id for g in await Groups.get_groups_by_member_id(user.id, db=db)}
+        user_group_ids = {g.id for g in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)}
         accessible_ids = await AccessGrants.get_accessible_resource_ids(
             user_id=user.id,
             resource_type='model',

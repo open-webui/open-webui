@@ -352,7 +352,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     tools_dict = {}
 
     # Get user's group memberships for access control checks
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
 
     # Batch-fetch all DB tools in one query instead of one per tool_id
     local_tool_ids = [tool_id for tool_id in tool_ids if not tool_id.startswith('server:')]
@@ -1471,7 +1471,7 @@ async def get_terminal_tools(
     if not connection.get('enabled', True):
         raise RuntimeError(f"Terminal server '{terminal_id}' is disabled")
 
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
     if not await has_connection_access(user, connection, user_group_ids):
         raise RuntimeError(f'Access denied to terminal {terminal_id}')
 

@@ -67,7 +67,7 @@ async def _check_calendar_access(calendar_id: str, user: UserModel, permission: 
         raise HTTPException(status_code=404, detail='Calendar not found')
     if cal.user_id == user.id or user.role == 'admin':
         return cal
-    user_groups = await Groups.get_groups_by_member_id(user.id)
+    user_groups = await Groups.get_groups_by_member_id(user.id, include_inherited=True)
     user_group_ids = [g.id for g in user_groups]
     if await AccessGrants.has_access(
         user_id=user.id,

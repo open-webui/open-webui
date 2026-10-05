@@ -252,7 +252,10 @@ class ModelsTable:
 
             if writable_by_user_id:
                 user_group_ids = {
-                    group.id for group in await Groups.get_groups_by_member_id(writable_by_user_id, db=db)
+                    group.id
+                    for group in await Groups.get_groups_by_member_id(
+                        writable_by_user_id, db=db, include_inherited=True
+                    )
                 }
                 stmt = self._has_permission(
                     db, stmt, {'user_id': writable_by_user_id, 'group_ids': user_group_ids}, permission='write'
@@ -475,7 +478,7 @@ class ModelsTable:
             )
 
             if not is_admin:
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = [group.id for group in user_groups]
 
                 filter_dict = {'user_id': user_id}

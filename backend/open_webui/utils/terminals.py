@@ -153,7 +153,9 @@ async def get_terminal_json(request, user, metadata: dict, path: str, extra_para
             or (config.get('context_id') in {'chat_id', 'automation_id'} and not context_id)
         ):
             return None
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_model.id)}
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user_model.id, include_inherited=True)
+        }
         if not await has_connection_access(user_model, connection, user_group_ids):
             return None
 

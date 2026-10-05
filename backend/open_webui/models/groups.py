@@ -2,9 +2,10 @@ import logging
 import time
 import uuid
 from typing import Optional
+from contextlib import asynccontextmanager
 
 from open_webui.env import DEFAULT_GROUP_SHARE_PERMISSION
-from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.internal.db import Base, JSONField, get_async_db_context, get_async_db
 from open_webui.models.access_grants import AccessGrant
 from open_webui.models.files import FileMetadataResponse
 from pydantic import BaseModel, ConfigDict
@@ -23,6 +24,7 @@ from sqlalchemy import (
     or_,
     select,
     update,
+    text,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +39,10 @@ log = logging.getLogger(__name__)
 
 class Group(Base):
     __tablename__ = 'group'
+
+    parent_group_id = Column(
+        Text, ForeignKey('group.id', name='fk_group_parent', ondelete='SET NULL'), nullable=True, index=True
+    )
 
     id = Column(Text, unique=True, primary_key=True)
     user_id = Column(Text)
@@ -54,6 +60,7 @@ class Group(Base):
 
 
 class GroupModel(BaseModel):
+    parent_group_id: Optional[str] = None
     id: str
     user_id: str
 
@@ -105,6 +112,7 @@ class GroupResponse(GroupModel):
 
 
 class GroupInfoResponse(BaseModel):
+    parent_group_id: Optional[str] = None
     id: str
     user_id: str
     name: str
@@ -115,6 +123,7 @@ class GroupInfoResponse(BaseModel):
 
 
 class GroupForm(BaseModel):
+    parent_group_id: Optional[str] = None
     name: str
     description: str
     permissions: Optional[dict] = None
@@ -134,6 +143,95 @@ class GroupListResponse(BaseModel):
     total: int = 0
 
 
+class GroupHierarchyError(ValueError):
+    def __init__(self, message: str, status_code: int = 400):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def ancestor_groups(group_ids):
+    """Identifier-only recursion: UNION also terminates on externally introduced cycles."""
+    chain = select(Group.id.label('group_id')).where(Group.id.in_(group_ids)).cte(recursive=True)
+    return chain.union(
+        select(Group.parent_group_id).join(chain, Group.id == chain.c.group_id).where(Group.parent_group_id.isnot(None))
+    )
+
+
+def descendant_groups(group_ids):
+    chain = (
+        select(Group.id.label('root_id'), Group.id.label('group_id')).where(Group.id.in_(group_ids)).cte(recursive=True)
+    )
+    return chain.union(select(chain.c.root_id, Group.id).join(chain, Group.parent_group_id == chain.c.group_id))
+
+
+def user_group_memberships(user_ids, include_inherited=False):
+    direct = select(GroupMember.user_id, GroupMember.group_id).where(GroupMember.user_id.in_(user_ids))
+    if not include_inherited:
+        return direct.subquery()
+    chain = direct.cte(recursive=True)
+    return chain.union(
+        select(chain.c.user_id, Group.parent_group_id)
+        .join(Group, Group.id == chain.c.group_id)
+        .where(Group.parent_group_id.isnot(None))
+    )
+
+
+def group_user_memberships(group_ids, include_inherited=False):
+    if not include_inherited:
+        return select(GroupMember.group_id, GroupMember.user_id).where(GroupMember.group_id.in_(group_ids)).subquery()
+    descendants = descendant_groups(group_ids)
+    return (
+        select(descendants.c.root_id.label('group_id'), GroupMember.user_id)
+        .join(GroupMember, GroupMember.group_id == descendants.c.group_id)
+        .distinct()
+        .subquery()
+    )
+
+
+@asynccontextmanager
+async def hierarchy_transaction():
+    # Own the session: callers may already have an unrelated read transaction.
+    async with get_async_db() as db:
+        try:
+            if db.bind.dialect.name == 'sqlite':
+                await db.execute(text('BEGIN IMMEDIATE'))
+            elif db.bind.dialect.name == 'postgresql':
+                await db.execute(text('SELECT pg_advisory_xact_lock(731947205)'))
+            else:
+                raise RuntimeError('Group hierarchy requires SQLite or PostgreSQL')
+            yield db
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+
+
+async def refresh_group_sessions(user_ids):
+    if not user_ids:
+        return
+    # Import lazily to avoid models/socket import cycles. A committed write must not
+    # be reported as failed just because a client has already disconnected.
+    from open_webui.socket.main import disconnect_user_sessions
+
+    for user_id in set(user_ids):
+        try:
+            await disconnect_user_sessions(user_id, refresh_access=True)
+        except Exception:
+            log.exception('Unable to refresh group access for user %s', user_id)
+
+
+async def validate_parent(db, group_id, parent_id):
+    if parent_id is None:
+        return
+    if not parent_id:
+        raise GroupHierarchyError('Parent group must be a group ID or null.')
+    if not await db.get(Group, parent_id):
+        raise GroupHierarchyError('Parent group not found.', 404)
+    ancestors = ancestor_groups([parent_id])
+    if (await db.execute(select(ancestors.c.group_id).where(ancestors.c.group_id == group_id))).first():
+        raise GroupHierarchyError('A group cannot be its own parent or a descendant of itself.')
+
+
 class GroupTable:
     def _ensure_default_share_config(self, group_data: dict) -> dict:
         """Ensure the group data dict has a default share config if not already set."""
@@ -148,30 +246,20 @@ class GroupTable:
     async def insert_new_group(
         self, user_id: str, form_data: GroupForm, db: Optional[AsyncSession] = None
     ) -> Optional[GroupModel]:
-        async with get_async_db_context(db) as db:
+        async with hierarchy_transaction() as session:
+            await validate_parent(session, None, form_data.parent_group_id)
             group_data = self._ensure_default_share_config(form_data.model_dump(exclude_none=True))
-            group = GroupModel(
-                **{
-                    **group_data,
-                    'id': str(uuid.uuid4()),
-                    'user_id': user_id,
-                    'created_at': int(time.time()),
-                    'updated_at': int(time.time()),
-                }
+            group = Group(
+                **group_data,
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                created_at=int(time.time()),
+                updated_at=int(time.time()),
             )
-
-            try:
-                result = Group(**group.model_dump())
-                db.add(result)
-                await db.commit()
-                await db.refresh(result)
-                if result:
-                    return GroupModel.model_validate(result)
-                else:
-                    return None
-
-            except Exception:
-                return None
+            session.add(group)
+            await session.flush()
+            result = GroupModel.model_validate(group)
+        return result
 
     async def get_all_groups(self, db: Optional[AsyncSession] = None) -> list[GroupModel]:
         async with get_async_db_context(db) as db:
@@ -217,7 +305,7 @@ class GroupTable:
                         )
 
                         if member_id:
-                            member_groups_select = select(GroupMember.group_id).where(GroupMember.user_id == member_id)
+                            member_groups_select = select(user_group_memberships([member_id], True).c.group_id)
                             members_only_and_is_member = and_(
                                 json_share_lower == 'members',
                                 Group.id.in_(member_groups_select),
@@ -232,7 +320,7 @@ class GroupTable:
                     # Only apply member_id filter when share filter is NOT present
                     if 'member_id' in filter:
                         stmt = stmt.filter(
-                            Group.id.in_(select(GroupMember.group_id).where(GroupMember.user_id == filter['member_id']))
+                            Group.id.in_(select(user_group_memberships([filter['member_id']], True).c.group_id))
                         )
 
             result = await db.execute(stmt.order_by(Group.updated_at.desc()))
@@ -263,7 +351,7 @@ class GroupTable:
                     stmt = stmt.filter(Group.name.ilike(f'%{filter["query"]}%'))
                 if 'member_id' in filter:
                     stmt = stmt.filter(
-                        Group.id.in_(select(GroupMember.group_id).where(GroupMember.user_id == filter['member_id']))
+                        Group.id.in_(select(user_group_memberships([filter['member_id']], True).c.group_id))
                     )
 
                 if 'share' in filter:
@@ -303,112 +391,100 @@ class GroupTable:
                 'total': total,
             }
 
-    async def get_groups_by_member_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[GroupModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(Group)
-                .join(GroupMember, GroupMember.group_id == Group.id)
-                .filter(GroupMember.user_id == user_id)
-                .order_by(Group.updated_at.desc())
-            )
-            return [GroupModel.model_validate(group) for group in result.scalars().all()]
+    async def get_groups_by_member_id(
+        self, user_id: str, db: Optional[AsyncSession] = None, *, include_inherited=False
+    ) -> list[GroupModel]:
+        return (await self.get_groups_by_member_ids([user_id], db=db, include_inherited=include_inherited))[user_id]
 
     async def get_groups_by_member_ids(
-        self, user_ids: list[str], db: Optional[AsyncSession] = None
+        self, user_ids: list[str], db: Optional[AsyncSession] = None, *, include_inherited=False
     ) -> dict[str, list[GroupModel]]:
-        """Fetch groups for multiple users in a single query to avoid N+1."""
+        groups = {uid: [] for uid in user_ids}
+        if not user_ids:
+            return groups
+        memberships = user_group_memberships(user_ids, include_inherited)
         async with get_async_db_context(db) as db:
-            # Query GroupMember joined with Group, filtering by user_ids
-            result = await db.execute(
-                select(GroupMember.user_id, Group)
-                .join(Group, Group.id == GroupMember.group_id)
-                .filter(GroupMember.user_id.in_(user_ids))
-                .order_by(Group.updated_at.desc())
+            rows = await db.execute(
+                select(memberships.c.user_id, Group)
+                .join(Group, Group.id == memberships.c.group_id)
+                .order_by(Group.updated_at.desc(), Group.id)
             )
-            rows = result.all()
+            for uid, group in rows:
+                groups[uid].append(GroupModel.model_validate(group))
+        return groups
 
-            # Group groups by user_id
-            user_groups: dict[str, list[GroupModel]] = {uid: [] for uid in user_ids}
-            for user_id, group in rows:
-                user_groups[user_id].append(GroupModel.model_validate(group))
-
-            return user_groups
+    async def get_ancestor_ids(self, group_id: str, db: Optional[AsyncSession] = None) -> set[str]:
+        chain = ancestor_groups([group_id])
+        async with get_async_db_context(db) as db:
+            return set((await db.execute(select(chain.c.group_id))).scalars())
 
     async def get_group_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[GroupModel]:
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(Group).filter_by(id=id))
+                result = await db.execute(select(Group).filter_by(id=id).execution_options(populate_existing=True))
                 group = result.scalars().first()
                 return GroupModel.model_validate(group) if group else None
         except Exception:
             return None
 
-    async def get_group_user_ids_by_id(self, id: str, db: Optional[AsyncSession] = None) -> list[str]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(GroupMember.user_id).filter(GroupMember.group_id == id))
-            members = result.all()
-
-            if not members:
-                return []
-
-            return [m[0] for m in members]
+    async def get_group_user_ids_by_id(
+        self, id: str, db: Optional[AsyncSession] = None, *, include_inherited=False
+    ) -> list[str]:
+        return (await self.get_group_user_ids_by_ids([id], db=db, include_inherited=include_inherited))[id]
 
     async def get_group_user_ids_by_ids(
-        self, group_ids: list[str], db: Optional[AsyncSession] = None
+        self, group_ids: list[str], db: Optional[AsyncSession] = None, *, include_inherited=False
     ) -> dict[str, list[str]]:
+        users = {gid: [] for gid in group_ids}
+        if not group_ids:
+            return users
+        memberships = group_user_memberships(group_ids, include_inherited)
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(GroupMember.group_id, GroupMember.user_id).filter(GroupMember.group_id.in_(group_ids))
-            )
-            members = result.all()
-
-            group_user_ids: dict[str, list[str]] = {group_id: [] for group_id in group_ids}
-
-            for group_id, user_id in members:
-                group_user_ids[group_id].append(user_id)
-
-            return group_user_ids
+            for gid, uid in await db.execute(select(memberships)):
+                users[gid].append(uid)
+        return users
 
     async def set_group_user_ids_by_id(
         self, group_id: str, user_ids: list[str], db: Optional[AsyncSession] = None
     ) -> None:
-        async with get_async_db_context(db) as db:
-            # Delete existing members
-            await db.execute(delete(GroupMember).filter(GroupMember.group_id == group_id))
-
-            # Insert new members
-            now = int(time.time())
-            new_members = [
-                GroupMember(
-                    id=str(uuid.uuid4()),
-                    group_id=group_id,
-                    user_id=user_id,
-                    created_at=now,
-                    updated_at=now,
+        async with hierarchy_transaction() as session:
+            if not await session.get(Group, group_id):
+                raise GroupHierarchyError('Group not found.', 404)
+            previous = set(
+                (await session.execute(select(GroupMember.user_id).where(GroupMember.group_id == group_id))).scalars()
+            )
+            requested = set(user_ids)
+            await session.execute(
+                delete(GroupMember).where(
+                    GroupMember.group_id == group_id, GroupMember.user_id.in_(previous - requested)
                 )
-                for user_id in user_ids
-            ]
+            )
+            now = int(time.time())
+            session.add_all(
+                [
+                    GroupMember(id=str(uuid.uuid4()), group_id=group_id, user_id=uid, created_at=now, updated_at=now)
+                    for uid in requested - previous
+                ]
+            )
+            await session.execute(update(Group).where(Group.id == group_id).values(updated_at=now))
+        await refresh_group_sessions(previous ^ requested)
 
-            db.add_all(new_members)
-            await db.commit()
+    async def get_group_member_count_by_id(
+        self, id: str, db: Optional[AsyncSession] = None, *, include_inherited=False
+    ) -> int:
+        return (await self.get_group_member_counts_by_ids([id], db=db, include_inherited=include_inherited)).get(id, 0)
 
-    async def get_group_member_count_by_id(self, id: str, db: Optional[AsyncSession] = None) -> int:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(func.count(GroupMember.user_id)).filter(GroupMember.group_id == id))
-            count = result.scalar()
-            return count if count else 0
-
-    async def get_group_member_counts_by_ids(self, ids: list[str], db: Optional[AsyncSession] = None) -> dict[str, int]:
+    async def get_group_member_counts_by_ids(
+        self, ids: list[str], db: Optional[AsyncSession] = None, *, include_inherited=False
+    ) -> dict[str, int]:
         if not ids:
             return {}
+        memberships = group_user_memberships(ids, include_inherited)
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(GroupMember.group_id, func.count(GroupMember.user_id))
-                .filter(GroupMember.group_id.in_(ids))
-                .group_by(GroupMember.group_id)
+            rows = await db.execute(
+                select(memberships.c.group_id, func.count(memberships.c.user_id)).group_by(memberships.c.group_id)
             )
-            rows = result.all()
-            return {group_id: count for group_id, count in rows}
+            return dict(rows.all())
 
     async def update_group_by_id(
         self,
@@ -416,71 +492,75 @@ class GroupTable:
         form_data: GroupUpdateForm,
         overwrite: bool = False,
         db: Optional[AsyncSession] = None,
+        *,
+        changes: Optional[dict] = None,
     ) -> Optional[GroupModel]:
-        try:
-            async with get_async_db_context(db) as db:
-                await db.execute(
-                    update(Group)
-                    .filter_by(id=id)
-                    .values(
-                        **form_data.model_dump(exclude_none=True),
-                        updated_at=int(time.time()),
-                    )
+        affected = []
+        async with hierarchy_transaction() as session:
+            group = await session.get(Group, id)
+            if group is None:
+                raise GroupHierarchyError('Group not found.', 404)
+            values = form_data.model_dump(exclude_none=True)
+            if 'parent_group_id' in form_data.model_fields_set:
+                await validate_parent(session, id, form_data.parent_group_id)
+                values['parent_group_id'] = form_data.parent_group_id
+            parent_changed = values.get('parent_group_id', group.parent_group_id) != group.parent_group_id
+            if changes is not None:
+                changes.update(
+                    old_parent_group_id=group.parent_group_id,
+                    parent_group_id=values.get('parent_group_id', group.parent_group_id),
                 )
-                await db.commit()
-                return await self.get_group_by_id(id=id, db=db)
-        except Exception as e:
-            log.exception(e)
-            return None
+            if parent_changed or ('permissions' in values and values['permissions'] != group.permissions):
+                members = group_user_memberships([id], True)
+                affected = list((await session.execute(select(members.c.user_id))).scalars())
+            for key, value in values.items():
+                setattr(group, key, value)
+            group.updated_at = int(time.time())
+            await session.flush()
+            result = GroupModel.model_validate(group)
+        await refresh_group_sessions(affected)
+        return result
 
-    async def delete_group_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
-        async with get_async_db_context(db) as db:
-            try:
-                await db.execute(delete(Group).filter_by(id=id))
-                await db.execute(delete(AccessGrant).filter_by(principal_type='group', principal_id=id))
-                await db.commit()
-                return True
-            except Exception:
-                await db.rollback()
-                return False
+    async def delete_group_by_id(
+        self, id: str, db: Optional[AsyncSession] = None, *, changes: Optional[dict] = None
+    ) -> bool:
+        async with hierarchy_transaction() as session:
+            group = await session.get(Group, id)
+            if group is None:
+                raise GroupHierarchyError('Group not found.', 404)
+            members = group_user_memberships([id], True)
+            affected = list((await session.execute(select(members.c.user_id))).scalars())
+            children = list((await session.execute(select(Group.id).where(Group.parent_group_id == id))).scalars())
+            if changes is not None:
+                changes.update(parent_group_id=group.parent_group_id, promoted_child_ids=children)
+            await session.execute(
+                update(Group)
+                .where(Group.parent_group_id == id)
+                .values(parent_group_id=group.parent_group_id, updated_at=int(time.time()))
+            )
+            await session.execute(delete(GroupMember).where(GroupMember.group_id == id))
+            await session.execute(delete(AccessGrant).filter_by(principal_type='group', principal_id=id))
+            await session.execute(delete(Group).where(Group.id == id))
+        await refresh_group_sessions(affected)
+        return True
 
     async def delete_all_groups(self, db: Optional[AsyncSession] = None) -> bool:
-        async with get_async_db_context(db) as db:
-            try:
-                await db.execute(delete(Group))
-                await db.execute(delete(AccessGrant).filter_by(principal_type='group'))
-                await db.commit()
-
-                return True
-            except Exception:
-                await db.rollback()
-                return False
+        async with hierarchy_transaction() as session:
+            affected = list((await session.execute(select(GroupMember.user_id).distinct())).scalars())
+            await session.execute(update(Group).values(parent_group_id=None))
+            await session.execute(delete(GroupMember))
+            await session.execute(delete(AccessGrant).filter_by(principal_type='group'))
+            await session.execute(delete(Group))
+        await refresh_group_sessions(affected)
+        return True
 
     async def remove_user_from_all_groups(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
-        async with get_async_db_context(db) as db:
-            try:
-                # Find all groups the user belongs to
-                result = await db.execute(
-                    select(Group)
-                    .join(GroupMember, GroupMember.group_id == Group.id)
-                    .filter(GroupMember.user_id == user_id)
-                )
-                groups = result.scalars().all()
-
-                # Remove the user from each group
-                for group in groups:
-                    await db.execute(
-                        delete(GroupMember).filter(GroupMember.group_id == group.id, GroupMember.user_id == user_id)
-                    )
-
-                    await db.execute(update(Group).filter_by(id=group.id).values(updated_at=int(time.time())))
-
-                await db.commit()
-                return True
-
-            except Exception:
-                await db.rollback()
-                return False
+        async with hierarchy_transaction() as session:
+            ids = select(GroupMember.group_id).where(GroupMember.user_id == user_id)
+            await session.execute(update(Group).where(Group.id.in_(ids)).values(updated_at=int(time.time())))
+            await session.execute(delete(GroupMember).where(GroupMember.user_id == user_id))
+        await refresh_group_sessions([user_id])
+        return True
 
     async def create_groups_by_group_names(
         self, user_id: str, group_names: list[str], db: Optional[AsyncSession] = None
@@ -521,133 +601,74 @@ class GroupTable:
     async def sync_groups_by_group_names(
         self, user_id: str, group_names: list[str], db: Optional[AsyncSession] = None
     ) -> bool:
-        async with get_async_db_context(db) as db:
-            try:
-                now = int(time.time())
-
-                # 1. Groups that SHOULD contain the user
-                result = await db.execute(select(Group).filter(Group.name.in_(group_names)))
-                target_groups = result.scalars().all()
-                target_group_ids = {g.id for g in target_groups}
-
-                # 2. Groups the user is CURRENTLY in
-                result = await db.execute(
-                    select(Group)
-                    .join(GroupMember, GroupMember.group_id == Group.id)
-                    .filter(GroupMember.user_id == user_id)
-                )
-                existing_group_ids = {g.id for g in result.scalars().all()}
-
-                # 3. Determine adds + removals
-                groups_to_add = target_group_ids - existing_group_ids
-                groups_to_remove = existing_group_ids - target_group_ids
-
-                # 4. Remove in one bulk delete
-                if groups_to_remove:
-                    await db.execute(
-                        delete(GroupMember).filter(
-                            GroupMember.user_id == user_id,
-                            GroupMember.group_id.in_(groups_to_remove),
-                        )
-                    )
-
-                    await db.execute(update(Group).filter(Group.id.in_(groups_to_remove)).values(updated_at=now))
-
-                # 5. Bulk insert missing memberships
-                for group_id in groups_to_add:
-                    db.add(
-                        GroupMember(
-                            id=str(uuid.uuid4()),
-                            group_id=group_id,
-                            user_id=user_id,
-                            created_at=now,
-                            updated_at=now,
-                        )
-                    )
-
-                if groups_to_add:
-                    await db.execute(update(Group).filter(Group.id.in_(groups_to_add)).values(updated_at=now))
-
-                await db.commit()
-                return True
-
-            except Exception as e:
-                log.exception(e)
-                await db.rollback()
-                return False
+        async with hierarchy_transaction() as session:
+            target = set((await session.execute(select(Group.id).where(Group.name.in_(group_names)))).scalars())
+            previous = set(
+                (await session.execute(select(GroupMember.group_id).where(GroupMember.user_id == user_id))).scalars()
+            )
+            await session.execute(
+                delete(GroupMember).where(GroupMember.user_id == user_id, GroupMember.group_id.in_(previous - target))
+            )
+            now = int(time.time())
+            session.add_all(
+                [
+                    GroupMember(id=str(uuid.uuid4()), group_id=gid, user_id=user_id, created_at=now, updated_at=now)
+                    for gid in target - previous
+                ]
+            )
+            await session.execute(update(Group).where(Group.id.in_(previous ^ target)).values(updated_at=now))
+        if previous != target:
+            await refresh_group_sessions([user_id])
+        return True
 
     async def add_users_to_group(
-        self,
-        id: str,
-        user_ids: Optional[list[str]] = None,
-        db: Optional[AsyncSession] = None,
+        self, id: str, user_ids: Optional[list[str]] = None, db: Optional[AsyncSession] = None
     ) -> Optional[GroupModel]:
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(Group).filter_by(id=id))
-                group = result.scalars().first()
-                if not group:
-                    return None
-
-                now = int(time.time())
-
-                for user_id in user_ids or []:
-                    try:
-                        db.add(
-                            GroupMember(
-                                id=str(uuid.uuid4()),
-                                group_id=id,
-                                user_id=user_id,
-                                created_at=now,
-                                updated_at=now,
-                            )
-                        )
-                        await db.flush()  # Detect unique constraint violation early
-                    except Exception:
-                        await db.rollback()  # Clear failed INSERT
-                        continue  # Duplicate → ignore
-
-                group.updated_at = now
-                await db.commit()
-                await db.refresh(group)
-
-                return GroupModel.model_validate(group)
-
-        except Exception as e:
-            log.exception(e)
-            return None
+        async with hierarchy_transaction() as session:
+            group = await session.get(Group, id)
+            if group is None:
+                raise GroupHierarchyError('Group not found.', 404)
+            previous = set(
+                (await session.execute(select(GroupMember.user_id).where(GroupMember.group_id == id))).scalars()
+            )
+            added = set(user_ids or []) - previous
+            now = int(time.time())
+            session.add_all(
+                [
+                    GroupMember(id=str(uuid.uuid4()), group_id=id, user_id=uid, created_at=now, updated_at=now)
+                    for uid in added
+                ]
+            )
+            group.updated_at = now
+            await session.flush()
+            result = GroupModel.model_validate(group)
+        await refresh_group_sessions(added)
+        return result
 
     async def remove_users_from_group(
-        self,
-        id: str,
-        user_ids: Optional[list[str]] = None,
-        db: Optional[AsyncSession] = None,
+        self, id: str, user_ids: Optional[list[str]] = None, db: Optional[AsyncSession] = None
     ) -> Optional[GroupModel]:
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(Group).filter_by(id=id))
-                group = result.scalars().first()
-                if not group:
-                    return None
-
-                if not user_ids:
-                    return GroupModel.model_validate(group)
-
-                # Remove users from group_member in batch
-                await db.execute(
-                    delete(GroupMember).filter(GroupMember.group_id == id, GroupMember.user_id.in_(user_ids))
-                )
-
-                # Update group timestamp
-                group.updated_at = int(time.time())
-
-                await db.commit()
-                await db.refresh(group)
-                return GroupModel.model_validate(group)
-
-        except Exception as e:
-            log.exception(e)
-            return None
+        async with hierarchy_transaction() as session:
+            group = await session.get(Group, id)
+            if group is None:
+                raise GroupHierarchyError('Group not found.', 404)
+            removed = list(
+                (
+                    await session.execute(
+                        select(GroupMember.user_id).where(
+                            GroupMember.group_id == id, GroupMember.user_id.in_(user_ids or [])
+                        )
+                    )
+                ).scalars()
+            )
+            await session.execute(
+                delete(GroupMember).where(GroupMember.group_id == id, GroupMember.user_id.in_(removed))
+            )
+            group.updated_at = int(time.time())
+            await session.flush()
+            result = GroupModel.model_validate(group)
+        await refresh_group_sessions(removed)
+        return result
 
 
 Groups = GroupTable()

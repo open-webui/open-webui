@@ -434,7 +434,7 @@ async def leave_room_for_users(room: str, user_ids: list[str]):
             log.debug('Failed to make session %s leave room %s: %s', sid, room, e)
 
 
-async def disconnect_user_sessions(user_id: str):
+async def disconnect_user_sessions(user_id: str, *, refresh_access: bool = False):
     """Disconnect all Socket.IO sessions belonging to a user.
 
     Call this when a user's role is changed or the user is deleted so that
@@ -444,6 +444,11 @@ async def disconnect_user_sessions(user_id: str):
     """
     session_ids = get_session_ids_by_user_id(user_id)
     for sid in session_ids:
+        if refresh_access:
+            try:
+                await sio.emit('access:updated', {}, to=sid)
+            except Exception:
+                log.exception('Failed to notify session %s about changed access', sid)
         try:
             await sio.disconnect(sid)
         except Exception:

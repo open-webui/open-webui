@@ -126,7 +126,7 @@ async def get_channel_member_user_ids(
     user_ids = permitted_ids.get('user_ids') or []
     group_ids = permitted_ids.get('group_ids') or []
     if group_ids:
-        for member_ids in (await Groups.get_group_user_ids_by_ids(group_ids, db=db)).values():
+        for member_ids in (await Groups.get_group_user_ids_by_ids(group_ids, db=db, include_inherited=True)).values():
             user_ids.extend(member_ids)
 
     return list(dict.fromkeys([*user_ids, channel.user_id]))

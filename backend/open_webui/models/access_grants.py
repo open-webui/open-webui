@@ -595,7 +595,7 @@ class AccessGrantsTable:
             if user_group_ids is None:
                 from open_webui.models.groups import Groups
 
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in user_groups}
 
             if user_group_ids:
@@ -651,7 +651,7 @@ class AccessGrantsTable:
             if user_group_ids is None:
                 from open_webui.models.groups import Groups
 
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in user_groups}
 
             if user_group_ids:
@@ -730,7 +730,7 @@ class AccessGrantsTable:
                     group_ids.append(grant.principal_id)
 
             if group_ids:
-                group_user_ids = await Groups.get_group_user_ids_by_ids(group_ids, db=db)
+                group_user_ids = await Groups.get_group_user_ids_by_ids(group_ids, db=db, include_inherited=True)
                 for members in group_user_ids.values():
                     user_ids.update(members)
             return user_ids

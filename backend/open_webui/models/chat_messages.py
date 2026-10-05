@@ -527,7 +527,7 @@ class ChatMessageTable:
         db: Optional[AsyncSession] = None,
     ) -> dict[str, int]:
         async with get_async_db_context(db) as db:
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import group_user_memberships
 
             stmt = select(ChatMessage.model_id, func.count(ChatMessage.id).label('count')).filter(
                 ChatMessage.role == 'assistant',
@@ -539,7 +539,7 @@ class ChatMessageTable:
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             stmt = stmt.group_by(ChatMessage.model_id)
@@ -555,7 +555,7 @@ class ChatMessageTable:
     ) -> dict[str, dict]:
         """Count distinct users and chats per model."""
         async with get_async_db_context(db) as db:
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import group_user_memberships
 
             stmt = select(
                 ChatMessage.model_id,
@@ -571,7 +571,7 @@ class ChatMessageTable:
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             stmt = stmt.group_by(ChatMessage.model_id)
@@ -593,7 +593,7 @@ class ChatMessageTable:
     ) -> dict[str, dict]:
         """Aggregate token usage by model using database-level aggregation."""
         async with get_async_db_context(db) as db:
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import group_user_memberships
 
             # We need the dialect to determine JSON extraction syntax
             # For async sessions, access via get_bind()
@@ -618,7 +618,7 @@ class ChatMessageTable:
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             stmt = stmt.group_by(ChatMessage.model_id)
@@ -643,7 +643,7 @@ class ChatMessageTable:
     ) -> dict[str, dict]:
         """Aggregate token usage by user using database-level aggregation."""
         async with get_async_db_context(db) as db:
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import group_user_memberships
 
             bind = await db.connection()
             dialect = bind.dialect.name
@@ -666,7 +666,7 @@ class ChatMessageTable:
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             stmt = stmt.group_by(ChatMessage.user_id)
@@ -917,7 +917,7 @@ class ChatMessageTable:
         db: Optional[AsyncSession] = None,
     ) -> dict[str, int]:
         async with get_async_db_context(db) as db:
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import group_user_memberships
 
             stmt = select(ChatMessage.user_id, func.count(ChatMessage.id).label('count')).filter(
                 ChatMessage.role == 'assistant',
@@ -928,7 +928,7 @@ class ChatMessageTable:
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             stmt = stmt.group_by(ChatMessage.user_id)
@@ -943,7 +943,7 @@ class ChatMessageTable:
         db: Optional[AsyncSession] = None,
     ) -> dict[str, int]:
         async with get_async_db_context(db) as db:
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import group_user_memberships
 
             stmt = select(ChatMessage.chat_id, func.count(ChatMessage.id).label('count')).filter(
                 ChatMessage.role == 'assistant',
@@ -954,7 +954,7 @@ class ChatMessageTable:
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             stmt = stmt.group_by(ChatMessage.chat_id)
@@ -972,7 +972,7 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             from datetime import datetime, timedelta
 
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import group_user_memberships
 
             stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
                 ChatMessage.role == 'assistant',
@@ -984,7 +984,7 @@ class ChatMessageTable:
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             result = await db.execute(stmt)
@@ -1021,7 +1021,7 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             from datetime import datetime, timedelta
 
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import group_user_memberships
 
             stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
                 ChatMessage.role == 'assistant',
@@ -1033,7 +1033,7 @@ class ChatMessageTable:
             if end_date:
                 stmt = stmt.filter(ChatMessage.created_at <= end_date)
             if group_id:
-                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             result = await db.execute(stmt)

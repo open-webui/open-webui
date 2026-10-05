@@ -192,7 +192,7 @@ async def get_models(
         filter['direction'] = direction
 
     # Pre-fetch user group IDs once - used for both filter and write_access check
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -472,7 +472,7 @@ async def import_models(
             # per-model has_access calls (N+1 avoidance).
             existing_model_ids = list(existing_models.keys())
             if user.role != 'admin' and existing_model_ids:
-                groups = await Groups.get_groups_by_member_id(user.id, db=db)
+                groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in groups}
                 writable_model_ids = await AccessGrants.get_accessible_resource_ids(
                     user_id=user.id,

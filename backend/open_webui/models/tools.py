@@ -189,7 +189,10 @@ class ToolsTable:
 
             if user_id is not None:
                 if user_group_ids is None:
-                    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
+                    user_group_ids = {
+                        group.id
+                        for group in await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+                    }
                 stmt = AccessGrants.has_permission_filter(
                     db=db,
                     query=stmt,
@@ -235,7 +238,7 @@ class ToolsTable:
         defer_content: bool = False,
         db: AsyncSession | None = None,
     ) -> list[ToolUserModel]:
-        user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+        user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
         user_group_ids = {group.id for group in user_groups}
         return await self.get_tools(
             defer_content=defer_content,

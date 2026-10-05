@@ -313,7 +313,7 @@ class NoteTable:
         db: Optional[AsyncSession] = None,
     ) -> list[NoteModel]:
         async with get_async_db_context(db) as db:
-            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
             user_group_ids = [group.id for group in user_groups]
 
             stmt = select(Note).order_by(Note.updated_at.desc())
@@ -400,7 +400,7 @@ class NoteTable:
         db: Optional[AsyncSession] = None,
     ) -> list[NoteModel]:
         async with get_async_db_context(db) as db:
-            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
             user_group_ids = [group.id for group in user_groups]
 
             stmt = (

@@ -167,8 +167,10 @@ async def search_users(
 
 
 @router.get('/groups')
-async def get_user_groups(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    return await Groups.get_groups_by_member_id(user.id, db=db)
+async def get_user_groups(
+    include_inherited: bool = False, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    return await user_groups_response(user.id, include_inherited, db)
 
 
 ############################
@@ -1108,9 +1110,12 @@ async def delete_user_by_id(
 
 @router.get('/{user_id}/groups')
 async def get_user_groups_by_id(
-    user_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+    user_id: str,
+    include_inherited: bool = False,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return await Groups.get_groups_by_member_id(user_id, db=db)
+    return await user_groups_response(user_id, include_inherited, db)
 
 
 ############################
@@ -1133,7 +1138,7 @@ async def get_user_preview(
         )
 
     # Get all group IDs this user belongs to
-    user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+    user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
     user_group_ids = {g.id for g in user_groups}
 
     all_models = await Models.get_all_models(db=db)
@@ -1189,3 +1194,12 @@ async def get_user_preview(
             'total': len(all_tools),
         },
     }
+
+
+async def user_groups_response(user_id, include_inherited, db):
+    direct = await Groups.get_groups_by_member_id(user_id, db=db)
+    if not include_inherited:
+        return direct
+    direct_ids = {g.id for g in direct}
+    effective = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+    return [{**g.model_dump(), 'membership_type': 'direct' if g.id in direct_ids else 'inherited'} for g in effective]

@@ -12,6 +12,7 @@
 	import {
 		config,
 		user,
+		models,
 		settings,
 		theme,
 		WEBUI_NAME,

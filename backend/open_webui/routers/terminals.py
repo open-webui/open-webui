@@ -91,7 +91,7 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
         return []
 
     connections = await Config.get('terminal_server.connections', []) or []
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
 
     return [
         {
@@ -129,7 +129,7 @@ async def proxy_terminal(
     if not connection.get('enabled', True):
         return JSONResponse({'error': 'Terminal server disabled'}, status_code=403)
 
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
     if not await has_connection_access(user, connection, user_group_ids):
         return JSONResponse({'error': 'Access denied'}, status_code=403)
 

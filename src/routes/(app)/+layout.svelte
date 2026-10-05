@@ -8,6 +8,8 @@
 
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
+	import { getSkills } from '$lib/apis/skills';
+	import { getSessionUser } from '$lib/apis/auths';
 	import { getBanners } from '$lib/apis/configs';
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { getUserSettings } from '$lib/apis/users';
@@ -23,6 +25,8 @@
 		models,
 		knowledge,
 		tools,
+		skills,
+		socket,
 		functions,
 		tags,
 		banners,
@@ -167,6 +171,37 @@
 		const toolsData = await getTools(localStorage.token);
 		tools.set(toolsData);
 	};
+
+	const refreshAccess = async () => {
+		if (!localStorage.token) return;
+		try {
+			user.set(await getSessionUser(localStorage.token));
+			const results = await Promise.allSettled([
+				setModels(),
+				setTools(),
+				setToolServers(),
+				getSkills(localStorage.token).then((value) => skills.set(value))
+			]);
+			for (const result of results) {
+				if (result.status === 'rejected') console.error('Unable to refresh access', result.reason);
+			}
+		} catch (error) {
+			console.error('Unable to refresh permissions', error);
+		}
+	};
+
+	onMount(() => {
+		const socketInstance = $socket;
+		const scheduleAccessRefresh = () => {
+			socketInstance?.off('connect', refreshAccess);
+			socketInstance?.once('connect', refreshAccess);
+		};
+		socketInstance?.on('access:updated', scheduleAccessRefresh);
+		return () => {
+			socketInstance?.off('access:updated', scheduleAccessRefresh);
+			socketInstance?.off('connect', refreshAccess);
+		};
+	});
 
 	const openSettingsFromUrl = async () => {
 		const requestedSettings = $page.url.searchParams.get('settings');

@@ -855,7 +855,7 @@ async def event_target_matches(
     if user_group_ids is None:
         from open_webui.models.groups import Groups
 
-        groups_by_user = await Groups.get_groups_by_member_ids(list(user_ids))
+        groups_by_user = await Groups.get_groups_by_member_ids(list(user_ids), include_inherited=True)
         user_group_ids = {user_id: {group.id for group in groups} for user_id, groups in groups_by_user.items()}
 
     return any(group_ids.intersection(target_group_ids) for group_ids in user_group_ids.values())

@@ -507,7 +507,9 @@ async def check_model_access(user, model, model_info=None, db=None):
         # base-model hop; skipped when no check below needs it.
         user_group_ids = None
         if user.id != model_info.user_id or model_info.base_model_id:
-            user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+            user_group_ids = {
+                group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+            }
 
         if not (
             user.id == model_info.user_id
@@ -547,7 +549,9 @@ async def get_filtered_models(models, user, db=None):
             if info:
                 model_infos[model['id']] = info
 
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+        }
 
         # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
         accessible_model_ids = await AccessGrants.get_accessible_resource_ids(

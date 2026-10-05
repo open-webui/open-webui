@@ -48,7 +48,9 @@ async def has_access_to_file(
     # the user controls would gain write/delete on it (CWE-863). Read access is unaffected.
     knowledge_bases = await Knowledges.get_knowledges_by_file_id(file_id, db=db)
     if user_group_ids is None:
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+        }
     for knowledge_base in knowledge_bases:
         if (
             knowledge_base.user_id == user.id
@@ -124,7 +126,9 @@ async def get_accessible_folder_files(
         return entries
 
     if user_group_ids is None:
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+        }
 
     accessible: list[dict] = []
     for entry in entries:
