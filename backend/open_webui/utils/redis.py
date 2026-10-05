@@ -39,13 +39,34 @@ _FACTORY_METHODS = frozenset({'pipeline', 'pubsub', 'monitor', 'client', 'transa
 _CONNECTION_POOL: dict[tuple, Any] = {}
 
 
+def _sentinel_service_from_netloc(netloc: str) -> str | None:
+    """Extract the host part of a ``netloc`` without lowercasing it.
+
+    ``ParseResult.hostname`` lowercases the host, which is correct for real
+    hostnames but wrong for Redis Sentinel master set names: those are
+    case-sensitive (``sentinel monitor myMaster ...``), so a mixed-case name
+    looked up as ``mymaster`` is never found. ``netloc`` keeps the original
+    case, so strip any ``user:pass@`` prefix and ``:port`` suffix from it
+    instead.
+    """
+    host = netloc.rsplit("@", 1)[-1]
+    if host.startswith("["):
+        # IPv6 literal, e.g. [::1]:6379 — keep everything up to the closing
+        # bracket so the case-sensitive service name is preserved.
+        closing = host.find("]")
+        if closing != -1:
+            return host[1:closing]
+        return host[1:]
+    return host.rsplit(":", 1)[0] if ":" in host else host or None
+
+
 def parse_redis_url(url: str) -> dict[str, Any]:
     """Break a ``redis://`` URL into its parts: service, port, db, username, password."""
     parts: ParseResult = urlparse(url)
     if parts.scheme not in _ACCEPTED_SCHEMES:
         raise ValueError(f"Invalid Redis URL scheme '{parts.scheme}'; expected 'redis' or 'rediss'.")
     return {
-        'service': parts.hostname or 'mymaster',
+        'service': _sentinel_service_from_netloc(parts.netloc) or 'mymaster',
         'port': parts.port or 6379,
         'db': int(parts.path.lstrip('/') or '0'),
         'username': parts.username or None,
