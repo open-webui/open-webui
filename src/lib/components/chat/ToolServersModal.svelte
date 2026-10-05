@@ -5,6 +5,7 @@
 
 	import Modal from '../common/Modal.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let show = false;
@@ -65,11 +66,11 @@
 							disabled={toolSpecs.length === 0}
 						>
 							<div class="min-w-0 flex-1">
-								<div class="flex items-center gap-1 min-w-0">
+								<div class="flex items-center gap-2 min-w-0">
 									<div class="text-sm font-normal dark:text-gray-100 text-gray-800 truncate">
 										{resolveLocalizedResource(tool, $i18n.language)}
 									</div>
-									{#if status}
+									{#if tool?.authenticated === false && status}
 										<span class="text-[0.6875rem] {status.pill} shrink-0">{status.label}</span>
 									{/if}
 									{#if toolSpecs.length > 0}
@@ -80,7 +81,13 @@
 										</span>
 									{/if}
 									{#if status}
-										<span class="size-1.5 rounded-full {status.dot} shrink-0"></span>
+										<Tooltip content={status.label} className="flex shrink-0 p-1 -m-1">
+											<span
+												class="size-1.5 rounded-full {status.dot}"
+												role="img"
+												aria-label={status.label}
+											></span>
+										</Tooltip>
 									{/if}
 								</div>
 
