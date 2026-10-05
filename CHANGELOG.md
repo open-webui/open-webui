@@ -247,7 +247,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔖 **Build shown next to the version.** The version in Settings shows "dev" and the commit for development builds and the commit for other non-release builds, and update checks and the update notification now only run on release builds. [Commit](https://github.com/open-webui/open-webui/commit/51f0e01258b92c77952d4534bb8ce8c618b2700c)
 - 📂 **Folder default model set in the folder settings.** A folder's default model for new chats is now chosen in the folder's settings, and switching the model inside a chat in that folder no longer changes the folder's default. [Commit](https://github.com/open-webui/open-webui/commit/a3a2e42ee00a70d6c646735345e6b771bcd2a70d), [Commit](https://github.com/open-webui/open-webui/commit/8f4f29d8345196e3221c85ecff0411fbd7e371af)
 - 🏷️ **Workspace model list links.** In the workspace model list, clicking a model's name now opens its editor and a small arrow next to it opens the model in a new chat, the enable switch goes back if saving fails, and deleting with Shift held now asks for confirmation. [Commit](https://github.com/open-webui/open-webui/commit/5bb1c470802c7df9a48cc0ca45c1886c294d6e6e)
-- 🐬 **Group changes need SQLite or PostgreSQL.** Creating, editing or deleting groups and changing their members now only works with a SQLite or PostgreSQL database, and is refused on MySQL and MariaDB. [Commit](https://github.com/open-webui/open-webui/commit/d4c561d9f22b6fe069c1a4e49f83d05fa6839991)
 
 ## [0.11.4] - 2026-09-21
 
