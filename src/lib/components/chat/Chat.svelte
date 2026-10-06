@@ -4675,6 +4675,7 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
+										callActive={!!(bridge?.connected || bridge?.connecting)}
 										bind:this={messageInput}
 										{history}
 										{taskIds}
@@ -4767,6 +4768,7 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
+										callActive={!!(bridge?.connected || bridge?.connecting)}
 										bind:this={messageInput}
 										{history}
 										{taskIds}
@@ -4828,6 +4830,7 @@
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
+									callActive={!!(bridge?.connected || bridge?.connecting)}
 									bind:selectedModelIdx
 									{history}
 									bind:selectedModels

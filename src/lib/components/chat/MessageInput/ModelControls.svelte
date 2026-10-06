@@ -4,6 +4,7 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
+	import ModelControlSlider from './ModelControlSlider.svelte';
 	import type { ModelControl } from '$lib/apis';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { toast } from 'svelte-sonner';
@@ -143,7 +144,14 @@
 							</div>
 						{/if}
 						{#each Object.entries(model.info?.params?.model_controls ?? {}) as [key, control] (key)}
-							{#if $mobile}
+							{#if control.display === 'slider'}
+								<ModelControlSlider
+									{control}
+									value={modelControls[model.id]?.[key] ?? ''}
+									disabled={saving}
+									on:change={(event) => select(model.id, key, event.detail)}
+								/>
+							{:else if $mobile}
 								<button
 									type="button"
 									aria-label={control.label}

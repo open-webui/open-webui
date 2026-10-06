@@ -145,6 +145,7 @@
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
+	export let callActive = false;
 
 	export let autoScroll = false;
 	export let generating = false;
@@ -2690,11 +2691,17 @@
 										{#if !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
-												<Tooltip content={$i18n.t('Voice mode')}>
+												<Tooltip content={$i18n.t(callActive ? 'Call in progress' : 'Voice mode')}>
 													<button
 														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-[0.3125rem] self-center"
+														class:call-active={callActive}
 														type="button"
 														on:click={async () => {
+															if (callActive) {
+																showCallOverlay.set(true);
+																showControls.set(true);
+																return;
+															}
 															if (selectedModels.length > 1) {
 																toast.error($i18n.t('Select only one model to call'));
 
@@ -2750,7 +2757,7 @@
 																);
 															}
 														}}
-														aria-label={$i18n.t('Voice mode')}
+														aria-label={$i18n.t(callActive ? 'Return to call' : 'Voice mode')}
 													>
 														<Voice className="size-5" strokeWidth="2.5" />
 													</button>
@@ -2809,3 +2816,17 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.call-active {
+		box-shadow:
+			0 0 0 2px rgb(0 0 0 / 0.2),
+			0 0 12px rgb(0 0 0 / 0.15);
+	}
+
+	:global(.dark) .call-active {
+		box-shadow:
+			0 0 0 2px rgb(255 255 255 / 0.35),
+			0 0 12px rgb(255 255 255 / 0.25);
+	}
+</style>

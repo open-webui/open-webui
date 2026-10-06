@@ -4,7 +4,7 @@ import logging
 import re
 import time
 from copy import deepcopy
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -77,6 +77,7 @@ class ModelControlOption(BaseModel):
 
 
 class ModelControl(BaseModel):
+    display: Literal['menu', 'slider'] = Field(default='menu', exclude_if=lambda value: value == 'menu')
     label: str = Field(pattern=r'\S')
     description: str | None = Field(default=None, exclude_if=lambda value: value is None)
     default: str | None = Field(default=None, exclude_if=lambda value: value is None)
@@ -84,6 +85,8 @@ class ModelControl(BaseModel):
 
     @model_validator(mode='after')
     def check_default(self):
+        if self.display == 'slider' and len(self.options) < 2:
+            raise ValueError('A slider needs at least two options.')
         if self.default is not None and self.default not in self.options:
             raise ValueError('Default must name an approved option.')
         return self

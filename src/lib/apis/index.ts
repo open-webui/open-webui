@@ -1792,6 +1792,7 @@ export interface ModelMeta {
 }
 
 export interface ModelControl {
+	display?: 'menu' | 'slider';
 	label: string;
 	description?: string;
 	default?: string | null;

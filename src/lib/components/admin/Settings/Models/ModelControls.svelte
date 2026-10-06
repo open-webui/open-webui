@@ -16,6 +16,7 @@
 	let editingKey = '';
 	let label = '';
 	let description = '';
+	let display: 'menu' | 'slider' = 'menu';
 	let defaultOption = '';
 	let options: { id: string; key?: string; label: string; params: Record<string, any> }[] = [];
 	let nameInput: HTMLInputElement;
@@ -46,6 +47,7 @@
 		const control = controls?.[key];
 		label = control?.label ?? '';
 		description = control?.description ?? '';
+		display = control?.display ?? 'menu';
 		defaultOption = control?.default ?? '';
 		options = Object.entries(control?.options ?? {}).map(([key, option]) => ({
 			id: key,
@@ -75,6 +77,7 @@
 			...controls,
 			[editingKey || keyFor(label, controls ?? {})]: {
 				label: label.trim(),
+				...(display === 'slider' ? { display } : {}),
 				...(description.trim() ? { description: description.trim() } : {}),
 				default: selected,
 				options: saved
@@ -228,6 +231,23 @@
 				<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Description')}</span>
 				<input class={inputClass} placeholder={$i18n.t('Optional')} bind:value={description} />
 			</label>
+			<div class="flex items-center justify-between">
+				<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Display')}</span>
+				<div class="flex gap-1">
+					{#each ['menu', 'slider'] as mode}
+						<button
+							type="button"
+							aria-pressed={display === mode}
+							class="rounded-lg px-2 py-1 text-xs transition {display === mode
+								? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+								: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
+							on:click={() => (display = mode as 'menu' | 'slider')}
+						>
+							{$i18n.t(mode === 'slider' ? 'Slider' : 'Menu')}
+						</button>
+					{/each}
+				</div>
+			</div>
 			<div>
 				<div class="flex items-center justify-between">
 					<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Options')}</span>
@@ -274,6 +294,11 @@
 					{/each}
 				</div>
 			</div>
+			{#if display === 'slider' && options.length < 2}
+				<p class="text-xs text-gray-500 dark:text-gray-400">
+					{$i18n.t('Add at least two options for a slider.')}
+				</p>
+			{/if}
 			<div class="flex justify-end gap-1.5 pt-1 text-sm font-medium">
 				<button
 					type="button"
@@ -284,6 +309,7 @@
 					type="submit"
 					disabled={!label.trim() ||
 						!options.length ||
+						(display === 'slider' && options.length < 2) ||
 						options.some((option) => !option.label.trim())}
 					class="rounded-full bg-black px-3.5 py-1.5 text-white transition hover:bg-gray-950 disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-gray-100"
 					>{$i18n.t('Apply')}</button
