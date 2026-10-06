@@ -62,7 +62,7 @@
 				<button
 					type="button"
 					class={compact
-						? 'mt-4 flex size-5 items-center justify-center rounded text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+						? 'mt-4 flex h-5 w-3 items-center justify-center rounded text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
 						: 'flex shrink-0 rounded-sm p-1 px-3 text-xs outline-hidden transition'}
 					aria-label={`${$i18n.t('Remove')} ${key || $i18n.t('parameter')}`}
 					on:click={() => {
