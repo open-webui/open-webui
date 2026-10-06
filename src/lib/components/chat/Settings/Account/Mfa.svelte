@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import { mfaRequest, type MfaChallenge } from '$lib/apis/auths/mfa';
 	import MfaChallengeForm from '$lib/components/auth/MfaChallenge.svelte';
 	import MfaRecoveryCodes from '$lib/components/auth/MfaRecoveryCodes.svelte';
@@ -27,6 +27,9 @@
 		localStorage.removeItem('token');
 		window.location.href = '/auth?state=logout&form=signin';
 	};
+	onDestroy(() => {
+		if (!localStorage.token) signIn();
+	});
 	const manage = async (replace: boolean) => {
 		busy = true;
 		error = '';
