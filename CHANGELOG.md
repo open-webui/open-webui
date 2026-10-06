@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.12.0] - 2026-10-06
+## [0.12.0] - 2026-10-07
 
 ### Added
 - 🔏 **Two-factor sign-in.** Administrators can require an authenticator app for every user under Admin Settings > Authentication, or with "ENABLE_MFA", so users set one up from a QR code on their next sign-in, get ten single-use recovery codes, and can later replace their authenticator or create new recovery codes in their account settings; OAuth and trusted-header sign-ins can be let through without it with "MFA_ALLOW_OAUTH_BYPASS" and "MFA_ALLOW_TRUSTED_HEADER_BYPASS", and the "open-webui mfa reset" command gives a user who lost their authenticator a one-time recovery token. [Commit](https://github.com/open-webui/open-webui/commit/24e30d1cbdaab624dfe20f479f805e6791cf0226)
