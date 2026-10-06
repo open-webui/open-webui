@@ -68,6 +68,7 @@
 	let importFiles = null;
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let requestId = 0;
 
 	let prompts = null;
 	let tags = [];
@@ -170,6 +171,7 @@
 	const getPromptList = async () => {
 		if (!loaded) return;
 
+		const activeRequestId = ++requestId;
 		loading = true;
 		try {
 			const res = await getPromptItems(
@@ -184,6 +186,7 @@
 				toast.error(`${error}`);
 				return null;
 			});
+			if (activeRequestId !== requestId) return;
 
 			if (res) {
 				prompts = res.items;
@@ -199,7 +202,7 @@
 		} catch (err) {
 			console.error(err);
 		} finally {
-			loading = false;
+			if (activeRequestId === requestId) loading = false;
 		}
 	};
 

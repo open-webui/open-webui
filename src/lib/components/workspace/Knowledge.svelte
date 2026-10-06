@@ -62,6 +62,7 @@
 	let page = 1;
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let requestId = 0;
 	let viewOption = '';
 	let sourceOption = '';
 	let sortKey = 'updated_at';
@@ -132,11 +133,12 @@
 	const init = async () => {
 		if (!loaded) return;
 
+		requestId += 1;
 		reset();
 		await getItemsPage();
 	};
 
-	const getItemsPage = async () => {
+	const getItemsPage = async (activeRequestId = requestId) => {
 		itemsLoading = true;
 		const res = await searchKnowledgeBases(
 			localStorage.token,
@@ -149,6 +151,7 @@
 		).catch(() => {
 			return [];
 		});
+		if (activeRequestId !== requestId) return res;
 
 		if (res) {
 			console.log(res);

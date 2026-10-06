@@ -98,6 +98,7 @@
 	let total = null;
 
 	let searchDebounceTimer;
+	let requestId = 0;
 
 	$: if (loaded) {
 		workspaceActions.set([
@@ -193,6 +194,7 @@
 	const getModelList = async () => {
 		if (!loaded) return;
 
+		const activeRequestId = ++requestId;
 		try {
 			const res = await getWorkspaceModels(
 				localStorage.token,
@@ -206,6 +208,7 @@
 				toast.error(`${error}`);
 				return null;
 			});
+			if (activeRequestId !== requestId) return;
 
 			if (res) {
 				models = res.items;

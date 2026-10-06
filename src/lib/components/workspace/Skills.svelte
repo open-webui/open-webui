@@ -55,6 +55,7 @@
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let requestId = 0;
 
 	let selectedSkill = null;
 	let showDeleteConfirm = false;
@@ -107,6 +108,7 @@
 	const loadSkillItems = async () => {
 		if (!loaded) return;
 
+		const activeRequestId = ++requestId;
 		loading = true;
 		try {
 			const res = await getSkillItems(
@@ -120,6 +122,7 @@
 				toast.error(`${error}`);
 				return null;
 			});
+			if (activeRequestId !== requestId) return;
 
 			if (res) {
 				filteredItems = res.items;
@@ -129,7 +132,7 @@
 		} catch (err) {
 			console.error(err);
 		} finally {
-			loading = false;
+			if (activeRequestId === requestId) loading = false;
 		}
 	};
 
