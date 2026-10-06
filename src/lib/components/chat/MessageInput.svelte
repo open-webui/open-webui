@@ -2820,13 +2820,13 @@
 <style>
 	.call-active {
 		box-shadow:
-			0 0 0 2px rgb(0 0 0 / 0.2),
-			0 0 12px rgb(0 0 0 / 0.15);
+			0 0 8px 2px rgb(0 0 0 / 0.25),
+			0 0 20px 4px rgb(0 0 0 / 0.15);
 	}
 
 	:global(.dark) .call-active {
 		box-shadow:
-			0 0 0 2px rgb(255 255 255 / 0.35),
-			0 0 12px rgb(255 255 255 / 0.25);
+			0 0 8px 2px rgb(255 255 255 / 0.4),
+			0 0 20px 4px rgb(255 255 255 / 0.25);
 	}
 </style>
