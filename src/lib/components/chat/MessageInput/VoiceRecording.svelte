@@ -424,7 +424,7 @@
 	$: maxVisibleItems = Math.floor(containerWidth / 5); // 2px width + 0.5px gap
 
 	const handleKeyDown = (e) => {
-		if (e.key === 'Escape') {
+		if (recording && e.key === 'Escape') {
 			e.preventDefault();
 			cancelRecording();
 			onCancel();
