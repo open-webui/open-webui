@@ -1766,7 +1766,7 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
         if not url:
             continue
 
-        if url.startswith('data:image/png;base64'):
+        if re.match(r'data:image/\w+;base64', url):
             url = await get_image_url_from_base64(request, url, metadata, user)
 
         image_urls.append(url)
