@@ -4916,15 +4916,6 @@
 	{/if}
 </div>
 
-{#if bridge?.connected && !$showCallOverlay}
-	<button
-		class="fixed bottom-4 right-4 z-50 rounded-full bg-black text-white dark:bg-white dark:text-black px-4 py-2 shadow-lg"
-		on:click={openCallOverlay}
-	>
-		{$i18n.t('Return to call')}
-	</button>
-{/if}
-
 <style>
 	::-webkit-scrollbar {
 		height: 0.5rem;
