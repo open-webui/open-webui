@@ -13,7 +13,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Knobs from '$lib/components/icons/Knobs.svelte';
-	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
+	import { localizeModelControls, resolveLocalizedModelName } from '$lib/utils/localizedContent';
 
 	const i18n: any = getContext('i18n');
 	export let selectedModels: string[] = [];
@@ -143,7 +143,7 @@
 								{resolveLocalizedModelName(model, $i18n.language)}
 							</div>
 						{/if}
-						{#each Object.entries(model.info?.params?.model_controls ?? {}) as [key, control] (key)}
+						{#each Object.entries(localizeModelControls(model, $i18n.language)) as [key, control] (key)}
 							{#if control.display === 'slider'}
 								<ModelControlSlider
 									{control}

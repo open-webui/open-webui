@@ -117,6 +117,41 @@ export const valveTranslationSource = (schema: any, prefix: string): Record<stri
 	return strings;
 };
 
+export const modelControlTranslationSource = (controls: any): Record<string, string> => {
+	const strings: Record<string, string> = {};
+	for (const [key, control] of Object.entries(controls ?? {}) as [string, any][]) {
+		strings[`model_controls.${key}.label`] = control.label;
+		if (control.description) strings[`model_controls.${key}.description`] = control.description;
+		for (const [value, option] of Object.entries(control.options) as [string, any][]) {
+			strings[`model_controls.${key}.options.${value}.label`] = option.label;
+		}
+	}
+	return strings;
+};
+
+export const localizeModelControls = (model: any, locale: string) => {
+	const translate = (value: string | undefined, key: string) =>
+		resolveLocalizedString(value, model?.info?.meta?.i18n, locale, `model_controls.${key}`);
+	return Object.fromEntries(
+		Object.entries(model?.info?.params?.model_controls ?? {}).map(
+			([key, control]: [string, any]) => [
+				key,
+				{
+					...control,
+					label: translate(control.label, `${key}.label`),
+					description: translate(control.description, `${key}.description`),
+					options: Object.fromEntries(
+						Object.entries(control.options).map(([value, option]: [string, any]) => [
+							value,
+							{ ...option, label: translate(option.label, `${key}.options.${value}.label`) }
+						])
+					)
+				}
+			]
+		)
+	);
+};
+
 export const resolveLocalizedModelName = (model: any, locale?: string | null) => {
 	const meta = model?.info?.meta ?? model?.meta;
 	const info = model?.info ?? model;

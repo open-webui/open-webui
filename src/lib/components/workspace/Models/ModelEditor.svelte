@@ -39,7 +39,11 @@
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import { copyToClipboard, extractInputVariables } from '$lib/utils';
-	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
+	import {
+		modelControlTranslationSource,
+		pruneEmptyLocaleEntries
+	} from '$lib/utils/localizedContent';
+	import TranslationTable from '$lib/components/common/TranslationTable.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -142,6 +146,12 @@
 		.filter(([_, value]: [string, any]) => Object.keys(value ?? {}).length > 0)
 		.map(([locale]) => locale);
 	$: editingLocaleLabel = languages.find((language) => language.code === editingLocale)?.title;
+	const isControlTranslation = (key: string) => key.startsWith('model_controls.');
+	$: controlTranslations = Object.fromEntries(
+		Object.entries((info?.meta?.i18n?.[editingLocale] ?? {}) as Record<string, string>).filter(
+			([key]) => isControlTranslation(key)
+		)
+	);
 
 	const localizedField = (field: string) => info?.meta?.i18n?.[editingLocale]?.[field] ?? '';
 	const setLocalizedField = (field: string, value: string) => {
@@ -171,6 +181,17 @@
 		}
 
 		info.meta.i18n = nextI18n;
+		info = info;
+	};
+
+	const setControlTranslations = (next: Record<string, string>) => {
+		const otherFields = Object.entries(info.meta.i18n?.[editingLocale] ?? {}).filter(
+			([key]) => !isControlTranslation(key)
+		);
+		info.meta.i18n = {
+			...(info.meta.i18n ?? {}),
+			[editingLocale]: { ...Object.fromEntries(otherFields), ...next }
+		};
 		info = info;
 	};
 
@@ -1164,7 +1185,19 @@
 									</div>
 								{/if}
 								{#if admin}
-									<ModelControls bind:controls={params.model_controls} />
+									{#if !editingLocale}
+										<ModelControls bind:controls={params.model_controls} />
+									{:else if Object.keys(params.model_controls ?? {}).length}
+										<div class="flex h-7 items-center text-xs text-gray-600 dark:text-gray-400">
+											{$i18n.t('Model controls')}
+										</div>
+										<TranslationTable
+											value={controlTranslations}
+											source={modelControlTranslationSource(params.model_controls)}
+											filename={`model-${id}-${editingLocale}.json`}
+											onChange={setControlTranslations}
+										/>
+									{/if}
 								{/if}
 							</div>
 						</section>
