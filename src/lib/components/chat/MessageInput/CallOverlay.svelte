@@ -1206,11 +1206,6 @@
 					</svg>
 				</button>
 			</div>
-			{#if bridge}
-				<button type="button" class="text-xs text-gray-500" on:click={() => dispatch('review')}>
-					{$i18n.t('Review in chat')}
-				</button>
-			{/if}
 		</div>
 	</div>
 {/if}

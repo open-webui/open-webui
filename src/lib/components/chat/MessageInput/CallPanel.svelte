@@ -48,7 +48,6 @@
 		{chatId}
 		{eventTarget}
 		bridge={callMode === 'bridge' ? bridge : undefined}
-		on:review={close}
 		on:close
 	/>
 {/if}
