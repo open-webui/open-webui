@@ -284,7 +284,7 @@ async def realtime_call(ws: WebSocket):
                             {
                                 'type': 'function',
                                 'name': 'generate_chat_completion',
-                                'description': 'Handle substantive questions and tasks using the selected chat model, conversation history, and configured tools. Use when new reasoning, information, or actions are needed, including unknown details about chat tools, capabilities, permissions, or model identity. Do not use for small talk, acknowledgments, call status, clarification, repeating or rephrasing an available answer, or duplicating pending or completed work.',
+                                'description': 'Handle substantive questions and tasks using the selected chat model, conversation history, and configured tools. Use when new reasoning, information, or actions are needed. Always use for questions about chat tools, capabilities, permissions, or model identity unless a previous function result already answers them. Do not use for small talk, acknowledgments, call status, clarification, repeating or rephrasing an available answer, or duplicating pending or completed work.',
                                 'parameters': {
                                     'type': 'object',
                                     'properties': {'request': {'type': 'string'}},
