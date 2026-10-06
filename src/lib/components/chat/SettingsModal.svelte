@@ -345,16 +345,16 @@
 			searchPrefixes: ['settings.admin.pipelines.']
 		},
 		{
-			id: 'admin:evaluations',
-			titleKey: 'settings.admin.evaluations.title',
-			title: $i18n.t('settings.admin.evaluations.title'),
-			searchPrefixes: ['settings.admin.evaluations.']
-		},
-		{
 			id: 'admin:analytics',
 			titleKey: 'settings.admin.analytics.title',
 			title: $i18n.t('settings.admin.analytics.title'),
 			searchPrefixes: ['settings.admin.analytics.']
+		},
+		{
+			id: 'admin:evaluations',
+			titleKey: 'settings.admin.evaluations.title',
+			title: $i18n.t('settings.admin.evaluations.title'),
+			searchPrefixes: ['settings.admin.evaluations.']
 		},
 		{
 			id: 'admin:db',
