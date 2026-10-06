@@ -6,7 +6,7 @@
 	import { fade } from 'svelte/transition';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
@@ -69,6 +69,7 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import { RealtimeCall, type BridgeSubmission } from '$lib/utils/realtime';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
 
@@ -188,7 +189,7 @@
 			($settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url);
 
 	let atSelectedModel: Model | undefined;
-	let selectedModelIds = [];
+	let selectedModelIds: string[] = [];
 	$: if (atSelectedModel !== undefined) {
 		selectedModelIds = [atSelectedModel.id];
 	} else {
@@ -402,7 +403,7 @@
 
 	let chatTasks = [];
 
-	let history = {
+	let history: { currentId: string | null; messages: Record<string, any> } = {
 		messages: {},
 		currentId: null
 	};
@@ -803,6 +804,7 @@
 	}
 
 	const navigateHandler = async () => {
+		bridge?.end();
 		noteChatDebug('navigateHandler start');
 		// Mark the outgoing chat as read before loading the new one.
 		// $chatId still holds the previous chat here — loadChat() updates it.
@@ -1251,6 +1253,7 @@
 			if (message) {
 				const data = event?.data?.data ?? null;
 
+				queueMicrotask(() => bridge?.update());
 				if (type === 'status') {
 					if (message?.statusHistory) {
 						message.statusHistory.push(data);
@@ -1281,6 +1284,8 @@
 					}
 					autoScrollToBottom();
 				} else if (type === 'chat:tasks:cancel') {
+					message.bridgeCancelled = true;
+					bridgeCancellations.get(event.message_id)?.();
 					dismissContextCompactionToast();
 					if (data?.output) {
 						message.output = data.output;
@@ -1299,6 +1304,8 @@
 					message.content += data.content;
 				} else if (type === 'chat:message' || type === 'replace') {
 					message.content = data.content;
+				} else if (type === 'chat:message:voice') {
+					message.meta = { ...message.meta, voice: data.voice };
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
 				} else if (type === 'chat:message:tasks') {
@@ -1930,8 +1937,136 @@
 
 	$: onHistoryChange(history);
 
+	let callMode = 'current';
+	let bridge: RealtimeCall;
+	const bridgeCancellations = new Map<string, () => void>();
+	const visibleMessageText = (message: any) =>
+		getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
+
+	const addVoiceMessage = async (
+		role: string,
+		content: string,
+		voice: any,
+		parentId: string | null = history.currentId
+	) => {
+		const id = uuidv4();
+		const message = {
+			id,
+			parentId,
+			childrenIds: [] as string[],
+			role,
+			content,
+			done: true,
+			timestamp: Math.floor(Date.now() / 1000),
+			meta: { voice },
+			...(role === 'assistant' ? { model: voice.model, modelName: voice.model, modelIdx: 0 } : {})
+		};
+		const changedMessages: Record<string, any> = { [id]: message };
+		const branch = createMessagesList(history, history.currentId);
+		const parentIndex = branch.findIndex((entry) => entry.id === parentId);
+		const nextMessage = parentIndex >= 0 ? branch[parentIndex + 1] : null;
+		history.messages[id] = message;
+		if (parentId && history.messages[parentId]) {
+			history.messages[parentId].childrenIds.push(id);
+			// A second transcript can arrive before the first spoken reply finishes.
+			// Insert that reply before the next user message without switching branches.
+			if (role === 'assistant' && nextMessage?.role === 'user') {
+				nextMessage.parentId = id;
+				message.childrenIds.push(nextMessage.id);
+				history.messages[parentId].childrenIds = history.messages[parentId].childrenIds.filter(
+					(childId: string) => childId !== nextMessage.id
+				);
+				changedMessages[nextMessage.id] = nextMessage;
+			}
+		}
+		if (history.currentId === parentId) history.currentId = id;
+		history = history;
+		if (!$chatId) await initChatHandler(history);
+		else if (!$temporaryChatEnabled) {
+			// Patch only the new message, so a running backend turn keeps its current output.
+			await updateChatById(localStorage.token, $chatId, {
+				history: { currentId: history.currentId, messages: changedMessages }
+			});
+		}
+		return id;
+	};
+
+	const saveVoice = async (id: string, voice: any) => {
+		const message = history.messages[id];
+		if (!message) return;
+		const previous = message.meta?.voice ?? {};
+		const speech = new Map((previous.speech ?? []).map((item: any) => [item.item_id, item]));
+		for (const item of voice.speech ?? []) speech.set(item.item_id, item);
+		const merged = { ...previous, ...voice, speech: [...speech.values()] };
+		message.meta = { ...message.meta, voice: merged };
+		history = history;
+		if ($chatId && !$temporaryChatEnabled) {
+			const response = await fetch(`${WEBUI_API_BASE_URL}/chats/${$chatId}/messages/${id}`, {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${localStorage.token}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ voice: merged })
+			});
+			if (!response.ok) throw new Error('Could not save voice metadata');
+		}
+	};
+
+	onMount(() => {
+		bridge = new RealtimeCall({
+			context: () => {
+				const model =
+					selectedModelIds.length === 1
+						? $models.find((model) => model.id === selectedModelIds[0])
+						: null;
+				return {
+					chatId: isTemporaryChatId($chatId) ? undefined : $chatId || undefined,
+					modelId: model && !('direct' in model && model.direct) ? model.id : '',
+					voiceModel: $config?.audio?.realtime?.model,
+					voice: model?.info?.meta?.voice?.voice || $config?.audio?.realtime?.voice,
+					messages: createMessagesList(history, history.currentId).map((message) => ({
+						role: message.role,
+						content: visibleMessageText(message)
+					}))
+				};
+			},
+			addMessage: addVoiceMessage,
+			submit: submitHandler,
+			message: (id) => history.messages[id],
+			visibleText: visibleMessageText,
+			saveVoice,
+			stop: async (id) => {
+				const message = history.messages[id];
+				if (!message || message.bridgeCancelled) return;
+				let timer: ReturnType<typeof setTimeout> | undefined;
+				const settled = new Promise<void>((resolve, reject) => {
+					bridgeCancellations.set(id, resolve);
+					timer = setTimeout(
+						() => reject(new Error('Backend cancellation was not confirmed')),
+						15000
+					);
+				});
+				try {
+					await Promise.all([stopResponse(false, id), settled]);
+				} finally {
+					clearTimeout(timer);
+					bridgeCancellations.delete(id);
+				}
+			},
+			change: () => {
+				bridge = bridge;
+			},
+			error: (message) => toast.error(message)
+		});
+		return () => bridge?.end();
+	});
+	beforeNavigate(() => bridge?.end());
+	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
+	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
+
 	const dispatchCallOverlayAudio = (message, final = false) => {
-		if (!$showCallOverlay) {
+		if (!$showCallOverlay || callMode !== 'current') {
 			return;
 		}
 
@@ -2038,18 +2173,22 @@
 			return;
 		}
 
-		if ($config.audio.stt.engine === 'web') {
+		if (
+			!bridge?.connected &&
+			!bridge?.connecting &&
+			!$config?.audio?.realtime?.enabled &&
+			$config?.audio?.stt?.engine === 'web'
+		) {
 			toast.error($i18n.t('Call feature is not supported when using Web STT engine'));
 			return;
 		}
 
-		setTimeout(() => {
-			showCallOverlay.set(true);
-			showControls.set(true);
-		}, 0);
+		showCallOverlay.set(true);
+		showControls.set(true);
 	};
 
 	const initNewChat = async () => {
+		bridge?.end();
 		console.log('initNewChat');
 		resetWebSearchConfirmation();
 
@@ -2913,7 +3052,7 @@
 				copyToClipboard(visibleContent);
 			}
 
-			if ($settings.responseAutoPlayback && !$showCallOverlay) {
+			if ($settings.responseAutoPlayback && !$showCallOverlay && !bridge?.connected) {
 				await tick();
 				document.getElementById(`speak-button-${message.id}`)?.click();
 			}
@@ -2950,14 +3089,18 @@
 			await processNextInQueue(chatId);
 		}
 
-		console.log(data);
+		bridge?.update();
 	};
 
 	//////////////////////////
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (inputContent, inputFiles) => {
+	const submitPrompt = async (
+		inputContent: string,
+		inputFiles: any[],
+		bridgeRequest: { userMessageId: string; modelId: string } | null = null
+	) => {
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -2973,7 +3116,7 @@
 		);
 
 		// Create user message
-		let userMessageId = uuidv4();
+		let userMessageId = bridgeRequest?.userMessageId ?? uuidv4();
 		let userMessage = {
 			id: userMessageId,
 			parentId: history.currentId ?? null,
@@ -2985,11 +3128,13 @@
 			models: selectedModels
 		};
 
-		// Add message to history and Set currentId to messageId
+		// A transcribed Bridge message already exists in the same history.
+		const existingUserMessage = history.messages[userMessageId];
+		if (existingUserMessage) userMessage = { ...existingUserMessage, files: userMessage.files };
 		history.messages[userMessageId] = userMessage;
 
 		// Append messageId to childrenIds of parent message
-		if (history.currentId !== null) {
+		if (!existingUserMessage && history.currentId !== null) {
 			history.messages[history.currentId].childrenIds.push(userMessageId);
 		}
 
@@ -3002,7 +3147,7 @@
 
 		saveSessionSelectedModels();
 
-		await sendMessage(history, userMessageId);
+		return await sendMessage(history, userMessageId, { modelId: bridgeRequest?.modelId ?? null });
 	};
 
 	const handleManualCompact = async () => {
@@ -3145,8 +3290,15 @@
 		prompt = '';
 	};
 
-	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
-		console.log('submitHandler', userPrompt, $chatId);
+	const submitHandler = async (
+		userPrompt: string,
+		{
+			_raw = false,
+			bridge: bridgeRequest = null
+		}: { _raw?: boolean; bridge?: { userMessageId: string; modelId: string } | null } = {}
+	): Promise<BridgeSubmission> => {
+		if (bridgeRequest && (selectedModelIds.length !== 1 || !bridgeRequest.modelId))
+			return { status: 'rejected' };
 
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
@@ -3159,47 +3311,47 @@
 		if (String(userPrompt).trim() === '/compact') {
 			clearCommandInput();
 			await handleManualCompact();
-			return;
+			return { status: 'rejected' };
 		}
 		if (String(userPrompt).trim() === '/status') {
 			clearCommandInput();
 			handleStatusCommand();
-			return;
+			return { status: 'rejected' };
 		}
 		if (String(userPrompt).trim() === '/fork') {
 			clearCommandInput();
 			await handleForkChat();
-			return;
+			return { status: 'rejected' };
 		}
 		const modelCommandMatch = String(userPrompt)
 			.trim()
 			.match(/^\/model(?:\s+([\s\S]+))?$/);
 		if (modelCommandMatch) {
 			handleModelCommand(modelCommandMatch[1]?.trim() ?? '');
-			return;
+			return { status: 'rejected' };
 		}
 
 		if (pendingOAuthTools.length > 0) {
 			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
-			return;
+			return { status: 'rejected' };
 		}
 		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));
-			return;
+			return { status: 'rejected' };
 		}
 		if (selectedModels.includes('')) {
 			toast.error($i18n.t('Model not selected'));
-			return;
+			return { status: 'rejected' };
 		}
 		const form = getChatVariablesForm(selectedModelIds, chatVariables, $models);
 		if (form.conflicts.length > 0) {
 			showChatVariablesModal = true;
 			toast.error($i18n.t('Chat Variables have conflicting model definitions'));
-			return;
+			return { status: 'rejected' };
 		}
 		if (form.missing || form.empty) {
 			showChatVariablesModal = true;
-			return;
+			return { status: 'deferred' };
 		}
 
 		if (
@@ -3211,7 +3363,7 @@
 					maxCount: $config?.file?.max_count
 				})
 			);
-			return;
+			return { status: 'rejected' };
 		}
 
 		if (
@@ -3219,9 +3371,9 @@
 			webSearchActive &&
 			!webSearchConfirmed
 		) {
-			pendingWebSearchPrompt = userPrompt ?? '';
+			pendingWebSearchPrompt = bridgeRequest ? null : (userPrompt ?? '');
 			openWebSearchConfirm();
-			return;
+			return { status: 'deferred' };
 		}
 
 		if (
@@ -3230,6 +3382,7 @@
 			) ||
 			(files.length > 0 && files.some((file) => ['uploading', 'error'].includes(file.status)))
 		) {
+			if (bridgeRequest) return { status: 'deferred' };
 			chatRequestQueues.update((q) => ({
 				...q,
 				[$chatId]: [...(q[$chatId] ?? []), { id: uuidv4(), prompt: userPrompt, files }]
@@ -3237,15 +3390,20 @@
 			messageInput?.setText('');
 			prompt = '';
 			files = [];
-			return;
+			return { status: 'rejected' };
 		}
 
 		// Check if the assistant is still generating the main response
 		// (don't block on background tasks like title gen, follow-ups, tags)
 		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
-		const isGenerating = lastMessage && lastMessage.role === 'assistant' && !lastMessage.done;
+		const isGenerating = bridgeRequest
+			? createMessagesList(history, bridgeRequest.userMessageId).some(
+					(message) => message.role === 'assistant' && !message.done
+				)
+			: lastMessage && lastMessage.role === 'assistant' && !lastMessage.done;
 
 		if (isGenerating) {
+			if (bridgeRequest) return { status: 'deferred' };
 			if ($settings?.enableMessageQueue ?? true) {
 				// Enqueue the request
 				const _files = structuredClone(files);
@@ -3257,7 +3415,7 @@
 				messageInput?.setText('');
 				prompt = '';
 				files = [];
-				return;
+				return { status: 'rejected' };
 			} else {
 				// Interrupt: stop current generation and proceed
 				await stopResponse();
@@ -3272,7 +3430,7 @@
 		files = [];
 		messageInput?.setText('');
 
-		await submitPrompt(userPrompt, _files);
+		return (await submitPrompt(userPrompt, _files, bridgeRequest)) ?? { status: 'rejected' };
 	};
 
 	const sendMessage = async (
@@ -3413,13 +3571,14 @@
 		const primaryModelId = selectedModelIds[0];
 		const primaryModel = $models.filter((m) => m.id === primaryModelId).at(0);
 		const primaryResponseMessageId = messageIdsList[0]?.message_id;
+		let submittedTaskIds: string[] = [];
 
 		if (primaryModel && primaryResponseMessageId) {
 			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);
 
 			try {
 				scrollToBottom();
-				await sendMessageSocket(
+				const completion = await sendMessageSocket(
 					primaryModel,
 					messages && messages.length > 0
 						? messages
@@ -3436,10 +3595,19 @@
 						regenerationPrompt
 					}
 				);
+				submittedTaskIds =
+					completion?.task_ids ?? (completion?.task_id ? [completion.task_id] : []);
 			} finally {
 				if (chatEventEmitter) clearInterval(chatEventEmitter);
 			}
 		}
+		return {
+			status: 'submitted' as const,
+			chatId: $chatId,
+			userMessageId: parentId,
+			assistantMessageId: primaryResponseMessageId,
+			taskIds: submittedTaskIds
+		};
 	};
 
 	const getFeatures = () => {
@@ -3447,7 +3615,7 @@
 
 		if ($config?.features)
 			features = {
-				voice: $showCallOverlay,
+				voice: $showCallOverlay && callMode === 'current',
 				image_generation:
 					$config?.features?.enable_image_generation &&
 					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
@@ -3774,6 +3942,7 @@
 		if (shouldAutoScrollResponse()) {
 			scrollToBottom();
 		}
+		return res;
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
@@ -3818,8 +3987,9 @@
 		history.messages[responseMessage.id] = responseMessage;
 	};
 
-	const stopResponse = async (processQueue = true) => {
-		const responseMessage = history.currentId ? history.messages[history.currentId] : null;
+	const stopResponse = async (processQueue = true, messageId = history.currentId) => {
+		const responseMessage = messageId ? history.messages[messageId] : null;
+		if (bridge?.connected && responseMessage) responseMessage.bridgeStopping = true;
 		const hasTaskIds = (taskIds?.length ?? 0) > 0;
 		const hasPendingAssistantResponse =
 			!!$chatId &&
@@ -4728,6 +4898,8 @@
 						}, [])}
 						submitPrompt={submitHandler}
 						{stopResponse}
+						{bridge}
+						bind:callMode
 						{showMessage}
 						{eventTarget}
 						{codeInterpreterEnabled}
@@ -4743,6 +4915,15 @@
 		</div>
 	{/if}
 </div>
+
+{#if bridge?.connected && !$showCallOverlay}
+	<button
+		class="fixed bottom-4 right-4 z-50 rounded-full bg-black text-white dark:bg-white dark:text-black px-4 py-2 shadow-lg"
+		on:click={openCallOverlay}
+	>
+		{$i18n.t('Return to call')}
+	</button>
+{/if}
 
 <style>
 	::-webkit-scrollbar {

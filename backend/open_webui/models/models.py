@@ -99,6 +99,10 @@ class ModelParams(BaseModel):
     )
 
 
+class ModelVoice(BaseModel):
+    voice: str | None = Field(default=None, min_length=1, max_length=200, pattern=r'^\S+$')
+
+
 class ModelMeta(BaseModel):
     """Metadata for a workspace model entry (profile, description, tags, capabilities)."""
 
@@ -108,6 +112,7 @@ class ModelMeta(BaseModel):
     i18n: dict[str, Any] | None = None
     capabilities: dict | None = None
     knowledge: list[Any] | None = None
+    voice: ModelVoice | None = None
 
     model_config = ConfigDict(extra='allow')
 

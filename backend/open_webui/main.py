@@ -2365,6 +2365,9 @@ async def get_app_config(request: Request):
         'ui.prompt_suggestions_i18n',
         'code_execution.engine',
         'code_interpreter.engine',
+        'audio.realtime.enabled',
+        'audio.realtime.model',
+        'audio.realtime.voice',
         'audio.tts.engine',
         'audio.tts.voice',
         'audio.tts.split_on',
@@ -2477,6 +2480,11 @@ async def get_app_config(request: Request):
                     'interpreter_engine': config.get('code_interpreter.engine'),
                 },
                 'audio': {
+                    'realtime': {
+                        'enabled': config.get('audio.realtime.enabled'),
+                        'model': config.get('audio.realtime.model'),
+                        'voice': config.get('audio.realtime.voice'),
+                    },
                     'tts': {
                         'engine': config.get('audio.tts.engine'),
                         'voice': config.get('audio.tts.voice'),

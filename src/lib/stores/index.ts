@@ -318,8 +318,8 @@ type ModelOptions = {
 };
 
 type AudioSettings = {
-	stt: any;
-	tts: any;
+	stt?: any;
+	tts?: any;
 	STTEngine?: string;
 	TTSEngine?: string;
 	speaker?: string;
@@ -342,6 +342,11 @@ type Document = {
 };
 
 type Config = {
+	audio?: {
+		realtime?: { enabled: boolean; model: string; voice: string };
+		stt: { engine: string };
+		tts: { engine: string; voice: string; split_on: string };
+	};
 	license_metadata: any;
 	status: boolean;
 	name: string;

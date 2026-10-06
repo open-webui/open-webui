@@ -53,13 +53,14 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
+from open_webui.routers.audio import realtime
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import strict_match_mime_type
 from open_webui.utils.session_pool import get_session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # pydub needs stdlib audioop (gone in 3.13); keep requires-python capped < 3.13
 if not USE_SLIM:
@@ -69,6 +70,7 @@ if not USE_SLIM:
 
 log = logging.getLogger(__name__)
 router = APIRouter()
+router.include_router(realtime.router)
 
 # --- Constants ---
 
@@ -95,6 +97,16 @@ TTS_CONFIG_KEYS = {
     'AZURE_SPEECH_OUTPUT_FORMAT': 'audio.tts.azure.speech_output_format',
     'MISTRAL_API_KEY': 'audio.tts.mistral.api_key',
     'MISTRAL_API_BASE_URL': 'audio.tts.mistral.api_base_url',
+}
+
+REALTIME_CONFIG_KEYS = {
+    'ENABLED': 'audio.realtime.enabled',
+    'OPENAI_API_BASE_URL': 'audio.realtime.openai.api_base_url',
+    'OPENAI_API_KEY': 'audio.realtime.openai.api_key',
+    'MODEL': 'audio.realtime.model',
+    'VOICE': 'audio.realtime.voice',
+    'TRANSCRIPTION_MODEL': 'audio.realtime.transcription_model',
+    'REALTIME_CALL_PROMPT_TEMPLATE': 'audio.realtime.prompt_template',
 }
 
 STT_CONFIG_KEYS = {
@@ -279,14 +291,26 @@ class STTConfigForm(BaseModel):
     MISTRAL_USE_CHAT_COMPLETIONS: bool
 
 
+class RealtimeConfigForm(BaseModel):
+    ENABLED: bool = False
+    OPENAI_API_BASE_URL: str = 'https://api.openai.com/v1'
+    OPENAI_API_KEY: str = ''
+    MODEL: str = Field(default='gpt-realtime-2.1-mini', min_length=1, max_length=200)
+    VOICE: str = Field(default='marin', min_length=1, max_length=200)
+    TRANSCRIPTION_MODEL: str = Field(default='gpt-transcribe', min_length=1, max_length=200)
+    REALTIME_CALL_PROMPT_TEMPLATE: Optional[str] = None
+
+
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
+    realtime: Optional[RealtimeConfigForm] = None
 
 
 @router.get('/config')
 async def get_audio_config(request: Request, user=Depends(get_admin_user)):
     return {
+        'realtime': await get_config_values(REALTIME_CONFIG_KEYS),
         'tts': await get_config_values(TTS_CONFIG_KEYS),
         'stt': await get_config_values(STT_CONFIG_KEYS),
     }
@@ -302,6 +326,11 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
             raise HTTPException(400, 'Local TTS is unavailable in slim. Select an external text-to-speech engine.')
     await Config.upsert(
         {
+            **(
+                config_updates(form_data.realtime.model_dump(exclude_unset=True), REALTIME_CONFIG_KEYS)
+                if form_data.realtime
+                else {}
+            ),
             **config_updates(form_data.tts.model_dump(exclude_unset=True), TTS_CONFIG_KEYS),
             **config_updates(form_data.stt.model_dump(exclude_unset=True), STT_CONFIG_KEYS),
         }

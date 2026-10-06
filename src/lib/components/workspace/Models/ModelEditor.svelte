@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
-	import { models, tools, functions, user } from '$lib/stores';
+	import { config, models, tools, functions, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
@@ -46,7 +46,7 @@
 	export let onSubmit: Function;
 	export let onBack: null | Function = null;
 
-	export let model = null;
+	export let model: any = null;
 	export let edit = false;
 	export let admin = false;
 
@@ -103,6 +103,7 @@
 			// https://docs.openwebui.com/license.
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			background_image_url: null as string | null,
+			voice: undefined as { voice?: string } | undefined,
 			description: '',
 			i18n: {},
 			suggestion_prompts: null,
@@ -133,6 +134,7 @@
 	let accessGrants = [];
 	let terminalId = '';
 	let tts = { voice: '' };
+	let voice = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
 	let voices: { id: string; name?: string }[] = [];
 
@@ -377,6 +379,9 @@
 			}
 		}
 
+		if (voice.voice.trim()) modelInfo.meta.voice = { voice: voice.voice.trim() };
+		else delete modelInfo.meta.voice;
+
 		if (tts.voice !== '') {
 			if (!modelInfo.meta.tts) modelInfo.meta.tts = {};
 			modelInfo.meta.tts.voice = tts.voice;
@@ -581,6 +586,7 @@
 			builtinTools = model?.meta?.builtinTools ?? builtinTools;
 			terminalId = model?.meta?.terminalId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
+			voice = { voice: model?.meta?.voice?.voice ?? '' };
 
 			accessGrants = model?.access_grants ?? [];
 
@@ -1287,6 +1293,23 @@
 							</div>
 						{/if}
 
+						{#if $config?.audio?.realtime?.enabled}
+							<div class="my-3">
+								<div class="flex w-full justify-between mb-1">
+									<label
+										for="realtime-voice-input"
+										class="self-center text-xs font-normal text-gray-500"
+									>
+										{$i18n.t('Realtime Voice')}
+									</label>
+								</div>
+								<TTSVoiceInput
+									id="realtime-voice"
+									bind:value={voice.voice}
+									placeholder={$i18n.t('Admin default')}
+								/>
+							</div>
+						{/if}
 						<div class="my-3">
 							<div class="flex w-full justify-between mb-1">
 								<div class="self-center text-xs font-normal text-gray-500">

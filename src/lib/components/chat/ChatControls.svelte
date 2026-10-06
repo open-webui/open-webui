@@ -18,7 +18,7 @@
 	} from '$lib/stores';
 
 	import Controls from './Controls/Controls.svelte';
-	import CallOverlay from './MessageInput/CallOverlay.svelte';
+	import CallPanel from './MessageInput/CallPanel.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import ResizableSidePanel from '../common/ResizableSidePanel.svelte';
 	import Artifacts from './Artifacts.svelte';
@@ -39,6 +39,8 @@
 	export let chatFiles = [];
 	export let params = {};
 
+	export let bridge: import('$lib/utils/realtime').RealtimeCall;
+	export let callMode = 'current';
 	export let eventTarget: EventTarget;
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
@@ -205,7 +207,9 @@
 					<div
 						class="h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
 					>
-						<CallOverlay
+						<CallPanel
+							{bridge}
+							bind:callMode
 							bind:files
 							{submitPrompt}
 							{stopResponse}
@@ -328,7 +332,9 @@
 			>
 				{#if $showCallOverlay}
 					<div class="w-full h-full flex justify-center">
-						<CallOverlay
+						<CallPanel
+							{bridge}
+							bind:callMode
 							bind:files
 							{submitPrompt}
 							{stopResponse}

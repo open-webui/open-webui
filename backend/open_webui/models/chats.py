@@ -993,6 +993,16 @@ class ChatTable:
         messages = history.setdefault('messages', {})
 
         if message_id in messages:
+            # Voice updates must not replace approval-resume metadata, and approval
+            # pauses must retain the generated speech already attached to this turn.
+            existing_meta = messages[message_id].get('meta')
+            existing_meta = existing_meta if isinstance(existing_meta, dict) else {}
+            incoming_meta = message.get('meta')
+            if isinstance(incoming_meta, dict):
+                if set(incoming_meta) == {'voice'}:
+                    message = {**message, 'meta': {**existing_meta, **incoming_meta}}
+                elif 'voice' in existing_meta and 'voice' not in incoming_meta:
+                    message = {**message, 'meta': {**incoming_meta, 'voice': existing_meta['voice']}}
             messages[message_id] = {
                 **messages[message_id],
                 **message,

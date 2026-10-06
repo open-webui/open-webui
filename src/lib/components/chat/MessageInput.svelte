@@ -2701,6 +2701,12 @@
 																return;
 															}
 
+															if ($config?.audio?.realtime?.enabled) {
+																showCallOverlay.set(true);
+																showControls.set(true);
+																return;
+															}
+
 															if ($config.audio.stt.engine === 'web') {
 																toast.error(
 																	$i18n.t('Call feature is not supported when using Web STT engine')

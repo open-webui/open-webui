@@ -14,6 +14,7 @@
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import type { RealtimeCall } from '$lib/utils/realtime';
 
 	const i18n: any = getContext('i18n');
 
@@ -23,6 +24,7 @@
 	export let files;
 	export let chatId;
 	export let modelId;
+	export let bridge: RealtimeCall | undefined = undefined;
 
 	let wakeLock = null;
 
@@ -48,6 +50,13 @@
 
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
+
+	$: if (bridge) {
+		assistantSpeaking = bridge.speaking;
+		muted = bridge.muted;
+		loading = bridge.connecting || (bridge.working && !bridge.speaking);
+		model = $models.find((m) => m.id === modelId);
+	}
 
 	const getVideoInputDevices = async () => {
 		const devices = await navigator.mediaDevices.enumerateDevices();
@@ -474,6 +483,7 @@
 	};
 
 	const stopAllAudio = async () => {
+		if (bridge) return bridge.stopSpeaking();
 		assistantSpeaking = false;
 		interrupted = true;
 		audioAbortController.abort();
@@ -674,6 +684,7 @@
 	};
 
 	const toggleMute = () => {
+		if (bridge) return bridge.mute();
 		muted = !muted;
 		if (muted && hasStartedSpeaking) {
 			// Abort the ongoing recording so it doesn't accidentally send a partial sentence
@@ -687,7 +698,7 @@
 	};
 
 	let wasAssistantSpeaking = false;
-	$: {
+	$: if (!bridge) {
 		if (assistantSpeaking && !wasAssistantSpeaking) {
 			wasAssistantSpeaking = true;
 		} else if (!assistantSpeaking && wasAssistantSpeaking) {
@@ -715,6 +726,10 @@
 	};
 
 	onMount(async () => {
+		if (bridge) {
+			document.addEventListener('keydown', handleKeydown);
+			return;
+		}
 		const setWakeLock = async () => {
 			try {
 				wakeLock = await navigator.wakeLock.request('screen');
@@ -790,6 +805,10 @@
 	});
 
 	onDestroy(async () => {
+		if (bridge) {
+			document.removeEventListener('keydown', handleKeydown);
+			return;
+		}
 		destroyed = true;
 		await stopAllAudio();
 		await stopRecordingCallback(false);
@@ -892,6 +911,7 @@
 			{#if !camera}
 				<button
 					type="button"
+					aria-label={assistantSpeaking ? $i18n.t('Stop speaking') : $i18n.t('Voice call')}
 					on:click={() => {
 						if (assistantSpeaking) {
 							stopAllAudio();
@@ -1008,8 +1028,12 @@
 					}
 				}}
 			>
-				<div class="line-clamp-1 text-sm font-normal">
-					{#if loading}
+				<div class="line-clamp-1 text-sm font-normal" role="status" aria-live="polite">
+					{#if bridge?.connecting}
+						{$i18n.t('Connecting')}
+					{:else if bridge?.approval}
+						{$i18n.t('Waiting for approval')}
+					{:else if loading}
 						{$i18n.t('Thinking...')}
 					{:else if muted}
 						{$i18n.t('Muted')}
@@ -1052,7 +1076,7 @@
 							</svg>
 						</button>
 					</VideoInputMenu>
-				{:else}
+				{:else if !bridge}
 					<Tooltip content={$i18n.t('Camera')}>
 						<button
 							aria-label={$i18n.t('Camera')}
@@ -1140,15 +1164,30 @@
 					</button>
 				</Tooltip>
 
+				{#if bridge?.working}
+					<Tooltip content={$i18n.t('Stop')}>
+						<button
+							type="button"
+							aria-label={$i18n.t('Stop')}
+							class="p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+							on:click={() => bridge?.stopBackend()}
+						>
+							<svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+								<rect x="4" y="4" width="12" height="12" rx="2" />
+							</svg>
+						</button>
+					</Tooltip>
+				{/if}
+
 				<button
 					aria-label={$i18n.t('End call')}
 					class="p-3 rounded-full bg-gray-50 dark:bg-gray-900"
 					on:click={async () => {
-						await stopAudioStream();
-						await stopVideoStream();
-
-						console.log(audioStream);
-						console.log(cameraStream);
+						if (bridge) bridge.end();
+						else {
+							await stopAudioStream();
+							await stopVideoStream();
+						}
 
 						showCallOverlay.set(false);
 						dispatch('close');
@@ -1167,6 +1206,11 @@
 					</svg>
 				</button>
 			</div>
+			{#if bridge}
+				<button type="button" class="text-xs text-gray-500" on:click={() => dispatch('review')}>
+					{$i18n.t('Review in chat')}
+				</button>
+			{/if}
 		</div>
 	</div>
 {/if}
