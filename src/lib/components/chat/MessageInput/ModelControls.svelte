@@ -5,6 +5,8 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
 	import type { ModelControl } from '$lib/apis';
+	import { updateUserSettings } from '$lib/apis/users';
+	import { toast } from 'svelte-sonner';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -14,7 +16,8 @@
 
 	const i18n: any = getContext('i18n');
 	export let selectedModels: string[] = [];
-	export let params: Record<string, any> = {};
+	let saving = false;
+	$: modelControls = $settings?.params?.model_controls ?? {};
 	let active: {
 		model: Model;
 		key: string;
@@ -43,18 +46,36 @@
 	$: selectedClass = $settings?.highContrastMode
 		? 'bg-gray-200 dark:bg-gray-800'
 		: 'bg-gray-50/70 dark:bg-gray-800/60';
-	const select = (modelId: string, controlId: string, value: string) => {
-		const selections = { ...params.model_controls?.[modelId] };
-		if (value) selections[controlId] = value;
-		else delete selections[controlId];
-		params = { ...params, model_controls: { ...params.model_controls, [modelId]: selections } };
+	const select = async (modelId: string, controlId: string, value: string) => {
+		const previous = modelControls;
+		const modelOptions = { ...modelControls[modelId] };
+		if (value) modelOptions[controlId] = value;
+		else delete modelOptions[controlId];
+		settings.set({
+			...$settings,
+			params: {
+				...$settings.params,
+				model_controls: { ...modelControls, [modelId]: modelOptions }
+			}
+		});
+		saving = true;
+		try {
+			if (!(await updateUserSettings(localStorage.token, { ui: { params: $settings.params } }))) {
+				throw new Error($i18n.t('Failed to save settings'));
+			}
+		} catch (error) {
+			settings.set({ ...$settings, params: { ...$settings.params, model_controls: previous } });
+			toast.error(String(error));
+		} finally {
+			saving = false;
+		}
 	};
 </script>
 
 {#snippet summary(model: Model, key: string, control: ModelControl)}
 	<span class="min-w-0 flex-1 truncate text-left">{control.label}</span>
 	<span class="max-w-[55%] truncate text-gray-500 dark:text-gray-400">
-		{control.options[params.model_controls?.[model.id]?.[key] ?? control.default ?? '']?.label ??
+		{control.options[modelControls[model.id]?.[key] ?? control.default ?? '']?.label ??
 			$i18n.t('Default')}
 	</span>
 	<ChevronRight className="size-3.5 shrink-0 text-gray-400" />
@@ -69,28 +90,28 @@
 	<button
 		type="button"
 		role="menuitemradio"
-		aria-checked={!params.model_controls?.[model.id]?.[key]}
-		class={`${rowClass} ${!params.model_controls?.[model.id]?.[key] ? selectedClass : ''}`}
+		disabled={saving}
+		aria-checked={!modelControls[model.id]?.[key]}
+		class={`${rowClass} ${!modelControls[model.id]?.[key] ? selectedClass : ''}`}
 		on:click={() => select(model.id, key, '')}
 	>
 		<span class="min-w-0 flex-1 truncate text-left">
 			{$i18n.t('Default')}{#if control.options[control.default ?? '']?.label}{' · '}{control
 					.options[control.default ?? ''].label}{/if}
 		</span>
-		{#if !params.model_controls?.[model.id]?.[key]}<Check className="size-3! shrink-0" />{/if}
+		{#if !modelControls[model.id]?.[key]}<Check className="size-3! shrink-0" />{/if}
 	</button>
 	{#each Object.entries(control.options) as [value, option] (value)}
 		<button
 			type="button"
 			role="menuitemradio"
-			aria-checked={params.model_controls?.[model.id]?.[key] === value}
-			class={`${rowClass} ${params.model_controls?.[model.id]?.[key] === value ? selectedClass : ''}`}
+			disabled={saving}
+			aria-checked={modelControls[model.id]?.[key] === value}
+			class={`${rowClass} ${modelControls[model.id]?.[key] === value ? selectedClass : ''}`}
 			on:click={() => select(model.id, key, value)}
 		>
 			<span class="min-w-0 flex-1 truncate text-left">{option.label}</span>
-			{#if params.model_controls?.[model.id]?.[key] === value}<Check
-					className="size-3! shrink-0"
-				/>{/if}
+			{#if modelControls[model.id]?.[key] === value}<Check className="size-3! shrink-0" />{/if}
 		</button>
 	{/each}
 {/snippet}

@@ -17,15 +17,15 @@ from open_webui.utils.task import prompt_template, prompt_variables_template
 log = logging.getLogger(__name__)
 
 
-def apply_model_controls(params: dict, controls: dict, selections: dict) -> dict:
+def apply_model_controls(params: dict, controls: dict, model_options: dict) -> dict:
     """Expand approved choices into ordinary Custom Params before normal request processing."""
-    if not isinstance(selections, dict):
-        raise HTTPException(400, 'Model control selections must be an object.')
-    for key, choice in selections.items():
+    if not isinstance(model_options, dict):
+        raise HTTPException(400, 'Model control options must be an object.')
+    for key, choice in model_options.items():
         if key not in controls or not isinstance(choice, str) or choice not in controls[key]['options']:
             raise HTTPException(400, f'Model control {key}: the selected option is no longer available.')
     for key, control in controls.items():
-        choice = selections.get(key, control.get('default'))
+        choice = model_options.get(key, control.get('default'))
         if choice is not None:
             params['custom_params'] = deep_update(
                 deepcopy(params.get('custom_params') or {}), deepcopy(control['options'][choice]['params'])

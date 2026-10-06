@@ -47,7 +47,6 @@
 	export let history;
 
 	export let prompt = '';
-	export let params = {};
 	export let files = [];
 	export let messageInput = null;
 
@@ -242,7 +241,6 @@
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
 				{#if !($selectedFolder && folderReadOnly)}
 					<MessageInput
-						bind:params
 						bind:this={messageInput}
 						{history}
 						bind:selectedModels

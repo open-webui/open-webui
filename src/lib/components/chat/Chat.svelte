@@ -3636,6 +3636,7 @@
 				params: {
 					...$settings?.params,
 					...params,
+					model_controls: $settings?.params?.model_controls ?? {},
 					stop: getStopTokens()
 				},
 
@@ -4504,7 +4505,6 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
-										bind:params
 										bind:this={messageInput}
 										{history}
 										{taskIds}
@@ -4597,7 +4597,6 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
-										bind:params
 										bind:this={messageInput}
 										{history}
 										{taskIds}
@@ -4659,7 +4658,6 @@
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
-									bind:params
 									bind:selectedModelIdx
 									{history}
 									bind:selectedModels

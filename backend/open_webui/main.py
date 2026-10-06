@@ -1197,7 +1197,7 @@ async def chat_completion(
         request_params = {key: value for key, value in (form_data.get('params') or {}).items() if value is not None}
         model_controls = request_params.pop('model_controls', {})
         if not isinstance(model_controls, dict):
-            raise HTTPException(400, 'Model control selections must be keyed by model.')
+            raise HTTPException(400, 'Model control options must be keyed by model.')
         model_controls = {} if form_data.get('automation_id') else model_controls
         if any(model_controls.values()) and user.role != 'admin':
             permissions = await Config.get('user.permissions')
@@ -1205,7 +1205,7 @@ async def chat_completion(
                 if not await has_permission(user.id, permission, permissions):
                     raise HTTPException(403, 'You cannot change model parameters.')
         if missing_base_model and model_controls.get(model_id):
-            raise HTTPException(400, 'Model control selections cannot be applied to the fallback model.')
+            raise HTTPException(400, 'Model control options cannot be applied to the fallback model.')
         if model_info_params or request_params:
             form_data['params'] = merge_model_params(model_info_params, request_params)
 
