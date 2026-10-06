@@ -1790,4 +1790,13 @@ export interface ModelMeta {
 	background_image_url?: string | null;
 }
 
-export interface ModelParams {}
+export interface ModelControl {
+	label: string;
+	description?: string;
+	default?: string | null;
+	options: Record<string, { label: string; params?: Record<string, any> }>;
+}
+
+export interface ModelParams {
+	model_controls?: Record<string, ModelControl>;
+}

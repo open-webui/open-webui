@@ -263,6 +263,7 @@ from open_webui.utils.models import (
     get_all_models,
     get_filtered_models,
 )
+from open_webui.utils.payload import apply_model_controls
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
     OAuthClientManager,
@@ -1192,7 +1193,19 @@ async def chat_completion(
             default_model_params,
             model_info.params.model_dump() if model_info and model_info.params else {},
         )
+        model_info_params.pop('model_controls', None)
         request_params = {key: value for key, value in (form_data.get('params') or {}).items() if value is not None}
+        model_controls = request_params.pop('model_controls', {})
+        if not isinstance(model_controls, dict):
+            raise HTTPException(400, 'Model control selections must be keyed by model.')
+        model_controls = {} if form_data.get('automation_id') else model_controls
+        if any(model_controls.values()) and user.role != 'admin':
+            permissions = await Config.get('user.permissions')
+            for permission in ('chat.controls', 'chat.params'):
+                if not await has_permission(user.id, permission, permissions):
+                    raise HTTPException(403, 'You cannot change model parameters.')
+        if missing_base_model and model_controls.get(model_id):
+            raise HTTPException(400, 'Model control selections cannot be applied to the fallback model.')
         if model_info_params or request_params:
             form_data['params'] = merge_model_params(model_info_params, request_params)
 
@@ -1313,6 +1326,7 @@ async def chat_completion(
                     or 'native'
                 ),
                 'tool_approval_mode': tool_approval_mode,
+                'model_controls': model_controls,
             },
         }
 
@@ -1670,6 +1684,15 @@ async def chat_completion(
         error_detail = None
         try:
             try:
+                if not metadata.get('direct'):
+                    target = (
+                        model_info if form_data['model'] == model_id
+                        else await Models.get_model_by_id(form_data['model'])
+                    )
+                    controls = target.params.model_dump().get('model_controls', {}) if target else {}
+                    form_data['params'] = apply_model_controls(
+                        copy.deepcopy(form_data.get('params') or {}), controls, model_controls.get(form_data['model'], {})
+                    )
                 ctx = None
                 # Saved chats load the message after approved tool calls run, so their results are kept
                 if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):

@@ -1,5 +1,8 @@
 import logging
+from copy import deepcopy
 from typing import Callable, Optional
+
+from fastapi import HTTPException
 
 from open_webui.utils.chat_variables import render_chat_variables, render_user_variables
 from open_webui.utils.json_codec import JSONCodec
@@ -12,6 +15,22 @@ from open_webui.utils.misc import (
 from open_webui.utils.task import prompt_template, prompt_variables_template
 
 log = logging.getLogger(__name__)
+
+
+def apply_model_controls(params: dict, controls: dict, selections: dict) -> dict:
+    """Expand approved choices into ordinary Custom Params before normal request processing."""
+    if not isinstance(selections, dict):
+        raise HTTPException(400, 'Model control selections must be an object.')
+    for key, choice in selections.items():
+        if key not in controls or not isinstance(choice, str) or choice not in controls[key]['options']:
+            raise HTTPException(400, f'Model control {key}: the selected option is no longer available.')
+    for key, control in controls.items():
+        choice = selections.get(key, control.get('default'))
+        if choice is not None:
+            params['custom_params'] = deep_update(
+                deepcopy(params.get('custom_params') or {}), deepcopy(control['options'][choice]['params'])
+            )
+    return params
 
 
 async def resolve_system_prompt(
@@ -96,6 +115,7 @@ def apply_params_to_form_data(form_data: dict, model: dict, params: dict | None 
         'system': str,
         'note_id': str,
         'tool_approval_mode': str,
+        'model_controls': dict,
     }
 
     for key in list(params.keys()):
@@ -151,6 +171,7 @@ def remove_open_webui_params(params: dict) -> dict:
         'system': str,
         'note_id': str,
         'tool_approval_mode': str,
+        'model_controls': dict,
     }
 
     for key in list(params.keys()):

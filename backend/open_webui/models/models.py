@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from copy import deepcopy
-from typing import Any
+from typing import Annotated, Any
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -11,7 +12,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from open_webui.utils.misc import json_text_variants
 from open_webui.utils.validate import validate_image_url
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationInfo, field_validator, model_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,10 +66,37 @@ def strip_extracted_content_from_model_knowledge(knowledge: Any) -> Any:
 # --- Models DB Schema ---
 
 
+ModelControlKey = Annotated[str, Field(pattern=re.compile(r'^(?!(?:constructor|prototype)\Z)[a-zA-Z][a-zA-Z0-9_-]*\Z'))]
+
+
+class ModelControlOption(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    label: str = Field(pattern=r'\S')
+    params: dict[str, JsonValue]
+
+
+class ModelControl(BaseModel):
+    label: str = Field(pattern=r'\S')
+    description: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    default: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    options: dict[ModelControlKey, ModelControlOption] = Field(min_length=1)
+
+    @model_validator(mode='after')
+    def check_default(self):
+        if self.default is not None and self.default not in self.options:
+            raise ValueError('Default must name an approved option.')
+        return self
+
+
 class ModelParams(BaseModel):
     """Parameters for model inference (temperature, top_p, etc.)."""
 
     model_config = ConfigDict(extra='allow')
+
+    model_controls: dict[ModelControlKey, ModelControl] = Field(
+        default_factory=dict, exclude_if=lambda value: not value
+    )
 
 
 class ModelMeta(BaseModel):

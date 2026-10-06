@@ -15,6 +15,7 @@
 	import { uploadFile, deleteFileById } from '$lib/apis/files';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
+	import ModelControls from '$lib/components/admin/Settings/Models/ModelControls.svelte';
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
@@ -47,6 +48,7 @@
 
 	export let model = null;
 	export let edit = false;
+	export let admin = false;
 
 	export let preset = true;
 
@@ -111,7 +113,7 @@
 		}
 	};
 
-	let params = {
+	let params: Record<string, any> = {
 		system: ''
 	};
 
@@ -1155,6 +1157,9 @@
 										<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
 									</div>
 								{/if}
+								{#if admin}
+									<ModelControls bind:controls={params.model_controls} />
+								{/if}
 							</div>
 						</section>
 
@@ -1330,7 +1335,7 @@
 										class="p-1 px-3 text-xs flex rounded-sm transition"
 										type="button"
 										on:click={async () => {
-											const copied = await copyToClipboard(JSON.stringify(info, null, 2));
+											const copied = await copyToClipboard(JSON.stringify(modelInfo, null, 2));
 											if (copied) {
 												toast.success($i18n.t('Copied to clipboard'));
 											}

@@ -32,6 +32,23 @@ log = logging.getLogger(__name__)
 BASE_MODELS_CACHE_KEY = f'{REDIS_KEY_PREFIX}:models:base'
 
 
+def public_model_params(params):
+    controls = params.get('model_controls', {})
+    return (
+        {
+            'model_controls': {
+                key: {
+                    **{field: control[field] for field in ('label', 'description', 'default') if field in control},
+                    'options': {key: {'label': option['label']} for key, option in control['options'].items()},
+                }
+                for key, control in controls.items()
+            }
+        }
+        if controls
+        else {}
+    )
+
+
 async def fetch_ollama_models(request: Request, user: UserModel = None):
     raw_ollama_models = await ollama.get_all_models(request, user=user)
     return [
@@ -209,8 +226,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                                 action_ids.extend(model['info']['meta'].get('actionIds', []))
                                 filter_ids.extend(model['info']['meta'].get('filterIds', []))
 
-                        if 'params' in model['info']:
-                            del model['info']['params']
+                        model['info']['params'] = public_model_params(model['info'].get('params', {}))
 
                     model['action_ids'] = action_ids
                     model['filter_ids'] = filter_ids
@@ -253,9 +269,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 info.setdefault('meta', {})['chat_variables_schema'] = schema
             elif isinstance(info.get('meta'), dict):
                 info['meta'].pop('chat_variables_schema', None)
-            if 'params' in info:
-                # Remove params to avoid exposing sensitive info
-                del info['params']
+            info['params'] = public_model_params(info.get('params', {}))
 
             model['info'] = info
 
