@@ -1070,10 +1070,11 @@ async def socket_event_handler(event: Any, sid: str, *args: Any) -> None:
     if not isinstance(event, str) or event.count(':') != 2 or not args:
         return
 
-    # The session check awaits, so keep each socket's events in the order they arrived
+    # The lock keeps arrival order; the sid re-check drops every event after a failed check
+    session_check = asyncio.create_task(get_socket_session_user(sid))
     async with SESSION_EVENT_LOCKS.setdefault(sid, asyncio.Lock()):
-        user = await get_socket_session_user(sid)
-        if not user or user.get('id') != event.split(':', 1)[0]:
+        user = await session_check
+        if not user or sid not in LOCAL_AUTHENTICATED_SIDS or user.get('id') != event.split(':', 1)[0]:
             return
 
         queue = EVENT_QUEUES.get(event)
