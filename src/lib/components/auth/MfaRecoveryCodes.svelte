@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	const i18n: any = getContext('i18n');
 	export let codes: string[];
@@ -7,6 +7,11 @@
 	let saved = false;
 	let busy = false;
 	let error = '';
+
+	// Without a token, a 401 from the ended session cannot redirect away from the codes
+	onMount(() => {
+		localStorage.removeItem('token');
+	});
 
 	const continueHandler = async () => {
 		if (busy || !saved) return;
