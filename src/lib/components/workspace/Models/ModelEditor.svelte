@@ -1330,7 +1330,7 @@
 										class="p-1 px-3 text-xs flex rounded-sm transition"
 										type="button"
 										on:click={async () => {
-											const copied = await copyToClipboard(JSON.stringify(info, null, 2));
+											const copied = await copyToClipboard(JSON.stringify(modelInfo, null, 2));
 											if (copied) {
 												toast.success($i18n.t('Copied to clipboard'));
 											}
