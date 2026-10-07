@@ -6183,6 +6183,8 @@ async def streaming_chat_response_handler(response, ctx):
                             # keeps indices aligned. The display prefix
                             # ensures the UI shows tool history during
                             # streaming.
+                            continued_output = prior_output
+                            round_output = output
                             prior_output = list(full_output())
                             # Trim the trailing empty placeholder message
                             # so it doesn't persist as a ghost item once
@@ -6195,11 +6197,13 @@ async def streaming_chat_response_handler(response, ctx):
                                 msg_parts = prior_output[-1].get('content', [])
                                 if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
                                     prior_output.pop()
+                                    round_output = round_output[:-1]
                             output = []
                             output_start = len(prior_output)
                             await stream_body_handler(res, new_form_data)
-                            output = full_output()
-                            prior_output = []
+                            # A continued reply's earlier items are already in form_data['messages']
+                            output = [*round_output, *output]
+                            prior_output = continued_output
                         elif getattr(res, 'status_code', 200) >= 400:
                             await emit_message_error(get_message_error_content(get_response_error_detail(res)))
                             break
@@ -6411,7 +6415,7 @@ async def streaming_chat_response_handler(response, ctx):
                             break
 
                 # Mark all in-progress items as completed
-                for item in output:
+                for item in [*prior_output, *output]:
                     if item.get('status') == 'in_progress':
                         item['status'] = 'completed'
 
