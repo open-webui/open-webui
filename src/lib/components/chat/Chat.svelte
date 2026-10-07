@@ -82,6 +82,7 @@
 		getAllTags,
 		getChatById,
 		getTagsById,
+		importChats,
 		resolveChatMessageToolCall,
 		updateChatById,
 		updateChatFolderIdById
@@ -381,6 +382,33 @@
 
 	// Read-only when viewing someone else's chat (e.g. via shared folder access)
 	$: readOnly = chat != null && chat.user_id !== $user?.id;
+	$: canClone = readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
+	let cloning = false;
+
+	const cloneSharedChat = async () => {
+		if (!canClone || cloning) return;
+		cloning = true;
+		try {
+			const [copy] = await importChats(localStorage.token, [
+				{
+					chat: {
+						...chat.chat,
+						title: $i18n.t('Clone of {{TITLE}}', { TITLE: chat.title }),
+						originalChatId: chat.id,
+						branchPointMessageId: history.currentId
+					}
+				}
+			]);
+			if (copy) {
+				await goto(`/c/${copy.id}`);
+				await refreshChatList(localStorage.token);
+			}
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			cloning = false;
+		}
+	};
 
 	let chatOwner = null;
 
@@ -4671,11 +4699,19 @@
 							</div>
 
 							{#if readOnly}
-								<div class="pb-6 z-10">
-									<div class="text-xs text-gray-400 dark:text-gray-500 text-center">
-										{$i18n.t('Read only')}
+								{#if canClone}
+									<div
+										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
+									>
+										<button
+											class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
+											disabled={cloning}
+											on:click={cloneSharedChat}
+										>
+											{$i18n.t('Clone Chat')}
+										</button>
 									</div>
-								</div>
+								{/if}
 							{:else}
 								<div
 									id={embedded ? messageInputDropzoneId : undefined}

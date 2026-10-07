@@ -225,16 +225,14 @@
 
 			{#if canClone}
 				<div
-					class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
+					class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
 				>
-					<div class="pb-5">
-						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-							on:click={cloneSharedChat}
-						>
-							{$i18n.t('Clone Chat')}
-						</button>
-					</div>
+					<button
+						class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
+						on:click={cloneSharedChat}
+					>
+						{$i18n.t('Clone Chat')}
+					</button>
 				</div>
 			{/if}
 		</div>
