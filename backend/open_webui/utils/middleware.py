@@ -1774,6 +1774,34 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
+def add_image_parts(messages: list) -> list:
+    """
+    Inject image files into user content as image_url parts (mirrors frontend logic).
+    """
+    for message in messages:
+        image_files = [
+            file
+            for file in message.get('files', [])
+            if file.get('type') == 'image' or is_raster_image_content_type(file.get('content_type'))
+        ]
+        if message.get('role') == 'user' and image_files:
+            text_content = message.get('content', '')
+            if isinstance(text_content, str):
+                message['content'] = [
+                    {'type': 'text', 'text': text_content},
+                    *[
+                        {
+                            'type': 'image_url',
+                            'image_url': {'url': file['url']},
+                        }
+                        for file in image_files
+                        if file.get('url')
+                    ],
+                ]
+
+    return messages
+
+
 def add_file_context(messages: list) -> list:
     """
     Add file URLs to messages for native function calling.
@@ -2424,27 +2452,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
 
-            # Inject image files into content as image_url parts (mirrors frontend logic)
-            for message in form_data['messages']:
-                image_files = [
-                    f
-                    for f in message.get('files', [])
-                    if f.get('type') == 'image' or is_raster_image_content_type(f.get('content_type'))
-                ]
-                if message.get('role') == 'user' and image_files:
-                    text_content = message.get('content', '')
-                    if isinstance(text_content, str):
-                        message['content'] = [
-                            {'type': 'text', 'text': text_content},
-                            *[
-                                {
-                                    'type': 'image_url',
-                                    'image_url': {'url': f['url']},
-                                }
-                                for f in image_files
-                                if f.get('url')
-                            ],
-                        ]
+            add_image_parts(form_data['messages'])
 
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
@@ -3485,6 +3493,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata) -> bool:
             if message.get('role') == 'assistant' and message.get('model') != model['id'] and isinstance(output, list):
                 message['output'] = strip_reasoning_details(output)
 
+        add_image_parts(db_messages)
         system_message = get_system_message(form_data.get('messages', []))
         form_data['messages'] = process_messages_with_output(
             [system_message, *db_messages] if system_message else db_messages,
@@ -3492,6 +3501,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata) -> bool:
             include_file_context=metadata.get('include_file_context', False),
         )
         form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
+        form_data = await convert_url_images_to_base64(form_data, user=user)
 
     if ENABLE_FUNCTIONS:
         filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
