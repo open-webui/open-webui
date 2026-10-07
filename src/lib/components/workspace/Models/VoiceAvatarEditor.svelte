@@ -76,6 +76,8 @@
 	};
 	export let disabled = false;
 	const i18n = getContext<any>('i18n');
+	const inputClass =
+		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	let input: HTMLInputElement;
 	let error = '';
 	let ready = false;
@@ -281,7 +283,7 @@
 					<div class="flex items-center gap-3">
 						<input
 							aria-label={$i18n.t('Gesture name')}
-							class="setting-input min-w-0 flex-1"
+							class="{inputClass} min-w-0 flex-1"
 							placeholder="wave"
 							maxlength="48"
 							bind:value={gesture.name}
@@ -300,7 +302,7 @@
 					</div>
 					<input
 						aria-label={$i18n.t('Gesture description')}
-						class="setting-input"
+						class={inputClass}
 						placeholder={$i18n.t('When should the model use this gesture?')}
 						maxlength="500"
 						bind:value={gesture.description}
@@ -379,11 +381,5 @@
 	}
 	.preview-state.selected {
 		background: rgb(127 127 127 / 0.15);
-	}
-	.setting-input {
-		padding: 7px 8px;
-		background: rgb(127 127 127 / 0.08);
-		border-radius: 7px;
-		width: 100%;
 	}
 </style>
