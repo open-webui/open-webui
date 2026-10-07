@@ -86,6 +86,11 @@ def _truncate_text(text: str) -> str:
     return text.encode()[:MILVUS_TEXT_MAX_LENGTH].decode(errors='ignore')
 
 
+def _write_in_batches(write: Callable[..., Any], collection_name: str, rows: list[dict]) -> None:
+    for start in range(0, len(rows), BM25_BACKFILL_BATCH_SIZE):
+        write(collection_name=collection_name, data=rows[start : start + BM25_BACKFILL_BATCH_SIZE])
+
+
 def _bm25_rows(rows: list[dict]) -> list[dict]:
     return [
         {
@@ -580,10 +585,7 @@ class MilvusClient(VectorDBBase):
                 row['data'] = {'text': text}
             data.append(row)
         try:
-            return self.client.insert(
-                collection_name=f'{self.collection_prefix}_{collection_name}',
-                data=data,
-            )
+            _write_in_batches(self.client.insert, f'{self.collection_prefix}_{collection_name}', data)
         except MilvusException as e:
             log.error(f'Milvus insert failed for {self.collection_prefix}_{collection_name} ({len(items)} items): {e}')
             raise
@@ -626,10 +628,7 @@ class MilvusClient(VectorDBBase):
                 row['data'] = {'text': text}
             data.append(row)
         try:
-            return self.client.upsert(
-                collection_name=f'{self.collection_prefix}_{collection_name}',
-                data=data,
-            )
+            _write_in_batches(self.client.upsert, f'{self.collection_prefix}_{collection_name}', data)
         except MilvusException as e:
             log.error(f'Milvus upsert failed for {self.collection_prefix}_{collection_name} ({len(items)} items): {e}')
             raise
