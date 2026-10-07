@@ -248,7 +248,7 @@
 		transition: opacity 240ms ease;
 	}
 	.unavailable-avatar {
-		opacity: 0.55;
+		opacity: 0.35;
 	}
 	.loading-avatar {
 		opacity: 0;
