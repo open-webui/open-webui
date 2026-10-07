@@ -315,7 +315,7 @@
 							{/if}
 						</div>
 
-						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
+						<div class="flex-1 min-w-0 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
 							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
 								{#if selectedTab == 'general'}
 									<General
@@ -343,16 +343,22 @@
 										defaultPermissions={custom ? inheritedPermissions : defaultPermissions}
 									/>
 								{:else if selectedTab == 'users'}
-									<div class="flex gap-3 mb-3 text-sm">
+									<div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3">
 										<button
 											type="button"
-											class:underline={membershipTab === 'direct'}
+											aria-pressed={membershipTab === 'direct'}
+											class="py-1 text-xs font-normal transition {membershipTab === 'direct'
+												? 'text-gray-900 dark:text-gray-100'
+												: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
 											on:click={() => (membershipTab = 'direct')}
 											>{$i18n.t('Direct members')}</button
 										>
 										<button
 											type="button"
-											class:underline={membershipTab === 'inherited'}
+											aria-pressed={membershipTab === 'inherited'}
+											class="py-1 text-xs font-normal transition {membershipTab === 'inherited'
+												? 'text-gray-900 dark:text-gray-100'
+												: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
 											on:click={() => (membershipTab = 'inherited')}
 											>{$i18n.t('Inherited members')}</button
 										>
