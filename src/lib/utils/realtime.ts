@@ -463,6 +463,7 @@ export class RealtimeCall {
 						/* Bad or unavailable gestures never interrupt a voice call. */
 					}
 					response.animation = true;
+					response.animationFailed ||= status !== 'started' && status !== 'cancelled';
 				}
 				this.send({ type: 'bridge.animation.result', call_id: event.item.call_id, status });
 				return;
@@ -549,6 +550,11 @@ export class RealtimeCall {
 				this.saveSpeech(response);
 				if (
 					response.animation &&
+					// A successful gesture is already the answer. Resume only for failure feedback
+					// or a chat-model result that has not produced any spoken answer yet.
+					(response.animationFailed ||
+						(response.metadata?.call_id &&
+							![...response.speech.values()].some((text) => text.trim()))) &&
 					!response.delegated &&
 					event.response.status === 'completed' &&
 					!this.interrupted.has(response.id)
