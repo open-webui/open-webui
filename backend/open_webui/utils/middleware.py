@@ -3493,6 +3493,13 @@ async def resume_tool_calls(request, form_data, user, model, metadata) -> bool:
         )
         form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
 
+        # The DB rebuild loses file sources put in the user message; system context keeps them
+        if not RAG_SYSTEM_CONTEXT:
+            last_user_message = get_last_user_message_item(form_data['messages'])
+            await apply_source_context_to_messages(
+                request, [last_user_message], metadata.get('sources'), metadata.get('user_prompt')
+            )
+
     if ENABLE_FUNCTIONS:
         filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
         if filter_functions:
