@@ -177,7 +177,9 @@ class SkillsTable:
                 stmt = stmt.filter(Skill.id.in_(ids))
 
             if user_id is not None:
-                user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
+                user_group_ids = {
+                    group.id for group in await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+                }
                 stmt = AccessGrants.has_permission_filter(
                     db=db,
                     query=stmt,

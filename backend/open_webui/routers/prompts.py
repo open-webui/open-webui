@@ -97,7 +97,7 @@ async def get_prompt_list(
         filter['direction'] = direction
 
     # Pre-fetch user group IDs once - used for both filter and write_access check
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     user_group_ids = {group.id for group in groups}
 
     if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL):

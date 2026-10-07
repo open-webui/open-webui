@@ -444,7 +444,20 @@ class ChatTable:
             message = messages[message_id]
             child_ids = message.get('childrenIds') if isinstance(message, dict) else []
             child_ids = child_ids if isinstance(child_ids, list) else []
-            next_id = next((child_id for child_id in reversed(child_ids) if child_id in messages), None)
+            # Skip malformed messages and stale links when recovering the branch.
+            next_id = next(
+                (
+                    child_id
+                    for child_id in reversed(child_ids)
+                    if isinstance(child_id, str)
+                    and child_id not in seen_ids
+                    and isinstance(child := messages.get(child_id), dict)
+                    and child.get('id') == child_id
+                    and child.get('role')
+                    and child.get('parentId') == message_id
+                ),
+                None,
+            )
             if not next_id:
                 break
             message_id = next_id
@@ -505,11 +518,10 @@ class ChatTable:
             and current_message.get('role')
             and not current_is_bad_leaf
         ):
-            if current_message.get('contextSummary') or current_message.get('context_summary'):
-                last_descendant_id = self._last_descendant_id(messages, current_id)
-                if last_descendant_id != current_id:
-                    history['currentId'] = last_descendant_id
-                    return True
+            last_descendant_id = self._last_descendant_id(messages, current_id)
+            if last_descendant_id != current_id:
+                history['currentId'] = last_descendant_id
+                return True
 
             return changed
 
@@ -660,11 +672,13 @@ class ChatTable:
         db: AsyncSession | None = None,
     ) -> list[ChatModel]:
         async with get_async_db_context(db) as session:
+            from open_webui.utils.access_control.folders import has_folder_write_access
+
             # Validate folder_id references — clear any that don't exist
             folder_ids = {f.folder_id for f in chat_import_forms if f.folder_id}
             existing = set()
             for fid in folder_ids:
-                if await Folders.get_folder_by_id_and_user_id(fid, user_id, db=session):
+                if await has_folder_write_access(user_id, fid, db=session):
                     existing.add(fid)
 
             cleared = 0
@@ -979,6 +993,16 @@ class ChatTable:
         messages = history.setdefault('messages', {})
 
         if message_id in messages:
+            # Voice updates must not replace approval-resume metadata, and approval
+            # pauses must retain the generated speech already attached to this turn.
+            existing_meta = messages[message_id].get('meta')
+            existing_meta = existing_meta if isinstance(existing_meta, dict) else {}
+            incoming_meta = message.get('meta')
+            if isinstance(incoming_meta, dict):
+                if set(incoming_meta) == {'voice'}:
+                    message = {**message, 'meta': {**existing_meta, **incoming_meta}}
+                elif 'voice' in existing_meta and 'voice' not in incoming_meta:
+                    message = {**message, 'meta': {**incoming_meta, 'voice': existing_meta['voice']}}
             messages[message_id] = {
                 **messages[message_id],
                 **message,
@@ -2583,11 +2607,11 @@ class ChatTable:
         if not file_ids:
             return None
 
-        chat_message_file_ids = {
-            item.id for item in await self.get_chat_files_by_chat_id_and_message_id(chat_id, message_id, db=db)
-        }
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(ChatFile.file_id).filter_by(chat_id=chat_id))
+            chat_file_ids = set(result.scalars().all())
         # Remove duplicates and existing file_ids
-        file_ids = list({file_id for file_id in file_ids if file_id and file_id not in chat_message_file_ids})
+        file_ids = list({file_id for file_id in file_ids if file_id and file_id not in chat_file_ids})
         if not file_ids:
             return None
 

@@ -415,6 +415,16 @@ input[type='number'] {
 	outline: none;
 }
 
+/* Each line picks its own direction so mixed RTL/LTR text reads correctly. */
+.ProseMirror p {
+	unicode-bidi: plaintext;
+	text-align: start;
+}
+
+p[dir='auto'] {
+	unicode-bidi: plaintext;
+}
+
 :focus-visible:not(.ProseMirror):not([contenteditable='true']):not(input):not(textarea),
 .focus-ring:focus-visible {
 	outline: 2px solid theme(--color-blue-500);

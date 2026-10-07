@@ -255,7 +255,7 @@
 		{
 			label: $i18n.t('Start a new conversation'),
 			onClick: async () => {
-				await goto(`/${query ? `?q=${query}` : ''}`);
+				await goto(`/${query ? `?q=${encodeURIComponent(query)}` : ''}`);
 				show = false;
 				onClose();
 			},
@@ -482,7 +482,7 @@
 		} else if (e.code === 'Enter') {
 			const item = document.querySelector(`[data-arrow-selected="true"]`);
 			if (item) {
-				item?.click();
+				(item.querySelector('a') ?? item).click();
 				show = false;
 			}
 
@@ -585,7 +585,7 @@
 					if (e.code === 'Enter' && (chatList ?? []).length > 0) {
 						const item = document.querySelector(`[data-arrow-selected="true"]`);
 						if (item) {
-							item?.click();
+							(item.querySelector('a') ?? item).click();
 						}
 
 						show = false;

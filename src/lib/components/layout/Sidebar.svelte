@@ -714,6 +714,11 @@
 		}
 
 		const socketInstance = $socket;
+		const scheduleChannelRefresh = () => {
+			socketInstance?.off('connect', initChannels);
+			socketInstance?.once('connect', initChannels);
+		};
+		socketInstance?.on('access:updated', scheduleChannelRefresh);
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
@@ -753,6 +758,8 @@
 				dropZone.removeEventListener('dragleave', onDragLeave);
 			}
 
+			socketInstance?.off('access:updated', scheduleChannelRefresh);
+			socketInstance?.off('connect', initChannels);
 			socketInstance?.off('events', chatActiveEventHandler);
 			socketInstance?.off('connect', refreshChatRows);
 
@@ -1464,6 +1471,10 @@
 										});
 
 										folderRegistry[chat.folder_id]?.setFolderItems();
+
+										if (res) {
+											chat = res;
+										}
 									}
 
 									if (chat.pinned) {
@@ -1561,6 +1572,10 @@
 															toast.error(`${error}`);
 															return null;
 														});
+
+														if (res) {
+															chat = res;
+														}
 													}
 
 													if (!chat.pinned) {

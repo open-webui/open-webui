@@ -55,6 +55,7 @@
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
 
 	let selectedSkill = null;
 	let showDeleteConfirm = false;
@@ -107,6 +108,11 @@
 	const loadSkillItems = async () => {
 		if (!loaded) return;
 
+		clearTimeout(searchDebounceTimer);
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
+
 		loading = true;
 		try {
 			const res = await getSkillItems(
@@ -115,11 +121,14 @@
 				viewOption,
 				page,
 				sortKey,
-				sortDirection
+				sortDirection,
+				signal
 			).catch((error) => {
-				toast.error(`${error}`);
+				if (!signal.aborted) toast.error(`${error}`);
 				return null;
 			});
+
+			if (signal.aborted) return;
 
 			if (res) {
 				filteredItems = res.items;
@@ -129,11 +138,12 @@
 		} catch (err) {
 			console.error(err);
 		} finally {
-			loading = false;
+			if (!signal.aborted) loading = false;
 		}
 	};
 
 	const handleSearchInput = () => {
+		searchController?.abort();
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
@@ -251,6 +261,7 @@
 	});
 
 	onDestroy(() => {
+		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 	});
 </script>

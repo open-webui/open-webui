@@ -46,6 +46,7 @@
 
 	import {
 		convertHeicToJpeg,
+		isHeicImage,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -80,6 +81,7 @@
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import ModelSelector from './ModelSelector.svelte';
+	import ModelControls from './MessageInput/ModelControls.svelte';
 
 	import ToolServersModal from './ToolServersModal.svelte';
 	import SkillsModal from './SkillsModal.svelte';
@@ -109,6 +111,7 @@
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import CodeBrackets from '../icons/CodeBrackets.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
 	import Note from '../icons/Note.svelte';
 	import AskUserCard from './AskUserCard.svelte';
@@ -142,6 +145,7 @@
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
+	export let callActive = false;
 
 	export let autoScroll = false;
 	export let generating = false;
@@ -472,7 +476,11 @@
 			let next = total + 4 + estimateTokens(message.content);
 			next += estimateTokens(message.output);
 			next += estimateTokens(message.tool_calls);
-			next += estimateTokens(message.files);
+			if (message.files?.length) {
+				next += estimateTokens(
+					JSON.stringify(message.files).replace(/data:[\w/+.;=%-]*;base64,[A-Za-z0-9+/=]*/g, '')
+				);
+			}
 			return next;
 		}, 0);
 
@@ -802,6 +810,7 @@
 	$: hasDirectToolServerAccess =
 		$_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true);
 	$: showTerminalSelector =
+		$config?.features?.enable_tool_servers &&
 		terminalCapableModels.length > 0 &&
 		(($terminalServers ?? []).some((t) => t.id) ||
 			(hasDirectToolServerAccess &&
@@ -1123,7 +1132,7 @@
 				return;
 			}
 
-			if (isRasterImageContentType(file['type'])) {
+			if (isRasterImageContentType(file['type']) || isHeicImage(file)) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
@@ -1165,6 +1174,7 @@
 					return imageUrl;
 				};
 
+				const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
@@ -1183,13 +1193,13 @@
 						];
 					} else {
 						const blob = await (await fetch(imageUrl)).blob();
-						const compressedFile = new File([blob], file.name, { type: file.type });
+						const compressedFile = new File([blob], imageFile.name, { type: imageFile.type });
 
 						uploadFileHandler(compressedFile, false);
 					}
 				};
 
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+				reader.readAsDataURL(imageFile);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -1633,7 +1643,12 @@
 	});
 </script>
 
-<ToolServersModal bind:show={showTools} {selectedToolIds} />
+<ToolServersModal
+	bind:show={showTools}
+	{selectedToolIds}
+	onConnect={(id) =>
+		oauthRedirectHandler({ id, serverId: id.split(':').at(-1), authType: 'mcp' }, chatInputDraft)}
+/>
 <SkillsModal bind:show={showSkills} {selectedSkillIds} />
 
 <InputVariablesModal
@@ -2156,7 +2171,9 @@
 																// either when Enter is pressed or when Ctrl+Enter is pressed.
 																const enterPressed =
 																	($settings?.ctrlEnterToSend ?? false)
-																		? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+																		? (e.key === 'Enter' || e.keyCode === 13) &&
+																			isCtrlPressed &&
+																			!e.shiftKey
 																		: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
 																if (enterPressed) {
@@ -2328,8 +2345,10 @@
 											onClose={async () => {
 												await tick();
 
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
+												if (!$mobile) {
+													const chatInput = document.getElementById('chat-input');
+													chatInput?.focus();
+												}
 											}}
 										>
 											<button
@@ -2341,6 +2360,22 @@
 												<Component className="size-4.5" strokeWidth="1.5" />
 											</button>
 										</IntegrationsMenu>
+									{/if}
+
+									{#if hasChatVariables}
+										<Tooltip content={$i18n.t('Chat Variables')} placement="top">
+											<button
+												type="button"
+												id="chat-variables-button"
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+												aria-label={$i18n.t('Chat Variables')}
+												on:click={() => {
+													dispatch('chatVariables');
+												}}
+											>
+												<CodeBrackets className="size-4.5" strokeWidth="1.5" />
+											</button>
+										</Tooltip>
 									{/if}
 								</div>
 
@@ -2583,22 +2618,7 @@
 											triggerClassName="items-center gap-1.5 rounded-lg pl-2 pr-1.5 py-1 text-[0.8125rem] font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 										/>
 									</div>
-
-									{#if hasChatVariables}
-										<Tooltip content={$i18n.t('Chat Variables')} placement="top">
-											<button
-												type="button"
-												id="chat-variables-button"
-												class="flex size-[1.875rem] shrink-0 items-center justify-center rounded-full bg-transparent text-gray-500 transition-colors hover:text-gray-800 focus:outline-hidden dark:text-gray-400 dark:hover:text-gray-100"
-												aria-label={$i18n.t('Chat Variables')}
-												on:click={() => {
-													dispatch('chatVariables');
-												}}
-											>
-												<Knobs className="size-4" strokeWidth="1.5" />
-											</button>
-										</Tooltip>
-									{/if}
+									<ModelControls selectedModels={selectedModelIds} />
 
 									{#if isActive && prompt === '' && files.length === 0}
 										<div class=" flex items-center">
@@ -2671,14 +2691,26 @@
 										{#if !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
-												<Tooltip content={$i18n.t('Voice mode')}>
+												<Tooltip content={$i18n.t(callActive ? 'Call in progress' : 'Voice mode')}>
 													<button
 														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-[0.3125rem] self-center"
+														class:call-active={callActive}
 														type="button"
 														on:click={async () => {
+															if (callActive) {
+																showCallOverlay.set(true);
+																showControls.set(true);
+																return;
+															}
 															if (selectedModels.length > 1) {
 																toast.error($i18n.t('Select only one model to call'));
 
+																return;
+															}
+
+															if ($config?.audio?.realtime?.enabled) {
+																showCallOverlay.set(true);
+																showControls.set(true);
 																return;
 															}
 
@@ -2725,7 +2757,7 @@
 																);
 															}
 														}}
-														aria-label={$i18n.t('Voice mode')}
+														aria-label={$i18n.t(callActive ? 'Return to call' : 'Voice mode')}
 													>
 														<Voice className="size-5" strokeWidth="2.5" />
 													</button>
@@ -2784,3 +2816,17 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.call-active {
+		box-shadow:
+			0 0 8px 2px rgb(0 0 0 / 0.25),
+			0 0 20px 4px rgb(0 0 0 / 0.15);
+	}
+
+	:global(.dark) .call-active {
+		box-shadow:
+			0 0 8px 2px rgb(255 255 255 / 0.4),
+			0 0 20px 4px rgb(255 255 255 / 0.25);
+	}
+</style>

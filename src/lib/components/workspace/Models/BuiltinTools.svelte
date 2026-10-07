@@ -73,6 +73,10 @@
 		subagents: {
 			label: $i18n.t('settings.admin.models.builtinTools.subagents.label'),
 			description: $i18n.t('settings.admin.models.builtinTools.subagents.description')
+		},
+		skills: {
+			label: $i18n.t('settings.admin.models.builtinTools.skills.label'),
+			description: $i18n.t('settings.admin.models.builtinTools.skills.description')
 		}
 	};
 

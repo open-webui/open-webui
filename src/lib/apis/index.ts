@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+import { config } from '$lib/stores';
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload, resolveSchema } from '$lib/utils';
 import { normalizeTags } from '$lib/utils/tags';
@@ -392,6 +394,7 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 };
 
 export const getToolServerData = async (token: string, url: string) => {
+	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 	let error = null;
 
 	const res = await fetch(`${url}`, {
@@ -435,6 +438,7 @@ export const getToolServerData = async (token: string, url: string) => {
 };
 
 export const getToolServersData = async (servers: object[]) => {
+	if (!get(config)?.features?.enable_tool_servers) return [];
 	return (
 		await Promise.all(
 			servers
@@ -546,6 +550,7 @@ export const executeToolServer = async (
 	serverData: { openapi: any; info: any; specs: any },
 	sessionId?: string
 ) => {
+	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 	let error = null;
 
 	try {
@@ -1776,6 +1781,8 @@ export interface ModelConfig {
 }
 
 export interface ModelMeta {
+	voice_avatar?: import('$lib/utils/voice-avatar').VoiceAvatarConfig | null;
+	voice?: { voice?: string };
 	toolIds: never[];
 	description?: string;
 	i18n?: Record<string, Record<string, any>>;
@@ -1785,4 +1792,14 @@ export interface ModelMeta {
 	background_image_url?: string | null;
 }
 
-export interface ModelParams {}
+export interface ModelControl {
+	display?: 'menu' | 'slider';
+	label: string;
+	description?: string;
+	default?: string | null;
+	options: Record<string, { label: string; params?: Record<string, any> }>;
+}
+
+export interface ModelParams {
+	model_controls?: Record<string, ModelControl>;
+}

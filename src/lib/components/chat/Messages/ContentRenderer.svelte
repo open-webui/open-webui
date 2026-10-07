@@ -105,6 +105,7 @@
 
 	const getSourceIds = (sources) => {
 		const result = [];
+		const seenIds = new Set();
 		for (const source of sources ?? []) {
 			for (let index = 0; index < (source.document ?? []).length; index++) {
 				if (model?.info?.meta?.capabilities?.citations == false) {
@@ -112,7 +113,11 @@
 					continue;
 				}
 				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
+				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
+				if (seenIds.has(id)) {
+					continue;
+				}
+				seenIds.add(id);
 				if (metadata?.name) {
 					result.push(metadata.name);
 				} else if (id.startsWith('http://') || id.startsWith('https://')) {
@@ -122,7 +127,7 @@
 				}
 			}
 		}
-		sourceIds = [...new Set(result)];
+		sourceIds = result;
 	};
 
 	/** @param {string} messageContent */

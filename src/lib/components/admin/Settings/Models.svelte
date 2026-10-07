@@ -1268,6 +1268,7 @@
 		</div>
 	{:else}
 		<ModelEditor
+			admin
 			edit
 			model={models.find((m) => m.id === selectedModelId)}
 			preset={false}

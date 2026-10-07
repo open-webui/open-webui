@@ -14,6 +14,7 @@
 	import { getUserVariables, updateUserVariables } from '$lib/apis/users';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
+	import Mfa from './Account/Mfa.svelte';
 	import { generateInitialsImage } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -383,6 +384,8 @@
 				<UpdatePassword />
 			</UserSettingSection>
 		{/if}
+
+		<UserSettingSection title={$i18n.t('Multi-factor authentication')}><Mfa /></UserSettingSection>
 
 		{#if canUseApiKeys({ user: $user, config: $config })}
 			<UserSettingSection title={$i18n.t('settings.personal.account.sections.apiKeys.title')}>

@@ -835,8 +835,7 @@
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Enter') {
-									updateHandler({ name });
-									edit = false;
+									e.currentTarget.blur();
 								}
 							}}
 							class="w-full h-full bg-transparent outline-hidden"
@@ -955,8 +954,10 @@
 							updatedAt={chat.updated_at}
 							lastReadAt={chat.last_read_at}
 							active={chat.active ?? false}
-							ownerName={folders[folderId]?.shared ? (chat.owner_name ?? null) : null}
-							ownerUserId={folders[folderId]?.shared && chat.owner_name ? chat.user_id : null}
+							ownerName={chat.owner_name ?? null}
+							ownerUserId={folders[folderId]?.shared || chat.user_id !== $user?.id
+								? chat.user_id
+								: null}
 							readonly={chat.user_id !== $user?.id}
 							{shiftKey}
 							onReadStateChange={applyReadState}

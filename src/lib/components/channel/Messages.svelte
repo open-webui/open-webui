@@ -73,16 +73,16 @@
 				</div>
 			</Loader>
 		{:else if !thread}
-			<div class="px-5 max-w-full mx-auto">
+			<div class="px-4 max-w-full mx-auto">
 				{#if channel}
-					<div class="flex flex-col gap-1.5 pb-5 pt-10">
+					<div class="flex flex-col gap-1.5 pb-4 pt-8">
 						{#if channel?.type === 'dm'}
 							<div class="flex ml-[0.0625rem] mr-0.5">
 								{#each channel.users.filter((u) => u.id !== $user?.id).slice(0, 2) as u, index}
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 										alt={u.name}
-										class=" size-7.5 rounded-full border-2 border-white dark:border-gray-900 {index ===
+										class=" size-7 rounded-full object-cover border-2 border-white dark:border-gray-900 {index ===
 										1
 											? '-ml-2.5'
 											: ''}"
@@ -91,7 +91,7 @@
 							</div>
 						{/if}
 
-						<div class="text-2xl font-normal capitalize">
+						<div class="text-lg font-medium leading-6">
 							{#if channel?.name}
 								{channel.name}
 							{:else}
@@ -102,7 +102,7 @@
 							{/if}
 						</div>
 
-						<div class=" text-gray-500">
+						<div class="text-xs leading-5 text-gray-500 dark:text-gray-400">
 							{$i18n.t(
 								'This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.',
 								{
@@ -119,7 +119,7 @@
 				{/if}
 
 				{#if messageList.length > 0}
-					<hr class=" border-gray-50 dark:border-gray-700/20 py-2.5 w-full" />
+					<hr class=" border-gray-100/60 dark:border-gray-800/40 mb-2 w-full" />
 				{/if}
 			</div>
 		{/if}
@@ -256,6 +256,6 @@
 			/>
 		{/each}
 
-		<div class="pb-6" />
+		<div class="pb-4"></div>
 	</div>
 {/if}

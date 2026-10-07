@@ -19,6 +19,7 @@ ARG USE_AUXILIARY_EMBEDDING_MODEL=TaylorAI/bge-micro-v2
 ARG USE_TIKTOKEN_ENCODING_NAME="cl100k_base"
 
 ARG BUILD_HASH=dev-build
+ARG BUILD_CHANNEL=unknown
 # Override at your own risk - non-root configurations are untested
 ARG UID=0
 ARG GID=0
@@ -26,6 +27,7 @@ ARG GID=0
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
+ARG BUILD_CHANNEL
 ARG USE_SLIM
 ARG UID
 ARG GID
@@ -43,6 +45,7 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
+ENV APP_BUILD_CHANNEL=${BUILD_CHANNEL}
 RUN npm run build && \
     if [ "$USE_SLIM" = "true" ]; then find build -type f -name '*.map' -delete; fi
 
@@ -225,7 +228,7 @@ RUN if [ "$USE_PERMISSION_HARDENING" = "true" ]; then \
 USER $UID:$GID
 
 ARG BUILD_HASH
-ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
+ENV WEBUI_BUILD_HASH=${BUILD_HASH}
 ENV DOCKER=true
 
 CMD [ "bash", "start.sh"]

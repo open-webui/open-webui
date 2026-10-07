@@ -549,7 +549,7 @@ class UsersTable:
         async with get_async_db_context(db) as session:
             # Deferred imports to avoid circular dependencies
             from open_webui.models.channels import ChannelMember
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import GroupMember, group_user_memberships
 
             # Join GroupMember so we can order by group_id when requested
             stmt = select(User)
@@ -587,14 +587,8 @@ class UsersTable:
                     stmt = stmt.filter(User.id.in_(user_ids))
 
                 if group_ids:
-                    stmt = stmt.filter(
-                        exists(
-                            select(GroupMember.id).where(
-                                GroupMember.user_id == User.id,
-                                GroupMember.group_id.in_(group_ids),
-                            )
-                        )
-                    )
+                    memberships = group_user_memberships(group_ids, True)
+                    stmt = stmt.filter(User.id.in_(select(memberships.c.user_id)))
 
                 roles = filter.get('roles')
                 if roles:

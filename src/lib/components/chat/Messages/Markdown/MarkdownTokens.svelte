@@ -190,7 +190,7 @@
 			/>
 		</svelte:element>
 	{:else if token.type === 'code'}
-		{#if token.raw.includes('```')}
+		{#if token.codeBlockStyle !== 'indented'}
 			<CodeBlock
 				id={`${id}-${tokenIdx}`}
 				collapsed={$settings?.collapseCodeBlocks ?? false}

@@ -64,7 +64,7 @@
 	};
 
 	onMount(() => {
-		if (!$config?.features?.enable_plugins) {
+		if (!$config?.features?.enable_functions) {
 			goto('/admin', { replaceState: true });
 			return;
 		}

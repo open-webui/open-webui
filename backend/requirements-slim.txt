@@ -1,5 +1,5 @@
-# Slim: external AI services, SQLite/PostgreSQL app data, pgvector, local file storage.
-# No Playwright, cloud-storage SDKs, or other database clients.
+# Slim: external AI services, SQLite/PostgreSQL app data, pgvector, Redis, local/S3 file storage.
+# No Playwright, Azure/GCS storage SDKs, or other database clients.
 # Keep shared package pins aligned with requirements.txt. NumPy is used for cosine scoring.
 numpy==2.4.6
 typer==0.25.1
@@ -12,6 +12,8 @@ itsdangerous==2.2.0
 python-socketio==5.16.2
 orjson==3.11.9
 cryptography==48.0.0
+pyotp==2.9.0
+qrcode==8.2
 bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.13.0
@@ -36,7 +38,7 @@ aiosqlite==0.22.1
 psycopg[binary]==3.3.4
 alembic==1.18.4
 
-pycrdt==0.13.1
+pycrdt==0.14.8
 redis==8.0.1
 hiredis==3.4.2
 
@@ -80,6 +82,9 @@ azure-search-documents==12.0.0
 ## Databases
 psycopg2-binary==2.9.12
 pgvector==0.4.2
+
+## File storage
+boto3==1.42.62
 
 ## LDAP
 ldap3==2.9.1

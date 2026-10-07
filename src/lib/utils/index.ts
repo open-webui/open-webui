@@ -33,6 +33,18 @@ import { decode } from 'html-entities';
 // house falls. Let the quiet work here hold.
 //////////////////////////
 
+export const resolveDefaultModelIds = (
+	models: { id: string; info?: { meta?: { hidden?: boolean } } }[],
+	...preferences: (string[] | null | undefined)[]
+): string[] => {
+	const available = models.filter((model) => !model.info?.meta?.hidden).map((model) => model.id);
+	for (const preference of preferences) {
+		const selected = [...new Set(preference ?? [])].filter((id) => available.includes(id));
+		if (selected.length) return selected;
+	}
+	return available.length ? [available[0]] : [];
+};
+
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const formatNumber = (num: number): string => {
@@ -1323,7 +1335,7 @@ export const getTimeRange = (timestamp) => {
 
 	if (nowYear === dateYear && nowMonth === dateMonth && nowDate === dateDate) {
 		return 'Today';
-	} else if (nowYear === dateYear && nowMonth === dateMonth && nowDate - dateDate === 1) {
+	} else if (dayjs(date).isYesterday()) {
 		return 'Yesterday';
 	} else if (diffDays <= 7) {
 		return 'Previous 7 days';
@@ -2107,10 +2119,18 @@ export const getAge = (birthDate) => {
 	return age.toString();
 };
 
+const HEIC_EXTENSION_PATTERN = /\.(heic|heif)$/i;
+
+// Browsers label HEIC photos inconsistently (Firefox uses image/heif, some leave it empty).
+export const isHeicImage = (file: File) =>
+	['image/heic', 'image/heif'].includes(file.type) || HEIC_EXTENSION_PATTERN.test(file.name);
+
 export const convertHeicToJpeg = async (file: File) => {
 	const { default: heic2any } = await import('heic2any');
 	try {
-		return await heic2any({ blob: file, toType: 'image/jpeg' });
+		const jpegBlob = (await heic2any({ blob: file, toType: 'image/jpeg' })) as Blob;
+		const jpegName = `${file.name.replace(HEIC_EXTENSION_PATTERN, '')}.jpg`;
+		return new File([jpegBlob], jpegName, { type: 'image/jpeg' });
 	} catch (err: any) {
 		if (err?.message?.includes('already browser readable')) {
 			return file;

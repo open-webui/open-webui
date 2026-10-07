@@ -37,6 +37,7 @@ from open_webui.env import (
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
@@ -71,6 +72,9 @@ REDIS = None
 
 # Configure CORS for Socket.IO
 SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
+
+# Large notes outgrow the 1 MB default; match uvicorn's 16 MiB websocket limit
+SOCKETIO_MAX_HTTP_BUFFER_SIZE = 16 * 1024 * 1024
 
 
 def get_room_sid_map(manager, namespace: str, room: str):
@@ -110,6 +114,7 @@ if WEBSOCKET_MANAGER == 'redis':
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
         ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        max_http_buffer_size=SOCKETIO_MAX_HTTP_BUFFER_SIZE,
         engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 else:
@@ -124,6 +129,7 @@ else:
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
         ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
+        max_http_buffer_size=SOCKETIO_MAX_HTTP_BUFFER_SIZE,
         engineio_logger=WEBSOCKET_SERVER_ENGINEIO_LOGGING,
     )
 
@@ -205,6 +211,7 @@ REDIS_EVENT_CHANNEL = f'{REDIS_KEY_PREFIX}:direct_completion'
 EVENT_QUEUES: dict[str, asyncio.Queue] = {}
 EVENT_PUBLISH_LOCK = asyncio.Lock()
 DOCUMENT_UPDATE_LOCKS: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
+SESSION_EVENT_LOCKS: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
 
 def get_session_pool_batches():
@@ -332,12 +339,27 @@ def get_user_id_from_session_pool(sid):
     return None
 
 
+LOCAL_AUTHENTICATED_SIDS: set[str] = set()
+
+
+async def periodic_socket_authentication():
+    while True:
+        await asyncio.sleep(30)
+        for sid in tuple(LOCAL_AUTHENTICATED_SIDS):
+            await get_socket_session_user(sid)
+
+
 async def get_socket_session_user(sid: str) -> dict | None:
     """Session user from this worker's local Socket.IO store; only locally connected sids are ever looked up."""
     try:
-        return (await sio.get_session(sid)).get('user')
-    except KeyError:
-        return None
+        session = await sio.get_session(sid)
+        if session.get('user') and await get_verified_user_by_token(session.get('token', ''), REDIS):
+            return session['user']
+    except Exception:
+        log.debug('Socket authentication expired for %s', sid)
+    LOCAL_AUTHENTICATED_SIDS.discard(sid)
+    await sio.disconnect(sid)
+    return None
 
 
 def get_session_ids_from_room(room):
@@ -394,8 +416,12 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
         user_ids (list[str]): The target user's IDs.
     """
     try:
-        for user_id in user_ids:
-            session_ids = get_session_ids_from_room(f'user:{user_id}')
+        default_permissions = await Config.get('user.permissions')
+        for user in await Users.get_users_by_user_ids(user_ids):
+            if user.role != 'admin' and not await has_permission(user.id, 'features.channels', default_permissions):
+                continue
+
+            session_ids = get_session_ids_from_room(f'user:{user.id}')
             for sid in session_ids:
                 await sio.enter_room(sid, room)
     except Exception as e:
@@ -411,7 +437,7 @@ async def leave_room_for_users(room: str, user_ids: list[str]):
             log.debug('Failed to make session %s leave room %s: %s', sid, room, e)
 
 
-async def disconnect_user_sessions(user_id: str):
+async def disconnect_user_sessions(user_id: str, *, refresh_access: bool = False):
     """Disconnect all Socket.IO sessions belonging to a user.
 
     Call this when a user's role is changed or the user is deleted so that
@@ -421,6 +447,11 @@ async def disconnect_user_sessions(user_id: str):
     """
     session_ids = get_session_ids_by_user_id(user_id)
     for sid in session_ids:
+        if refresh_access:
+            try:
+                await sio.emit('access:updated', {}, to=sid)
+            except Exception:
+                log.exception('Failed to notify session %s about changed access', sid)
         try:
             await sio.disconnect(sid)
         except Exception:
@@ -467,7 +498,8 @@ async def connect(sid, environ, auth):
                 'last_seen_at': int(time.time()),
             }
             SESSION_POOL[sid] = socket_user
-            await sio.save_session(sid, {'user': socket_user})
+            await sio.save_session(sid, {'user': socket_user, 'token': auth['token']})
+            LOCAL_AUTHENTICATED_SIDS.add(sid)
             await sio.enter_room(sid, f'user:{user.id}')
 
 
@@ -499,11 +531,12 @@ async def user_join(sid, data):
     }
 
     SESSION_POOL[sid] = socket_user
-    await sio.save_session(sid, {'user': socket_user})
+    await sio.save_session(sid, {'user': socket_user, 'token': auth['token']})
+    LOCAL_AUTHENTICATED_SIDS.add(sid)
     await sio.enter_room(sid, f'user:{user.id}')
 
     # Join all the channels only if user has channels permission
-    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
+    if user.role == 'admin' or await has_permission(user.id, 'features.channels', await Config.get('user.permissions')):
         channels = await Channels.get_channels_by_user_id(user.id)
         log.debug('channels=%r', channels)
         for channel in channels:
@@ -535,7 +568,7 @@ async def join_channel(sid, data):
         return
 
     # Join all the channels only if user has channels permission
-    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
+    if user.role == 'admin' or await has_permission(user.id, 'features.channels', await Config.get('user.permissions')):
         channels = await Channels.get_channels_by_user_id(user.id)
         log.debug('channels=%r', channels)
         for channel in channels:
@@ -554,6 +587,11 @@ async def join_note(sid, data):
     redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
     user = await get_verified_user_by_token(auth['token'], redis)
     if not user:
+        return
+
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions')
+    ):
         return
 
     note = await Notes.get_note_by_id(data['note_id'])
@@ -689,6 +727,11 @@ async def ydoc_document_join(sid, data):
         document_id = normalize_document_id(data['document_id'])
 
         if document_id.startswith('note:'):
+            if user.get('role') != 'admin' and not await has_permission(
+                user.get('id'), 'features.notes', await Config.get('user.permissions')
+            ):
+                return
+
             note_id = document_id.split(':')[1]
             note = await Notes.get_note_by_id(note_id)
             if not note:
@@ -980,6 +1023,7 @@ async def yjs_awareness_update(sid, data):
 
 @sio.event
 async def disconnect(sid, reason=None):
+    LOCAL_AUTHENTICATED_SIDS.discard(sid)
     if sid in SESSION_POOL:
         del SESSION_POOL[sid]
 
@@ -1039,19 +1083,22 @@ async def socket_event_handler(event: Any, sid: str, *args: Any) -> None:
     if not isinstance(event, str) or event.count(':') != 2 or not args:
         return
 
-    user = await get_socket_session_user(sid)
-    if not user or user.get('id') != event.split(':', 1)[0]:
-        return
+    # The lock keeps arrival order; the sid re-check drops every event after a failed check
+    session_check = asyncio.create_task(get_socket_session_user(sid))
+    async with SESSION_EVENT_LOCKS.setdefault(sid, asyncio.Lock()):
+        user = await session_check
+        if not user or sid not in LOCAL_AUTHENTICATED_SIDS or user.get('id') != event.split(':', 1)[0]:
+            return
 
-    queue = EVENT_QUEUES.get(event)
-    if queue is not None:
-        await queue.put(args[0])
-    elif WEBSOCKET_MANAGER == 'redis':
-        try:
-            async with EVENT_PUBLISH_LOCK:
-                await REDIS.publish(REDIS_EVENT_CHANNEL, dumps_bytes({'channel': event, 'data': args[0]}))
-        except RedisError as e:
-            log.debug('Failed to relay socket event %s: %s', event, e)
+        queue = EVENT_QUEUES.get(event)
+        if queue is not None:
+            await queue.put(args[0])
+        elif WEBSOCKET_MANAGER == 'redis':
+            try:
+                async with EVENT_PUBLISH_LOCK:
+                    await REDIS.publish(REDIS_EVENT_CHANNEL, dumps_bytes({'channel': event, 'data': args[0]}))
+            except RedisError as e:
+                log.debug('Failed to relay socket event %s: %s', event, e)
 
 
 async def _make_channel_emitter(request_info):

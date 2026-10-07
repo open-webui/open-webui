@@ -14,12 +14,13 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from open_webui.config import OAUTH_PROVIDERS
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.env import SCIM_AUTH_PROVIDER
 from open_webui.internal.db import get_async_session
-from open_webui.models.groups import GroupModel, Groups
+from open_webui.models.groups import GroupModel, Groups, GroupHierarchyError
 from open_webui.models.users import UserModel, Users
 from open_webui.utils.auth import (
     decode_token,
@@ -32,7 +33,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-router = APIRouter()
+
+class SCIMGroupRoute(APIRoute):
+    def get_route_handler(self):
+        handler = super().get_route_handler()
+
+        async def handle(request):
+            try:
+                return await handler(request)
+            except GroupHierarchyError as error:
+                return scim_error(error.status_code, str(error), 'invalidValue')
+
+        return handle
+
+
+router = APIRouter(route_class=SCIMGroupRoute)
 
 # SCIM 2.0 Schema URIs
 SCIM_USER_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:User'
@@ -115,6 +130,8 @@ class SCIMPhoto(BaseModel):
 
 class SCIMGroupMember(BaseModel):
     """SCIM Group Member"""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     value: str  # User ID
     ref: Optional[str] = Field(None, alias='$ref')
@@ -935,6 +952,19 @@ async def get_group(
     return await group_to_scim(group, request, db=db)
 
 
+async def validate_user_members(members, db):
+    ids = []
+    for member in members or []:
+        value = member if isinstance(member, dict) else member.model_dump(by_alias=True)
+        if value.get('type') not in (None, 'User') or '/Groups/' in (value.get('$ref') or ''):
+            raise GroupHierarchyError('Only direct User members are supported by SCIM.')
+        if not value.get('value'):
+            raise GroupHierarchyError('A member user ID is required.')
+        ids.append(value['value'])
+    if set(await Users.get_valid_user_ids(ids, db=db)) != set(ids):
+        raise GroupHierarchyError('One or more member users were not found.')
+
+
 @router.post('/Groups', response_model=SCIMGroup, status_code=status.HTTP_201_CREATED)
 async def create_group(
     request: Request,
@@ -943,6 +973,7 @@ async def create_group(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Create SCIM Group"""
+    await validate_user_members(group_data.members, db)
     # Extract member IDs
     member_ids = []
     if group_data.members:
@@ -1014,6 +1045,7 @@ async def update_group(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update SCIM Group (full update)"""
+    await validate_user_members(group_data.members, db)
     group = await Groups.get_group_by_id(group_id, db=db)
     if not group:
         raise HTTPException(
@@ -1100,6 +1132,13 @@ async def patch_group(
     added_member_ids = []
     removed_member_ids = []
 
+    # Validate all requested assignments before applying any patch operation.
+    for operation in patch_data.Operations:
+        if operation.path == 'members' and operation.op.lower() in ('add', 'replace'):
+            if not isinstance(operation.value, list):
+                raise GroupHierarchyError('Members must be a list of users.')
+            await validate_user_members(operation.value, db)
+
     for operation in patch_data.Operations:
         op = operation.op.lower()
         path = operation.path
@@ -1182,7 +1221,8 @@ async def delete_group(
             detail=f'Group {group_id} not found',
         )
 
-    success = await Groups.delete_group_by_id(group_id, db=db)
+    changes = {}
+    success = await Groups.delete_group_by_id(group_id, db=db, changes=changes)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1194,7 +1234,15 @@ async def delete_group(
         EVENTS.GROUP_DELETED,
         subject_id=group_id,
         source='scim',
-        data={'name': group.name},
+        data={'name': group.name, **changes},
     )
 
+    for child_id in changes['promoted_child_ids']:
+        await publish_event(
+            request,
+            EVENTS.GROUP_UPDATED,
+            subject_id=child_id,
+            source='scim',
+            data={'old_parent_group_id': group_id, 'parent_group_id': changes['parent_group_id']},
+        )
     return None
