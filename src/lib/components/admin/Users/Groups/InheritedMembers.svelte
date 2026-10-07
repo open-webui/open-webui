@@ -15,19 +15,22 @@
 </script>
 
 <div class="flex w-full min-w-0 flex-col text-sm">
-	<div class="mb-1.5 flex items-center">
-		<div class="self-center mr-3">
-			<Search />
+	<div class="mb-1.5 flex flex-wrap items-center gap-2">
+		<div class="flex min-w-0 flex-1 basis-full items-center sm:basis-0">
+			<div class="self-center mr-3">
+				<Search />
+			</div>
+			<input
+				class="w-full min-w-0 text-sm pr-4 rounded-r-xl outline-hidden bg-transparent"
+				aria-label={$i18n.t('Search inherited members')}
+				placeholder={$i18n.t('Search')}
+				bind:value={query}
+				on:input={() => {
+					page = 1;
+				}}
+			/>
 		</div>
-		<input
-			class="w-full min-w-0 text-sm pr-4 rounded-r-xl outline-hidden bg-transparent"
-			aria-label={$i18n.t('Search inherited members')}
-			placeholder={$i18n.t('Search')}
-			bind:value={query}
-			on:input={() => {
-				page = 1;
-			}}
-		/>
+		<slot name="filter" />
 	</div>
 	{#await members}
 		<div class="my-10" role="status" aria-label={$i18n.t('Loading...')}>
@@ -80,12 +83,6 @@
 				{$i18n.t('No inherited members')}
 			</div>
 		{/if}
-		<p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-			{$i18n.t(
-				'Direct: {{direct}} · Inherited: {{inherited}} · Total: {{effective}}',
-				result.counts
-			)}
-		</p>
 		{#if result.total > 30}
 			<Pagination bind:page count={result.total} perPage={30} />
 		{/if}
