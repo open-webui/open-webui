@@ -3076,7 +3076,7 @@
 	"settings.personal.personalization.savedMemories.label": "Saved Memories",
 	"settings.personal.personalization.sections.memory.title": "Memory",
 	"settings.personal.personalization.title": "Personalization",
-	"settings.personal.shortcuts.acceptAutocomplete.label": "Accept Autocomplete Generation\\nJump to Prompt Variable",
+	"settings.personal.shortcuts.acceptAutocomplete.label": "Accept Autocomplete Generation\nJump to Prompt Variable",
 	"settings.personal.shortcuts.addPrompt.label": "Add Custom Prompt",
 	"settings.personal.shortcuts.allowToolCall.label": "Allow Tool Call",
 	"settings.personal.shortcuts.attachFile.label": "Attach File From Knowledge",
