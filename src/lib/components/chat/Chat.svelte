@@ -86,7 +86,7 @@
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
 	import {
 		getAndUpdateUserLocation,
@@ -1322,9 +1322,9 @@
 						}
 					}, 100);
 				} else if (type === 'chat:message:error') {
-					message.error = data.error;
-					if (data.done === true && !message.done) {
-						message.done = true;
+					const responseCompleted = message.done;
+					handleOpenAIError(data.error, message);
+					if (!responseCompleted) {
 						dismissContextCompactionToast();
 						if (event.message_id === history.currentId) {
 							await processNextInQueue(event.chat_id);
@@ -2090,7 +2090,7 @@
 	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
 
 	const dispatchCallOverlayAudio = (message, final = false) => {
-		if (!$showCallOverlay || callMode !== 'current') {
+		if (message.error || !$showCallOverlay || callMode !== 'current') {
 			return;
 		}
 
@@ -3002,6 +3002,8 @@
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
 
+		if (error) handleOpenAIError(error, message);
+
 		// Store raw OR-aligned output items from backend
 		if (output) {
 			message.output = output;
@@ -3014,10 +3016,6 @@
 				navigator.vibrate(5);
 			}
 			dispatchCallOverlayAudio(message);
-		}
-
-		if (error) {
-			await handleOpenAIError(error, message);
 		}
 
 		if (sources && !message?.sources) {
@@ -3069,6 +3067,12 @@
 
 		if (done) {
 			message.done = true;
+			if (message.error) {
+				dismissContextCompactionToast();
+				bridge?.update();
+				await processNextInQueue(chatId);
+				return;
+			}
 			const visibleContent =
 				getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
 
@@ -3976,46 +3980,18 @@
 		return res;
 	};
 
-	const handleOpenAIError = async (error, responseMessage) => {
-		let errorMessage = '';
-		let innerError;
-
-		if (error) {
-			innerError = error;
-		}
-
-		console.error(innerError);
-		if ('detail' in innerError) {
-			// FastAPI error
-			toast.error(innerError.detail);
-			errorMessage = innerError.detail;
-		} else if ('error' in innerError) {
-			// OpenAI error
-			if ('message' in innerError.error) {
-				toast.error(innerError.error.message);
-				errorMessage = innerError.error.message;
-			} else {
-				toast.error(innerError.error);
-				errorMessage = innerError.error;
-			}
-		} else if ('message' in innerError) {
-			// OpenAI error
-			toast.error(innerError.message);
-			errorMessage = innerError.message;
-		}
-
-		responseMessage.error = {
-			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
-		};
+	const handleOpenAIError = (error, responseMessage) => {
+		const responseFailed = responseMessage.done && responseMessage.error;
+		const errorMessage = getErrorMessage(error, $i18n.t('Server connection failed'));
+		responseMessage.error = { content: errorMessage };
 		responseMessage.done = true;
-
 		if (responseMessage.statusHistory) {
 			responseMessage.statusHistory = responseMessage.statusHistory.filter(
 				(status) => status.action !== 'knowledge_search'
 			);
 		}
-
 		history.messages[responseMessage.id] = responseMessage;
+		if (!responseFailed) toast.error(errorMessage);
 	};
 
 	const stopResponse = async (processQueue = true, messageId = history.currentId) => {

@@ -91,6 +91,7 @@ class CallProtocol:
         self.transcripts = set()
         self.requested = set()
         self.functions = set()
+        self.results = {}
         self.audio = {}
         self.responses = set()
         self.context_revision = 0
@@ -263,6 +264,7 @@ class CallProtocol:
             if not isinstance(event['answer'], str) or len(event['answer']) > 100000:
                 raise ValueError('Invalid function answer')
             self.functions.remove(event['call_id'])
+            self.results[event['call_id']] = event['status']
             return {
                 'type': 'conversation.item.create',
                 'item': {
@@ -284,11 +286,17 @@ class CallProtocol:
                 if call_id in self.functions or f'result:{call_id}' not in self.requested:
                     raise ValueError('Function result is not ready')
                 self.requested.remove(f'result:{call_id}')
+                failed = self.results.pop(call_id) == 'failed'
                 return {
                     'type': 'response.create',
                     'response': {
-                        'tools': self.animation_tools,
-                        'tool_choice': 'auto' if self.animation_tools else 'none',
+                        'tools': [] if failed else self.animation_tools,
+                        'tool_choice': 'auto' if self.animation_tools and not failed else 'none',
+                        **({'instructions': (
+                            'Briefly tell the user the request failed, in their language. No retry is running. '
+                            'Tell them they can ask you to retry, then stop. Do not claim work is continuing '
+                            'or invent a cause.'
+                        )} if failed else {}),
                         'metadata': {'call_id': call_id},
                     },
                 }

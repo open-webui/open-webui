@@ -2961,8 +2961,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         if event_emitter:
                             await event_emitter(
                                 {
-                                    'type': 'chat:message:error',
-                                    'data': {'error': {'content': f"Failed to connect to MCP server '{server_id}'"}},
+                                    'type': 'status',
+                                    'data': {
+                                        'action': 'tool_connection',
+                                        'description': f"Failed to connect to MCP server '{server_id}'",
+                                        'error': True,
+                                        'done': True,
+                                    },
                                 }
                             )
                         continue
