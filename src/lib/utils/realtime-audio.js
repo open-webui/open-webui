@@ -13,6 +13,9 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 		this.rendered = new Map();
 		this.ended = new Set();
 		this.ticks = 0;
+		this.inputEnergy = 0;
+		this.outputEnergy = 0;
+		this.levelSamples = 0;
 		this.port.onmessage = ({ data }) => {
 			if (data.type === 'capture') {
 				this.enabled = data.enabled;
@@ -86,8 +89,21 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 			}
 			if (!this.queued) this.playing = false;
 		}
+		for (let i = 0; i < output.length; i++) {
+			const sample = this.enabled ? (input?.[i] ?? 0) : 0;
+			this.inputEnergy += sample * sample;
+			this.outputEnergy += output[i] * output[i];
+		}
+		this.levelSamples += output.length;
 		if (++this.ticks % 8 === 0) {
-			this.port.postMessage({ type: 'playback', queued: this.queued, received: this.received });
+			this.port.postMessage({
+				type: 'playback',
+				queued: this.queued,
+				received: this.received,
+				inputLevel: Math.sqrt(this.inputEnergy / this.levelSamples),
+				outputLevel: Math.sqrt(this.outputEnergy / this.levelSamples)
+			});
+			this.inputEnergy = this.outputEnergy = this.levelSamples = 0;
 		}
 		return true;
 	}

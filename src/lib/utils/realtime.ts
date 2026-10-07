@@ -75,6 +75,9 @@ export class RealtimeCall {
 	approval = false;
 	model = '';
 	voice = '';
+	inputLevel = 0;
+	outputLevel = 0;
+	error = '';
 	private ws?: WebSocket;
 	private context?: AudioContext;
 	private stream?: MediaStream;
@@ -109,6 +112,7 @@ export class RealtimeCall {
 
 	async connect(token: string) {
 		if (this.connected || this.connecting) return;
+		this.error = '';
 		this.connecting = true;
 		this.options.change();
 		const session = ++this.session;
@@ -192,12 +196,21 @@ export class RealtimeCall {
 				audio: btoa(String.fromCharCode(...new Uint8Array(data.pcm)))
 			});
 		} else if (data.type === 'playback') {
+			const inputLevel = this.muted ? 0 : (data.inputLevel ?? 0);
+			const outputLevel = data.outputLevel ?? 0;
+			const levelsChanged =
+				Math.abs(inputLevel - this.inputLevel) > 0.002 ||
+				Math.abs(outputLevel - this.outputLevel) > 0.002;
 			const nextSpeaking = data.queued > 0 || this.sentSamples > data.received;
 			const speakingChanged = this.speaking !== nextSpeaking;
 			this.speaking = nextSpeaking;
 			if (!this.speaking && !this.activeResponse && !this.responseRequested)
 				this.speakingResponses.clear();
-			if (speakingChanged) this.options.change();
+			if (levelsChanged || speakingChanged) {
+				this.inputLevel = inputLevel;
+				this.outputLevel = outputLevel;
+				this.options.change();
+			}
 			this.flush();
 		} else if (data.type === 'overflow') {
 			this.stopSpeaking();
@@ -591,6 +604,7 @@ export class RealtimeCall {
 		}
 		this.speakingResponses.clear();
 		this.speaking = false;
+		this.outputLevel = 0;
 		const id = ++this.clearId;
 		this.clears.set(id, responses);
 		this.audio?.port.postMessage({ type: 'clear', id });
@@ -617,6 +631,7 @@ export class RealtimeCall {
 
 	mute() {
 		this.muted = !this.muted;
+		if (this.muted) this.inputLevel = 0;
 		this.stream?.getAudioTracks().forEach((track) => {
 			track.enabled = !this.muted;
 		});
@@ -626,6 +641,7 @@ export class RealtimeCall {
 	}
 
 	private fail(message: string) {
+		this.error = message;
 		this.options.error(message);
 		this.end();
 	}
@@ -657,6 +673,7 @@ export class RealtimeCall {
 		this.context = undefined;
 		this.audio = undefined;
 		this.connected = this.connecting = this.speaking = this.working = this.approval = false;
+		this.inputLevel = this.outputLevel = 0;
 		this.responseRequested = false;
 		this.cancelRequested = false;
 		this.receivingSpeech = false;
