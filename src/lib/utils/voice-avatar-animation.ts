@@ -29,8 +29,9 @@ export function validateAnimation(data: ArrayBuffer) {
 	const json = JSON.parse(new TextDecoder().decode(new Uint8Array(data, 20, length)));
 	const ext = json.extensions?.VRMC_vrm_animation;
 	const bones = Object.values(ext?.humanoid?.humanBones ?? {}) as { node: number }[];
+	// Match the VRMA loader's compatibility fallback for unversioned exports.
 	if (
-		ext?.specVersion !== '1.0' ||
+		(ext?.specVersion != null && ext.specVersion !== '1.0') ||
 		!bones.length ||
 		!json.nodes?.length ||
 		json.nodes.length > 512 ||

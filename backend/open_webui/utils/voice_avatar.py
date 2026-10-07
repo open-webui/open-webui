@@ -96,7 +96,8 @@ def validate_voice_animation(data: bytes) -> None:
         ext = model.get('extensions', {}).get('VRMC_vrm_animation', {})
         bones = ext.get('humanoid', {}).get('humanBones', {})
         nodes = model.get('nodes', [])
-        if ext.get('specVersion') != '1.0' or not bones or not 0 < len(nodes) <= 512:
+        # Match the VRMA loader's compatibility fallback for unversioned exports.
+        if ext.get('specVersion') not in (None, '1.0') or not bones or not 0 < len(nodes) <= 512:
             raise ValueError('Use a VRMA 1.0 humanoid animation.')
         for bone in bones.values():
             if type(bone.get('node')) is not int or not 0 <= bone['node'] < len(nodes):
