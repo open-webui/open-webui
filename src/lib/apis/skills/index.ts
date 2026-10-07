@@ -102,7 +102,8 @@ export const getSkillItems = async (
 	viewOption: string | null = null,
 	page: number | null = null,
 	orderBy: string | null = null,
-	direction: string | null = null
+	direction: string | null = null,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 
@@ -115,6 +116,7 @@ export const getSkillItems = async (
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/skills/list?${searchParams.toString()}`, {
 		method: 'GET',
+		signal,
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -129,6 +131,7 @@ export const getSkillItems = async (
 			return json;
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			error = err;
 			console.error(err);
 			return null;

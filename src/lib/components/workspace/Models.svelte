@@ -7,7 +7,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	const i18n = getContext<any>('i18n');
 	dayjs.extend(relativeTime);
@@ -97,7 +97,13 @@
 	let models = null;
 	let total = null;
 
-	let searchDebounceTimer;
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+		searchController?.abort();
+	});
 
 	$: if (loaded) {
 		workspaceActions.set([
@@ -193,6 +199,11 @@
 	const getModelList = async () => {
 		if (!loaded) return;
 
+		clearTimeout(searchDebounceTimer);
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
+
 		try {
 			const res = await getWorkspaceModels(
 				localStorage.token,
@@ -201,11 +212,14 @@
 				selectedTag,
 				sortKey,
 				sortDirection,
-				page
+				page,
+				signal
 			).catch((error) => {
-				toast.error(`${error}`);
+				if (!signal.aborted) toast.error(`${error}`);
 				return null;
 			});
+
+			if (signal.aborted) return;
 
 			if (res) {
 				models = res.items;
@@ -213,10 +227,11 @@
 				workspaceCounts.update((counts) => ({ ...counts, models: total }));
 
 				// get tags
-				tags = await getModelTags(localStorage.token).catch((error) => {
-					toast.error(`${error}`);
+				const fetchedTags = await getModelTags(localStorage.token).catch((error) => {
+					if (!signal.aborted) toast.error(`${error}`);
 					return [];
 				});
+				if (!signal.aborted) tags = fetchedTags;
 			}
 		} catch (err) {
 			console.error(err);
@@ -571,6 +586,7 @@
 					placeholder={$i18n.t('Search Models')}
 					maxlength="500"
 					on:input={() => {
+						searchController?.abort();
 						clearTimeout(searchDebounceTimer);
 						searchDebounceTimer = setTimeout(() => {
 							page = 1;
