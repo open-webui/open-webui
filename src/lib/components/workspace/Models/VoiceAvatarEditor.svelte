@@ -7,6 +7,7 @@
 		type VoiceAvatarConfig
 	} from '$lib/utils/voice-avatar';
 	import VoiceAvatar from '$lib/components/chat/MessageInput/CallOverlay/VoiceAvatar.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let value: VoiceAvatarConfig | null = null;
 	export let file: File | null = null;
@@ -238,7 +239,7 @@
 								: $i18n.t('Built-in')}
 						</div>
 					</div>
-					<div class="flex shrink-0 gap-3 text-gray-500">
+					<div class="flex shrink-0 items-center gap-3 text-gray-500">
 						{#if asset}<button
 								type="button"
 								disabled={!ready || animationsLoading || !!animationErrors[asset.file_id]}
@@ -290,14 +291,32 @@
 							on:input={() => {
 								if (value) value = { ...value, gestures };
 							}}
-						/><button
+						/>
+						{#if gesture.file_id}
+							<button
+								type="button"
+								class="shrink-0 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+								aria-label={`${$i18n.t('Preview gesture')} ${i + 1}`}
+								disabled={!ready || animationsLoading || !!animationErrors[gesture.file_id]}
+								on:click={() => previewGesture(gesture.name)}>{$i18n.t('Preview')}</button
+							>
+						{/if}
+						<button
 							type="button"
-							class="text-gray-500"
+							class="shrink-0 whitespace-nowrap text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+							aria-label={`${$i18n.t('Upload gesture')} ${i + 1} VRMA`}
+							on:click={() => uploadAnimation(i)}
+							>{$i18n.t(gesture.file_id ? 'Replace clip' : 'Upload VRMA')}</button
+						>
+						<button
+							type="button"
+							class="shrink-0 m-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+							title={$i18n.t('Remove gesture')}
 							aria-label={`${$i18n.t('Remove gesture')} ${i + 1}`}
 							on:click={() => {
 								if (value)
 									value = { ...value, gestures: gestures.filter((_, index) => index !== i) };
-							}}>{$i18n.t('Remove')}</button
+							}}><XMark className="size-4" /></button
 						>
 					</div>
 					<input
@@ -310,21 +329,6 @@
 							if (value) value = { ...value, gestures };
 						}}
 					/>
-					<div class="flex items-center gap-3 text-gray-500">
-						<button
-							type="button"
-							aria-label={`${$i18n.t('Upload gesture')} ${i + 1} VRMA`}
-							on:click={() => uploadAnimation(i)}
-							>{$i18n.t(gesture.file_id ? 'Replace clip' : 'Upload VRMA')}</button
-						>{#if gesture.file_id}<button
-								type="button"
-								aria-label={`${$i18n.t('Preview gesture')} ${i + 1}`}
-								disabled={!ready || animationsLoading || !!animationErrors[gesture.file_id]}
-								on:click={() => previewGesture(gesture.name)}>{$i18n.t('Preview')}</button
-							><span class="truncate"
-								>{animationFiles[gesture.file_id]?.name ?? $i18n.t('Custom animation')}</span
-							>{/if}
-					</div>
 					{#if animationErrors[gesture.file_id]}<p
 							class="text-red-600 dark:text-red-400"
 							role="alert"
