@@ -206,34 +206,29 @@ export async function createAvatarRenderer(
 				((input.active && input.listening && !input.speaking ? 1 : 0) - listening) * smooth;
 			speechTime = input.active && input.speaking ? speechTime + dt : 0;
 			listenTime = input.active && input.listening ? listenTime + dt : 0;
-			// Full-body framing needs readable poses, not faster oscillation.
+			// Keep the built-in body relaxed; authored clips supply intentional gestures.
 			const amount = reducedMotion ? 0 : Math.sqrt(0.35);
 			const breath = Math.sin(elapsed * 1.5);
-			const phrase = 0.5 + 0.5 * Math.sin(speechTime * 1.1);
-			const leftGesture = speaking * (0.45 + 0.55 * phrase);
-			const rightGesture = speaking * (0.15 + 0.55 * (1 - phrase));
 			// One small acknowledgment every few seconds, with stillness between nods.
 			const nodPhase = listenTime % 5;
 			const nod = nodPhase < 1.2 ? Math.sin((nodPhase / 1.2) * Math.PI) : 0;
 			if (spine) {
 				spine.rotation.x = amount * (0.012 * breath + 0.065 * listening);
-				spine.rotation.y = amount * speaking * 0.045 * Math.sin(speechTime * 0.8);
+				spine.rotation.y = amount * speaking * 0.01 * Math.sin(speechTime * 0.6);
 			}
 			if (head) {
 				head.rotation.x =
 					amount *
 					(0.018 * Math.sin(elapsed * 0.7) +
-						speaking * 0.085 * Math.sin(speechTime * 2.2) +
+						speaking * 0.02 * Math.sin(speechTime * 0.9) +
 						listening * (0.08 + 0.12 * nod));
 				head.rotation.y =
 					amount *
-					(0.025 * Math.sin(elapsed * 0.47) + speaking * 0.09 * Math.sin(speechTime * 0.9));
+					(0.025 * Math.sin(elapsed * 0.47) + speaking * 0.015 * Math.sin(speechTime * 0.6));
 				head.rotation.z = amount * (0.02 * Math.sin(elapsed * 0.63) + listening * 0.18);
 			}
-			if (leftArm) leftArm.rotation.z = -1.22 + amount * (0.015 * breath + 0.22 * leftGesture);
-			if (rightArm) rightArm.rotation.z = 1.22 - amount * (0.015 * breath + 0.22 * rightGesture);
-			if (leftElbow) leftElbow.rotation.z = amount * 1.25 * leftGesture;
-			if (rightElbow) rightElbow.rotation.z = -amount * 1.25 * rightGesture;
+			if (leftArm) leftArm.rotation.z = -1.22 + amount * 0.015 * breath;
+			if (rightArm) rightArm.rotation.z = 1.22 - amount * 0.015 * breath;
 			if (current && (bodyWeight > 0 || authored)) {
 				for (const pose of poses) {
 					pose.q.copy(pose.node.quaternion);
