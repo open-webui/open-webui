@@ -2,6 +2,7 @@
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { models, showCallOverlay } from '$lib/stores';
 	import type { RealtimeCall } from '$lib/utils/realtime';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import VoiceOrb from './VoiceOrb.svelte';
 	import VoiceAvatar from './VoiceAvatar.svelte';
 
@@ -71,7 +72,11 @@
 			{#if showAvatar && avatar}
 				{@const selectedAvatar = avatar}
 				{#key selectedAvatar.file_id}
-					<div class="avatar-content" class:loading-avatar={readyAvatar !== selectedAvatar.file_id}>
+					<div
+						class="avatar-content"
+						class:unavailable-avatar={unavailable}
+						class:loading-avatar={readyAvatar !== selectedAvatar.file_id || !bridge.connected}
+					>
 						<VoiceAvatar
 							bind:this={avatarView}
 							interruption={bridge.animationInterruption}
@@ -89,9 +94,16 @@
 						/>
 					</div>
 				{/key}
-				{#if readyAvatar !== selectedAvatar.file_id}<div class="avatar-loading">
-						<VoiceOrb speaking={false} level={0} muted={true} />
-					</div>{/if}
+				{#if readyAvatar !== selectedAvatar.file_id || !bridge.connected}
+					<div class="avatar-loading" role="status">
+						{#if !bridge.error}
+							<Spinner className="size-6 text-gray-400 dark:text-gray-500" />
+							<span class="sr-only">
+								{bridge.connected ? $i18n.t('Loading avatar...') : $i18n.t('Connecting...')}
+							</span>
+						{/if}
+					</div>
+				{/if}
 			{:else}
 				<VoiceOrb
 					speaking={bridge.speaking && !unavailable}
@@ -237,6 +249,10 @@
 		inset: 0;
 		width: 100%;
 		height: 100%;
+		transition: opacity 240ms ease;
+	}
+	.unavailable-avatar {
+		opacity: 0.55;
 	}
 	.loading-avatar {
 		opacity: 0;
@@ -386,7 +402,8 @@
 		.connecting-dot {
 			animation: none;
 		}
-		.call-control {
+		.call-control,
+		.avatar-content {
 			transition: none;
 		}
 	}
