@@ -75,7 +75,7 @@
 					<div
 						class="avatar-content"
 						class:unavailable-avatar={unavailable}
-						class:loading-avatar={readyAvatar !== selectedAvatar.file_id || !bridge.connected}
+						class:loading-avatar={readyAvatar !== selectedAvatar.file_id}
 					>
 						<VoiceAvatar
 							bind:this={avatarView}
@@ -94,14 +94,10 @@
 						/>
 					</div>
 				{/key}
-				{#if readyAvatar !== selectedAvatar.file_id || !bridge.connected}
+				{#if readyAvatar !== selectedAvatar.file_id}
 					<div class="avatar-loading" role="status">
-						{#if !bridge.error}
-							<Spinner className="size-6 text-gray-400 dark:text-gray-500" />
-							<span class="sr-only">
-								{bridge.connected ? $i18n.t('Loading avatar...') : $i18n.t('Connecting...')}
-							</span>
-						{/if}
+						<Spinner className="size-6 text-gray-400 dark:text-gray-500" />
+						<span class="sr-only">{$i18n.t('Loading avatar...')}</span>
 					</div>
 				{/if}
 			{:else}
