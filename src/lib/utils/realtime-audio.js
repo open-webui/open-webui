@@ -16,6 +16,8 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 		this.inputEnergy = 0;
 		this.outputEnergy = 0;
 		this.levelSamples = 0;
+		this.playbackSamples = 0;
+		this.clearId = 0;
 		this.port.onmessage = ({ data }) => {
 			if (data.type === 'capture') {
 				this.enabled = data.enabled;
@@ -31,6 +33,8 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 			} else if (data.type === 'done') {
 				this.ended.add(data.response_id);
 			} else if (data.type === 'clear') {
+				this.clearId = data.id;
+				this.playbackSamples = this.outputEnergy = 0;
 				this.port.postMessage({
 					type: 'cleared',
 					id: data.id,
@@ -76,6 +80,7 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 				offset += count;
 				chunk.offset += count;
 				this.queued -= count;
+				this.playbackSamples += count;
 				const key = `${chunk.item_id}:${chunk.content_index}`;
 				const position = this.rendered.get(key) ?? {
 					response_id: chunk.response_id,
@@ -98,12 +103,14 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 		if (++this.ticks % 8 === 0) {
 			this.port.postMessage({
 				type: 'playback',
+				clearId: this.clearId,
+				playbackActive: this.playbackSamples > 0,
 				queued: this.queued,
 				received: this.received,
 				inputLevel: Math.sqrt(this.inputEnergy / this.levelSamples),
 				outputLevel: Math.sqrt(this.outputEnergy / this.levelSamples)
 			});
-			this.inputEnergy = this.outputEnergy = this.levelSamples = 0;
+			this.inputEnergy = this.outputEnergy = this.levelSamples = this.playbackSamples = 0;
 		}
 		return true;
 	}

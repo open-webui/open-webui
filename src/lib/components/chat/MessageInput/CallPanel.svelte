@@ -49,7 +49,7 @@
 
 {#if started}
 	{#if callMode === 'bridge'}
-		<BridgeCallOverlay {bridge} on:close />
+		<BridgeCallOverlay {bridge} {modelId} on:close />
 	{:else}
 		<CallOverlay
 			bind:files

@@ -50,6 +50,7 @@ from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import get_all_models
 from open_webui.utils.validate import BACKGROUND_IMAGE_MAX_BYTES, validate_background_image
+from open_webui.utils.voice_avatar import AVATAR_MAX_BYTES, ANIMATION_MAX_BYTES, validate_voice_avatar, validate_voice_animation
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -148,6 +149,34 @@ async def _verify_background_image(url: str | None, user, db, previous_url: str 
     if (file.meta or {}).get('content_type') != content_type:
         if not await Files.update_file_metadata_by_id(file_id, {'content_type': content_type}, db=db):
             raise HTTPException(status_code=500, detail='Could not validate background image.')
+
+
+async def _verify_voice_avatar(avatar, user, db, previous=None) -> None:
+    if not avatar:
+        return
+    assets = {avatar.file_id: (AVATAR_MAX_BYTES, validate_voice_avatar)}
+    for asset in [*avatar.states.values(), *avatar.gestures]:
+        if asset.file_id == avatar.file_id:
+            raise HTTPException(status_code=400, detail='An animation must be a VRMA file, not the avatar.')
+        assets[asset.file_id] = (ANIMATION_MAX_BYTES, validate_voice_animation)
+    previous_assets = ({previous.file_id: validate_voice_avatar} | {
+        asset.file_id: validate_voice_animation for asset in [*previous.states.values(), *previous.gestures]
+    }) if previous else {}
+    for file_id, (limit, validate) in assets.items():
+        if previous_assets.get(file_id) is validate:
+            continue
+        file = await Files.get_file_by_id(file_id, db=db)
+        if not file or not (
+            user.role == 'admin' or file.user_id == user.id or await has_access_to_file(file_id, 'read', user, db=db)
+        ):
+            raise HTTPException(status_code=403, detail='Avatar or animation file is not accessible. Upload it again.')
+        try:
+            path = await asyncio.to_thread(Storage.get_file, file.path)
+            with open(path, 'rb') as source:
+                data = await asyncio.to_thread(source.read, limit + 1)
+            await asyncio.to_thread(validate, data)
+        except (ValueError, OSError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 async def _verify_knowledge_file_access(
@@ -370,6 +399,7 @@ async def create_new_model(
     )
 
     await _verify_background_image(form_data.meta.background_image_url, user, db)
+    await _verify_voice_avatar(form_data.meta.voice_avatar, user, db)
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
@@ -666,6 +696,14 @@ async def import_models(
                             db,
                             existing_model.meta.background_image_url if existing_model else None,
                         )
+                        if existing_model and 'voice_avatar' not in imported_model.meta.model_fields_set:
+                            imported_model.meta.voice_avatar = existing_model.meta.voice_avatar
+                        await _verify_voice_avatar(
+                            imported_model.meta.voice_avatar,
+                            user,
+                            db,
+                            existing_model.meta.voice_avatar if existing_model else None,
+                        )
                         saved = (
                             await Models.update_model_by_id(model_id, imported_model, db=db)
                             if existing_model
@@ -722,6 +760,9 @@ async def sync_models(
     for model in form_data.models:
         previous = existing.get(model.id)
         await _check_model_controls(model, previous, user, request)
+        if previous and 'voice_avatar' not in model.meta.model_fields_set:
+            model.meta.voice_avatar = previous.meta.voice_avatar
+        await _verify_voice_avatar(model.meta.voice_avatar, user, db, previous.meta.voice_avatar if previous else None)
         if previous and 'background_image_url' not in model.meta.model_fields_set:
             model.meta.background_image_url = previous.meta.background_image_url
         await _verify_background_image(
@@ -1014,6 +1055,9 @@ async def update_model_by_id(
     if 'profile_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.profile_image_url = model.meta.profile_image_url
 
+    if 'voice_avatar' not in form_data.meta.model_fields_set:
+        form_data.meta.voice_avatar = model.meta.voice_avatar
+    await _verify_voice_avatar(form_data.meta.voice_avatar, user, db, model.meta.voice_avatar)
     if 'background_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.background_image_url = model.meta.background_image_url
     await _verify_background_image(form_data.meta.background_image_url, user, db, model.meta.background_image_url)

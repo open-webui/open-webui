@@ -36,6 +36,12 @@
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import TerminalSelector from './TerminalSelector.svelte';
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
+	import VoiceAvatarSettings from './VoiceAvatarSettings.svelte';
+	import {
+		avatarAssetIds,
+		type AnimationFiles,
+		type VoiceAvatarConfig
+	} from '$lib/utils/voice-avatar';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import { copyToClipboard, extractInputVariables } from '$lib/utils';
@@ -53,6 +59,9 @@
 	export let preset = true;
 
 	let loading = false;
+	let voiceAvatar: VoiceAvatarConfig | null = null;
+	let avatarFile: File | null = null;
+	let animationFiles: AnimationFiles = {};
 	let backgroundFile: File | null = null;
 	let backgroundInput: HTMLInputElement;
 	let backgroundPreview: string | null = null;
@@ -104,6 +113,7 @@
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			background_image_url: null as string | null,
 			voice: undefined as { voice?: string } | undefined,
+			voice_avatar: null as VoiceAvatarConfig | null,
 			description: '',
 			i18n: {},
 			suggestion_prompts: null,
@@ -288,6 +298,7 @@
 		const modelInfo = structuredClone(info);
 
 		modelInfo.id = id;
+		modelInfo.meta.voice_avatar = voiceAvatar;
 		modelInfo.name = name;
 
 		modelInfo.params = { ...modelInfo.params, ...params };
@@ -452,6 +463,8 @@
 
 		let uploadedId: string | null = null;
 		const previousBackground = info.meta.background_image_url;
+		const previousAvatar = structuredClone(info.meta.voice_avatar);
+		const uploadedAvatarIds: string[] = [];
 
 		try {
 			if (backgroundFile) {
@@ -460,12 +473,59 @@
 				uploadedId = uploaded.id;
 				info.meta.background_image_url = `/api/v1/files/${uploaded.id}/content`;
 			}
+			if (avatarFile && info.meta.voice_avatar) {
+				const uploaded = await uploadFile(localStorage.token, avatarFile, null, false, false);
+				if (!uploaded?.id) throw new Error($i18n.t('Failed to upload avatar.'));
+				uploadedAvatarIds.push(uploaded.id);
+				info.meta.voice_avatar = { ...info.meta.voice_avatar, file_id: uploaded.id };
+			}
+			if (info.meta.voice_avatar) {
+				const avatar = info.meta.voice_avatar;
+				const replacements = new Map<string, string>();
+				for (const id of new Set(avatarAssetIds(avatar))) {
+					if (!animationFiles[id]) continue;
+					const uploaded = await uploadFile(
+						localStorage.token,
+						animationFiles[id],
+						null,
+						false,
+						false
+					);
+					if (!uploaded?.id) throw new Error($i18n.t('Failed to upload animation.'));
+					uploadedAvatarIds.push(uploaded.id);
+					replacements.set(id, uploaded.id);
+				}
+				for (const asset of [...Object.values(avatar.states ?? {}), ...(avatar.gestures ?? [])]) {
+					asset.file_id = replacements.get(asset.file_id) ?? asset.file_id;
+				}
+			}
 			const saved = await onSubmit(info);
 			if (saved === false) throw new Error($i18n.t('Failed to save model'));
 			backgroundFile = null;
+			avatarFile = null;
+			animationFiles = {};
+			voiceAvatar = info.meta.voice_avatar;
 			clearBackgroundPreview();
 		} catch (error: any) {
 			info.meta.background_image_url = previousBackground;
+			info.meta.voice_avatar = previousAvatar;
+			if (uploadedAvatarIds.length) {
+				try {
+					const response = await fetch(
+						`${WEBUI_API_BASE_URL}/models/model?${new URLSearchParams({ id: info.id })}`,
+						{ headers: { authorization: `Bearer ${localStorage.token}` } }
+					);
+					if (response.status === 404 || response.ok) {
+						const referenced = response.ok
+							? avatarAssetIds((await response.json())?.meta?.voice_avatar)
+							: [];
+						for (const id of uploadedAvatarIds)
+							if (!referenced.includes(id)) await deleteFileById(localStorage.token, id);
+					}
+				} catch {
+					/* Keep uploads when the save result is uncertain. */
+				}
+			}
 			if (uploadedId) {
 				// A failed response can follow a committed save; only delete an unused upload.
 				try {
@@ -524,6 +584,7 @@
 
 		if (model) {
 			name = model.name;
+			voiceAvatar = model.meta?.voice_avatar ? structuredClone(model.meta.voice_avatar) : null;
 			await tick();
 
 			id = model.id;
@@ -1309,6 +1370,14 @@
 									placeholder={$i18n.t('Admin default')}
 								/>
 							</div>
+						{/if}
+						{#if $config?.audio?.realtime?.enabled || voiceAvatar}
+							<VoiceAvatarSettings
+								bind:value={voiceAvatar}
+								bind:file={avatarFile}
+								bind:animationFiles
+								disabled={loading}
+							/>
 						{/if}
 						<div class="my-3">
 							<div class="flex w-full justify-between mb-1">

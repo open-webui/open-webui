@@ -80,6 +80,9 @@ export class RealtimeCall {
 	inputLevel = 0;
 	outputLevel = 0;
 	error = '';
+	animationPlayer?: (name: string) => string;
+	animationInterruption = 0;
+	private animationCalls = new Set<string>();
 	private ws?: WebSocket;
 	private context?: AudioContext;
 	private stream?: MediaStream;
@@ -441,6 +444,29 @@ export class RealtimeCall {
 			event.item.status === 'completed'
 		) {
 			const response = this.responses.get(event.response_id);
+			if (event.item.name === 'play_animation') {
+				if (this.animationCalls.has(event.item.call_id)) return;
+				this.animationCalls.add(event.item.call_id);
+				let status = 'unavailable';
+				if (!response || this.interrupted.has(event.response_id) || this.receivingSpeech)
+					status = 'cancelled';
+				else {
+					try {
+						const args = JSON.parse(event.item.arguments);
+						if (
+							event.animation_valid !== false &&
+							Object.keys(args).length === 1 &&
+							typeof args.name === 'string'
+						)
+							status = this.animationPlayer?.(args.name) ?? 'unavailable';
+					} catch {
+						/* Bad or unavailable gestures never interrupt a voice call. */
+					}
+					response.animation = true;
+				}
+				this.send({ type: 'bridge.animation.result', call_id: event.item.call_id, status });
+				return;
+			}
 			if (
 				!response ||
 				event.item.name !== 'generate_chat_completion' ||
@@ -521,6 +547,14 @@ export class RealtimeCall {
 			if (response) {
 				response.done = true;
 				this.saveSpeech(response);
+				if (
+					response.animation &&
+					!response.delegated &&
+					event.response.status === 'completed' &&
+					!this.interrupted.has(response.id)
+				) {
+					this.enqueue({ type: 'bridge.animation.respond', response_id: response.id });
+				}
 			}
 			if (['failed', 'incomplete'].includes(event.response.status))
 				this.options.error('The voice response did not complete.');
@@ -619,6 +653,7 @@ export class RealtimeCall {
 	}
 
 	stopSpeaking() {
+		this.animationInterruption++;
 		if (this.responseRequested) this.cancelRequested = true;
 		const responses = new Set(
 			[...this.speakingResponses].filter((id) => !this.interrupted.has(id))
@@ -639,7 +674,9 @@ export class RealtimeCall {
 		const id = ++this.clearId;
 		this.clears.set(id, responses);
 		this.audio?.port.postMessage({ type: 'clear', id });
-		this.commands = this.commands.filter((command) => command.type !== 'bridge.status');
+		this.commands = this.commands.filter(
+			(command) => command.type !== 'bridge.status' && command.type !== 'bridge.animation.respond'
+		);
 		this.options.change();
 	}
 
@@ -723,6 +760,7 @@ export class RealtimeCall {
 		this.responses.clear();
 		this.inputs.clear();
 		this.calls.clear();
+		this.animationCalls.clear();
 		this.clears.clear();
 		this.clearId = 0;
 		this.options.change();

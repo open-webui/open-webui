@@ -1,10 +1,19 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
-	import { showCallOverlay } from '$lib/stores';
+	import { models, showCallOverlay } from '$lib/stores';
 	import type { RealtimeCall } from '$lib/utils/realtime';
 	import VoiceOrb from './VoiceOrb.svelte';
+	import VoiceAvatar from './VoiceAvatar.svelte';
 
 	export let bridge: RealtimeCall;
+	export let modelId = '';
+	let failedAvatar = '';
+	let avatarView: VoiceAvatar;
+	$: bridge.animationPlayer = (name) =>
+		showAvatar ? (avatarView?.playAnimation(name) ?? 'unavailable') : 'unavailable';
+	let readyAvatar = '';
+	$: avatar = $models.find((model) => model.id === modelId)?.info?.meta?.voice_avatar;
+	$: showAvatar = avatar?.file_id && failedAvatar !== avatar.file_id;
 
 	const i18n = getContext<any>('i18n');
 	const dispatch = createEventDispatcher();
@@ -42,7 +51,10 @@
 			}
 		};
 		document.addEventListener('keydown', handleKeydown);
-		return () => document.removeEventListener('keydown', handleKeydown);
+		return () => {
+			document.removeEventListener('keydown', handleKeydown);
+			bridge.animationPlayer = undefined;
+		};
 	});
 </script>
 
@@ -51,21 +63,48 @@
 		<button
 			type="button"
 			class="orb-button"
+			class:avatar-button={showAvatar}
 			disabled={!bridge.speaking}
 			aria-label={$i18n.t('Stop speaking')}
 			on:click={() => bridge.stopSpeaking()}
 		>
-			<VoiceOrb
-				speaking={bridge.speaking && !unavailable}
-				level={unavailable
-					? 0
-					: bridge.speaking
-						? bridge.outputLevel
-						: bridge.muted
-							? 0
-							: bridge.inputLevel}
-				muted={unavailable || (bridge.muted && !bridge.speaking)}
-			/>
+			{#if showAvatar && avatar}
+				{@const selectedAvatar = avatar}
+				{#key selectedAvatar.file_id}
+					<div class="avatar-content" class:loading-avatar={readyAvatar !== selectedAvatar.file_id}>
+						<VoiceAvatar
+							bind:this={avatarView}
+							interruption={bridge.animationInterruption}
+							config={selectedAvatar}
+							speaking={bridge.playbackActive && !unavailable}
+							listening={bridge.userSpeaking && !bridge.muted && !unavailable}
+							level={bridge.outputLevel}
+							active={!unavailable}
+							on:ready={() => {
+								readyAvatar = selectedAvatar.file_id;
+							}}
+							on:error={() => {
+								failedAvatar = selectedAvatar.file_id;
+							}}
+						/>
+					</div>
+				{/key}
+				{#if readyAvatar !== selectedAvatar.file_id}<div class="avatar-loading">
+						<VoiceOrb speaking={false} level={0} muted={true} />
+					</div>{/if}
+			{:else}
+				<VoiceOrb
+					speaking={bridge.speaking && !unavailable}
+					level={unavailable
+						? 0
+						: bridge.speaking
+							? bridge.outputLevel
+							: bridge.muted
+								? 0
+								: bridge.inputLevel}
+					muted={unavailable || (bridge.muted && !bridge.speaking)}
+				/>
+			{/if}
 		</button>
 
 		<div class="call-status" role="status" aria-live="polite" aria-atomic="true">
@@ -169,6 +208,27 @@
 		flex-shrink: 0;
 		padding: 12px;
 		border-radius: 50%;
+	}
+	.avatar-button {
+		width: 100%;
+		height: clamp(240px, 42vh, 360px);
+		position: relative;
+		padding: 0;
+		border-radius: 16px;
+		overflow: hidden;
+	}
+	.avatar-content {
+		width: 100%;
+		height: 100%;
+	}
+	.loading-avatar {
+		opacity: 0;
+	}
+	.avatar-loading {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
 	}
 	.orb-button:disabled {
 		cursor: default;

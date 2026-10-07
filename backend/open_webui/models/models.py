@@ -106,6 +106,38 @@ class ModelVoice(BaseModel):
     voice: str | None = Field(default=None, min_length=1, max_length=200, pattern=r'^\S+$')
 
 
+class ModelAvatarAnimation(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    file_id: str = Field(pattern=r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$')
+
+
+class ModelAvatarGesture(ModelAvatarAnimation):
+    name: str = Field(pattern=r'^[a-z][a-z0-9_]{0,47}$')
+    description: str = Field(min_length=1, max_length=500)
+
+
+class ModelVoiceAvatar(BaseModel):
+    model_config = ConfigDict(extra='forbid', allow_inf_nan=False)
+
+    file_id: str = Field(pattern=r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$')
+    states: dict[Literal['idle', 'listening', 'speaking'], ModelAvatarAnimation] = Field(default_factory=dict)
+    gestures: list[ModelAvatarGesture] = Field(default_factory=list, max_length=16)
+
+    @model_validator(mode='before')
+    @classmethod
+    def discard_legacy_movement_settings(cls, value):
+        if isinstance(value, dict):
+            return {key: item for key, item in value.items() if key not in {'preset', 'movement', 'mouth', 'gaze'}}
+        return value
+
+    @model_validator(mode='after')
+    def unique_gestures(self):
+        names = [gesture.name for gesture in self.gestures]
+        if len(set(names)) != len(names) or any(not gesture.description.strip() for gesture in self.gestures):
+            raise ValueError('Gestures need unique names and a description.')
+        return self
+
+
 class ModelMeta(BaseModel):
     """Metadata for a workspace model entry (profile, description, tags, capabilities)."""
 
@@ -116,6 +148,7 @@ class ModelMeta(BaseModel):
     capabilities: dict | None = None
     knowledge: list[Any] | None = None
     voice: ModelVoice | None = None
+    voice_avatar: ModelVoiceAvatar | None = None
 
     model_config = ConfigDict(extra='allow')
 
@@ -329,12 +362,13 @@ class ModelsTable:
     async def get_model_owner_ids_by_file_id(
         self, file_id: str, db: AsyncSession | None = None, include_background: bool = False
     ) -> dict[str, str]:
-        """Return model IDs mapped to owner IDs for models referencing the file."""
+        """Find file references; include_background adds read-only background/avatar assets."""
         async with get_async_db_context(db) as db:
             # File ids are server-generated uuids, so the text match can only over-match.
             result = await db.execute(
                 select(Model.id, Model.user_id, Model.meta).filter(
-                    Model.base_model_id.is_not(None), cast(Model.meta, String).like(f'%{file_id}%')
+                    (Model.base_model_id.is_not(None) if not include_background else True),
+                    cast(Model.meta, String).like(f'%{file_id}%'),
                 )
             )
             return {
@@ -344,7 +378,17 @@ class ModelsTable:
                     isinstance(item, dict) and item.get('type') == 'file' and item.get('id') == file_id
                     for item in meta.get('knowledge') or []
                 )
-                or (include_background and meta.get('background_image_url') == f'/api/v1/files/{file_id}/content')
+                or (
+                    include_background
+                    and (
+                        meta.get('background_image_url') == f'/api/v1/files/{file_id}/content'
+                        or (meta.get('voice_avatar') or {}).get('file_id') == file_id
+                        or any(asset.get('file_id') == file_id for asset in (
+                            list((meta.get('voice_avatar') or {}).get('states', {}).values())
+                            + (meta.get('voice_avatar') or {}).get('gestures', [])
+                        ))
+                    )
+                )
             }
 
     @staticmethod
