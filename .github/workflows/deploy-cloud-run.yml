@@ -3,7 +3,7 @@ name: Deploy Open WebUI
 on:
   push:
     branches:
-      - production
+      - main
 
   workflow_dispatch:
 
