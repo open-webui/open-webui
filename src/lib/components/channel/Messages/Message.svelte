@@ -306,7 +306,7 @@
 
 			{#if message?.is_pinned}
 				<div class="flex {showUserProfile ? 'mb-0.5' : 'mt-0.5'}">
-					<div class="ml-8 flex items-center gap-1 text-[0.6875rem] leading-4">
+					<div class="ml-9 flex items-center gap-1 text-[0.6875rem] leading-4">
 						<Pin className="size-3 text-yellow-500 dark:text-yellow-300" />
 						<span class="text-gray-500">{$i18n.t('Pinned')}</span>
 					</div>
@@ -316,11 +316,11 @@
 			{#if message?.reply_to_message?.user}
 				<div class="relative text-xs mb-1">
 					<div
-						class="absolute h-3 w-5 left-3 top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
+						class="absolute h-3 w-6 left-3 top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
 					></div>
 
 					<button
-						class="ml-8 flex min-w-0 max-w-[calc(100%-2rem)] items-center gap-1.5 relative z-0"
+						class="ml-9 flex min-w-0 max-w-[calc(100%-2.25rem)] items-center gap-1.5 relative z-0"
 						on:click={() => {
 							const messageElement = document.getElementById(`message-${replyToMessageId}`);
 							if (messageElement) {
@@ -409,7 +409,7 @@
 						{/if}
 					{:else if message.created_at}
 						<div
-							class="-mx-1 mt-1 flex items-center justify-center text-[0.6875rem] leading-4 tabular-nums hover-reveal text-gray-500 dark:text-gray-400"
+							class="-mx-1 mt-1 translate-y-px flex items-center justify-center text-[0.6875rem] leading-4 tabular-nums hover-reveal text-gray-500 dark:text-gray-400"
 						>
 							<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 								{dayjs(message.created_at / 1000000).format('HH:mm')}
@@ -418,7 +418,7 @@
 					{/if}
 				</div>
 
-				<div class="flex-auto w-0 pl-2">
+				<div class="flex-auto w-0 pl-3">
 					{#if showUserProfile}
 						<div class="flex min-w-0 items-baseline gap-1.5 leading-5">
 							<div
@@ -433,7 +433,7 @@
 
 							{#if message.created_at}
 								<div
-									class=" shrink-0 text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400 font-normal first-letter:capitalize"
+									class=" shrink-0 translate-y-px text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400 font-normal first-letter:capitalize"
 								>
 									<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 										<span class="line-clamp-1">
