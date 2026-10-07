@@ -100,7 +100,9 @@ export async function createAvatarRenderer(
 		restQ: node.quaternion.clone(),
 		restP: node.position.clone(),
 		q: node.quaternion.clone(),
-		p: node.position.clone()
+		p: node.position.clone(),
+		authoredQ: node.quaternion.clone(),
+		authoredP: node.position.clone()
 	}));
 	const clips = new Map<string, THREE.AnimationClip>();
 	let current: THREE.AnimationAction | null = null;
@@ -232,10 +234,14 @@ export async function createAvatarRenderer(
 			if (rightArm) rightArm.rotation.z = 1.22 - amount * (0.015 * breath + 0.22 * rightGesture);
 			if (leftElbow) leftElbow.rotation.z = amount * 1.25 * leftGesture;
 			if (rightElbow) rightElbow.rotation.z = -amount * 1.25 * rightGesture;
-			if (current && bodyWeight > 0) {
+			if (current && (bodyWeight > 0 || authored)) {
 				for (const pose of poses) {
 					pose.q.copy(pose.node.quaternion);
 					pose.p.copy(pose.node.position);
+					// Three's mixer skips unchanged keyframes, so preserve its last output
+					// independently of procedural movement and the final blended pose.
+					pose.node.quaternion.copy(pose.authoredQ);
+					pose.node.position.copy(pose.authoredP);
 				}
 				mixer.update(dt);
 				fadeTime += dt;
@@ -244,8 +250,10 @@ export async function createAvatarRenderer(
 					outgoing = null;
 				}
 				for (const pose of poses) {
-					pose.node.quaternion.slerpQuaternions(pose.q, pose.node.quaternion, bodyWeight);
-					pose.node.position.lerpVectors(pose.p, pose.node.position, bodyWeight);
+					pose.authoredQ.copy(pose.node.quaternion);
+					pose.authoredP.copy(pose.node.position);
+					pose.node.quaternion.slerpQuaternions(pose.q, pose.authoredQ, bodyWeight);
+					pose.node.position.lerpVectors(pose.p, pose.authoredP, bodyWeight);
 				}
 			} else if (current) {
 				mixer.stopAllAction();

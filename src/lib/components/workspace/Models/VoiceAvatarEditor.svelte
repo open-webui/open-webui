@@ -240,11 +240,12 @@
 						</div>
 					</div>
 					<div class="flex shrink-0 items-center gap-3 text-gray-500">
-						{#if asset}<button
-								type="button"
-								disabled={!ready || animationsLoading || !!animationErrors[asset.file_id]}
-								on:click={() => preview(mode as AvatarState)}>{$i18n.t('Preview')}</button
-							>{/if}
+						<button
+							type="button"
+							aria-label={`${$i18n.t('Preview')} ${mode}`}
+							disabled={!ready || animationsLoading || !!(asset && animationErrors[asset.file_id])}
+							on:click={() => preview(mode as AvatarState)}>{$i18n.t('Preview')}</button
+						>
 						<button
 							type="button"
 							aria-label={`${$i18n.t('Upload')} ${mode} VRMA`}
