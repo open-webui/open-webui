@@ -71,6 +71,8 @@ export class RealtimeCall {
 	connecting = false;
 	muted = false;
 	speaking = false;
+	playbackActive = false;
+	userSpeaking = false;
 	working = false;
 	approval = false;
 	model = '';
@@ -88,6 +90,7 @@ export class RealtimeCall {
 	private callId = '';
 	private token = '';
 	private configuration = '';
+	private chatContext = '';
 	private cancelRequested = false;
 	private receivingSpeech = false;
 	private savingHistory = 0;
@@ -157,7 +160,7 @@ export class RealtimeCall {
 			ws.onmessage = ({ data }) => {
 				if (session !== this.session) return;
 				try {
-					this.event(JSON.parse(data), context);
+					this.event(JSON.parse(data));
 				} catch {
 					this.fail('Invalid voice event. The call has ended.');
 				}
@@ -196,6 +199,11 @@ export class RealtimeCall {
 				audio: btoa(String.fromCharCode(...new Uint8Array(data.pcm)))
 			});
 		} else if (data.type === 'playback') {
+			// Ignore reports queued before an interruption cleared the audio.
+			if ((data.clearId ?? 0) < this.clearId) return;
+			const playbackActive = !!data.playbackActive;
+			const playbackChanged = this.playbackActive !== playbackActive;
+			this.playbackActive = playbackActive;
 			const inputLevel = this.muted ? 0 : (data.inputLevel ?? 0);
 			const outputLevel = data.outputLevel ?? 0;
 			const levelsChanged =
@@ -206,7 +214,7 @@ export class RealtimeCall {
 			this.speaking = nextSpeaking;
 			if (!this.speaking && !this.activeResponse && !this.responseRequested)
 				this.speakingResponses.clear();
-			if (levelsChanged || speakingChanged) {
+			if (levelsChanged || speakingChanged || playbackChanged) {
 				this.inputLevel = inputLevel;
 				this.outputLevel = outputLevel;
 				this.options.change();
@@ -251,8 +259,10 @@ export class RealtimeCall {
 			this.commands.some((item) => item.type === 'bridge.status' && item.status === command.status)
 		)
 			return;
-		if (command.type === 'bridge.respond' && command.item_id) this.commands.unshift(command);
-		else this.commands.push(command);
+		if (command.type === 'bridge.respond' && command.item_id) {
+			const index = this.commands.findIndex((item) => !item.item_id);
+			this.commands.splice(index < 0 ? this.commands.length : index, 0, command);
+		} else this.commands.push(command);
 		this.flush();
 	}
 
@@ -271,6 +281,7 @@ export class RealtimeCall {
 		if (!this.connected) return;
 		const command = this.commands.shift();
 		if (command) {
+			this.syncContext();
 			this.responseRequested = true;
 			this.send(command);
 		}
@@ -298,7 +309,28 @@ export class RealtimeCall {
 		}
 	}
 
-	private event(event: any, initial: CallContext) {
+	private syncContext() {
+		if (!this.connected) return;
+		// Replace the bounded snapshot, so streaming answers and task status cannot go stale.
+		let budget = 64000;
+		const messages = this.options
+			.context()
+			.messages.slice(-100)
+			.reverse()
+			.flatMap((message) => {
+				if (!['user', 'assistant'].includes(message.role) || budget <= 0) return [];
+				const content = message.content.slice(0, Math.min(32000, budget));
+				budget -= content.length;
+				return content ? [{ role: message.role, content }] : [];
+			})
+			.reverse();
+		const snapshot = JSON.stringify(messages);
+		if (snapshot === this.chatContext) return;
+		this.chatContext = snapshot;
+		this.send({ type: 'bridge.context', messages });
+	}
+
+	private event(event: any) {
 		const type = event.type;
 		if (type === 'bridge.error') {
 			this.fail(event.message);
@@ -314,28 +346,21 @@ export class RealtimeCall {
 			this.voice = event.voice;
 			this.connected = true;
 			this.connecting = false;
-			// A bounded visible-text history, without reasoning or raw tool output.
-			let budget = 64000;
-			const messages = initial.messages
-				.slice(-100)
-				.reverse()
-				.flatMap((message) => {
-					if (!['user', 'assistant'].includes(message.role) || budget <= 0) return [];
-					const content = message.content.slice(0, Math.min(32000, budget));
-					budget -= content.length;
-					return content ? [{ role: message.role, content }] : [];
-				})
-				.reverse();
-			this.send({ type: 'bridge.history', messages });
+			this.syncContext();
 			this.audio?.port.postMessage({ type: 'capture', enabled: !this.muted });
 		} else if (type === 'input_audio_buffer.speech_started') {
 			this.receivingSpeech = true;
+			this.userSpeaking = !this.muted;
 			this.stopSpeaking();
+		} else if (type === 'input_audio_buffer.speech_stopped') {
+			this.userSpeaking = false;
 		} else if (type === 'conversation.item.input_audio_transcription.failed') {
 			this.receivingSpeech = false;
+			this.userSpeaking = false;
 			this.enqueue({ type: 'bridge.status', status: 'transcription_failed' });
 		} else if (type === 'conversation.item.input_audio_transcription.completed') {
 			this.receivingSpeech = false;
+			this.userSpeaking = false;
 			if (this.inputs.has(event.item_id)) return;
 			const text = event.transcript?.trim();
 			if (!text) {
@@ -344,6 +369,7 @@ export class RealtimeCall {
 			}
 			const session = this.session;
 			const modelId = this.options.context().modelId;
+			this.savingHistory++;
 			const userId = this.recording.then(() => {
 				if (session !== this.session) return '';
 				return this.options.addMessage('user', text, {
@@ -355,6 +381,7 @@ export class RealtimeCall {
 			this.recording = userId.then(() => undefined);
 			this.inputs.set(event.item_id, { text, userId, modelId });
 			userId
+				.finally(() => this.savingHistory--)
 				.then(() => {
 					if (session === this.session)
 						this.enqueue({ type: 'bridge.respond', item_id: event.item_id });
@@ -370,6 +397,7 @@ export class RealtimeCall {
 			}
 			this.responses.set(event.response.id, {
 				...event.response,
+				statusCallId: this.pending?.callId,
 				speech: new Map(),
 				audio: new Map(),
 				delegated: false
@@ -458,6 +486,8 @@ export class RealtimeCall {
 						await this.options.saveVoice(previous.assistantId!, { superseded: true });
 					}
 					turn.userId = await input.userId;
+					// The next model request must include the previous spoken reply in DB history.
+					await this.metadata;
 					if (session !== this.session) return;
 					this.pending = turn;
 					this.working = true;
@@ -500,6 +530,7 @@ export class RealtimeCall {
 	}
 
 	update() {
+		this.syncContext();
 		const turn = this.pending;
 		if (!turn?.assistantId || turn.finished || !this.connected) return;
 		const message = this.options.message(turn.assistantId);
@@ -544,7 +575,7 @@ export class RealtimeCall {
 		if (!response.speech.size) return;
 		const inputId = response.metadata?.input_item_id;
 		const turn = response.metadata?.status
-			? this.pending
+			? this.calls.get(response.statusCallId)
 			: response.metadata?.call_id
 				? this.calls.get(response.metadata.call_id)
 				: [...this.calls.values()].find((call) => call.inputId === inputId);
@@ -566,8 +597,7 @@ export class RealtimeCall {
 			speech
 		};
 		const savedChatId = this.options.context().chatId;
-		const savesHistory = !turn?.assistantId;
-		if (savesHistory) this.savingHistory++;
+		this.savingHistory++;
 		this.metadata = this.metadata
 			.then(async () => {
 				if (savedChatId !== this.options.context().chatId) return;
@@ -583,7 +613,7 @@ export class RealtimeCall {
 			})
 			.catch(() => this.options.error('Could not save the voice transcript.'))
 			.finally(() => {
-				if (savesHistory) this.savingHistory--;
+				this.savingHistory--;
 				this.flush();
 			});
 	}
@@ -604,6 +634,7 @@ export class RealtimeCall {
 		}
 		this.speakingResponses.clear();
 		this.speaking = false;
+		this.playbackActive = false;
 		this.outputLevel = 0;
 		const id = ++this.clearId;
 		this.clears.set(id, responses);
@@ -631,7 +662,10 @@ export class RealtimeCall {
 
 	mute() {
 		this.muted = !this.muted;
-		if (this.muted) this.inputLevel = 0;
+		if (this.muted) {
+			this.inputLevel = 0;
+			this.userSpeaking = false;
+		}
 		this.stream?.getAudioTracks().forEach((track) => {
 			track.enabled = !this.muted;
 		});
@@ -674,11 +708,14 @@ export class RealtimeCall {
 		this.audio = undefined;
 		this.connected = this.connecting = this.speaking = this.working = this.approval = false;
 		this.inputLevel = this.outputLevel = 0;
+		this.playbackActive = false;
 		this.responseRequested = false;
 		this.cancelRequested = false;
 		this.receivingSpeech = false;
+		this.userSpeaking = false;
 		this.activeResponse = '';
 		this.pending = undefined;
+		this.chatContext = '';
 		this.sentSamples = 0;
 		this.commands = [];
 		this.speakingResponses.clear();
@@ -687,6 +724,7 @@ export class RealtimeCall {
 		this.inputs.clear();
 		this.calls.clear();
 		this.clears.clear();
+		this.clearId = 0;
 		this.options.change();
 	}
 }

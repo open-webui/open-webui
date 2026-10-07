@@ -69,7 +69,7 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
-	import { RealtimeCall, type BridgeSubmission } from '$lib/utils/realtime';
+	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
 
@@ -1925,6 +1925,7 @@
 
 	const onHistoryChange = (history) => {
 		if (history) {
+			bridge?.update();
 			clearTimeout(contentsRAF);
 			contentsRAF = setTimeout(() => {
 				getContents();
@@ -1949,6 +1950,15 @@
 		voice: any,
 		parentId: string | null = history.currentId
 	) => {
+		const branch = createMessagesList(history, history.currentId);
+		let parentIndex = branch.findIndex((entry) => entry.id === parentId);
+		// A chat answer can have been inserted while this spoken reply was being generated.
+		// Keep the reply on that branch, before the next user turn, rather than losing it as a sibling.
+		if (role === 'assistant' && parentIndex >= 0) {
+			while (branch[parentIndex + 1]?.role === 'assistant') parentIndex++;
+			parentId = branch[parentIndex].id;
+		}
+		const nextMessage = parentIndex >= 0 ? branch[parentIndex + 1] : null;
 		const id = uuidv4();
 		const message = {
 			id,
@@ -1962,9 +1972,6 @@
 			...(role === 'assistant' ? { model: voice.model, modelName: voice.model, modelIdx: 0 } : {})
 		};
 		const changedMessages: Record<string, any> = { [id]: message };
-		const branch = createMessagesList(history, history.currentId);
-		const parentIndex = branch.findIndex((entry) => entry.id === parentId);
-		const nextMessage = parentIndex >= 0 ? branch[parentIndex + 1] : null;
 		history.messages[id] = message;
 		if (parentId && history.messages[parentId]) {
 			history.messages[parentId].childrenIds.push(id);
@@ -2025,10 +2032,27 @@
 					modelId: model && !('direct' in model && model.direct) ? model.id : '',
 					voiceModel: $config?.audio?.realtime?.model,
 					voice: model?.info?.meta?.voice?.voice || $config?.audio?.realtime?.voice,
-					messages: createMessagesList(history, history.currentId).map((message) => ({
-						role: message.role,
-						content: visibleMessageText(message)
-					}))
+					messages: createMessagesList(history, history.currentId).map((message) => {
+						const voice = message.meta?.voice;
+						const spoken = voice && message.model === voice.model && !message.output?.length;
+						const state = getBridgeTurnState(message);
+						const speech = !spoken
+							? (voice?.speech ?? [])
+									.map((item: any) => item.transcript)
+									.filter(Boolean)
+									.join('\n')
+							: '';
+						let content = visibleMessageText(message);
+						if (message.role === 'assistant') {
+							const source = spoken
+								? 'Historical voice transcript, not current task status'
+								: 'Chat model';
+							content = `[${source}; message_id=${message.id}; state=${state}]\n${state === 'completed' ? content : ''}`;
+							if (speech)
+								content += `\n[Historical voice transcript, not current task status]\n${speech}`;
+						}
+						return { role: message.role, content };
+					})
 				};
 			},
 			addMessage: addVoiceMessage,
@@ -3736,7 +3760,12 @@
 					);
 
 					if (message.output && message.role === 'assistant') {
-						return { role: message.role, model: message.model, output: message.output };
+						return {
+							role: message.role,
+							model: message.model,
+							output: message.output,
+							meta: message.meta
+						};
 					}
 
 					if (message.role === 'user' && imageFiles.length > 0) {
@@ -3759,7 +3788,9 @@
 
 					return {
 						role: message.role,
-						content: message?.merged?.content ?? message.content
+						content: message?.merged?.content ?? message.content,
+						model: message.model,
+						meta: message.meta
 					};
 				})
 				.filter(

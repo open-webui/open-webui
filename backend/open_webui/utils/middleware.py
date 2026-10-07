@@ -2208,7 +2208,7 @@ async def convert_url_images_to_base64(form_data, user=None):
     return form_data
 
 
-MESSAGE_REPLAY_KEYS = ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage', 'model')
+MESSAGE_REPLAY_KEYS = ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage', 'model', 'meta')
 
 
 async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
@@ -2270,6 +2270,33 @@ def process_messages_with_output(
     processed = []
 
     for message in messages:
+        meta = message.get('meta')
+        voice = meta.get('voice') if isinstance(meta, dict) else None
+        voice = voice if isinstance(voice, dict) else {}
+        spoken = (
+            message.get('role') == 'assistant'
+            and voice
+            and message.get('model') == voice.get('model')
+            and not message.get('output')
+        )
+        # Keep voice speech available for follow-ups without attributing its status claims
+        # to the reasoning model. A completed chat answer can predate a stale spoken reply.
+        transcripts = []
+        if message.get('role') == 'assistant':
+            transcripts = voice.get('speech') or []
+        if spoken:
+            transcripts = [{'transcript': message.get('content', '')}]
+        speech = [
+            {
+                'role': 'assistant',
+                'content': '[Historical voice assistant transcript; not current task status]\n' + item['transcript'],
+            }
+            for item in transcripts
+            if isinstance(item, dict) and isinstance(item.get('transcript'), str) and item['transcript']
+        ]
+        if spoken:
+            processed.extend(speech)
+            continue
         if message.get('role') == 'assistant' and message.get('output'):
             # Use output items for clean OpenAI-format messages
             output_messages = convert_output_to_messages(
@@ -2280,14 +2307,16 @@ def process_messages_with_output(
             )
             if output_messages:
                 processed.extend(output_messages)
+                processed.extend(speech)
                 continue
             if not message.get('content'):
                 continue
 
         clean_message = dict(message)
-        for key in ('id', 'output', 'model', 'contextSummary', 'context_summary', 'usage'):
+        for key in ('id', 'output', 'model', 'contextSummary', 'context_summary', 'usage', 'meta'):
             clean_message.pop(key, None)
         processed.append(clean_message)
+        processed.extend(speech)
 
     if include_file_context:
         add_file_context(processed)
