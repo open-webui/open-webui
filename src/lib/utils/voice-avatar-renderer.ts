@@ -59,15 +59,49 @@ export async function createAvatarRenderer(
 		vrm.humanoid.getNormalizedBoneNode(name);
 	const head = bone('head');
 	const spine = bone('spine');
+	const chest = bone('chest') ?? bone('upperChest');
 	const leftArm = bone('leftUpperArm');
 	const rightArm = bone('rightUpperArm');
-	// VRM's normalized skeleton gives both VRM 0 and 1 a predictable T-pose.
-	if (leftArm) leftArm.rotation.z = -1.22;
-	if (rightArm) rightArm.rotation.z = 1.22;
 	const leftElbow = bone('leftLowerArm');
 	const rightElbow = bone('rightLowerArm');
-	if (leftElbow) leftElbow.rotation.y = -0.12;
-	if (rightElbow) rightElbow.rotation.y = 0.12;
+	// Start all built-in states from a relaxed, slightly asymmetric stance.
+	// Normalized VRM bones share T-pose axes across VRM 0 and 1.
+	const restingRotations: Partial<Record<Parameters<typeof bone>[0], [number, number, number]>> = {
+		spine: [0.012, 0.025, -0.016],
+		chest: [-0.018, -0.012, 0.022],
+		head: [0.006, -0.012, -0.006],
+		leftShoulder: [0, 0, -0.025],
+		rightShoulder: [0, 0, 0.035],
+		leftUpperArm: [0.025, -0.06, -1.38],
+		rightUpperArm: [-0.015, 0.035, 1.34],
+		leftLowerArm: [0, -0.24, -0.035],
+		rightLowerArm: [0, 0.19, 0.025],
+		leftHand: [0.025, 0, -0.055],
+		rightHand: [-0.015, 0, 0.035],
+		leftUpperLeg: [-0.025, 0, 0.02],
+		rightUpperLeg: [-0.045, 0, -0.025],
+		leftLowerLeg: [0.05, 0, 0],
+		rightLowerLeg: [0.09, 0, 0],
+		leftFoot: [-0.025, 0.045, -0.02],
+		rightFoot: [-0.045, -0.035, 0.025]
+	};
+	for (const [name, rotation] of Object.entries(restingRotations))
+		bone(name as Parameters<typeof bone>[0])?.rotation.set(...rotation);
+	// Resting fingers curl mainly at the first two joints, with a softer index finger.
+	for (const side of ['left', 'right'] as const) {
+		const sign = side === 'left' ? -1 : 1;
+		for (const [i, finger] of (['Index', 'Middle', 'Ring', 'Little'] as const).entries()) {
+			const curl = 0.18 + i * 0.035 + (side === 'right' ? 0.025 : 0);
+			for (const [joint, amount] of [
+				['Proximal', curl],
+				['Intermediate', curl * 0.8],
+				['Distal', 0.04]
+			] as const) {
+				const node = bone(`${side}${finger}${joint}`);
+				if (node) node.rotation.z = sign * amount;
+			}
+		}
+	}
 	vrm.update(0);
 	vrm.scene.updateMatrixWorld(true);
 	const bounds = new THREE.Box3().setFromObject(vrm.scene);
@@ -85,8 +119,6 @@ export async function createAvatarRenderer(
 		!!expressions?.getExpression('blinkLeft') && !!expressions?.getExpression('blinkRight');
 	let speaking = 0,
 		listening = 0,
-		speechTime = 0,
-		listenTime = 0,
 		mouthWeight = 0,
 		elapsed = 0,
 		nextBlink = 2.8,
@@ -220,31 +252,26 @@ export async function createAvatarRenderer(
 			speaking += ((input.active && input.speaking ? 1 : 0) - speaking) * smooth;
 			listening +=
 				((input.active && input.listening && !input.speaking ? 1 : 0) - listening) * smooth;
-			speechTime = input.active && input.speaking ? speechTime + dt : 0;
-			listenTime = input.active && input.listening ? listenTime + dt : 0;
 			// Keep the built-in body relaxed; authored clips supply intentional gestures.
 			const amount = reducedMotion ? 0 : Math.sqrt(0.35);
-			const breath = Math.sin(elapsed * 1.5);
-			// One small acknowledgment every few seconds, with stillness between nods.
-			const nodPhase = listenTime % 5;
-			const nod = nodPhase < 1.2 ? Math.sin((nodPhase / 1.2) * Math.PI) : 0;
+			const breath = Math.sin(elapsed * 1.1) * 0.9 + Math.sin(elapsed * 0.47) * 0.1;
 			if (spine) {
-				spine.rotation.x = amount * (0.012 * breath + 0.065 * listening);
-				spine.rotation.y = amount * speaking * 0.01 * Math.sin(speechTime * 0.6);
+				spine.rotation.x += amount * (0.006 * breath + 0.015 * listening);
+				spine.rotation.y += amount * speaking * 0.008 * Math.sin(elapsed * 0.6);
 			}
+			if (chest) chest.rotation.x -= amount * 0.008 * breath;
 			if (head) {
-				head.rotation.x =
+				head.rotation.x +=
 					amount *
-					(0.018 * Math.sin(elapsed * 0.7) +
-						speaking * 0.02 * Math.sin(speechTime * 0.9) +
-						listening * (0.08 + 0.12 * nod));
-				head.rotation.y =
-					amount *
-					(0.025 * Math.sin(elapsed * 0.47) + speaking * 0.015 * Math.sin(speechTime * 0.6));
-				head.rotation.z = amount * (0.02 * Math.sin(elapsed * 0.63) + listening * 0.18);
+					(0.006 * breath + speaking * 0.012 * Math.sin(elapsed * 0.85) + listening * 0.025);
+				head.rotation.y +=
+					amount * (0.012 * Math.sin(elapsed * 0.32) + speaking * 0.008 * Math.sin(elapsed * 0.6));
+				head.rotation.z += amount * (0.006 * Math.sin(elapsed * 0.27) + listening * 0.025);
 			}
-			if (leftArm) leftArm.rotation.z = -1.22 + amount * 0.015 * breath;
-			if (rightArm) rightArm.rotation.z = 1.22 - amount * 0.015 * breath;
+			if (leftArm) leftArm.rotation.z += amount * 0.004 * breath;
+			if (rightArm) rightArm.rotation.z -= amount * 0.003 * Math.sin(elapsed * 1.1 - 0.2);
+			if (leftElbow) leftElbow.rotation.y -= amount * 0.006 * Math.sin(elapsed * 1.1 - 0.3);
+			if (rightElbow) rightElbow.rotation.y += amount * 0.004 * Math.sin(elapsed * 1.1 - 0.5);
 			if (current && (bodyWeight > 0 || authored)) {
 				for (const pose of poses) {
 					pose.q.copy(pose.node.quaternion);
