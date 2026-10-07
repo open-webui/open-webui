@@ -68,11 +68,7 @@
 		previewContainer?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 		const result = avatarPreview?.playAnimation(name);
 		if (result !== 'started')
-			error = $i18n.t(
-				result === 'busy'
-					? 'Wait for the current gesture to finish.'
-					: 'Animation is unavailable or reduced motion is enabled.'
-			);
+			error = $i18n.t('Animation is unavailable or reduced motion is enabled.');
 		else error = '';
 	};
 	export let disabled = false;

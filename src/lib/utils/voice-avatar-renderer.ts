@@ -115,8 +115,25 @@ export async function createAvatarRenderer(
 	let enabled = true;
 	let cameraDistance = 0;
 	const switchClip = (clip: THREE.AnimationClip, once: boolean) => {
-		outgoing?.stop();
-		outgoing = current;
+		if (outgoing) {
+			outgoing.stop();
+			mixer.uncacheAction(outgoing.getClip());
+			outgoing = null;
+		}
+		if (current) {
+			current.stop();
+			// Blend from the pose actually on screen, including an interrupted crossfade.
+			// A separate snapshot also lets the same clip restart without snapping.
+			const pose = new THREE.AnimationClip(
+				'transition',
+				0.3,
+				poses.flatMap(({ node, authoredQ, authoredP }) => [
+					new THREE.QuaternionKeyframeTrack(`${node.name}.quaternion`, [0], authoredQ.toArray()),
+					new THREE.VectorKeyframeTrack(`${node.name}.position`, [0], authoredP.toArray())
+				])
+			);
+			outgoing = mixer.clipAction(pose).play();
+		}
 		current = mixer.clipAction(clip);
 		current.reset().setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity);
 		current.clampWhenFinished = true;
@@ -152,7 +169,6 @@ export async function createAvatarRenderer(
 		},
 		playGesture(id: string) {
 			if (!enabled) return 'unavailable' as const;
-			if (gesture) return 'busy' as const;
 			const clip = clips.get(id);
 			if (!clip) return 'unavailable' as const;
 			switchClip(clip, true);
@@ -241,7 +257,8 @@ export async function createAvatarRenderer(
 				mixer.update(dt);
 				fadeTime += dt;
 				if (outgoing && fadeTime >= 0.3) {
-					if (outgoing !== current) outgoing.stop();
+					outgoing.stop();
+					mixer.uncacheAction(outgoing.getClip());
 					outgoing = null;
 				}
 				for (const pose of poses) {
@@ -252,6 +269,7 @@ export async function createAvatarRenderer(
 				}
 			} else if (current) {
 				mixer.stopAllAction();
+				if (outgoing) mixer.uncacheAction(outgoing.getClip());
 				current = outgoing = null;
 			}
 			// Only assistant PCM drives the mouth. Silence and interruptions close it immediately.
