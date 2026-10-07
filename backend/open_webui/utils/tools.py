@@ -811,7 +811,7 @@ async def get_builtin_tools(
         )
 
     # Skills tools - view_skill allows model to load full skill instructions on demand
-    if extra_params.get('__skill_ids__'):
+    if is_builtin_tool_enabled('skills') and extra_params.get('__skill_ids__'):
         builtin_functions.append(view_skill)
 
     # Task management - break down complex work into trackable steps

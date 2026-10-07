@@ -2631,6 +2631,8 @@
 	"settings.admin.models.builtinTools.notes.label": "Notes",
 	"settings.admin.models.builtinTools.notifications.description": "Send notifications to configured webhook targets",
 	"settings.admin.models.builtinTools.notifications.label": "Notifications",
+	"settings.admin.models.builtinTools.skills.description": "Find and load skill instructions on demand",
+	"settings.admin.models.builtinTools.skills.label": "Skills",
 	"settings.admin.models.builtinTools.subagents.description": "Delegate focused work to parallel sub-agents",
 	"settings.admin.models.builtinTools.subagents.label": "Sub-agents",
 	"settings.admin.models.builtinTools.tasks.description": "Break down complex requests into trackable steps",

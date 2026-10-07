@@ -2778,7 +2778,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if note_files:
                 files = [*(files or []), *note_files]
 
-    if skill_ids or use_builtin_tools:
+    model_builtin_tools = model.get('info', {}).get('meta', {}).get('builtinTools') or {}
+
+    if skill_ids or (use_builtin_tools and model_builtin_tools.get('skills', True)):
         from open_webui.models.skills import Skills as SkillsModel
         from open_webui.utils.terminals import (
             format_terminal_skill_context,
@@ -2791,7 +2793,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         db_skill_ids = [sid for sid in skill_ids if not sid.startswith(terminal_skill_prefix)]
         terminal_skill_ids = [sid for sid in skill_ids if sid.startswith(terminal_skill_prefix)]
 
-        if use_builtin_tools:
+        if use_builtin_tools and model_builtin_tools.get('skills', True):
             accessible_skills = {s.id: s for s in await SkillsModel.get_skills(user_id=user.id)}
             db_skill_ids = sorted(accessible_skills)
         else:
@@ -2804,7 +2806,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         skill_manifest = ''
         for skill in available_skills:
-            if skill.id in mentioned_skill_ids or not use_builtin_tools:
+            if skill.id in mentioned_skill_ids or not use_builtin_tools or not model_builtin_tools.get('skills', True):
                 form_data['messages'] = add_or_update_system_message(
                     f'<skill name="{skill.name}">\n{skill.content}\n</skill>',
                     form_data['messages'],
@@ -2825,7 +2827,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         listed_terminal_skills = listed if isinstance(listed, list) else []
 
-        if terminal_id and use_builtin_tools:
+        if terminal_id and use_builtin_tools and model_builtin_tools.get('skills', True):
             terminal_skills = listed_terminal_skills
         elif terminal_skill_ids:
             terminal_skill_map = {skill['id']: skill for skill in listed_terminal_skills}
@@ -2833,7 +2835,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         for skill in terminal_skills:
             sid = skill['id']
-            if sid in mentioned_skill_ids or not use_builtin_tools:
+            if sid in mentioned_skill_ids or not use_builtin_tools or not model_builtin_tools.get('skills', True):
                 skill_name = unquote(sid.removeprefix(terminal_skill_prefix))
                 loaded = await get_terminal_skill(request, user.model_dump(), metadata, skill_name, extra_params)
                 if loaded:
@@ -3058,7 +3060,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Only inject when the request originates from the UI (identified by session_id).
         # API callers don't expect hidden tools; they can explicitly request tools via tool_ids.
         if use_builtin_tools:
-            if (model.get('info', {}).get('meta', {}).get('builtinTools') or {}).get('knowledge', True):
+            if model_builtin_tools.get('knowledge', True):
                 from html import escape
 
                 knowledge_tags = []
