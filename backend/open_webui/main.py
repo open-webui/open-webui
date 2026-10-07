@@ -253,7 +253,6 @@ from open_webui.utils.middleware import (
     build_chat_response_context,
     process_chat_payload,
     process_chat_response,
-    resume_tool_calls,
 )
 from open_webui.utils.misc import get_response_error_detail, merge_model_params
 from open_webui.utils.model_ids import strip_provider_model_prefix
@@ -1697,9 +1696,9 @@ async def chat_completion(
                 # Saved chats load the message after approved tool calls run, so their results are kept
                 if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
                     ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
-                form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
-
-                paused = await resume_tool_calls(request, form_data, user, model, metadata)
+                form_data, metadata, events, paused = await process_chat_payload(
+                    request, form_data, user, metadata, model
+                )
                 if paused:
                     return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
 
