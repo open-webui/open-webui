@@ -18,7 +18,8 @@ export const getModelItems = async (
 	selectedTag,
 	orderBy,
 	direction,
-	page
+	page,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 
@@ -44,6 +45,7 @@ export const getModelItems = async (
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/list?${searchParams.toString()}`, {
 		method: 'GET',
+		signal,
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -58,6 +60,7 @@ export const getModelItems = async (
 			return json;
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			error = err;
 			console.error(err);
 			return null;

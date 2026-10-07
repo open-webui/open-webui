@@ -17,8 +17,9 @@
 
 	import { config, user as currentUser, pinnedModels, settings } from '$lib/stores';
 	import Link from '$lib/components/icons/Link.svelte';
+	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	export let user;
 	export let model;
@@ -54,6 +55,11 @@
 >
 	<Tooltip content={$i18n.t('More')}>
 		<button
+			type="button"
+			class="focus-ring rounded-lg"
+			aria-label={`${$i18n.t('More')}: ${resolveLocalizedModelName(model, $i18n.language)}`}
+			aria-haspopup="menu"
+			aria-expanded={show}
 			on:click={(e) => {
 				e.stopPropagation();
 				show = !show;

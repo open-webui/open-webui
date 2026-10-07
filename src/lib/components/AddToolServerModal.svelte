@@ -5,7 +5,7 @@
 	const { saveAs } = fileSaver;
 
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	const i18n = getContext<any>('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -17,6 +17,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tags from './common/Tags.svelte';
 	import { getToolServerData } from '$lib/apis';
+	import { slugify } from '$lib/utils';
 	import {
 		verifyToolServerConnection,
 		registerOAuthClient,
@@ -88,9 +89,15 @@
 			? $i18n.t('OAuth discovery successful')
 			: $i18n.t('Connection successful');
 
+	const ensureConnectionId = () => {
+		if (type === 'mcp' && !edit && !id.trim()) {
+			id = slugify(name.trim()) || uuidv4();
+		}
+	};
+
 	const authorizeOAuthHandler = () => {
 		if (!id) {
-			toast.error($i18n.t('Please enter a valid ID'));
+			toast.error($i18n.t('Please enter a Connection ID before authorizing OAuth.'));
 			return;
 		}
 
@@ -112,13 +119,14 @@
 			return;
 		}
 
-		if (id === '') {
-			toast.error($i18n.t('Please enter a valid ID'));
+		if (auth_type === 'oauth_2.1_static' && (!oauthClientId || !oauthClientSecret)) {
+			toast.error($i18n.t('Please enter Client ID and Client Secret'));
 			return;
 		}
 
-		if (auth_type === 'oauth_2.1_static' && (!oauthClientId || !oauthClientSecret)) {
-			toast.error($i18n.t('Please enter Client ID and Client Secret'));
+		ensureConnectionId();
+		if (!id.trim()) {
+			toast.error($i18n.t('Enter a Connection ID to register.'));
 			return;
 		}
 
@@ -146,10 +154,9 @@
 		});
 
 		if (res) {
+			// $i18n.t('Please save the connection to persist the OAuth client information and do not change the ID');
 			toast.warning(
-				$i18n.t(
-					'Please save the connection to persist the OAuth client information and do not change the ID'
-				)
+				$i18n.t('Save the connection to keep the OAuth details. Keep the Connection ID unchanged.')
 			);
 			toast.success($i18n.t('Registration successful'));
 
@@ -242,7 +249,7 @@
 		if (!file) return;
 
 		const reader = new FileReader();
-		reader.onload = (event) => {
+		reader.onload = async (event) => {
 			const json = event.target.result;
 			console.log('importHandler', json);
 
@@ -280,6 +287,11 @@
 				if (data.config) {
 					enable = data.config.enable ?? true;
 					accessGrants = data.config.access_grants ?? [];
+				}
+
+				if (data.info?.id) {
+					await tick();
+					id = data.info.id;
 				}
 
 				toast.success($i18n.t('Import successful'));
@@ -329,6 +341,7 @@
 
 	const submitHandler = async () => {
 		loading = true;
+		ensureConnectionId();
 
 		// remove trailing slash from url for non-MCP connections
 		// MCP servers may require a trailing slash; stripping it can cause
@@ -337,7 +350,11 @@
 			url = url.replace(/\/$/, '');
 		}
 		if (id.includes(':') || id.includes('|')) {
-			toast.error($i18n.t('ID cannot contain ":" or "|" characters'));
+			toast.error(
+				type === 'mcp'
+					? $i18n.t('Connection ID cannot contain ":" or "|" characters')
+					: $i18n.t('ID cannot contain ":" or "|" characters')
+			);
 			loading = false;
 			return;
 		}
@@ -446,7 +463,7 @@
 		accessGrants = [];
 	};
 
-	const init = () => {
+	const init = async () => {
 		forwardCookies = connection?.forward_cookies ?? false;
 		if (connection) {
 			type = connection?.type ?? 'openapi';
@@ -474,6 +491,11 @@
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessGrants = connection.config?.access_grants ?? [];
+
+			if (connection.info?.id) {
+				await tick();
+				id = connection.info.id;
+			}
 		}
 	};
 
@@ -481,9 +503,9 @@
 		init();
 	}
 
-	onMount(() => {
-		init();
-	});
+	$: if (show && type === 'mcp' && !edit && !oauthClientInfo && name) {
+		id = slugify(name.trim());
+	}
 </script>
 
 <Modal size="sm" bind:show>
@@ -594,13 +616,28 @@
 							{#if !direct}
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label for="enter-id" class={`text-xs text-gray-500`}
-											>{$i18n.t('ID')}
-											{#if type !== 'mcp'}<span class="opacity-50">({$i18n.t('optional')})</span
-												>{/if}</label
+										<label for="enter-id" class={`text-xs text-gray-500`}>
+											{#if type === 'mcp'}
+												{$i18n.t('Connection ID')}
+											{:else}
+												{$i18n.t('ID')}
+												<span class="opacity-50">({$i18n.t('optional')})</span>
+											{/if}</label
 										>
 									</div>
-									<div class="flex flex-1 items-center">
+									<Tooltip
+										className="flex flex-1 items-center"
+										tippyOptions={{ trigger: 'mouseenter focusin' }}
+										content={type === 'mcp' && oauthAuthTypes.includes(auth_type)
+											? edit
+												? $i18n.t(
+														'Identifies this connection in Open WebUI, separately from the OAuth client ID.'
+													)
+												: $i18n.t(
+														'Generated from the name, or enter your own. Identifies this connection in Open WebUI, separately from the OAuth client ID.'
+													)
+											: ''}
+									>
 										<input
 											id="enter-id"
 											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
@@ -608,9 +645,9 @@
 											bind:value={id}
 											placeholder="auto"
 											autocomplete="off"
-											required={type === 'mcp'}
+											required={type === 'mcp' && edit}
 										/>
-									</div>
+									</Tooltip>
 								</div>
 							{/if}
 						</div>

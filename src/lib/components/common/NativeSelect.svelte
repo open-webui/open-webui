@@ -15,7 +15,7 @@
 	bind:value
 	{required}
 	on:change={() => {
-		dispatch('change');
+		dispatch('change', value);
 	}}
 >
 	{#if placeholder}

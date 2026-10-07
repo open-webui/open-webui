@@ -109,7 +109,9 @@ async def get_folders(
 
     user_group_ids = None
     if user.role != 'admin' and any(folder.data and 'files' in folder.data for folder in folders):
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+        }
 
     # Verify folder data integrity
     folder_list = []
@@ -244,7 +246,7 @@ async def get_shared_folders(
 ):
     """Get all folders shared with the current user (not owned by them)."""
     await check_folders_permission(request, user, db=db)
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     group_ids = {g.id for g in groups}
 
     folder_perms = await Folders.get_shared_folder_ids_for_user(user.id, group_ids, db=db)

@@ -201,7 +201,7 @@ async def search_notes(
         filter['direction'] = direction
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
-        groups = await Groups.get_groups_by_member_id(user.id, db=db)
+        groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
         if groups:
             filter['group_ids'] = [group.id for group in groups]
 

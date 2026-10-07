@@ -268,9 +268,6 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
         title = str(data.get('title') or event.message or 'Chat finished')
         content = str(data.get('message') or '')
         url = str(data.get('url') or '')
-        chat_id = str(data.get('chat_id') or '')
-        if chat_id and url.endswith(f'/c/{chat_id}'):
-            url = f'{url[: -len(f"/c/{chat_id}")].rstrip("/")}/{chat_id}'
         body = '\n'.join(part for part in (content, url) if part)
         return (
             f'**{title}**',
@@ -288,9 +285,6 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
         title = str(event.message or 'Chat failed')
         content = str(data.get('message') or '')
         url = str(data.get('url') or '')
-        chat_id = str(data.get('chat_id') or '')
-        if chat_id and url.endswith(f'/c/{chat_id}'):
-            url = f'{url[: -len(f"/c/{chat_id}")].rstrip("/")}/{chat_id}'
         body = '\n'.join(part for part in (content, url) if part)
         return (
             f'**{title}**',

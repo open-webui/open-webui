@@ -12,8 +12,9 @@ from importlib import util
 from typing import Any
 
 from open_webui.env import (
+    ENABLE_FUNCTIONS,
     ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
-    ENABLE_PLUGINS,
+    ENABLE_TOOLS,
     OFFLINE_MODE,
     PIP_OPTIONS,
     PIP_PACKAGE_INDEX_OPTIONS,
@@ -204,8 +205,8 @@ def replace_imports(content):
 # May the intent of the one who wrote it survive every
 # import and transformation, as a deed survives the generations.
 async def load_tool_module_by_id(tool_id, content=None):
-    if not ENABLE_PLUGINS:
-        raise RuntimeError('Plugins are disabled by ENABLE_PLUGINS=false')
+    if not ENABLE_TOOLS:
+        raise RuntimeError('Tools are disabled by ENABLE_PLUGINS or ENABLE_TOOLS')
 
     frontmatter = None
     if content is None:
@@ -257,8 +258,8 @@ async def load_tool_module_by_id(tool_id, content=None):
 
 
 async def load_function_module_by_id(function_id: str, content: str | None = None):
-    if not ENABLE_PLUGINS:
-        raise RuntimeError('Plugins are disabled by ENABLE_PLUGINS=false')
+    if not ENABLE_FUNCTIONS:
+        raise RuntimeError('Functions are disabled by ENABLE_PLUGINS or ENABLE_FUNCTIONS')
 
     frontmatter = None
     if content is None:
@@ -338,6 +339,9 @@ def get_function_contents_cache(request) -> dict:
 
 
 async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
+    if not ENABLE_TOOLS:
+        raise RuntimeError('Tools are disabled by ENABLE_PLUGINS or ENABLE_TOOLS')
+
     tools_cache = get_tools_cache(request)
     tool_contents_cache = get_tool_contents_cache(request)
     content = None
@@ -375,6 +379,9 @@ async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
 async def get_function_module_from_cache(
     request, function_id, function: FunctionModel | None = None, load_from_db=True
 ):
+    if not ENABLE_FUNCTIONS:
+        raise RuntimeError('Functions are disabled by ENABLE_PLUGINS or ENABLE_FUNCTIONS')
+
     functions_cache = get_functions_cache(request)
     function_contents_cache = get_function_contents_cache(request)
     content = None
@@ -458,12 +465,12 @@ async def install_tool_and_function_dependencies():
     and then installing them using pip. Duplicates or similar version specifications are
     handled by pip as much as possible.
     """
-    if not ENABLE_PLUGINS:
-        log.info('ENABLE_PLUGINS is disabled, skipping tool and function dependencies.')
+    if not ENABLE_TOOLS and not ENABLE_FUNCTIONS:
+        log.info('Tools and Functions are disabled, skipping their dependencies.')
         return
 
-    function_list = await Functions.get_functions(active_only=True)
-    tool_list = await Tools.get_tools()
+    function_list = await Functions.get_functions(active_only=True) if ENABLE_FUNCTIONS else []
+    tool_list = await Tools.get_tools() if ENABLE_TOOLS else []
 
     all_dependencies = ''
     try:

@@ -101,7 +101,7 @@ async def get_user_groups_for_custom_headers(
         return None
 
     try:
-        return await Groups.get_groups_by_member_id(user.id)
+        return await Groups.get_groups_by_member_id(user.id, include_inherited=True)
     except Exception:
         log.exception('Failed to resolve user groups for custom headers')
         return None

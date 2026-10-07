@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from fastapi.responses import JSONResponse
@@ -18,6 +19,8 @@ from open_webui.utils.task import (
 )
 
 log = logging.getLogger(__name__)
+
+BASE64_DATA_URI_RE = re.compile(r'data:[\w/+.;=%-]*;base64,[A-Za-z0-9+/=]*')
 
 DEFAULT_CONTEXT_COMPACTION_PROMPT = """### Task:
 Summarize the conversation history that will be compacted out of the active chat context.
@@ -439,7 +442,10 @@ def _estimate_messages_tokens(messages: list[dict]) -> int:
 
         total += _estimate_tokens(message.get('output'))
         total += _estimate_tokens(message.get('tool_calls'))
-        total += _estimate_tokens(message.get('files'))
+        files = message.get('files')
+        if files:
+            # Inline data is not part of the file tags sent to the model.
+            total += _estimate_tokens(BASE64_DATA_URI_RE.sub('', JSONCodec.dumps(files, ensure_ascii=False)))
     return total
 
 

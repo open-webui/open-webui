@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
-	import { models, tools, functions, user } from '$lib/stores';
+	import { config, models, tools, functions, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
@@ -15,6 +15,7 @@
 	import { uploadFile, deleteFileById } from '$lib/apis/files';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
+	import ModelControls from '$lib/components/admin/Settings/Models/ModelControls.svelte';
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
@@ -35,9 +36,15 @@
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import TerminalSelector from './TerminalSelector.svelte';
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
+	import VoiceAvatarSettings from './VoiceAvatarSettings.svelte';
+	import {
+		avatarAssetIds,
+		type AnimationFiles,
+		type VoiceAvatarConfig
+	} from '$lib/utils/voice-avatar';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
-	import { extractInputVariables } from '$lib/utils';
+	import { copyToClipboard, extractInputVariables } from '$lib/utils';
 	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
 
 	const i18n: any = getContext('i18n');
@@ -45,12 +52,16 @@
 	export let onSubmit: Function;
 	export let onBack: null | Function = null;
 
-	export let model = null;
+	export let model: any = null;
 	export let edit = false;
+	export let admin = false;
 
 	export let preset = true;
 
 	let loading = false;
+	let voiceAvatar: VoiceAvatarConfig | null = null;
+	let avatarFile: File | null = null;
+	let animationFiles: AnimationFiles = {};
 	let backgroundFile: File | null = null;
 	let backgroundInput: HTMLInputElement;
 	let backgroundPreview: string | null = null;
@@ -101,6 +112,8 @@
 			// https://docs.openwebui.com/license.
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			background_image_url: null as string | null,
+			voice: undefined as { voice?: string } | undefined,
+			voice_avatar: null as VoiceAvatarConfig | null,
 			description: '',
 			i18n: {},
 			suggestion_prompts: null,
@@ -111,7 +124,7 @@
 		}
 	};
 
-	let params = {
+	let params: Record<string, any> = {
 		system: ''
 	};
 
@@ -131,6 +144,7 @@
 	let accessGrants = [];
 	let terminalId = '';
 	let tts = { voice: '' };
+	let voice = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
 	let voices: { id: string; name?: string }[] = [];
 
@@ -280,12 +294,135 @@
 		);
 	};
 
+	$: modelInfo = (() => {
+		const modelInfo = structuredClone(info);
+
+		modelInfo.id = id;
+		modelInfo.meta.voice_avatar = voiceAvatar;
+		modelInfo.name = name;
+
+		modelInfo.params = { ...modelInfo.params, ...params };
+
+		modelInfo.access_grants = accessGrants;
+		modelInfo.meta.capabilities = capabilities;
+
+		if (enableDescription) {
+			modelInfo.meta.description =
+				(modelInfo.meta.description ?? '').trim() === '' ? null : modelInfo.meta.description;
+		} else {
+			modelInfo.meta.description = null;
+		}
+
+		if (knowledge.length > 0) {
+			modelInfo.meta.knowledge = knowledge.map(toModelKnowledgeReference);
+		} else {
+			if (modelInfo.meta.knowledge) {
+				delete modelInfo.meta.knowledge;
+			}
+		}
+
+		if (toolIds.length > 0) {
+			modelInfo.meta.toolIds = toolIds;
+		} else {
+			if (modelInfo.meta.toolIds) {
+				delete modelInfo.meta.toolIds;
+			}
+		}
+
+		if (skillIds.length > 0) {
+			modelInfo.meta.skillIds = skillIds;
+		} else {
+			if (modelInfo.meta.skillIds) {
+				delete modelInfo.meta.skillIds;
+			}
+		}
+
+		if (filterIds.length > 0) {
+			modelInfo.meta.filterIds = filterIds;
+		} else {
+			if (modelInfo.meta.filterIds) {
+				delete modelInfo.meta.filterIds;
+			}
+		}
+
+		if (defaultFilterIds.length > 0) {
+			modelInfo.meta.defaultFilterIds = defaultFilterIds;
+		} else {
+			if (modelInfo.meta.defaultFilterIds) {
+				delete modelInfo.meta.defaultFilterIds;
+			}
+		}
+
+		if (actionIds.length > 0) {
+			modelInfo.meta.actionIds = actionIds;
+		} else {
+			if (modelInfo.meta.actionIds) {
+				delete modelInfo.meta.actionIds;
+			}
+		}
+
+		if (defaultFeatureIds.length > 0) {
+			modelInfo.meta.defaultFeatureIds = defaultFeatureIds;
+		} else {
+			if (modelInfo.meta.defaultFeatureIds) {
+				delete modelInfo.meta.defaultFeatureIds;
+			}
+		}
+
+		if (Object.keys(builtinTools).length > 0) {
+			modelInfo.meta.builtinTools = builtinTools;
+		} else {
+			if (modelInfo.meta.builtinTools) {
+				delete modelInfo.meta.builtinTools;
+			}
+		}
+
+		modelInfo.meta.i18n = pruneEmptyLocaleEntries(modelInfo.meta.i18n);
+		if (Object.keys(modelInfo.meta.i18n).length === 0) {
+			delete modelInfo.meta.i18n;
+		}
+
+		if (terminalId) {
+			modelInfo.meta.terminalId = terminalId;
+		} else {
+			if (modelInfo.meta.terminalId) {
+				delete modelInfo.meta.terminalId;
+			}
+		}
+
+		if (voice.voice.trim()) modelInfo.meta.voice = { voice: voice.voice.trim() };
+		else delete modelInfo.meta.voice;
+
+		if (tts.voice !== '') {
+			if (!modelInfo.meta.tts) modelInfo.meta.tts = {};
+			modelInfo.meta.tts.voice = tts.voice;
+		} else {
+			if (modelInfo.meta.tts?.voice) {
+				delete modelInfo.meta.tts.voice;
+				if (Object.keys(modelInfo.meta.tts).length === 0) {
+					delete modelInfo.meta.tts;
+				}
+			}
+		}
+
+		modelInfo.params.system = system.trim() === '' ? null : system;
+		modelInfo.params.stop = params.stop
+			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
+					s.trim()
+				)
+			: null;
+		Object.keys(modelInfo.params).forEach((key) => {
+			if (modelInfo.params[key] === '' || modelInfo.params[key] === null) {
+				delete modelInfo.params[key];
+			}
+		});
+
+		return modelInfo;
+	})();
+
 	const submitHandler = async () => {
 		if (loading) return;
 		loading = true;
-
-		info.id = id;
-		info.name = name;
 
 		if (id === '') {
 			toast.error($i18n.t('Model ID is required.'));
@@ -322,121 +459,12 @@
 			return;
 		}
 
-		info.params = { ...info.params, ...params };
-
-		info.access_grants = accessGrants;
-		info.meta.capabilities = capabilities;
-
-		if (enableDescription) {
-			info.meta.description =
-				(info.meta.description ?? '').trim() === '' ? null : info.meta.description;
-		} else {
-			info.meta.description = null;
-		}
-
-		if (knowledge.length > 0) {
-			info.meta.knowledge = knowledge.map(toModelKnowledgeReference);
-		} else {
-			if (info.meta.knowledge) {
-				delete info.meta.knowledge;
-			}
-		}
-
-		if (toolIds.length > 0) {
-			info.meta.toolIds = toolIds;
-		} else {
-			if (info.meta.toolIds) {
-				delete info.meta.toolIds;
-			}
-		}
-
-		if (skillIds.length > 0) {
-			info.meta.skillIds = skillIds;
-		} else {
-			if (info.meta.skillIds) {
-				delete info.meta.skillIds;
-			}
-		}
-
-		if (filterIds.length > 0) {
-			info.meta.filterIds = filterIds;
-		} else {
-			if (info.meta.filterIds) {
-				delete info.meta.filterIds;
-			}
-		}
-
-		if (defaultFilterIds.length > 0) {
-			info.meta.defaultFilterIds = defaultFilterIds;
-		} else {
-			if (info.meta.defaultFilterIds) {
-				delete info.meta.defaultFilterIds;
-			}
-		}
-
-		if (actionIds.length > 0) {
-			info.meta.actionIds = actionIds;
-		} else {
-			if (info.meta.actionIds) {
-				delete info.meta.actionIds;
-			}
-		}
-
-		if (defaultFeatureIds.length > 0) {
-			info.meta.defaultFeatureIds = defaultFeatureIds;
-		} else {
-			if (info.meta.defaultFeatureIds) {
-				delete info.meta.defaultFeatureIds;
-			}
-		}
-
-		if (Object.keys(builtinTools).length > 0) {
-			info.meta.builtinTools = builtinTools;
-		} else {
-			if (info.meta.builtinTools) {
-				delete info.meta.builtinTools;
-			}
-		}
-
-		info.meta.i18n = pruneEmptyLocaleEntries(info.meta.i18n);
-		if (Object.keys(info.meta.i18n).length === 0) {
-			delete info.meta.i18n;
-		}
-
-		if (terminalId) {
-			info.meta.terminalId = terminalId;
-		} else {
-			if (info.meta.terminalId) {
-				delete info.meta.terminalId;
-			}
-		}
-
-		if (tts.voice !== '') {
-			if (!info.meta.tts) info.meta.tts = {};
-			info.meta.tts.voice = tts.voice;
-		} else {
-			if (info.meta.tts?.voice) {
-				delete info.meta.tts.voice;
-				if (Object.keys(info.meta.tts).length === 0) {
-					delete info.meta.tts;
-				}
-			}
-		}
-
-		info.params.system = system.trim() === '' ? null : system;
-		info.params.stop = params.stop
-			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
-					s.trim()
-				)
-			: null;
-		Object.keys(info.params).forEach((key) => {
-			if (info.params[key] === '' || info.params[key] === null) {
-				delete info.params[key];
-			}
-		});
+		info = structuredClone(modelInfo);
 
 		let uploadedId: string | null = null;
 		const previousBackground = info.meta.background_image_url;
+		const previousAvatar = structuredClone(info.meta.voice_avatar);
+		const uploadedAvatarIds: string[] = [];
 
 		try {
 			if (backgroundFile) {
@@ -445,12 +473,59 @@
 				uploadedId = uploaded.id;
 				info.meta.background_image_url = `/api/v1/files/${uploaded.id}/content`;
 			}
+			if (avatarFile && info.meta.voice_avatar) {
+				const uploaded = await uploadFile(localStorage.token, avatarFile, null, false, false);
+				if (!uploaded?.id) throw new Error($i18n.t('Failed to upload avatar.'));
+				uploadedAvatarIds.push(uploaded.id);
+				info.meta.voice_avatar = { ...info.meta.voice_avatar, file_id: uploaded.id };
+			}
+			if (info.meta.voice_avatar) {
+				const avatar = info.meta.voice_avatar;
+				const replacements = new Map<string, string>();
+				for (const id of new Set(avatarAssetIds(avatar))) {
+					if (!animationFiles[id]) continue;
+					const uploaded = await uploadFile(
+						localStorage.token,
+						animationFiles[id],
+						null,
+						false,
+						false
+					);
+					if (!uploaded?.id) throw new Error($i18n.t('Failed to upload animation.'));
+					uploadedAvatarIds.push(uploaded.id);
+					replacements.set(id, uploaded.id);
+				}
+				for (const asset of [...Object.values(avatar.states ?? {}), ...(avatar.gestures ?? [])]) {
+					asset.file_id = replacements.get(asset.file_id) ?? asset.file_id;
+				}
+			}
 			const saved = await onSubmit(info);
 			if (saved === false) throw new Error($i18n.t('Failed to save model'));
 			backgroundFile = null;
+			avatarFile = null;
+			animationFiles = {};
+			voiceAvatar = info.meta.voice_avatar;
 			clearBackgroundPreview();
 		} catch (error: any) {
 			info.meta.background_image_url = previousBackground;
+			info.meta.voice_avatar = previousAvatar;
+			if (uploadedAvatarIds.length) {
+				try {
+					const response = await fetch(
+						`${WEBUI_API_BASE_URL}/models/model?${new URLSearchParams({ id: info.id })}`,
+						{ headers: { authorization: `Bearer ${localStorage.token}` } }
+					);
+					if (response.status === 404 || response.ok) {
+						const referenced = response.ok
+							? avatarAssetIds((await response.json())?.meta?.voice_avatar)
+							: [];
+						for (const id of uploadedAvatarIds)
+							if (!referenced.includes(id)) await deleteFileById(localStorage.token, id);
+					}
+				} catch {
+					/* Keep uploads when the save result is uncertain. */
+				}
+			}
 			if (uploadedId) {
 				// A failed response can follow a committed save; only delete an unused upload.
 				try {
@@ -509,6 +584,7 @@
 
 		if (model) {
 			name = model.name;
+			voiceAvatar = model.meta?.voice_avatar ? structuredClone(model.meta.voice_avatar) : null;
 			await tick();
 
 			id = model.id;
@@ -571,6 +647,7 @@
 			builtinTools = model?.meta?.builtinTools ?? builtinTools;
 			terminalId = model?.meta?.terminalId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
+			voice = { voice: model?.meta?.voice?.voice ?? '' };
 
 			accessGrants = model?.access_grants ?? [];
 
@@ -1147,6 +1224,9 @@
 										<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
 									</div>
 								{/if}
+								{#if admin}
+									<ModelControls bind:controls={params.model_controls} />
+								{/if}
 							</div>
 						</section>
 
@@ -1274,6 +1354,31 @@
 							</div>
 						{/if}
 
+						{#if $config?.audio?.realtime?.enabled}
+							<div class="my-3">
+								<div class="flex w-full justify-between mb-1">
+									<label
+										for="realtime-voice-input"
+										class="self-center text-xs font-normal text-gray-500"
+									>
+										{$i18n.t('Realtime Voice')}
+									</label>
+								</div>
+								<TTSVoiceInput
+									id="realtime-voice"
+									bind:value={voice.voice}
+									placeholder={$i18n.t('Admin default')}
+								/>
+							</div>
+						{/if}
+						{#if $config?.audio?.realtime?.enabled || voiceAvatar}
+							<VoiceAvatarSettings
+								bind:value={voiceAvatar}
+								bind:file={avatarFile}
+								bind:animationFiles
+								disabled={loading}
+							/>
+						{/if}
 						<div class="my-3">
 							<div class="flex w-full justify-between mb-1">
 								<div class="self-center text-xs font-normal text-gray-500">
@@ -1317,19 +1422,33 @@
 							<div class="flex w-full justify-between mb-2">
 								<div class=" self-center text-sm font-normal">{$i18n.t('JSON Preview')}</div>
 
-								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										showPreview = !showPreview;
-									}}
-								>
-									{#if showPreview}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-									{/if}
-								</button>
+								<div class="flex items-center">
+									<button
+										class="p-1 px-3 text-xs flex rounded-sm transition"
+										type="button"
+										on:click={async () => {
+											const copied = await copyToClipboard(JSON.stringify(modelInfo, null, 2));
+											if (copied) {
+												toast.success($i18n.t('Copied to clipboard'));
+											}
+										}}
+									>
+										{$i18n.t('Copy')}
+									</button>
+									<button
+										class="p-1 px-3 text-xs flex rounded-sm transition"
+										type="button"
+										on:click={() => {
+											showPreview = !showPreview;
+										}}
+									>
+										{#if showPreview}
+											<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+										{:else}
+											<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+										{/if}
+									</button>
+								</div>
 							</div>
 
 							{#if showPreview}
@@ -1337,7 +1456,7 @@
 									<textarea
 										class="text-sm w-full bg-transparent outline-hidden resize-none"
 										rows="10"
-										value={JSON.stringify(info, null, 2)}
+										value={JSON.stringify(modelInfo, null, 2)}
 										disabled
 										readonly
 									/>

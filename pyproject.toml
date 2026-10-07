@@ -15,6 +15,8 @@ dependencies = [
     "python-socketio==5.16.2",
     "orjson==3.11.9",
     "cryptography==48.0.0",
+    "pyotp==2.9.0",
+    "qrcode==8.2",
     "bcrypt==5.0.0",
     "argon2-cffi==25.1.0",
     "PyJWT[crypto]==2.13.0",
@@ -38,7 +40,7 @@ dependencies = [
     "psycopg[binary]==3.3.4",
     "alembic==1.18.4",
 
-    "pycrdt==0.13.1",
+    "pycrdt==0.14.8",
     "redis==8.0.1",
     "hiredis==3.4.2",
     # "valkey-glide-sync==2.3.1",  # optional: install manually if VECTOR_DB=valkey

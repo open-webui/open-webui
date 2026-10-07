@@ -351,6 +351,7 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
 
                 parent.chat = parent_chat
                 history['currentId'] = assistant_message_id
+                parent.current_message_id = assistant_message_id
                 parent.updated_at = int(time.time())
                 timer_row = await db.get(Chat, timer_id)
                 if timer_row:

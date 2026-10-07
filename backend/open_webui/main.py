@@ -74,9 +74,7 @@ from open_webui.config import (
     seed_registered_defaults,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS
-from open_webui.utils.recurrence import RecurrenceEvaluationTimeout
 from open_webui.env import (
-    USE_SLIM,
     AIOHTTP_CLIENT_SESSION_SSL,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_INCLUDED_PATHS,
@@ -88,6 +86,7 @@ from open_webui.env import (
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_CUSTOM_MODEL_FALLBACK,
     ENABLE_EASTER_EGGS,
+    ENABLE_FUNCTIONS,
     # OAuth Back-Channel Logout
     ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
     ENABLE_OTEL,
@@ -98,6 +97,8 @@ from open_webui.env import (
     ENABLE_SCIM,
     ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
+    ENABLE_TOOL_SERVERS,
+    ENABLE_TOOLS,
     ENABLE_VERSION_UPDATE_CHECK,
     ENABLE_WEBSOCKET_SUPPORT,
     EXTERNAL_PWA_MANIFEST_URL,
@@ -113,6 +114,7 @@ from open_webui.env import (
     RESET_CONFIG_ON_START,
     SAFE_MODE,
     SCIM_TOKEN,
+    USE_SLIM,
     VERSION,
     WEBSOCKET_HEARTBEAT_INTERVAL,
     WEBSOCKET_MANAGER,
@@ -145,6 +147,7 @@ from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.messages import Messages
 from open_webui.models.models import Models, normalize_model_tags
+from open_webui.models.groups import Groups, resolve_group_default_models
 from open_webui.models.users import Users
 from open_webui.routers import (
     analytics,
@@ -163,6 +166,7 @@ from open_webui.routers import (
     images,
     knowledge,
     memories,
+    mfa,
     models,
     notes,
     notifications,
@@ -191,8 +195,10 @@ from open_webui.socket.main import (
     get_models_in_use,
     get_user_id_from_session_pool,
     periodic_session_pool_cleanup,
+    periodic_socket_authentication,
     periodic_usage_pool_cleanup,
     redis_event_listener,
+    sio,
 )
 from open_webui.socket.main import (
     app as socket_app,
@@ -221,6 +227,7 @@ from open_webui.utils.auth import (
     get_http_authorization_cred,
     get_license_data,
     get_verified_user,
+    is_valid_token,
 )
 from open_webui.utils.chat import (
     chat_completed as chat_completed_handler,
@@ -244,9 +251,9 @@ from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
     background_tasks_handler,
     build_chat_response_context,
-    drain_approved_tool_calls,
     process_chat_payload,
     process_chat_response,
+    resume_tool_calls,
 )
 from open_webui.utils.misc import get_response_error_detail, merge_model_params
 from open_webui.utils.model_ids import strip_provider_model_prefix
@@ -256,6 +263,7 @@ from open_webui.utils.models import (
     get_all_models,
     get_filtered_models,
 )
+from open_webui.utils.payload import apply_model_controls
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
     OAuthClientManager,
@@ -269,6 +277,7 @@ from open_webui.utils.oauth import (
     resolve_oauth_client_info,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
+from open_webui.utils.recurrence import RecurrenceEvaluationTimeout
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
 from open_webui.utils.tool_approval import (
@@ -366,6 +375,9 @@ async def lifespan(app: FastAPI):
 
     await import_legacy_config_json()
     await seed_registered_defaults()
+    from open_webui.utils.mfa import validate_mfa_configuration
+
+    await validate_mfa_configuration()
     await initialize_runtime_config(app)
     await migrate_legacy_webhook_config()
     await publish_event(app, EVENTS.SYSTEM_STARTUP_STARTED, source='system')
@@ -397,7 +409,11 @@ async def lifespan(app: FastAPI):
 
     if WEBSOCKET_MANAGER == 'redis':
         app.state.redis_event_listener = asyncio.create_task(redis_event_listener())
+        # socket.io only starts listening on its first connect; event call answers need it earlier
+        sio.manager_initialized = True
+        sio.manager.initialize()
 
+    app.state.periodic_socket_authentication = asyncio.create_task(periodic_socket_authentication())
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
 
@@ -430,7 +446,9 @@ async def lifespan(app: FastAPI):
             log.warning(f'Failed to pre-fetch models at startup: {e}')
 
     # Pre-fetch tool server specs so the first request doesn't pay the latency cost
-    if len(await Config.get('tool_server.connections', []) or []) > 0:
+    if ENABLE_TOOL_SERVERS and (
+        await Config.get('tool_server.connections', []) or await Config.get('terminal_server.connections', [])
+    ):
         mock_request = Request(
             {
                 'type': 'http',
@@ -490,6 +508,7 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, 'redis_event_listener'):
         app.state.redis_event_listener.cancel()
 
+    app.state.periodic_socket_authentication.cancel()
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
     app.state.scheduler_worker_loop.cancel()
@@ -497,7 +516,7 @@ async def lifespan(app: FastAPI):
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
 
-# Opt-in (ENABLE_ORJSON): orjson for request-body parsing and JSONResponse bodies;
+# ENABLE_ORJSON: orjson for request-body parsing and JSONResponse bodies;
 # response_model routes keep FastAPI's Pydantic fast path either way.
 apply_orjson_http_json()
 
@@ -629,7 +648,7 @@ async def initialize_runtime_config(app: FastAPI):
             migrate_access_control(connection.get('config', {}))
         await Config.upsert({'tool_server.connections': connections})
 
-    for tool_server_connection in connections:
+    for tool_server_connection in connections if ENABLE_TOOL_SERVERS else []:
         if tool_server_connection.get('type', 'openapi') == 'mcp':
             server_id = (tool_server_connection.get('info') or {}).get('id')
             auth_type = tool_server_connection.get('auth_type', 'none')
@@ -853,6 +872,7 @@ app.include_router(retrieval.router, prefix='/api/v1/retrieval', tags=['retrieva
 app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
+app.include_router(mfa.router, prefix='/api/v1/auths/mfa', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
 
 
@@ -1001,12 +1021,15 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                         data=payload,
                         headers=headers,
                         cookies=cookies,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
                         if not r.ok:
                             errors.append({'url_idx': idx, 'error': await r.text()})
             except Exception as e:
                 log.exception(f'Failed to unload model on Ollama node {idx}: {e}')
                 errors.append({'url_idx': idx, 'error': str(e)})
+
+        await ollama.clear_models_cache(request)
 
         if errors:
             raise HTTPException(
@@ -1040,16 +1063,19 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                         json={'model': actual_model},
                         headers=headers,
                         cookies=cookies,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
                         if not r.ok:
                             detail = await r.text()
                             raise HTTPException(status_code=r.status, detail=detail)
-                        return await r.json()
+                        result = await r.json()
             except HTTPException:
                 raise
             except Exception as e:
                 log.exception(f'Failed to unload model via llama.cpp: {e}')
                 raise HTTPException(status_code=500, detail=str(e))
+            await openai.clear_models_cache(request)
+            return result
         else:
             raise HTTPException(
                 status_code=400,
@@ -1167,7 +1193,19 @@ async def chat_completion(
             default_model_params,
             model_info.params.model_dump() if model_info and model_info.params else {},
         )
+        model_info_params.pop('model_controls', None)
         request_params = {key: value for key, value in (form_data.get('params') or {}).items() if value is not None}
+        model_controls = request_params.pop('model_controls', {})
+        if not isinstance(model_controls, dict):
+            raise HTTPException(400, 'Model control options must be keyed by model.')
+        model_controls = {} if form_data.get('automation_id') else model_controls
+        if any(model_controls.values()) and user.role != 'admin':
+            permissions = await Config.get('user.permissions')
+            for permission in ('chat.controls', 'chat.params'):
+                if not await has_permission(user.id, permission, permissions):
+                    raise HTTPException(403, 'You cannot change model parameters.')
+        if missing_base_model and model_controls.get(model_id):
+            raise HTTPException(400, 'Model control options cannot be applied to the fallback model.')
         if model_info_params or request_params:
             form_data['params'] = merge_model_params(model_info_params, request_params)
 
@@ -1289,6 +1327,7 @@ async def chat_completion(
                     or 'native'
                 ),
                 'tool_approval_mode': tool_approval_mode,
+                'model_controls': model_controls,
             },
         }
 
@@ -1643,82 +1682,88 @@ async def chat_completion(
         )
 
     async def process_chat(request, form_data, user, metadata, model, tasks=None):
+        error_detail = None
         try:
-            ctx = None
-            # Saved chats load the message after approved tool calls run, so their results are kept
-            if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
-                ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
-            form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
-
-            if await drain_approved_tool_calls(request, form_data, user, model, metadata):
-                return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
-
-            response = await chat_completion_handler(request, form_data, user)
-
-            # When the upstream provider returns an error (e.g. HTTP 400
-            # content-filter, quota exceeded), generate_chat_completion
-            # returns a JSONResponse instead of raising.  Detect this and
-            # raise so the except-block below emits a terminal
-            # chat:message:error, unblocking the frontend.
-            if isinstance(response, JSONResponse) and response.status_code >= 400:
-                raise Exception(get_response_error_detail(response))
-
-            if ctx is None:
-                ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
-            else:
-                ctx.update(form_data=form_data, metadata=metadata, events=events)
-
-            return await process_chat_response(response, ctx)
-        except asyncio.CancelledError:
-            log.info('Chat processing was cancelled')
             try:
+                if not metadata.get('direct'):
+                    target = (
+                        model_info if form_data['model'] == model_id
+                        else await Models.get_model_by_id(form_data['model'])
+                    )
+                    controls = target.params.model_dump().get('model_controls', {}) if target else {}
+                    form_data['params'] = apply_model_controls(
+                        copy.deepcopy(form_data.get('params') or {}), controls, model_controls.get(form_data['model'], {})
+                    )
+                ctx = None
+                # Saved chats load the message after approved tool calls run, so their results are kept
+                if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
+                    ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
+                form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
-                async def emit_cancel_event():
-                    event_emitter = await get_event_emitter(metadata)
-                    if event_emitter:
-                        await event_emitter({'type': 'chat:tasks:cancel'})
+                paused = await resume_tool_calls(request, form_data, user, model, metadata)
+                if paused:
+                    return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
 
-                await asyncio.shield(emit_cancel_event())
-            except Exception:
-                pass
-            raise  # re-raise to ensure proper task cancellation handling
-        except Exception as e:
-            error_detail = e.detail if isinstance(e, HTTPException) else str(e)
-            log.error('Error processing chat payload: %s', error_detail)
-            if metadata.get('chat_id') and metadata.get('message_id'):
-                # Update the chat message with the error
+                response = await chat_completion_handler(request, form_data, user)
+
+                if isinstance(response, Response) and response.status_code >= 400:
+                    error_detail = get_response_error_detail(response)
+                    if metadata.get('session_id') and metadata.get('chat_id'):
+                        return None
+                    return response
+
+                if ctx is None:
+                    ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+                else:
+                    ctx.update(form_data=form_data, metadata=metadata, events=events)
+
+                return await process_chat_response(response, ctx)
+            except asyncio.CancelledError:
+                log.info('Chat processing was cancelled')
                 try:
-                    if is_saved_chat_id(metadata.get('chat_id')):
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {
-                                'parentId': metadata.get('user_message_id', None),
-                                'error': {'content': error_detail},
-                                'done': True,
-                            },
-                        )
 
-                    event_emitter = await get_event_emitter(metadata)
-                    if event_emitter:
-                        await event_emitter(
-                            {
-                                'type': 'chat:message:error',
-                                'data': {'error': {'content': error_detail}, 'done': True},
-                            }
-                        )
+                    async def emit_cancel_event():
+                        event_emitter = await get_event_emitter(metadata)
+                        if event_emitter:
+                            await event_emitter({'type': 'chat:tasks:cancel'})
 
+                    await asyncio.shield(emit_cancel_event())
                 except Exception:
                     pass
-            else:
-                # No chat_id/message_id → legacy/direct API path with no
-                # WebSocket error channel.  We must surface the error as
-                # a proper HTTP response; without this the function would
-                # return None which FastAPI serializes as null.  #23924
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=error_detail,
-                )
+                raise  # re-raise to ensure proper task cancellation handling
+            except Exception as e:
+                error_detail = e.detail if isinstance(e, HTTPException) else str(e)
+                if not (metadata.get('session_id') and metadata.get('chat_id')):
+                    raise
+            finally:
+                if error_detail is not None:
+                    log.error('Error processing chat payload: %s', error_detail)
+                    if metadata.get('chat_id') and metadata.get('message_id'):
+                        if is_saved_chat_id(metadata['chat_id']):
+                            try:
+                                await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata['chat_id'],
+                                    metadata['message_id'],
+                                    {
+                                        'parentId': metadata.get('user_message_id'),
+                                        'error': {'content': error_detail},
+                                        'done': True,
+                                    },
+                                )
+                            except Exception:
+                                log.exception('Failed to save chat error')
+
+                        try:
+                            event_emitter = await get_event_emitter(metadata)
+                            if event_emitter:
+                                await event_emitter(
+                                    {
+                                        'type': 'chat:message:error',
+                                        'data': {'error': {'content': error_detail}, 'done': True},
+                                    }
+                                )
+                        except Exception:
+                            log.exception('Failed to emit chat error')
         finally:
             # Clean up MCP clients.  Each client is isolated so one
             # failure doesn't skip the rest.
@@ -1811,6 +1856,9 @@ async def chat_completion(
             if not assistant_message_id:
                 continue
 
+            if fallback_model is not None and target_model_id == model_id:
+                target_model_id = fallback_model['id']
+
             # Per-model metadata: own message_id + model
             per_model_metadata = {
                 **metadata,
@@ -1881,7 +1929,12 @@ async def chat_completion(
     else:
         # Legacy/direct: single model, synchronous
         metadata['message_id'] = message_ids[0]['message_id']
-        return await process_chat(request, form_data, user, metadata, model, tasks)
+        try:
+            return await process_chat(request, form_data, user, metadata, model, tasks)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 # Alias for chat_completion (Legacy)
@@ -1983,9 +2036,12 @@ async def passthrough_anthropic_messages(request: Request, form_data: dict, user
                 requested_model=requested_model,
                 upstream_error=response_data,
             )
+            retry_headers = {
+                k: v for k, v in response.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')
+            }
             if isinstance(response_data, (dict, list)):
-                return JSONResponse(status_code=response.status, content=response_data)
-            return Response(status_code=response.status, content=response_data)
+                return JSONResponse(status_code=response.status, content=response_data, headers=retry_headers)
+            return Response(status_code=response.status, content=response_data, headers=retry_headers)
 
         return response_data
     except HTTPException:
@@ -2243,8 +2299,26 @@ async def get_app_config(request: Request):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid token',
             )
-        if data is not None and 'id' in data:
+        if data is not None and 'id' in data and await is_valid_token(data, request.app.state.redis):
             user = await Users.get_user_by_id(data['id'])
+
+    group_defaults = None
+    if user is not None and user.role in ('admin', 'user'):
+        group_defaults, _ = resolve_group_default_models(
+            await Groups.get_groups_by_member_id(user.id, include_inherited=True)
+        )
+        if group_defaults:
+            try:
+                models = (await get_models(request, user=user))['data']
+                available = {
+                    model['id']
+                    for model in models
+                    if not ((model.get('info') or {}).get('meta') or {}).get('hidden', False)
+                }
+                group_defaults = [model_id for model_id in group_defaults if model_id in available]
+            except Exception:
+                log.exception('Unable to resolve available group default models')
+                group_defaults = None
 
     onboarding = False
     if user is None:
@@ -2292,6 +2366,9 @@ async def get_app_config(request: Request):
         'ui.prompt_suggestions_i18n',
         'code_execution.engine',
         'code_interpreter.engine',
+        'audio.realtime.enabled',
+        'audio.realtime.model',
+        'audio.realtime.voice',
         'audio.tts.engine',
         'audio.tts.voice',
         'audio.tts.split_on',
@@ -2348,8 +2425,12 @@ async def get_app_config(request: Request):
                     'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
                     'enable_easter_eggs': ENABLE_EASTER_EGGS,
                     'enable_direct_connections': config.get('direct.enable'),
-                    'enable_direct_integrations': config.get('direct.integrations.enable', False),
+                    'enable_direct_integrations': ENABLE_TOOL_SERVERS
+                    and config.get('direct.integrations.enable', False),
                     'enable_plugins': ENABLE_PLUGINS,
+                    'enable_tools': ENABLE_TOOLS,
+                    'enable_functions': ENABLE_FUNCTIONS,
+                    'enable_tool_servers': ENABLE_TOOL_SERVERS,
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),
@@ -2390,7 +2471,7 @@ async def get_app_config(request: Request):
         },
         **(
             {
-                'default_models': config.get('ui.default_models'),
+                'default_models': ','.join(group_defaults) if group_defaults else config.get('ui.default_models'),
                 'default_pinned_models': config.get('ui.default_pinned_models'),
                 'default_prompt_suggestions': config.get('ui.prompt_suggestions'),
                 'default_prompt_suggestions_i18n': config.get('ui.prompt_suggestions_i18n'),
@@ -2400,6 +2481,11 @@ async def get_app_config(request: Request):
                     'interpreter_engine': config.get('code_interpreter.engine'),
                 },
                 'audio': {
+                    'realtime': {
+                        'enabled': config.get('audio.realtime.enabled'),
+                        'model': config.get('audio.realtime.model'),
+                        'voice': config.get('audio.realtime.voice'),
+                    },
                     'tts': {
                         'engine': config.get('audio.tts.engine'),
                         'voice': config.get('audio.tts.voice'),
@@ -2674,6 +2760,9 @@ except Exception as e:
 
 
 async def register_client(request, client_id: str) -> bool:
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
     server_type, server_id = client_id.split(':', 1)
 
     connection = None
@@ -2776,6 +2865,9 @@ async def oauth_client_authorize(
     user=Depends(get_verified_user),
 ):
     # ensure_valid_client_registration
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
     client = await oauth_client_manager.get_client(client_id)
     client_info = await oauth_client_manager.get_client_info(client_id)
     if client is None or client_info is None:
@@ -2817,6 +2909,9 @@ async def oauth_client_callback(
     request: Request,
     response: Response,
 ):
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
     return await oauth_client_manager.handle_callback(
         request,
         client_id=client_id,

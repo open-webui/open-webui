@@ -10,14 +10,11 @@ import uuid
 from datetime import datetime, timedelta
 from threading import Lock
 from time import monotonic
-from typing import Optional, Union
+from typing import Union
 
 import bcrypt
 import jwt
-import pytz
 import requests
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -26,7 +23,6 @@ from open_webui.env import (
     ENABLE_OTEL,
     ENABLE_PASSWORD_VALIDATION,
     LICENSE_BLOB,
-    OFFLINE_MODE,
     PASSWORD_HASH_ALGORITHM,
     PASSWORD_VALIDATION_HINT,
     PASSWORD_VALIDATION_REGEX_PATTERN,
@@ -274,14 +270,28 @@ revocation_log.addFilter(RateLimitFilter())
 
 
 async def is_valid_token(decoded, redis=None) -> bool:
-    """
-    Check whether a JWT has been revoked. Two mechanisms:
-    1. Per-token (jti) — used by user-initiated sign-out (known jti).
-    2. Per-user (revoked_at) — used by password changes and OIDC back-channel
-       logout when individual jti values are unknown; rejects tokens with iat <= revoked_at.
+    """Check persistent account revocation, then optional Redis per-token revocation.
 
-    Fail open on Redis errors to preserve availability; revoked tokens may be accepted.
+    Database failures fail closed. Redis failures retain the existing availability policy.
     """
+    from open_webui.utils.mfa import get_auth, get_mfa_config, is_mfa_required
+
+    auth = await get_auth(decoded.get('id', ''))
+    if decoded.get('session_stamp') != auth.session_stamp:
+        return False
+    token_type = decoded.get('typ', 'session')
+    if token_type not in {'session', 'automation', 'subagent'}:
+        return False
+    if token_type == 'session':
+        config = await get_mfa_config()
+        if is_mfa_required(decoded.get('auth_method', ''), config):
+            if (
+                decoded.get('mfa_verified') is not True
+                or not auth.mfa
+                or not auth.mfa.secret
+                or auth.mfa.reset_required
+            ):
+                return False
     if not redis:
         return True
 
@@ -347,27 +357,13 @@ async def invalidate_token(request, token):
 
 
 async def revoke_user_tokens(request, user_id: str):
-    """Reject every token already issued to a user. Requires Redis."""
-    redis = request.app.state.redis
-
-    if not redis:
-        log.warning(
-            'Cannot revoke tokens for user %s: Redis is not configured, existing sessions stay valid until expiry.',
-            user_id,
-        )
-        return
-
-    # The marker has to outlive every token it revokes, so it never expires when tokens do not
-    expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
-
-    await redis.set(
-        f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at',
-        str(int(datetime.now(UTC).timestamp())),
-        ex=int(expires_delta.total_seconds()) if expires_delta else None,
-    )
-
+    """Persist account-wide revocation, whether or not Redis is configured."""
+    from open_webui.internal.db import get_async_db
     from open_webui.socket.main import disconnect_user_sessions
 
+    async with get_async_db() as db:
+        await Auths.revoke_sessions_by_user_id(user_id, db=db)
+        await db.commit()
     await disconnect_user_sessions(user_id)
 
 
@@ -485,6 +481,7 @@ async def get_current_user(
             # Scope-backed, so outer middleware (audit) can reuse the resolved user
             request.state.user = user
             request.state.auth_type = 'jwt'
+            request.state.claims = data
             return user
         else:
             raise HTTPException(
@@ -663,3 +660,107 @@ async def create_admin_user(email: str, password: str, name: str = 'Admin'):
     except Exception as e:
         log.error(f'Error creating admin account: {e}')
         return None
+
+
+async def create_signin_response(
+    request,
+    user,
+    db=None,
+    response=None,
+    set_cookie=False,
+    source='password',
+    auth=None,
+    *,
+    oauth_session_id=None,
+    provider=None,
+):
+    """Gate every human login before issuing an application credential."""
+    from open_webui.utils.mfa import get_auth, get_mfa_config, is_mfa_required, start_mfa_login
+
+    auth = auth or await get_auth(user.id)
+    current = await get_auth(user.id)
+    if current.session_stamp != auth.session_stamp or current.password != auth.password:
+        raise HTTPException(409, 'Authentication changed. Please sign in again.')
+    config = await get_mfa_config()
+    if config.ENABLE_MFA and user.role not in {'admin', 'user'}:
+        return {'next_step': 'pending'}
+    if is_mfa_required(source, config):
+        return await start_mfa_login(current, source, oauth_session_id=oauth_session_id, provider=provider)
+    return await create_session_response(
+        request, user, db, response, set_cookie=set_cookie, source=source, auth=current
+    )
+
+
+async def create_session_response(
+    request,
+    user,
+    db=None,
+    response=None,
+    set_cookie=False,
+    source='password',
+    *,
+    auth,
+    mfa_verified=False,
+    auth_time=None,
+):
+    """Issue a completed human session using the credential snapshot that authorized it."""
+    import time
+
+    from open_webui.env import WEBUI_AUTH_COOKIE_SAME_SITE, WEBUI_AUTH_COOKIE_SECURE
+    from open_webui.events import EVENTS, publish_event
+    from open_webui.utils.access_control import get_permissions
+    from open_webui.utils.mfa import get_auth, get_mfa_config, is_mfa_required
+
+    current = await get_auth(user.id)
+    if current.session_stamp != auth.session_stamp:
+        raise HTTPException(409, 'Authentication changed. Please sign in again.')
+    if is_mfa_required(source, await get_mfa_config()) and not mfa_verified:
+        raise HTTPException(401, 'Authenticator verification is required.')
+    expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
+    expires_at = int(time.time()) + int(expires_delta.total_seconds()) if expires_delta else None
+    token = create_token(
+        {
+            'id': user.id,
+            'typ': 'session',
+            'auth_method': source,
+            'auth_time': auth_time or int(time.time()),
+            'session_stamp': auth.session_stamp,
+            'mfa_verified': mfa_verified,
+        },
+        expires_delta=expires_delta,
+    )
+    if set_cookie and response is not None:
+        response.set_cookie(
+            'token',
+            token,
+            httponly=True,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            max_age=int(expires_delta.total_seconds()) if expires_delta else None,
+        )
+    await publish_event(
+        request,
+        EVENTS.AUTH_LOGIN,
+        actor=user,
+        subject_id=user.id,
+        subject_type='user',
+        source=source,
+        data={'auth_method': source},
+    )
+    return {
+        'token': token,
+        'token_type': 'Bearer',
+        'expires_at': expires_at,
+        'id': user.id,
+        'email': user.email,
+        'name': user.name,
+        'role': user.role,
+        'profile_image_url': f'/api/v1/users/{user.id}/profile/image',
+        'permissions': await get_permissions(user.id, await Config.get('user.permissions'), db=db),
+    }
+
+
+async def get_human_user(request: Request, user=Depends(get_current_user)):
+    if request.state.auth_type != 'jwt' or request.state.claims.get('typ', 'session') != 'session':
+        raise HTTPException(403, 'A human session is required.')
+    return user

@@ -39,6 +39,7 @@ from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
 from open_webui.utils.chat_fork import build_fork_history
 from open_webui.utils.context_compaction import compact_chat_branch, get_chat_context_usage
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
 from pydantic import BaseModel
@@ -1408,7 +1409,8 @@ async def update_chat_by_id(
 # UpdateChatMessageById
 ############################
 class MessageForm(BaseModel):
-    content: str
+    content: str | None = None
+    voice: dict | None = None
 
 
 @router.post('/{id}/messages/{message_id}', response_model=ChatResponse | None)
@@ -1434,13 +1436,18 @@ async def update_chat_message_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    chat = await Chats.upsert_message_to_chat_by_id_and_message_id(
-        id,
-        message_id,
-        {
-            'content': form_data.content,
-        },
-    )
+    updates = {}
+    if form_data.content is not None:
+        updates['content'] = form_data.content
+    if form_data.voice is not None:
+        if len(JSONCodec.dumps(form_data.voice)) > 100000:
+            raise HTTPException(400, 'Voice metadata is too large')
+        if not await Chats.get_message_by_id_and_message_id(id, message_id):
+            raise HTTPException(404, ERROR_MESSAGES.NOT_FOUND)
+        updates['meta'] = {'voice': form_data.voice}
+    if not updates:
+        raise HTTPException(400, 'No message changes supplied')
+    chat = await Chats.upsert_message_to_chat_by_id_and_message_id(id, message_id, updates)
 
     event_emitter = await get_event_emitter(
         {
@@ -1454,11 +1461,11 @@ async def update_chat_message_by_id(
     if event_emitter:
         await event_emitter(
             {
-                'type': 'chat:message',
+                'type': 'chat:message' if form_data.content is not None else 'chat:message:voice',
                 'data': {
                     'chat_id': id,
                     'message_id': message_id,
-                    'content': form_data.content,
+                    **({'content': form_data.content} if form_data.content is not None else {'voice': form_data.voice}),
                 },
             }
         )
@@ -1468,7 +1475,7 @@ async def update_chat_message_by_id(
         EVENTS.MESSAGE_UPDATED,
         actor=user,
         subject_id=message_id,
-        data={'chat_id': id, 'content_preview': form_data.content[:300]},
+        data={'chat_id': id, 'content_preview': (form_data.content or '')[:300]},
     )
     return ChatResponse.model_validate(chat, from_attributes=True)
 
