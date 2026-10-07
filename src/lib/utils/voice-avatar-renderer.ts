@@ -64,12 +64,30 @@ export async function createAvatarRenderer(
 	const rightArm = bone('rightUpperArm');
 	const leftElbow = bone('leftLowerArm');
 	const rightElbow = bone('rightLowerArm');
+	const hips = bone('hips');
+	vrm.scene.updateMatrixWorld(true);
+	const legs = (['left', 'right'] as const).flatMap((side) => {
+		const upper = bone(`${side}UpperLeg`),
+			lower = bone(`${side}LowerLeg`),
+			foot = bone(`${side}Foot`);
+		if (!upper || !lower || !foot) return [];
+		return [
+			{
+				upper,
+				lower,
+				foot,
+				target: foot.getWorldPosition(new THREE.Vector3()),
+				orientation: foot.getWorldQuaternion(new THREE.Quaternion())
+			}
+		];
+	});
 	// Start all built-in states from a relaxed, slightly asymmetric stance.
 	// Normalized VRM bones share T-pose axes across VRM 0 and 1.
 	const restingRotations: Partial<Record<Parameters<typeof bone>[0], [number, number, number]>> = {
-		spine: [0.012, 0.025, -0.016],
-		chest: [-0.018, -0.012, 0.022],
-		head: [0.006, -0.012, -0.006],
+		hips: [0, 0, 0.025],
+		spine: [0.025, 0.015, -0.035],
+		chest: [-0.012, -0.008, 0.01],
+		head: [0.008, -0.008, 0],
 		leftShoulder: [0, 0, -0.025],
 		rightShoulder: [0, 0, 0.035],
 		leftUpperArm: [0.025, -0.06, -1.38],
@@ -78,8 +96,8 @@ export async function createAvatarRenderer(
 		rightLowerArm: [0, 0.19, 0.025],
 		leftHand: [0.025, 0, -0.055],
 		rightHand: [-0.015, 0, 0.035],
-		leftUpperLeg: [-0.025, 0, 0.02],
-		rightUpperLeg: [-0.045, 0, -0.025],
+		leftUpperLeg: [-0.025, 0, 0.045],
+		rightUpperLeg: [-0.045, 0, 0],
 		leftLowerLeg: [0.05, 0, 0],
 		rightLowerLeg: [0.09, 0, 0],
 		leftFoot: [-0.025, 0.045, -0.02],
@@ -101,6 +119,57 @@ export async function createAvatarRenderer(
 				if (node) node.rotation.z = sign * amount;
 			}
 		}
+	}
+	// Pose once over the supporting leg, solving the knees back to the original
+	// foot contacts. Breathing never moves the pelvis or feet after this setup.
+	if (hips && legs.length === 2) {
+		const standingHeight =
+			hips.getWorldPosition(new THREE.Vector3()).y - (legs[0].target.y + legs[1].target.y) / 2;
+		if (standingHeight > 0) {
+			const position = hips.getWorldPosition(new THREE.Vector3());
+			position.x += standingHeight * 0.02;
+			position.y -= standingHeight * 0.009;
+			hips.position.copy(hips.parent ? hips.parent.worldToLocal(position) : position);
+		}
+	}
+	vrm.scene.updateMatrixWorld(true);
+	const aim = (node: THREE.Object3D, child: THREE.Object3D, target: THREE.Vector3) => {
+		const origin = node.getWorldPosition(new THREE.Vector3());
+		const from = child.getWorldPosition(new THREE.Vector3()).sub(origin).normalize();
+		const to = target.clone().sub(origin).normalize();
+		const world = new THREE.Quaternion()
+			.setFromUnitVectors(from, to)
+			.multiply(node.getWorldQuaternion(new THREE.Quaternion()));
+		const parent =
+			node.parent?.getWorldQuaternion(new THREE.Quaternion()) ?? new THREE.Quaternion();
+		node.quaternion.copy(parent.invert().multiply(world));
+		node.updateWorldMatrix(false, true);
+	};
+	for (const { upper, lower, foot, target, orientation } of legs) {
+		const origin = upper.getWorldPosition(new THREE.Vector3());
+		const knee = lower.getWorldPosition(new THREE.Vector3());
+		const upperLength = origin.distanceTo(knee);
+		const lowerLength = knee.distanceTo(foot.getWorldPosition(new THREE.Vector3()));
+		if (upperLength < 0.001 || lowerLength < 0.001) continue;
+		const direction = target.clone().sub(origin);
+		const distance = THREE.MathUtils.clamp(
+			direction.length(),
+			Math.abs(upperLength - lowerLength) + 0.0001,
+			upperLength + lowerLength - 0.0001
+		);
+		direction.normalize();
+		const along = (upperLength ** 2 + distance ** 2 - lowerLength ** 2) / (2 * distance);
+		const bend = new THREE.Vector3(0, 0, 1).addScaledVector(direction, -direction.z).normalize();
+		knee
+			.copy(origin)
+			.addScaledVector(direction, along)
+			.addScaledVector(bend, Math.sqrt(Math.max(0, upperLength ** 2 - along ** 2)));
+		aim(upper, lower, knee);
+		aim(lower, foot, target);
+		const parent =
+			foot.parent?.getWorldQuaternion(new THREE.Quaternion()) ?? new THREE.Quaternion();
+		foot.quaternion.copy(parent.invert().multiply(orientation));
+		foot.updateWorldMatrix(false, true);
 	}
 	vrm.update(0);
 	vrm.scene.updateMatrixWorld(true);
@@ -255,18 +324,24 @@ export async function createAvatarRenderer(
 			// Keep the built-in body relaxed; authored clips supply intentional gestures.
 			const amount = reducedMotion ? 0 : Math.sqrt(0.35);
 			const breath = Math.sin(elapsed * 1.1) * 0.9 + Math.sin(elapsed * 0.47) * 0.1;
+			const sway = amount * (0.01 * Math.sin(elapsed * 0.43) + 0.003 * Math.sin(elapsed * 0.71));
 			if (spine) {
 				spine.rotation.x += amount * (0.006 * breath + 0.015 * listening);
 				spine.rotation.y += amount * speaking * 0.008 * Math.sin(elapsed * 0.6);
+				spine.rotation.z += sway;
 			}
-			if (chest) chest.rotation.x -= amount * 0.008 * breath;
+			if (chest) {
+				chest.rotation.x -= amount * 0.008 * breath;
+				chest.rotation.z -= sway * 0.35;
+			}
 			if (head) {
 				head.rotation.x +=
 					amount *
 					(0.006 * breath + speaking * 0.012 * Math.sin(elapsed * 0.85) + listening * 0.025);
 				head.rotation.y +=
 					amount * (0.012 * Math.sin(elapsed * 0.32) + speaking * 0.008 * Math.sin(elapsed * 0.6));
-				head.rotation.z += amount * (0.006 * Math.sin(elapsed * 0.27) + listening * 0.025);
+				head.rotation.z +=
+					amount * (0.006 * Math.sin(elapsed * 0.27) + listening * 0.025) - sway * 0.5;
 			}
 			if (leftArm) leftArm.rotation.z += amount * 0.004 * breath;
 			if (rightArm) rightArm.rotation.z -= amount * 0.003 * Math.sin(elapsed * 1.1 - 0.2);
