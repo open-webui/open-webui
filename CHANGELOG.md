@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.12.0] - 2026-10-07
+## [0.12.0] - 2026-10-08
 
 ### Added
 - ☎️ **Realtime voice calls.** Administrators can now switch Call mode in the Voice calls section of Audio settings from Standard to Realtime, so Voice mode talks through an OpenAI Realtime voice model (gpt-realtime-2.1-mini with the Marin voice by default) that handles small talk itself and hands real questions and tasks to the chat's selected model, with its conversation history and tools, before speaking the answer while the full reply appears in the chat. Approvals and questions from tools still have to be answered in the chat, calls need the Allow Call permission and end after an hour, models can set their own Realtime Voice in the model editor, and the settings can also be given with the "AUDIO_REALTIME_ENABLED", "AUDIO_REALTIME_OPENAI_API_BASE_URL", "AUDIO_REALTIME_OPENAI_API_KEY", "AUDIO_REALTIME_MODEL", "AUDIO_REALTIME_VOICE", "AUDIO_REALTIME_TRANSCRIPTION_MODEL" and "REALTIME_CALL_PROMPT_TEMPLATE" environment variables. [Commit](https://github.com/open-webui/open-webui/commit/093bfce2b6bd128731bae8075110898ae22a76e9), [Commit](https://github.com/open-webui/open-webui/commit/fa4c7fe5e8b5a26bcb9e4597d311a6b16aaf796a), [#5894](https://github.com/open-webui/open-webui/issues/5894)
@@ -250,6 +250,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📅 **Yesterday's chats on the first of the month.** Chats from the previous day are now listed under Yesterday in the sidebar on the first day of a month or year too, where they showed under Previous 7 days. [#31973](https://github.com/open-webui/open-webui/pull/31973), [#31964](https://github.com/open-webui/open-webui/issues/31964)
 - ✌️ **Web search confirmation needing two clicks.** With web search confirmation on, turning on Web Search from the Integrations menu now closes the menu, so a single click on Cancel or Continue in the confirmation popup works. [#31976](https://github.com/open-webui/open-webui/pull/31976), [#31963](https://github.com/open-webui/open-webui/issues/31963)
 - 🖇️ **Files attached to shared notes.** People a note is shared with can now open its attached files and have them used in the note's chat, where they were refused and the model answered without them. [Commit](https://github.com/open-webui/open-webui/commit/b612c8847ad186dbfe8f745f81f0d97286ea7919), [#32011](https://github.com/open-webui/open-webui/issues/32011)
+- 🚦 **Filters before approved tool calls.** After you approve a tool call, request filters now check the request before the tool runs, where the tool ran first and a filter rejecting the request came only after its effects, and the follow-up request now uses the same prepared history as any other message instead of one rebuilt from the saved chat. [Commit](https://github.com/open-webui/open-webui/commit/639139aa7a69a78a758f2075d42d4d5e1554cf57)
 
 ### Changed
 
