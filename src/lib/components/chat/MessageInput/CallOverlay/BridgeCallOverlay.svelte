@@ -58,7 +58,7 @@
 	});
 </script>
 
-<section class="bridge-call" aria-label={$i18n.t('Voice call')}>
+<section class="bridge-call" class:avatar-call={showAvatar} aria-label={$i18n.t('Voice call')}>
 	<div class="call-stage">
 		<button
 			type="button"
@@ -209,15 +209,32 @@
 		padding: 12px;
 		border-radius: 50%;
 	}
+	.avatar-call {
+		height: 100%;
+		padding-inline: 0;
+	}
+	.avatar-call .call-stage {
+		min-height: 0;
+		padding: 0;
+	}
+	.avatar-call .call-status {
+		margin-bottom: 24px;
+	}
+	.avatar-call footer {
+		padding-inline: 16px;
+	}
 	.avatar-button {
+		flex: 1;
 		width: 100%;
-		height: clamp(240px, 42vh, 360px);
+		min-height: 160px;
 		position: relative;
 		padding: 0;
 		border-radius: 16px;
 		overflow: hidden;
 	}
 	.avatar-content {
+		position: absolute;
+		inset: 0;
 		width: 100%;
 		height: 100%;
 	}
