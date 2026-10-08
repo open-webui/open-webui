@@ -1333,7 +1333,7 @@ async def get_event_emitter(request_info, update_db=True):
 
                     output, _ = handle_responses_streaming_event(data, output or [])
                 now = time.monotonic()
-                if not data.get('type', '').endswith('.delta') or now - last_shared_emit >= 0.15:
+                if not (data.get('type') or '').endswith('.delta') or now - last_shared_emit >= 0.15:
                     last_shared_emit = now
                     payload = {
                         key: value
