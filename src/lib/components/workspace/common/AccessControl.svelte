@@ -648,7 +648,7 @@
 			{#if shareUsers}
 				{#each selectedUsers as user}
 					<div
-						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-1.5 last:border-0"
+						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50/50 dark:border-gray-850/50 pb-1.5 last:border-0"
 					>
 						<div class="flex items-center gap-2 min-w-0 flex-1">
 							<img

@@ -441,13 +441,16 @@
 				>
 					{#if message.timestamp}
 						<Tooltip
-							className="flex self-center {($settings?.chatBubble ?? true) ? 'mr-1' : 'order-last'}"
+							className="flex self-center {($settings?.chatBubble ?? true) && isOwn
+								? 'mr-1'
+								: 'order-last'}"
 							content={formatMessageTimestampFull(message.timestamp * 1000)}
 							placement="bottom"
 						>
 							<time
 								datetime={new Date(message.timestamp * 1000).toISOString()}
-								class="{compactPreview ? '' : 'hover-reveal'} {($settings?.chatBubble ?? true)
+								class="{compactPreview ? '' : 'hover-reveal'} {($settings?.chatBubble ?? true) &&
+								isOwn
 									? 'mr-1'
 									: 'ml-1 shrink-0 whitespace-nowrap'} text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
 							>
@@ -456,7 +459,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if !compactPreview && !($settings?.chatBubble ?? true)}
+					{#if !compactPreview && (!($settings?.chatBubble ?? true) || !isOwn)}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">
 								<button
@@ -645,7 +648,7 @@
 						{/if}
 					{/if}
 
-					{#if !compactPreview && ($settings?.chatBubble ?? true)}
+					{#if !compactPreview && ($settings?.chatBubble ?? true) && isOwn}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">
 								<button
