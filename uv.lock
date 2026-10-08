@@ -2820,6 +2820,7 @@ dependencies = [
     { name = "pydub" },
     { name = "pyjwt", extra = ["crypto"] },
     { name = "pymysql" },
+    { name = "pyotp" },
     { name = "pypandoc" },
     { name = "pypdf" },
     { name = "python-docx" },
@@ -2829,6 +2830,7 @@ dependencies = [
     { name = "python-socketio" },
     { name = "pytz" },
     { name = "pyxlsb" },
+    { name = "qrcode" },
     { name = "rank-bm25" },
     { name = "rapidocr" },
     { name = "redis" },
@@ -2956,6 +2958,7 @@ requires-dist = [
     { name = "pyjwt", extras = ["crypto"], specifier = "==2.13.0" },
     { name = "pymilvus", marker = "extra == 'all'", specifier = "==2.6.14" },
     { name = "pymysql", specifier = "==1.2.0" },
+    { name = "pyotp", specifier = "==2.9.0" },
     { name = "pypandoc", specifier = "==1.17" },
     { name = "pypdf", specifier = "==6.7.5" },
     { name = "python-docx", specifier = "==1.2.0" },
@@ -2966,6 +2969,7 @@ requires-dist = [
     { name = "pytz", specifier = "==2026.2" },
     { name = "pyxlsb", specifier = "==1.0.10" },
     { name = "qdrant-client", marker = "extra == 'all'", specifier = "==1.18.0" },
+    { name = "qrcode", specifier = "==8.2" },
     { name = "rank-bm25", specifier = "==0.2.2" },
     { name = "rapidocr", specifier = "==3.9.2" },
     { name = "redis", specifier = "==8.0.1" },
@@ -2987,6 +2991,7 @@ requires-dist = [
     { name = "xlrd", specifier = "==2.0.2" },
     { name = "youtube-transcript-api", specifier = "==1.2.4" },
 ]
+
 provides-extras = ["all", "mariadb", "postgres", "unstructured"]
 
 [package.metadata.requires-dev]
@@ -3998,6 +4003,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyotp"
+version = "2.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/b2/1d5994ba2acde054a443bd5e2d384175449c7d2b6d1a0614dbca3a63abfc/pyotp-2.9.0.tar.gz", hash = "sha256:346b6642e0dbdde3b4ff5a930b664ca82abfa116356ed48cc42c7d6590d36f63", size = 17763 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/c0/c33c8792c3e50193ef55adb95c1c3c2786fe281123291c2dbf0eaab95a6f/pyotp-2.9.0-py3-none-any.whl", hash = "sha256:81c2e5865b8ac55e825b0358e496e1d9387c811e85bb40e71a3b29b288963612", size = 13376 },
+]
+
+[[package]]
 name = "pypandoc"
 version = "1.17"
 source = { registry = "https://pypi.org/simple" }
@@ -4308,6 +4322,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/65/45/5b1bdd15a3c7730eefb9c113600829e20d689b82b5a23f9e07d107094004/qdrant_client-1.18.0.tar.gz", hash = "sha256:52e8ece1a7d40519801bf0b70713bfa0f6b7ae28c7275bbe0b0286fbed7f6db4", size = 352580, upload-time = "2026-05-11T14:12:38.702Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d6/10/c437bd2ac41ef30d3019063e6ce537dc111e9214473b337ee88f7fa6359a/qdrant_client-1.18.0-py3-none-any.whl", hash = "sha256:093aa8cf8a420ee3ad2a68b007e1378d7992b2600e0b53c193fc172674f659cd", size = 398126, upload-time = "2026-05-11T14:12:36.998Z" },
+]
+
+[[package]]
+name = "qrcode"
+version = "8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/b2/7fc2931bfae0af02d5f53b174e9cf701adbb35f39d69c2af63d4a39f81a9/qrcode-8.2.tar.gz", hash = "sha256:35c3f2a4172b33136ab9f6b3ef1c00260dd2f66f858f24d88418a015f446506c", size = 43317 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/b8/d2d6d731733f51684bbf76bf34dab3b70a9148e8f2cef2bb544fccec681a/qrcode-8.2-py3-none-any.whl", hash = "sha256:16e64e0716c14960108e85d853062c9e8bba5ca8252c0b4d0231b9df4060ff4f", size = 45986 },
 ]
 
 [[package]]

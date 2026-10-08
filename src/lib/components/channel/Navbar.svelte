@@ -52,19 +52,19 @@
 
 <PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} {onPin} />
 <ChannelInfoModal bind:show={showChannelInfoModal} {channel} {onUpdate} />
-<nav class="sticky top-0 z-30 w-full px-1.5 py-1 -mb-8 flex items-center drag-region flex flex-col">
+<nav class="sticky top-0 z-30 w-full px-3 py-1 -mb-8 flex items-center drag-region flex-col">
 	<div
 		id="navbar-bg-gradient-to-b"
 		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
 	></div>
 
-	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
+	<div class=" flex max-w-full w-full mx-auto pt-0.5 bg-transparent">
 		<div class="flex items-center w-full max-w-full">
 			{#if $mobile}
 				<div
 					class="{$showSidebar
 						? 'md:hidden'
-						: ''} mr-1.5 mt-0.5 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+						: ''} mr-1.5 mt-0.5 self-center flex flex-none items-center text-gray-600 dark:text-gray-400"
 				>
 					<Tooltip
 						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
@@ -86,23 +86,23 @@
 			{/if}
 
 			<div
-				class="flex-1 overflow-hidden max-w-full py-0.5 flex items-center
+				class="min-w-0 flex-1 overflow-hidden max-w-full py-0.5 flex items-center
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
 				{#if channel}
-					<div class="flex items-center gap-0.5 shrink-0">
+					<div class="flex min-w-0 items-center gap-1.5">
 						{#if channel?.type === 'dm'}
 							{#if channel?.users}
 								{@const channelMembers = channel.users.filter((u) => u.id !== $user?.id)}
-								<div class="flex mr-1.5 relative">
+								<div class="flex shrink-0 relative">
 									{#each channelMembers.slice(0, 2) as u, index}
 										<img
 											src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 											alt={u.name}
-											class=" size-6.5 rounded-full border-2 border-white dark:border-gray-900 {index ===
+											class=" size-5.5 rounded-full object-cover border border-white dark:border-gray-900 {index ===
 											1
-												? '-ml-3'
+												? '-ml-2'
 												: ''}"
 										/>
 									{/each}
@@ -110,11 +110,6 @@
 									{#if channelMembers.length === 1}
 										<div class="absolute bottom-0 right-0">
 											<span class="relative flex size-2">
-												{#if channelMembers[0]?.is_active}
-													<span
-														class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-													></span>
-												{/if}
 												<span
 													class="relative inline-flex size-2 rounded-full {channelMembers[0]
 														?.is_active
@@ -126,19 +121,21 @@
 									{/if}
 								</div>
 							{:else}
-								<Users className="size-4 ml-1 mr-0.5" strokeWidth="2" />
+								<Users className="size-4" strokeWidth="1.5" />
 							{/if}
 						{:else}
-							<div class=" size-4.5 justify-center flex items-center">
+							<div class=" size-4 shrink-0 justify-center flex items-center">
 								{#if isPublicChannel(channel)}
-									<Hashtag className="size-3.5" strokeWidth="2.5" />
+									<Hashtag className="size-4" strokeWidth="1.5" />
 								{:else}
-									<Lock className="size-5" strokeWidth="2" />
+									<Lock className="size-4" strokeWidth="1.5" />
 								{/if}
 							</div>
 						{/if}
 
-						<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1">
+						<div
+							class=" min-w-0 truncate text-left text-sm font-medium leading-5 text-gray-700 dark:text-gray-300"
+						>
 							{#if channel?.name}
 								{channel.name}
 							{:else}
@@ -153,19 +150,19 @@
 			</div>
 
 			<div
-				class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1 shrink-0"
+				class="self-center flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1 shrink-0"
 			>
 				{#if channel}
 					<Tooltip content={$i18n.t('Pinned Messages')}>
 						<button
-							class=" flex cursor-pointer py-1.5 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 							aria-label={$i18n.t('Pinned Messages')}
 							type="button"
 							on:click={() => {
 								showChannelPinnedMessagesModal = true;
 							}}
 						>
-							<div class=" flex items-center gap-0.5 m-auto self-center shrink-0">
+							<div class=" flex items-center gap-1 m-auto self-center shrink-0">
 								<Pin className=" size-4" strokeWidth="1.5" />
 							</div>
 						</button>
@@ -174,17 +171,17 @@
 					{#if channel?.user_count !== undefined}
 						<Tooltip content={$i18n.t('Users')}>
 							<button
-								class=" flex cursor-pointer shrink-0 py-1 px-1.5 border dark:border-gray-850 border-gray-50 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								class=" flex h-7 items-center cursor-pointer shrink-0 px-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 								aria-label={$i18n.t('User Count')}
 								type="button"
 								on:click={() => {
 									showChannelInfoModal = true;
 								}}
 							>
-								<div class=" flex items-center gap-0.5 m-auto self-center shrink-0">
+								<div class=" flex items-center gap-1 m-auto self-center shrink-0">
 									<UserAlt className=" size-4" strokeWidth="1.5" />
 
-									<div class="text-sm shrink-0">
+									<div class="text-xs tabular-nums shrink-0">
 										{channel.user_count}
 									</div>
 								</div>

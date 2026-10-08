@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -44,7 +45,8 @@ from open_webui.utils.plugin import (
     replace_imports,
     resolve_valves_schema_options,
 )
-from open_webui.utils.tools import get_tool_servers, get_tool_specs
+from open_webui.utils.tools import connect_mcp_server, get_tool_servers
+from open_webui.utils.tools import get_tool_specs as get_local_tool_specs
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,7 +81,9 @@ async def get_tools(
     tools = []
     bypass_access_control = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
     user_group_ids = (
-        set() if bypass_access_control else {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        set()
+        if bypass_access_control
+        else {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)}
     )
 
     # Local Tools
@@ -196,6 +200,32 @@ async def get_tools(
     return tools
 
 
+@router.get('/id/{id}/specs')
+async def get_tool_specs(request: Request, id: str, user=Depends(get_verified_user)):
+    """Discover tools for an accessible connection. Currently supports MCP."""
+    if not id.startswith('server:mcp:'):
+        raise HTTPException(status_code=404, detail='Tool not found')
+
+    try:
+        # Keep connect, discovery and cleanup in one task for the MCP transport.
+        async with asyncio.timeout(15):
+            result = await connect_mcp_server(request, id.removeprefix('server:mcp:'), user, {})
+            if result is None:
+                raise HTTPException(status_code=404, detail='Tool not found')
+            client, specs = result
+            try:
+                return {'specs': [{'name': spec['name'], 'description': spec.get('description', '')} for spec in specs]}
+            finally:
+                await client.disconnect()
+    except HTTPException:
+        raise
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail='Tool discovery timed out')
+    except Exception:
+        log.exception('Failed to discover tool specs')
+        raise HTTPException(status_code=502, detail='Unable to load tools')
+
+
 ############################
 # GetToolList
 ############################
@@ -208,7 +238,9 @@ async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depe
 
     bypass_access_control = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
     user_group_ids = (
-        set() if bypass_access_control else {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        set()
+        if bypass_access_control
+        else {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)}
     )
     tools = await Tools.get_tools(
         defer_content=True,
@@ -397,7 +429,7 @@ async def create_new_tools(
             TOOLS = get_tools_cache(request)
             TOOLS[form_data.id] = tool_module
 
-            specs = get_tool_specs(TOOLS[form_data.id])
+            specs = get_local_tool_specs(TOOLS[form_data.id])
             tools = await Tools.insert_new_tool(user.id, form_data, specs, db=db)
 
             tool_cache_dir = CACHE_DIR / 'tools' / form_data.id
@@ -539,7 +571,7 @@ async def update_tools_by_id(
         TOOLS = get_tools_cache(request)
         TOOLS[id] = tool_module
 
-        specs = get_tool_specs(TOOLS[id])
+        specs = get_local_tool_specs(TOOLS[id])
 
         form_data.access_grants = await filter_allowed_access_grants(
             await Config.get('user.permissions'),

@@ -260,7 +260,7 @@ async def get_openai_connection(idx: int) -> tuple[str, str, dict]:
     return url, key, api_config
 
 
-async def clear_openai_model_cache(request: Request):
+async def clear_models_cache(request: Request):
     await get_all_models.cache.clear()
     redis = getattr(request.app.state, 'redis', None)
     if redis is not None:
@@ -491,7 +491,7 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
         }
     )
 
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
 
     await publish_event(
         request,
@@ -683,7 +683,9 @@ async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     model_ids = [model['id'] for model in models.get('data', [])]
     model_infos = {model_info.id: model_info for model_info in await Models.get_models_by_ids(model_ids, db=db)}
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+    user_group_ids = {
+        group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+    }
 
     # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
     accessible_model_ids = await AccessGrants.get_accessible_resource_ids(
@@ -880,7 +882,7 @@ async def download_provider_model(
     payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
 
     result = await send_model_management_request(request, url_idx, 'download', 'POST', payload, user=user)
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
     await publish_event(
         request,
         EVENTS.MODEL_PROVIDER_MODEL_CREATED,
@@ -919,7 +921,7 @@ async def load_provider_model(
     payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
 
     result = await send_model_management_request(request, url_idx, 'load', 'POST', payload, user=user)
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
     return result
 
 
@@ -935,7 +937,7 @@ async def unload_provider_model(
     payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
 
     result = await send_model_management_request(request, url_idx, 'unload', 'POST', payload, user=user)
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
     return result
 
 
@@ -962,7 +964,7 @@ async def delete_provider_model(
         query={'model': actual_model},
         user=user,
     )
-    await clear_openai_model_cache(request)
+    await clear_models_cache(request)
     await publish_event(
         request,
         EVENTS.MODEL_PROVIDER_MODEL_DELETED,
@@ -1591,6 +1593,7 @@ async def generate_chat_completion(
             # read the body and return a proper error response instead of
             # streaming the error back (which hides the error from logs).
             if r.status >= 400:
+                retry_headers = {k: v for k, v in r.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')}
                 error_body = await r.text()
                 log.error(
                     'Provider returned HTTP %d with SSE content-type: %s',
@@ -1609,7 +1612,7 @@ async def generate_chat_completion(
                         requested_model=requested_model,
                         upstream_error=error_json,
                     )
-                    return JSONResponse(status_code=r.status, content=error_json)
+                    return JSONResponse(status_code=r.status, content=error_json, headers=retry_headers)
                 except JSONCodec.JSONDecodeError:
                     await publish_model_provider_request_failed(
                         request,
@@ -1624,6 +1627,7 @@ async def generate_chat_completion(
                     return JSONResponse(
                         status_code=r.status,
                         content={'error': {'message': error_body, 'code': r.status}},
+                        headers=retry_headers,
                     )
 
             streaming = True
@@ -1640,6 +1644,7 @@ async def generate_chat_completion(
                 response = await r.text()
 
             if r.status >= 400:
+                retry_headers = {k: v for k, v in r.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')}
                 await publish_model_provider_request_failed(
                     request,
                     actor=user,
@@ -1651,9 +1656,9 @@ async def generate_chat_completion(
                     upstream_error=response,
                 )
                 if isinstance(response, (dict, list)):
-                    return JSONResponse(status_code=r.status, content=response)
+                    return JSONResponse(status_code=r.status, content=response, headers=retry_headers)
                 else:
-                    return PlainTextResponse(status_code=r.status, content=response)
+                    return PlainTextResponse(status_code=r.status, content=response, headers=retry_headers)
 
             # Convert Responses API result to simple format
             if is_responses and isinstance(response, dict):
@@ -1751,6 +1756,7 @@ async def embeddings(request: Request, form_data: dict, user):
                 response_data = await r.text()
 
             if r.status >= 400:
+                retry_headers = {k: v for k, v in r.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')}
                 await publish_model_provider_request_failed(
                     request,
                     actor=user,
@@ -1762,9 +1768,9 @@ async def embeddings(request: Request, form_data: dict, user):
                     upstream_error=response_data,
                 )
                 if isinstance(response_data, (dict, list)):
-                    return JSONResponse(status_code=r.status, content=response_data)
+                    return JSONResponse(status_code=r.status, content=response_data, headers=retry_headers)
                 else:
-                    return PlainTextResponse(status_code=r.status, content=response_data)
+                    return PlainTextResponse(status_code=r.status, content=response_data, headers=retry_headers)
 
             return response_data
     except Exception as e:
@@ -1879,6 +1885,7 @@ async def responses(
                 response_data = await r.text()
 
             if r.status >= 400:
+                retry_headers = {k: v for k, v in r.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')}
                 await publish_model_provider_request_failed(
                     request,
                     actor=user,
@@ -1890,9 +1897,9 @@ async def responses(
                     upstream_error=response_data,
                 )
                 if isinstance(response_data, (dict, list)):
-                    return JSONResponse(status_code=r.status, content=response_data)
+                    return JSONResponse(status_code=r.status, content=response_data, headers=retry_headers)
                 else:
-                    return PlainTextResponse(status_code=r.status, content=response_data)
+                    return PlainTextResponse(status_code=r.status, content=response_data, headers=retry_headers)
 
             return response_data
 
@@ -2001,6 +2008,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 response_data = await r.text()
 
             if r.status >= 400:
+                retry_headers = {k: v for k, v in r.headers.items() if k.lower() in ('retry-after', 'retry-after-ms')}
                 await publish_model_provider_request_failed(
                     request,
                     actor=user,
@@ -2012,9 +2020,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                     upstream_error=response_data,
                 )
                 if isinstance(response_data, (dict, list)):
-                    return JSONResponse(status_code=r.status, content=response_data)
+                    return JSONResponse(status_code=r.status, content=response_data, headers=retry_headers)
                 else:
-                    return PlainTextResponse(status_code=r.status, content=response_data)
+                    return PlainTextResponse(status_code=r.status, content=response_data, headers=retry_headers)
 
             return response_data
 

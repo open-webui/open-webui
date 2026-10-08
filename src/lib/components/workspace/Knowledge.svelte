@@ -62,6 +62,7 @@
 	let page = 1;
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
 	let viewOption = '';
 	let sourceOption = '';
 	let sortKey = 'updated_at';
@@ -86,6 +87,8 @@
 	}
 
 	const handleSearchInput = () => {
+		searchController?.abort();
+		itemsLoading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			init();
@@ -93,6 +96,7 @@
 	};
 
 	onDestroy(() => {
+		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 	});
 
@@ -137,6 +141,11 @@
 	};
 
 	const getItemsPage = async () => {
+		clearTimeout(searchDebounceTimer);
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
+
 		itemsLoading = true;
 		const res = await searchKnowledgeBases(
 			localStorage.token,
@@ -145,10 +154,13 @@
 			page,
 			sourceOption,
 			sortKey,
-			sortDirection
+			sortDirection,
+			signal
 		).catch(() => {
 			return [];
 		});
+
+		if (signal.aborted) return;
 
 		if (res) {
 			console.log(res);

@@ -99,7 +99,9 @@ class ImportConfigForm(BaseModel):
 
 @router.post('/import', response_model=dict)
 async def import_config(request: Request, form_data: ImportConfigForm, user=Depends(get_admin_user)):
-    await Config.upsert(form_data.config)
+    from open_webui.utils.mfa import update_mfa_config
+
+    await update_mfa_config(request, form_data.config)
     await publish_event(
         request,
         EVENTS.CONFIG_IMPORTED,

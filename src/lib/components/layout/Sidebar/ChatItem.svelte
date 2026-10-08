@@ -515,11 +515,11 @@
 
 {#snippet chatItemContent()}
 	{#if ownerUserId}
-		<Tooltip content={ownerName || 'Unknown'}>
+		<Tooltip content={ownerName || 'Unknown'} className="flex items-center self-center shrink-0">
 			<img
 				src="{WEBUI_API_BASE_URL}/users/{ownerUserId}/profile/image"
 				alt=""
-				class="size-3.5 rounded-full shrink-0 object-cover mr-1.5"
+				class="size-3.5 rounded-full shrink-0 object-cover mr-2"
 				on:error={(e) => {
 					if (!e.currentTarget.src.endsWith('/static/favicon.png')) {
 						e.currentTarget.src = `${WEBUI_BASE_URL}/static/favicon.png`;

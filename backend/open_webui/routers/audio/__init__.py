@@ -9,9 +9,11 @@ import logging
 import mimetypes
 import os
 import uuid
+import wave
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import aiofiles
 import aiohttp
@@ -28,6 +30,7 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from open_webui.config import (
     CACHE_DIR,
+    DEFAULT_REALTIME_TTS_PROMPT_TEMPLATE,
     ELEVENLABS_API_BASE_URL,
     WHISPER_COMPUTE_TYPE,
     WHISPER_LANGUAGE,
@@ -50,13 +53,14 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
+from open_webui.routers.audio import realtime
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import strict_match_mime_type
 from open_webui.utils.session_pool import get_session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # pydub needs stdlib audioop (gone in 3.13); keep requires-python capped < 3.13
 if not USE_SLIM:
@@ -66,6 +70,7 @@ if not USE_SLIM:
 
 log = logging.getLogger(__name__)
 router = APIRouter()
+router.include_router(realtime.router)
 
 # --- Constants ---
 
@@ -85,12 +90,23 @@ TTS_CONFIG_KEYS = {
     'ENGINE': 'audio.tts.engine',
     'MODEL': 'audio.tts.model',
     'VOICE': 'audio.tts.voice',
+    'REALTIME_TTS_PROMPT_TEMPLATE': 'audio.tts.realtime.prompt_template',
     'SPLIT_ON': 'audio.tts.split_on',
     'AZURE_SPEECH_REGION': 'audio.tts.azure.speech_region',
     'AZURE_SPEECH_BASE_URL': 'audio.tts.azure.speech_base_url',
     'AZURE_SPEECH_OUTPUT_FORMAT': 'audio.tts.azure.speech_output_format',
     'MISTRAL_API_KEY': 'audio.tts.mistral.api_key',
     'MISTRAL_API_BASE_URL': 'audio.tts.mistral.api_base_url',
+}
+
+REALTIME_CONFIG_KEYS = {
+    'ENABLED': 'audio.realtime.enabled',
+    'OPENAI_API_BASE_URL': 'audio.realtime.openai.api_base_url',
+    'OPENAI_API_KEY': 'audio.realtime.openai.api_key',
+    'MODEL': 'audio.realtime.model',
+    'VOICE': 'audio.realtime.voice',
+    'TRANSCRIPTION_MODEL': 'audio.realtime.transcription_model',
+    'REALTIME_CALL_PROMPT_TEMPLATE': 'audio.realtime.prompt_template',
 }
 
 STT_CONFIG_KEYS = {
@@ -246,6 +262,7 @@ class TTSConfigForm(BaseModel):
     ENGINE: str
     MODEL: str
     VOICE: str
+    REALTIME_TTS_PROMPT_TEMPLATE: Optional[str] = None
     SPLIT_ON: str
     AZURE_SPEECH_REGION: str
     AZURE_SPEECH_BASE_URL: str
@@ -274,14 +291,26 @@ class STTConfigForm(BaseModel):
     MISTRAL_USE_CHAT_COMPLETIONS: bool
 
 
+class RealtimeConfigForm(BaseModel):
+    ENABLED: bool = False
+    OPENAI_API_BASE_URL: str = 'https://api.openai.com/v1'
+    OPENAI_API_KEY: str = ''
+    MODEL: str = Field(default='gpt-realtime-2.1-mini', min_length=1, max_length=200)
+    VOICE: str = Field(default='marin', min_length=1, max_length=200)
+    TRANSCRIPTION_MODEL: str = Field(default='gpt-transcribe', min_length=1, max_length=200)
+    REALTIME_CALL_PROMPT_TEMPLATE: Optional[str] = None
+
+
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
+    realtime: Optional[RealtimeConfigForm] = None
 
 
 @router.get('/config')
 async def get_audio_config(request: Request, user=Depends(get_admin_user)):
     return {
+        'realtime': await get_config_values(REALTIME_CONFIG_KEYS),
         'tts': await get_config_values(TTS_CONFIG_KEYS),
         'stt': await get_config_values(STT_CONFIG_KEYS),
     }
@@ -297,6 +326,11 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
             raise HTTPException(400, 'Local TTS is unavailable in slim. Select an external text-to-speech engine.')
     await Config.upsert(
         {
+            **(
+                config_updates(form_data.realtime.model_dump(exclude_unset=True), REALTIME_CONFIG_KEYS)
+                if form_data.realtime
+                else {}
+            ),
             **config_updates(form_data.tts.model_dump(exclude_unset=True), TTS_CONFIG_KEYS),
             **config_updates(form_data.stt.model_dump(exclude_unset=True), STT_CONFIG_KEYS),
         }
@@ -439,6 +473,126 @@ async def _tts_openai(request, payload, file_path, file_body_path, user):
     except Exception as exc:
         log.exception(exc)
         await _raise_tts_error(exc, r)
+
+
+async def _tts_openai_realtime(request, payload, file_path, file_body_path, user):
+    """Generate speech via the OpenAI Realtime API."""
+    api_key = await Config.get('audio.tts.openai.api_key')
+    if not isinstance(api_key, str) or not api_key.strip():
+        raise HTTPException(400, 'Configure an OpenAI Realtime API key.')
+    url = urlsplit(payload['api_base_url'])
+    ws_url = urlunsplit(
+        (
+            'wss' if url.scheme == 'https' else 'ws',
+            url.netloc,
+            f'{url.path}/realtime',
+            urlencode({'model': payload['model']}),
+            '',
+        )
+    )
+    headers = {'Authorization': f'Bearer {api_key}'}
+    if ENABLE_FORWARD_USER_INFO_HEADERS:
+        headers = include_user_info_headers(headers, user)
+
+    try:
+        async with asyncio.timeout(120):
+            session = await get_session()
+            async with asyncio.timeout(15):
+                ws = await session.ws_connect(ws_url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL)
+            async with ws:
+                pcm = bytearray()
+                response_id = None
+                async for message in ws:
+                    if message.type == aiohttp.WSMsgType.ERROR:
+                        raise HTTPException(502, 'OpenAI Realtime WebSocket failed.')
+                    if message.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    event = message.json()
+                    event_type = event['type']
+                    if event_type == 'error':
+                        # Provider messages may contain input text or credentials.
+                        raise HTTPException(502, 'OpenAI Realtime rejected synthesis. Check the model, voice, and key.')
+                    if event_type == 'session.created':
+                        await ws.send_json(
+                            {
+                                'type': 'session.update',
+                                'session': {
+                                    'type': 'realtime',
+                                    'output_modalities': ['audio'],
+                                    'audio': {
+                                        'input': {'turn_detection': None, 'transcription': None},
+                                        'output': {
+                                            'format': {'type': 'audio/pcm', 'rate': 24000},
+                                            'voice': payload['voice'],
+                                        },
+                                    },
+                                    'tools': [],
+                                    'tool_choice': 'none',
+                                    'instructions': payload['instructions'],
+                                },
+                            }
+                        )
+                    elif event_type == 'session.updated':
+                        await ws.send_json(
+                            {
+                                'type': 'response.create',
+                                'response': {
+                                    'conversation': 'none',
+                                    'output_modalities': ['audio'],
+                                    'tools': [],
+                                    'tool_choice': 'none',
+                                    'instructions': payload['instructions'],
+                                    'input': [
+                                        {
+                                            'type': 'message',
+                                            'role': 'user',
+                                            'content': [{'type': 'input_text', 'text': payload['input']}],
+                                        }
+                                    ],
+                                },
+                            }
+                        )
+                    elif event_type == 'response.created':
+                        response_id = event['response']['id']
+                    elif event_type == 'response.output_audio.delta' and response_id:
+                        if event.get('response_id') == response_id:
+                            pcm.extend(base64.b64decode(event['delta'], validate=True))
+                    elif event_type == 'response.done' and response_id:
+                        response = event['response']
+                        if response['id'] != response_id:
+                            continue
+                        if response['status'] != 'completed':
+                            raise HTTPException(502, 'OpenAI Realtime speech generation did not complete.')
+                        if not pcm or len(pcm) % 2:
+                            raise HTTPException(502, 'OpenAI Realtime returned empty or invalid PCM audio.')
+                        break
+                else:
+                    raise HTTPException(502, 'OpenAI Realtime closed before speech generation completed.')
+    except TimeoutError:
+        raise HTTPException(504, 'OpenAI Realtime speech synthesis timed out.') from None
+    except aiohttp.WSServerHandshakeError as exc:
+        raise HTTPException(502, f'OpenAI Realtime connection rejected (HTTP {exc.status}).') from None
+    except aiohttp.ClientError:
+        raise HTTPException(502, 'Could not connect to OpenAI Realtime.') from None
+    except (ValueError, KeyError, TypeError):
+        raise HTTPException(502, 'OpenAI Realtime returned invalid audio or event data.') from None
+
+    audio = io.BytesIO()
+    with wave.open(audio, 'wb') as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(24000)
+        wav.writeframes(pcm)
+
+    # Publish only complete files; simultaneous requests may synthesize the same cache key.
+    temporary_path = file_path.with_name(f'{file_path.name}.{uuid.uuid4().hex}.tmp')
+    try:
+        async with aiofiles.open(temporary_path, 'wb') as f:
+            await f.write(audio.getvalue())
+        os.replace(temporary_path, file_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    return FileResponse(file_path, media_type='audio/wav')
 
 
 async def _tts_elevenlabs(request, payload, file_path, file_body_path, user):
@@ -591,6 +745,7 @@ async def _tts_mistral(request, payload, file_path, file_body_path, user):
 # Dispatcher map: engine name -> handler
 _TTS_ENGINES = {
     'openai': _tts_openai,
+    'openai-realtime': _tts_openai_realtime,
     'elevenlabs': _tts_elevenlabs,
     'azure': _tts_azure,
     'transformers': _tts_transformers,
@@ -616,14 +771,50 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         )
 
     body = await request.body()
-    name = hashlib.sha256(
-        body
-        + str(engine).encode('utf-8')
-        + str(await Config.get('audio.tts.model')).encode('utf-8')
-        + (b':slim' if USE_SLIM else b'')
-    ).hexdigest()
+    payload = None
+    if engine == 'openai-realtime':
+        try:
+            payload = JSONCodec.loads(body)
+        except (ValueError, TypeError):
+            raise HTTPException(400, 'Invalid JSON payload') from None
+        if not isinstance(payload, dict):
+            raise HTTPException(400, 'Speech payload must be an object.')
+        text = payload.get('input')
+        if not isinstance(text, str) or not text.strip():
+            raise HTTPException(400, 'Speech input must be nonempty text.')
+        model = await Config.get('audio.tts.model')
+        voice = payload.get('voice') or await Config.get('audio.tts.voice')
+        base_url = await Config.get('audio.tts.openai.api_base_url')
+        if not all(isinstance(value, str) and value.strip() for value in (model, voice, base_url)):
+            raise HTTPException(400, 'Configure the OpenAI Realtime model, voice, and API base URL.')
+        base_url = base_url.strip().rstrip('/')
+        try:
+            url = urlsplit(base_url)
+            valid = (
+                url.scheme in ('http', 'https')
+                and url.hostname
+                and not (url.username or url.password or url.query or url.fragment)
+            )
+            url.port  # Validate a configured port before connecting.
+        except ValueError:
+            valid = False
+        if not valid:
+            raise HTTPException(400, 'OpenAI Realtime requires an HTTP(S) API base URL without credentials or a query.')
+        payload = {'input': text, 'model': model.strip(), 'voice': voice.strip(), 'api_base_url': base_url}
+        payload['instructions'] = (
+            await Config.get('audio.tts.realtime.prompt_template') or DEFAULT_REALTIME_TTS_PROMPT_TEMPLATE
+        )
+        name = hashlib.sha256(JSONCodec.dumps({'engine': engine, **payload}).encode('utf-8')).hexdigest()
+    else:
+        name = hashlib.sha256(
+            body
+            + str(engine).encode('utf-8')
+            + str(await Config.get('audio.tts.model')).encode('utf-8')
+            + (b':slim' if USE_SLIM else b'')
+        ).hexdigest()
 
-    file_path = SPEECH_CACHE_DIR.joinpath(f'{name}.mp3')
+    extension = 'wav' if engine == 'openai-realtime' else 'mp3'
+    file_path = SPEECH_CACHE_DIR.joinpath(f'{name}.{extension}')
     file_body_path = SPEECH_CACHE_DIR.joinpath(f'{name}.json')
 
     # Return cached result if available
@@ -635,17 +826,18 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             subject_id=name,
             data={'engine': engine, 'cached': True},
         )
-        content_type = None
-        if USE_SLIM:
+        content_type = 'audio/wav' if engine == 'openai-realtime' else None
+        if USE_SLIM and engine != 'openai-realtime':
             async with aiofiles.open(file_path.with_suffix('.mime')) as f:
                 content_type = await f.read()
         return FileResponse(file_path, media_type=content_type)
 
-    try:
-        payload = JSONCodec.loads(body)
-    except Exception as exc:
-        log.exception(exc)
-        raise HTTPException(status_code=400, detail='Invalid JSON payload')
+    if payload is None:
+        try:
+            payload = JSONCodec.loads(body)
+        except Exception as exc:
+            log.exception(exc)
+            raise HTTPException(status_code=400, detail='Invalid JSON payload')
 
     handler = _TTS_ENGINES.get(engine)
     if handler is None:
@@ -660,7 +852,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         data={
             'engine': engine,
             'model': payload.get('model'),
-            'input_preview': str(payload.get('input', ''))[:300],
+            **({'input_preview': str(payload.get('input', ''))[:300]} if engine != 'openai-realtime' else {}),
             'cached': False,
         },
     )
@@ -1377,6 +1569,9 @@ async def get_available_models(request: Request) -> list[dict]:
         else:
             available_models = [{'id': 'tts-1'}, {'id': 'tts-1-hd'}]
 
+    elif engine == 'openai-realtime':
+        available_models = [{'id': 'gpt-realtime-2.1-mini'}, {'id': 'gpt-realtime-2.1'}]
+
     elif engine == 'elevenlabs':
         try:
             session = await get_session()
@@ -1420,6 +1615,12 @@ async def get_available_voices(request) -> dict:
     """Return ``{voice_id: voice_name}`` for the configured TTS engine."""
     engine = await Config.get('audio.tts.engine')
     _timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+
+    if engine == 'openai-realtime':
+        return {
+            voice: voice
+            for voice in ('alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar')
+        }
 
     if engine == 'openai':
         base_url = await Config.get('audio.tts.openai.api_base_url')

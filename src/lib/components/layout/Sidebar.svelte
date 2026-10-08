@@ -290,7 +290,10 @@
 
 		// Merge shared folders into the same structure
 		for (const sf of sharedFolders) {
-			if (folderMap[sf.id]) continue; // Already owned by user
+			if (folderMap[sf.id]) {
+				folderMap[sf.id].showOwnerInfo = true;
+				continue;
+			}
 			folderMap[sf.id] = { ...sf, shared: true };
 		}
 
@@ -714,6 +717,11 @@
 		}
 
 		const socketInstance = $socket;
+		const scheduleChannelRefresh = () => {
+			socketInstance?.off('connect', initChannels);
+			socketInstance?.once('connect', initChannels);
+		};
+		socketInstance?.on('access:updated', scheduleChannelRefresh);
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
@@ -753,6 +761,8 @@
 				dropZone.removeEventListener('dragleave', onDragLeave);
 			}
 
+			socketInstance?.off('access:updated', scheduleChannelRefresh);
+			socketInstance?.off('connect', initChannels);
 			socketInstance?.off('events', chatActiveEventHandler);
 			socketInstance?.off('connect', refreshChatRows);
 

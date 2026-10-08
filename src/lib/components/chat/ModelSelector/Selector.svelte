@@ -774,7 +774,6 @@
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL
 			});
-			await deleteModel(localStorage.token, model);
 			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
 		} else {
 			const displayModel = $MODEL_DOWNLOAD_POOL[model]?.model ?? model;
@@ -904,9 +903,9 @@
 	}}
 />
 
-<svelte:window on:click|capture={handleWindowClick} on:keydown={handleKeydown} />
+<svelte:window on:click|capture={handleWindowClick} on:keydown|capture={handleKeydown} />
 
-<div class="relative w-full">
+<div class="relative flex w-full">
 	<button
 		bind:this={triggerElement}
 		class="focus-ring relative w-full {($settings?.highContrastMode ?? false)

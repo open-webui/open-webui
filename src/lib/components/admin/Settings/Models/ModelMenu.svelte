@@ -27,6 +27,8 @@
 	export let model;
 
 	export let exportHandler: Function;
+	export let deleteHandler: Function;
+	export let deleteLabel: string;
 	export let hideHandler: Function;
 	export let privacyHandler: Function;
 	export let isDefaultSelected = false;
@@ -66,6 +68,15 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
+			<button
+				class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
+				type="button"
+				on:click={() => runAndClose(deleteHandler)}
+			>
+				<GarbageBin className="size-3.5" />
+				<div class="flex items-center">{deleteLabel}</div>
+			</button>
+
 			<button
 				class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
 				on:click={() => runAndClose(hideHandler)}

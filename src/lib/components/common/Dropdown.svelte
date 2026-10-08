@@ -290,8 +290,9 @@
 		if (!(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
-		// Submenu content is portaled outside contentEl.
-		if (event.target instanceof Element && event.target.closest('[role="menu"]')) return;
+		// Submenus and listboxes can be portaled outside contentEl.
+		if (event.target instanceof Element && event.target.closest('[role="menu"], [role="listbox"]'))
+			return;
 		event.preventDefault();
 		event.stopPropagation();
 		closeDropdown(false);

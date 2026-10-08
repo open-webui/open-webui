@@ -47,14 +47,42 @@ from open_webui.utils.access_control import filter_allowed_access_grants, has_ac
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import get_all_models
 from open_webui.utils.validate import BACKGROUND_IMAGE_MAX_BYTES, validate_background_image
+from open_webui.utils.voice_avatar import AVATAR_MAX_BYTES, ANIMATION_MAX_BYTES, validate_voice_avatar, validate_voice_animation
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def model_response(model, user):
+    if model is None:
+        return None
+    data = model.model_dump()
+    if user.role != 'admin':
+        data.get('params', {}).pop('model_controls', None)
+    return data
+
+
+async def _check_model_controls(form, previous, user, request):
+    old = previous.params.model_dump().get('model_controls', {}) if previous else {}
+    if 'model_controls' not in form.params.model_fields_set:
+        if old:
+            form.params.model_controls = previous.params.model_controls
+        return
+    controls = form.params.model_dump().get('model_controls', {})
+    if user.role != 'admin' and JSONCodec.dumps(controls) != JSONCodec.dumps(old):
+        raise HTTPException(403, 'Only admins can change model controls.')
+    if controls:
+        if not request.app.state.MODELS:
+            await get_all_models(request, user=user)
+        base = request.app.state.MODELS.get(form.base_model_id or form.id, {})
+        if 'pipe' in base or base.get('direct') or base.get('owned_by') == 'arena':
+            raise HTTPException(400, 'Model controls require a server-managed provider model.')
 
 
 def add_chat_variables_schema(model_dict: dict) -> dict:
@@ -121,6 +149,34 @@ async def _verify_background_image(url: str | None, user, db, previous_url: str 
     if (file.meta or {}).get('content_type') != content_type:
         if not await Files.update_file_metadata_by_id(file_id, {'content_type': content_type}, db=db):
             raise HTTPException(status_code=500, detail='Could not validate background image.')
+
+
+async def _verify_voice_avatar(avatar, user, db, previous=None) -> None:
+    if not avatar:
+        return
+    assets = {avatar.file_id: (AVATAR_MAX_BYTES, validate_voice_avatar)}
+    for asset in [*avatar.states.values(), *avatar.gestures]:
+        if asset.file_id == avatar.file_id:
+            raise HTTPException(status_code=400, detail='An animation must be a VRMA file, not the avatar.')
+        assets[asset.file_id] = (ANIMATION_MAX_BYTES, validate_voice_animation)
+    previous_assets = ({previous.file_id: validate_voice_avatar} | {
+        asset.file_id: validate_voice_animation for asset in [*previous.states.values(), *previous.gestures]
+    }) if previous else {}
+    for file_id, (limit, validate) in assets.items():
+        if previous_assets.get(file_id) is validate:
+            continue
+        file = await Files.get_file_by_id(file_id, db=db)
+        if not file or not (
+            user.role == 'admin' or file.user_id == user.id or await has_access_to_file(file_id, 'read', user, db=db)
+        ):
+            raise HTTPException(status_code=403, detail='Avatar or animation file is not accessible. Upload it again.')
+        try:
+            path = await asyncio.to_thread(Storage.get_file, file.path)
+            with open(path, 'rb') as source:
+                data = await asyncio.to_thread(source.read, limit + 1)
+            await asyncio.to_thread(validate, data)
+        except (ValueError, OSError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 async def _verify_knowledge_file_access(
@@ -192,7 +248,7 @@ async def get_models(
         filter['direction'] = direction
 
     # Pre-fetch user group IDs once - used for both filter and write_access check
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -217,7 +273,7 @@ async def get_models(
     # Strip profile_image_url from meta — images are served via /model/profile/image.
     items = []
     for model in result.items:
-        data = add_chat_variables_schema(model.model_dump())
+        data = add_chat_variables_schema(model_response(model, user))
         if data.get('meta'):
             data['meta'].pop('profile_image_url', None)
         write_access = (
@@ -343,6 +399,7 @@ async def create_new_model(
     )
 
     await _verify_background_image(form_data.meta.background_image_url, user, db)
+    await _verify_voice_avatar(form_data.meta.voice_avatar, user, db)
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
@@ -352,6 +409,7 @@ async def create_new_model(
         'sharing.public_models',
     )
 
+    await _check_model_controls(form_data, None, user, request)
     model = await Models.insert_new_model(form_data, user.id, db=db)
     if not model:
         raise HTTPException(
@@ -366,7 +424,7 @@ async def create_new_model(
         subject_id=model.id,
         data={'name': model.name},
     )
-    return model
+    return model_response(model, user)
 
 
 ############################
@@ -406,7 +464,7 @@ async def export_models(
             raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     exported = []
     for model in models:
-        data = model.model_dump()
+        data = model_response(model, user)
         url = model.meta.background_image_url
         if url:
             try:
@@ -472,7 +530,7 @@ async def import_models(
             # per-model has_access calls (N+1 avoidance).
             existing_model_ids = list(existing_models.keys())
             if user.role != 'admin' and existing_model_ids:
-                groups = await Groups.get_groups_by_member_id(user.id, db=db)
+                groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in groups}
                 writable_model_ids = await AccessGrants.get_accessible_resource_ids(
                     user_id=user.id,
@@ -602,6 +660,7 @@ async def import_models(
                         )
                         imported_model = new_model
 
+                    await _check_model_controls(imported_model, existing_model, user, request)
                     uploaded = None
                     try:
                         encoded = model_data.pop('background_image_data', None)
@@ -636,6 +695,14 @@ async def import_models(
                             user,
                             db,
                             existing_model.meta.background_image_url if existing_model else None,
+                        )
+                        if existing_model and 'voice_avatar' not in imported_model.meta.model_fields_set:
+                            imported_model.meta.voice_avatar = existing_model.meta.voice_avatar
+                        await _verify_voice_avatar(
+                            imported_model.meta.voice_avatar,
+                            user,
+                            db,
+                            existing_model.meta.voice_avatar if existing_model else None,
                         )
                         saved = (
                             await Models.update_model_by_id(model_id, imported_model, db=db)
@@ -692,6 +759,10 @@ async def sync_models(
     existing = {model.id: model for model in await Models.get_models_by_ids([m.id for m in form_data.models], db=db)}
     for model in form_data.models:
         previous = existing.get(model.id)
+        await _check_model_controls(model, previous, user, request)
+        if previous and 'voice_avatar' not in model.meta.model_fields_set:
+            model.meta.voice_avatar = previous.meta.voice_avatar
+        await _verify_voice_avatar(model.meta.voice_avatar, user, db, previous.meta.voice_avatar if previous else None)
         if previous and 'background_image_url' not in model.meta.model_fields_set:
             model.meta.background_image_url = previous.meta.background_image_url
         await _verify_background_image(
@@ -741,7 +812,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
             permission='read',
             db=db,
         ):
-            model_dict = model.model_dump()
+            model_dict = model_response(model, user)
             model_dict = add_chat_variables_schema(model_dict)
             # Strip params (system prompt and other admin-curated config)
             # for read-only callers — matches the params strip already
@@ -809,8 +880,11 @@ async def get_model_profile_image(
         for arena_model in arena_models:
             if arena_model.get('id') == id:
                 arena_meta = arena_model.get('meta', {})
-                if bypass_access_control or await has_access(
-                    user.id, permission='read', access_grants=arena_meta.get('access_grants', []), db=db
+                access_grants = arena_meta.get('access_grants', [])
+                if (
+                    bypass_access_control
+                    or (not access_grants and user.role == 'admin')
+                    or await has_access(user.id, permission='read', access_grants=access_grants, db=db)
                 ):
                     profile_image_url = arena_meta.get('profile_image_url')
                 break
@@ -906,7 +980,7 @@ async def toggle_model_by_id(
                     subject_type='model',
                     data={'name': model.name},
                 )
-                return model
+                return model_response(model, user)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -981,6 +1055,9 @@ async def update_model_by_id(
     if 'profile_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.profile_image_url = model.meta.profile_image_url
 
+    if 'voice_avatar' not in form_data.meta.model_fields_set:
+        form_data.meta.voice_avatar = model.meta.voice_avatar
+    await _verify_voice_avatar(form_data.meta.voice_avatar, user, db, model.meta.voice_avatar)
     if 'background_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.background_image_url = model.meta.background_image_url
     await _verify_background_image(form_data.meta.background_image_url, user, db, model.meta.background_image_url)
@@ -1009,6 +1086,7 @@ async def update_model_by_id(
             'sharing.public_models',
         )
 
+    await _check_model_controls(form_data, model, user, request)
     model = await Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()), db=db)
     if model:
         await publish_event(
@@ -1018,7 +1096,7 @@ async def update_model_by_id(
             subject_id=model.id,
             data={'name': model.name},
         )
-    return model
+    return model_response(model, user)
 
 
 ############################
@@ -1100,7 +1178,7 @@ async def update_model_access_by_id(
         actor=user,
         subject_id=form_data.id,
     )
-    return model
+    return model_response(model, user)
 
 
 ############################

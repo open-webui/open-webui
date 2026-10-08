@@ -1,3 +1,7 @@
+<script context="module">
+	/** @typedef {{ id: string, name: string, parent_group_id?: string | null, path: string, ancestor_ids: string[], data?: { config?: { default_models?: string[] | null } } }} GroupListItem */
+</script>
+
 <script>
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
@@ -11,8 +15,9 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Select from '$lib/components/common/Select.svelte';
-	import { createNewGroup, getGroups } from '$lib/apis/groups';
+	import { createNewGroup, getGroups, updateGroupById } from '$lib/apis/groups';
 	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
@@ -23,33 +28,95 @@
 	let groups = [];
 
 	let query = '';
-	let sortBy = 'members';
+	let sortBy = 'name';
+	let collapsed = new Set();
+	/** @type {any} */
+	let draggedGroup = null;
+	let dropTarget = '';
+	let moving = false;
 
 	const sortItems = [
 		{ value: 'members', label: $i18n.t('Members') },
 		{ value: 'name', label: $i18n.t('Name') }
 	];
 
-	$: filteredGroups = groups
-		.filter((group) => {
-			if (query === '') {
-				return true;
-			} else {
-				let name = group.name.toLowerCase();
-				const q = query.toLowerCase();
-				return name.includes(q);
+	/** @type {any[]} */
+	let filteredGroups = [];
+	/** @type {Map<string | null, any[]>} */
+	let children = new Map();
+	$: {
+		children = new Map();
+		for (const group of groups) {
+			const parent = group.parent_group_id ?? null;
+			children.set(parent, [...(children.get(parent) ?? []), group]);
+		}
+		for (const siblings of children.values()) {
+			siblings.sort((a, b) =>
+				sortBy === 'members'
+					? (b.member_count ?? 0) - (a.member_count ?? 0) || a.name.localeCompare(b.name)
+					: a.name.localeCompare(b.name)
+			);
+		}
+		const matching = new Set();
+		for (const group of groups) {
+			if (group.path.toLowerCase().includes(query.toLowerCase())) {
+				matching.add(group.id);
+				for (const id of group.ancestor_ids) matching.add(id);
 			}
-		})
-		.sort((a, b) => {
-			if (sortBy === 'name') {
-				return a.name.localeCompare(b.name);
+		}
+		const visible = [];
+		const pending = [...(children.get(null) ?? [])].reverse();
+		while (pending.length) {
+			const group = pending.pop();
+			if (!matching.has(group.id)) continue;
+			visible.push(group);
+			if (query || !collapsed.has(group.id)) {
+				pending.push(...[...(children.get(group.id) ?? [])].reverse());
 			}
+		}
+		filteredGroups = visible;
+	}
 
-			return (b.member_count ?? 0) - (a.member_count ?? 0) || a.name.localeCompare(b.name);
-		});
+	/** @param {string | null} parentId */
+	const canDrop = (parentId) => {
+		const parent = groups.find((group) => group.id === parentId);
+		return (
+			draggedGroup &&
+			!moving &&
+			(draggedGroup.parent_group_id ?? null) !== parentId &&
+			draggedGroup.id !== parentId &&
+			!parent?.ancestor_ids.includes(draggedGroup.id)
+		);
+	};
+
+	/** @param {string | null} parentId */
+	const moveGroup = async (parentId) => {
+		if (!canDrop(parentId)) return;
+		const group = draggedGroup;
+		draggedGroup = null;
+		dropTarget = '';
+		moving = true;
+		try {
+			await updateGroupById(localStorage.token, group.id, {
+				name: group.name,
+				description: group.description,
+				parent_group_id: parentId
+			});
+			collapsed.delete(parentId);
+			collapsed = new Set(collapsed);
+			await setGroups();
+			toast.success($i18n.t('Group moved successfully'));
+		} catch (error) {
+			toast.error(String(error));
+		} finally {
+			moving = false;
+		}
+	};
 
 	$: if (loaded) {
-		adminGroupCount.set(filteredGroups.length);
+		adminGroupCount.set(
+			groups.filter((group) => group.path.toLowerCase().includes(query.toLowerCase())).length
+		);
 	}
 
 	/** @type {any} */
@@ -59,12 +126,31 @@
 	let showDefaultPermissionsModal = false;
 
 	const setGroups = async () => {
-		groups = await getGroups(localStorage.token);
+		/** @type {any[]} */
+		const result = await getGroups(localStorage.token);
+		const byId = new Map(result.map((group) => [group.id, group]));
+		groups = result.map((group) => {
+			const ancestors = [];
+			const seen = new Set([group.id]);
+			let parent = byId.get(group.parent_group_id);
+			while (parent && !seen.has(parent.id)) {
+				seen.add(parent.id);
+				ancestors.unshift(parent);
+				parent = byId.get(parent.parent_group_id);
+			}
+			return {
+				...group,
+				path: [...ancestors, group].map((item) => item.name).join(' / '),
+				ancestor_ids: ancestors.map((item) => item.id)
+			};
+		});
 	};
 
 	/** @param {any} updatedGroup */
 	const updateGroup = (updatedGroup) => {
-		groups = groups.map((group) => (group.id === updatedGroup.id ? updatedGroup : group));
+		groups = groups.map((group) =>
+			group.id === updatedGroup.id ? { ...group, ...updatedGroup } : group
+		);
 	};
 
 	/** @param {any} group */
@@ -78,6 +164,7 @@
 			toast.success($i18n.t('Group created successfully'));
 			await setGroups();
 		}
+		return !!res;
 	};
 
 	/** @param {any} group */
@@ -95,6 +182,7 @@
 			toast.success($i18n.t('Default permissions updated successfully'));
 			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
 		}
+		return !!res;
 	};
 
 	onMount(async () => {
@@ -116,6 +204,7 @@
 			edit={false}
 			tabs={['general', 'permissions']}
 			permissions={defaultPermissions}
+			{groups}
 			onSubmit={addGroupHandler}
 		/>
 	{/if}
@@ -185,13 +274,105 @@
 		</div>
 
 		{#if filteredGroups.length !== 0}
-			<div class="mt-1 grid grid-cols-1">
-				{#each filteredGroups as group, idx (group.id)}
-					<GroupItem {group} {setGroups} {updateGroup} {defaultPermissions} />
-					{#if idx < filteredGroups.length - 1}
-						<hr class="border-gray-50 dark:border-gray-850/40" />
-					{/if}
+			<div class="mt-2" aria-label={$i18n.t('Group hierarchy')}>
+				{#each filteredGroups as group (group.id)}
+					<div
+						role="group"
+						aria-label={group.name}
+						class="relative flex items-center rounded-xl transition {dropTarget === group.id
+							? 'bg-gray-100/40 dark:bg-gray-800/30'
+							: 'hover:bg-gray-50/60 dark:hover:bg-gray-900'} {draggedGroup?.id === group.id
+							? 'opacity-40'
+							: ''}"
+						style:padding-left={`${Math.min(group.ancestor_ids.length, 8) * 20}px`}
+						on:dragover={(event) => {
+							if (canDrop(group.id)) {
+								event.preventDefault();
+								if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+								dropTarget = group.id;
+							}
+						}}
+						on:dragleave={(event) => {
+							if (
+								!(event.relatedTarget instanceof Node) ||
+								!event.currentTarget.contains(event.relatedTarget)
+							)
+								dropTarget = '';
+						}}
+						on:drop|preventDefault={() => moveGroup(group.id)}
+					>
+						{#each group.ancestor_ids.slice(0, 8) as ancestorId, depth}
+							<span
+								aria-hidden="true"
+								class="pointer-events-none absolute top-0 bottom-0 border-l border-gray-100 dark:border-gray-900"
+								style:left={`${depth * 20 + 11}px`}
+							></span>
+						{/each}
+						{#if children.has(group.id)}
+							<button
+								type="button"
+								class="z-10 flex size-6 shrink-0 items-center justify-center rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+								aria-label={$i18n.t(
+									collapsed.has(group.id) ? 'Expand {{name}}' : 'Collapse {{name}}',
+									{ name: group.name }
+								)}
+								aria-expanded={!!query || !collapsed.has(group.id)}
+								on:click={() => {
+									collapsed.has(group.id) ? collapsed.delete(group.id) : collapsed.add(group.id);
+									collapsed = new Set(collapsed);
+								}}
+							>
+								<div
+									class="transition-transform"
+									class:rotate-90={!!query || !collapsed.has(group.id)}
+								>
+									<ChevronRight className="size-3.5" />
+								</div>
+							</button>
+						{:else}<span class="w-6 shrink-0"></span>{/if}
+						<div class="min-w-0 flex-1">
+							<GroupItem
+								{group}
+								{groups}
+								{setGroups}
+								{updateGroup}
+								{defaultPermissions}
+								draggable={!moving}
+								onDragStart={(event) => {
+									if (!event.dataTransfer) return;
+									draggedGroup = group;
+									event.dataTransfer.effectAllowed = 'move';
+									event.dataTransfer.setData('text/plain', group.id);
+								}}
+								onDragEnd={() => {
+									draggedGroup = null;
+									dropTarget = '';
+								}}
+							/>
+						</div>
+					</div>
 				{/each}
+				{#if draggedGroup}
+					<div
+						role="region"
+						aria-label={$i18n.t('Move to top level')}
+						class="mt-1 rounded-lg px-3 py-2 text-xs transition {dropTarget === 'root'
+							? 'bg-gray-100/40 text-gray-500 dark:bg-gray-800/30 dark:text-gray-400'
+							: 'text-gray-400 dark:text-gray-500'}"
+						on:dragover={(event) => {
+							if (canDrop(null)) {
+								event.preventDefault();
+								dropTarget = 'root';
+							}
+						}}
+						on:dragleave={() => {
+							dropTarget = '';
+						}}
+						on:drop|preventDefault={() => moveGroup(null)}
+					>
+						{$i18n.t('Move to top level')}
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<div class="flex w-full flex-col items-center justify-center py-16 pb-24">

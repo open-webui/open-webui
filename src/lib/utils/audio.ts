@@ -36,6 +36,7 @@ export class AudioQueue {
 	}
 
 	setPlaybackRate(rate: number) {
+		this.audio.defaultPlaybackRate = rate;
 		this.audio.playbackRate = rate;
 	}
 
@@ -79,6 +80,7 @@ export class AudioQueue {
 		if (this.current) {
 			const url = this.current;
 			this.audio.src = url;
+			this.audio.muted = false;
 			this.audio.play().catch((error) => {
 				if (this.current !== url) return;
 

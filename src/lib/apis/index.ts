@@ -1781,6 +1781,8 @@ export interface ModelConfig {
 }
 
 export interface ModelMeta {
+	voice_avatar?: import('$lib/utils/voice-avatar').VoiceAvatarConfig | null;
+	voice?: { voice?: string };
 	toolIds: never[];
 	description?: string;
 	i18n?: Record<string, Record<string, any>>;
@@ -1790,4 +1792,14 @@ export interface ModelMeta {
 	background_image_url?: string | null;
 }
 
-export interface ModelParams {}
+export interface ModelControl {
+	display?: 'menu' | 'slider';
+	label: string;
+	description?: string;
+	default?: string | null;
+	options: Record<string, { label: string; params?: Record<string, any> }>;
+}
+
+export interface ModelParams {
+	model_controls?: Record<string, ModelControl>;
+}

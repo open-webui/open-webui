@@ -100,8 +100,40 @@ class EventDefinitions(BaseModel):
     AUTH_SIGNUP: EventDefinition = EventDefinition(
         name='auth.signup', description='A user account was created through signup.', message='User signed up'
     )
+    AUTH_MFA_ENROLLED: EventDefinition = EventDefinition(
+        name='auth.mfa.enrolled', description='MFA enrolled.', message='MFA enrolled'
+    )
+    AUTH_MFA_REPLACED: EventDefinition = EventDefinition(
+        name='auth.mfa.replaced', description='MFA replaced.', message='MFA replaced'
+    )
+    AUTH_MFA_FAILED: EventDefinition = EventDefinition(
+        name='auth.mfa.failed', description='MFA failed.', message='MFA failed'
+    )
+    AUTH_MFA_THROTTLED: EventDefinition = EventDefinition(
+        name='auth.mfa.throttled', description='MFA throttled.', message='MFA throttled'
+    )
+    AUTH_MFA_RECOVERY_USED: EventDefinition = EventDefinition(
+        name='auth.mfa.recovery_used', description='MFA recovery used.', message='MFA recovery used'
+    )
+    AUTH_MFA_RECOVERY_CODES_REGENERATED: EventDefinition = EventDefinition(
+        name='auth.mfa.recovery_codes_regenerated',
+        description='MFA recovery codes regenerated.',
+        message='MFA recovery codes regenerated',
+    )
+    AUTH_MFA_RESET_REQUESTED: EventDefinition = EventDefinition(
+        name='auth.mfa.reset_requested', description='MFA reset requested.', message='MFA reset requested'
+    )
+    AUTH_MFA_RESET_COMPLETED: EventDefinition = EventDefinition(
+        name='auth.mfa.reset_completed', description='MFA reset completed.', message='MFA reset completed'
+    )
+    AUTH_MFA_POLICY_CHANGED: EventDefinition = EventDefinition(
+        name='auth.mfa.policy_changed', description='MFA policy changed.', message='MFA policy changed'
+    )
     AUTH_LOGIN: EventDefinition = EventDefinition(
         name='auth.login', description='A user successfully logged in.', message='User logged in'
+    )
+    AUTH_SESSIONS_REVOKED: EventDefinition = EventDefinition(
+        name='auth.sessions_revoked', description='All user sessions were revoked.', message='User sessions revoked'
     )
     AUTH_LOGOUT: EventDefinition = EventDefinition(
         name='auth.logout', description='A user logged out.', message='User logged out'
@@ -823,7 +855,7 @@ async def event_target_matches(
     if user_group_ids is None:
         from open_webui.models.groups import Groups
 
-        groups_by_user = await Groups.get_groups_by_member_ids(list(user_ids))
+        groups_by_user = await Groups.get_groups_by_member_ids(list(user_ids), include_inherited=True)
         user_group_ids = {user_id: {group.id for group in groups} for user_id, groups in groups_by_user.items()}
 
     return any(group_ids.intersection(target_group_ids) for group_ids in user_group_ids.values())
@@ -1089,6 +1121,28 @@ class NotificationEventSink:
 
 class SocketSessionEventSink:
     async def handle_event(self, app: Any, event: Event, request: Any | None = None) -> None:
+        from open_webui.socket.main import refresh_chat_access
+
+        if event.event in {
+            EVENTS.FOLDER_ACCESS_UPDATED.name,
+            EVENTS.FOLDER_UPDATED.name,
+            EVENTS.FOLDER_PARENT_UPDATED.name,
+            EVENTS.FOLDER_DELETED.name,
+            EVENTS.GROUP_MEMBER_REMOVED.name,
+            EVENTS.GROUP_MEMBER_ADDED.name,
+            EVENTS.GROUP_UPDATED.name,
+            EVENTS.GROUP_DELETED.name,
+            EVENTS.CHAT_DELETED_ALL.name,
+        }:
+            await refresh_chat_access()
+        elif event.event in {
+            EVENTS.CHAT_SHARED.name,
+            EVENTS.CHAT_UNSHARED.name,
+            EVENTS.CHAT_FOLDER_UPDATED.name,
+            EVENTS.CHAT_DELETED.name,
+        }:
+            await refresh_chat_access((event.subject or {}).get('id'))
+
         if event.event not in {EVENTS.USER_DELETED.name, EVENTS.USER_ROLE_UPDATED.name}:
             return
 

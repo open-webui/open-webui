@@ -263,7 +263,12 @@ export const markFolderChatsReadById = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateFolderAccessById = async (token: string, id: string, accessGrants: any[]) => {
+export const updateFolderAccessById = async (
+	token: string,
+	id: string,
+	accessGrants: any[],
+	shareMode?: 'continue' | null
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/access/update`, {
@@ -273,7 +278,7 @@ export const updateFolderAccessById = async (token: string, id: string, accessGr
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ access_grants: accessGrants })
+		body: JSON.stringify({ access_grants: accessGrants, share_mode: shareMode })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

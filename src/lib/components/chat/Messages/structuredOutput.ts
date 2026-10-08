@@ -434,6 +434,16 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 	});
 
 	flushDetails();
+
+	// Providers can reuse item ids across tool-call rounds.
+	const seenIds = new Set<string>();
+	displayItems.forEach((displayItem, index) => {
+		if (seenIds.has(displayItem.id)) {
+			displayItem.id = `${displayItem.id}-${index}`;
+		}
+		seenIds.add(displayItem.id);
+	});
+
 	return displayItems;
 }
 
@@ -689,7 +699,7 @@ export function replaceOutputMessageText(
 		const part = nextContent[partIndex];
 		nextContent[partIndex] = {
 			...part,
-			text: (part.text as string).replace(oldContent, newContent)
+			text: (part.text as string).replace(oldContent, () => newContent)
 		};
 
 		return {

@@ -703,6 +703,7 @@ async def query_collection(
     queries: list[str],
     embedding_function,
     k: int,
+    user: UserModel | None = None,
 ) -> dict:
     config = await Config.get_many(
         'rag.enable_hybrid_search',
@@ -715,7 +716,7 @@ async def query_collection(
     if request and config.get('rag.enable_hybrid_search'):
         try:
             reranking_function = (
-                (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents))
+                (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
                 if request.app.state.RERANKING_FUNCTION
                 else None
             )
@@ -1692,6 +1693,7 @@ async def get_sources_from_items(
                         queries=queries,
                         embedding_function=embedding_function,
                         k=k,
+                        user=user,
                     )
             except Exception as e:
                 log.exception(e)

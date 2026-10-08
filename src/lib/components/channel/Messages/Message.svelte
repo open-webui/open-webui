@@ -23,7 +23,6 @@
 	import StructuredOutputRenderer from '$lib/components/chat/Messages/StructuredOutputRenderer.svelte';
 	import { buildOutputDisplayItems } from '$lib/components/chat/Messages/structuredOutput';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
-	import Name from '$lib/components/chat/Messages/Name.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
@@ -181,7 +180,7 @@
 					class="swipe-reply-icon"
 					class:swipe-reply-icon--active={swipeOffsetX >= SWIPE_THRESHOLD}
 				>
-					<ArrowUpLeftAlt className="size-5" />
+					<ArrowUpLeftAlt className="size-4" />
 				</div>
 			</div>
 		{/if}
@@ -190,24 +189,24 @@
 			id="message-{renderedMessageId}"
 			class="flex flex-col justify-between w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 relative {className
 				? className
-				: `px-5 ${
+				: `px-4 ${
 						replyToMessage
-							? 'border-l-4 border-blue-500 bg-blue-100/10 dark:bg-blue-100/5 pl-4'
+							? 'border-l-4 border-blue-500 bg-blue-100/10 dark:bg-blue-100/5 pl-3'
 							: ''
 					} ${
 						(message?.reply_to_message?.meta?.model_id ?? message?.reply_to_message?.user_id) ===
 						$user?.id
-							? 'border-l-4 border-orange-500 bg-orange-100/10 dark:bg-orange-100/5 pl-4'
+							? 'border-l-4 border-orange-500 bg-orange-100/10 dark:bg-orange-100/5 pl-3'
 							: ''
 					} ${message?.is_pinned ? 'bg-yellow-100/20 dark:bg-yellow-100/5' : ''}`} {showUserProfile
-				? 'pt-1.5 pb-0.5'
+				? 'pt-2.5 pb-0.5'
 				: ''}"
 			style="transform: translateX({swipeOffsetX}px); {swipeOffsetX > 0
 				? ''
 				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
 		>
 			{#if !edit && !disabled}
-				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-7 z-30">
+				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-3 z-30">
 					<div
 						class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 					>
@@ -235,12 +234,13 @@
 						{#if onReply}
 							<Tooltip content={$i18n.t('Reply')}>
 								<button
-									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-0.5"
+									aria-label={$i18n.t('Reply')}
+									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 									on:click={() => {
 										onReply(message);
 									}}
 								>
-									<ArrowUpLeftAlt className="size-5" />
+									<ArrowUpLeftAlt className="size-4" />
 								</button>
 							</Tooltip>
 						{/if}
@@ -263,6 +263,7 @@
 						{#if !thread && onThread}
 							<Tooltip content={$i18n.t('Reply in Thread')}>
 								<button
+									aria-label={$i18n.t('Reply in Thread')}
 									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 									on:click={() => {
 										onThread(message.id);
@@ -305,7 +306,7 @@
 
 			{#if message?.is_pinned}
 				<div class="flex {showUserProfile ? 'mb-0.5' : 'mt-0.5'}">
-					<div class="ml-8.5 flex items-center gap-1 px-1 rounded-full text-xs">
+					<div class="ml-9 flex items-center gap-1 text-[0.6875rem] leading-4">
 						<Pin className="size-3 text-yellow-500 dark:text-yellow-300" />
 						<span class="text-gray-500">{$i18n.t('Pinned')}</span>
 					</div>
@@ -315,11 +316,11 @@
 			{#if message?.reply_to_message?.user}
 				<div class="relative text-xs mb-1">
 					<div
-						class="absolute h-3 w-7 left-[1.125rem] top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
+						class="absolute h-3 w-6 left-3 top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
 					></div>
 
 					<button
-						class="ml-12 flex items-center space-x-2 relative z-0"
+						class="ml-9 flex min-w-0 max-w-[calc(100%-2.25rem)] items-center gap-1.5 relative z-0"
 						on:click={() => {
 							const messageElement = document.getElementById(`message-${replyToMessageId}`);
 							if (messageElement) {
@@ -355,13 +356,15 @@
 							/>
 						{/if}
 
-						<div class="shrink-0">
+						<div class="max-w-[35%] shrink-0 truncate">
 							{message?.reply_to_message.meta?.model_name ??
 								message?.reply_to_message.user?.name ??
 								$i18n.t('Unknown User')}
 						</div>
 
-						<div class="italic text-sm text-gray-500 dark:text-gray-400 line-clamp-1 w-full flex-1">
+						<div
+							class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 min-w-0 flex-1 [&_.markdown-prose]:text-xs!"
+						>
 							<Markdown
 								id={`${renderedMessageId}-reply-to`}
 								content={message?.reply_to_message?.content}
@@ -377,13 +380,13 @@
 				id="message-{renderedMessageId}"
 				dir={$settings.chatDirection}
 			>
-				<div class={`shrink-0 mr-1 w-9`}>
+				<div class="w-6 shrink-0">
 					{#if showUserProfile}
 						{#if message?.meta?.model_id}
 							<img
 								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}`}
 								alt={message.meta.model_name ?? message.meta.model_id}
-								class="size-8 translate-y-1 ml-0.5 object-cover rounded-full"
+								class="size-6 mt-0.5 object-cover rounded-full"
 								on:error={(e) => {
 									// LICENSE covers this Open WebUI fallback logo.
 									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -394,35 +397,33 @@
 						{:else if message.user?.role === 'webhook'}
 							<ProfileImage
 								src={`${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image`}
-								className={'size-8 ml-0.5'}
+								className={'size-6 mt-0.5 rounded-full!'}
 							/>
 						{:else}
 							<ProfilePreview user={message.user}>
 								<ProfileImage
 									src={`${WEBUI_API_BASE_URL}/users/${message.user?.id}/profile/image`}
-									className={'size-8 ml-0.5'}
+									className={'size-6 mt-0.5 rounded-full!'}
 								/>
 							</ProfilePreview>
 						{/if}
-					{:else}
-						<!-- <div class="w-7 h-7 rounded-full bg-transparent" /> -->
-
-						{#if message.created_at}
-							<div
-								class="mt-1.5 flex shrink-0 items-center text-xs self-center hover-reveal text-gray-500 font-normal first-letter:capitalize"
-							>
-								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
-									{dayjs(message.created_at / 1000000).format('HH:mm')}
-								</Tooltip>
-							</div>
-						{/if}
+					{:else if message.created_at}
+						<div
+							class="-mx-1 mt-1 translate-y-px flex items-center justify-center text-[0.6875rem] leading-4 tabular-nums hover-reveal text-gray-500 dark:text-gray-400"
+						>
+							<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
+								{dayjs(message.created_at / 1000000).format('HH:mm')}
+							</Tooltip>
+						</div>
 					{/if}
 				</div>
 
-				<div class="flex-auto w-0 pl-2">
+				<div class="flex-auto w-0 pl-3">
 					{#if showUserProfile}
-						<Name>
-							<div class=" self-end text-base shrink-0 font-normal truncate">
+						<div class="flex min-w-0 items-baseline gap-1.5 leading-5">
+							<div
+								class=" min-w-0 truncate text-[0.8125rem] font-medium text-gray-900 dark:text-gray-100"
+							>
 								{#if message?.meta?.model_id}
 									{message?.meta?.model_name ?? message?.meta?.model_id}
 								{:else}
@@ -432,7 +433,7 @@
 
 							{#if message.created_at}
 								<div
-									class=" self-center text-xs text-gray-400 font-normal first-letter:capitalize ml-0.5 translate-y-[1px]"
+									class=" shrink-0 translate-y-px text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400 font-normal first-letter:capitalize"
 								>
 									<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 										<span class="line-clamp-1">
@@ -448,7 +449,7 @@
 									</Tooltip>
 								</div>
 							{/if}
-						</Name>
+						</div>
 					{/if}
 
 					{#if message?.data === true}
@@ -531,7 +532,11 @@
 							</div>
 						</div>
 					{:else}
-						<div class="min-w-full {pending ? 'opacity-50' : ''}">
+						<div
+							class="min-w-full [&_.markdown-prose]:text-sm! [&_.markdown-prose]:leading-[1.375rem]! {pending
+								? 'opacity-50'
+								: ''}"
+						>
 							{#if hasStructuredOutput}
 								<StructuredOutputRenderer
 									id={renderedMessageId}
@@ -558,7 +563,7 @@
 
 						{#if (message?.reactions ?? []).length > 0}
 							<div>
-								<div class="flex items-center flex-wrap gap-y-1.5 gap-1 mt-1 mb-2">
+								<div class="flex items-center flex-wrap gap-1 mt-1 mb-1">
 									{#each message.reactions as reaction}
 										<Tooltip
 											content={$i18n.t('{{NAMES}} reacted with {{REACTION}}', {
@@ -596,7 +601,7 @@
 										>
 											<button
 												{disabled}
-												class="flex items-center gap-1.5 transition rounded-xl px-2 py-1 cursor-pointer {reaction.users
+												class="flex min-h-6 items-center gap-1.5 text-sm leading-4 transition rounded-lg px-1.5 py-0.5 cursor-pointer {reaction.users
 													.map((u) => u.id)
 													.includes($user?.id)
 													? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
@@ -607,10 +612,12 @@
 													}
 												}}
 											>
-												<Emoji shortCode={reaction.name} />
+												<Emoji className="size-3.5" shortCode={reaction.name} />
 
 												{#if reaction.users.length > 0}
-													<div class="text-xs font-normal text-gray-500 dark:text-gray-400">
+													<div
+														class="text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
+													>
 														{reaction.users?.length}
 													</div>
 												{/if}
@@ -626,7 +633,7 @@
 										>
 											<Tooltip content={$i18n.t('Add Reaction')}>
 												<div
-													class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
+													class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-lg p-1 cursor-pointer text-gray-500 dark:text-gray-400"
 												>
 													<FaceSmile />
 												</div>
@@ -640,14 +647,14 @@
 						{#if !thread && message.reply_count > 0}
 							<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
 								<button
-									class="flex items-center text-xs py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
+									class="flex min-w-0 items-center text-[0.6875rem] py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 									on:click={() => {
 										onThread(message.id);
 									}}
 								>
-									<span class="font-normal mr-1">
+									<span class="shrink-0 font-medium mr-1">
 										{$i18n.t('{{COUNT}} Replies', { COUNT: message.reply_count })}</span
-									><span>
+									><span class="truncate">
 										{' - '}{$i18n.t('Last reply')}
 										{dayjs.unix(message.latest_reply_at / 1000000000).fromNow()}</span
 									>

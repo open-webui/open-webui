@@ -33,6 +33,18 @@ import { decode } from 'html-entities';
 // house falls. Let the quiet work here hold.
 //////////////////////////
 
+export const resolveDefaultModelIds = (
+	models: { id: string; info?: { meta?: { hidden?: boolean } } }[],
+	...preferences: (string[] | null | undefined)[]
+): string[] => {
+	const available = models.filter((model) => !model.info?.meta?.hidden).map((model) => model.id);
+	for (const preference of preferences) {
+		const selected = [...new Set(preference ?? [])].filter((id) => available.includes(id));
+		if (selected.length) return selected;
+	}
+	return available.length ? [available[0]] : [];
+};
+
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const formatNumber = (num: number): string => {
@@ -1323,7 +1335,7 @@ export const getTimeRange = (timestamp) => {
 
 	if (nowYear === dateYear && nowMonth === dateMonth && nowDate === dateDate) {
 		return 'Today';
-	} else if (nowYear === dateYear && nowMonth === dateMonth && nowDate - dateDate === 1) {
+	} else if (dayjs(date).isYesterday()) {
 		return 'Yesterday';
 	} else if (diffDays <= 7) {
 		return 'Previous 7 days';
