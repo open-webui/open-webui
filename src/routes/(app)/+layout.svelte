@@ -284,6 +284,7 @@
 			terminalServers.set([]);
 		});
 		if (
+			$config?.features?.enable_url_query_submission &&
 			$page.url.searchParams.get('q') &&
 			($page.url.searchParams.get('submit') ?? 'true') === 'true'
 		) {

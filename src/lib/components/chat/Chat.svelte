@@ -2622,7 +2622,10 @@
 		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 
-			if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
+			if (
+				$config?.features?.enable_url_query_submission &&
+				($page.url.searchParams.get('submit') ?? 'true') === 'true'
+			) {
 				messageInput?.setText(q, () => submitHandler(prompt));
 			} else {
 				messageInput?.setText(q);

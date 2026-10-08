@@ -382,6 +382,7 @@ type Config = {
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
 		enable_autocomplete_generation: boolean;
+		enable_url_query_submission?: boolean;
 		enable_direct_connections: boolean;
 		enable_direct_integrations?: boolean;
 		enable_version_update_check: boolean;
