@@ -4212,12 +4212,14 @@ async def non_streaming_chat_response_handler(response, ctx):
 
             choices = response_data.get('choices', [])
             response_output = response_data.get('output')
-            content = choices[0].get('message', {}).get('content') if choices else ''
+            content = (choices[0].get('message', {}).get('content') or '') if choices else ''
+            # Native tools only run on the streaming path; still finish the turn.
+            tool_calls = choices[0].get('message', {}).get('tool_calls') if choices else None
 
             if (continuing and 'error' not in response_data) or (
-                not continuing and choices and (content or response_output)
+                not continuing and choices and (content or response_output or tool_calls)
             ):
-                if content or response_output or continuing:
+                if content or response_output or tool_calls or continuing:
                     if not continuing:
                         await event_emitter(
                             {
