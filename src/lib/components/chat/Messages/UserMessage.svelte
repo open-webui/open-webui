@@ -142,12 +142,16 @@
 />
 
 <div
-	class="flex w-full user-message group {!isOwn && !message?.meta?.internal ? 'mb-2' : ''}"
+	class="flex w-full user-message group {!isOwn && !message?.meta?.internal
+		? compactPreview
+			? 'my-2'
+			: 'mb-2'
+		: ''}"
 	dir={$settings.chatDirection}
 	id="message-{message.id}"
 	style="scroll-margin-top: 3rem;"
 >
-	{#if (!($settings?.chatBubble ?? true) || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
+	{#if !compactPreview && (!($settings?.chatBubble ?? true) || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
 		<div
 			class="shrink-0 me-2 {($settings?.chatBubble ?? true) ? 'mt-6' : 'hidden @lg:flex mt-0.5'}"
 		>
@@ -169,7 +173,7 @@
 			? ''
 			: 'pl-1'}"
 	>
-		{#if (!($settings?.chatBubble ?? true) || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
+		{#if !compactPreview && (!($settings?.chatBubble ?? true) || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
 			<div
 				class={($settings?.chatBubble ?? true)
 					? 'mb-1 ps-2 text-xs text-gray-400 dark:text-gray-500'

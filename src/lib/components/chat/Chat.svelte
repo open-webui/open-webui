@@ -1264,6 +1264,36 @@
 
 	let joinedChatId = '';
 	let chatRefresh: { id: string; promise: Promise<void> } | null = null;
+	let typingUsers: { id: string; name: string }[] = [];
+	let typingUsersTimeout: Record<string, ReturnType<typeof setTimeout>> = {};
+	let lastTypingEmit = 0;
+
+	const emitTyping = (typing: boolean) => {
+		if (!$socket?.connected || !joinedChatId) return;
+		if (typing && (joinedChatId !== $chatId || (readOnly && chat?.chat?.share_mode !== 'continue')))
+			return;
+		if (typing ? Date.now() - lastTypingEmit < 2000 : !lastTypingEmit) return;
+		lastTypingEmit = typing ? Date.now() : 0;
+		$socket.emit('events:chat', {
+			chat_id: joinedChatId,
+			data: { type: 'typing', data: { typing } }
+		});
+	};
+
+	const removeTypingUser = (id: string) => {
+		clearTimeout(typingUsersTimeout[id]);
+		delete typingUsersTimeout[id];
+		typingUsers = typingUsers.filter((user) => user.id !== id);
+	};
+
+	const clearTyping = () => {
+		emitTyping(false);
+		Object.values(typingUsersTimeout).forEach(clearTimeout);
+		typingUsersTimeout = {};
+		typingUsers = [];
+		lastTypingEmit = 0;
+	};
+	$: if (!prompt.trim()) emitTyping(false);
 
 	const mergeChatMessages = (
 		incoming: typeof history,
@@ -1333,6 +1363,7 @@
 	const syncChatRoom = (socket: typeof $socket, id: string, temporary: boolean) => {
 		const next = socket && id && !temporary && !isTemporaryChatId(id) ? id : '';
 		if (next === joinedChatId) return;
+		clearTyping();
 		if (joinedChatId)
 			socket?.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
 		joinedChatId = next;
@@ -1354,12 +1385,32 @@
 		) {
 			await tick();
 			const type = event?.data?.type ?? null;
+			if (type === 'typing') {
+				const sender = event.user;
+				if (
+					!sender?.id ||
+					sender.id === $user?.id ||
+					(readOnly && chat?.chat?.share_mode !== 'continue')
+				)
+					return;
+				if (event.data.data?.typing) {
+					if (!typingUsers.some((entry) => entry.id === sender.id))
+						typingUsers = [...typingUsers, { id: sender.id, name: sender.name }];
+					clearTimeout(typingUsersTimeout[sender.id]);
+					typingUsersTimeout[sender.id] = setTimeout(() => removeTypingUser(sender.id), 5000);
+				} else {
+					removeTypingUser(sender.id);
+				}
+				return;
+			}
 			if (event.shared) {
 				if (type === 'chat:messages') {
+					removeTypingUser(event.user_id);
 					mergeChatMessages(event.data.data);
 					return;
 				}
 				if (type === 'chat:access' || type === 'chat:active') {
+					if (type === 'chat:access') clearTyping();
 					if (type === 'chat:access' || event.data.data?.active === false) await refreshChat();
 					return;
 				}
@@ -1684,6 +1735,7 @@
 		);
 
 	const handleSocketConnect = async () => {
+		clearTyping();
 		if (!$chatId || $temporaryChatEnabled) return;
 		joinedChatId = '';
 		syncChatRoom($socket, $chatId, $temporaryChatEnabled);
@@ -1698,6 +1750,7 @@
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', handleSocketConnect);
+		$socket?.on('disconnect', clearTyping);
 
 		$audioQueue?.destroy();
 
@@ -1792,6 +1845,7 @@
 				// Clear the selected chat when leaving the chat surface (e.g. navigating
 				// to the admin panel), otherwise the previously-viewed chat stays selected
 				// in the sidebar and deleting/archiving it wrongly navigates away.
+				clearTyping();
 				if (joinedChatId)
 					$socket?.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
 				joinedChatId = '';
@@ -1801,6 +1855,7 @@
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('connect', handleSocketConnect);
+				$socket?.off('disconnect', clearTyping);
 				dismissContextCompactionToast();
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
@@ -3458,6 +3513,7 @@
 			bridge: bridgeRequest = null
 		}: { _raw?: boolean; bridge?: { userMessageId: string; modelId: string } | null } = {}
 	): Promise<BridgeSubmission> => {
+		emitTyping(false);
 		if (bridgeRequest && (selectedModelIds.length !== 1 || !bridgeRequest.modelId))
 			return { status: 'rejected' };
 
@@ -4831,6 +4887,8 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
+										{typingUsers}
+										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
 										bind:this={messageInput}
 										{history}
@@ -4924,6 +4982,8 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
+										{typingUsers}
+										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
 										bind:this={messageInput}
 										{history}

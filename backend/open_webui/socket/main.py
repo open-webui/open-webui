@@ -700,6 +700,32 @@ async def chat_events(sid, data):
     event_data = data.get('data', {})
     event_type = event_data.get('type')
 
+    if event_type == 'typing':
+        chat_id = data.get('chat_id')
+        typing_data = event_data.get('data')
+        typing = typing_data.get('typing') if isinstance(typing_data, dict) else None
+        if not isinstance(chat_id, str) or not is_saved_chat_id(chat_id) or not isinstance(typing, bool):
+            return False
+        room = f'chat:{chat_id}'
+        if sid not in (get_room_sid_map(sio.manager, '/', room) or {}):
+            return False
+        sender = await Users.get_user_by_id(user['id'])
+        if not sender or not await Chats.get_accessible_chat_by_id(chat_id, sender, permission='write'):
+            return False
+        await sio.emit(
+            'events',
+            {
+                'chat_id': chat_id,
+                'user_id': sender.id,
+                'user': {'id': sender.id, 'name': sender.name},
+                'shared': True,
+                'data': {'type': 'typing', 'data': {'typing': typing}},
+            },
+            room=room,
+            skip_sid=sid,
+        )
+        return True
+
     if event_type in {'join', 'leave'}:
         chat_id = data.get('chat_id')
         if not isinstance(chat_id, str) or not is_saved_chat_id(chat_id):

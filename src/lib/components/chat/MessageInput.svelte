@@ -117,6 +117,7 @@
 	import AskUserCard from './AskUserCard.svelte';
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
+	import Skeleton from './Messages/Skeleton.svelte';
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
@@ -134,6 +135,12 @@
 
 	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
+	export let typingUsers: { id: string; name: string }[] = [];
+
+	const handleTypingInput = (event: Event) => {
+		const input = event.target as HTMLElement;
+		if (input.isContentEditable) dispatch('typing', Boolean(input.textContent?.trim()));
+	};
 	export let onWebSearchToggle: Function = () => {};
 
 	export let createMessagePair: Function;
@@ -1672,6 +1679,7 @@
 
 <InputModal
 	bind:show={showInputModal}
+	oninput={handleTypingInput}
 	bind:value={prompt}
 	bind:inputContent
 	onChange={(content) => {
@@ -1693,6 +1701,21 @@
 					: 'max-w-[58rem]'} w-full"
 			>
 				<div class="relative">
+					{#if typingUsers.length > 0}
+						<div
+							class="absolute -top-7 inset-x-0 pointer-events-none select-none bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-2.5"
+						>
+							<div class="text-xs px-1 mt-1.5 flex items-center gap-1.5">
+								<Skeleton size="xs" />
+								<div class="min-w-0 truncate">
+									<span class="font-normal text-black dark:text-white">
+										{typingUsers.map((user) => user.name).join(', ')}
+									</span>
+									{$i18n.t(typingUsers.length === 1 ? 'is typing...' : 'are typing...')}
+								</div>
+							</div>
+						</div>
+					{/if}
 					{#if autoScroll === false && history?.currentId}
 						<div
 							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
@@ -2062,6 +2085,7 @@
 											: 'pt-2'
 										: ''}"
 									id="chat-input-container"
+									on:input={handleTypingInput}
 								>
 									{#if suggestions}
 										{#key $settings?.richTextInput ?? true}
