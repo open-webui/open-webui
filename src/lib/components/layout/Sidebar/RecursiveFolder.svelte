@@ -959,7 +959,9 @@
 							lastReadAt={chat.last_read_at}
 							active={chat.active ?? false}
 							ownerName={chat.owner_name ?? null}
-							ownerUserId={folders[folderId]?.shared || chat.user_id !== $user?.id
+							ownerUserId={folders[folderId]?.showOwnerInfo ||
+							folders[folderId]?.shared ||
+							chat.user_id !== $user?.id
 								? chat.user_id
 								: null}
 							readonly={chat.user_id !== $user?.id}

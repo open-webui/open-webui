@@ -290,7 +290,10 @@
 
 		// Merge shared folders into the same structure
 		for (const sf of sharedFolders) {
-			if (folderMap[sf.id]) continue; // Already owned by user
+			if (folderMap[sf.id]) {
+				folderMap[sf.id].showOwnerInfo = true;
+				continue;
+			}
 			folderMap[sf.id] = { ...sf, shared: true };
 		}
 

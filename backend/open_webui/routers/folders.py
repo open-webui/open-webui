@@ -245,15 +245,14 @@ async def get_shared_folders(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Get all folders shared with the current user (not owned by them)."""
+    """Get folders shared with or by the current user."""
     await check_folders_permission(request, user, db=db)
     groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     group_ids = {g.id for g in groups}
 
     folder_perms = await Folders.get_shared_folder_ids_for_user(user.id, group_ids, db=db)
 
-    folders = await Folders.get_folders_by_ids(list(folder_perms.keys()), db=db)
-    shared_folders = [folder for folder in folders if folder.user_id != user.id]
+    shared_folders = await Folders.get_folders_by_ids(list(folder_perms.keys()), db=db)
 
     owners = await Users.get_users_by_user_ids([folder.user_id for folder in shared_folders], db=db)
     owner_names = {owner.id: owner.name for owner in owners}
@@ -262,7 +261,7 @@ async def get_shared_folders(
         {
             **folder.model_dump(),
             'owner_name': owner_names.get(folder.user_id, 'Unknown'),
-            'permission': folder_perms[folder.id],
+            'permission': 'write' if folder.user_id == user.id else folder_perms[folder.id],
         }
         for folder in shared_folders
     ]
@@ -278,7 +277,7 @@ async def get_shared_folders(
                     {
                         **child.model_dump(),
                         'owner_name': owner_names.get(child.user_id, 'Unknown'),
-                        'permission': folder_perms[folder.id],
+                        'permission': 'write' if child.user_id == user.id else folder_perms[folder.id],
                     }
                 )
 
