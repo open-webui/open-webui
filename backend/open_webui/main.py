@@ -53,7 +53,6 @@ from open_webui.config import (
     ENABLE_ADMIN_EXPORT,
     ENABLE_ONEDRIVE_BUSINESS,
     ENABLE_ONEDRIVE_PERSONAL,
-    ENABLE_URL_QUERY_SUBMISSION,
     # OpenAI
     ENV,
     FRONTEND_BUILD_DIR,
@@ -2394,7 +2393,6 @@ async def get_app_config(request: Request):
                     'enable_code_interpreter': config.get('code_interpreter.enable'),
                     'enable_image_generation': config.get('image_generation.enable'),
                     'enable_autocomplete_generation': config.get('task.autocomplete.enable'),
-                    'enable_url_query_submission': ENABLE_URL_QUERY_SUBMISSION,
                     'enable_community_sharing': config.get('ui.enable_community_sharing'),
                     'enable_message_rating': config.get('ui.enable_message_rating'),
                     'enable_user_webhooks': config.get('ui.enable_user_webhooks'),

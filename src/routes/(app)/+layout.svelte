@@ -279,17 +279,10 @@
 			$config?.features?.enable_tool_servers ? (localStorage.selectedTerminalId ?? null) : null
 		);
 
-		const loadToolServers = setToolServers().catch((e) => {
+		setToolServers().catch((e) => {
 			console.error('Failed to load tool servers:', e);
 			terminalServers.set([]);
 		});
-		if (
-			$config?.features?.enable_url_query_submission &&
-			$page.url.searchParams.get('q') &&
-			($page.url.searchParams.get('submit') ?? 'true') === 'true'
-		) {
-			await loadToolServers;
-		}
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {

@@ -164,6 +164,7 @@
 	let navbarElement;
 
 	let showEventConfirmation = false;
+	let pendingUrlActions: { urls: string[]; call: boolean } | null = null;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
 	let eventConfirmationInput = false;
@@ -2264,7 +2265,10 @@
 		});
 		return () => bridge?.end();
 	});
-	beforeNavigate(() => bridge?.end());
+	beforeNavigate(() => {
+		bridge?.end();
+		pendingUrlActions = null;
+	});
 	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
 	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
 
@@ -2540,13 +2544,14 @@
 		taskIds = null;
 		chatTasks = [];
 
-		if ($page.url.searchParams.get('youtube')) {
-			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
-		}
-
-		if ($page.url.searchParams.get('load-url')) {
-			await uploadWeb($page.url.searchParams.get('load-url'));
-		}
+		const youtube = $page.url.searchParams.get('youtube');
+		const loadUrl = $page.url.searchParams.get('load-url');
+		const urls = [
+			...(youtube ? [`https://www.youtube.com/watch?v=${youtube}`] : []),
+			...(loadUrl ? [loadUrl] : [])
+		];
+		const call = $page.url.searchParams.get('call') === 'true';
+		pendingUrlActions = urls.length || call ? { urls, call } : null;
 
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
@@ -2581,10 +2586,6 @@
 			if (!selectedToolIds.includes(pendingToolId)) {
 				selectedToolIds = [...selectedToolIds, pendingToolId];
 			}
-		}
-
-		if ($page.url.searchParams.get('call') === 'true') {
-			openCallOverlay();
 		}
 
 		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
@@ -2622,14 +2623,7 @@
 		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 
-			if (
-				$config?.features?.enable_url_query_submission &&
-				($page.url.searchParams.get('submit') ?? 'true') === 'true'
-			) {
-				messageInput?.setText(q, () => submitHandler(prompt));
-			} else {
-				messageInput?.setText(q);
-			}
+			messageInput?.setText(q);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -4657,6 +4651,35 @@
 		onSave={saveChatVariables}
 	/>
 {/if}
+
+<EventConfirmDialog
+	show={pendingUrlActions !== null}
+	title={$i18n.t('Open link')}
+	on:confirm={async () => {
+		const actions = pendingUrlActions;
+		const url = $page.url.href;
+		pendingUrlActions = null;
+		if (!actions) return;
+		for (const source of actions.urls) {
+			if ($page.url.href !== url) return;
+			await uploadWeb(source);
+		}
+		if (actions.call && $page.url.href === url) openCallOverlay();
+	}}
+	on:cancel={() => (pendingUrlActions = null)}
+>
+	<div class="text-sm text-gray-500 space-y-2 max-h-60 overflow-auto break-words">
+		{#if pendingUrlActions?.urls.length}
+			<p>{$i18n.t('Load content from these URLs?')}</p>
+			{#each pendingUrlActions.urls as url}
+				<p>{url}</p>
+			{/each}
+		{/if}
+		{#if pendingUrlActions?.call}
+			<p>{$i18n.t('Start a voice call using your microphone?')}</p>
+		{/if}
+	</div>
+</EventConfirmDialog>
 
 <WebSearchConfirmDialog
 	bind:show={showWebSearchConfirm}
