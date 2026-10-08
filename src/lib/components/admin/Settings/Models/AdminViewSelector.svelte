@@ -14,6 +14,8 @@
 
 	const items = [
 		{ value: '', label: $i18n.t('All') },
+		{ value: 'available', label: $i18n.t('Available') },
+		{ value: 'unavailable', label: $i18n.t('Unavailable') },
 		{ value: 'base', label: $i18n.t('Base Models') },
 		{ value: 'workspace', label: $i18n.t('Workspace Models') },
 		{ value: 'enabled', label: $i18n.t('Enabled') },

@@ -90,6 +90,7 @@
 
 	let savedModels: ModelListItem[] = [];
 	let allModels: ModelListItem[] = [];
+	let availableModelIds = new Set<string>();
 
 	let filteredModels = [];
 	let selectedModelId = null;
@@ -102,7 +103,7 @@
 	let modelDefaultsPanel = null;
 	let modelDefaultsDirty = false;
 
-	let viewOption = '';
+	let viewOption = 'available';
 	let tags: string[] = [];
 	let selectedTag = '';
 
@@ -156,6 +157,8 @@
 			.filter((m) => !selectedTag || modelTags(m).includes(selectedTag))
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
 			.filter((m) => {
+				if (viewOption === 'available') return availableModelIds.has(m.id) || isPresetModel(m);
+				if (viewOption === 'unavailable') return !availableModelIds.has(m.id) && !isPresetModel(m);
 				if (viewOption === 'base') return !isPresetModel(m);
 				if (viewOption === 'workspace') return isPresetModel(m);
 				if (viewOption === 'enabled') return m?.is_active ?? true;
@@ -287,8 +290,8 @@
 			...allModels,
 			...providerModels.filter((model: ModelListItem) => !allModelIds.has(model.id))
 		];
-		const listedModelIds = new Set(allModels.map((model) => model.id));
-		allModels.push(...savedModels.filter((model) => !listedModelIds.has(model.id)));
+		availableModelIds = new Set(allModels.map((model) => model.id));
+		allModels.push(...savedModels.filter((model) => !availableModelIds.has(model.id)));
 
 		models = allModels.map((m: ModelListItem) => {
 			const savedModel = savedModels.find((model: ModelListItem) => model.id === m.id);
