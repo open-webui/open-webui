@@ -339,6 +339,38 @@
 	let jsonValue = '';
 	let mdValue = '';
 
+	const serializeContent = (richText: boolean) => {
+		if (!editor) return;
+
+		htmlValue = editor.getHTML();
+		jsonValue = editor.getJSON();
+
+		if (richText) {
+			mdValue = turndownService
+				.turndown(
+					htmlValue
+						.replace(/<p><\/p>/g, '<br/>')
+						.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+				)
+				.replace(/\u00a0/g, ' ');
+		} else {
+			mdValue = turndownService
+				.turndown(
+					htmlValue
+						// Replace empty paragraphs with line breaks
+						.replace(/<p><\/p>/g, '<br/>')
+						// Replace multiple spaces with non-breaking spaces
+						.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+						// Replace tabs with non-breaking spaces (preserve indentation)
+						.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
+				)
+				// Convert non-breaking spaces back to regular spaces for markdown
+				.replace(/\u00a0/g, ' ');
+		}
+	};
+
+	$: serializeContent(richText);
+
 	let provider: SocketIOCollaborationProvider | null = null;
 
 	let floatingMenuElement: Element | null = null;
@@ -936,7 +968,7 @@
 			],
 			content: provider ? undefined : content,
 			autofocus: messageInput && !$showCallOverlay,
-			onTransaction: () => {
+			onTransaction: ({ transaction }) => {
 				if (!editor) return;
 
 				// Defer Svelte reactivity trigger to rAF so we don't interleave
@@ -950,30 +982,9 @@
 					});
 				}
 
-				htmlValue = editor.getHTML();
-				jsonValue = editor.getJSON();
-
-				if (richText) {
-					mdValue = turndownService
-						.turndown(
-							htmlValue
-								.replace(/<p><\/p>/g, '<br/>')
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-						)
-						.replace(/\u00a0/g, ' ');
-				} else {
-					mdValue = turndownService
-						.turndown(
-							htmlValue
-								// Replace empty paragraphs with line breaks
-								.replace(/<p><\/p>/g, '<br/>')
-								// Replace multiple spaces with non-breaking spaces
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-								// Replace tabs with non-breaking spaces (preserve indentation)
-								.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
-						)
-						// Convert non-breaking spaces back to regular spaces for markdown
-						.replace(/\u00a0/g, ' ');
+				// Compare the final document to include changes from appended transactions.
+				if (jsonValue === '' || transaction.before !== editor.state.doc) {
+					serializeContent(richText);
 				}
 
 				onChange({
@@ -988,12 +999,8 @@
 					if (raw) {
 						value = htmlValue;
 					} else {
-						if (!preserveBreaks) {
-							mdValue = mdValue.replace(/<br\/>/g, '');
-						}
-
-						if (value !== mdValue) {
-							value = mdValue;
+						if (value !== (preserveBreaks ? mdValue : mdValue.replace(/<br\/>/g, ''))) {
+							value = preserveBreaks ? mdValue : mdValue.replace(/<br\/>/g, '');
 
 							// check if the node is paragraph as well
 							if (editor.isActive('paragraph')) {
@@ -1346,7 +1353,9 @@
 	const onValueChange = () => {
 		if (!editor) return;
 
-		const jsonValue = editor.getJSON();
+		if (value !== '' && value === jsonValue) return;
+
+		const editorJsonValue = editor.getJSON();
 		const htmlValue = editor.getHTML();
 		let mdValue = turndownService
 			.turndown(
@@ -1365,7 +1374,7 @@
 		}
 
 		if (json) {
-			if (!equalEditorJSON(value, jsonValue)) {
+			if (!equalEditorJSON(value, editorJsonValue)) {
 				editor.commands.setContent(value);
 				selectTemplate();
 			}
