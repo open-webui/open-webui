@@ -1484,7 +1484,9 @@
 				} else if (type === 'chat:message:voice') {
 					message.meta = { ...message.meta, voice: data.voice };
 				} else if (type === 'chat:message:files' || type === 'files') {
-					message.files = data.files;
+					message.files = isTemporaryChatId(event.chat_id)
+						? [...(message.files ?? []), ...data.files]
+						: data.files;
 				} else if (type === 'chat:message:tasks') {
 					chatTasks = data.tasks;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
