@@ -16,7 +16,7 @@
 	import PageEdit from '$lib/components/icons/PageEdit.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let onClose: Function = () => {};
@@ -61,8 +61,7 @@
 				return {
 					...note,
 					type: 'note',
-					name: note.title,
-					description: dayjs(note.updated_at / 1000000).fromNow()
+					name: note.title
 				};
 			});
 		}
@@ -193,7 +192,11 @@
 									{/if}
 
 									<Tooltip
-										content={item.description || decodeString(item?.name)}
+										content={item.type === 'note'
+											? dayjs(item.updated_at / 1000000)
+													.locale($i18n.language)
+													.fromNow()
+											: item.description || decodeString(item?.name)}
 										placement="top-start"
 										tippyOptions={{ zIndex: 100000 }}
 									>

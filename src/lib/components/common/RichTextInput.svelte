@@ -135,7 +135,7 @@
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const eventDispatch = createEventDispatcher();
 
 	import { Fragment, DOMParser } from 'prosemirror-model';
@@ -226,15 +226,15 @@
 	export let documentId = '';
 
 	export let className = 'input-prose min-h-fit h-full';
-	export let placeholder = $i18n.t('Type here...');
-	let _placeholder = placeholder;
+	export let placeholder: string | undefined = undefined;
+	let _placeholder = '';
 
-	$: if (placeholder !== _placeholder) {
-		setPlaceholder();
+	$: if ((placeholder ?? $i18n.t('Type here...')) !== _placeholder) {
+		setPlaceholder(placeholder ?? $i18n.t('Type here...'));
 	}
 
-	const setPlaceholder = () => {
-		_placeholder = placeholder;
+	const setPlaceholder = (value: string) => {
+		_placeholder = value;
 		if (editor) {
 			editor?.view.dispatch(editor.state.tr);
 		}

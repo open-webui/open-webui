@@ -515,16 +515,16 @@ const messageTimestampDate = (inputDate) => {
 	return Number.isNaN(date.getTime()) ? null : date;
 };
 
-export const formatMessageTimestamp = (inputDate) =>
-	messageTimestampDate(inputDate)?.toLocaleString(undefined, {
+export const formatMessageTimestamp = (inputDate, locale: string) =>
+	messageTimestampDate(inputDate)?.toLocaleString(locale, {
 		month: 'short',
 		day: 'numeric',
 		hour: 'numeric',
 		minute: '2-digit'
 	}) ?? '';
 
-export const formatMessageTimestampFull = (inputDate) =>
-	messageTimestampDate(inputDate)?.toLocaleString(undefined, {
+export const formatMessageTimestampFull = (inputDate, locale: string) =>
+	messageTimestampDate(inputDate)?.toLocaleString(locale, {
 		weekday: 'long',
 		year: 'numeric',
 		month: 'long',

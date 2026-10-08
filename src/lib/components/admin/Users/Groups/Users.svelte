@@ -498,7 +498,9 @@
 								</td>
 
 								<td class=" px-3 py-1">
-									{dayjs(user.last_active_at * 1000).fromNow()}
+									{dayjs(user.last_active_at * 1000)
+										.locale($i18n.language)
+										.fromNow()}
 								</td>
 							</tr>
 						{/each}

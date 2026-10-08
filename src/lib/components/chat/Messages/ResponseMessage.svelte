@@ -933,14 +933,14 @@
 					<div class="mt-0.5 flex justify-start whitespace-nowrap text-gray-600 dark:text-gray-500">
 						<Tooltip
 							className="flex self-center"
-							content={formatMessageTimestampFull(message.timestamp * 1000)}
+							content={formatMessageTimestampFull(message.timestamp * 1000, $i18n.language)}
 							placement="bottom"
 						>
 							<time
 								datetime={new Date(message.timestamp * 1000).toISOString()}
 								class="ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
 							>
-								{formatMessageTimestamp(message.timestamp * 1000)}
+								{formatMessageTimestamp(message.timestamp * 1000, $i18n.language)}
 							</time>
 						</Tooltip>
 					</div>
@@ -1606,14 +1606,14 @@
 									{#if message.timestamp}
 										<Tooltip
 											className="flex self-center"
-											content={formatMessageTimestampFull(message.timestamp * 1000)}
+											content={formatMessageTimestampFull(message.timestamp * 1000, $i18n.language)}
 											placement="bottom"
 										>
 											<time
 												datetime={new Date(message.timestamp * 1000).toISOString()}
 												class="hover-reveal ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
 											>
-												{formatMessageTimestamp(message.timestamp * 1000)}
+												{formatMessageTimestamp(message.timestamp * 1000, $i18n.language)}
 											</time>
 										</Tooltip>
 									{/if}

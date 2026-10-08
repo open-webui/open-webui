@@ -25,7 +25,7 @@
 	} from '$lib/apis/channels';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let id = null;
 	export let channel = null;
@@ -106,7 +106,9 @@
 							{$i18n.t(
 								'This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.',
 								{
-									createdAt: dayjs(channel.created_at / 1000000).format('MMMM D, YYYY'),
+									createdAt: dayjs(channel.created_at / 1000000)
+										.locale($i18n.language)
+										.format('MMMM D, YYYY'),
 									channelName: channel.name
 								}
 							)}

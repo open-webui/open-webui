@@ -832,11 +832,15 @@
 												</div>
 
 												<Tooltip
-													content={dayjs(model.updated_at * 1000).format('LLLL')}
+													content={dayjs(model.updated_at * 1000)
+														.locale($i18n.language)
+														.format('LLLL')}
 													className="hidden shrink-0 sm:flex"
 												>
 													<span class="text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-500"
-														>{dayjs(model.updated_at * 1000).fromNow()}</span
+														>{dayjs(model.updated_at * 1000)
+															.locale($i18n.language)
+															.fromNow()}</span
 													>
 												</Tooltip>
 

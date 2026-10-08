@@ -47,7 +47,7 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	let shiftKey = false;
 
@@ -538,11 +538,17 @@
 													</div>
 												{/if}
 
-												<Tooltip content={dayjs(func.updated_at * 1000).format('LLLL')}>
+												<Tooltip
+													content={dayjs(func.updated_at * 1000)
+														.locale($i18n.language)
+														.format('LLLL')}
+												>
 													<div
 														class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 													>
-														{dayjs(func.updated_at * 1000).fromNow()}
+														{dayjs(func.updated_at * 1000)
+															.locale($i18n.language)
+															.fromNow()}
 													</div>
 												</Tooltip>
 											</div>

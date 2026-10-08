@@ -217,8 +217,8 @@
 	const renderDate = (timestamp: number) => {
 		const dateVal = timestamp * 1000;
 		return $i18n.t(formatDate(dateVal), {
-			LOCALIZED_TIME: dayjs(dateVal).format('LT'),
-			LOCALIZED_DATE: dayjs(dateVal).format('L')
+			LOCALIZED_TIME: dayjs(dateVal).locale($i18n.language).format('LT'),
+			LOCALIZED_DATE: dayjs(dateVal).locale($i18n.language).format('L')
 		});
 	};
 

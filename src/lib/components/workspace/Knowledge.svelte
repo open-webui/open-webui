@@ -477,11 +477,17 @@
 													<Badge type="muted" content={$i18n.t('Read Only')} />
 												{/if}
 
-												<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
+												<Tooltip
+													content={dayjs(item.updated_at * 1000)
+														.locale($i18n.language)
+														.format('LLLL')}
+												>
 													<div
 														class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 													>
-														{dayjs(item.updated_at * 1000).fromNow()}
+														{dayjs(item.updated_at * 1000)
+															.locale($i18n.language)
+															.fromNow()}
 													</div>
 												</Tooltip>
 											</div>

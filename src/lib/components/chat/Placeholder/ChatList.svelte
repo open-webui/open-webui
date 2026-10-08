@@ -3,6 +3,7 @@
 	import type { Writable } from 'svelte/store';
 
 	type ChatListI18n = {
+		language: string;
 		t: (key: string, options?: Record<string, unknown>) => string;
 	};
 
@@ -250,7 +251,9 @@
 
 				<div class="hidden sm:flex sm:basis-2/5 items-center justify-end gap-2">
 					<div class=" text-gray-500 dark:text-gray-400 text-xs">
-						{dayjs((chat.updated_at ?? chat.created_at ?? 0) * 1000).calendar()}
+						{dayjs((chat.updated_at ?? chat.created_at ?? 0) * 1000)
+							.locale($i18n.language)
+							.calendar()}
 					</div>
 				</div>
 			</a>

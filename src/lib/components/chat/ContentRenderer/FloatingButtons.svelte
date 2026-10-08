@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import LightBulb from '$lib/components/icons/LightBulb.svelte';
@@ -16,11 +16,7 @@
 	let selectedText = '';
 	let floatingInputValue = '';
 
-	$: if (actions.length === 0) {
-		actions = DEFAULT_ACTIONS;
-	}
-
-	const DEFAULT_ACTIONS = [
+	$: DEFAULT_ACTIONS = [
 		{
 			id: 'ask',
 			label: $i18n.t('Ask'),
@@ -36,13 +32,15 @@
 		}
 	];
 
+	$: displayActions = actions.length ? actions : DEFAULT_ACTIONS;
+
 	const actionHandler = (actionId) => {
 		let selectedContent = selectedText
 			.split('\n')
 			.map((line) => `> ${line}`)
 			.join('\n');
 
-		let selectedAction = actions.find((action) => action.id === actionId);
+		let selectedAction = displayActions.find((action) => action.id === actionId);
 		if (!selectedAction) {
 			return;
 		}
@@ -92,7 +90,7 @@
 		<div
 			class="flex flex-row shrink-0 p-0.5 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
 		>
-			{#each actions as action}
+			{#each displayActions as action}
 				<button
 					aria-label={action.label}
 					class="px-1.5 py-[0.0625rem] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"

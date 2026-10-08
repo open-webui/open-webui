@@ -22,7 +22,7 @@
 	import { user } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let boilerplate = '';
 	export let value = '';
@@ -88,6 +88,12 @@
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
+	const editorPlaceholder = new Compartment();
+	$: if (codeEditor) {
+		codeEditor.dispatch({
+			effects: editorPlaceholder.reconfigure(placeholder($i18n.t('Enter your code here...')))
+		});
+	}
 
 	const getLang = async () => {
 		const language = languages.find((l) => l.alias.includes(lang));
@@ -210,7 +216,7 @@ print("${endTag}")
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		indentUnit.of('    '),
-		placeholder($i18n.t('Enter your code here...')),
+		editorPlaceholder.of([]),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
 				_value = e.state.doc.toString();

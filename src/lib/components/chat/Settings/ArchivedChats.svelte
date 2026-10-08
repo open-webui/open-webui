@@ -330,14 +330,16 @@
 							class="hidden w-24 shrink-0 self-center justify-end text-gray-400 dark:text-gray-600 sm:flex"
 						>
 							{$i18n.t(
-								dayjs(chat?.updated_at * 1000).calendar(null, {
-									sameDay: '[Today]',
-									nextDay: '[Tomorrow]',
-									nextWeek: 'dddd',
-									lastDay: '[Yesterday]',
-									lastWeek: '[Last] dddd',
-									sameElse: 'L'
-								})
+								dayjs(chat?.updated_at * 1000)
+									.locale($i18n.language)
+									.calendar(null, {
+										sameDay: '[Today]',
+										nextDay: '[Tomorrow]',
+										nextWeek: 'dddd',
+										lastDay: '[Yesterday]',
+										lastWeek: '[Last] dddd',
+										sameElse: 'L'
+									})
 							)}
 						</div>
 						<div class="flex shrink-0 items-center justify-end text-gray-500 dark:text-gray-500">

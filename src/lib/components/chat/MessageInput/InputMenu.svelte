@@ -51,7 +51,7 @@
 	let tab = '';
 
 	let showAttachWebpageModal = false;
-	const toolApprovalModes = [
+	$: toolApprovalModes = [
 		{
 			value: 'full',
 			label: $i18n.t('Full access'),

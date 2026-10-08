@@ -8,7 +8,7 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import {
 		deleteFeedbackById,
@@ -492,7 +492,9 @@
 								{/if}
 
 								<td class=" px-3 py-1 text-right font-normal">
-									{dayjs(feedback.updated_at * 1000).fromNow()}
+									{dayjs(feedback.updated_at * 1000)
+										.locale($i18n.language)
+										.fromNow()}
 								</td>
 
 								<td class=" px-3 py-1 text-right font-normal" on:click={(e) => e.stopPropagation()}>

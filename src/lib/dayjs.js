@@ -102,5 +102,18 @@ import 'dayjs/locale/zh';
 import 'dayjs/locale/zh-tw';
 import 'dayjs/locale/et';
 import 'dayjs/locale/en-gb';
+import 'dayjs/locale/bn-bd';
+import 'dayjs/locale/fr-ca';
+import 'dayjs/locale/ms-my';
+import 'dayjs/locale/pt-br';
+import 'dayjs/locale/pa-in';
+import 'dayjs/locale/ug-cn';
+import 'dayjs/locale/zh-cn';
+
+/** @param {string | undefined} language */
+export const getDayjsLocale = (language) => {
+	const code = (language ?? 'en').toLowerCase();
+	return [code, code.split('-')[0], 'en'].find((candidate) => dayjs.Ls[candidate]);
+};
 
 export default dayjs;

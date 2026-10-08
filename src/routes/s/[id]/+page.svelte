@@ -17,7 +17,7 @@
 	import { getModels } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	dayjs.extend(localizedFormat);
 
 	let loaded = false;
@@ -205,9 +205,13 @@
 						</h1>
 						<time
 							class="ms-auto shrink-0 whitespace-nowrap text-xs text-gray-400 dark:text-gray-500"
-							datetime={dayjs(chat.chat.timestamp || chat.created_at * 1000).toISOString()}
+							datetime={dayjs(chat.chat.timestamp || chat.created_at * 1000)
+								.locale($i18n.language)
+								.toISOString()}
 						>
-							{dayjs(chat.chat.timestamp || chat.created_at * 1000).format('LLL')}
+							{dayjs(chat.chat.timestamp || chat.created_at * 1000)
+								.locale($i18n.language)
+								.format('LLL')}
 						</time>
 					</div>
 				</header>

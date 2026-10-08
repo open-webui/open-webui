@@ -45,7 +45,7 @@
 	import Skeleton from '../chat/Messages/Skeleton.svelte';
 	import XMark from '../icons/XMark.svelte';
 
-	export let placeholder = $i18n.t('Type here...');
+	export let placeholder: string | undefined = undefined;
 	export let chatInputElement: any;
 
 	export let id: string | null = null;
@@ -1001,7 +1001,7 @@
 											json={true}
 											messageInput={true}
 											editable={!disabled}
-											{placeholder}
+											placeholder={placeholder ?? $i18n.t('Type here...')}
 											richText={$settings?.richTextInput ?? true}
 											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&

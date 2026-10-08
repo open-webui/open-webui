@@ -411,8 +411,14 @@
 						<div
 							class="-mx-1 mt-1 translate-y-px flex items-center justify-center text-[0.6875rem] leading-4 tabular-nums hover-reveal text-gray-500 dark:text-gray-400"
 						>
-							<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
-								{dayjs(message.created_at / 1000000).format('HH:mm')}
+							<Tooltip
+								content={dayjs(message.created_at / 1000000)
+									.locale($i18n.language)
+									.format('LLLL')}
+							>
+								{dayjs(message.created_at / 1000000)
+									.locale($i18n.language)
+									.format('HH:mm')}
 							</Tooltip>
 						</div>
 					{/if}
@@ -435,14 +441,26 @@
 								<div
 									class=" shrink-0 translate-y-px text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400 font-normal first-letter:capitalize"
 								>
-									<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
+									<Tooltip
+										content={dayjs(message.created_at / 1000000)
+											.locale($i18n.language)
+											.format('LLLL')}
+									>
 										<span class="line-clamp-1">
-											{#if dayjs(message.created_at / 1000000).isToday()}
-												{dayjs(message.created_at / 1000000).format('LT')}
+											{#if dayjs(message.created_at / 1000000)
+												.locale($i18n.language)
+												.isToday()}
+												{dayjs(message.created_at / 1000000)
+													.locale($i18n.language)
+													.format('LT')}
 											{:else}
 												{$i18n.t(formatDate(message.created_at / 1000000), {
-													LOCALIZED_TIME: dayjs(message.created_at / 1000000).format('LT'),
-													LOCALIZED_DATE: dayjs(message.created_at / 1000000).format('L')
+													LOCALIZED_TIME: dayjs(message.created_at / 1000000)
+														.locale($i18n.language)
+														.format('LT'),
+													LOCALIZED_DATE: dayjs(message.created_at / 1000000)
+														.locale($i18n.language)
+														.format('L')
 												})}
 											{/if}
 										</span>
@@ -656,7 +674,10 @@
 										{$i18n.t('{{COUNT}} Replies', { COUNT: message.reply_count })}</span
 									><span class="truncate">
 										{' - '}{$i18n.t('Last reply')}
-										{dayjs.unix(message.latest_reply_at / 1000000000).fromNow()}</span
+										{dayjs
+											.unix(message.latest_reply_at / 1000000000)
+											.locale($i18n.language)
+											.fromNow()}</span
 									>
 
 									<span class="ml-1">

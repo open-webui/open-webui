@@ -123,9 +123,9 @@
 	];
 
 	const heatmapModes: Array<{ value: HeatmapMode; label: string }> = [
-		{ value: 'daily', label: $i18n.t('Daily') },
-		{ value: 'weekly', label: $i18n.t('Weekly') },
-		{ value: 'cumulative', label: $i18n.t('Cumulative') }
+		{ value: 'daily', label: 'Daily' },
+		{ value: 'weekly', label: 'Weekly' },
+		{ value: 'cumulative', label: 'Cumulative' }
 	];
 
 	const loadUsage = async () => {
@@ -197,7 +197,9 @@
 			}
 
 			labels.push({
-				label: new Date(`${entry.date}T00:00:00`).toLocaleString(undefined, { month: 'short' }),
+				label: new Date(`${entry.date}T00:00:00`).toLocaleString($i18n.language, {
+					month: 'short'
+				}),
 				column,
 				span: Math.min(MIN_MONTH_LABEL_GAP, columns - column + 1)
 			});

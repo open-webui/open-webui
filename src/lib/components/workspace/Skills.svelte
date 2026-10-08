@@ -9,7 +9,7 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import {
 		WEBUI_NAME,
@@ -476,14 +476,16 @@
 											</div>
 
 											<Tooltip
-												content={dayjs((skill.updated_at ?? skill.created_at) * 1000).format(
-													'LLLL'
-												)}
+												content={dayjs((skill.updated_at ?? skill.created_at) * 1000)
+													.locale($i18n.language)
+													.format('LLLL')}
 											>
 												<div
 													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 												>
-													{dayjs((skill.updated_at ?? skill.created_at) * 1000).fromNow()}
+													{dayjs((skill.updated_at ?? skill.created_at) * 1000)
+														.locale($i18n.language)
+														.fromNow()}
 												</div>
 											</Tooltip>
 

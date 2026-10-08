@@ -3,6 +3,7 @@ import resourcesToBackend from 'i18next-resources-to-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import type { i18n as i18nType } from 'i18next';
 import { writable } from 'svelte/store';
+import dayjs, { getDayjsLocale } from '$lib/dayjs';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import { assembleSettingsTranslations } from './settings-translations';
@@ -47,6 +48,7 @@ const createI18nStore = (i18n: i18nType) => {
 	});
 	i18n.on('added', () => i18nWritable.set(i18n));
 	i18n.on('languageChanged', (lang) => {
+		dayjs.locale(getDayjsLocale(lang));
 		i18nWritable.set(i18n);
 		if (typeof document !== 'undefined') {
 			document.documentElement.setAttribute('lang', lang);
@@ -87,18 +89,16 @@ const toBundleCode = (code: string) => {
 
 export const initI18n = (defaultLocale?: string, value: I18nOverrides = {}) => {
 	overrides = value;
-	const detectionOrder = defaultLocale
-		? ['querystring', 'localStorage']
-		: ['querystring', 'localStorage', 'navigator'];
-	const fallbackDefaultLocale = defaultLocale ? [defaultLocale, 'en-US'] : ['en-US'];
+	const detector = new LanguageDetector();
+	detector.addDetector({ name: 'defaultLocale', lookup: () => defaultLocale });
 
 	return i18next
 		.use(resourcesToBackend(loadResource))
-		.use(LanguageDetector)
+		.use(detector)
 		.init({
 			debug: false,
 			detection: {
-				order: detectionOrder,
+				order: ['querystring', 'localStorage', 'defaultLocale', 'navigator'],
 				caches: ['localStorage'],
 				lookupQuerystring: 'lang',
 				lookupLocalStorage: 'locale',
@@ -106,7 +106,7 @@ export const initI18n = (defaultLocale?: string, value: I18nOverrides = {}) => {
 			},
 			fallbackLng: {
 				fr: ['fr-FR'],
-				default: fallbackDefaultLocale
+				default: ['en-US']
 			},
 			ns: 'translation',
 			keySeparator: false,
@@ -122,9 +122,15 @@ const i18n = createI18nStore(i18next);
 const isLoadingStore = createIsLoadingStore(i18next);
 
 export const getLanguages = async () => languages;
+// Serialize switches so a slower download cannot overwrite a newer selection.
+let languageChange = Promise.resolve();
 export const changeLanguage = (lang: string) => {
-	document.documentElement.setAttribute('lang', lang);
-	return i18next.changeLanguage(lang);
+	const change = languageChange.then(() => i18next.changeLanguage(toBundleCode(lang)));
+	languageChange = change.then(
+		() => {},
+		() => {}
+	);
+	return change;
 };
 
 export default i18n;

@@ -18,7 +18,7 @@
 	import Youtube from '$lib/components/icons/Youtube.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let query = '';
 	export let onSelect = (e) => {};
@@ -64,7 +64,6 @@
 		}
 	};
 
-	let folderItems = [];
 	let knowledgeItems = [];
 	let fileItems = [];
 
@@ -82,21 +81,18 @@
 	});
 
 	const getItems = () => {
-		getFolderItems();
 		getKnowledgeItems();
 		getKnowledgeFileItems();
 	};
 
-	const getFolderItems = async () => {
-		folderItems = $folders
-			.map((folder) => ({
-				...folder,
-				type: 'folder',
-				description: $i18n.t('Folder'),
-				title: folder.name
-			}))
-			.filter((folder) => folder.name.toLowerCase().includes(query.toLowerCase()));
-	};
+	$: folderItems = $folders
+		.map((folder) => ({
+			...folder,
+			type: 'folder',
+			description: $i18n.t('Folder'),
+			title: folder.name
+		}))
+		.filter((folder) => folder.name.toLowerCase().includes(query.toLowerCase()));
 
 	const getKnowledgeItems = async () => {
 		const res = await searchKnowledgeBases(localStorage.token, query).catch(() => {

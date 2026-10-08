@@ -12,22 +12,9 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	async function loadLocale(locales) {
-		for (const locale of locales) {
-			try {
-				dayjs.locale(locale);
-				break; // Stop after successfully loading the first available locale
-			} catch (error) {
-				console.error(`Could not load locale '${locale}':`, error);
-			}
-		}
-	}
-
 	import { onMount, getContext, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
-	// Assuming $i18n.languages is an array of language codes
-	$: loadLocale($i18n.languages);
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import { goto } from '$app/navigation';
 	import { WEBUI_NAME, config, user, pinnedNotes, mobile, showSidebar } from '$lib/stores';
@@ -448,7 +435,9 @@
 								id: 'notes-new',
 								label: $i18n.t('Create'),
 								onClick: async () => {
-									const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+									const res = await createNoteHandler(
+										dayjs().locale($i18n.language).format('YYYY-MM-DD')
+									);
 
 									if (res) {
 										goto(`/notes/${res.id}`);
@@ -629,11 +618,17 @@
 														</div>
 													</Tooltip>
 
-													<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+													<Tooltip
+														content={dayjs(note.updated_at / 1000000)
+															.locale($i18n.language)
+															.format('LLLL')}
+													>
 														<div
 															class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 														>
-															{dayjs(note.updated_at / 1000000).fromNow()}
+															{dayjs(note.updated_at / 1000000)
+																.locale($i18n.language)
+																.fromNow()}
 														</div>
 													</Tooltip>
 												</div>
@@ -825,9 +820,15 @@
 															</div>
 														</Tooltip>
 
-														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+														<Tooltip
+															content={dayjs(note.updated_at / 1000000)
+																.locale($i18n.language)
+																.format('LLLL')}
+														>
 															<div class="shrink-0">
-																{dayjs(note.updated_at / 1000000).fromNow()}
+																{dayjs(note.updated_at / 1000000)
+																	.locale($i18n.language)
+																	.fromNow()}
 															</div>
 														</Tooltip>
 													</div>

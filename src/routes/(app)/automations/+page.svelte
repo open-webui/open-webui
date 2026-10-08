@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatSchedule } from '$lib/utils/schedule';
 	import { onMount, onDestroy, getContext } from 'svelte';
 
 	import dayjs from '$lib/dayjs';
@@ -100,6 +101,8 @@
 			}
 		});
 	};
+
+	$: if (loaded && $i18n) syncHeader();
 
 	const handleSearchInput = () => {
 		if (!loaded) return;
@@ -225,7 +228,9 @@
 
 	const formatLastRun = (automation: AutomationResponse): string => {
 		return automation.last_run_at
-			? dayjs(automation.last_run_at / 1000000).fromNow()
+			? dayjs(automation.last_run_at / 1000000)
+					.locale($i18n.language)
+					.fromNow()
 			: $i18n.t('Never');
 	};
 
@@ -307,55 +312,6 @@
 		await getAutomationList();
 	};
 
-	const formatRRule = (rrule: string): string => {
-		const match = rrule.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
-		// Detect one-time schedule (ONCE)
-		if (/COUNT=1(?!\d)/.test(rrule)) {
-			if (match) {
-				const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`);
-				return `Once · ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
-			}
-			return 'Once';
-		}
-		const parts: Record<string, string> = {};
-		rrule
-			.split(/\s+/)
-			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
-			.join('')
-			.replace('RRULE:', '')
-			.split(';')
-			.forEach((p) => {
-				const [k, v] = p.split('=');
-				if (k && v) parts[k] = v;
-			});
-		const freq = parts.FREQ || '';
-		const hour = parseInt(parts.BYHOUR || match?.[4] || '0');
-		const min = (parts.BYMINUTE || match?.[5] || '0').padStart(2, '0');
-		const iv = parseInt(parts.INTERVAL || '1');
-		const ampm = hour >= 12 ? 'PM' : 'AM';
-		const h12 = hour % 12 || 12;
-		const time = `${h12}:${min} ${ampm}`;
-
-		if (freq === 'MINUTELY') return iv === 1 ? 'Every minute' : `Every ${iv} minutes`;
-		if (freq === 'HOURLY') return iv === 1 ? 'Hourly' : `Every ${iv} hours`;
-		if (freq === 'DAILY') return `Daily at ${time}`;
-		if (freq === 'WEEKLY') {
-			const days = parts.BYDAY || '';
-			return days ? `${days} at ${time}` : `Weekly at ${time}`;
-		}
-		if (freq === 'MONTHLY')
-			return `Monthly on the ${parts.BYMONTHDAY || '1'}${ordinal(parts.BYMONTHDAY || '1')} at ${time}`;
-		return rrule;
-	};
-
-	const ordinal = (n: string): string => {
-		const num = parseInt(n);
-		if (num % 10 === 1 && num !== 11) return 'st';
-		if (num % 10 === 2 && num !== 12) return 'nd';
-		if (num % 10 === 3 && num !== 13) return 'rd';
-		return 'th';
-	};
-
 	onMount(() => {
 		if (
 			!($config?.features as any)?.enable_automations ||
@@ -366,7 +322,6 @@
 		}
 
 		loaded = true;
-		syncHeader();
 		ensureChannels();
 
 		const onKeyDown = (event: KeyboardEvent) => {
@@ -617,7 +572,9 @@
 
 											<Tooltip
 												content={automation.last_run_at
-													? dayjs(automation.last_run_at / 1000000).format('LLLL')
+													? dayjs(automation.last_run_at / 1000000)
+															.locale($i18n.language)
+															.format('LLLL')
 													: $i18n.t('Never')}
 											>
 												<div
@@ -635,11 +592,11 @@
 								class="hidden max-w-56 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
 								<Tooltip
-									content={`${formatRRule(automation.data.rrule)} · ${formatDestination(automation)}`}
+									content={`${formatSchedule(automation.data.rrule, $i18n)} · ${formatDestination(automation)}`}
 									className="min-w-0"
 								>
 									<div class="truncate">
-										{formatRRule(automation.data.rrule)} · {formatDestination(automation)}
+										{formatSchedule(automation.data.rrule, $i18n)} · {formatDestination(automation)}
 									</div>
 								</Tooltip>
 							</div>

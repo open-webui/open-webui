@@ -29,13 +29,13 @@
 	let events: { event: string; label: string; description?: string }[] = [
 		{
 			event: 'chat.finished',
-			label: $i18n.t('Chat finished'),
-			description: $i18n.t('A chat run finished successfully.')
+			label: 'Chat finished',
+			description: 'A chat run finished successfully.'
 		},
 		{
 			event: 'chat.failed',
-			label: $i18n.t('Chat failed'),
-			description: $i18n.t('A chat run failed.')
+			label: 'Chat failed',
+			description: 'A chat run failed.'
 		}
 	];
 	let loadingTargets = false;
@@ -249,7 +249,7 @@
 						{#each targets as target, index}
 							{@const alertLabels = events
 								.filter((event) => target.events.includes(event.event))
-								.map((event) => event.label)
+								.map((event) => $i18n.t(event.label))
 								.join(', ')}
 							<div class="flex items-center gap-3 px-1 py-1.5">
 								<div class="min-w-0 flex-1">
@@ -388,7 +388,7 @@
 					type="button"
 					on:click={() => toggleFormEvent(event.event)}
 				>
-					{event.label}
+					{$i18n.t(event.label)}
 				</button>
 			{/each}
 		</div>

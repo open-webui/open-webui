@@ -20,6 +20,7 @@
 	import { createNewGroup, getGroups, updateGroupById } from '$lib/apis/groups';
 	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
 
+	/** @type {import('svelte/store').Writable<import('i18next').i18n>} */
 	const i18n = getContext('i18n');
 
 	let loaded = false;
@@ -35,7 +36,7 @@
 	let dropTarget = '';
 	let moving = false;
 
-	const sortItems = [
+	$: sortItems = [
 		{ value: 'members', label: $i18n.t('Members') },
 		{ value: 'name', label: $i18n.t('Name') }
 	];
