@@ -2550,7 +2550,9 @@
 			...(youtube ? [`https://www.youtube.com/watch?v=${youtube}`] : []),
 			...(loadUrl ? [loadUrl] : [])
 		];
-		const call = $page.url.searchParams.get('call') === 'true';
+		const call =
+			$page.url.searchParams.get('call') === 'true' ||
+			$page.url.searchParams.get('voice') === 'true';
 		pendingUrlActions = urls.length || call ? { urls, call } : null;
 
 		if ($page.url.searchParams.get('web-search') === 'true') {
