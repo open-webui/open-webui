@@ -23,10 +23,7 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 				this.enabled = data.enabled;
 				this.captureLength = 0;
 			} else if (data.type === 'audio') {
-				if (this.queued + data.samples.length > 24000 * 120) {
-					this.port.postMessage({ type: 'overflow' });
-					return;
-				}
+				// Speech can arrive faster than playback; release each chunk after it plays.
 				this.received += data.samples.length;
 				this.queue.push({ ...data, offset: 0 });
 				this.queued += data.samples.length;

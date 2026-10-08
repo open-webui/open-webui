@@ -223,9 +223,6 @@ export class RealtimeCall {
 				this.options.change();
 			}
 			this.flush();
-		} else if (data.type === 'overflow') {
-			this.stopSpeaking();
-			this.fail('Voice playback exceeded the 120 second buffer.');
 		} else if (data.type === 'cleared') {
 			const responses = this.clears.get(data.id);
 			this.clears.delete(data.id);
