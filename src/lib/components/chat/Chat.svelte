@@ -1368,8 +1368,8 @@
 			socket?.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
 		joinedChatId = next;
 		if (next)
-			socket?.emit('events:chat', { chat_id: next, data: { type: 'join' } }, (joined: boolean) => {
-				if (joined && $chatId === next) void refreshChat();
+			socket?.emit('events:chat', { chat_id: next, data: { type: 'join' } }, () => {
+				if ($chatId === next) void refreshChat();
 			});
 	};
 	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
