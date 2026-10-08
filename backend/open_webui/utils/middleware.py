@@ -4714,6 +4714,7 @@ async def streaming_chat_response_handler(response, ctx):
             )
 
             tool_calls = []
+            streamed_image_files = []
 
             last_assistant_message = None
             try:
@@ -5382,7 +5383,9 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                     if image_urls:
                                         image_file_list = [{'type': 'image', 'url': url} for url in image_urls]
-                                        message_files = image_file_list
+                                        # The frontend replaces the message files, so unsaved chats need the full list.
+                                        streamed_image_files.extend(image_file_list)
+                                        message_files = streamed_image_files
                                         if save_to_chat:
                                             message_files = await Chats.add_message_files_by_id_and_message_id(
                                                 metadata['chat_id'],
