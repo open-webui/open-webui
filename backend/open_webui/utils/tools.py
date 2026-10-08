@@ -1507,10 +1507,15 @@ async def get_terminal_tools(
         headers[TERMINAL_CONTEXT_HEADER] = context_id
 
     # Fetch live with the user's credentials so prompt changes apply without a restart
-    terminal_cwd, system_prompt = await asyncio.gather(
-        get_terminal_cwd(server_data['url'], headers, cookies),
-        get_terminal_system_prompt(server_data['url'], headers, cookies),
-    )
+    connection_config = connection.get('config') or {}
+    terminal_cwd = None
+    if connection_config.get('working_directory_context', True):
+        terminal_cwd, system_prompt = await asyncio.gather(
+            get_terminal_cwd(server_data['url'], headers, cookies),
+            get_terminal_system_prompt(server_data['url'], headers, cookies),
+        )
+    else:
+        system_prompt = await get_terminal_system_prompt(server_data['url'], headers, cookies)
     if not system_prompt:
         system_prompt = server_data.get('system_prompt')
 
@@ -1548,6 +1553,7 @@ async def get_terminal_tools(
             'callable': callable,
             'spec': tool_spec,
             'type': 'terminal',
+            'user_shell_tools': connection_config.get('user_shell_tools', 'auto'),
         }
 
     return tools_dict, system_prompt

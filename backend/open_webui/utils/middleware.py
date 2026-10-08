@@ -3125,7 +3125,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
 
-        # Only advertise user-shell tools when the originating browser has a connected shell.
+        # Connections can keep shell tools advertised across browser disconnects for prompt caching.
         shell_tools = {
             name: tool
             for name, tool in tools_dict.items()
@@ -3133,7 +3133,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             and (tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
         }
         selected = {
-            name
+            name: tool
             for name, tool in shell_tools.items()
             if terminal_id
             and (
@@ -3141,9 +3141,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
             )
         }
-        connected = False
+        connected = (
+            any(
+                tool.get('user_shell_tools') == 'always'
+                or (
+                    tool.get('direct')
+                    and (tool.get('server', {}).get('config') or {}).get('user_shell_tools') == 'always'
+                )
+                for tool in selected.values()
+            )
+            and not metadata.get('automation_id')
+            and not metadata.get('internal')
+        )
         if (
             selected
+            and not connected
             and event_caller
             and metadata.get('session_id')
             and metadata.get('chat_id')
