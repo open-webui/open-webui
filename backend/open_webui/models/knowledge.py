@@ -481,7 +481,7 @@ class KnowledgeTable:
         if knowledge.user_id == user_id:
             return True
         if user_group_ids is None:
-            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
             user_group_ids = {group.id for group in user_groups}
         return await AccessGrants.has_access(
             user_id=user_id,

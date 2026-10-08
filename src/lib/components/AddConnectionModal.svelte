@@ -38,13 +38,6 @@
 
 	let connectionType = 'external';
 	let provider = '';
-	$: azure =
-		provider === 'azure' ||
-		((url.includes('azure.') || url.includes('cognitive.microsoft.com')) &&
-			!direct &&
-			provider === '' &&
-			!/\/openai\/v1(\/|$)/.test(url));
-
 	let prefixId = '';
 	let enable = true;
 	let apiVersion = '';
@@ -57,6 +50,7 @@
 
 	let modelId = '';
 	let modelIds = [];
+	let availableModelIds: string[] = [];
 
 	let loading = false;
 	let showDeleteConfirmDialog = false;
@@ -110,6 +104,7 @@
 	};
 
 	const verifyOpenAIHandler = async () => {
+		availableModelIds = [];
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
 
@@ -148,6 +143,15 @@
 		).catch((error) => {
 			toast.error(`${error}`);
 		});
+
+		const models = Array.isArray(res) ? res : res?.data;
+		if (show && !azure && Array.isArray(models)) {
+			availableModelIds = [
+				...new Set<string>(
+					models.map((model) => model?.id).filter((id) => typeof id === 'string' && id.trim())
+				)
+			];
+		}
 
 		if (res) {
 			toast.success($i18n.t('Server connection verified'));
@@ -219,6 +223,7 @@
 				}
 				headers = JSON.stringify(_headers, null, 2);
 			} catch (error) {
+				loading = false;
 				toast.error($i18n.t('Headers must be a valid JSON object'));
 				return;
 			}
@@ -270,6 +275,7 @@
 	};
 
 	const init = () => {
+		availableModelIds = [];
 		forwardCookies = connection?.config?.forward_cookies ?? false;
 		if (connection) {
 			url = connection.url;
@@ -302,6 +308,13 @@
 	$: if (show) {
 		init();
 	}
+
+	$: azure =
+		provider === 'azure' ||
+		((url.includes('azure.') || url.includes('cognitive.microsoft.com')) &&
+			!direct &&
+			provider === '' &&
+			!/\/openai\/v1(\/|$)/.test(url));
 
 	onMount(() => {
 		init();
@@ -753,7 +766,18 @@
 									bind:value={modelId}
 									id="add-model-id-input"
 									placeholder={$i18n.t('Add a model ID')}
+									list={availableModelIds.length ? 'model-id-suggestions' : undefined}
+									on:keydown={(event) => {
+										if (event.key === 'Enter') event.preventDefault();
+									}}
 								/>
+								{#if availableModelIds.length}
+									<datalist id="model-id-suggestions">
+										{#each availableModelIds.filter((id) => !modelIds.includes(id)) as id}
+											<option value={id}></option>
+										{/each}
+									</datalist>
+								{/if}
 
 								<div>
 									<button

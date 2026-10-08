@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from copy import deepcopy
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -11,7 +12,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from open_webui.utils.misc import json_text_variants
 from open_webui.utils.validate import validate_image_url
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationInfo, field_validator, model_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,10 +66,76 @@ def strip_extracted_content_from_model_knowledge(knowledge: Any) -> Any:
 # --- Models DB Schema ---
 
 
+ModelControlKey = Annotated[str, Field(pattern=re.compile(r'^(?!(?:constructor|prototype)\Z)[a-zA-Z][a-zA-Z0-9_-]*\Z'))]
+
+
+class ModelControlOption(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    label: str = Field(pattern=r'\S')
+    params: dict[str, JsonValue]
+
+
+class ModelControl(BaseModel):
+    display: Literal['menu', 'slider'] = Field(default='menu', exclude_if=lambda value: value == 'menu')
+    label: str = Field(pattern=r'\S')
+    description: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    default: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    options: dict[ModelControlKey, ModelControlOption] = Field(min_length=1)
+
+    @model_validator(mode='after')
+    def check_default(self):
+        if self.display == 'slider' and len(self.options) < 2:
+            raise ValueError('A slider needs at least two options.')
+        if self.default is not None and self.default not in self.options:
+            raise ValueError('Default must name an approved option.')
+        return self
+
+
 class ModelParams(BaseModel):
     """Parameters for model inference (temperature, top_p, etc.)."""
 
     model_config = ConfigDict(extra='allow')
+
+    model_controls: dict[ModelControlKey, ModelControl] = Field(
+        default_factory=dict, exclude_if=lambda value: not value
+    )
+
+
+class ModelVoice(BaseModel):
+    voice: str | None = Field(default=None, min_length=1, max_length=200, pattern=r'^\S+$')
+
+
+class ModelAvatarAnimation(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    file_id: str = Field(pattern=r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$')
+
+
+class ModelAvatarGesture(ModelAvatarAnimation):
+    name: str = Field(pattern=r'^[a-z][a-z0-9_]{0,47}$')
+    description: str = Field(min_length=1, max_length=500)
+
+
+class ModelVoiceAvatar(BaseModel):
+    model_config = ConfigDict(extra='forbid', allow_inf_nan=False)
+
+    file_id: str = Field(pattern=r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$')
+    states: dict[Literal['idle', 'listening', 'speaking'], ModelAvatarAnimation] = Field(default_factory=dict)
+    gestures: list[ModelAvatarGesture] = Field(default_factory=list, max_length=16)
+
+    @model_validator(mode='before')
+    @classmethod
+    def discard_legacy_movement_settings(cls, value):
+        if isinstance(value, dict):
+            return {key: item for key, item in value.items() if key not in {'preset', 'movement', 'mouth', 'gaze'}}
+        return value
+
+    @model_validator(mode='after')
+    def unique_gestures(self):
+        names = [gesture.name for gesture in self.gestures]
+        if len(set(names)) != len(names) or any(not gesture.description.strip() for gesture in self.gestures):
+            raise ValueError('Gestures need unique names and a description.')
+        return self
 
 
 class ModelMeta(BaseModel):
@@ -80,6 +147,8 @@ class ModelMeta(BaseModel):
     i18n: dict[str, Any] | None = None
     capabilities: dict | None = None
     knowledge: list[Any] | None = None
+    voice: ModelVoice | None = None
+    voice_avatar: ModelVoiceAvatar | None = None
 
     model_config = ConfigDict(extra='allow')
 
@@ -252,7 +321,10 @@ class ModelsTable:
 
             if writable_by_user_id:
                 user_group_ids = {
-                    group.id for group in await Groups.get_groups_by_member_id(writable_by_user_id, db=db)
+                    group.id
+                    for group in await Groups.get_groups_by_member_id(
+                        writable_by_user_id, db=db, include_inherited=True
+                    )
                 }
                 stmt = self._has_permission(
                     db, stmt, {'user_id': writable_by_user_id, 'group_ids': user_group_ids}, permission='write'
@@ -290,12 +362,13 @@ class ModelsTable:
     async def get_model_owner_ids_by_file_id(
         self, file_id: str, db: AsyncSession | None = None, include_background: bool = False
     ) -> dict[str, str]:
-        """Return model IDs mapped to owner IDs for models referencing the file."""
+        """Find file references; include_background adds read-only background/avatar assets."""
         async with get_async_db_context(db) as db:
             # File ids are server-generated uuids, so the text match can only over-match.
             result = await db.execute(
                 select(Model.id, Model.user_id, Model.meta).filter(
-                    Model.base_model_id.is_not(None), cast(Model.meta, String).like(f'%{file_id}%')
+                    (Model.base_model_id.is_not(None) if not include_background else True),
+                    cast(Model.meta, String).like(f'%{file_id}%'),
                 )
             )
             return {
@@ -305,7 +378,17 @@ class ModelsTable:
                     isinstance(item, dict) and item.get('type') == 'file' and item.get('id') == file_id
                     for item in meta.get('knowledge') or []
                 )
-                or (include_background and meta.get('background_image_url') == f'/api/v1/files/{file_id}/content')
+                or (
+                    include_background
+                    and (
+                        meta.get('background_image_url') == f'/api/v1/files/{file_id}/content'
+                        or (meta.get('voice_avatar') or {}).get('file_id') == file_id
+                        or any(asset.get('file_id') == file_id for asset in (
+                            list((meta.get('voice_avatar') or {}).get('states', {}).values())
+                            + (meta.get('voice_avatar') or {}).get('gestures', [])
+                        ))
+                    )
+                )
             }
 
     @staticmethod
@@ -475,7 +558,7 @@ class ModelsTable:
             )
 
             if not is_admin:
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = [group.id for group in user_groups]
 
                 filter_dict = {'user_id': user_id}

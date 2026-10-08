@@ -393,8 +393,13 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             expires_delta = parse_duration(str(await Config.get('automations.auth_token_expires_in', '1h')))
         except ValueError:
             expires_delta = None
+        from open_webui.models.auths import Auths
+
+        auth = await Auths.get_auth_by_id(user.id)
+        if auth is None or not auth.active:
+            raise ValueError('Automation owner is no longer active')
         token = create_token(
-            data={'id': user.id, 'typ': 'automation'},
+            data={'id': user.id, 'typ': 'automation', 'session_stamp': auth.session_stamp},
             expires_delta=expires_delta or timedelta(hours=1),
         )
 

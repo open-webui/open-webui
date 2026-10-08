@@ -11,7 +11,7 @@
 				goto('/workspace/knowledge', { replaceState: true });
 			} else if ($user?.permissions?.workspace?.prompts) {
 				goto('/workspace/prompts', { replaceState: true });
-			} else if ($config?.features?.enable_plugins && $user?.permissions?.workspace?.tools) {
+			} else if ($config?.features?.enable_tools && $user?.permissions?.workspace?.tools) {
 				goto('/workspace/tools', { replaceState: true });
 			} else if ($user?.permissions?.workspace?.skills) {
 				goto('/workspace/skills', { replaceState: true });

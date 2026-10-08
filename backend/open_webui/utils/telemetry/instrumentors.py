@@ -178,7 +178,7 @@ class Instrumentor(BaseInstrumentor):
         SQLAlchemyInstrumentor().instrument(engine=self.db_engine)
         RedisInstrumentor().instrument(request_hook=redis_request_hook)
         RequestsInstrumentor().instrument(request_hook=requests_hook, response_hook=response_hook)
-        LoggingInstrumentor().instrument()
+        LoggingInstrumentor().instrument(enable_log_auto_instrumentation=False)
         HTTPXClientInstrumentor().instrument(
             request_hook=httpx_request_hook,
             response_hook=httpx_response_hook,

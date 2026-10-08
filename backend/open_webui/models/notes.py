@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from open_webui.utils.json_codec import JSONCodec
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, Text, delete, func, or_, select, update
+from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
@@ -313,7 +313,7 @@ class NoteTable:
         db: Optional[AsyncSession] = None,
     ) -> list[NoteModel]:
         async with get_async_db_context(db) as db:
-            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
             user_group_ids = [group.id for group in user_groups]
 
             stmt = select(Note).order_by(Note.updated_at.desc())
@@ -335,6 +335,27 @@ class NoteTable:
             result = await db.execute(select(Note).filter(Note.id == id))
             note = result.scalars().first()
             return await self._to_note_model(note, db=db) if note else None
+
+    async def get_note_ids_by_file_id(self, file_id: str, owner_id: str, db: AsyncSession | None = None) -> list[str]:
+        """Find current file attachments in notes owned by the file owner."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Note.id, Note.data).filter(
+                    Note.user_id == owner_id,
+                    cast(Note.data, Text).like(f'%{file_id}%'),
+                )
+            )
+            # The text filter only narrows candidates; authorization needs an exact attachment.
+            return [
+                note_id
+                for note_id, data in result.all()
+                if isinstance(data, dict)
+                and isinstance(data.get('files'), list)
+                and any(
+                    isinstance(item, dict) and item.get('type') == 'file' and item.get('id') == file_id
+                    for item in data['files']
+                )
+            ]
 
     async def update_note_by_id(
         self, id: str, form_data: NoteUpdateForm, db: Optional[AsyncSession] = None
@@ -400,7 +421,7 @@ class NoteTable:
         db: Optional[AsyncSession] = None,
     ) -> list[NoteModel]:
         async with get_async_db_context(db) as db:
-            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
             user_group_ids = [group.id for group in user_groups]
 
             stmt = (

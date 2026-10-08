@@ -148,6 +148,18 @@ async def next_run_ns(s: str, tz: str = None) -> Optional[int]:
     return int(dt.timestamp() * 1_000_000_000)
 
 
+def schedule_start_ns(s: str, tz: str = None) -> int:
+    """DTSTART the scheduler anchors the rule to, as epoch nanoseconds."""
+    zi = _resolve_tz(tz)
+    now = datetime.now(zi).replace(tzinfo=None) if zi else datetime.now()
+    parsed = _parse_rule(s, now)
+    rule = parsed._rrule[0] if isinstance(parsed, rruleset) else parsed
+    dt = rule._dtstart
+    if zi:
+        dt = dt.replace(tzinfo=zi)
+    return int(dt.timestamp() * 1_000_000_000)
+
+
 async def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
     """Compute next N occurrences for UI preview.
 

@@ -180,7 +180,7 @@ async def get_knowledge_bases(
     skip = (page - 1) * limit
 
     filter = {}
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -245,7 +245,7 @@ async def search_knowledge_bases(
     if direction in {'asc', 'desc'}:
         filter['direction'] = direction
 
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -301,7 +301,7 @@ async def search_knowledge_files(
     if include_content:
         filter['include_content'] = True
 
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     if groups:
         filter['group_ids'] = [group.id for group in groups]
 

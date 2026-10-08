@@ -99,6 +99,16 @@ export const getTools = async (token: string = '', query: string | null = null) 
 	return res;
 };
 
+export const getToolSpecs = async (token: string, id: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${encodeURIComponent(id)}/specs`, {
+		headers: { Accept: 'application/json', authorization: `Bearer ${token}` }
+	});
+	if (!res.ok) {
+		throw { status: res.status };
+	}
+	return (await res.json()).specs;
+};
+
 export const getToolList = async (token: string = '') => {
 	let error = null;
 

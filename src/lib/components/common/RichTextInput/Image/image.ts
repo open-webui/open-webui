@@ -106,6 +106,9 @@ export const Image = Node.create<ImageOptions>({
 		return [
 			{
 				tag: this.options.allowBase64 ? 'img[src]' : 'img[src]:not([src^="data:"])'
+			},
+			{
+				tag: 'img[src^="data://"]'
 			}
 		];
 	},

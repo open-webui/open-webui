@@ -1441,8 +1441,7 @@
 			showFileNavDir.set(null);
 			filePath = normalizePath(filePath);
 			if (!isInsideFileRoot(filePath)) {
-				await loadDir(fileRoot?.path ?? '/');
-				return;
+				filePath = fileRoot?.path ?? '/';
 			}
 
 			const lastSlash = filePath.lastIndexOf('/');

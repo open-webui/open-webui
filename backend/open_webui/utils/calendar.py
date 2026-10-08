@@ -60,7 +60,7 @@ def expand_recurring_event(
 
     instances = []
     previous_start = None
-    for occurrence_start in rule.xafter(scan_start, count=max_instances, inc=True):
+    for occurrence_start in rule.xafter(scan_start, inc=True):
         if occurrence_start >= range_end or occurrence_start == previous_start:
             break
         previous_start = occurrence_start
@@ -76,6 +76,8 @@ def expand_recurring_event(
                 'instance_id': f'{event_dict["id"]}_{instance_start_ns}',
             }
             instances.append(instance)
+            if len(instances) >= max_instances:
+                break
 
     return instances
 

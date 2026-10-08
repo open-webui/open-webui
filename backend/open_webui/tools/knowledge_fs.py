@@ -314,7 +314,7 @@ async def _get_accessible_kb_ids(
 
     user_id = user.get('id')
     user_role = user.get('role', 'user')
-    user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
+    user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id, include_inherited=True)]
 
     async def _has_access(kb):
         return (

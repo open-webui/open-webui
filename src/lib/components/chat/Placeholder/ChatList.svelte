@@ -214,6 +214,21 @@
 				on:click={() => markChatRead(chat, unread)}
 			>
 				<div class="flex min-w-0 items-center w-full sm:basis-3/5">
+					{#if showOwnerInfo && chat.user_id && chat.owner_name}
+						<Tooltip content={chat.owner_name} className="flex shrink-0 me-2">
+							<img
+								src="{WEBUI_API_BASE_URL}/users/{chat.user_id}/profile/image"
+								alt=""
+								class="size-4 rounded-full shrink-0 object-cover"
+								on:error={(e) => {
+									if (!e.currentTarget.src.endsWith('/static/favicon.png')) {
+										e.currentTarget.src = `${WEBUI_BASE_URL}/static/favicon.png`;
+									}
+								}}
+							/>
+						</Tooltip>
+					{/if}
+
 					{#if chat.active}
 						<div class="shrink-0 self-center pr-2">
 							<Spinner className="size-3" />
@@ -237,21 +252,6 @@
 					<div class=" text-gray-500 dark:text-gray-400 text-xs">
 						{dayjs((chat.updated_at ?? chat.created_at ?? 0) * 1000).calendar()}
 					</div>
-
-					{#if showOwnerInfo && chat.user_id && chat.owner_name}
-						<Tooltip content={chat.owner_name}>
-							<img
-								src="{WEBUI_API_BASE_URL}/users/{chat.user_id}/profile/image"
-								alt=""
-								class="size-4 rounded-full shrink-0 object-cover"
-								on:error={(e) => {
-									if (!e.currentTarget.src.endsWith('/static/favicon.png')) {
-										e.currentTarget.src = `${WEBUI_BASE_URL}/static/favicon.png`;
-									}
-								}}
-							/>
-						</Tooltip>
-					{/if}
 				</div>
 			</a>
 		{/each}

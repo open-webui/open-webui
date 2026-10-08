@@ -6,6 +6,7 @@ import ntpath
 import posixpath
 from urllib.parse import quote
 
+from open_webui.env import ENABLE_TOOL_SERVERS
 from open_webui.utils.chat_id import is_saved_chat_id
 
 TERMINAL_CONTEXT_HEADER = 'X-Terminal-Context-Id'
@@ -122,8 +123,10 @@ def terminal_chat_uploads(connection: dict) -> str:
 
 async def get_terminal_json(request, user, metadata: dict, path: str, extra_params: dict | None = None):
     """Read from an admin terminal on the backend or a personal terminal in its browser."""
-    import aiohttp
+    if not ENABLE_TOOL_SERVERS:
+        return None
 
+    import aiohttp
     from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
     from open_webui.models.config import Config
     from open_webui.models.groups import Groups
@@ -150,7 +153,9 @@ async def get_terminal_json(request, user, metadata: dict, path: str, extra_para
             or (config.get('context_id') in {'chat_id', 'automation_id'} and not context_id)
         ):
             return None
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_model.id)}
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user_model.id, include_inherited=True)
+        }
         if not await has_connection_access(user_model, connection, user_group_ids):
             return None
 
@@ -159,7 +164,6 @@ async def get_terminal_json(request, user, metadata: dict, path: str, extra_para
             request,
             user_model,
             metadata=metadata,
-            extra_params=extra_params,
         )
         headers['Accept'] = 'application/json'
         headers['X-User-Id'] = user_model.id

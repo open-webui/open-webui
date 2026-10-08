@@ -424,8 +424,8 @@
 		})
 		.sort((a, b) => a.name.localeCompare(b.name));
 
-	$: accessGroups = groups
-		.filter((group) => readGroupIds.includes(group.id) || writeGroupIds.includes(group.id))
+	$: accessGroups = Array.from(new Set([...readGroupIds, ...writeGroupIds]))
+		.map((id) => groups.find((group) => group.id === id) ?? { id, name: id })
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: if (selectedUserIds.length > 0) {
@@ -565,6 +565,8 @@
 		{/if}
 	</div>
 
+	<slot />
+
 	{#if share}
 		<div class="flex items-center justify-between text-xs font-normal text-gray-500 my-0.5">
 			<div>
@@ -599,9 +601,11 @@
 
 						<div class="truncate text-sm flex items-center gap-2">
 							{group.name}
-							<span class="text-xs text-gray-400 font-normal"
-								>{group?.member_count} {$i18n.t('members')}</span
-							>
+							{#if group.member_count != null}
+								<span class="text-xs text-gray-400 font-normal"
+									>{group.member_count} {$i18n.t('members')}</span
+								>
+							{/if}
 						</div>
 					</div>
 
@@ -644,7 +648,7 @@
 			{#if shareUsers}
 				{#each selectedUsers as user}
 					<div
-						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-1.5 last:border-0"
+						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50/50 dark:border-gray-850/50 pb-1.5 last:border-0"
 					>
 						<div class="flex items-center gap-2 min-w-0 flex-1">
 							<img

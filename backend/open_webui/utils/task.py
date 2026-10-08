@@ -64,7 +64,7 @@ async def prompt_template(template: str, user: Optional[Any] = None) -> str:
                     try:
                         from open_webui.models.groups import Groups
 
-                        user_groups = await Groups.get_groups_by_member_id(user_id)
+                        user_groups = await Groups.get_groups_by_member_id(user_id, include_inherited=True)
                         groups = ', '.join(g.name for g in user_groups)
                     except Exception:
                         pass

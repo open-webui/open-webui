@@ -86,7 +86,9 @@ async def get_skill_list(
         filter['direction'] = direction
 
     is_bypass_admin = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+    user_group_ids = {
+        group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+    }
 
     if not is_bypass_admin:
         filter['group_ids'] = user_group_ids

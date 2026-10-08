@@ -12,6 +12,7 @@
 	import {
 		config,
 		user,
+		models,
 		settings,
 		theme,
 		WEBUI_NAME,
@@ -30,6 +31,7 @@
 		playingNotificationSound,
 		channels,
 		channelId,
+		channelRequestQueues,
 		terminalServers,
 		connectedUserTerminals,
 		showControls,
@@ -77,6 +79,7 @@
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import MfaManagement from '$lib/components/auth/MfaManagement.svelte';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import { getUserSettings } from '$lib/apis/users';
 	import dayjs from 'dayjs';
@@ -99,13 +102,22 @@
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(async ({ willUnload, to }) => {
-		if (updated.current && !willUnload && to?.url) {
+		if (updated.current && !mfaManagement && !willUnload && to?.url) {
 			await unregisterServiceWorkers();
 			location.href = to.url.href;
 		}
 	});
 
 	setContext('i18n', i18n);
+	/** @type {import('$lib/components/auth/MfaManagement.svelte').MfaManagementFlow | null} */
+	let mfaManagement = null;
+	setContext(
+		'showMfaManagement',
+		/** @param {import('$lib/components/auth/MfaManagement.svelte').MfaManagementFlow} flow */
+		(flow) => {
+			mfaManagement = flow;
+		}
+	);
 
 	const bc = new BroadcastChannel('active-tab-channel');
 
@@ -206,8 +218,9 @@
 
 			if (version !== null || deploymentId !== null) {
 				if (
-					($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) ||
-					($WEBUI_DEPLOYMENT_ID !== null && deploymentId !== $WEBUI_DEPLOYMENT_ID)
+					!mfaManagement &&
+					(($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) ||
+						($WEBUI_DEPLOYMENT_ID !== null && deploymentId !== $WEBUI_DEPLOYMENT_ID))
 				) {
 					await unregisterServiceWorkers();
 					location.href = location.href;
@@ -501,6 +514,10 @@
 	};
 
 	const executeTool = async (data, cb, chatId) => {
+		if (!$config?.features?.enable_tool_servers) {
+			cb?.({ error: 'Tool servers are disabled' });
+			return;
+		}
 		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
 		const defaultInline =
 			data?.name === 'display_file' &&
@@ -562,16 +579,19 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
+		if (event.shared) return;
 		// Answer this session's availability check even when another chat is active.
 		if (
 			event?.data?.type === 'request:terminal:state' &&
 			event.data.data?.session_id === $socket?.id
 		) {
 			cb?.({
-				connected: [...$connectedUserTerminals.values()].some(
-					(shell) =>
-						shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
-				)
+				connected:
+					$config?.features?.enable_tool_servers &&
+					[...$connectedUserTerminals.values()].some(
+						(shell) =>
+							shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
+					)
 			});
 			return;
 		}
@@ -648,6 +668,7 @@
 				return;
 			} else if (type === 'request:terminal') {
 				try {
+					if (!$config?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 					const connection = resolveTerminalConnection(
 						data.terminal_id,
 						[],
@@ -882,6 +903,10 @@
 
 			if (type === 'message') {
 				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
+				const content = data?.content?.replace(
+					/<([@#])([^|>\s]+)(?:\|([^>]*))?>/g,
+					(_, trigger, id, label) => trigger + (label || id)
+				);
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
@@ -889,7 +914,7 @@
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
 						new Notification(`${title} / Open WebUI`, {
-							body: data?.content,
+							body: content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
 					}
@@ -902,7 +927,7 @@
 								`/channels/${event.channel_id}${data?.parent_id ? `?thread=${data.parent_id}` : ''}`
 							);
 						},
-						content: data?.content,
+						content,
 						title: `${title}`
 					},
 					duration: 15000,
@@ -1234,7 +1259,12 @@
 		};
 		window.addEventListener('resize', onResize);
 
-		user.subscribe(async (value) => {
+		let queueUserId = $user?.id;
+		const unsubscribeQueueUser = user.subscribe(async (value) => {
+			if (queueUserId !== value?.id) {
+				channelRequestQueues.set({});
+				queueUserId = value?.id;
+			}
 			if (value) {
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
@@ -1253,6 +1283,15 @@
 			}
 		});
 
+		/** @param {BeforeUnloadEvent} event */
+		const beforeUnloadHandler = (event) => {
+			if (Object.values($channelRequestQueues).some((queue) => queue.length)) {
+				event.preventDefault();
+				event.returnValue = '';
+			}
+		};
+		window.addEventListener('beforeunload', beforeUnloadHandler);
+
 		let backendConfig = null;
 		try {
 			backendConfig = await getBackendConfig();
@@ -1269,7 +1308,10 @@
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
-		await initI18n(localStorage?.locale, backendConfig?.i18n ?? {});
+		await initI18n(
+			localStorage?.locale ?? backendConfig?.default_locale,
+			backendConfig?.i18n ?? {}
+		);
 		if (!localStorage.locale) {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
@@ -1385,6 +1427,8 @@
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			window.removeEventListener('pagehide', handlePageHidden);
 			window.removeEventListener('pageshow', handlePageVisible);
+			window.removeEventListener('beforeunload', beforeUnloadHandler);
+			unsubscribeQueueUser();
 		};
 	});
 
@@ -1433,7 +1477,9 @@
 {/if}
 
 {#if loaded}
-	{#if $isApp}
+	{#if mfaManagement}
+		<MfaManagement flow={mfaManagement} onClose={() => (mfaManagement = null)} />
+	{:else if $isApp}
 		<div class="flex flex-row h-screen">
 			<AppSidebar />
 

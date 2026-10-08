@@ -138,7 +138,7 @@
 			{/if}
 		</div>
 
-		{#if $config?.features?.enable_plugins}
+		{#if $config?.features?.enable_tools}
 			<div class="flex flex-col w-full">
 				<Tooltip
 					className="flex w-full justify-between my-1"

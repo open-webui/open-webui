@@ -2,7 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { toast } from 'svelte-sonner';
 
-	import type { Token } from 'marked';
+	import type { Token, Tokens } from 'marked';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -46,6 +46,21 @@
 		return null;
 	};
 
+	const getLinkToken = (token: Tokens.Link | Tokens.Generic) => {
+		const isAutolink = !token.raw.startsWith('[');
+		const isBracketed = token.raw.startsWith('<');
+		// Use the source URL: decoding marked's escaped text also changes literal entities.
+		const text = isBracketed ? token.raw.slice(1, -1) : token.raw;
+		const href = isBracketed ? token.href.replace(token.text, () => text) : token.href;
+		return {
+			isAutolink,
+			href,
+			safeHref: safeLinkUrl(href),
+			noteId: getNoteIdFromHref(href),
+			text: isAutolink ? text : token.text
+		};
+	};
+
 	/**
 	 * Handle link clicks - intercept same-origin app URLs for in-app navigation
 	 */
@@ -74,27 +89,26 @@
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'link'}
-		{@const noteId = getNoteIdFromHref(token.href)}
-		{@const safeHref = safeLinkUrl(token.href)}
-		{#if noteId}
-			<NoteLinkToken {noteId} href={token.href} />
-		{:else if token.tokens}
+		{@const linkToken = getLinkToken(token)}
+		{#if linkToken.noteId}
+			<NoteLinkToken noteId={linkToken.noteId} href={linkToken.href} />
+		{:else if token.tokens && !linkToken.isAutolink}
 			<a
-				href={safeHref}
+				href={linkToken.safeHref}
 				target="_blank"
 				rel="nofollow"
 				title={token.title}
-				on:click={(e) => handleLinkClick(e, token.href)}
+				on:click={(e) => handleLinkClick(e, linkToken.href)}
 			>
 				<svelte:self id={`${id}-a`} tokens={token.tokens} {sourceIds} {onSourceClick} {done} />
 			</a>
 		{:else}
 			<a
-				href={safeHref}
+				href={linkToken.safeHref}
 				target="_blank"
 				rel="nofollow"
 				title={token.title}
-				on:click={(e) => handleLinkClick(e, token.href)}>{token.text}</a
+				on:click={(e) => handleLinkClick(e, linkToken.href)}>{linkToken.text}</a
 			>
 		{/if}
 	{:else if token.type === 'image'}
