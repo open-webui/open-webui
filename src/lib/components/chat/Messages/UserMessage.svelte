@@ -172,7 +172,7 @@
 		{#if (!($settings?.chatBubble ?? true) || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
 			<div
 				class={($settings?.chatBubble ?? true)
-					? 'mb-1 text-xs text-gray-400 dark:text-gray-500'
+					? 'mb-1 ps-2 text-xs text-gray-400 dark:text-gray-500'
 					: ''}
 			>
 				{#if $settings?.chatBubble ?? true}
