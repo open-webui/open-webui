@@ -370,8 +370,7 @@
 					bind:currentDate
 					on:createEvent={handleCreateEvent}
 					on:eventClick={handleEventClick}
-					on:navigate={handleNavigate}
-					on:viewChange={handleNavigate}
+					onNavigate={handleNavigate}
 				/>
 			</div>
 		</div>

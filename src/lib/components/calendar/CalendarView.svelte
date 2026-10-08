@@ -11,6 +11,7 @@
 	export let visibleCalendarIds: Set<string> = new Set();
 	export let view: 'month' | 'week' | 'day' = 'month';
 	export let currentDate: Date = new Date();
+	export let onNavigate: () => void = () => {};
 
 	const NS = 1_000_000;
 	const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -120,6 +121,7 @@
 
 	function handleDayClick(day: Date) {
 		currentDate = day;
+		onNavigate();
 		const ms = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9).getTime();
 		dispatch('createEvent', { start_at: ms * NS });
 	}
@@ -127,8 +129,7 @@
 	function goToDayView(day: Date) {
 		currentDate = day;
 		view = 'day';
-		dispatch('viewChange', view);
-		dispatch('navigate', { date: currentDate });
+		onNavigate();
 	}
 
 	function handleHourClick(day: Date, hour: number) {
