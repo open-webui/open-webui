@@ -3689,6 +3689,8 @@ def update_assistant_message_from_stream(assistant_message, raw):
             assistant_message['usage'] = merge_usage(assistant_message.get('usage'), raw_usage)
 
         for choice in data.get('choices', []):
+            if choice.get('finish_reason'):
+                assistant_message['finish_reason'] = choice['finish_reason']
             delta = choice.get('delta', {}) or {}
             content = delta.get('content')
             reasoning_content = delta.get('reasoning_content') or delta.get('reasoning') or delta.get('thinking')
@@ -4066,6 +4068,7 @@ async def outlet_filter_handler(ctx):
             if not message_list:
                 return
 
+        finish_reason = (ctx.get('assistant_message') or {}).get('finish_reason')
         outlet_data = {
             'model': model_id,
             'messages': [
@@ -4079,6 +4082,7 @@ async def outlet_filter_handler(ctx):
                     **({'output': copy.deepcopy(m['output'])} if m.get('output') else {}),
                     **({'usage': m['usage']} if m.get('usage') else {}),
                     **({'sources': m['sources']} if m.get('sources') else {}),
+                    **({'finish_reason': finish_reason} if finish_reason and m.get('id') == message_id else {}),
                 }
                 for m in message_list
             ],
@@ -4307,6 +4311,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
+                    finish_reason = choices[0].get('finish_reason') if choices else None
 
                     if save_to_chat:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -4326,6 +4331,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         'content': content,
                         'output': response_output,
                         **({'usage': usage} if usage else {}),
+                        **({'finish_reason': finish_reason} if finish_reason else {}),
                     }
                     await outlet_filter_handler(ctx)
                     await background_tasks_handler(ctx)
@@ -4361,10 +4367,12 @@ async def non_streaming_chat_response_handler(response, ctx):
     content = choices[0].get('message', {}).get('content') if choices else ''
     if ENABLE_API_OUTLET_FILTERS and (content or output):
         usage = normalize_usage(response_data.get('usage', {}) or {})
+        finish_reason = choices[0].get('finish_reason') if choices else None
         ctx['assistant_message'] = {
             **({'content': content} if content else {}),
             **({'output': output} if output else {}),
             **({'usage': usage} if usage else {}),
+            **({'finish_reason': finish_reason} if finish_reason else {}),
         }
         await outlet_filter_handler(ctx)
 
@@ -4768,6 +4776,7 @@ async def streaming_chat_response_handler(response, ctx):
                 content_parts = []
 
             usage = None
+            finish_reason = None
             last_response_id = None
 
             def full_output():
@@ -4867,6 +4876,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 async def stream_body_handler(response, form_data):
                     nonlocal usage
+                    nonlocal finish_reason
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
@@ -5210,6 +5220,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                 }
                                             )
                                         continue
+
+                                    if choices[0].get('finish_reason'):
+                                        finish_reason = choices[0]['finish_reason']
 
                                     delta = choices[0].get('delta', {})
                                     delta_type = 'content'
@@ -6513,6 +6526,7 @@ async def streaming_chat_response_handler(response, ctx):
                     else ''.join(content_parts) or get_output_text(current_output),
                     'output': current_output,
                     **({'usage': usage} if usage else {}),
+                    **({'finish_reason': finish_reason} if finish_reason else {}),
                 }
                 await outlet_filter_handler(ctx)
                 await background_tasks_handler(ctx)
