@@ -3316,6 +3316,7 @@ async def query_knowledge_files(
                 queries=[query],
                 embedding_function=lambda queries, prefix: embedding_function(queries, prefix=prefix, user=user_model),
                 k=count,
+                user=user_model,
             )
 
             if query_results and 'documents' in query_results:
