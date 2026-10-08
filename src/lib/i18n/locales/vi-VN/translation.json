@@ -498,7 +498,7 @@
 	"Copy Token": "Sao chép token",
 	"Copy URL": "Sao chép URL",
 	"Copying to clipboard was successful!": "Sao chép vào clipboard thành công!",
-	"Copyright (c)": "Bản quyền (c)",
+	"Copyright (c)": "Copyright (c)",
 	"CORS must be properly configured by the provider to allow requests from Open WebUI.": "CORS phải được cấu hình đúng bởi nhà cung cấp để cho phép các yêu cầu từ Open WebUI.",
 	"Could not check for updates": "Không thể kiểm tra cập nhật",
 	"Could not load release notes.": "Không thể tải mô tả những cập nhật mới.",
