@@ -26,6 +26,9 @@
 	let notificationEnabled = false;
 	let notificationSound = true;
 	let targets: NotificationTarget[] = [];
+	// Keep dynamically translated event keys visible to i18next-parser.
+	// $i18n.t('Chat finished'); $i18n.t('A chat run finished successfully.');
+	// $i18n.t('Chat failed'); $i18n.t('A chat run failed.');
 	let events: { event: string; label: string; description?: string }[] = [
 		{
 			event: 'chat.finished',

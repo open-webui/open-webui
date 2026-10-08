@@ -122,6 +122,8 @@
 		]
 	];
 
+	// Keep dynamically translated mode labels visible to i18next-parser.
+	// $i18n.t('Daily'); $i18n.t('Weekly'); $i18n.t('Cumulative');
 	const heatmapModes: Array<{ value: HeatmapMode; label: string }> = [
 		{ value: 'daily', label: 'Daily' },
 		{ value: 'weekly', label: 'Weekly' },
