@@ -142,7 +142,7 @@
 />
 
 <div
-	class=" flex w-full user-message group"
+	class="flex w-full user-message group {!isOwn && !message?.meta?.internal ? 'mb-2' : ''}"
 	dir={$settings.chatDirection}
 	id="message-{message.id}"
 	style="scroll-margin-top: 3rem;"

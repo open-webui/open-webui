@@ -24,7 +24,7 @@
 
 	let autoScroll = true;
 	let processing = '';
-	let messagesContainerElement: HTMLDivElement;
+	let messagesComponent;
 
 	// let chatId = $page.params.id;
 	let showModelSelector = false;
@@ -50,8 +50,9 @@
 	$: if ($page.params.id) {
 		(async () => {
 			if (await loadSharedChat()) {
-				await tick();
 				loaded = true;
+				await tick();
+				messagesComponent?.scrollToBottom();
 			} else if (localStorage.token) {
 				await goto('/');
 			} else {
@@ -214,6 +215,7 @@
 				<div class=" h-full w-full flex flex-col py-2" role="main">
 					<div class="w-full">
 						<Messages
+							bind:this={messagesComponent}
 							className="h-full flex pb-8"
 							{user}
 							chatId={$chatId}

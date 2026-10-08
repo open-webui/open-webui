@@ -144,15 +144,18 @@
 		})();
 	}
 
-	const scrollToBottom = () => {
+	export const scrollToBottom = () => {
 		const element = getMessagesContainer();
 		if (element) {
 			element.scrollTop = element.scrollHeight;
 
-			// Follow-up scroll to account for content-visibility: auto re-layouts
+			// Re-scroll across two frames as content-visibility resolves message heights.
 			requestAnimationFrame(() => {
 				if (element) {
 					element.scrollTop = element.scrollHeight;
+					requestAnimationFrame(() => {
+						element.scrollTop = element.scrollHeight;
+					});
 				}
 			});
 		}
