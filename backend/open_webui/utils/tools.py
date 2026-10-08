@@ -110,8 +110,9 @@ from open_webui.utils.headers import (
     normalize_bearer_token,
 )
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.mcp.client import MCPClient, OAuthTokenAuth
 from open_webui.utils.misc import is_string_allowed
+from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
 from open_webui.utils.terminals import (
     TERMINAL_CONTEXT_HEADER,
@@ -132,7 +133,6 @@ async def build_tool_server_headers(
     user,
     server_id: str = '',
     metadata: dict | None = None,
-    extra_params: dict | None = None,
 ) -> tuple[dict, dict]:
     """Build auth headers and cookies for a tool server connection.
 
@@ -142,7 +142,6 @@ async def build_tool_server_headers(
 
     Returns (headers, cookies).
     """
-    extra_params = extra_params or {}
     metadata = metadata or {}
 
     auth_type = connection.get('auth_type', 'bearer')
@@ -154,7 +153,7 @@ async def build_tool_server_headers(
     elif auth_type == 'session':
         headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
-        oauth_token = extra_params.get('__oauth_token__', None)
+        oauth_token = await get_system_oauth_token(request, user)
         if oauth_token:
             headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
     elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
@@ -173,7 +172,8 @@ async def build_tool_server_headers(
     # Interpolate template vars in custom connection headers
     connection_headers = connection.get('headers', None)
     if connection_headers and isinstance(connection_headers, dict):
-        headers.update(await get_custom_headers(connection_headers, user, metadata))
+        for key, value in (await get_custom_headers(connection_headers, user, metadata)).items():
+            headers['Authorization' if key.lower() == 'authorization' else key] = value
 
     # Add user info headers if enabled
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
@@ -191,7 +191,6 @@ async def connect_mcp_server(
     server_id: str,
     user,
     metadata: dict,
-    extra_params: dict,
 ) -> tuple[MCPClient, list[dict]] | None:
     """Resolve an MCP server connection, authenticate, and return (client, tool_specs).
 
@@ -215,22 +214,14 @@ async def connect_mcp_server(
         log.warning(f'Access denied to MCP server {server_id} for user {user.id}')
         return None
 
-    if mcp_server_connection.get('auth_type') == 'system_oauth' and not extra_params.get('__oauth_token__'):
-        session_id = request.cookies.get('oauth_session_id')
-        if session_id:
-            extra_params = {
-                **extra_params,
-                '__oauth_token__': await request.app.state.oauth_manager.get_oauth_token(user.id, session_id),
-            }
+    async def get_headers():
+        headers, _ = await build_tool_server_headers(
+            mcp_server_connection, request, user, server_id=server_id, metadata=metadata
+        )
+        return headers
 
-    headers, _ = await build_tool_server_headers(
-        mcp_server_connection,
-        request,
-        user,
-        server_id=server_id,
-        metadata=metadata,
-        extra_params=extra_params,
-    )
+    auth = OAuthTokenAuth(get_headers) if mcp_server_connection.get('auth_type') == 'system_oauth' else None
+    headers = {} if auth else await get_headers()
 
     if mcp_server_connection.get('auth_type') in ('oauth_2.1', 'oauth_2.1_static') and not headers.get('Authorization'):
         raise HTTPException(status_code=401, detail='Auth required')
@@ -240,6 +231,7 @@ async def connect_mcp_server(
         await client.connect(
             url=mcp_server_connection.get('url', ''),
             headers=headers if headers else None,
+            auth=auth,
         )
         function_name_filter_list = (mcp_server_connection.get('config') or {}).get('function_name_filter_list', '')
         if isinstance(function_name_filter_list, str):
@@ -504,18 +496,13 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                                 continue
 
                         metadata = extra_params.get('__metadata__', {})
-                        headers, cookies = await build_tool_server_headers(
-                            tool_server_connection,
-                            request,
-                            user,
-                            server_id=server_id,
-                            metadata=metadata,
-                            extra_params=extra_params,
-                        )
-                        headers.setdefault('Content-Type', 'application/json')
 
-                        async def make_tool_function(function_name, tool_server_data, headers, cookies):
+                        async def make_tool_function(function_name, tool_server_data, connection, server_id, metadata):
                             async def tool_function(**kwargs):
+                                headers, cookies = await build_tool_server_headers(
+                                    connection, request, user, server_id=server_id, metadata=metadata
+                                )
+                                headers.setdefault('Content-Type', 'application/json')
                                 return await execute_tool_server(
                                     url=tool_server_data['url'],
                                     headers=headers,
@@ -527,7 +514,9 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
                             return tool_function
 
-                        tool_function = await make_tool_function(function_name, tool_server_data, headers, cookies)
+                        tool_function = await make_tool_function(
+                            function_name, tool_server_data, tool_server_connection, server_id, metadata
+                        )
 
                         callable = await get_async_tool_function_and_apply_extra_params(
                             tool_function,

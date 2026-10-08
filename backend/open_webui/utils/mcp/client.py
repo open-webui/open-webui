@@ -57,17 +57,41 @@ def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=False)
 
 
+class OAuthTokenAuth(httpx.Auth):
+    """Resolve current credentials per request and recover from concurrent token rotation."""
+
+    requires_request_body = True
+
+    def __init__(self, get_headers):
+        self.get_headers = get_headers
+
+    async def async_auth_flow(self, request):
+        headers = httpx.Headers(await self.get_headers())
+        authorization = headers.get('Authorization')
+        if not authorization:
+            raise httpx.RequestError('No OAuth access token available', request=request)
+        request.headers.update(headers)
+        response = yield request
+
+        if response.status_code == 401:
+            headers = httpx.Headers(await self.get_headers())
+            if headers.get('Authorization') and headers['Authorization'] != authorization:
+                request.headers.update(headers)
+                yield request
+
+
 class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
         self.exit_stack = None
 
-    async def connect(self, url: str, headers: Optional[dict] = None):
+    async def connect(self, url: str, headers: Optional[dict] = None, auth: Optional[httpx.Auth] = None):
         async with AsyncExitStack() as exit_stack:
             try:
                 self._streams_context = streamablehttp_client(
                     url,
                     headers=headers,
+                    auth=auth,
                     httpx_client_factory=create_httpx_client
                     if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
                     else create_insecure_httpx_client,

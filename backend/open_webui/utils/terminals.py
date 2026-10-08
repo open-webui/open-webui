@@ -164,7 +164,6 @@ async def get_terminal_json(request, user, metadata: dict, path: str, extra_para
             request,
             user_model,
             metadata=metadata,
-            extra_params=extra_params,
         )
         headers['Accept'] = 'application/json'
         headers['X-User-Id'] = user_model.id

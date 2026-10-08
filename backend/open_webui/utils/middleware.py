@@ -53,7 +53,6 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.models import Models
 from open_webui.models.notes import Notes
-from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import UserModel, Users
 from open_webui.retrieval.utils import filter_source_metadata, get_sources_from_items
 from open_webui.routers.images import (
@@ -127,6 +126,7 @@ from open_webui.utils.misc import (
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
+from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
@@ -2952,7 +2952,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             server_id,
                             user,
                             metadata,
-                            extra_params,
                         )
                         if result is None:
                             continue
@@ -3739,42 +3738,6 @@ def update_assistant_message_from_stream(assistant_message, raw):
                     append_to_text_field(assistant_message, 'content', content)
                 else:
                     assistant_message['content'] = '' + content
-
-
-async def get_system_oauth_token(request, user):
-    """Get the system OAuth token for a user.
-
-    Primary path: use the oauth_session_id cookie (browser requests).
-    Fallback: look up the user's most recent OAuth session from the DB
-    (covers automations, API calls, and other cookie-less contexts).
-    """
-    oauth_token = None
-    try:
-        oauth_session_id = request.cookies.get('oauth_session_id', None)
-        if oauth_session_id:
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                user.id,
-                oauth_session_id,
-            )
-
-        # Fallback: no cookie (automation, API key, etc.) — use most recent session
-        if oauth_token is None:
-            from open_webui.models.oauth_sessions import OAuthSessions
-
-            sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
-            # Filter out MCP-provider sessions — their token refresh is handled
-            # separately by oauth_client_manager.  Passing them to the SSO
-            # oauth_manager causes a failed refresh and session deletion (#24618).
-            sessions = [s for s in sessions if not (s.provider or '').startswith('mcp:')]
-            if sessions:
-                best = max(sessions, key=lambda s: s.updated_at)
-                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                    user.id,
-                    best.id,
-                )
-    except Exception as e:
-        log.error(f'Error getting OAuth token: {e}')
-    return oauth_token
 
 
 async def background_tasks_handler(ctx):

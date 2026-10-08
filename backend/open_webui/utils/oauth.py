@@ -127,6 +127,41 @@ from open_webui.utils.json_codec import JSONCodec
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+
+async def get_system_oauth_token(request, user):
+    """Get the system OAuth token for a user.
+
+    Primary path: use the oauth_session_id cookie (browser requests).
+    Fallback: look up the user's most recent OAuth session from the DB
+    (covers automations, API calls, and other cookie-less contexts).
+    """
+    oauth_token = None
+    try:
+        oauth_session_id = request.cookies.get('oauth_session_id', None)
+        if oauth_session_id:
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                user.id,
+                oauth_session_id,
+            )
+
+        # Fallback: no cookie (automation, API key, etc.) — use most recent session
+        if oauth_token is None:
+            sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
+            # Filter out MCP-provider sessions — their token refresh is handled
+            # separately by oauth_client_manager.  Passing them to the SSO
+            # oauth_manager causes a failed refresh and session deletion (#24618).
+            sessions = [s for s in sessions if not (s.provider or '').startswith('mcp:')]
+            if sessions:
+                best = max(sessions, key=lambda s: s.updated_at)
+                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                    user.id,
+                    best.id,
+                )
+    except Exception as e:
+        log.error(f'Error getting OAuth token: {e}')
+    return oauth_token
+
+
 OAUTH_RESOURCE_PARAMETER_MODES = {'auto', 'include', 'omit'}
 
 OAUTH_RUNTIME_CONFIG = {

@@ -209,7 +209,7 @@ async def get_tool_specs(request: Request, id: str, user=Depends(get_verified_us
     try:
         # Keep connect, discovery and cleanup in one task for the MCP transport.
         async with asyncio.timeout(15):
-            result = await connect_mcp_server(request, id.removeprefix('server:mcp:'), user, {}, {})
+            result = await connect_mcp_server(request, id.removeprefix('server:mcp:'), user, {})
             if result is None:
                 raise HTTPException(status_code=404, detail='Tool not found')
             client, specs = result
