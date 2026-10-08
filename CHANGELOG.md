@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎒 **Skills built-in tool per model.** The Builtin Tools section of a model now has a Skills switch, on by default, so a model can be kept from finding and loading skills on its own while skills a user picks for a chat still apply. [Commit](https://github.com/open-webui/open-webui/commit/55e1c44c946828ab92c94934c12c4fc8aa7568fd)
 - 🪞 **Cloning chats you can only read.** A chat you open read only, such as one in a folder shared with you, now shows a Clone Chat button that copies it into your own chats from the message you are viewing, for anyone allowed to import chats. [Commit](https://github.com/open-webui/open-webui/commit/c6dd9a451abef12e93e19624a64cfb8a9a1f6465)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for German, Italian, Turkish, Persian, Indonesian, Catalan, French, Malay, Simplified Chinese, Hindi, Japanese, Romanian, Czech, Slovenian, Croatian, Slovak, Dutch, Hungarian and Tamil were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for German, Italian, Turkish, Persian, Indonesian, Catalan, French, Malay, Simplified Chinese, Hindi, Japanese, Romanian, Czech, Slovenian, Croatian, Slovak, Dutch, Hungarian, Tamil, Spanish, Vietnamese and Norwegian Bokmål were enhanced and expanded.
 
 ### Fixed
 
