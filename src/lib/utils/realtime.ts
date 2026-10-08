@@ -95,7 +95,7 @@ export class RealtimeCall {
 	private configuration = '';
 	private chatContext = '';
 	private cancelRequested = false;
-	private receivingSpeech = false;
+	private receivingSpeech = '';
 	private savingHistory = 0;
 	private lastPong = 0;
 	private activeResponse = '';
@@ -349,22 +349,29 @@ export class RealtimeCall {
 			this.syncContext();
 			this.audio?.port.postMessage({ type: 'capture', enabled: !this.muted });
 		} else if (type === 'input_audio_buffer.speech_started') {
-			this.receivingSpeech = true;
+			this.receivingSpeech = event.item_id;
 			this.userSpeaking = !this.muted;
 			this.stopSpeaking();
 		} else if (type === 'input_audio_buffer.speech_stopped') {
-			this.userSpeaking = false;
-		} else if (type === 'conversation.item.input_audio_transcription.failed') {
-			this.receivingSpeech = false;
-			this.userSpeaking = false;
-			this.enqueue({ type: 'bridge.status', status: 'transcription_failed' });
-		} else if (type === 'conversation.item.input_audio_transcription.completed') {
-			this.receivingSpeech = false;
-			this.userSpeaking = false;
+			if (this.receivingSpeech === event.item_id) this.userSpeaking = false;
+		} else if (
+			type === 'conversation.item.input_audio_transcription.failed' ||
+			type === 'conversation.item.input_audio_transcription.completed'
+		) {
+			// Transcription events from older segments can arrive during newer speech.
+			if (this.receivingSpeech === event.item_id) {
+				this.receivingSpeech = '';
+				this.userSpeaking = false;
+			}
 			if (this.inputs.has(event.item_id)) return;
-			const text = event.transcript?.trim();
+			const failed = type === 'conversation.item.input_audio_transcription.failed';
+			const text = failed ? '' : event.transcript?.trim();
 			if (!text) {
-				this.enqueue({ type: 'bridge.status', status: 'transcription_failed' });
+				// Empty VAD segments are not requests and must not produce assistant replies.
+				if (failed)
+					this.options.error('A voice segment could not be transcribed. Please try again.');
+				this.options.change();
+				this.flush();
 				return;
 			}
 			const session = this.session;
@@ -751,7 +758,7 @@ export class RealtimeCall {
 		this.playbackActive = false;
 		this.responseRequested = false;
 		this.cancelRequested = false;
-		this.receivingSpeech = false;
+		this.receivingSpeech = '';
 		this.userSpeaking = false;
 		this.activeResponse = '';
 		this.pending = undefined;

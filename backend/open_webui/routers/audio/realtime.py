@@ -28,7 +28,6 @@ CALL_STATUSES = {
     'working': 'I am working on your request.',
     'approval': 'Please review the approval or question in chat. I will wait for you there.',
     'deferred': 'Please complete the required settings or confirmation in chat, then try again.',
-    'transcription_failed': 'I could not transcribe that. Please repeat it.',
 }
 
 CHAT_TOOL = {
