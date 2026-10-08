@@ -5464,6 +5464,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                     output.insert(message_index, reasoning_item)
                                                 else:
                                                     output.append(reasoning_item)
+                                                await emit_response_completion_event(
+                                                    {
+                                                        'type': 'response.output_item.added',
+                                                        'output_index': output.index(reasoning_item),
+                                                        'item': reasoning_item.copy(),
+                                                    }
+                                                )
                                             else:
                                                 reasoning_item = output[-1]
 
@@ -5491,20 +5498,20 @@ async def streaming_chat_response_handler(response, ctx):
                                                 ),
                                                 'delta': reasoning_content,
                                             }
-                                            delta_type = 'response.reasoning_text.delta'
+                                            await emit_response_completion_event(data)
+                                            data = None
 
                                         if reasoning_detail_items:
                                             merge_streamed_reasoning_details(
                                                 reasoning_item.setdefault('reasoning_details', []),
                                                 reasoning_detail_items,
                                             )
+                                            await flush_pending_delta_data()
+                                            await event_emitter(
+                                                {'type': 'chat:completion', 'data': {'output': full_output()}}
+                                            )
                                             await save_current_response_stream()
-                                            # Providers such as OpenRouter send reasoning_details
-                                            # alongside the reasoning text: only drop the event when
-                                            # the details were all there was to report, otherwise the
-                                            # reasoning delta never reaches the client.
-                                            if not reasoning_content:
-                                                data = None
+                                            data = None
 
                                     if value:
                                         if (
@@ -5518,6 +5525,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                 reasoning_item['ended_at'] - reasoning_item['started_at']
                                             )
                                             reasoning_item['status'] = 'completed'
+                                            await emit_response_completion_event(
+                                                {
+                                                    'type': 'response.output_item.done',
+                                                    'output_index': len(output) - 1,
+                                                    'item': reasoning_item.copy(),
+                                                }
+                                            )
 
                                             output.append(
                                                 {
