@@ -5392,9 +5392,10 @@ async def streaming_chat_response_handler(response, ctx):
                                             if message_files is None:
                                                 message_files = image_file_list
 
+                                        # 'files' would make the emitter save these again.
                                         await event_emitter(
                                             {
-                                                'type': 'files',
+                                                'type': 'chat:message:files',
                                                 'data': {'files': message_files},
                                             }
                                         )
