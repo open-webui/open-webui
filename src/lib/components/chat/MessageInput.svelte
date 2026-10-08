@@ -2715,7 +2715,7 @@
 										{#if !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
-												<Tooltip content={$i18n.t(callActive ? 'Call in progress' : 'Voice mode')}>
+												<Tooltip content={callActive ? $i18n.t('Call in progress') : $i18n.t('Voice mode')}>
 													<button
 														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-[0.3125rem] self-center"
 														class:call-active={callActive}
@@ -2781,7 +2781,7 @@
 																);
 															}
 														}}
-														aria-label={$i18n.t(callActive ? 'Return to call' : 'Voice mode')}
+														aria-label={callActive ? $i18n.t('Return to call') : $i18n.t('Voice mode')}
 													>
 														<Voice className="size-5" strokeWidth="2.5" />
 													</button>
