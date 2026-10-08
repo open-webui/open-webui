@@ -17,6 +17,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     MCP_INITIALIZE_TIMEOUT,
 )
+from open_webui.utils.json_codec import JSONCodec
 
 
 def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
@@ -137,7 +138,7 @@ class MCPClient:
 
         return tool_specs
 
-    async def call_tool(self, function_name: str, function_args: dict) -> Optional[dict]:
+    async def call_tool(self, function_name: str, function_args: dict) -> list[dict]:
         if not self.session:
             raise RuntimeError('MCP client is not connected.')
 
@@ -150,12 +151,29 @@ class MCPClient:
             raise Exception('No result returned from MCP tool call.')
 
         result_dict = result.model_dump(mode='json')
-        result_content = result_dict.get('content', {})
+        result_content = result_dict['content']
 
         if result.isError:
             raise Exception(result_content)
-        else:
+
+        structured_content = result_dict.get('structuredContent')
+        if structured_content is None:
             return result_content
+
+        # Compare serialized JSON: Python equality treats True and 1 as the same value.
+        structured_json = JSONCodec.dumps(structured_content, sort_keys=True)
+        for item in result_content:
+            if item['type'] != 'text':
+                continue
+            try:
+                text_content = JSONCodec.loads(item['text'])
+            except JSONCodec.JSONDecodeError:
+                continue
+            if JSONCodec.dumps(text_content, sort_keys=True) == structured_json:
+                return result_content
+
+        result_content.append({'type': 'text', 'text': structured_json})
+        return result_content
 
     async def list_resources(self, cursor: Optional[str] = None) -> Optional[dict]:
         if not self.session:
