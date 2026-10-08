@@ -85,6 +85,9 @@ async def has_access_to_file(
         )
         if accessible_ids:
             return True
+        for chat_id in shared_chat_ids:
+            if await Chats.get_accessible_chat_by_id(chat_id, user, db=db):
+                return True
 
     # Note attachment JSON is user-controlled, so only the file owner's notes can grant access.
     if access_type == 'read':

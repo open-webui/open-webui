@@ -1263,8 +1263,10 @@ async def chat_completion(
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
         chat_id = form_data.pop('chat_id', None) or ''
         chat_variables = form_data.pop('chat_variables', None)
-        if chat_variables is None:
-            existing_chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
+        existing_chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
+        if existing_chat and existing_chat.user_id != user.id:
+            chat_variables = {}
+        elif chat_variables is None:
             chat_variables = existing_chat.variables if existing_chat else {}
 
         chat_variables = normalize_chat_variables(chat_variables)
@@ -1401,6 +1403,7 @@ async def chat_completion(
 
                     if user_message_id and user_message:
                         user_message['childrenIds'] = all_assistant_ids
+                        user_message['user_id'] = user.id
                         history_messages[user_message_id] = user_message
 
                     for entry in message_ids:
@@ -1455,7 +1458,7 @@ async def chat_completion(
                         subject_id=chat_id,
                         data={'title': 'New Chat'},
                     )
-                    await emit_chat_list_event(metadata, chat_id)
+                    await emit_chat_list_event({**metadata, 'message_id': user_message_id}, chat_id)
                     if user_message_id:
                         await publish_event(
                             request,
@@ -1524,56 +1527,41 @@ async def chat_completion(
 
                         asyncio.create_task(run_initial_title_generation())
                 else:
-                    # Existing chat — verify ownership
-                    if not await Chats.is_chat_owner(chat_id, user.id) and not (
-                        user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS
-                    ):
-                        raise HTTPException(
-                            status_code=status.HTTP_404_NOT_FOUND,
-                            detail=ERROR_MESSAGES.DEFAULT(),
-                        )
+                    chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
+                    if not chat:
+                        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
 
                     user_message = metadata.get('user_message') or {}
-                    selected_chat_models = user_message.get('models') if isinstance(user_message, dict) else None
-                    if not isinstance(selected_chat_models, list) or not selected_chat_models:
-                        selected_chat_models = [entry.get('model_id') for entry in message_ids if entry.get('model_id')]
-
-                    # Persist chat-level fields the frontend used to save on every message.
-                    # The old frontend saveChatHandler did this on every message;
-                    # now the backend owns persistence.
-                    chat_files = metadata.get('files')
-                    chat_fields = {}
-                    if chat_files is not None:
-                        chat_fields['files'] = chat_files
-                    if selected_chat_models:
-                        chat_fields['models'] = selected_chat_models
-                    if chat_fields:
-                        await Chats.update_chat_by_id(chat_id, chat_fields, touch=False)
-
-                    await Chats.update_chat_variables_by_id(chat_id, chat_variables)
-
-                    # Save user message to DB
-                    if user_message and user_message.get('id'):
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            chat_id,
-                            user_message['id'],
-                            user_message,
+                    assistant_message_id = metadata.get('assistant_message_id')
+                    if assistant_message_id:
+                        message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
+                        if not message or (message.get('user_id') or chat.user_id) != user.id:
+                            raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+                        if any(entry.get('message_id') != assistant_message_id for entry in message_ids):
+                            raise HTTPException(status_code=400, detail='Invalid response ID.')
+                        metadata['user_message_id'] = message.get('parentId')
+                    else:
+                        turn = await Chats.insert_chat_turn(chat_id, user, user_message, message_ids)
+                        event_emitter = await get_event_emitter(
+                            {**metadata, 'message_id': turn['currentId']}, update_db=False
                         )
+                        turn['messages'] = {
+                            mid: {key: value for key, value in message.items() if key != 'meta'}
+                            for mid, message in turn['messages'].items()
+                        }
+                        await event_emitter({'type': 'chat:messages', 'data': turn})
                         await emit_chat_list_event({**metadata, 'message_id': user_message['id']}, chat_id)
-                        await publish_event(
-                            request,
-                            EVENTS.MESSAGE_CREATED,
-                            actor=user,
-                            subject_id=user_message['id'],
-                            data={
-                                'chat_id': chat_id,
-                                'role': user_message.get('role', 'user'),
-                                'content_preview': user_message.get('content', '')[:300],
-                            },
-                        )
-                        if not getattr(request.state, 'internal', False) and not (user_message.get('meta') or {}).get(
-                            'internal'
-                        ):
+                        for message_id, message in turn['messages'].items():
+                            if message_id != user_message['id'] and message.get('parentId') != user_message['id']:
+                                continue
+                            await publish_event(
+                                request,
+                                EVENTS.MESSAGE_CREATED,
+                                actor=user,
+                                subject_id=message_id,
+                                data={'chat_id': chat_id, 'role': message['role'], 'model': message.get('model')},
+                            )
+                        if not getattr(request.state, 'internal', False):
                             try:
                                 from open_webui.utils.timers import cancel_timers_for_chat
 
@@ -1581,91 +1569,30 @@ async def chat_completion(
                             except Exception:
                                 log.exception('Failed to cancel chat.user_message timers for chat %s', chat_id)
 
-                        # Link grandparent → user message (childrenIds)
-                        grandparent_id = user_message.get('parentId')
-                        if grandparent_id:
-                            grandparent = await Chats.get_message_by_id_and_message_id(chat_id, grandparent_id)
-                            if grandparent:
-                                child_ids = grandparent.get('childrenIds', [])
-                                if user_message['id'] not in child_ids:
-                                    child_ids.append(user_message['id'])
-                                    await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                        chat_id, grandparent_id, {'childrenIds': child_ids}
-                                    )
+                    if chat.user_id == user.id:
+                        selected_chat_models = user_message.get('models') or [
+                            entry['model_id'] for entry in message_ids
+                        ]
+                        chat_fields = {'models': selected_chat_models}
+                        if metadata.get('files') is not None:
+                            chat_fields['files'] = metadata['files']
+                        await Chats.update_chat_by_id(chat_id, chat_fields, touch=False)
+                        await Chats.update_chat_variables_by_id(chat_id, chat_variables)
+                    else:
+                        tasks = {
+                            key: value
+                            for key, value in (tasks or {}).items()
+                            if key not in (TASKS.TITLE_GENERATION, TASKS.TAGS_GENERATION)
+                        } or None
 
-                    # Insert chat files from user message if any
                     user_message_files = user_message.get('files', [])
                     if user_message_files:
-                        try:
-                            await Chats.insert_chat_files(
-                                chat_id,
-                                user_message.get('id'),
-                                [
-                                    file_item.get('id')
-                                    for file_item in user_message_files
-                                    if file_item.get('type') == 'file'
-                                ],
-                                user.id,
-                            )
-                        except Exception as e:
-                            log.debug('Error inserting chat files: %s', e)
-                            pass
-
-                    # Save ALL assistant placeholders
-                    user_message_id = metadata.get('user_message_id')
-                    all_assistant_ids = [entry['message_id'] for entry in message_ids if entry.get('message_id')]
-
-                    # Link user message → all assistant messages (childrenIds)
-                    if user_message_id and all_assistant_ids:
-                        existing_user_message = await Chats.get_message_by_id_and_message_id(chat_id, user_message_id)
-                        if existing_user_message:
-                            child_ids = existing_user_message.get('childrenIds', [])
-                            for assistant_id in all_assistant_ids:
-                                if assistant_id not in child_ids:
-                                    child_ids.append(assistant_id)
-                            await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                chat_id,
-                                user_message_id,
-                                {'childrenIds': child_ids},
-                            )
-
-                    # Save each assistant placeholder
-                    for entry in message_ids:
-                        target_model_id = entry['model_id']
-                        assistant_message_id = entry['message_id']
-                        if assistant_message_id and assistant_message_id == metadata.get('assistant_message_id'):
-                            continue
-                        if assistant_message_id:
-                            assistant_message = {
-                                'id': assistant_message_id,
-                                'parentId': user_message_id,
-                                'childrenIds': [],
-                                'role': 'assistant',
-                                'content': '',
-                                'done': False,
-                                'model': target_model_id,
-                                'timestamp': int(time.time()),
-                            }
-                            # Preserve the side-by-side column index so duplicate
-                            # models don't collapse into one another on reload.
-                            if entry.get('modelIdx') is not None:
-                                assistant_message['modelIdx'] = entry['modelIdx']
-                            await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                chat_id,
-                                assistant_message_id,
-                                assistant_message,
-                            )
-                            await publish_event(
-                                request,
-                                EVENTS.MESSAGE_CREATED,
-                                actor=user,
-                                subject_id=assistant_message_id,
-                                data={
-                                    'chat_id': chat_id,
-                                    'role': 'assistant',
-                                    'model': target_model_id,
-                                },
-                            )
+                        await Chats.insert_chat_files(
+                            chat_id,
+                            user_message.get('id'),
+                            [file.get('id') for file in user_message_files if file.get('type') == 'file'],
+                            user.id,
+                        )
 
         request.state.metadata = metadata
         form_data['metadata'] = metadata
@@ -1685,12 +1612,15 @@ async def chat_completion(
             try:
                 if not metadata.get('direct'):
                     target = (
-                        model_info if form_data['model'] == model_id
+                        model_info
+                        if form_data['model'] == model_id
                         else await Models.get_model_by_id(form_data['model'])
                     )
                     controls = target.params.model_dump().get('model_controls', {}) if target else {}
                     form_data['params'] = apply_model_controls(
-                        copy.deepcopy(form_data.get('params') or {}), controls, model_controls.get(form_data['model'], {})
+                        copy.deepcopy(form_data.get('params') or {}),
+                        controls,
+                        model_controls.get(form_data['model'], {}),
                     )
                 ctx = None
                 # Saved chats load the message after approved tool calls run, so their results are kept
@@ -1863,6 +1793,11 @@ async def chat_completion(
                 'message_id': assistant_message_id,
                 'task_id': str(uuid4()),
             }
+
+            if is_saved_chat_id(chat_id):
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
+                    chat_id, assistant_message_id, {'meta': {'task_id': per_model_metadata['task_id']}}, touch=False
+                )
 
             # Per-model form_data: own model
             model_form_data = {
@@ -2200,11 +2135,14 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if owner_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS):
             return {'task_ids': []}
     else:
-        chat = await Chats.get_chat_by_id(chat_id)
-        if chat is None or (chat.user_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS)):
+        chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
+        if chat is None:
             return {'task_ids': []}
 
     task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
+
+    if not socket_id:
+        task_ids = await Chats.filter_task_ids_by_user_id(chat, user.id, task_ids)
 
     log.debug('Task IDs for chat %s: %s', chat_id, task_ids)
     return {'task_ids': task_ids}
@@ -2219,14 +2157,24 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if owner_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     else:
-        chat = await Chats.get_chat_by_id(chat_id)
-        if chat is None or (chat.user_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS)):
+        chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
+        if chat is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
-    result = await stop_item_tasks(request.app.state.redis, chat_id)
+    if socket_id:
+        result = await stop_item_tasks(request.app.state.redis, chat_id)
+    else:
+        task_ids = await Chats.filter_task_ids_by_user_id(
+            chat, user.id, await list_task_ids_by_item_id(request.app.state.redis, chat_id)
+        )
+        result = {'status': True, 'message': 'No tasks found.'}
+        for task_id in task_ids:
+            result = await stop_task(request.app.state.redis, task_id)
 
     if not socket_id and str(result.get('message', '')).startswith('No tasks found'):
         messages_map = await Chats.get_messages_map_by_chat_id(chat_id) or {}
         for message_id, message in messages_map.items():
+            if (message.get('user_id') or chat.user_id) != user.id:
+                continue
             if message.get('role') != 'assistant' or message.get('done') is not False:
                 continue
 
@@ -2254,7 +2202,7 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
 
             event_emitter = await get_event_emitter(
                 {
-                    'user_id': chat.user_id,
+                    'user_id': user.id,
                     'chat_id': chat_id,
                     'message_id': message_id,
                 },

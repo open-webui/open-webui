@@ -579,6 +579,7 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
+		if (event.shared) return;
 		// Answer this session's availability check even when another chat is active.
 		if (
 			event?.data?.type === 'request:terminal:state' &&

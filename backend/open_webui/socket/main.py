@@ -529,7 +529,7 @@ async def user_join(sid, data):
         'last_seen_at': int(time.time()),
     }
 
-    SESSION_POOL[sid] = socket_user
+    SESSION_POOL[sid] = {**socket_user, 'chat_ids': (SESSION_POOL.get(sid) or {}).get('chat_ids', [])}
     await sio.save_session(sid, {'user': socket_user, 'token': auth['token']})
     LOCAL_AUTHENTICATED_SIDS.add(sid)
     await sio.enter_room(sid, f'user:{user.id}')
@@ -544,11 +544,40 @@ async def user_join(sid, data):
     return {'id': user.id, 'name': user.name}
 
 
+async def refresh_chat_access(chat_id=None):
+    # The pool includes sessions on other workers; Socket.IO routes room changes via Redis.
+    access = {}
+    for batch in get_session_pool_batches():
+        for sid, session in batch:
+            if not session:
+                continue
+            chat_ids = set(session.get('chat_ids') or [])
+            for cid in list(chat_ids):
+                if chat_id and cid != chat_id:
+                    continue
+                key = (cid, session['id'])
+                if key not in access:
+                    user = await Users.get_user_by_id(session['id'])
+                    access[key] = bool(user and await Chats.get_accessible_chat_by_id(cid, user))
+                if not access[key]:
+                    await sio.leave_room(sid, f'chat:{cid}')
+                    chat_ids.discard(cid)
+                await sio.emit(
+                    'events', {'chat_id': cid, 'shared': True, 'data': {'type': 'chat:access', 'data': {}}}, to=sid
+                )
+            if chat_ids != set(session.get('chat_ids') or []):
+                SESSION_POOL[sid] = {**session, 'chat_ids': list(chat_ids)}
+
+
 @sio.on('heartbeat')
 async def heartbeat(sid, data):
     user = await get_socket_session_user(sid)
     if user:
-        SESSION_POOL[sid] = {**user, 'last_seen_at': int(time.time())}
+        SESSION_POOL[sid] = {
+            **user,
+            'chat_ids': (SESSION_POOL.get(sid) or {}).get('chat_ids', []),
+            'last_seen_at': int(time.time()),
+        }
         await Users.update_last_active_by_id(user['id'])
 
 
@@ -670,6 +699,24 @@ async def chat_events(sid, data):
 
     event_data = data.get('data', {})
     event_type = event_data.get('type')
+
+    if event_type in {'join', 'leave'}:
+        chat_id = data.get('chat_id')
+        if not isinstance(chat_id, str) or not is_saved_chat_id(chat_id):
+            return False
+        session = SESSION_POOL.get(sid) or user
+        chat_ids = set(session.get('chat_ids') or [])
+        if event_type == 'leave':
+            await sio.leave_room(sid, f'chat:{chat_id}')
+            chat_ids.discard(chat_id)
+        else:
+            reader = await Users.get_user_by_id(user['id'])
+            if not reader or not await Chats.get_accessible_chat_by_id(chat_id, reader):
+                return False
+            await sio.enter_room(sid, f'chat:{chat_id}')
+            chat_ids.add(chat_id)
+        SESSION_POOL[sid] = {**session, 'chat_ids': list(chat_ids)}
+        return True
 
     if event_type == 'last_read_at':
         read_update = await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
@@ -1208,7 +1255,11 @@ async def get_event_emitter(request_info, update_db=True):
     if (request_info.get('chat_id') or '').startswith('channel:'):
         return await _make_channel_emitter(request_info)
 
+    last_shared_emit = 0.0
+    output = None
+
     async def __event_emitter__(event_data):
+        nonlocal last_shared_emit, output
         user_id = request_info['user_id']
         chat_id = request_info['chat_id']
         message_id = request_info['message_id']
@@ -1219,8 +1270,7 @@ async def get_event_emitter(request_info, update_db=True):
             return
 
         room = f'user:{user_id}'
-        # Local rooms are authoritative; Redis may have listeners on another instance.
-        if WEBSOCKET_MANAGER == 'redis' or room in sio.manager.rooms.get('/', {}):
+        if event_data.get('type') != 'chat:messages':
             await sio.emit(
                 'events',
                 {
@@ -1231,6 +1281,55 @@ async def get_event_emitter(request_info, update_db=True):
                 },
                 room=room,
             )
+
+        if not internal and is_saved_chat_id(chat_id):
+            event_type = event_data.get('type')
+            shared_event = None
+            if event_type in {
+                'chat:messages',
+                'chat:active',
+                'status',
+                'source',
+                'citation',
+                'files',
+                'embeds',
+                'chat:message:error',
+                'chat:tasks:cancel',
+                'chat:message:follow_ups',
+            }:
+                shared_event = event_data
+            elif event_type in {'chat:completion', 'response:completion'}:
+                data = event_data.get('data') or {}
+                if isinstance(data.get('output'), list):
+                    output = copy.deepcopy(data['output'])
+                elif event_type == 'response:completion':
+                    from open_webui.utils.middleware import handle_responses_streaming_event
+
+                    output, _ = handle_responses_streaming_event(data, output or [])
+                now = time.monotonic()
+                if not data.get('type', '').endswith('.delta') or now - last_shared_emit >= 0.15:
+                    last_shared_emit = now
+                    payload = {
+                        key: value
+                        for key, value in data.items()
+                        if key in {'done', 'error', 'usage', 'finish_reason', 'content', 'selected_model_id', 'sources'}
+                    }
+                    if output is not None:
+                        payload['output'] = output
+                    shared_event = {'type': 'chat:completion', 'data': payload}
+            if shared_event:
+                await sio.emit(
+                    'events',
+                    {
+                        'chat_id': chat_id,
+                        'message_id': message_id,
+                        'user_id': user_id,
+                        'shared': True,
+                        'data': shared_event,
+                    },
+                    room=f'chat:{chat_id}',
+                    skip_sid=request_info.get('session_id'),
+                )
 
         if save_to_chat:
             event_type = event_data.get('type')

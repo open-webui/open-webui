@@ -106,6 +106,11 @@
 		await chatId.set(shareId);
 		chat = await getChatByShareId(token, shareId).catch(() => null);
 
+		if (chat?.chat?.share_mode === 'continue' && chat.id !== shareId) {
+			await goto(`/c/${chat.id}`, { replaceState: true });
+			return;
+		}
+
 		if (chat) {
 			user = token
 				? await getUserInfoById(token, chat.user_id).catch((error) => {

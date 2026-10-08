@@ -69,6 +69,7 @@
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 
 	interface MessageType {
+		user_id?: string;
 		id: string;
 		model: string;
 		content: string;
@@ -172,6 +173,7 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
+	export let shareMode: 'continue' | null = null;
 	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
@@ -849,10 +851,11 @@
 									floatingButtons={message?.done &&
 										!readOnly &&
 										($settings?.showFloatingActionButtons ?? true)}
-									save={!readOnly}
+									save={(!readOnly && (!message.user_id || message.user_id === $user?.id)) ||
+										(shareMode === 'continue' && message.user_id === $user?.id)}
 									preview={!readOnly}
 									{compactPreview}
-									{editCodeBlock}
+									editCodeBlock={!readOnly && editCodeBlock}
 									{topPadding}
 									done={message?.done ?? false}
 									allowEmbeds={!readOnly}
@@ -1253,8 +1256,8 @@
 									</Tooltip>
 								{/if}
 
-								{#if !readOnly}
-									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (shareMode === 'continue' && message.user_id === $user?.id)}
+									{#if !readOnly && !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Good Response')}
@@ -1481,7 +1484,7 @@
 										{/if}
 									{/if}
 
-									{#each model?.actions ?? [] as action}
+									{#each (!readOnly && model?.actions) || [] as action}
 										<Tooltip
 											content={resolveLocalizedFunction(
 												action,

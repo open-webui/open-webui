@@ -12,6 +12,7 @@ from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
+from open_webui.models.shared_chats import ChatShareMode
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.config import Config
 from open_webui.models.chats import Chats
@@ -526,6 +527,7 @@ async def update_folder_is_expanded_by_id(
 
 class FolderAccessGrantsForm(BaseModel):
     access_grants: list[dict]
+    share_mode: ChatShareMode = None
 
 
 @router.post('/{id}/access/update')
@@ -561,6 +563,10 @@ async def update_folder_access_by_id(
     )
 
     await AccessGrants.set_access_grants('folder', id, form_data.access_grants, db=db)
+    if 'share_mode' in form_data.model_fields_set:
+        folder = await Folders.update_folder_by_id_and_user_id(
+            id, folder.user_id, FolderUpdateForm(data={'share_mode': form_data.share_mode}), db=db
+        )
 
     grants = await AccessGrants.get_grants_by_resource('folder', id, db=db)
     await publish_event(

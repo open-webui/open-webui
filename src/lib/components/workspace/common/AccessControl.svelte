@@ -565,6 +565,8 @@
 		{/if}
 	</div>
 
+	<slot />
+
 	{#if share}
 		<div class="flex items-center justify-between text-xs font-normal text-gray-500 my-0.5">
 			<div>

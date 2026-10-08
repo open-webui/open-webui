@@ -692,7 +692,21 @@ def handle_responses_streaming_event(
             delta_type = parts[1]
             delta = data.get('delta', '')
 
-            output_index = data.get('output_index', len(current_output) - 1)
+            output_index = data.get('output_index', max(len(current_output) - 1, 0))
+
+            # Chat Completions can start an item with a delta, without an added event.
+            if output_index >= len(current_output):
+                current_output = list(current_output)
+                while len(current_output) <= output_index:
+                    current_output.append(
+                        {'type': 'message', 'status': 'in_progress', 'role': 'assistant', 'content': []}
+                    )
+                current_output[output_index].update(
+                    id=data.get('item_id'),
+                    type='reasoning'
+                    if delta_type.startswith('reasoning')
+                    else ('function_call' if delta_type == 'function_call_arguments' else 'message'),
+                )
 
             if current_output and 0 <= output_index < len(current_output):
                 new_output = list(current_output)
@@ -1832,10 +1846,10 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     if not is_saved_chat_id(chat_id):
         message_list = form_data.get('messages', [])
     else:
-        chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+        chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
 
         messages_map = chat.chat.get('history', {}).get('messages', {})
-        message_id = chat.chat.get('history', {}).get('currentId')
+        message_id = metadata.get('user_message_id') or chat.chat.get('history', {}).get('currentId')
         message_list = get_message_list(messages_map, message_id)
 
     user_message = get_last_user_message(message_list)

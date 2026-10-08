@@ -43,6 +43,7 @@
 	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let shareMode: 'continue' | null = null;
 	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
@@ -67,7 +68,7 @@
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
-				{user}
+				user={history.messages[messageId].user ?? user}
 				{chatId}
 				{history}
 				{messageId}
@@ -118,6 +119,7 @@
 				{editCodeBlock}
 				{topPadding}
 				{onInsertToNote}
+				{shareMode}
 			/>
 		{:else}
 			{#key messageId}
@@ -148,6 +150,7 @@
 					{editCodeBlock}
 					{topPadding}
 					{onInsertToNote}
+					{shareMode}
 				/>
 			{/key}
 		{/if}

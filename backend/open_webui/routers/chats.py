@@ -30,7 +30,7 @@ from open_webui.models.chats import (
 )
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
-from open_webui.models.shared_chats import SharedChatResponse, SharedChats
+from open_webui.models.shared_chats import ChatShareMode, ShareChatForm, SharedChatResponse, SharedChats
 from open_webui.models.tags import TagModel, Tags
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
@@ -125,6 +125,20 @@ async def can_read_shared_chat(user, shared, db: AsyncSession) -> bool:
         permission='read',
         db=db,
     )
+
+
+def shared_chat_response(chat, user=None):
+    data = ChatResponse.model_validate(chat, from_attributes=True).model_dump()
+    if user is None or chat.user_id != user.id:
+        data['variables'] = {}
+        for key in ('params', 'tool_servers', 'tool_ids', 'filter_ids', 'variables'):
+            data['chat'].pop(key, None)
+    messages = list((data['chat'].get('history', {}).get('messages') or {}).values())
+    messages.extend(data['chat'].get('messages') or [])
+    for message in messages:
+        if user is None or (message.get('user_id') or chat.user_id) != user.id:
+            message.pop('meta', None)
+    return data
 
 
 async def add_active_state_to_chat_list(
@@ -1223,9 +1237,20 @@ async def get_shared_chat_by_id(
         if await is_open_shared_chat(shared, db=db) or (
             user is not None and await can_read_shared_chat(user, shared, db=db)
         ):
-            chat = await Chats.get_chat_by_share_id(share_id, db=db)
+            live = (
+                shared.chat.get('share_mode') == 'continue'
+                and user is not None
+                and await can_read_shared_chat(user, shared, db=db)
+            )
+            chat = (
+                await Chats.get_chat_by_id(shared.chat_id, db=db)
+                if live
+                else await Chats.get_chat_by_share_id(share_id, db=db)
+            )
             if chat:
-                return ChatResponse.model_validate(chat, from_attributes=True)
+                data = shared_chat_response(chat, user)
+                data['chat']['share_mode'] = 'continue' if live else None
+                return data
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1338,14 +1363,17 @@ async def get_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    chat = await Chats.get_chat_by_id_for_user(
+    chat = await Chats.get_accessible_chat_by_id(
         id,
         user,
         db=db,
     )
 
     if chat:
-        data = ChatResponse.model_validate(chat, from_attributes=True).model_dump()
+        data = shared_chat_response(chat, user)
+        data['chat']['share_mode'] = (
+            'continue' if await Chats.get_accessible_chat_by_id(id, user, db=db, permission='write', chat=chat) else None
+        )
         data = overlay_response_streams(
             data,
             await get_response_streams_by_chat_id(request.app.state.redis, id),
@@ -1383,12 +1411,6 @@ async def update_chat_by_id(
                 )
                 or chat
             )
-
-        # Reconcile chat_message rows without inferring deletes from missing IDs.
-        # Message deletion has its own endpoint below.
-        messages = ((chat.chat or {}).get('history') or {}).get('messages') or {}
-        if messages:
-            await Chats.reconcile_messages_by_chat_id(id, user.id, messages)
 
         await publish_event(
             request,
@@ -1874,6 +1896,8 @@ async def clone_shared_chat_by_id(
             )
 
     chat = await Chats.get_chat_by_share_id(id, db=db) if shared else None
+    if shared and shared.chat.get('share_mode') == 'continue' and await can_read_shared_chat(user, shared, db=db):
+        chat = await Chats.get_chat_by_id(shared.chat_id, db=db)
 
     # Fallback: admins can also access any chat directly by chat ID
     if not chat and user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
@@ -1886,7 +1910,7 @@ async def clone_shared_chat_by_id(
         )
 
     updated_chat = {
-        **chat.chat,
+        **shared_chat_response(chat, user)['chat'],
         'originalChatId': chat.id,
         'branchPointMessageId': chat.chat['history']['currentId'],
         'title': f'Clone of {chat.title}',
@@ -1899,9 +1923,9 @@ async def clone_shared_chat_by_id(
                 **{
                     'chat': updated_chat,
                     'meta': chat.meta,
-                    'variables': chat.variables or {},
+                    'variables': {},
                     'pinned': chat.pinned,
-                    'folder_id': chat.folder_id,
+                    'folder_id': None,
                 }
             )
         ],
@@ -1963,6 +1987,7 @@ async def archive_chat_by_id(
 async def share_chat_by_id(
     request: Request,
     id: str,
+    form_data: ShareChatForm | None = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -1975,7 +2000,7 @@ async def share_chat_by_id(
 
     # If a share already exists, re-snapshot it
     if chat.share_id:
-        shared = await SharedChats.update(chat.share_id, db=db)
+        shared = await SharedChats.update(chat.share_id, form_data, db=db)
         if shared:
             chat = await Chats.get_chat_by_id(id, db=db)
             await publish_event(
@@ -1988,7 +2013,7 @@ async def share_chat_by_id(
             return ChatResponse.model_validate(chat, from_attributes=True)
 
     # Create a new share
-    shared = await SharedChats.create(id, user.id, db=db)
+    shared = await SharedChats.create(id, user.id, db=db, share_mode=form_data.share_mode if form_data else None)
     if not shared:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -2041,6 +2066,7 @@ async def delete_shared_chat_by_id(
 
 class ChatAccessGrantsForm(BaseModel):
     access_grants: list[dict]
+    share_mode: ChatShareMode = None
 
 
 @router.post('/shared/{id}/access/update', response_model=ChatResponse | None)
@@ -2072,6 +2098,11 @@ async def update_shared_chat_access_by_id(
     )
 
     await AccessGrants.set_access_grants('shared_chat', id, form_data.access_grants, db=db)
+    if 'share_mode' in form_data.model_fields_set and chat.share_id:
+        await SharedChats.set_share_mode(chat.share_id, form_data.share_mode, db=db)
+    from open_webui.socket.main import refresh_chat_access
+
+    await refresh_chat_access(id)
 
     return ChatResponse.model_validate(chat, from_attributes=True)
 
@@ -2177,7 +2208,7 @@ async def update_chat_folder_id_by_id(
 
 @router.get('/{id}/tags', response_model=list[TagModel])
 async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    chat = await Chats.get_chat_by_id_for_user(
+    chat = await Chats.get_accessible_chat_by_id(
         id,
         user,
         db=db,
