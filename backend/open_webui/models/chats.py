@@ -603,7 +603,9 @@ class ChatTable:
                         await ChatMessages.upsert_message(
                             message_id=message_id,
                             chat_id=id,
-                            user_id=user_id,
+                            user_id=message.get('user_id')
+                            or (message['user'].get('id') if isinstance(message.get('user'), dict) else None)
+                            or user_id,
                             data=message,
                         )
             except Exception as e:
@@ -677,7 +679,11 @@ class ChatTable:
         messages = list((chat.chat.get('history', {}).get('messages') or {}).values())
         messages.extend(chat.chat.get('messages') or [])
         for message in messages:
-            message['user_id'] = user_id
+            message['user_id'] = (
+                message.get('user_id')
+                or (message['user'].get('id') if isinstance(message.get('user'), dict) else None)
+                or user_id
+            )
         return chat
 
     async def import_chats(
@@ -729,7 +735,9 @@ class ChatTable:
                             await ChatMessages.upsert_message(
                                 message_id=message_id,
                                 chat_id=imported_chat.id,
-                                user_id=user_id,
+                                user_id=message.get('user_id')
+                                or (message['user'].get('id') if isinstance(message.get('user'), dict) else None)
+                                or user_id,
                                 data=message,
                             )
                         except Exception as e:
@@ -1839,7 +1847,8 @@ class ChatTable:
         if (
             chat.user_id == user.id
             or user.role == 'admin'
-            and (ENABLE_ADMIN_CHAT_ACCESS or permission == 'read' and is_internal_chat(chat.meta))
+            and permission == 'read'
+            and (ENABLE_ADMIN_CHAT_ACCESS or is_internal_chat(chat.meta))
         ):
             return ChatModel.model_validate(chat)
         from open_webui.models.shared_chats import SharedChats

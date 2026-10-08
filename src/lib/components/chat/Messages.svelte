@@ -333,6 +333,8 @@
 					parentId: history.messages[messageId].parentId,
 					childrenIds: [],
 					role: 'user',
+					user_id: $_user?.id,
+					user: { id: $_user?.id, name: $_user?.name },
 					content: userPrompt,
 					...(files && { files: files }),
 					models: selectedModels,

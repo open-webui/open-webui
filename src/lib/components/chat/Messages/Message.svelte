@@ -68,7 +68,7 @@
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
-				user={history.messages[messageId].user ?? user}
+				{user}
 				{chatId}
 				{history}
 				{messageId}

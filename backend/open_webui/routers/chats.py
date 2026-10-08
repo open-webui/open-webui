@@ -127,7 +127,9 @@ async def can_read_shared_chat(user, shared, db: AsyncSession) -> bool:
     )
 
 
-def shared_chat_response(chat, user=None):
+async def shared_chat_response(chat, user=None, db=None):
+    from open_webui.models.users import Users
+
     data = ChatResponse.model_validate(chat, from_attributes=True).model_dump()
     if user is None or chat.user_id != user.id:
         data['variables'] = {}
@@ -135,9 +137,24 @@ def shared_chat_response(chat, user=None):
             data['chat'].pop(key, None)
     messages = list((data['chat'].get('history', {}).get('messages') or {}).values())
     messages.extend(data['chat'].get('messages') or [])
+    authors = {}
     for message in messages:
+        if message.get('role') == 'user':
+            author = message.get('user')
+            author = author if isinstance(author, dict) else {}
+            author_id = message.get('user_id') or author.get('id') or chat.user_id
+            message['user_id'] = author_id
+            if author.get('id') == author_id and author.get('name'):
+                authors[author_id] = {'id': author_id, 'name': author['name']}
         if user is None or (message.get('user_id') or chat.user_id) != user.id:
             message.pop('meta', None)
+    missing_ids = {message['user_id'] for message in messages if message.get('role') == 'user'} - authors.keys()
+    if missing_ids:
+        for author in await Users.get_users_by_user_ids(list(missing_ids), db=db):
+            authors[author.id] = {'id': author.id, 'name': author.name}
+    for message in messages:
+        if message.get('role') == 'user':
+            message['user'] = authors.get(message['user_id'], {'id': message['user_id'], 'name': ''})
     return data
 
 
@@ -1240,7 +1257,7 @@ async def get_shared_chat_by_id(
             live = (
                 shared.chat.get('share_mode') == 'continue'
                 and user is not None
-                and await can_read_shared_chat(user, shared, db=db)
+                and await Chats.get_accessible_chat_by_id(shared.chat_id, user, db=db, permission='write') is not None
             )
             chat = (
                 await Chats.get_chat_by_id(shared.chat_id, db=db)
@@ -1248,7 +1265,7 @@ async def get_shared_chat_by_id(
                 else await Chats.get_chat_by_share_id(share_id, db=db)
             )
             if chat:
-                data = shared_chat_response(chat, user)
+                data = await shared_chat_response(chat, user, db=db)
                 data['chat']['share_mode'] = 'continue' if live else None
                 return data
 
@@ -1262,7 +1279,13 @@ async def get_shared_chat_by_id(
     if user is not None and user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
         chat = await Chats.get_chat_by_id(share_id, db=db)
         if chat:
-            return ChatResponse.model_validate(chat, from_attributes=True)
+            data = await shared_chat_response(chat, user, db=db)
+            data['chat']['share_mode'] = (
+                'continue'
+                if await Chats.get_accessible_chat_by_id(chat.id, user, db=db, permission='write', chat=chat)
+                else None
+            )
+            return data
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -1370,9 +1393,11 @@ async def get_chat_by_id(
     )
 
     if chat:
-        data = shared_chat_response(chat, user)
+        data = await shared_chat_response(chat, user, db=db)
         data['chat']['share_mode'] = (
-            'continue' if await Chats.get_accessible_chat_by_id(id, user, db=db, permission='write', chat=chat) else None
+            'continue'
+            if await Chats.get_accessible_chat_by_id(id, user, db=db, permission='write', chat=chat)
+            else None
         )
         data = overlay_response_streams(
             data,
@@ -1746,11 +1771,14 @@ async def fork_chat_by_id(
             detail=detail,
         ) from exc
 
-    # An unfinished message is stale unless it is awaiting tool approval
     for message in fork_history['messages'].values():
+        author = (history.get('messages', {}).get(message['id']) or {}).get('user')
+        if isinstance(author, dict) and author.get('id') == message.get('user_id'):
+            message['user'] = author
         if message.get('role') != 'assistant' or message.get('done') is not False:
             continue
 
+        # An unfinished message is stale unless it is awaiting tool approval
         output = message.get('output')
         if isinstance(output, list) and any(
             isinstance(item, dict)
@@ -1910,7 +1938,7 @@ async def clone_shared_chat_by_id(
         )
 
     updated_chat = {
-        **shared_chat_response(chat, user)['chat'],
+        **(await shared_chat_response(chat, user, db=db))['chat'],
         'originalChatId': chat.id,
         'branchPointMessageId': chat.chat['history']['currentId'],
         'title': f'Clone of {chat.title}',

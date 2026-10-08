@@ -1404,6 +1404,7 @@ async def chat_completion(
                     if user_message_id and user_message:
                         user_message['childrenIds'] = all_assistant_ids
                         user_message['user_id'] = user.id
+                        user_message['user'] = {'id': user.id, 'name': user.name}
                         history_messages[user_message_id] = user_message
 
                     for entry in message_ids:

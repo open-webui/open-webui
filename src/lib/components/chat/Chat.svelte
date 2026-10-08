@@ -2997,6 +2997,8 @@
 				parentId: parentMessage ? parentMessage.id : null,
 				childrenIds: [responseMessageId],
 				role: 'user',
+				user_id: $user?.id,
+				user: { id: $user?.id, name: $user?.name },
 				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
 				timestamp: Math.floor(Date.now() / 1000)
 			};
@@ -3279,6 +3281,7 @@
 			parentId: history.currentId ?? null,
 			childrenIds: [],
 			role: 'user',
+			user: { id: $user?.id, name: $user?.name },
 			user_id: $user?.id,
 			content: inputContent,
 			files: _files.length > 0 ? _files : undefined,
@@ -4188,6 +4191,8 @@
 			parentId: parentId,
 			childrenIds: [],
 			role: 'user',
+			user_id: $user?.id,
+			user: { id: $user?.id, name: $user?.name },
 			content: userPrompt,
 			models: selectedModels,
 			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
@@ -4775,7 +4780,7 @@
 									<Messages
 										bind:this={messagesRef}
 										chatId={$chatId}
-										user={chatOwner ?? $user}
+										user={chatOwner ?? (chat ? { id: chat.user_id } : $user)}
 										{readOnly}
 										shareMode={chat?.chat?.share_mode ?? null}
 										bind:history
