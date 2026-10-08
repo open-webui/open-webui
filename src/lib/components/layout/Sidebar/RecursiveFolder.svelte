@@ -543,6 +543,9 @@
 
 		await tick();
 		if (open) {
+			if (!append) {
+				pendingUpsertChats = [];
+			}
 			// Always use getSharedFolderChats so owners also see chats
 			// created by users who have write access to this folder.
 			const nextPage = append ? chatsPage + 1 : 1;
