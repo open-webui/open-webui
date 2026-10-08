@@ -349,6 +349,18 @@ async def update_folder_name_by_id(
             )
 
     if folder:
+        if (
+            user.role != 'admin'
+            and user.id != folder.user_id
+            and form_data.data
+            and 'share_mode' in form_data.data
+            and form_data.data['share_mode'] != (folder.data or {}).get('share_mode')
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
         if form_data.name is not None:
             # Check if folder with same name exists
             existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
@@ -532,13 +544,12 @@ async def update_folder_access_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Only owner, admin, or write-granted user can update access
+    # Editing folder contents does not grant permission to manage sharing.
     if user.role != 'admin' and user.id != folder.user_id:
-        if not await _has_folder_access(user.id, folder, 'write', db):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
