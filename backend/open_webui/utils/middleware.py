@@ -5623,11 +5623,15 @@ async def streaming_chat_response_handler(response, ctx):
                                         tag_output = None
 
                                         if DETECT_REASONING_TAGS:
-                                            tag_output, _ = tag_output_handler(
-                                                'reasoning',
-                                                reasoning_tags,
-                                                output,
-                                            )
+                                            if not any(
+                                                item.get('attributes', {}).get('type') == 'reasoning_content'
+                                                for item in output
+                                            ):
+                                                tag_output, _ = tag_output_handler(
+                                                    'reasoning',
+                                                    reasoning_tags,
+                                                    output,
+                                                )
 
                                             solution_output, _ = tag_output_handler(
                                                 'solution',
