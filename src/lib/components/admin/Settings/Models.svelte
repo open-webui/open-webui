@@ -18,6 +18,7 @@
 	import {
 		createNewModel,
 		deleteAllModels,
+		deleteModelById,
 		getAllModels,
 		getModelById,
 		exportModels,
@@ -97,6 +98,8 @@
 
 	let showManageModal = false;
 	let showResetModal = false;
+	let showDeleteModal = false;
+	let modelToDelete: ModelListItem | null = null;
 	let savingModelOrder = false;
 	let savingModelsSettings = false;
 	let modelOrderDirty = false;
@@ -122,6 +125,8 @@
 
 	const isPresetModel = (model: any) =>
 		!!(model?.preset || model?.base_model_id || model?.info?.base_model_id);
+	const canResetModel = (model: ModelListItem | null) =>
+		!!model && !isPresetModel(model) && availableModelIds.has(model.id);
 	const modelTags = (model: any): string[] =>
 		(model?.meta?.tags ?? [])
 			.map((tag) => (typeof tag === 'string' ? tag : tag?.name))
@@ -535,6 +540,29 @@
 		);
 	};
 
+	const deleteModelHandler = async (model: ModelListItem) => {
+		try {
+			// Read fresh records: visibility and access changes can create saved settings.
+			const savedModels = await getAllModels(localStorage.token);
+			if (savedModels.some((savedModel: ModelListItem) => savedModel.id === model.id)) {
+				const res = await deleteModelById(localStorage.token, model.id);
+				if (!res) {
+					toast.error($i18n.t('Failed to delete model'));
+					return;
+				}
+			}
+
+			toast.success(
+				canResetModel(model)
+					? $i18n.t('Model reset successfully')
+					: $i18n.t('Deleted {{name}}', { name: model.name })
+			);
+			await init();
+		} catch (error: any) {
+			toast.error(`${error?.detail ?? error}`);
+		}
+	};
+
 	const hideModelHandler = async (model) => {
 		const updatedModel = {
 			...model,
@@ -703,6 +731,22 @@
 		}
 	});
 </script>
+
+<ConfirmDialog
+	title={canResetModel(modelToDelete) ? $i18n.t('Reset') : $i18n.t('Delete')}
+	message={canResetModel(modelToDelete)
+		? $i18n.t(
+				'This will reset the saved settings for this base model to their defaults. The model will remain available.'
+			)
+		: $i18n.t('Are you sure you want to delete **{{modelName}}**?', {
+				modelName: modelToDelete?.name
+			})}
+	confirmLabel={canResetModel(modelToDelete) ? $i18n.t('Reset') : $i18n.t('Delete')}
+	bind:show={showDeleteModal}
+	onConfirm={async () => {
+		if (modelToDelete) await deleteModelHandler(modelToDelete);
+	}}
+/>
 
 <ConfirmDialog
 	title={$i18n.t('Reset All Models')}
@@ -1180,6 +1224,11 @@
 									<ModelMenu
 										user={$user}
 										{model}
+										deleteLabel={canResetModel(model) ? $i18n.t('Reset') : $i18n.t('Delete')}
+										deleteHandler={() => {
+											modelToDelete = model;
+											showDeleteModal = true;
+										}}
 										exportHandler={() => {
 											exportModelHandler(model);
 										}}
