@@ -40,7 +40,7 @@
 	};
 	const focus = (node: HTMLInputElement) => node.focus();
 	const addOption = () => {
-		options = [...options, { id: crypto.randomUUID(), label: '', params: {} }];
+		options = [...options, { id: crypto.randomUUID(), label: '', params: { '': '' } }];
 	};
 	const edit = async (key = '') => {
 		editingKey = key;
@@ -249,16 +249,7 @@
 				</div>
 			</div>
 			<div>
-				<div class="flex items-center justify-between">
-					<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Options')}</span>
-					<button
-						type="button"
-						class="rounded p-1 text-gray-500 transition hover:bg-black/5 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
-						aria-label={$i18n.t('Add option')}
-						title={$i18n.t('Add option')}
-						on:click={addOption}><Plus className="size-3" /></button
-					>
-				</div>
+				<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Options')}</span>
 				<div class="divide-y divide-gray-100/60 dark:divide-gray-850/60" use:sortable={moveOption}>
 					{#each options as option, index (option.id)}
 						<div class="py-1.5">
@@ -293,6 +284,14 @@
 						</div>
 					{/each}
 				</div>
+				<button
+					type="button"
+					class="mt-1 flex items-center gap-1.5 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+					on:click={addOption}
+				>
+					<Plus className="size-3" />
+					<span>{$i18n.t('Add option')}</span>
+				</button>
 			</div>
 			{#if display === 'slider' && options.length < 2}
 				<p class="text-xs text-gray-500 dark:text-gray-400">
