@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import types
+import uuid
 from importlib import util
 from typing import Any
 
@@ -205,6 +206,7 @@ def replace_imports(content):
 # May the intent of the one who wrote it survive every
 # import and transformation, as a deed survives the generations.
 async def load_tool_module_by_id(tool_id, content=None):
+    """Prepare a Tool instance, frontmatter, and Python module without changing the live cache."""
     if not ENABLE_TOOLS:
         raise RuntimeError('Tools are disabled by ENABLE_PLUGINS or ENABLE_TOOLS')
 
@@ -215,9 +217,6 @@ async def load_tool_module_by_id(tool_id, content=None):
             raise Exception(f'Toolkit not found: {tool_id}')
 
         content = tool.content
-
-        content = replace_imports(content)
-        await Tools.update_tool_by_id(tool_id, {'content': content})
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter.
@@ -225,7 +224,8 @@ async def load_tool_module_by_id(tool_id, content=None):
         # offload to a thread so it doesn't block the event loop.
         await asyncio.to_thread(install_frontmatter_requirements, frontmatter.get('requirements', ''))
 
-    module_name = f'tool_{tool_id}'
+    content = replace_imports(content)
+    module_name = f'tool_{tool_id}_{uuid.uuid4().hex}'
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
@@ -246,18 +246,19 @@ async def load_tool_module_by_id(tool_id, content=None):
 
         # Create and return the object if the class 'Tools' is found in the module
         if hasattr(module, 'Tools'):
-            return module.Tools(), frontmatter
+            return module.Tools(), frontmatter, module
         else:
             raise Exception('No Tools class found in the module')
     except Exception as e:
         log.error(f'Error loading module: {tool_id}: {e}')
-        del sys.modules[module_name]  # Clean up
         raise e
     finally:
         os.unlink(temp_file.name)
+        sys.modules.pop(module_name, None)
 
 
 async def load_function_module_by_id(function_id: str, content: str | None = None):
+    """Prepare a Function instance, type, frontmatter, and Python module without publishing it."""
     if not ENABLE_FUNCTIONS:
         raise RuntimeError('Functions are disabled by ENABLE_PLUGINS or ENABLE_FUNCTIONS')
 
@@ -267,15 +268,13 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
         if not function:
             raise Exception(f'Function not found: {function_id}')
         content = function.content
-
-        content = replace_imports(content)
-        await Functions.update_function_by_id(function_id, {'content': content})
     else:
         frontmatter = extract_frontmatter(content)
         # `pip install` via subprocess can block for a long time; offload it.
         await asyncio.to_thread(install_frontmatter_requirements, frontmatter.get('requirements', ''))
 
-    module_name = f'function_{function_id}'
+    content = replace_imports(content)
+    module_name = f'function_{function_id}_{uuid.uuid4().hex}'
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
@@ -296,24 +295,21 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
 
         # Create appropriate object based on available class type in the module
         if hasattr(module, 'Pipe'):
-            return module.Pipe(), 'pipe', frontmatter
+            return module.Pipe(), 'pipe', frontmatter, module
         elif hasattr(module, 'Filter'):
-            return module.Filter(), 'filter', frontmatter
+            return module.Filter(), 'filter', frontmatter, module
         elif hasattr(module, 'Action'):
-            return module.Action(), 'action', frontmatter
+            return module.Action(), 'action', frontmatter, module
         elif hasattr(module, 'Event'):
-            return module.Event(), 'event', frontmatter
+            return module.Event(), 'event', frontmatter, module
         else:
             raise Exception('No Function class found in the module')
     except Exception as e:
         log.error(f'Error loading module: {function_id}: {e}')
-        # Cleanup by removing the module in case of error
-        del sys.modules[module_name]
-
-        await Functions.update_function_by_id(function_id, {'is_active': False})
         raise e
     finally:
         os.unlink(temp_file.name)
+        sys.modules.pop(module_name, None)
 
 
 def _state_cache(request, name: str) -> dict:
@@ -338,6 +334,26 @@ def get_function_contents_cache(request) -> dict:
     return _state_cache(request, 'FUNCTION_CONTENTS')
 
 
+def set_tool_module_in_cache(request, tool_id, content, tool_module, source_module):
+    previous = sys.modules.get(f'tool_{tool_id}')
+    if previous is not None:
+        sys.modules.pop(previous.__name__, None)
+    sys.modules[source_module.__name__] = source_module
+    sys.modules[f'tool_{tool_id}'] = source_module
+    get_tools_cache(request)[tool_id] = tool_module
+    get_tool_contents_cache(request)[tool_id] = content
+
+
+def set_function_module_in_cache(request, function_id, content, function_module, source_module):
+    previous = sys.modules.get(f'function_{function_id}')
+    if previous is not None:
+        sys.modules.pop(previous.__name__, None)
+    sys.modules[source_module.__name__] = source_module
+    sys.modules[f'function_{function_id}'] = source_module
+    get_functions_cache(request)[function_id] = function_module
+    get_function_contents_cache(request)[function_id] = content
+
+
 async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
     if not ENABLE_TOOLS:
         raise RuntimeError('Tools are disabled by ENABLE_PLUGINS or ENABLE_TOOLS')
@@ -353,25 +369,16 @@ async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
             raise Exception(f'Tool not found: {tool_id}')
         content = tool.content
 
-        new_content = replace_imports(content)
-        if new_content != content:
-            content = new_content
-            # Update the tool content in the database
-            await Tools.update_tool_by_id(tool_id, {'content': content})
-
         if tool_id in tool_contents_cache and tool_id in tools_cache:
             if tool_contents_cache[tool_id] == content:
                 return tools_cache[tool_id], None
 
-        tool_module, frontmatter = await load_tool_module_by_id(tool_id, content)
     else:
         if tool_id in tools_cache:
             return tools_cache[tool_id], None
 
-        tool_module, frontmatter = await load_tool_module_by_id(tool_id)
-
-    tools_cache[tool_id] = tool_module
-    tool_contents_cache[tool_id] = content
+    tool_module, frontmatter, source_module = await load_tool_module_by_id(tool_id, content)
+    set_tool_module_in_cache(request, tool_id, content, tool_module, source_module)
 
     return tool_module, frontmatter
 
@@ -397,17 +404,10 @@ async def get_function_module_from_cache(
             raise Exception(f'Function not found: {function_id}')
         content = function.content
 
-        new_content = replace_imports(content)
-        if new_content != content:
-            content = new_content
-            # Update the function content in the database
-            await Functions.update_function_by_id(function_id, {'content': content})
-
         if function_id in function_contents_cache and function_id in functions_cache:
             if function_contents_cache[function_id] == content:
                 return functions_cache[function_id], None, None
 
-        function_module, function_type, frontmatter = await load_function_module_by_id(function_id, content)
     else:
         # Load from cache (e.g. "stream" hook)
         # This is useful for performance reasons
@@ -415,10 +415,15 @@ async def get_function_module_from_cache(
         if function_id in functions_cache:
             return functions_cache[function_id], None, None
 
-        function_module, function_type, frontmatter = await load_function_module_by_id(function_id)
+    try:
+        function_module, function_type, frontmatter, source_module = await load_function_module_by_id(
+            function_id, content
+        )
+    except Exception:
+        await Functions.update_function_by_id(function_id, {'is_active': False})
+        raise
 
-    functions_cache[function_id] = function_module
-    function_contents_cache[function_id] = content
+    set_function_module_in_cache(request, function_id, content, function_module, source_module)
 
     return function_module, function_type, frontmatter
 

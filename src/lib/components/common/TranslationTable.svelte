@@ -1,4 +1,7 @@
 <script lang="ts">
+	// Keep keys in nested template expressions visible to i18next-parser.
+	// $i18n.t("Translation");
+
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { validateDictionary } from '$lib/utils/translationDictionary';
@@ -13,9 +16,11 @@
 	export let filename = 'translations.json';
 	export let onChange = (_value: Record<string, string>) => {};
 	export let allowNewKeys = false;
+	export let readOnly = false;
 	let adding = false;
 	let newKey = '';
 	const addKey = () => {
+		if (readOnly) return;
 		if (newKey.trim()) {
 			update(newKey.trim(), value?.[newKey.trim()] ?? '');
 			query = newKey.trim();
@@ -52,16 +57,19 @@
 	$: pages = Math.max(1, Math.ceil(keys.length / 50));
 	$: if (page >= pages) page = pages - 1;
 	const update = (key: string, text: string) => {
+		if (readOnly) return;
 		value = { ...value, [key]: text };
 		onChange(value);
 	};
 	const reset = (key: string) => {
+		if (readOnly) return;
 		const next = { ...value };
 		delete next[key];
 		value = next;
 		onChange(value);
 	};
 	const importFile = async (event: Event) => {
+		if (readOnly) return;
 		const input = event.currentTarget as HTMLInputElement;
 		try {
 			if (input.files?.[0]) {
@@ -88,9 +96,11 @@
 			hidden
 			on:change={importFile}
 		/>
-		<button type="button" on:click={() => fileInput.click()}>{$i18n.t('Import')}</button>
+		<button type="button" disabled={readOnly} on:click={() => fileInput.click()}
+			>{$i18n.t('Import')}</button
+		>
 		<button type="button" on:click={exportFile}>{$i18n.t('Export')}</button>
-		{#if allowNewKeys}<Tooltip content={$i18n.t('Add translation')}
+		{#if allowNewKeys && !readOnly}<Tooltip content={$i18n.t('Add translation')}
 				><button
 					class="flex size-6 items-center justify-center"
 					type="button"
@@ -99,7 +109,7 @@
 				></Tooltip
 			>{/if}
 	</div>
-	{#if adding}<div class="flex items-center gap-2 text-xs">
+	{#if adding && !readOnly}<div class="flex items-center gap-2 text-xs">
 			<input
 				class="min-w-0 flex-1 rounded-lg border border-gray-200 bg-transparent px-2 py-1.5 dark:border-gray-800"
 				aria-label={$i18n.t('Translation key')}
@@ -147,6 +157,7 @@
 				</div>
 				<textarea
 					rows="2"
+					readonly={readOnly}
 					class="w-full min-w-0 resize-y rounded-md border border-gray-100 bg-transparent px-2 py-1 text-xs outline-hidden focus:border-gray-400 dark:border-gray-800"
 					aria-label={key}
 					placeholder={source[key] || key}
@@ -158,7 +169,7 @@
 						type="button"
 						class="flex size-6 items-center justify-center disabled:opacity-30"
 						aria-label={`${$i18n.t('Use default')}: ${key}`}
-						disabled={!Object.hasOwn(value ?? {}, key)}
+						disabled={readOnly || !Object.hasOwn(value ?? {}, key)}
 						on:click={() => reset(key)}><ArrowUturnLeft className="size-3.5" /></button
 					></Tooltip
 				>

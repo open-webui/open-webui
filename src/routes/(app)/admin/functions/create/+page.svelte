@@ -41,7 +41,8 @@
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
-			content: data.content
+			content: data.content,
+			commit_message: data.commit_message
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -101,9 +102,7 @@
 				meta={func?.meta ?? { description: '' }}
 				content={func?.content ?? ''}
 				{clone}
-				onSave={(value) => {
-					saveHandler(value);
-				}}
+				onSave={saveHandler}
 			/>
 		</div>
 	{/key}

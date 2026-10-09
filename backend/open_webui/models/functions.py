@@ -6,9 +6,11 @@ import logging
 import time
 
 # local imports
+from fastapi import HTTPException
 from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.models.function_history import FunctionHistories, FunctionHistory, function_snapshot
 from open_webui.models.users import User, UserResponse, Users, UserSettings
-from open_webui.utils.valves import decrypt_valves, encrypt_valves
+from open_webui.utils.valves import decrypt_valves, encrypt_valves, validate_valves
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, Index, String, Text, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +22,7 @@ class Function(Base):  # database table mapping
     __tablename__ = 'function'
 
     id = Column(String, primary_key=True, unique=True)
+    version_id = Column(Text, nullable=True)
     user_id = Column(String, index=True)  # creator user id
     name = Column(Text, nullable=False)  # function identifier
     type = Column(Text, nullable=False)  # function type (pipe, filter, etc.)
@@ -41,6 +44,7 @@ class FunctionMeta(BaseModel):
 
 
 class FunctionModel(BaseModel):
+    version_id: str | None = None
     id: str
     user_id: str | None = None  # may be null for legacy/malformed records
     name: str
@@ -57,6 +61,7 @@ class FunctionModel(BaseModel):
 
 # --- form / schema definitions ---
 class FunctionWithValvesModel(BaseModel):
+    version_id: str | None = None
     id: str
     user_id: str | None = None  # may be null for legacy/malformed records
     name: str
@@ -78,6 +83,7 @@ class FunctionWithValvesModel(BaseModel):
 
 
 class FunctionResponse(BaseModel):
+    version_id: str | None = None
     id: str
     user_id: str | None = None  # may be null for legacy/malformed records
     type: str
@@ -96,6 +102,7 @@ class FunctionUserResponse(FunctionResponse):
 
 
 class FunctionForm(BaseModel):
+    commit_message: str | None = None
     id: str
     name: str
     content: str
@@ -107,79 +114,117 @@ class FunctionValves(BaseModel):
 
 
 class FunctionsTable:
-    async def insert_new_function(
+    async def _lock_function(self, session, id):
+        # UPDATE also serializes writers on SQLite, where SELECT FOR UPDATE does not.
+        await session.execute(update(Function).where(Function.id == id).values(version_id=Function.version_id))
+        return await session.get(Function, id, populate_existing=True)
+
+    async def _write_function(
         self,
-        user_id: str,
-        type: str,
-        form_data: FunctionForm,
-        db: AsyncSession | None = None,
-    ) -> FunctionModel | None:
-        function = FunctionModel(
-            **{
-                **form_data.model_dump(),
-                'user_id': user_id,
-                'type': type,
-                'updated_at': int(time.time()),
-                'created_at': int(time.time()),
-            }
-        )
+        session,
+        resource,
+        updated,
+        user_id=None,
+        version_id=None,
+        module=None,
+        merge_meta=False,
+    ):
+        updated = dict(updated)
+        message = updated.pop('commit_message', None)
+        updated.pop('version_id', None)  # Imported pointers never belong to this resource.
+        before = function_snapshot(resource)
+        if version_id:
+            entry = (
+                await session.execute(select(FunctionHistory).filter_by(id=version_id, function_id=resource.id))
+            ).scalar_one_or_none()
+            if not entry:
+                raise HTTPException(404, 'Version not found')
+            # The prepared candidate must be the exact selected saved configuration.
+            if function_snapshot(updated) != function_snapshot(entry.snapshot):
+                raise HTTPException(400, 'Version configuration does not match the saved snapshot')
+        if module is not None:
+            validate_valves(module, updated.get('valves', resource.valves))
+        if merge_meta:
+            updated['meta'] = {**(resource.meta or {}), **updated.get('meta', {})}
+        for key, value in updated.items():
+            setattr(resource, key, value)
+        after = function_snapshot(resource)
+        if version_id:
+            resource.version_id = version_id
+        elif after != before or not resource.version_id:
+            entry = FunctionHistories.new_entry(
+                resource.id, after, user_id or resource.user_id or '', resource.version_id, message
+            )
+            session.add(entry)
+            resource.version_id = entry.id
+        resource.updated_at = int(time.time())
 
-        try:
-            async with get_async_db_context(db) as db:
-                result = Function(**function.model_dump())
-                db.add(result)
-                await db.commit()
-                if result:
-                    return FunctionModel.model_validate(result)
-                else:
-                    return None
-        except Exception as e:
-            log.exception(f'Error creating a new function: {e}')
-            return None
+    async def insert_new_function(self, user_id, type, form_data, db=None, module=None):
+        async with get_async_db_context(db) as session:
+            try:
+                function = Function(
+                    **form_data.model_dump(exclude={'commit_message'}),
+                    user_id=user_id,
+                    type=type,
+                    is_active=False,
+                    is_global=False,
+                    updated_at=int(time.time()),
+                    created_at=int(time.time()),
+                )
+                session.add(function)
+                await self._write_function(
+                    session,
+                    function,
+                    {'commit_message': form_data.commit_message},
+                    user_id,
+                    module=module,
+                )
+                await session.flush()
+                result = FunctionModel.model_validate(function)
+                await session.commit()
+                return result
+            except Exception:
+                await session.rollback()
+                raise
 
-    async def sync_functions(
-        self,
-        user_id: str,
-        functions: list[FunctionWithValvesModel],
-        db: AsyncSession | None = None,
-    ) -> list[FunctionWithValvesModel]:
-        # Synchronize functions by updating existing ones, inserting new ones,
-        # and removing those that are no longer present.
-        try:
-            async with get_async_db_context(db) as db:
-                # Get existing functions
-                result = await db.execute(select(Function))
-                existing_functions = result.scalars().all()
-                existing_ids = {func.id for func in existing_functions}
-
-                # Prepare a set of new function IDs
-                new_function_ids = {func.id for func in functions}
-
-                # Update or insert functions
+    async def sync_functions(self, user_id, functions, db=None, modules=None):
+        async with get_async_db_context(db) as session:
+            try:
+                # Lock all existing rows in a stable order before applying the batch.
+                ids = (await session.execute(select(Function.id).order_by(Function.id))).scalars().all()
+                existing = {id: await self._lock_function(session, id) for id in ids}
+                incoming = {func.id for func in functions}
                 for func in functions:
-                    func_data = func.model_dump()
-                    func_data['valves'] = encrypt_valves(func_data['valves']) if func_data.get('valves') else None
-                    func_data['user_id'] = user_id
-                    func_data['updated_at'] = int(time.time())
-
-                    if func.id in existing_ids:
-                        await db.execute(update(Function).filter_by(id=func.id).values(**func_data))
-                    else:
-                        new_func = Function(**func_data)
-                        db.add(new_func)
-
-                # Remove functions that are no longer present
-                for func in existing_functions:
-                    if func.id not in new_function_ids:
-                        await db.delete(func)
-
-                await db.commit()
-
-                result = await db.execute(select(Function))
-                return [FunctionModel.model_validate(func) for func in result.scalars().all()]
-        except Exception as e:
-            log.exception(f'Error syncing functions for user {user_id}: {e}')
-            return []
+                    data = func.model_dump(exclude={'version_id'})
+                    data['valves'] = encrypt_valves(data.get('valves'))
+                    data['user_id'] = user_id
+                    resource = existing.get(func.id)
+                    if resource is None:
+                        resource = Function(**data)
+                        session.add(resource)
+                    await self._write_function(
+                        session,
+                        resource,
+                        data,
+                        user_id,
+                        module=(modules or {}).get(func.id),
+                    )
+                for id in set(existing) - incoming:
+                    await session.execute(delete(FunctionHistory).filter_by(function_id=id))
+                    await session.delete(existing[id])
+                await session.flush()
+                rows = (await session.execute(select(Function))).scalars().all()
+                result = [
+                    FunctionWithValvesModel.model_validate(
+                        {**FunctionModel.model_validate(row).model_dump(), 'valves': decrypt_valves(row.valves)}
+                    )
+                    for row in rows
+                ]
+                await session.commit()
+                return result
+            except Exception:
+                await session.rollback()
+                raise
 
     async def get_function_by_id(self, id: str, db: AsyncSession | None = None) -> FunctionModel | None:
         try:
@@ -329,27 +374,8 @@ class FunctionsTable:
             except Exception:
                 return None
 
-    async def update_function_metadata_by_id(
-        self, id: str, metadata: dict, db: AsyncSession | None = None
-    ) -> FunctionModel | None:
-        async with get_async_db_context(db) as db:
-            try:
-                function = await db.get(Function, id)
-
-                if function:
-                    if function.meta:
-                        function.meta = {**function.meta, **metadata}
-                    else:
-                        function.meta = metadata
-
-                    function.updated_at = int(time.time())
-                    await db.commit()
-                    return FunctionModel.model_validate(function)
-                else:
-                    return None
-            except Exception as e:
-                log.exception(f'Error updating function metadata by id {id}: {e}')
-                return None
+    async def update_function_metadata_by_id(self, id, metadata, db=None, user_id=None):
+        return await self.update_function_by_id(id, {'meta': metadata}, db=db, user_id=user_id, merge_meta=True)
 
     async def get_user_valves_by_id_and_user_id(
         self, id: str, user_id: str, db: AsyncSession | None = None
@@ -396,23 +422,29 @@ class FunctionsTable:
             return None
 
     async def update_function_by_id(
-        self, id: str, updated: dict, db: AsyncSession | None = None
-    ) -> FunctionModel | None:
-        async with get_async_db_context(db) as db:
+        self, id, updated, db=None, user_id=None, version_id=None, module=None, merge_meta=False
+    ):
+        async with get_async_db_context(db) as session:
             try:
-                await db.execute(
-                    update(Function)
-                    .filter_by(id=id)
-                    .values(
-                        **updated,
-                        updated_at=int(time.time()),
-                    )
+                function = await self._lock_function(session, id)
+                if not function:
+                    raise ValueError('Function not found')
+                await self._write_function(
+                    session,
+                    function,
+                    updated,
+                    user_id,
+                    version_id,
+                    module,
+                    merge_meta,
                 )
-                await db.commit()
-                function = await db.get(Function, id)
-                return FunctionModel.model_validate(function) if function else None
+                await session.flush()
+                result = FunctionModel.model_validate(function)
+                await session.commit()
+                return result
             except Exception:
-                return None
+                await session.rollback()
+                raise
 
     async def deactivate_all_functions(self, db: AsyncSession | None = None) -> bool | None:
         async with get_async_db_context(db) as db:
@@ -431,6 +463,8 @@ class FunctionsTable:
     async def delete_function_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as db:
             try:
+                await self._lock_function(db, id)
+                await db.execute(delete(FunctionHistory).filter_by(function_id=id))
                 await db.execute(delete(Function).filter_by(id=id))
                 await db.commit()
 

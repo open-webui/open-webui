@@ -116,7 +116,12 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.mcp.client import MCPClient, OAuthTokenAuth
 from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.oauth import get_system_oauth_token
-from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
+from open_webui.utils.plugin import (
+    get_tool_contents_cache,
+    get_tools_cache,
+    load_tool_module_by_id,
+    set_tool_module_in_cache,
+)
 from open_webui.utils.terminals import (
     TERMINAL_CONTEXT_HEADER,
     get_terminal_server_url,
@@ -375,9 +380,8 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
             tool_contents_cache = get_tool_contents_cache(request)
             module = tools_cache.get(tool_id)
             if module is None or tool_contents_cache.get(tool_id) != tool.content:
-                module, _ = await load_tool_module_by_id(tool_id, content=tool.content)
-                tools_cache[tool_id] = module
-                tool_contents_cache[tool_id] = tool.content
+                module, _, source_module = await load_tool_module_by_id(tool_id, content=tool.content)
+                set_tool_module_in_cache(request, tool_id, tool.content, module, source_module)
 
             __user__ = {
                 **extra_params['__user__'],

@@ -40,6 +40,7 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
+			commit_message: data.commit_message,
 			access_grants: data.access_grants
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -89,6 +90,10 @@
 			meta={tool.meta}
 			content={tool.content}
 			accessGrants={tool.access_grants ?? []}
+			version_id={tool.version_id}
+			onProduction={async () => {
+				tools.set(await getTools(localStorage.token));
+			}}
 			onSave={saveHandler}
 		/>
 	</div>
