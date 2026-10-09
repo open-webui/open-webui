@@ -146,8 +146,8 @@
 
 {#snippet sidebar()}
 	<div class="flex h-full min-h-0 w-full flex-col">
-		<div class="flex shrink-0 items-center gap-1 p-1.5">
-			<Search className="ml-1 size-3.5 shrink-0 text-gray-400" /><input
+		<div class="flex shrink-0 items-center p-1.5">
+			<Search className="mx-1 size-3.5 shrink-0 text-gray-400" /><input
 				aria-label={$i18n.t('Search Collection')}
 				placeholder={$i18n.t('Search Collection')}
 				bind:value={inputQuery}
@@ -158,7 +158,10 @@
 				}}
 			/>
 			<Dropdown align="end"
-				><button type="button" aria-label={$i18n.t('Filter and sort')} class="p-1 text-gray-500"
+				><button
+					type="button"
+					aria-label={$i18n.t('Filter and sort')}
+					class="flex h-7 w-6 shrink-0 items-center justify-center px-1 text-gray-500"
 					><AdjustmentsHorizontal className="size-3.5" /></button
 				>
 				<div slot="content">

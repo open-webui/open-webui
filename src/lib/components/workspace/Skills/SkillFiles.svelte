@@ -656,7 +656,7 @@
 
 {#snippet fileList()}
 	<div class="h-full min-h-0 w-full overflow-auto p-1.5">
-		<div class="mb-1 flex w-full items-center gap-1">
+		<div class="mb-1 flex w-full items-center">
 			<div class="min-w-0 flex-1">{@render version()}</div>
 			{#if readOnly}
 				<Tooltip content={$i18n.t('Read Only')}>
@@ -667,12 +667,13 @@
 					>
 				</Tooltip>
 			{/if}
+
 			{#if !readOnly || canExport}
 				<Dropdown closeOnSelect align="end">
 					<button
 						type="button"
 						aria-label={$i18n.t('Actions')}
-						class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl px-2 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+						class="flex h-7 w-6 shrink-0 items-center justify-center rounded-xl px-1 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
 					>
 						<EllipsisHorizontal className="size-4" />
 					</button>
@@ -711,6 +712,28 @@
 						</DropdownMenu>
 					</div>
 				</Dropdown>
+			{/if}
+			{#if !readOnly}
+				<Tooltip content={$i18n.t('New File')}>
+					<button
+						type="button"
+						aria-label={$i18n.t('New File')}
+						class="px-1 py-1.5 rounded-xl bg-transparent transition text-xs flex items-center text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+						on:click={() => startCreate('file')}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+							class="w-4 h-4"
+							aria-hidden="true"
+						>
+							<path stroke-linecap="round" d="M12 5v14M5 12h14" />
+						</svg>
+					</button>
+				</Tooltip>
 			{/if}
 		</div>
 		{#if $mobile && !showFileDrawer && loadError}
