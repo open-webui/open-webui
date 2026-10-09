@@ -86,8 +86,11 @@
 						{#if action.href}
 							<a
 								href={action.href}
-								on:click={() => {
+								on:click={(e) => {
 									showMenu = false;
+									if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+									e.preventDefault();
+									runAction(action);
 								}}
 							>
 								<Icon className="size-3.5" />
