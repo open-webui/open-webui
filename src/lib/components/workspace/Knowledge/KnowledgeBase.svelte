@@ -186,6 +186,7 @@
 							return null;
 						});
 						if (!linkedKnowledge) {
+							toast.error($i18n.t('Failed to add file.'));
 							uploadedFile = null;
 						}
 					}
@@ -874,6 +875,7 @@
 				on:click={() => goto('/workspace/knowledge')}
 				><ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}</button
 			>
+			<!-- Previous file count label: {$i18n.t('{{COUNT}} files')} -->
 			{#if knowledge.write_access}<AccessButton
 					on:click={() => (showAccessControlModal = true)}
 				/>{:else}<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
