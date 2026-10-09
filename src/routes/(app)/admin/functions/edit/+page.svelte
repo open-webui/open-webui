@@ -60,6 +60,7 @@
 				)
 			);
 		}
+		return res;
 	};
 
 	onMount(async () => {
@@ -91,9 +92,7 @@
 			name={func.name}
 			meta={func.meta}
 			content={func.content}
-			onSave={(value) => {
-				saveHandler(value);
-			}}
+			onSave={saveHandler}
 		/>
 	</div>
 {:else}

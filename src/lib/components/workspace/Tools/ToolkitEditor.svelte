@@ -31,7 +31,7 @@
 	export let edit = false;
 	export let clone = false;
 
-	export let onSave = /** @param {any} _value */ async (_value) => {};
+	export let onSave = /** @param {any} _value */ async (_value) => false;
 
 	export let id = '';
 	export let name = '';
@@ -43,6 +43,17 @@
 	export let accessGrants = [];
 
 	let _content = '';
+	/** @param {string} id @param {string} name @param {Record<string, any>} meta @param {string} content */
+	const draftSnapshot = (id, name, meta, content) =>
+		JSON.stringify({
+			id,
+			name,
+			meta: { ...meta, i18n: pruneEmptyLocaleEntries(meta.i18n) },
+			content
+		});
+	let savedDraft = draftSnapshot(id, name, meta, content);
+	$: draft = draftSnapshot(id, name, meta, _content);
+	$: changed = draft !== savedDraft;
 
 	$: if (content) {
 		updateContent();
@@ -172,19 +183,22 @@ class Tools:
 		}
 		loading = true;
 		try {
-			await onSave({
+			const submittedDraft = draftSnapshot(id, name, meta, content);
+			const saved = await onSave({
 				id,
 				name,
 				meta: { ...meta, i18n: pruneEmptyLocaleEntries(meta.i18n) },
 				content,
 				access_grants: accessGrants
 			});
+			if (saved) savedDraft = submittedDraft;
 		} finally {
 			loading = false;
 		}
 	};
 
 	const submitHandler = async () => {
+		if (loading || (edit && !changed)) return;
 		if (codeEditor) {
 			content = _content;
 			await tick();
@@ -236,16 +250,29 @@ class Tools:
 			}
 		}}
 	>
-		<button
-			class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-			type="button"
-			on:click={() => {
-				goto('/workspace/tools');
-			}}
-		>
-			<ChevronLeft className="size-3" strokeWidth="2" />
-			<span>{$i18n.t('Back')}</span>
-		</button>
+		<div class="flex shrink-0 items-center justify-between gap-2">
+			<button
+				class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+				type="button"
+				on:click={() => {
+					goto('/workspace/tools');
+				}}
+			>
+				<ChevronLeft className="size-3" strokeWidth="2" />
+				<span>{$i18n.t('Back')}</span>
+			</button>
+			<div class="flex shrink-0 items-center gap-1 pr-0.5">
+				<LanguageModeSelect
+					bind:value={locale}
+					translatedLocales={Object.keys(pruneEmptyLocaleEntries(meta.i18n))}
+				/>
+				<AccessButton
+					on:click={() => {
+						showAccessControlModal = true;
+					}}
+				/>
+			</div>
+		</div>
 
 		<div class="flex shrink-0 flex-col gap-2 pb-2 px-1 sm:flex-row sm:items-start">
 			<div class="min-w-0 w-full flex-1">
@@ -300,18 +327,6 @@ class Tools:
 					</Tooltip>
 				</div>
 			</div>
-
-			<div class="flex shrink-0 items-center gap-1 pr-0.5">
-				<LanguageModeSelect
-					bind:value={locale}
-					translatedLocales={Object.keys(pruneEmptyLocaleEntries(meta.i18n))}
-				/>
-				<AccessButton
-					on:click={() => {
-						showAccessControlModal = true;
-					}}
-				/>
-			</div>
 		</div>
 
 		<div class="min-h-0 flex-1 overflow-hidden rounded-lg flex flex-col">
@@ -365,7 +380,7 @@ class Tools:
 				<button
 					class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 					type="submit"
-					disabled={loading}
+					disabled={loading || (edit && !changed)}
 				>
 					{$i18n.t(edit ? 'Save' : 'Save & Create')}
 					{#if loading}

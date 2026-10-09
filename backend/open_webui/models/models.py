@@ -6,8 +6,10 @@ import time
 from copy import deepcopy
 from typing import Annotated, Any, Literal
 
+from fastapi import HTTPException
+from open_webui.models.model_history import ModelHistory, ModelHistories, model_snapshot
 from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.models.access_grants import AccessGrant, AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from open_webui.utils.misc import json_text_variants
@@ -188,12 +190,14 @@ class Model(Base):
     name = Column(Text)  # human-readable display name
     params = Column(JSONField)  # see ModelParams
     meta = Column(JSONField)  # see ModelMeta
+    version_id = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)  # soft-disable toggle
     updated_at = Column(BigInteger)  # epoch seconds
     created_at = Column(BigInteger)  # epoch seconds
 
 
 class ModelModel(BaseModel):
+    version_id: str | None = None
     id: str
     user_id: str
     base_model_id: str | None = None
@@ -236,6 +240,8 @@ class ModelAccessListResponse(BaseModel):
 
 
 class ModelForm(BaseModel):
+    commit_message: str | None = None
+
     model_config = ConfigDict(extra='ignore')
 
     id: str = Field(pattern=r'^\S+$')
@@ -257,44 +263,85 @@ class ModelsTable:
         access_grants: list[AccessGrantModel] | None = None,
         db: AsyncSession | None = None,
     ) -> ModelModel:
-        if isinstance(model.meta, dict):
-            knowledge = model.meta.get('knowledge')
-            stripped_knowledge = strip_extracted_content_from_model_knowledge(knowledge)
-            if stripped_knowledge != knowledge:
-                model.meta = {**model.meta, 'knowledge': stripped_knowledge}
-                if db is not None:
-                    await db.commit()
-
         model_model = ModelModel.model_validate(model)
         model_model.access_grants = (
             access_grants if access_grants is not None else await self._get_access_grants(model_model.id, db=db)
         )
         return model_model
 
+    async def _write_model(self, session, form, user_id, current=None, production_version_id=None):
+        """Write configuration, history, and grants in the caller's transaction."""
+        data = form.model_dump(exclude={'access_grants', 'commit_message'})
+        data['meta'].pop('chat_variables_schema', None)
+        snapshot = model_snapshot(data)
+        if current is None:
+            entry = ModelHistories.new_entry(form.id, snapshot, user_id, commit_message=form.commit_message)
+            current = Model(
+                **data, user_id=user_id, version_id=entry.id, created_at=int(time.time()), updated_at=int(time.time())
+            )
+            session.add_all([current, entry])
+        else:
+            values = {key: value for key, value in data.items() if key != 'id'}
+            # Omitted operational state must not reset a disabled model.
+            if 'is_active' not in form.model_fields_set:
+                values.pop('is_active', None)
+            previous = model_snapshot(
+                {
+                    'name': current.name,
+                    'base_model_id': current.base_model_id,
+                    'params': ModelParams.model_validate(current.params or {}),
+                    'meta': ModelMeta.model_validate(deepcopy(current.meta or {})),
+                }
+            )
+            if production_version_id is not None:
+                entry = (
+                    await session.execute(select(ModelHistory).filter_by(id=production_version_id, model_id=current.id))
+                ).scalar_one_or_none()
+                if entry is None:
+                    raise HTTPException(404, 'Model version not found')
+                values['version_id'] = entry.id
+                values.pop('is_active', None)
+                # Visibility belongs to the live model, not the historical snapshot.
+                values['meta'].pop('hidden', None)
+                if 'hidden' in (current.meta or {}):
+                    values['meta']['hidden'] = current.meta['hidden']
+            elif snapshot != previous:
+                entry = ModelHistories.new_entry(current.id, snapshot, user_id, current.version_id, form.commit_message)
+                session.add(entry)
+                values['version_id'] = entry.id
+            values['updated_at'] = int(time.time())
+            result = await session.execute(
+                update(Model)
+                .where(Model.id == current.id, Model.version_id == current.version_id)
+                .values(**values)
+                .execution_options(synchronize_session=False)
+            )
+            if result.rowcount != 1:
+                raise HTTPException(409, {'code': 'version_conflict'})
+        if form.access_grants is not None or current in session.new:
+            await AccessGrants.replace_access_grants(session, 'model', form.id, form.access_grants)
+        return current
+
+    async def _written_model(self, session, model):
+        await session.refresh(model)
+        grants = (
+            (await session.execute(select(AccessGrant).filter_by(resource_type='model', resource_id=model.id)))
+            .scalars()
+            .all()
+        )
+        return await self._to_model_model(model, [AccessGrantModel.model_validate(g) for g in grants])
+
     async def insert_new_model(
         self, form_data: ModelForm, user_id: str, db: AsyncSession | None = None
     ) -> ModelModel | None:
-        try:
-            async with get_async_db_context(db) as db:
-                result = Model(
-                    **{
-                        **form_data.model_dump(exclude={'access_grants'}),
-                        'user_id': user_id,
-                        'created_at': int(time.time()),
-                        'updated_at': int(time.time()),
-                    }
-                )
-                db.add(result)
-                await db.commit()
-                await AccessGrants.set_access_grants('model', result.id, form_data.access_grants, db=db)
-
-                if result:
-                    return await self._to_model_model(result, db=db)
-                else:
-                    return None
-        except Exception as e:
-            log.exception(f'Failed to insert a new model: {e}')
-            return None
+        async with get_async_db_context(db) as session:
+            try:
+                model = await self._write_model(session, form_data, user_id)
+                await session.commit()
+                return await self._written_model(session, model)
+            except Exception:
+                await session.rollback()
+                raise
 
     async def get_all_models(self, db: AsyncSession | None = None) -> list[ModelModel]:
         async with get_async_db_context(db) as db:
@@ -383,10 +430,13 @@ class ModelsTable:
                     and (
                         meta.get('background_image_url') == f'/api/v1/files/{file_id}/content'
                         or (meta.get('voice_avatar') or {}).get('file_id') == file_id
-                        or any(asset.get('file_id') == file_id for asset in (
-                            list((meta.get('voice_avatar') or {}).get('states', {}).values())
-                            + (meta.get('voice_avatar') or {}).get('gestures', [])
-                        ))
+                        or any(
+                            asset.get('file_id') == file_id
+                            for asset in (
+                                list((meta.get('voice_avatar') or {}).get('states', {}).values())
+                                + (meta.get('voice_avatar') or {}).get('gestures', [])
+                            )
+                        )
                     )
                 )
             }
@@ -626,22 +676,25 @@ class ModelsTable:
             except Exception:
                 return None
 
-    async def update_model_by_id(self, id: str, model: ModelForm, db: AsyncSession | None = None) -> ModelModel | None:
-        try:
-            async with get_async_db_context(db) as db:
-                # update only the fields that are present in the model
-                data = model.model_dump(exclude={'id', 'access_grants'})
-                data['updated_at'] = int(time.time())
-                await db.execute(update(Model).filter_by(id=id).values(**data))
-
-                await db.commit()
-                if model.access_grants is not None:
-                    await AccessGrants.set_access_grants('model', id, model.access_grants, db=db)
-
-                return await self.get_model_by_id(id, db=db)
-        except Exception as e:
-            log.exception(f'Failed to update the model by id {id}: {e}')
-            return None
+    async def update_model_by_id(
+        self,
+        id: str,
+        model: ModelForm,
+        db: AsyncSession | None = None,
+        user_id: str | None = None,
+        production_version_id: str | None = None,
+    ) -> ModelModel | None:
+        async with get_async_db_context(db) as session:
+            try:
+                current = await session.get(Model, id, populate_existing=True)
+                if current is None:
+                    return None
+                await self._write_model(session, model, user_id or current.user_id, current, production_version_id)
+                await session.commit()
+                return await self._written_model(session, current)
+            except Exception:
+                await session.rollback()
+                raise
 
     async def update_model_updated_at_by_id(self, id: str, db: AsyncSession | None = None) -> ModelModel | None:
         try:
@@ -657,85 +710,51 @@ class ModelsTable:
             log.exception(f'Failed to update the model updated_at by id {id}: {e}')
             return None
 
-    async def delete_model_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
-        try:
-            async with get_async_db_context(db) as db:
-                await AccessGrants.revoke_all_access('model', id, db=db)
-                await db.execute(delete(Model).filter_by(id=id))
-                await db.commit()
+    async def _delete_models(self, session, ids):
+        await session.execute(
+            delete(AccessGrant).where(AccessGrant.resource_type == 'model', AccessGrant.resource_id.in_(ids))
+        )
+        await session.execute(delete(ModelHistory).where(ModelHistory.model_id.in_(ids)))
+        await session.execute(delete(Model).where(Model.id.in_(ids)))
 
+    async def delete_model_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
+        async with get_async_db_context(db) as session:
+            try:
+                await self._delete_models(session, [id])
+                await session.commit()
                 return True
-        except Exception:
-            return False
+            except Exception:
+                await session.rollback()
+                raise
 
     async def delete_all_models(self, db: AsyncSession | None = None) -> bool:
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(Model.id))
-                model_ids = [row[0] for row in result.all()]
-                for model_id in model_ids:
-                    await AccessGrants.revoke_all_access('model', model_id, db=db)
-                await db.execute(delete(Model))
-                await db.commit()
-
+        async with get_async_db_context(db) as session:
+            try:
+                ids = (await session.execute(select(Model.id))).scalars().all()
+                await self._delete_models(session, ids)
+                await session.commit()
                 return True
-        except Exception:
-            return False
+            except Exception:
+                await session.rollback()
+                raise
 
     async def sync_models(
         self, user_id: str, models: list[ModelModel], db: AsyncSession | None = None
     ) -> list[ModelModel]:
-        try:
-            async with get_async_db_context(db) as db:
-                # Get existing models
-                result = await db.execute(select(Model))
-                existing_models = result.scalars().all()
-                existing_ids = {model.id for model in existing_models}
-
-                # Prepare a set of new model IDs
-                new_model_ids = {model.id for model in models}
-
-                # Update or insert models
+        async with get_async_db_context(db) as session:
+            try:
+                existing = {model.id: model for model in (await session.execute(select(Model))).scalars()}
+                written = []
                 for model in models:
-                    model_data = {
-                        **model.model_dump(exclude={'access_grants'}),
-                        'user_id': user_id,
-                        'updated_at': int(time.time()),
-                    }
-
-                    if model.id in existing_ids:
-                        await db.execute(update(Model).filter_by(id=model.id).values(**model_data))
-                    else:
-                        db.add(Model(**model_data))
-
-                # Remove models that are no longer present
-                for model in existing_models:
-                    if model.id not in new_model_ids:
-                        await db.delete(model)
-
-                await db.commit()
-
-                # Grants after the commit to avoid SQLite write-lock contention when session sharing is off
-                for model in models:
-                    await AccessGrants.set_access_grants('model', model.id, model.access_grants, db=db)
-                for model_id in existing_ids - new_model_ids:
-                    await AccessGrants.revoke_all_access('model', model_id, db=db)
-
-                result = await db.execute(select(Model))
-                all_models = result.scalars().all()
-                model_ids = [model.id for model in all_models]
-                grants_map = await AccessGrants.get_grants_by_resources('model', model_ids, db=db)
-                return [
-                    await self._to_model_model(
-                        model,
-                        access_grants=grants_map.get(model.id, []),
-                        db=db,
-                    )
-                    for model in all_models
-                ]
-        except Exception as e:
-            log.exception(f'Error syncing models for user {user_id}: {e}')
-            return []
+                    # Imported version IDs are never local history identities.
+                    form = ModelForm(**model.model_dump())
+                    written.append(await self._write_model(session, form, user_id, existing.get(model.id)))
+                await self._delete_models(session, existing.keys() - {model.id for model in models})
+                await session.commit()
+                return [await self._written_model(session, model) for model in written]
+            except Exception:
+                await session.rollback()
+                raise
 
 
 Models = ModelsTable()  # singleton model registry

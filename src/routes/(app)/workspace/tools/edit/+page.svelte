@@ -52,6 +52,7 @@
 
 			// await goto('/workspace/tools');
 		}
+		return res;
 	};
 
 	onMount(async () => {
@@ -88,9 +89,7 @@
 			meta={tool.meta}
 			content={tool.content}
 			accessGrants={tool.access_grants ?? []}
-			onSave={(value) => {
-				saveHandler(value);
-			}}
+			onSave={saveHandler}
 		/>
 	</div>
 {:else}
