@@ -878,7 +878,7 @@
 					on:click={() => (showAccessControlModal = true)}
 				/>{:else}<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
 		</div>
-		<div class="shrink-0 px-1 pb-2">
+		<div class="shrink-0 px-1 pb-2.5">
 			<input
 				class="w-full bg-transparent text-sm outline-hidden"
 				bind:value={knowledge.name}
