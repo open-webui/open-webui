@@ -499,6 +499,10 @@ export const generateInitialsImage = (name) => {
 	return canvas.toDataURL();
 };
 
+// These keys are translated by callers after choosing a date format.
+// t('Today at {{LOCALIZED_TIME}}');
+// t('Yesterday at {{LOCALIZED_TIME}}');
+// t('{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}');
 export const formatDate = (inputDate) => {
 	const date = dayjs(inputDate);
 
