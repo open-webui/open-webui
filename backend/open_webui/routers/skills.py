@@ -661,17 +661,20 @@ async def diff_skill_file(
         raise HTTPException(404, 'File not found')
     if any(f and f.get('encoding') for f in files):
         return {'binary': True}
+    before, after = ((file or {}).get('content', '') for file in files)
+    diff = '\n'.join(
+        difflib.unified_diff(
+            before.splitlines(),
+            after.splitlines(),
+            fromfile=f'{from_id[:7]}/{path}',
+            tofile=f'{to_id[:7]}/{path}',
+            lineterm='',
+        )
+    )
     return {
         'binary': False,
-        'diff': ''.join(
-            line if line.endswith('\n') else line + '\n\\ No newline at end of file\n'
-            for line in difflib.unified_diff(
-                (files[0] or {}).get('content', '').splitlines(True),
-                (files[1] or {}).get('content', '').splitlines(True),
-                fromfile=f'{from_id[:7]}/{path}',
-                tofile=f'{to_id[:7]}/{path}',
-            )
-        ),
+        'diff': diff,
+        'line_endings_only': not diff and before != after,
     }
 
 

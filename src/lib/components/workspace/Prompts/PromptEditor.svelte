@@ -170,18 +170,12 @@
 				metadata: Object.fromEntries(
 					['name', 'tags'].map((key) => [key, { before: before[key], after: after[key] }])
 				),
-				files: result.content_diff.length
-					? [{ path: $i18n.t('Prompt Content'), status: 'modified', binary: false }]
-					: [],
-				content: result.content_diff
-					.map((line, index) =>
-						line.endsWith('\n')
-							? line
-							: line +
-								'\n' +
-								(index >= 3 && !line.startsWith('@@') ? '\\ No newline at end of file\n' : '')
-					)
-					.join('')
+				files:
+					result.content_diff.length || result.line_endings_only
+						? [{ path: $i18n.t('Prompt Content'), status: 'modified', binary: false }]
+						: [],
+				line_endings_only: result.line_endings_only,
+				content: result.content_diff.join('\n')
 			};
 		} catch (error) {
 			toast.error(`${error}`);
@@ -481,7 +475,11 @@
 				<VersionDiff
 					diff={historyDiff}
 					currentLabel="Production"
-					loadFileDiff={async () => ({ diff: historyDiff.content })}
+					showFileHeaders={false}
+					loadFileDiff={async () => ({
+						diff: historyDiff.content,
+						line_endings_only: historyDiff.line_endings_only
+					})}
 					onClose={() => (historyDiff = null)}
 				/>
 			{:else}
@@ -632,7 +630,7 @@
 						bind:value={commitMessage}
 					/>{:else}<div class="flex-1"></div>{/if}
 				<div class="ml-auto flex shrink-0 items-center gap-3">
-					{#if edit}<label
+					{#if historical}<label
 							class="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs text-gray-500"
 							><input
 								type="checkbox"

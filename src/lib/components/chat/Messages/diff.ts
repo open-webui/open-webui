@@ -81,7 +81,7 @@ export function parseDiffRows(code: string): DiffRow[] {
 	return rows;
 }
 
-function emphasizePair(oldRow: DiffRow, newRow: DiffRow) {
+export function emphasizePair(oldRow: DiffRow, newRow: DiffRow) {
 	if (
 		oldRow.content === newRow.content ||
 		Math.max(oldRow.content.length, newRow.content.length) >= 1024

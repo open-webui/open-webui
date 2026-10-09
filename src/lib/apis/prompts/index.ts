@@ -41,6 +41,7 @@ type PromptDiff = {
 	from_snapshot: object;
 	to_snapshot: object;
 	content_diff: string[];
+	line_endings_only?: boolean;
 	name_changed: boolean;
 	access_grants_changed: boolean;
 };
