@@ -1,3 +1,4 @@
+
 <script lang="ts">
 	import { getI18n } from '$lib/utils/context';
 	import { goto } from '$app/navigation';
@@ -13,7 +14,17 @@
 	import { onMount } from 'svelte';
 	import { getRequestToken } from '$lib/services/auth';
 
+	// Markdown rendering
+	import termsMarkdown from '$lib/content/terms/en.md?raw';
+	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
+
 	const i18n = getI18n();
+
+	// Render repository-controlled Markdown safely.
+	const termsHtml = DOMPurify.sanitize(
+		marked.parse(termsMarkdown) as string
+	);
 
 	let accepting = false;
 	let accepted = false;
@@ -21,13 +32,15 @@
 	let termsStatusUnavailable = false;
 	let acceptTermsFailureCount = 0;
 
-	const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+	const sleep = (ms: number) =>
+		new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 	const runWithRetry = async <T,>(
 		operation: (attempt: number) => Promise<T>,
 		maxAttempts = TERMS_MAX_RETRY_ATTEMPTS
 	): Promise<T> => {
 		let lastError: unknown;
+
 		for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
 			try {
 				return await operation(attempt);
@@ -65,19 +78,25 @@
 
 	const handleAccept = async () => {
 		accepting = true;
+
 		try {
-			await runWithRetry(() => acceptTerms(getRequestToken()), TERMS_MAX_RETRY_ATTEMPTS);
+			await runWithRetry(
+				() => acceptTerms(getRequestToken()),
+				TERMS_MAX_RETRY_ATTEMPTS
+			);
+
 			acceptTermsFailureCount = 0;
 			toast.success('Terms accepted. Redirecting to CANChat.');
 			await goto('/');
 		} catch (e) {
 			acceptTermsFailureCount += 1;
+
 			if (acceptTermsFailureCount >= TERMS_MAX_RETRY_ATTEMPTS) {
 				toast.error(
-					`Repeated attempts to record acceptance have failed. Please wait a few minutes before retrying.`
+					'Repeated attempts to record acceptance have failed. Please wait a few minutes before retrying.'
 				);
 			} else {
-				toast.error(`Failed to record acceptance. Please try again.`);
+				toast.error('Failed to record acceptance. Please try again.');
 			}
 		} finally {
 			accepting = false;
@@ -92,20 +111,24 @@
 
 <div class="w-full h-screen max-h-[100dvh] overflow-y-auto bg-white dark:bg-gray-950">
 	<div class="max-w-5xl mx-auto px-4 py-6 text-black dark:text-white">
+
+		<!-- Header -->
 		<div class="flex flex-col md:flex-row items-start md:items-center justify-between">
 			<h1 class="text-3xl font-bold mb-2 md:mb-0 md:mr-4 dark:text-white">
 				CANChat – Terms of Use
 			</h1>
+
 			<div>
 				{#if accepted}
 					<a
 						href="/"
-						class="px-4 py-2 mr-2 bg-purple-800 text-white rounded-md hover:bg-purple-800/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 dark:focus-visible:ring-purple-300"
+						class="px-4 py-2 mr-2 bg-purple-800 text-white rounded-md hover:bg-purple-800/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 dark:focus-visible:ring-purple-300"
 						on:click={() => goto('/')}
 					>
 						Return to CANChat
 					</a>
 				{/if}
+
 				<a
 					href="/conditions"
 					class="px-4 py-2 bg-purple-800 text-white rounded-md hover:bg-purple-800/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 dark:focus-visible:ring-purple-300"
@@ -115,6 +138,7 @@
 			</div>
 		</div>
 
+		<!-- Terms version -->
 		<p class="text-sm text-neutral-600 dark:text-neutral-400 mt-1 pl-1">
 			Effective Date: {TERMS_VERSION_DATE.toLocaleDateString('en-GB', {
 				day: 'numeric',
@@ -123,756 +147,16 @@
 			})} | Version: {TERMS_VERSION}
 		</p>
 
+		<!-- Markdown Terms of Use -->
 		<div
-			class="mt-2 p-3 w-full rounded-lg border border-neutral-500 text-neutral-900 dark:text-neutral-100 dark:bg-gray-900 shadow [&_p]:ml-2"
+			class="mt-2 p-3 w-full rounded-lg border border-neutral-500 text-neutral-900 dark:text-neutral-100 dark:bg-gray-900 shadow"
 		>
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 pl-2 text-purple-700 dark:text-purple-400">
-					Welcome to CANChat
-				</h2>
-				<p class="mb-3">
-					CANChat is an advanced generative artificial intelligence solution provided by Shared
-					Services Canada (SSC). It is designed to assist Government of Canada (GC) personnel in
-					enhancing productivity, streamlining tasks, and improving communication.
-				</p>
-				<p class="mb-3">
-					By accessing, using, or interacting with CANChat, you acknowledge that you have read,
-					understood, and agree to be bound by these Terms of Use, as well as all applicable
-					Government of Canada policies, directives, and laws. <b
-						>If you do not agree with these terms, you must not access or use CANChat.</b
-					>
-				</p>
-				<p class="mb-3">
-					<b>Disclaimer:</b> CANChat was used in the development of the Terms of Use. All information
-					generated by AI was reviewed by human analysts.
-				</p>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					1. Definitions
-				</h2>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						<b>CANChat</b>: Refers to the generative artificial intelligence solution, including its
-						underlying models, user interface, features, and associated services.
-					</li>
-					<li class="mb-2"><b>User</b>: Any individual authorized to access and use CANChat.</li>
-					<li class="mb-2">
-						<b>Input Data</b>: Any text, documents, files, or information that a user provides or
-						uploads to CANChat.
-					</li>
-					<li class="mb-2">
-						<b>Output Content</b>: Any text, code, images, summaries, translations, analyses, or
-						other information generated or provided by CANChat in response to User Input Data.
-					</li>
-					<li class="mb-2">
-						<b>Personal Information (PI)</b>: Information about an identifiable individual that is
-						recorded in any form. See section 3 of the
-						<a
-							class="underline"
-							target="_blank"
-							rel="noopener noreferrer"
-							href="https://laws-lois.justice.gc.ca/eng/acts/p-21/FullText.html">Privacy Act</a
-						> for additional information.
-					</li>
-					<li class="mb-2">
-						<b>Protected A</b>: Applies to information when unauthorized disclosure could reasonably
-						be expected to cause limited or moderate injury outside the national interest, for
-						example, disclosure of an exact salary figure.
-					</li>
-					<li class="mb-2">
-						<b>Protected B</b>: Applies to information when unauthorized disclosure could reasonably
-						be expected to cause serious injury outside the national interest, for example, loss of
-						reputation or competitive advantage.
-					</li>
-					<li class="mb-2">
-						<b>Protected C</b>: Applies to the very limited amount of information when unauthorized
-						disclosure could reasonably be expected to cause extremely grave injury outside the
-						national interest, for example, loss of life.
-					</li>
-					<li class="mb-2">
-						<b>Sensitive Information or assets</b>: Information or assets that, if compromised,
-						would reasonably be expected to cause an injury. This includes all information that
-						falls within the exemption or exclusion criteria under the Access to Information Act and
-						the Privacy Act. This also includes controlled goods as well as other information and
-						assets that have regulatory or statutory prohibitions and controls.
-					</li>
-					<li class="mb-2">
-						<b>Aggregation</b>: Aggregation means a group of information resources or assets. The
-						security category for information or asset repositories reflects the impact of
-						aggregation, where more significant injury may occur when a group of information
-						resources or assets is compromised. As a user of CANChat, users have a responsibility to
-						use data appropriately in accordance with
-						<a
-							class="underline"
-							target="_blank"
-							rel="noopener noreferrer"
-							href="https://www.canada.ca/en/government/system/digital-government/digital-privacy-playbook/how-to-use-share.html"
-							>The Digital Privacy Playbook - Using and sharing personal information</a
-						>. This includes considering the aggregation and de-identification of data whenever
-						possible.
-					</li>
-					<li class="mb-2">
-						<b>Third-Party Providers</b>: External companies (e.g., Microsoft's OpenAI Service,
-						Meta, Google, Cohere, etc.) that provide the Large Language Models (LLMs) leveraged by
-						CANChat.
-					</li>
-					<li class="mb-2">
-						<b>Transitory Record</b>: Transitory records are not of business value. They may include
-						records that serve solely as convenience copies of records held in a government
-						institution repository, but do not include any records that are required to control,
-						support, or document the delivery of programs, to carry out operations, to make
-						decisions, or to provide evidence to account for the activities of government at any
-						time. (Source:
-						<a
-							class="underline"
-							target="_blank"
-							rel="noopener noreferrer"
-							href="https://www.canada.ca/en/library-archives/services/government/information-disposition/records/multi-institution-disposition-authorizations/2016-001-da-transitory-records.html"
-							>Disposition Authorization #2016/001 for Transitory Records, Section A.2</a
-						>).
-					</li>
-				</ul>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					2. About CANChat
-				</h2>
-				<p class="mb-2">
-					CANChat is a valuable assistant designed to boost task efficiency. Its capabilities
-					include seamlessly crafting impactful initial communications, overcoming translation
-					challenges, refining email responses with precision, generating detailed document
-					outlines, conducting preliminary research, and accomplishing a multitude of other tasks.
-				</p>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					3. Components
-				</h2>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						CANChat leverages large language models from third-party providers including OpenAI,
-						Meta, Google, Cohere and others.
-					</li>
-					<li class="mb-2">
-						CANChat uses an open-source user interface (OpenWebUI) licensed under the <a
-							class="underline"
-							target="_blank"
-							rel="noopener noreferrer"
-							href="https://mit-license.org/">MIT License</a
-						>.
-					</li>
-				</ul>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">4. Features</h2>
-				<p class="mb-3">
-					CANChat's NextGen user interface introduces an array of innovative functions and features,
-					inviting users to discover and integrate these enhancements and more into their
-					experience:
-				</p>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						<b>Bring your own data</b>: Work with your own documents through CANChat's upload
-						function.
-					</li>
-					<li class="mb-2">
-						<b>Chat history</b>: Review prior conversations with CANChat to resume discussions or
-						revisit information.
-					</li>
-					<li class="mb-2">
-						<b>Conversation tagging</b>: Organize your discussions by tagging conversations, making
-						them easy to sort and find.
-					</li>
-					<li class="mb-2">
-						<b>Language selection</b>: Engage with CANChat in your preferred official language.
-					</li>
-					<li class="mb-2">
-						<b>Mobile accessibility</b>: Connect with CANChat on-the-go with a mobile-friendly
-						interface.
-					</li>
-					<li class="mb-2">
-						<b>Model selection</b>: Choose from a selection of AI models in CANChat to best match
-						the task at hand.
-					</li>
-					<li class="mb-2">
-						<b>Multi-model support</b>: Benefit from varying AI models in CANChat for diverse
-						functionalities and expertise.
-					</li>
-					<li class="mb-2">
-						<b>Personalization</b>: Tailor your CANChat experience with customizable settings to
-						meet your preferences.
-					</li>
-					<li class="mb-2">
-						<b>Web searches</b>: Use CANChat's web search capabilities to quickly retrieve
-						information from websites.
-					</li>
-				</ul>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-4 text-purple-700 dark:text-purple-400">
-					5. Acceptable Use Policy
-				</h2>
-				<p class="mb-4">
-					When using CANChat for work purposes, you must strictly adhere to all applicable
-					Government of Canada and departmental policies, standards, and directives on the
-					responsible use of AI, digital services, information management, and security. These Terms
-					of Use align with key Government of Canada policies, frameworks, and guidelines, including
-					the
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=17151"
-						>Framework for the Management of Compliance</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://laws-lois.justice.gc.ca/eng/acts/P-21/">Privacy Act</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32603"
-						>Policy on Service and Digital</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32601"
-						>Directive on Service and Digital</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=16578&section=html"
-						>Policy on Government Security</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32592"
-						>Directive on Automated Decision-Making</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://laws-lois.justice.gc.ca/eng/acts/p-32/FullText.html"
-						>Public Servants Inventions Act</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=13697"
-						>Policy on Title to Intellectual Property Arising Under Crown Procurement Contracts</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32611"
-						>Directive on Security Management</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://gcxgce.sharepoint.com/:b:/t/1000538/IQBz57y49iJkTImo0OtymLL5AbLijOqyCeARBeIi0nBcIhA?e=VYrJjs"
-						>SSC guide on the use of generative AI</a
-					>, and the
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.canada.ca/en/government/system/digital-government/digital-government-innovations/responsible-use-ai/guide-use-generative-ai.html"
-						>Guide on the use of generative artificial intelligence</a
-					>.
-				</p>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					5.1 Permitted Activities (for official GoC business only)
-				</h2>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						<b>Document summarization</b>: Summarize various documents, articles, policies, research
-						papers, reports, meeting notes, and more.
-					</li>
-					<li class="mb-2">
-						<b>Text translation</b>: Translate various documents, presentations, reports, and
-						emails.
-					</li>
-					<li class="mb-2">
-						<b>Content creation</b>: Generate text to support reports, blogs, communiqués,
-						presentations, and other communications.
-					</li>
-					<li class="mb-2">
-						<b>Content editing</b>: Edit text to adjust the tone, formality, or length to improve
-						clarity and communication.
-					</li>
-					<li class="mb-2">
-						<b>Research and analysis</b>: Conduct research and analyze large volumes of content to
-						save time on complex or time-sensitive tasks.
-					</li>
-					<li class="mb-2">
-						<b>Meeting preparation</b>: Generate agendas, talking points, and summaries from
-						transcripts to support meeting preparation and follow-up.
-					</li>
-					<li class="mb-2">
-						<b>Support with Microsoft Office tasks</b>: Generate Excel formulas, create charts, and
-						produce PowerPoint content, and other Office tool functionalities to streamline data
-						management and analysis.
-					</li>
-				</ul>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					5.2 Prohibited Activities
-				</h2>
-				<p class="mb-2">You shall not, and shall not permit any third party to:</p>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						<b>Input Data beyond Protected B</b>: Do not use departmental information with a
-						classification higher than Protected B (e.g., Protected C, Classified, Secret, Top
-						Secret).
-					</li>
-					<li class="mb-2">
-						<b>Prohibited Sensitive Information</b>: CANChat can handle Protected B information.
-						However, users are fully responsible for ensuring that any Personal or Sensitive
-						Information submitted is strictly essential for their duties and completely complies
-						with all relevant Government of Canada policies and their department's specific security
-						and privacy policies, standards, and directives.
-					</li>
-					<li class="mb-2">
-						<b>Code Generation for Development or Production</b>:
-						<ul class="list-disc pl-6 mt-2">
-							<li class="mb-2">
-								<b>For Shared Services Canada Employees</b>: The use of CANChat or any other
-								generative AI tool for generating, developing, or integrating code into a
-								development or production setting is strictly prohibited due to intellectual
-								property, copyright, and security vulnerability concerns.
-							</li>
-							<li class="mb-2">
-								<b>For Employees of Other Government of Canada Departments</b>: Before using CANChat
-								for code generation, development, or integration, users are strongly encouraged to
-								consult and comply with their department's specific policies, standards, and
-								directives regarding the responsible use of generative AI for coding. Independent
-								security review and Intellectual Property clearance are also highly recommended for
-								any code intended for development or production.
-							</li>
-						</ul>
-					</li>
-					<li class="mb-2">
-						<b>Engage in Unlawful or Unethical Practices</b>: Do not use CANChat for any unlawful,
-						unethical, or unauthorized purpose, or in any way that violates applicable laws or
-						regulations. Please refer to the
-						<a
-							class="underline"
-							target="_blank"
-							rel="noopener noreferrer"
-							href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=25049"
-							>Value and Ethics Guidelines for Public Sector</a
-						>.
-					</li>
-					<li class="mb-2">
-						<b>Generate Harmful Content</b>: Do not generate harmful, offensive, malicious,
-						discriminatory, hateful, or inappropriate content.
-					</li>
-					<li class="mb-2">
-						<b>Bypass Security Measures</b>: Do not attempt to bypass departmental security
-						measures, attempt to exploit vulnerabilities in CANChat or associated systems, or engage
-						in any form of unauthorized access.
-					</li>
-					<li class="mb-2">
-						<b>Impersonate</b>: Do not impersonate any person or entity, or falsely state or
-						otherwise misrepresent your affiliation with a person or entity.
-					</li>
-					<li class="mb-2">
-						<b>Automated Decision-Making</b>: Do not use CANChat for automated decision-making that
-						directly affects individuals without comprehensive human review, validation, and
-						adherence to the Directive on Automated Decision-Making.
-					</li>
-					<li class="mb-2">
-						<b>Commercial Use</b>: Do not use CANChat for any commercial purpose unrelated to
-						official Government of Canada business.
-					</li>
-				</ul>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					6. Employee Responsibilities &amp; Limitations of AI
-				</h2>
-				<p class="mb-3">
-					Employees must understand and be aware of certain inherent limitations that exist with
-					generative AI services. When using services such as CANChat to craft documents or
-					responses that will be used to inform decision-makers, it is imperative to validate the
-					outputs generated by these services for accuracy, clarity, completeness, and relevance.
-					Therefore, when used in an official capacity, employees are responsible for:
-				</p>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						<b>Awareness of Data Timeliness</b>: Recognize that the effectiveness and currency of AI
-						models are influenced by the timeliness and age of their training data. Output Content
-						may not reflect the most current information or policies.
-					</li>
-					<li class="mb-2">
-						<b>Ethical Considerations &amp; Bias</b>: Be aware of potential ethical concerns,
-						including the possibility of inherent biases or inaccuracies in AI-generated content due
-						to biases in training data. Ensure that its application aligns with the organization's
-						values and goals and actively work to identify and mitigate such biases.
-					</li>
-					<li class="mb-2">
-						<b>Human Oversight &amp; Verification</b>: Act as the ultimate subject matter expert and
-						are solely responsible for verifying the accuracy, completeness, and suitability of all
-						Output Content before relying on it or disseminating it.
-					</li>
-					<li class="mb-2">
-						<b>Legal &amp; Regulatory Compliance</b>: Be aware of and comply with all legal
-						requirements, privacy regulations (Privacy Act), and intellectual property implications
-						when working with CANChat Input or Output content, especially when handling privacy
-						information or Protected B information.
-					</li>
-					<li class="mb-2">
-						<b>Responsible Disclosure</b>: Clearly identify when content is generated with
-						assistance from CANChat. This helps maintain accountability, facilitates understanding
-						of the AI-generated results by stakeholders, promotes trust, and mitigates potential
-						risks (e.g., by adding a disclaimer like "This content was generated with assistance
-						from CANChat and validated by a human").
-					</li>
-					<li class="mb-2">
-						<b>Risk Mitigation</b>: Understand the potential risks associated with generative AI,
-						such as the creation of misleading content, amplification of biases, or generation of
-						"hallucinations" (plausible but incorrect information).
-					</li>
-				</ul>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					7. Employee Agreement (Acceptance of Terms)
-				</h2>
-				<p class="mb-3">By using CANChat, you explicitly agree and confirm that:</p>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						You will validate all Output Content generated by CANChat by a subject matter expert
-						prior to inclusion in a professional setting or before any reliance on it.
-					</li>
-					<li class="mb-2">
-						You will not submit Input Data or information above Protected B level of sensitivity.
-					</li>
-					<li class="mb-2">
-						You understand and accept the responsibilities associated with processing Protected B
-						information within CANChat.
-					</li>
-					<li class="mb-2">
-						For Shared Services Canada employees: You will not use CANChat for generating,
-						developing, or integrating code into a development or production setting.
-					</li>
-					<li class="mb-2">
-						For employees of other Government of Canada departments: You will consult and adhere to
-						your departmental policies regarding the use of generative AI for code generation.
-					</li>
-					<li class="mb-2">You will not engage in unlawful or unethical practices.</li>
-					<li class="mb-2">You will not generate harmful, offensive, or malicious content.</li>
-					<li class="mb-2">
-						You will not attempt to circumvent departmental security measures or attempt to exploit
-						vulnerabilities.
-					</li>
-					<li class="mb-2">
-						You understand that CANChat is a monitored service, and all interactions, Input Data,
-						and Output Content may be logged and audited.
-					</li>
-					<li class="mb-2">
-						You understand that support for CANChat is provided on a best-effort basis by the
-						Artificial Intelligence Program, generally available during standard business hours <b
-							>(7:30 AM to 8:00 PM Eastern Time, Monday to Friday)</b
-						>, and that the product can be decommissioned or altered without prior notice.
-					</li>
-				</ul>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					8. Intellectual Property (IP) Rights
-				</h2>
-				<div class="mb-4">
-					<h3 class="text-lg font-semibold mb-2 text-purple-700 dark:text-purple-400">
-						8.1 Input Data
-					</h3>
-					<ul class="list-disc pl-6">
-						<li class="mb-2">
-							Under no circumstances will your Input Data be used for training or improving the
-							underlying generative AI models, either by SSC or by Third-Party Providers.
-						</li>
-						<li class="mb-2">
-							You represent and warrant that you have all necessary rights and permissions to
-							provide Input Data to CANChat and that your Input Data does not infringe upon the
-							intellectual property rights, privacy rights, or other rights of any third party.
-						</li>
-					</ul>
-				</div>
-				<div>
-					<h3 class="text-lg font-semibold mb-2 text-purple-700 dark:text-purple-400">
-						8.2 Output Content
-					</h3>
-					<ul class="list-disc pl-6">
-						<li class="mb-2">
-							For Output Content generated by CANChat that is created by a public servant in the
-							course of their official duties as an employee of the Crown, such Output Content, once
-							validated and adopted by the public servant as part of their work, may become the
-							property of the Crown. Public servants must refer to the <a
-								class="underline"
-								target="_blank"
-								rel="noopener noreferrer"
-								href="https://laws-lois.justice.gc.ca/eng/acts/p-32/FullText.html"
-								>Public Servants Inventions Act</a
-							> and check with their department for any related policies to the implementation of provisions
-							in the PSIA.
-						</li>
-						<li class="mb-2">
-							Users who are not part of the federal public service must reference the <a
-								class="underline"
-								target="_blank"
-								rel="noopener noreferrer"
-								href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=13697"
-								>Policy on Title to Intellectual Property Arising Under Crown Procurement Contracts</a
-							>.
-						</li>
-						<li class="mb-2">
-							You acknowledge that CANChat's models are trained on vast datasets, and while efforts
-							are made to respect IP, SSC cannot guarantee that Output Content will be free from
-							elements that may infringe on third-party intellectual property rights. Users are
-							responsible for exercising due diligence and performing their own IP clearance on
-							Output Content, particularly for external communications or publicly released
-							materials.
-						</li>
-						<li class="mb-2">
-							SSC makes no representations or warranties regarding the originality or freedom from
-							infringement of any Output Content.
-						</li>
-					</ul>
-				</div>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					9. Data Privacy and Handling
-				</h2>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						<b>Data Collection</b>: SSC collects and stores your Input Data, Output Content,
-						interaction logs, usage metrics, and technical information to operate, monitor, secure,
-						and improve CANChat.
-					</li>
-					<li class="mb-2">
-						<b>Purpose of Collection</b>:
-						<ul class="list-disc pl-6 mt-2">
-							<li class="mb-2">Provide and maintain the CANChat service.</li>
-							<li class="mb-2">
-								Monitor for compliance with these Terms of Use and relevant Government of Canada
-								policies.
-							</li>
-							<li class="mb-2">Ensure the security and integrity of the system.</li>
-							<li class="mb-2">Debug and improve the performance and functionality of CANChat.</li>
-							<li class="mb-2">
-								Generate anonymized and aggregated statistical reports for service management.
-							</li>
-							<li class="mb-2">
-								Crucially, Input Data and Output Content will not be used for training the
-								underlying generative AI models.
-							</li>
-						</ul>
-					</li>
-					<li class="mb-2">
-						<b>Sharing with Third-Party Providers</b>: By using CANChat with Protected B data, you
-						understand that your Input Data and interactions with CANChat will be processed by the
-						Third-Party Providers (e.g., Azure OpenAI Service, Cohere, Meta, Google) you select
-						through CANChat. This processing is subject to SSC's agreements with these providers,
-						which
-						<b>explicitly state that user data will not be used for monitoring or training.</b>
-					</li>
-					<li class="mb-2">
-						<b>Data Storage</b>: User data (Input Data, Output Content, logs) will be stored on
-						Government of Canada approved infrastructure and handled in accordance with the security
-						classification of the data.
-					</li>
-					<li class="mb-2">
-						<b>Data Retention</b>: All chat data (Input Data, Output Content, interaction logs for
-						individual chats) is retained for <b>30 days from the last activity in each chat.</b> Other
-						usage metrics and aggregated statistical reports may be retained for longer periods in accordance
-						with SSC's information management policies and schedules.
-					</li>
-					<li class="mb-2">
-						<b>Personal Information</b>: Shared Services Canada is committed to protecting Personal
-						Information in accordance with the Privacy Act. When Protected B data containing
-						Personal Information is processed, all aspects of its handling will conform to the
-						Privacy Act and the
-						<a
-							class="underline"
-							target="_blank"
-							rel="noopener noreferrer"
-							href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=18309"
-							>Directive on Privacy Practices</a
-						>.
-					</li>
-					<li class="mb-2">
-						<b>Monitoring</b>: You acknowledge that all usage of CANChat, including Input Data and
-						Output Content, is subject to monitoring and audit for security, compliance, and
-						investigative purposes. There is no expectation of privacy regarding your use of
-						CANChat.
-					</li>
-					<li class="mb-2">
-						<b>Business Continuity</b>: SSC's business continuity approach focuses on (1)
-						operational recovery, which restores service availability without recovering user data,
-						and (2) full recovery, which restores both service and data. Users of CANChat should be
-						aware that operational recovery will be prioritized to re-establish core functionality
-						quickly. Transitory records (e.g., transient sessions, caches, temporary indexes) will
-						be recovered on a best-effort basis.
-					</li>
-				</ul>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					10. Disclaimer of Warranties
-				</h2>
-				<p class="mb-2 font-semibold">
-					USERS ACKNOWLEDGE THAT CANCHAT HAS NOT YET UNDERGONE A FULL SERVICE AUTHORIZATION PROCESS.
-					CONSEQUENTLY, ANY SUPPORT PROVIDED FOR CANCHAT IS ON A BEST-EFFORT BASIS AND GENERALLY
-					AVAILABLE ONLY DURING STANDARD BUSINESS HOURS (7:30 AM TO 8:00 PM EASTERN TIME, MONDAY TO
-					FRIDAY).
-				</p>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					11. Consequences of Breach
-				</h2>
-				<p class="mb-2">
-					Any breach of these Terms of Use or departmental policies may result in disciplinary
-					action, in accordance with the
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32603"
-						>Policy on Service and Digital</a
-					>,
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32611"
-						>Directive on Security Management</a
-					>, the
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32601"
-						>Directive on Service and Digital</a
-					>, and the
-					<a
-						class="underline"
-						target="_blank"
-						rel="noopener noreferrer"
-						href="https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=17151"
-						>Framework for the Management of Compliance</a
-					>. Consequences may include suspension or termination of your access to CANChat, as deemed
-					appropriate by your department.
-				</p>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					12. Modifications to Terms
-				</h2>
-				<p class="mb-2">
-					The Department reserves the right to modify or replace these Terms of Use at any time. By
-					continuing to access or use CANChat after those revisions become effective, you agree to
-					be bound by the revised terms.
-				</p>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					13. Termination of Access
-				</h2>
-				<p class="mb-2">
-					The Department reserves the right to suspend or terminate your access to CANChat at its
-					sole discretion, at any time and for any reason, without prior notice, including but not
-					limited to breaches of these Terms of Use, security concerns, or operational necessity.
-					Upon termination, your access to CANChat will end.
-				</p>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					14. Reporting Misuse, Incidents, or Concerns
-				</h2>
-				<p class="mb-2">
-					If you become aware of any security vulnerabilities, instances of CANChat generating
-					harmful/inappropriate content, potential breaches of these Terms of Use, or any other
-					concerns (especially related to Protected B data handling), please immediately report them
-					to <a
-						class="underline"
-						href="mailto:ssc.canchat-support-assistance-canchat.spc@ssc-spc.gc.ca"
-						>CANChat Support</a
-					>.
-				</p>
-			</div>
-
-			<div class="mb-5">
-				<h2 class="text-xl font-semibold mb-3 text-purple-700 dark:text-purple-400">
-					15. Contact Information
-				</h2>
-				<p class="mb-2">
-					For general inquiries about CANChat or these Terms of Use, please contact:
-				</p>
-				<ul class="list-disc pl-6">
-					<li class="mb-2">
-						<a
-							class="underline"
-							href="mailto:dsaiclientengagement.sdiaclientmobilisation@ssc-spc.gc.ca"
-							>Business Intake and Client Engagement</a
-						>
-					</li>
-					<li class="mb-2">
-						<a
-							class="underline"
-							target="_blank"
-							rel="noopener noreferrer"
-							href="https://gcxgce.sharepoint.com/teams/1000538/SitePages/GC-AI-Hub.aspx"
-							>Artificial Intelligence Centre of Excellence</a
-						>
-					</li>
-				</ul>
-			</div>
-
-			<div class="mt-3">
-				<p class="font-semibold">
-					By accepting to use CANChat, you understand your responsibilities and agree to adhere to
-					these Terms of Use.
-				</p>
-			</div>
+			<article class="terms-markdown prose dark:prose-invert max-w-none">
+				{@html termsHtml}
+			</article>
 		</div>
 
+		<!-- Terms acceptance -->
 		<div class="mt-3 flex justify-center">
 			{#if accepted}
 				<button
@@ -880,7 +164,7 @@
 					on:click={() => goto('/')}
 					disabled={accepting || checkingTermsStatus}
 					aria-busy={accepting || checkingTermsStatus}
-					class="px-4 py-2 bg-purple-800 text-white p-4 rounded-md hover:bg-purple-800/80 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 dark:focus-visible:ring-purple-300"
+					class="px-4 py-2 bg-purple-800 text-white rounded-md hover:bg-purple-800/80 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 dark:focus-visible:ring-purple-300"
 				>
 					{#if checkingTermsStatus}
 						Checking terms...
@@ -898,7 +182,7 @@
 							on:click={handleAccept}
 							disabled={accepting || checkingTermsStatus}
 							aria-busy={accepting || checkingTermsStatus}
-							class="px-4 py-2 bg-purple-800 text-white p-4 rounded-md hover:bg-purple-800/80 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 dark:focus-visible:ring-purple-300"
+							class="px-4 py-2 bg-purple-800 text-white rounded-md hover:bg-purple-800/80 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 dark:focus-visible:ring-purple-300"
 						>
 							{#if checkingTermsStatus}
 								Checking terms...
@@ -909,6 +193,7 @@
 							{/if}
 						</button>
 					{/if}
+
 					{#if termsStatusUnavailable}
 						<div
 							role="alert"
@@ -916,17 +201,17 @@
 						>
 							<span
 								class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-xs font-bold"
-								>!</span
-							>
+							>!</span>
 							<p>
 								Unable to verify terms status. Please contact
 								<a
 									class="font-semibold underline underline-offset-2"
-									href={`mailto:${TERMS_SUPPORT_EMAIL}`}>CANChat Support</a
-								>.
+									href={`mailto:${TERMS_SUPPORT_EMAIL}`}
+								>CANChat Support</a>.
 							</p>
 						</div>
 					{/if}
+
 					{#if acceptTermsFailureCount >= TERMS_MAX_RETRY_ATTEMPTS}
 						<div
 							role="alert"
@@ -934,11 +219,10 @@
 						>
 							<span
 								class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-xs font-bold"
-								>!</span
-							>
+							>!</span>
 							<p>
-								Repeated attempts to record acceptance have failed. Please wait a few minutes before
-								retrying.
+								Repeated attempts to record acceptance have failed.
+								Please wait a few minutes before retrying.
 							</p>
 						</div>
 					{/if}
@@ -947,3 +231,56 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	:global(.terms-markdown h1),
+	:global(.terms-markdown h2),
+	:global(.terms-markdown h3) {
+		color: #7e22ce;
+		font-weight: 600;
+		margin-top: 1.25rem;
+		margin-bottom: 0.75rem;
+	}
+
+	:global(.terms-markdown h1) {
+		font-size: 1.5rem;
+	}
+
+	:global(.terms-markdown h2) {
+		font-size: 1.25rem;
+	}
+
+	:global(.terms-markdown h3) {
+		font-size: 1.125rem;
+	}
+
+	:global(.terms-markdown p) {
+		margin-bottom: 0.75rem;
+	}
+
+	:global(.terms-markdown ul) {
+		list-style-type: disc;
+		padding-left: 1.5rem;
+		margin-bottom: 1rem;
+	}
+
+	:global(.terms-markdown ol) {
+		list-style-type: decimal;
+		padding-left: 1.5rem;
+		margin-bottom: 1rem;
+	}
+
+	:global(.terms-markdown li) {
+		margin-bottom: 0.5rem;
+	}
+
+	:global(.terms-markdown a) {
+		text-decoration: underline;
+	}
+
+	:global(.dark .terms-markdown h1),
+	:global(.dark .terms-markdown h2),
+	:global(.dark .terms-markdown h3) {
+		color: #c084fc;
+	}
+</style>
