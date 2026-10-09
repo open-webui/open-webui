@@ -79,13 +79,20 @@
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => {
-						exportHandler();
+						exportHandler('json');
 						closeMenu();
 					}}
 				>
 					<Download className="size-3.5" />
-					<div class="flex items-center">{$i18n.t('Export')}</div>
+					<div class="flex items-center">{$i18n.t('Export JSON')}</div>
 				</button>
+				<button
+					class="flex h-7 w-full items-center gap-2 px-2 text-[0.8125rem]"
+					on:click={() => {
+						exportHandler('zip');
+						closeMenu();
+					}}><Download className="size-3.5" />Export ZIP</button
+				>
 			{/if}
 
 			<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />

@@ -372,6 +372,7 @@
 		{#if searchTarget}
 			<div class="absolute inset-0">
 				<FileCodeEditor
+					{readOnly}
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
@@ -414,6 +415,7 @@
 		{:else if isHtml && showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
+					{readOnly}
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
@@ -427,6 +429,7 @@
 		{:else if isMarkdown && showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
+					{readOnly}
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
@@ -483,6 +486,7 @@
 		{:else if isCode && !showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
+					{readOnly}
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}

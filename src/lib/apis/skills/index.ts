@@ -329,3 +329,105 @@ export const deleteSkillById = async (token: string, id: string) => {
 
 	return res;
 };
+
+export type SkillFile = { path: string; content: string; encoding?: 'base64' };
+export type SkillFileSummary = { path: string; size: number; encoding?: 'base64' | null };
+export type SkillFileOperation = {
+	op: 'put' | 'move' | 'delete';
+	path: string;
+	content?: string;
+	encoding?: 'base64';
+	destination?: string;
+};
+
+export const skillRequest = async (token: string, path: string, options: RequestInit = {}) => {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/skills${path}`, {
+		...options,
+		headers: {
+			authorization: `Bearer ${token}`,
+			...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+			...options.headers
+		}
+	});
+	if (!response.ok) {
+		const body = await response.json();
+		throw body.detail ?? body;
+	}
+	return response;
+};
+export const getSkillFiles = async (token: string, id: string, versionId: string) =>
+	(
+		await skillRequest(token, `/id/${id}/files?${new URLSearchParams({ version_id: versionId })}`)
+	).json();
+export const getSkillFile = async (token: string, id: string, versionId: string, path: string) =>
+	(
+		await skillRequest(
+			token,
+			`/id/${id}/files/content?${new URLSearchParams({ version_id: versionId, path })}`
+		)
+	).blob();
+export const getSkillHistory = async (token: string, id: string, page = 1) =>
+	(await skillRequest(token, `/id/${id}/history?page=${page}`)).json();
+export const getSkillVersion = async (token: string, id: string, versionId: string) =>
+	(await skillRequest(token, `/id/${id}/history/${versionId}`)).json();
+export const restoreSkillVersion = async (
+	token: string,
+	id: string,
+	versionId: string,
+	expectedVersionId: string
+) =>
+	(
+		await skillRequest(token, `/id/${id}/history/${versionId}/restore`, {
+			method: 'POST',
+			body: JSON.stringify({ expected_version_id: expectedVersionId })
+		})
+	).json();
+export const cloneSkill = async (
+	token: string,
+	id: string,
+	name: string,
+	newId: string,
+	versionId?: string
+) =>
+	(
+		await skillRequest(token, `/id/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify({ id: newId, name, version_id: versionId })
+		})
+	).json();
+export const exportSkillBundle = async (
+	token: string,
+	format: 'json' | 'zip',
+	ids: string[] = [],
+	versionId?: string
+) => {
+	const query = new URLSearchParams({ format });
+	ids.forEach((id) => query.append('ids', id));
+	if (versionId) query.set('version_id', versionId);
+	return (await skillRequest(token, `/export?${query}`)).blob();
+};
+export const importSkillBundles = async (token: string, files: File[], decisions?: object[]) => {
+	const body = new FormData();
+	files.forEach((file) => body.append('files', file, file.webkitRelativePath || file.name));
+	if (decisions) body.append('decisions', JSON.stringify(decisions));
+	return (
+		await skillRequest(token, decisions ? '/import' : '/import/preview', { method: 'POST', body })
+	).json();
+};
+export const skillError = (error: unknown): string =>
+	error instanceof Error
+		? error.message
+		: typeof error === 'string'
+			? error
+			: JSON.stringify(error);
+
+export const downloadSkillBlob = (blob: Blob, filename: string) => {
+	const url = URL.createObjectURL(blob);
+	const anchor = document.createElement('a');
+	anchor.href = url;
+	anchor.download = filename;
+	document.body.appendChild(anchor);
+	anchor.click();
+	anchor.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+};

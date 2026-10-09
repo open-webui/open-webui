@@ -134,7 +134,7 @@ from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skills import (
     apply_skills_create_prompt,
     extract_skill_ids_from_messages,
-    has_prior_real_chat_content,
+    has_prior_user_message,
     strip_skill_mentions,
 )
 from open_webui.utils.task import (
@@ -2762,8 +2762,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     files = form_data.pop('files', None)
     form_data.pop('folder_id', None)
     metadata['terminal_id'] = terminal_id
-    skill_authoring_allowed = bool(terminal_id) and has_prior_real_chat_content(form_data.get('messages', []))
-    skill_create_denial_reason = 'empty_chat' if terminal_id else 'disabled'
+    can_author_skills = (
+        use_builtin_tools
+        and (model.get('info', {}).get('meta', {}).get('builtinTools') or {}).get('skills', True)
+        and (
+            user.role == 'admin'
+            or await has_permission(user.id, 'workspace.skills', await Config.get('user.permissions'))
+        )
+    )
+    skill_authoring_allowed = can_author_skills and has_prior_user_message(form_data.get('messages', []))
+    skill_create_denial_reason = 'empty_chat' if can_author_skills else 'disabled'
     apply_skills_create_prompt(
         form_data.get('messages', []),
         allowed=skill_authoring_allowed,
@@ -2776,6 +2784,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Mentioned skills get full content; selected/default skills can be loaded through view_skill.
     chat_context = metadata.get('chat_context') or {}
+    metadata['chat_context'] = chat_context
+    skill_versions = chat_context.setdefault('skill_versions', {})
     mentioned_skill_ids = set(chat_context.get('mentioned_skill_ids') or []) | extract_skill_ids_from_messages(
         form_data.get('messages', [])
     )
@@ -2839,8 +2849,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         skill_manifest = ''
         for skill in available_skills:
             if skill.id in mentioned_skill_ids or not use_builtin_tools or not model_builtin_tools.get('skills', True):
+                from open_webui.models.skills import get_skill_snapshot
+
+                version_id = skill_versions.get(skill.id) or skill.version_id
+                try:
+                    snapshot = await get_skill_snapshot(skill, version_id)
+                except HTTPException as error:
+                    if error.status_code != 404:
+                        raise
+                    continue
+                skill_versions[skill.id] = version_id
+                root_content = snapshot['content']
+                resources = '\n'.join(f['path'] for f in snapshot['data']['files'] if f['path'] != 'SKILL.md')
+                resource_hint = (
+                    f'\nRead supporting files with read_skill_file(id="{skill.id}", path=...).\n{resources}'
+                    if use_builtin_tools and model_builtin_tools.get('skills', True)
+                    else '\nSupporting files require a model with skill tools enabled.'
+                    if resources
+                    else ''
+                )
                 form_data['messages'] = add_or_update_system_message(
-                    f'<skill name="{skill.name}">\n{skill.content}\n</skill>',
+                    f'<skill id="{skill.id}" version_id="{version_id}" name="{skill.name}">\n{root_content}{resource_hint}\n</skill>',
                     form_data['messages'],
                     append=True,
                 )

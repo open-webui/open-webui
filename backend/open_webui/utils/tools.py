@@ -99,6 +99,9 @@ from open_webui.tools.builtin import (
     view_knowledge_file,
     view_note,
     view_skill,
+    read_skill_file,
+    create_skill,
+    update_skill_files,
     write_note,
 )
 from open_webui.utils.access_control import has_access, has_connection_access, has_permission
@@ -800,8 +803,12 @@ async def get_builtin_tools(
         )
 
     # Skills tools - view_skill allows model to load full skill instructions on demand
-    if is_builtin_tool_enabled('skills') and extra_params.get('__skill_ids__'):
-        builtin_functions.append(view_skill)
+    if is_builtin_tool_enabled('skills'):
+        builtin_functions.extend([view_skill, read_skill_file, update_skill_files])
+        if user.get('role') == 'admin' or await has_permission(
+            user.get('id', ''), 'workspace.skills', await Config.get('user.permissions')
+        ):
+            builtin_functions.append(create_skill)
 
     # Task management - break down complex work into trackable steps
     # Task state is stored on the chats row; local/channel IDs do not have one.

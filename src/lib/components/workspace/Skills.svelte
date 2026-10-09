@@ -21,14 +21,12 @@
 	import { goto } from '$app/navigation';
 	import {
 		getSkills,
-		getSkillById,
 		getSkillItems,
 		exportSkills,
-		createNewSkill,
 		deleteSkillById,
 		toggleSkillById
 	} from '$lib/apis/skills';
-	import { capitalizeFirstLetter, parseFrontmatter, formatSkillName, slugify } from '$lib/utils';
+	import { capitalizeFirstLetter } from '$lib/utils';
 	import TagInput from '$lib/components/common/Tags/TagInput.svelte';
 
 	import Tooltip from '../common/Tooltip.svelte';
@@ -43,6 +41,11 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Switch from '../common/Switch.svelte';
 	import SkillMenu from './Skills/SkillMenu.svelte';
+	import SkillImport from './Skills/SkillImport.svelte';
+	import { cloneSkill, exportSkillBundle, skillError } from '$lib/apis/skills';
+	let showImport = false;
+	let bundleFiles: File[] = [];
+	let folderImportInput: HTMLInputElement;
 	import Pagination from '../common/Pagination.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
@@ -50,7 +53,6 @@
 	let shiftKey = false;
 	let loaded = false;
 
-	let importFiles;
 	let importInputElement: HTMLInputElement;
 
 	let query = '';
@@ -81,9 +83,27 @@
 			},
 			{
 				id: 'skills-import',
-				label: $i18n.t('Import JSON'),
+				label: $i18n.t('Import'),
 				onClick: () => importInputElement?.click(),
 				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import
+			},
+			{
+				id: 'skills-import-folder',
+				label: 'Import folder',
+				onClick: () => folderImportInput?.click(),
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import
+			},
+			{
+				id: 'skills-export-zip',
+				label: 'Export ZIP',
+				onClick: async () => {
+					try {
+						saveAs(await exportSkillBundle(localStorage.token, 'zip'), 'skills.zip');
+					} catch (error) {
+						toast.error(skillError(error));
+					}
+				},
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_export
 			},
 			{
 				id: 'skills-export',
@@ -184,32 +204,28 @@
 	};
 
 	const cloneHandler = async (skill) => {
-		const _skill = await getSkillById(localStorage.token, skill.id).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (_skill) {
-			sessionStorage.skill = JSON.stringify({
-				..._skill,
-				id: `${_skill.id}_clone`,
-				name: `${_skill.name} (Clone)`
-			});
-			goto('/workspace/skills/create');
+		try {
+			const suffix = crypto.randomUUID().slice(0, 7);
+			const result = await cloneSkill(
+				localStorage.token,
+				skill.id,
+				`${skill.name} (${suffix})`,
+				`${skill.id}-${suffix}`
+			);
+			await goto(`/workspace/skills/edit?id=${result.id}`);
+		} catch (error) {
+			toast.error(skillError(error));
 		}
 	};
 
-	const exportHandler = async (skill) => {
-		const _skill = await getSkillById(localStorage.token, skill.id).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (_skill) {
-			let blob = new Blob([JSON.stringify([_skill])], {
-				type: 'application/json'
-			});
-			saveAs(blob, `skill-${_skill.id}-export-${Date.now()}.json`);
+	const exportHandler = async (skill, format: 'json' | 'zip' = 'json') => {
+		try {
+			saveAs(
+				await exportSkillBundle(localStorage.token, format, [skill.id]),
+				`${skill.id}.${format}`
+			);
+		} catch (error) {
+			toast.error(skillError(error));
 		}
 	};
 
@@ -276,69 +292,37 @@
 </svelte:head>
 
 {#if loaded}
+	<SkillImport
+		bind:show={showImport}
+		files={bundleFiles}
+		onImported={async () => {
+			page = 1;
+			await loadSkillItems();
+			_skills.set(await getSkills(localStorage.token));
+		}}
+	/>
 	<input
 		bind:this={importInputElement}
-		bind:files={importFiles}
 		type="file"
-		accept=".md,.json"
+		accept=".md,.json,.zip"
+		multiple
 		hidden
 		on:change={() => {
-			if (importFiles && importFiles.length > 0) {
-				const file = importFiles[0];
-				const ext = file.name.split('.').pop()?.toLowerCase();
-
-				if (ext === 'json') {
-					// JSON import: create skills via API
-					const reader = new FileReader();
-					reader.onload = async (event) => {
-						try {
-							const content = event.target?.result;
-							if (typeof content !== 'string') return;
-
-							const parsedSkills = JSON.parse(content);
-							const items = Array.isArray(parsedSkills) ? parsedSkills : [parsedSkills];
-
-							for (const skill of items) {
-								await createNewSkill(localStorage.token, skill).catch((error) => {
-									toast.error(`${error}`);
-								});
-							}
-
-							toast.success($i18n.t('Skill imported successfully'));
-							page = 1;
-							loadSkillItems();
-							_skills.set(await getSkills(localStorage.token));
-						} catch (e) {
-							toast.error($i18n.t('Invalid JSON file'));
-						}
-					};
-					reader.readAsText(file);
-				} else {
-					// Markdown import: parse frontmatter and open in editor
-					const reader = new FileReader();
-					reader.onload = (event) => {
-						const mdContent = event.target?.result;
-						if (typeof mdContent === 'string') {
-							const fm = parseFrontmatter(mdContent);
-							const fileName = file.name.replace(/\.md$/, '');
-							const rawName = fm.name || fileName;
-							const displayName = formatSkillName(rawName);
-							sessionStorage.skill = JSON.stringify({
-								name: displayName,
-								id: slugify(rawName),
-								description: fm.description || '',
-								content: mdContent,
-								is_active: true,
-								access_grants: []
-							});
-							goto('/workspace/skills/create');
-						}
-					};
-					reader.readAsText(file);
-				}
-
-				importInputElement.value = '';
-			}
+			bundleFiles = Array.from(importInputElement.files || []);
+			showImport = true;
+			importInputElement.value = '';
+		}}
+	/>
+	<input
+		bind:this={folderImportInput}
+		type="file"
+		webkitdirectory
+		multiple
+		hidden
+		on:change={() => {
+			bundleFiles = Array.from(folderImportInput.files || []);
+			showImport = true;
+			folderImportInput.value = '';
 		}}
 	/>
 
@@ -558,8 +542,8 @@
 												cloneHandler={() => {
 													cloneHandler(skill);
 												}}
-												exportHandler={() => {
-													exportHandler(skill);
+												exportHandler={(format) => {
+													exportHandler(skill, format);
 												}}
 												deleteHandler={async () => {
 													selectedSkill = skill;
