@@ -717,7 +717,7 @@
 		{#if models !== null}
 			{#if (models ?? []).length !== 0}
 				<div class="my-1" id="model-list">
-					<div class="flex items-center gap-3 px-2 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+					<div class="flex items-center gap-3 px-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
 						<span>{$i18n.t('Sort by')}</span>
 						<button
 							class="flex items-center gap-1 py-0.5"
