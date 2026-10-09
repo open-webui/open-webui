@@ -3,6 +3,8 @@
 
 	const i18n = getContext('i18n');
 
+	// Message roles arrive as data; keep their translation keys visible to the parser.
+	// $i18n.t('user'); $i18n.t('assistant'); $i18n.t('system');
 	export let message;
 	export let idx;
 

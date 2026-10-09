@@ -1,4 +1,8 @@
 <script lang="ts">
+	// Keep keys in nested template expressions visible to i18next-parser.
+	// $i18n.t("and");
+	// $i18n.t("and {{COUNT}} others");
+
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import isToday from 'dayjs/plugin/isToday';

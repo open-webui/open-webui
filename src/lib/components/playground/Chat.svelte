@@ -474,9 +474,9 @@
 									? ''
 									: 'outline-hidden'}"
 								aria-pressed={role === 'assistant'}
-								aria-label={$i18n.t(
-									role === 'user' ? 'Switch to Assistant role' : 'Switch to User role'
-								)}
+								aria-label={role === 'user'
+									? $i18n.t('Switch to Assistant role')
+									: $i18n.t('Switch to User role')}
 								on:click={() => {
 									role = role === 'user' ? 'assistant' : 'user';
 								}}

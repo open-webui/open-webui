@@ -1711,7 +1711,7 @@
 									<span class="font-normal text-black dark:text-white">
 										{typingUsers.map((user) => user.name).join(', ')}
 									</span>
-									{$i18n.t(typingUsers.length === 1 ? 'is typing...' : 'are typing...')}
+									{typingUsers.length === 1 ? $i18n.t('is typing...') : $i18n.t('are typing...')}
 								</div>
 							</div>
 						</div>
