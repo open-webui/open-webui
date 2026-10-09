@@ -634,8 +634,8 @@
 				bind:this={newNameInput}
 				bind:value={newName}
 				class="min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden"
-				placeholder={$i18n.t(creating === 'file' ? 'File name' : 'Folder name')}
-				aria-label={$i18n.t(creating === 'file' ? 'File name' : 'Folder name')}
+				placeholder={creating === 'file' ? $i18n.t('File name') : $i18n.t('Folder name')}
+				aria-label={creating === 'file' ? $i18n.t('File name') : $i18n.t('Folder name')}
 				on:keydown={(event) => {
 					if (event.key === 'Enter') {
 						event.preventDefault();

@@ -607,7 +607,7 @@
 					type="submit"
 					disabled={loading || !fileEditor}
 				>
-					{$i18n.t(edit ? 'Save' : 'Save & Create')}
+					{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}
 					{#if loading}
 						<Spinner className="size-3" />
 					{/if}
