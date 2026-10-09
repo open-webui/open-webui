@@ -1,4 +1,6 @@
 <script lang="ts">
+	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
+	let accessModal: WorkspaceAccessModal;
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
@@ -506,6 +508,8 @@
 	});
 </script>
 
+<WorkspaceAccessModal bind:this={accessModal} resourceType="models" onUpdated={getModelList} />
+
 <svelte:head>
 	<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -924,6 +928,7 @@
 									{:else}
 										<div class="flex shrink-0 flex-row items-center gap-1 self-center">
 											<ModelMenu
+												accessHandler={() => accessModal.open(model.id)}
 												user={$user}
 												{model}
 												writeAccess={model.write_access}

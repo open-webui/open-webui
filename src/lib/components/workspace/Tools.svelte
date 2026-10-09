@@ -1,4 +1,6 @@
 <script lang="ts">
+	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
+	let accessModal: WorkspaceAccessModal;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -294,6 +296,8 @@
 	});
 </script>
 
+<WorkspaceAccessModal bind:this={accessModal} resourceType="tools" onUpdated={init} />
+
 <svelte:head>
 	<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -587,6 +591,7 @@
 										</Tooltip>
 
 										<ToolMenu
+											accessHandler={() => accessModal.open(tool.id)}
 											show={openToolMenuId === tool.id}
 											editHandler={() => {
 												goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);

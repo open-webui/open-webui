@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -9,12 +10,13 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import { user } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let editHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
 	export let deleteHandler: Function;
+	export let accessHandler: (() => void) | null = null;
 	export let onClose: Function;
 
 	export let show = false;
@@ -63,6 +65,19 @@
 
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</button>
+			{#if accessHandler}
+				<button
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={() => {
+						accessHandler?.();
+						closeMenu();
+					}}
+				>
+					<LockClosed className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Access')}</div>
+				</button>
+			{/if}
 
 			<button
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"

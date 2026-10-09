@@ -1,4 +1,6 @@
 <script lang="ts">
+	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
+	let accessModal: WorkspaceAccessModal;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -282,6 +284,8 @@
 	});
 </script>
 
+<WorkspaceAccessModal bind:this={accessModal} resourceType="skills" onUpdated={loadSkillItems} />
+
 <svelte:head>
 	<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -535,6 +539,7 @@
 									{:else}
 										<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 											<SkillMenu
+												accessHandler={() => accessModal.open(skill.id)}
 												show={openSkillMenuId === skill.id}
 												editHandler={() => {
 													goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
+	let accessModal: WorkspaceAccessModal;
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
@@ -375,6 +377,8 @@
 	});
 </script>
 
+<WorkspaceAccessModal bind:this={accessModal} resourceType="prompts" onUpdated={getPromptList} />
+
 <svelte:head>
 	<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -688,6 +692,7 @@
 
 									<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
 										<PromptMenu
+											accessHandler={() => accessModal.open(prompt.id)}
 											writeAccess={prompt.write_access}
 											show={openPromptMenuId === prompt.id}
 											editHandler={() => {
