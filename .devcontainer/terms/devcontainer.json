@@ -1,0 +1,29 @@
+{
+  "name": "CANChat local development",
+  "dockerComposeFile": "compose.yaml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/canchat-v2",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [5173, 8080],
+  "portsAttributes": {
+    "5173": {
+      "label": "CANChat Svelte frontend",
+      "onAutoForward": "openBrowser"
+    },
+    "8080": {
+      "label": "CANChat local Python backend",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/terms/bootstrap.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "svelte.svelte-vscode",
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "DavidAnson.vscode-markdownlint"
+      ]
+    }
+  }
+}
