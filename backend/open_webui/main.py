@@ -1315,6 +1315,15 @@ async def chat_completion(
             'features': form_data.get('features', {}),
             'variables': form_data.get('variables', {}),
             'chat_variables': chat_variables,
+            # Later requests rebuild generated instructions from this original chat context.
+            'chat_context': {
+                **copy.deepcopy(getattr(request.state, 'chat_context', None) or {}),
+                'messages': copy.deepcopy(
+                    [message for message in form_data.get('messages', []) if message.get('role') == 'system']
+                ),
+                'params': {'system': request_params['system']} if 'system' in request_params else {},
+                'chat_variables': copy.deepcopy(chat_variables),
+            },
             'model': model,
             'direct': model_item.get('direct', False),
             'params': {
@@ -1762,7 +1771,7 @@ async def chat_completion(
                             'session_id': metadata.get('session_id'),
                             'tool_ids': metadata.get('tool_ids') or [],
                             'skill_ids': metadata.get('skill_ids') or [],
-                            'system_prompt': metadata.get('system_prompt'),
+                            'chat_context': metadata.get('chat_context'),
                             'filter_ids': metadata.get('filter_ids') or [],
                             'terminal_id': metadata.get('terminal_id'),
                             'features': metadata.get('features') or {},
@@ -1791,6 +1800,7 @@ async def chat_completion(
             # Per-model metadata: own message_id + model
             per_model_metadata = {
                 **metadata,
+                'chat_context': copy.deepcopy(metadata['chat_context']),
                 'message_id': assistant_message_id,
                 'task_id': str(uuid4()),
             }

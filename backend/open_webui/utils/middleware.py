@@ -2399,8 +2399,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['model'] = selected_model_id
             metadata['selected_model_id'] = selected_model_id
 
-    # Captured before apply_params_to_form_data pops 'params'; populates metadata['system_prompt'] below
-    model_system_prompt = (form_data.get('params') or {}).get('system')
+    # Keep the template before apply_params_to_form_data consumes the model parameters.
+    model_system_prompt_template = (form_data.get('params') or {}).get('system')
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug('form_data: %s', form_data)
@@ -2487,7 +2487,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             compaction_models = request.app.state.MODELS
 
         system_message = get_system_message(form_data.get('messages', []))
-        system_prompt = get_content_from_message(system_message) if system_message else ''
+        chat_system_prompt = get_content_from_message(system_message) if system_message else ''
 
         try:
             form_data['messages'], context_summary, _ = await compact_messages_for_request(
@@ -2497,7 +2497,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 metadata,
                 form_data.get('model'),
                 compaction_models,
-                system_prompt,
+                chat_system_prompt,
             )
             if context_summary:
                 form_data['messages'] = add_or_update_system_message(
@@ -2591,8 +2591,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             folder = None
 
         if folder and folder.data:
-            # A sub-agent already gets it in the parent's system prompt
-            if 'system_prompt' in folder.data and not metadata.get('internal'):
+            if 'system_prompt' in folder.data:
                 form_data = await apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
             if 'files' in folder.data:
                 if metadata.get('params', {}).get('function_calling') == 'legacy':
@@ -2776,7 +2775,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     inlet_filter_tools = None if payload_tools is not None else form_data.get('tools', None)
 
     # Mentioned skills get full content; selected/default skills can be loaded through view_skill.
-    mentioned_skill_ids = extract_skill_ids_from_messages(form_data.get('messages', []))
+    chat_context = metadata.get('chat_context') or {}
+    mentioned_skill_ids = set(chat_context.get('mentioned_skill_ids') or []) | extract_skill_ids_from_messages(
+        form_data.get('messages', [])
+    )
     skill_ids = sorted(
         set(form_data.pop('skill_ids', None) or [])
         | set(model.get('info', {}).get('meta', {}).get('skillIds', []))
@@ -2887,6 +2889,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Strip only resolved skill mentions; ordinary text such as Perl's <$fh> stays intact.
     resolved_skill_ids = {s.id for s in available_skills} | {s['id'] for s in terminal_skills}
+    chat_context['mentioned_skill_ids'] = sorted(mentioned_skill_ids & resolved_skill_ids)
     strip_skill_mentions(form_data.get('messages', []), resolved_skill_ids)
 
     prompt = get_last_user_message(form_data['messages'])
@@ -3036,15 +3039,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     extra_params,
                 )
                 if isinstance(terminal_result, tuple):
-                    terminal_tools, system_prompt = terminal_result
+                    terminal_tools, terminal_system_prompt = terminal_result
                 else:
                     terminal_tools = terminal_result
-                    system_prompt = None
+                    terminal_system_prompt = None
                 if terminal_tools:
                     tools_dict = {**tools_dict, **terminal_tools}
-                if system_prompt:
+                if terminal_system_prompt:
                     form_data['messages'] = add_or_update_system_message(
-                        system_prompt,
+                        terminal_system_prompt,
                         form_data['messages'],
                         append=True,
                     )
@@ -3058,10 +3061,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     continue
                 # Copy so the pops below keep metadata intact for sub-agents and approval resumes
                 tool_server = dict(tool_server)
-                system_prompt = tool_server.pop('system_prompt', None)
-                if system_prompt:
+                tool_server_system_prompt = tool_server.pop('system_prompt', None)
+                if tool_server_system_prompt:
                     form_data['messages'] = add_or_update_system_message(
-                        system_prompt,
+                        tool_server_system_prompt,
                         form_data['messages'],
                         append=True,
                     )
@@ -3213,22 +3216,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             log.exception(e)
 
-    # Save the pre-RAG message state so the native tool call loop can
-    # restore to the true original (before file-source injection) rather
-    # than a snapshot that already has the RAG template baked in.
+    # The tool loop restores these prompts before rebuilding file and tool source context.
     system_message = get_system_message(form_data['messages'])
-    system_content = get_content_from_message(system_message) if system_message else ''
+    base_system_prompt = get_content_from_message(system_message) if system_message else ''
     resolved_model_system_prompt = await resolve_system_prompt(
-        model_system_prompt,
+        model_system_prompt_template,
         metadata,
         user,
     )
     if resolved_model_system_prompt:
-        system_content = (
-            f'{resolved_model_system_prompt}\n{system_content}' if system_content else resolved_model_system_prompt
+        base_system_prompt = (
+            f'{resolved_model_system_prompt}\n{base_system_prompt}'
+            if base_system_prompt
+            else resolved_model_system_prompt
         )
-    metadata['system_prompt'] = system_content or None
-    metadata['user_prompt'] = get_last_user_message(form_data['messages'])
+    metadata['base_system_prompt'] = base_system_prompt or None
+    metadata['base_user_prompt'] = get_last_user_message(form_data['messages'])
     metadata['sources'] = sources[:] if sources else []
 
     # If context is not empty, insert it into the messages
@@ -5821,15 +5824,11 @@ async def streaming_chat_response_handler(response, ctx):
                     'citations', True
                 )
 
-                # Use the pre-RAG system content captured before the
-                # initial file-source injection in process_chat_payload.
-                # This ensures restore truly undoes the RAG template.
-                original_system_content = metadata.get('system_prompt')
-                if original_system_content is None:
-                    original_system_message = get_system_message(form_data['messages'])
-                    original_system_content = (
-                        get_content_from_message(original_system_message) if original_system_message else None
-                    )
+                # Requests that bypass payload processing have no saved source-free prompt.
+                base_system_prompt = metadata.get('base_system_prompt')
+                if base_system_prompt is None:
+                    system_message = get_system_message(form_data['messages'])
+                    base_system_prompt = get_content_from_message(system_message) if system_message else None
 
                 async def emit_output():
                     # Channels publish whole messages; Continue can merge into the preceding item.
@@ -6083,27 +6082,23 @@ async def streaming_chat_response_handler(response, ctx):
                         for source in tool_call_sources:
                             await event_emitter({'type': 'source', 'data': source})
 
-                        # Apply tool source context to messages for the model.
-                        # Restoring to pre-RAG original prevents duplicating
-                        # the RAG template across file and tool sources.
+                        # Rebuild source context from the saved prompts so it never accumulates.
                         all_tool_call_sources.extend(tool_call_sources)
                         if all_tool_call_sources and user_message:
-                            # Restore pre-RAG message state before re-applying
-                            # to prevent RAG template duplication.
-                            original_user_message = metadata.get('user_prompt') or user_message
+                            base_user_prompt = metadata.get('base_user_prompt') or user_message
                             set_last_user_message_content(
-                                original_user_message,
+                                base_user_prompt,
                                 form_data['messages'],
                             )
-                            if original_system_content is not None:
+                            if base_system_prompt is not None:
                                 if get_system_message(form_data['messages']):
                                     replace_system_message_content(
-                                        original_system_content,
+                                        base_system_prompt,
                                         form_data['messages'],
                                     )
                                 else:
                                     form_data['messages'] = add_or_update_system_message(
-                                        original_system_content,
+                                        base_system_prompt,
                                         form_data['messages'],
                                     )
                             else:
