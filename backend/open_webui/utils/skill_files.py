@@ -16,6 +16,41 @@ MAX_FILE_BYTES = 10 * 1024 * 1024
 MAX_SKILL_BYTES = 50 * 1024 * 1024
 MAX_IMPORT_BYTES = 200 * 1024 * 1024
 MAX_FILES = 1000
+SKILL_CONTENT_MAX_CHARS = 100_000
+SKILL_MANIFEST_MAX_ENTRIES = 50
+SKILL_MANIFEST_MAX_CHARS = 5_000
+
+
+def skill_content_page(content: str, offset: int = 0, max_chars: int = SKILL_CONTENT_MAX_CHARS) -> dict:
+    offset = max(0, offset)
+    end = offset + min(SKILL_CONTENT_MAX_CHARS, max(1, max_chars))
+    return {'content': content[offset:end], 'next_offset': end if end < len(content) else None}
+
+
+def bounded_skill_manifest(entries: list, field: str = 'files') -> dict:
+    bounded, size = [], 2  # Include the JSON array brackets and separators in the budget.
+    for entry in entries[:SKILL_MANIFEST_MAX_ENTRIES]:
+        entry_size = len(json.dumps(entry, ensure_ascii=False)) + (2 if bounded else 0)
+        if size + entry_size > SKILL_MANIFEST_MAX_CHARS:
+            break
+        bounded.append(entry)
+        size += entry_size
+    result = {field: bounded}
+    if len(bounded) < len(entries):
+        result['notice'] = 'Additional supporting files omitted.'
+    return result
+
+
+def format_skill_content(page: dict, skill_id: str, tools_enabled: bool) -> str:
+    content = page['content']
+    if page['next_offset'] is not None:
+        content += '\nSkill instructions truncated.'
+        if tools_enabled:
+            content += (
+                f'\nContinue reading with read_skill_file(id={json.dumps(skill_id)}, '
+                f'path="SKILL.md", offset={page["next_offset"]}).'
+            )
+    return content
 
 
 class SkillFile(BaseModel):

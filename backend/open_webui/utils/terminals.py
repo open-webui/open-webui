@@ -1,6 +1,7 @@
 """Shared routing helpers for admin-configured terminal servers."""
 
 import asyncio
+import hashlib
 import logging
 import ntpath
 import posixpath
@@ -8,6 +9,12 @@ from urllib.parse import quote
 
 from open_webui.env import ENABLE_TOOL_SERVERS
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.skill_files import (
+    SKILL_CONTENT_MAX_CHARS,
+    bounded_skill_manifest,
+    format_skill_content,
+    skill_content_page,
+)
 
 TERMINAL_CONTEXT_HEADER = 'X-Terminal-Context-Id'
 TERMINAL_CONTEXT_DEFAULT = 'default'
@@ -226,14 +233,32 @@ def add_terminal_agents_md(messages: list[dict], agents_md: str) -> list[dict]:
 
 
 async def get_terminal_skill(
-    request, user, metadata: dict, skill_name: str, extra_params: dict | None = None
+    request,
+    user,
+    metadata: dict,
+    skill_name: str,
+    extra_params: dict | None = None,
+    *,
+    offset: int = 0,
+    max_chars: int = SKILL_CONTENT_MAX_CHARS,
+    refresh: bool = True,
 ) -> dict | None:
     skill = await get_terminal_json(
         request, user, metadata, f'/skills/read?name={quote(skill_name, safe="")}', extra_params
     )
 
-    if not isinstance(skill, dict):
+    if not isinstance(skill, dict) or not isinstance(skill.get('content'), str):
         return None
+
+    context = metadata.get('chat_context') or {}
+    metadata['chat_context'] = context
+    fingerprints = context.setdefault('terminal_skill_fingerprints', {}).setdefault(metadata['terminal_id'], {})
+    skill_id = f'terminal:{quote(skill_name, safe="")}'
+    fingerprint = hashlib.sha256(skill['content'].encode('utf-8')).hexdigest()
+    previous = fingerprints.get(skill_id)
+    if not refresh and previous is not None and previous != fingerprint:
+        raise ValueError('Skill changed while reading. Call view_skill again and restart reading.')
+    fingerprints[skill_id] = fingerprint
 
     location = skill.get('location') or skill.get('path') or ''
     directory = location.rsplit('/', 1)[0] if '/' in location else location
@@ -241,21 +266,23 @@ async def get_terminal_skill(
     return {
         'name': skill.get('name'),
         'description': skill.get('description'),
-        'content': skill.get('content'),
+        **skill_content_page(skill['content'], offset, max_chars),
         'directory': directory,
-        'resources': resources,
+        **bounded_skill_manifest(resources, 'resources'),
     }
 
 
-def format_terminal_skill_context(skill: dict) -> str:
+def format_terminal_skill_context(skill: dict, skill_id: str, tools_enabled: bool) -> str:
     resources = skill.get('resources') if isinstance(skill.get('resources'), list) else []
-    parts = [f'<skill name="{skill.get("name") or ""}">', skill.get('content') or '']
+    parts = [f'<skill name="{skill.get("name") or ""}">', format_skill_content(skill, skill_id, tools_enabled)]
     if skill.get('directory'):
         parts.append(f'<directory>{skill["directory"]}</directory>')
     if resources:
         parts.append('<resources>')
         parts.extend(f'<file>{resource}</file>' for resource in resources)
         parts.append('</resources>')
+    if skill.get('notice'):
+        parts.append(skill['notice'])
     parts.append('</skill>')
     return '\n'.join(parts)
 

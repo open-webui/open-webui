@@ -806,7 +806,7 @@ async def get_builtin_tools(
             ]
         )
 
-    # Skills tools - view_skill allows model to load full skill instructions on demand
+    # Skills tools - view_skill loads bounded instructions, with read_skill_file for continuation.
     if is_builtin_tool_enabled('skills'):
         builtin_functions.extend([view_skill, read_skill_file, update_skill_files])
         if user.get('role') == 'admin' or await has_permission(

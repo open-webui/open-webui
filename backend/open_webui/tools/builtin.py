@@ -69,7 +69,7 @@ from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
-from open_webui.utils.skill_files import SkillFile, SkillFileOperation
+from open_webui.utils.skill_files import SkillFile, SkillFileOperation, bounded_skill_manifest, skill_content_page
 
 log = logging.getLogger(__name__)
 
@@ -3488,7 +3488,7 @@ async def view_skill(
     __metadata__: dict = None,
     __event_call__: callable = None,
 ) -> str:
-    """Load the current SKILL.md and its file manifest. Supporting file reads use this same snapshot.
+    """Read skill instructions and file list. Use read_skill_file to continue from next_offset.
 
     :param id: Skill ID from the available skills manifest.
     """
@@ -3528,8 +3528,8 @@ async def view_skill(
                 'id': skill.id,
                 'version_id': version_id,
                 'name': snapshot['name'],
-                'content': snapshot['content'],
-                'files': file_summaries(snapshot['data']['files']),
+                **skill_content_page(snapshot['content']),
+                **bounded_skill_manifest(file_summaries(snapshot['data']['files'])),
             },
             ensure_ascii=False,
         )
@@ -3545,8 +3545,9 @@ async def read_skill_file(
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
+    __event_call__: callable = None,
 ) -> str:
-    """Read one skill resource from the snapshot loaded by view_skill, or the current snapshot if none was loaded.
+    """Read a skill file from the loaded snapshot. Terminal skills support SKILL.md only.
 
     :param id: Skill ID.
     :param path: Relative path within the skill.
@@ -3562,6 +3563,26 @@ async def read_skill_file(
 
         if not __user__ or __request__ is None:
             raise ValueError('Request and user context required')
+        if id.startswith('terminal:'):
+            from open_webui.utils.terminals import get_terminal_skill
+
+            if path != 'SKILL.md':
+                raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
+            skill = await get_terminal_skill(
+                __request__,
+                __user__,
+                __metadata__ if __metadata__ is not None else {},
+                unquote(id.removeprefix('terminal:')),
+                {'__event_call__': __event_call__},
+                offset=offset,
+                max_chars=max_chars,
+                refresh=False,
+            )
+            if not skill:
+                raise ValueError(f"Skill '{id}' not found")
+            return JSONCodec.dumps(
+                {'path': path, 'content': skill['content'], 'next_offset': skill['next_offset']}, ensure_ascii=False
+            )
         skill = await authorized_skill(id, SimpleNamespace(**__user__))
         if not skill.is_active:
             await authorized_skill(id, SimpleNamespace(**__user__), 'write')
@@ -3583,13 +3604,11 @@ async def read_skill_file(
                     'url': '/workspace/skills/edit?' + urlencode({'id': id, 'version_id': version_id, 'path': path}),
                 }
             )
-        offset, max_chars = max(0, offset), min(100000, max(1, max_chars))
         return JSONCodec.dumps(
             {
                 'path': path,
                 'version_id': version_id,
-                'content': file['content'][offset : offset + max_chars],
-                'next_offset': offset + max_chars if offset + max_chars < len(file['content']) else None,
+                **skill_content_page(file['content'], offset, max_chars),
             },
             ensure_ascii=False,
         )
