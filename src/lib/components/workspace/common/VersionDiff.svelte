@@ -9,6 +9,8 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
+	// Keep the default key visible to i18next-parser; callers can supply another key.
+	// $i18n.t('Current');
 	export let currentLabel = 'Current';
 	export let showFileHeaders = true;
 	let mode: 'split' | 'unified' = 'split';
@@ -70,13 +72,18 @@
 	$: metadata = Object.entries(diff.metadata).flatMap(([key, value]) =>
 		changes(key === 'meta' ? [] : [key], value.before, value.after)
 	);
-	const labels: Record<string, string> = {
-		name: 'Name',
-		description: 'Description',
-		tags: 'Tags',
-		i18n: 'Translations'
+	let labels: Record<string, string>;
+	$: labels = {
+		name: $i18n.t('Name'),
+		description: $i18n.t('Description'),
+		tags: $i18n.t('Tags'),
+		i18n: $i18n.t('Translations')
 	};
-	const statuses = { added: 'Added', deleted: 'Deleted', modified: 'Modified' };
+	$: statuses = {
+		added: $i18n.t('Added'),
+		deleted: $i18n.t('Deleted'),
+		modified: $i18n.t('Modified')
+	};
 
 	async function loadFile(path: string) {
 		if (results[path]?.loading || results[path]?.diff !== undefined || results[path]?.binary)
@@ -120,7 +127,7 @@
 					name={mode === 'split' ? 'split-horizontal' : 'list'}
 					size={13}
 					class="shrink-0"
-				/>{$i18n.t(mode === 'split' ? 'Split' : 'Unified')}<ChevronDown
+				/>{mode === 'split' ? $i18n.t('Split') : $i18n.t('Unified')}<ChevronDown
 					className="size-3"
 				/></button
 			>
@@ -143,7 +150,7 @@
 								size={13}
 								class="shrink-0 text-gray-500"
 							/><span class="flex-1 text-left"
-								>{$i18n.t(option === 'split' ? 'Split' : 'Unified')}</span
+								>{option === 'split' ? $i18n.t('Split') : $i18n.t('Unified')}</span
 							>{#if mode === option}<Check className="size-3" />{/if}</button
 						>{/each}
 				</DropdownMenu>
@@ -168,7 +175,7 @@
 		{#each metadata as change}
 			<div class="border-b border-gray-100 dark:border-white/5">
 				<div class="px-3 py-1.5 font-medium text-gray-600 dark:text-gray-300">
-					{change.path.map((key) => $i18n.t(labels[key] || key)).join(' / ')}
+					{change.path.map((key) => labels[key] || $i18n.t(key)).join(' / ')}
 				</div>
 				<div class="grid grid-cols-2">
 					<div
@@ -203,7 +210,7 @@
 								: file.status === 'deleted'
 									? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400'
 									: 'bg-gray-100 text-gray-500 dark:bg-gray-850 dark:text-gray-400'}"
-							>{$i18n.t(statuses[file.status])}</span
+							>{statuses[file.status]}</span
 						>
 					</button>
 				{/if}
@@ -229,11 +236,9 @@
 							<VersionDiffContent code={results[file.path].diff ?? ''} {mode} />
 						{:else}
 							<p class="px-3 py-3 text-gray-500">
-								{$i18n.t(
-									results[file.path]?.line_endings_only
-										? 'Only line endings changed'
-										: 'No text differences'
-								)}
+								{results[file.path]?.line_endings_only
+									? $i18n.t('Only line endings changed')
+									: $i18n.t('No text differences')}
 							</p>
 						{/if}
 					</div>
