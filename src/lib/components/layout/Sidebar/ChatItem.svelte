@@ -329,6 +329,10 @@
 
 	const onDragStart = (event) => {
 		event.stopPropagation();
+		if (readonly) {
+			event.preventDefault();
+			return;
+		}
 		openPreview = false;
 
 		event.dataTransfer.setDragImage(invisibleDragImage, 0, 0);
@@ -592,7 +596,7 @@
 	id="sidebar-chat-group"
 	bind:this={itemElement}
 	class=" w-full {className} relative group"
-	draggable={!confirmEdit && !readonly}
+	draggable={!confirmEdit}
 	on:mouseenter={() => {
 		mouseOver = true;
 	}}
