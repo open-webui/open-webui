@@ -313,10 +313,9 @@
 							<button
 								type="button"
 								class="z-10 flex size-6 shrink-0 items-center justify-center rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-								aria-label={$i18n.t(
-									collapsed.has(group.id) ? 'Expand {{name}}' : 'Collapse {{name}}',
-									{ name: group.name }
-								)}
+								aria-label={collapsed.has(group.id)
+									? $i18n.t('Expand {{name}}', { name: group.name })
+									: $i18n.t('Collapse {{name}}', { name: group.name })}
 								aria-expanded={!!query || !collapsed.has(group.id)}
 								on:click={() => {
 									collapsed.has(group.id) ? collapsed.delete(group.id) : collapsed.add(group.id);

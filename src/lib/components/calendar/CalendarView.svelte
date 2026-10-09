@@ -14,7 +14,15 @@
 	export let onNavigate: () => void = () => {};
 
 	const NS = 1_000_000;
-	const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	$: DAY_NAMES = [
+		$i18n.t('Sun'),
+		$i18n.t('Mon'),
+		$i18n.t('Tue'),
+		$i18n.t('Wed'),
+		$i18n.t('Thu'),
+		$i18n.t('Fri'),
+		$i18n.t('Sat')
+	];
 
 	$: calColorMap = calendars.reduce(
 		(acc, c) => ({ ...acc, [c.id]: c.color }),
@@ -147,7 +155,7 @@
 			<div class="grid grid-cols-7">
 				{#each DAY_NAMES as day}
 					<div class="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500 text-left truncate">
-						{$i18n.t(day)}
+						{day}
 					</div>
 				{/each}
 			</div>

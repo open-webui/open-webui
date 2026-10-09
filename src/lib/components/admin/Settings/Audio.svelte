@@ -803,8 +803,8 @@
 					aria-label={$i18n.t('Select how to split message text for TTS requests')}
 					bind:value={TTS_SPLIT_ON}
 				>
-					{#each Object.values(TTS_RESPONSE_SPLIT) as split}
-						<option value={split}>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option>
+					{#each [{ value: TTS_RESPONSE_SPLIT.PUNCTUATION, label: $i18n.t('Punctuation') }, { value: TTS_RESPONSE_SPLIT.PARAGRAPHS, label: $i18n.t('Paragraphs') }, { value: TTS_RESPONSE_SPLIT.NONE, label: $i18n.t('None') }] as split}
+						<option value={split.value}>{split.label}</option>
 					{/each}
 				</SettingsSelect>
 			</AdminSettingRow>

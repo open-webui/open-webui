@@ -190,7 +190,7 @@
 	<div class="px-5 pb-5 pt-4 dark:text-gray-200">
 		<div class="mb-3 flex items-center justify-between gap-3">
 			<div class="font-primary text-lg font-medium">
-				{$i18n.t(editingKey ? 'Edit control' : 'Add control')}
+				{editingKey ? $i18n.t('Edit control') : $i18n.t('Add control')}
 			</div>
 			<button
 				type="button"
@@ -243,7 +243,7 @@
 								: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
 							on:click={() => (display = mode as 'menu' | 'slider')}
 						>
-							{$i18n.t(mode === 'slider' ? 'Slider' : 'Menu')}
+							{mode === 'slider' ? $i18n.t('Slider') : $i18n.t('Menu')}
 						</button>
 					{/each}
 				</div>
