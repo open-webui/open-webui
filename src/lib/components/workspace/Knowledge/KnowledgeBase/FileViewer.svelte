@@ -225,7 +225,7 @@
 				on:click={onClose}><ChevronLeft className="size-3.5" />{$i18n.t('Back')}</button
 			>{/if}
 		<span class="min-w-0 flex-1 truncate text-gray-500" title={name}>{name}</span>
-		{#if !noOriginal}<button
+		{#if !noOriginal && (originalLoaded || previewError)}<button
 				type="button"
 				class="shrink-0 px-1 py-0.5 {state.mode === 'preview' ? '' : 'text-gray-400'}"
 				aria-pressed={state.mode === 'preview'}
@@ -291,7 +291,7 @@
 			</div>
 		{:else}<FilePreview
 				selectedFile={previewName}
-				fileLoading={loading}
+				fileLoading={loading || !originalLoaded}
 				{...previewData}
 				readOnly
 				allowScripts={false}
