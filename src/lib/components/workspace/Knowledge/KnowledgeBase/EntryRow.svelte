@@ -156,7 +156,9 @@
 			>{/if}
 		{#if !directory && !renaming}<span class="shrink-0 text-[0.6875rem] text-gray-400"
 				>{pending
-					? $i18n.t(status === 'uploading' ? 'Uploading' : 'Processing')
+					? status === 'uploading'
+						? $i18n.t('Uploading')
+						: $i18n.t('Processing')
 					: status === 'failed'
 						? $i18n.t('Failed')
 						: file.meta?.size != null
@@ -174,7 +176,7 @@
 			<div slot="content">
 				<DropdownMenu className="min-w-36">
 					{#if directory}<button type="button" on:click={onOpen}
-							>{$i18n.t(expanded ? 'Collapse' : 'Expand')}</button
+							>{expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}</button
 						>{:else}<button type="button" on:click={onDownload}>{$i18n.t('Download')}</button>{/if}
 					{#if writeAccess}
 						{#if directory}<hr class="border-gray-100 dark:border-gray-800" />
@@ -192,7 +194,7 @@
 						<button type="button" on:click={startRename}>{$i18n.t('Rename')}</button><button
 							type="button"
 							on:click={onDelete}
-							>{$i18n.t(directory ? 'Delete folder' : 'Remove from knowledge')}</button
+							>{directory ? $i18n.t('Delete folder') : $i18n.t('Remove from knowledge')}</button
 						>
 					{/if}
 				</DropdownMenu>

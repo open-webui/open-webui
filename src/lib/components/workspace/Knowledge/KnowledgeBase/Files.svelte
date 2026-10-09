@@ -325,7 +325,7 @@
 
 <ConfirmDialog
 	bind:show={showDelete}
-	title={$i18n.t(deletion?.directory ? 'Delete folder?' : 'Remove file from knowledge?')}
+	title={deletion?.directory ? $i18n.t('Delete folder?') : $i18n.t('Remove file from knowledge?')}
 	on:confirm={remove}
 >
 	{#if deletion?.directory}<label class="flex items-center gap-2 text-xs"
@@ -375,7 +375,7 @@
 		on:drop={rootDrop}
 		title={$i18n.t('Drop here to move to root')}
 	>
-		{$i18n.t(query ? 'Search results' : 'All files')}
+		{query ? $i18n.t('Search results') : $i18n.t('All files')}
 	</div>
 	{#if query}{@render listing(null, results, 0, true)}{:else}{@render branch(null, 0)}{/if}
 </div>
@@ -457,6 +457,6 @@
 	{:else if !data.items.length && (search || !data.directories.length)}<p
 			class="px-2 py-1 text-xs text-gray-400"
 		>
-			{$i18n.t(search ? 'No results found' : 'No files')}
+			{search ? $i18n.t('No results found') : $i18n.t('No files')}
 		</p>{/if}
 {/snippet}

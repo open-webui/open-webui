@@ -278,7 +278,7 @@
 					{#if state.mode === 'preview' && sourceToggle}<button
 							type="button"
 							on:click={() => (showRaw = !showRaw)}
-							>{$i18n.t(showRaw ? 'Rendered preview' : 'View source')}</button
+							>{showRaw ? $i18n.t('Rendered preview') : $i18n.t('View source')}</button
 						>{/if}</DropdownMenu
 				>
 			</div></Dropdown

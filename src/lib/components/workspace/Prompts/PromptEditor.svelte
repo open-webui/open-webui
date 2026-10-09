@@ -396,7 +396,7 @@
 		<div class="flex min-h-7 shrink-0 items-center justify-between gap-2">
 			{#if modal}
 				<span class="text-xs text-gray-500"
-					>{$i18n.t(clone ? 'Clone Prompt' : 'Create Prompt')}</span
+					>{clone ? $i18n.t('Clone Prompt') : $i18n.t('Create Prompt')}</span
 				>
 			{:else}
 				<button
@@ -651,7 +651,7 @@
 						class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 						disabled={loading || !ready || historyLoading}
 					>
-						{$i18n.t(edit ? 'Save' : 'Save & Create')}{#if loading}<Spinner
+						{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}{#if loading}<Spinner
 								className="size-3"
 							/>{/if}
 					</button>

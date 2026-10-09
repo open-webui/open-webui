@@ -174,25 +174,25 @@
 							>{includeContent ? '✓ ' : ''}{$i18n.t('Search file content')}</button
 						>
 						<hr class="border-gray-100 dark:border-gray-800" />
-						{#each [{ value: null, label: 'All' }, { value: 'created', label: 'Created by you' }, { value: 'shared', label: 'Shared with you' }] as option}<button
+						{#each [{ value: null, label: $i18n.t('All') }, { value: 'created', label: $i18n.t('Created by you') }, { value: 'shared', label: $i18n.t('Shared with you') }] as option}<button
 								type="button"
 								role="menuitemradio"
 								aria-checked={viewOption === option.value}
 								on:click={() => (viewOption = option.value)}
-								>{viewOption === option.value ? '✓ ' : ''}{$i18n.t(option.label)}</button
+								>{viewOption === option.value ? '✓ ' : ''}{option.label}</button
 							>{/each}
 						<hr class="border-gray-100 dark:border-gray-800" />
-						{#each [{ value: 'name', label: 'Name' }, { value: 'created_at', label: 'Created' }, { value: 'updated_at', label: 'Updated' }] as option}<button
+						{#each [{ value: 'name', label: $i18n.t('Name') }, { value: 'created_at', label: $i18n.t('Created') }, { value: 'updated_at', label: $i18n.t('Updated') }] as option}<button
 								type="button"
 								role="menuitemradio"
 								aria-checked={sortKey === option.value}
 								on:click={() => (sortKey = option.value)}
-								>{sortKey === option.value ? '✓ ' : ''}{$i18n.t(option.label)}</button
+								>{sortKey === option.value ? '✓ ' : ''}{option.label}</button
 							>{/each}
 						<button
 							type="button"
 							on:click={() => (direction = direction === 'asc' ? 'desc' : 'asc')}
-							>{$i18n.t(direction === 'asc' ? 'Ascending' : 'Descending')}</button
+							>{direction === 'asc' ? $i18n.t('Ascending') : $i18n.t('Descending')}</button
 						>
 					</DropdownMenu>
 				</div></Dropdown
