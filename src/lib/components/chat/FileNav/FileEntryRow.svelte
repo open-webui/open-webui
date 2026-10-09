@@ -170,7 +170,7 @@
 <li class="group" data-file-row>
 	<div
 		class="w-full flex items-center transition-colors duration-75 {variant === 'workspace'
-			? 'rounded-xl my-0.5 py-0.5'
+			? 'rounded-xl'
 			: ''}
 			{selected || active ? 'bg-gray-100 dark:bg-white/8' : 'hover:bg-gray-50/40 dark:hover:bg-white/4'}
 			{dragOverFolder
@@ -255,7 +255,9 @@
 
 		<button
 			type="button"
-			class="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-2 text-left"
+			class="flex min-w-0 flex-1 items-center py-1.5 pr-2 text-left {variant === 'workspace'
+				? 'gap-1.5'
+				: 'gap-2'}"
 			draggable={canMutate}
 			on:dragstart={(e) => {
 				if (!canMutate) {

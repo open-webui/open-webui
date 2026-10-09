@@ -541,12 +541,12 @@
 	<div
 		class="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900"
 	>
-		<div class="flex shrink-0 items-center gap-1 px-3 py-1.5 text-xs dark:bg-black">
+		<div class="flex shrink-0 items-center gap-1 px-2.5 py-1.5 text-xs dark:bg-black">
 			{#if $mobile}
 				<button
 					type="button"
 					aria-label={$i18n.t('Back to files')}
-					class="flex shrink-0 items-center gap-1 whitespace-nowrap py-1.5 pr-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+					class="flex shrink-0 items-center gap-1 whitespace-nowrap py-0.5 pr-1 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => {
 						flush();
 						showFileDrawer = false;
@@ -558,7 +558,7 @@
 			<span class="min-w-0 flex-1 truncate text-gray-500" title={selected}>{selected}</span>
 			{#if /\.md$/i.test(selected) && !loading}<button
 					type="button"
-					class="rounded-xl px-2 py-1.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+					class="rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={async () => {
 						preview = !preview;
 						if (preview) await renderPreview();
@@ -566,7 +566,7 @@
 				>{/if}
 			<button
 				type="button"
-				class="rounded-xl px-2 py-1.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+				class="rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => download(selected)}>Download</button
 			>
 		</div>
@@ -619,8 +619,8 @@
 {#snippet createInput()}
 	{#if creating && !readOnly}
 		<div
-			class="flex h-8 items-center gap-2 pr-2"
-			style:padding-left={`${24 + currentPath.split('/').filter(Boolean).length * 16}px`}
+			class="flex h-7 items-center gap-1.5 pr-2"
+			style:padding-left={`${26 + currentPath.split('/').filter(Boolean).length * 16}px`}
 		>
 			<FileTypeIcon name={newName} type={creating} size={14} />
 			<input
