@@ -613,6 +613,10 @@
 					bind:this={codeEditor}
 					bind:value
 					filePath={selected}
+					ariaLabel={selected === 'SKILL.md' ? $i18n.t('Skill Instructions') : selected}
+					placeholder={selected === 'SKILL.md'
+						? $i18n.t('Enter skill instructions in markdown...')
+						: ''}
 					{readOnly}
 					onSave={async () => {
 						flush();
