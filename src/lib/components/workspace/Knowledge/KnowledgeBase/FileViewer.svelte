@@ -74,7 +74,11 @@
 		try {
 			const content = await getFileIndexedText(localStorage.token, file.id!, signal);
 			if (!signal.aborted)
-				state = { ...state, indexed: content, draft: state.editing ? state.draft : content };
+				state = {
+					...state,
+					indexed: content,
+					draft: state.editing && state.indexed !== null ? state.draft : content
+				};
 		} catch (error) {
 			if (!signal.aborted) indexedError = message(error);
 		} finally {
@@ -184,7 +188,7 @@
 		}
 	};
 	const save = async () => {
-		if (!writeAccess || saving || !state.editing) return;
+		if (!writeAccess || saving || !state.editing || state.indexed === null) return;
 		state.draft = indexedEditor?.getValue() ?? state.draft;
 		saving = true;
 		try {
@@ -230,19 +234,19 @@
 			aria-pressed={state.mode === 'indexed'}
 			on:click={() => (state.mode = 'indexed')}>{$i18n.t('Indexed text')}</button
 		>
-		{#if state.mode === 'indexed' && state.indexed !== null && writeAccess}
+		{#if writeAccess}
 			{#if state.editing}
 				<button
 					type="button"
 					class="shrink-0 px-1 py-0.5 text-gray-500"
 					disabled={saving}
-					on:click={() => (state = { ...state, draft: state.indexed!, editing: false })}
+					on:click={() => (state = { ...state, draft: state.indexed ?? '', editing: false })}
 					>{$i18n.t('Cancel')}</button
 				>
 				<button
 					type="button"
 					class="flex shrink-0 items-center gap-1 px-1 py-0.5"
-					disabled={saving}
+					disabled={saving || state.indexed === null}
 					on:click={save}
 				>
 					{$i18n.t('Save')}{#if saving}<Spinner className="size-3" />{/if}
@@ -252,7 +256,7 @@
 					type="button"
 					class="shrink-0 px-1 py-0.5 text-gray-500"
 					on:click={() => {
-						state = { ...state, editing: true, draft: state.indexed! };
+						state = { ...state, mode: 'indexed', editing: true, draft: state.indexed ?? '' };
 						toast.info(
 							$i18n.t(
 								'Edits change retrieval text in all linked collections; the original file stays unchanged.'
