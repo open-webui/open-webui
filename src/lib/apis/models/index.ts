@@ -515,6 +515,18 @@ export const getModelHistoryEntry = async (
 	return response.json();
 };
 
+export const deleteModelHistoryVersion = async (token: string, id: string, versionId: string) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/history/${encodeURIComponent(versionId)}?${new URLSearchParams({ id })}`,
+		{
+			method: 'DELETE',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
 export const setProductionModelVersion = async (token: string, id: string, versionId: string) => {
 	const response = await fetch(
 		`${WEBUI_API_BASE_URL}/models/model/update/version?${new URLSearchParams({ id })}`,

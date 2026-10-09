@@ -9,6 +9,7 @@
 	import VersionMenuItem from '../common/VersionMenuItem.svelte';
 	import {
 		getModelHistory,
+		deleteModelHistoryVersion,
 		getModelHistoryEntry,
 		setProductionModelVersion,
 		type ModelHistoryEntry,
@@ -29,6 +30,9 @@
 	export let promoting = false;
 	let error = '';
 	let confirmPromotion = false;
+	let showDeleteVersion = false;
+	let deleteVersionId = '';
+	let deleting = false;
 	let selection = 0;
 	const message = (error: any) =>
 		typeof error?.detail === 'string'
@@ -71,13 +75,32 @@
 		}
 	}
 
+	async function deleteVersion() {
+		if (deleting || promoting || !deleteVersionId || deleteVersionId === model.version_id) return;
+		deleting = true;
+		try {
+			await deleteModelHistoryVersion(localStorage.token, model.id, deleteVersionId);
+			// Invalidate an in-flight preview response for the deleted version.
+			selection++;
+			selecting = false;
+			if (selected?.id === deleteVersionId) selected = null;
+			page = 1;
+			await loadHistory();
+			toast.success($i18n.t('Version deleted'));
+		} catch (e) {
+			toast.error(message(e));
+		} finally {
+			deleting = false;
+		}
+	}
+
 	export function requestPromotion() {
 		if (dirty) confirmPromotion = true;
 		else promote();
 	}
 
 	async function promote() {
-		if (!selected || promoting) return;
+		if (!selected || promoting || deleting) return;
 		promoting = true;
 		try {
 			const result = await setProductionModelVersion(localStorage.token, model.id, selected.id);
@@ -102,13 +125,23 @@
 	on:confirm={promote}
 />
 
+<ConfirmDialog
+	bind:show={showDeleteVersion}
+	title={$i18n.t('Delete Version')}
+	message={$i18n.t(
+		"Are you sure you want to delete this version? Child versions will be relinked to this version's parent."
+	)}
+	confirmLabel={$i18n.t('Delete')}
+	onConfirm={deleteVersion}
+/>
+
 <div class="flex shrink-0 items-center">
 	<Dropdown bind:show align="start">
 		<button
 			type="button"
 			aria-label={$i18n.t('Select version')}
 			class="flex min-w-0 items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-			disabled={promoting}
+			disabled={promoting || deleting}
 			on:click={() => {
 				page = 1;
 				loadHistory();
@@ -138,6 +171,11 @@
 							{entry}
 							selected={entry.id === selected?.id}
 							onSelect={() => selectVersion(entry.id)}
+							onDelete={() => {
+								deleteVersionId = entry.id;
+								show = false;
+								showDeleteVersion = true;
+							}}
 						/>
 					{/each}
 					{#if page > 1 || history.length === 20}

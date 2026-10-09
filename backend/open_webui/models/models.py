@@ -281,6 +281,10 @@ class ModelsTable:
             )
             session.add_all([current, entry])
         else:
+            if production_version_id is not None:
+                # Serialize with history deletion before reading the selected snapshot.
+                await session.execute(update(Model).where(Model.id == current.id).values(version_id=Model.version_id))
+                await session.refresh(current)
             values = {key: value for key, value in data.items() if key != 'id'}
             # Omitted operational state must not reset a disabled model.
             if 'is_active' not in form.model_fields_set:

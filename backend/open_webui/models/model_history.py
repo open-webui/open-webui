@@ -4,8 +4,9 @@ import time
 import uuid
 
 from open_webui.internal.db import Base, get_async_db_context
+from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, Text, select
+from sqlalchemy import JSON, BigInteger, Column, Text, select, update
 
 
 def model_snapshot(model) -> dict:
@@ -51,6 +52,35 @@ class ModelHistoryModel(ModelHistoryResponse):
 
 
 class ModelHistoryTable:
+    async def delete_history_entry(self, model_id, history_id, db=None):
+        from open_webui.models.models import Model
+
+        async with get_async_db_context(db) as session:
+            try:
+                # Serialize with production switches on both SQLite and PostgreSQL.
+                await session.execute(update(Model).where(Model.id == model_id).values(version_id=Model.version_id))
+                model = await session.get(Model, model_id, populate_existing=True)
+                if not model:
+                    return False
+                if model.version_id == history_id:
+                    raise HTTPException(400, 'Cannot delete the current version')
+                entry = (
+                    await session.execute(select(ModelHistory).filter_by(id=history_id, model_id=model_id))
+                ).scalar_one_or_none()
+                if not entry:
+                    return False
+                await session.execute(
+                    update(ModelHistory)
+                    .where(ModelHistory.model_id == model_id, ModelHistory.parent_id == history_id)
+                    .values(parent_id=entry.parent_id)
+                )
+                await session.delete(entry)
+                await session.commit()
+                return True
+            except Exception:
+                await session.rollback()
+                raise
+
     def new_entry(self, model_id, snapshot, user_id, parent_id=None, commit_message=None):
         return ModelHistory(
             id=str(uuid.uuid4()),

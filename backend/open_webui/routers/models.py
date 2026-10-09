@@ -901,6 +901,19 @@ async def get_model_history_entry(
     return entry
 
 
+@router.delete('/model/history/{history_id}', response_model=bool)
+async def delete_model_history_entry(
+    id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await authorized_model_history(id, user, db)
+    if not await ModelHistories.delete_history_entry(id, history_id, db):
+        raise HTTPException(404, 'Model version not found')
+    return True
+
+
 async def _verify_version_dependencies(request, form, user, db):
     from open_webui.models.functions import Functions
     from open_webui.models.knowledge import Knowledges
