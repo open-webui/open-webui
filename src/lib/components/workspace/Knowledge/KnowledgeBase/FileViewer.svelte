@@ -2,6 +2,7 @@
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import DOMPurify from 'dompurify';
+	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import {
 		FileContentError,
 		getFileBlobById,
@@ -109,6 +110,7 @@
 			if (signal.aborted || key !== request) return;
 			const mime = (file.meta?.content_type || blob.type).split(';')[0].toLowerCase();
 			const ext = name.split('.').pop()?.toLowerCase() || '';
+			const codeFile = isCodeFile(name);
 			let data: Record<string, any>;
 			previewName = name;
 			if (mime === 'application/pdf' || ext === 'pdf')
@@ -123,7 +125,7 @@
 			} else if (mime.startsWith('audio/') || /^(mp3|wav|ogg|m4a|flac)$/.test(ext)) {
 				objectUrl = URL.createObjectURL(blob);
 				data = { fileAudioUrl: objectUrl };
-			} else if (mime.startsWith('video/') || /^(mp4|webm|mov)$/.test(ext)) {
+			} else if ((!codeFile && mime.startsWith('video/')) || /^(mp4|webm|mov)$/.test(ext)) {
 				objectUrl = URL.createObjectURL(blob);
 				data = { fileVideoUrl: objectUrl };
 			} else if (ext === 'docx' || mime.includes('wordprocessingml'))
@@ -143,6 +145,7 @@
 				data = { fileOfficeSlides: result.images };
 			} else if (
 				mime.startsWith('text/') ||
+				codeFile ||
 				/^(md|markdown|mdx|txt|csv|tsv|json|jsonc|jsonl|json5|html?|xml|ya?ml|toml|ini|log|py|js|ts|tsx|jsx|css|sh|sql|rs|go|java|c|cpp|h|ipynb)$/.test(
 					ext
 				) ||
