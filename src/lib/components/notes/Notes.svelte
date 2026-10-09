@@ -1,4 +1,6 @@
 <script lang="ts">
+	import WorkspaceAccessModal from '$lib/components/workspace/common/WorkspaceAccessModal.svelte';
+	let accessModal: WorkspaceAccessModal;
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
@@ -349,6 +351,8 @@
 	});
 </script>
 
+<WorkspaceAccessModal bind:this={accessModal} resourceType="notes" onUpdated={init} />
+
 <svelte:head>
 	<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -667,6 +671,9 @@
 														</Tooltip>
 													{:else}
 														<NoteMenu
+															onAccess={note.user_id === $user?.id || $user?.role === 'admin'
+																? () => accessModal.open(note.id)
+																: null}
 															show={openNoteMenuId === note.id}
 															onDownload={(type) => {
 																selectedNote = note;
@@ -755,6 +762,9 @@
 														</Tooltip>
 													{:else}
 														<NoteMenu
+															onAccess={note.user_id === $user?.id || $user?.role === 'admin'
+																? () => accessModal.open(note.id)
+																: null}
 															onDownload={(type) => {
 																selectedNote = note;
 
