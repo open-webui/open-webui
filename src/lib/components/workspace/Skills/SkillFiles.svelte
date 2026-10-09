@@ -43,6 +43,7 @@
 	export let reloadKey = 0;
 	export let initialPath = 'SKILL.md';
 	export let onSave: () => Promise<void> = async () => {};
+	export let onContentChange: (path: string, content: string) => void = () => {};
 	const i18n = getContext<any>('i18n');
 	type Draft = SkillFileSummary & {
 		sourcePath?: string;
@@ -139,6 +140,7 @@
 		if (loadedPath && codeEditor) value = codeEditor.getValue();
 		const file = files.find((f) => f.path === loadedPath);
 		if (file && !readOnly && value !== loadedValue) {
+			onContentChange(loadedPath, value);
 			file.content = value;
 			file.changed = true;
 			file.size = new TextEncoder().encode(value).length;
@@ -158,7 +160,10 @@
 		};
 	};
 	$: if (!$mobile) showFileDrawer = false;
-	$: if (loadedPath && value !== loadedValue && !readOnly) dirty = true;
+	$: if (loadedPath && value !== loadedValue && !readOnly) {
+		dirty = true;
+		onContentChange(loadedPath, value);
+	}
 	const blobFor = async (file: Draft) => {
 		if (file.content !== undefined)
 			return new Blob([

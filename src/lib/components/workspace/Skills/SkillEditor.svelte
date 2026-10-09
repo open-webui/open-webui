@@ -16,7 +16,7 @@
 	let locale = '';
 	let meta: { i18n?: Record<string, Record<string, string>>; [key: string]: any } = {};
 	import { user } from '$lib/stores';
-	import { slugify } from '$lib/utils';
+	import { slugify, parseFrontmatter, formatSkillName } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { updateSkillAccessGrants } from '$lib/apis/skills';
 	import { goto, beforeNavigate } from '$app/navigation';
@@ -221,6 +221,12 @@
 
 	let accessGrants: any[] = [];
 	let showAccessControlModal = false;
+	const handleContentChange = (path: string, content: string) => {
+		if (edit || path !== 'SKILL.md') return;
+		const fields = parseFrontmatter(content);
+		if (!name && typeof fields.name === 'string') name = formatSkillName(fields.name);
+		if (!description && typeof fields.description === 'string') description = fields.description;
+	};
 	$: if (!edit && !clone && name) {
 		id = slugify(name);
 	}
@@ -454,6 +460,7 @@
 					bind:dirty={fileDirty}
 					initialPath={new URLSearchParams(location.search).get('path') || 'SKILL.md'}
 					onSave={submitHandler}
+					onContentChange={handleContentChange}
 					canExport={edit &&
 						($user?.role === 'admin' || $user?.permissions?.workspace?.skills_export)}
 				>
