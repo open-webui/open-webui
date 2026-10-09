@@ -1,0 +1,4546 @@
+{
+  "$defs": {
+    "AccessDeniedDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "$ref": "#/$defs/AccessDeniedReason"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "AccessDeniedDetails",
+      "type": "object"
+    },
+    "AccessDeniedReason": {
+      "enum": [
+        "no_access",
+        "model_not_found"
+      ],
+      "title": "AccessDeniedReason",
+      "type": "string"
+    },
+    "Actor": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_method": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AuthMethod"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Role"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "subject_pseudonym": {
+          "anyOf": [
+            {
+              "pattern": "^ps1:[a-z0-9-]{1,32}:[A-Za-z0-9_-]{22}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Pseudonym"
+        },
+        "type": {
+          "$ref": "#/$defs/ActorType"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "Actor",
+      "type": "object"
+    },
+    "ActorType": {
+      "enum": [
+        "user",
+        "anonymous"
+      ],
+      "title": "ActorType",
+      "type": "string"
+    },
+    "AuditEvent_api_key_create": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "api_key.create",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "auth",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_api_key_create",
+      "type": "object"
+    },
+    "AuditEvent_api_key_delete": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "api_key.delete",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "auth",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_api_key_delete",
+      "type": "object"
+    },
+    "AuditEvent_chat_share": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "chat.share",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "chat",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/ChatShareDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_chat"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_chat_share",
+      "type": "object"
+    },
+    "AuditEvent_chat_unshare": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "chat.unshare",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "chat",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/ChatShareDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_chat"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_chat_unshare",
+      "type": "object"
+    },
+    "AuditEvent_config_import": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "config.import",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/ConfigDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_config"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_config_import",
+      "type": "object"
+    },
+    "AuditEvent_config_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "config.update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/ConfigDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_config"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_config_update",
+      "type": "object"
+    },
+    "AuditEvent_domain_create": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "domain.create",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_domain"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_domain_create",
+      "type": "object"
+    },
+    "AuditEvent_domain_delete": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "domain.delete",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_domain"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_domain_delete",
+      "type": "object"
+    },
+    "AuditEvent_domain_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "domain.update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_domain"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_domain_update",
+      "type": "object"
+    },
+    "AuditEvent_file_delete": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "file.delete",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_file"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_file_delete",
+      "type": "object"
+    },
+    "AuditEvent_file_delete_all": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "file.delete_all",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/BulkDeleteDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "details"
+      ],
+      "title": "AuditEvent_file_delete_all",
+      "type": "object"
+    },
+    "AuditEvent_file_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "file.update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_file"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_file_update",
+      "type": "object"
+    },
+    "AuditEvent_file_upload": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "file.upload",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/FileUploadDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_file"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_file_upload",
+      "type": "object"
+    },
+    "AuditEvent_group_create": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "group.create",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/GroupChangeDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_group"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_group_create",
+      "type": "object"
+    },
+    "AuditEvent_group_delete": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "group.delete",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/GroupDeleteDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_group"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_group_delete",
+      "type": "object"
+    },
+    "AuditEvent_group_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "group.update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/GroupChangeDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_group"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_group_update",
+      "type": "object"
+    },
+    "AuditEvent_knowledge_create": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "knowledge.create",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_knowledge"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_knowledge_create",
+      "type": "object"
+    },
+    "AuditEvent_knowledge_delete": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "knowledge.delete",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_knowledge"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_knowledge_delete",
+      "type": "object"
+    },
+    "AuditEvent_knowledge_delete_all": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "knowledge.delete_all",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/BulkDeleteDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "details"
+      ],
+      "title": "AuditEvent_knowledge_delete_all",
+      "type": "object"
+    },
+    "AuditEvent_knowledge_file_add": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "knowledge.file_add",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/KnowledgeFilesDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_knowledge"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_knowledge_file_add",
+      "type": "object"
+    },
+    "AuditEvent_knowledge_file_remove": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "knowledge.file_remove",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/KnowledgeFilesDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_knowledge"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_knowledge_file_remove",
+      "type": "object"
+    },
+    "AuditEvent_knowledge_reset": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "knowledge.reset",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/KnowledgeResetDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_knowledge"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_knowledge_reset",
+      "type": "object"
+    },
+    "AuditEvent_knowledge_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "knowledge.update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "resource",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_knowledge"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_knowledge_update",
+      "type": "object"
+    },
+    "AuditEvent_login_failure": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "login.failure",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "auth",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/LoginFailureDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Target_user"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "details"
+      ],
+      "title": "AuditEvent_login_failure",
+      "type": "object"
+    },
+    "AuditEvent_login_success": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "login.success",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "auth",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_login_success",
+      "type": "object"
+    },
+    "AuditEvent_logout": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "logout",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "auth",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action"
+      ],
+      "title": "AuditEvent_logout",
+      "type": "object"
+    },
+    "AuditEvent_mcp_config_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "mcp.config_update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "mcp",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/ConfigDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_config"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_mcp_config_update",
+      "type": "object"
+    },
+    "AuditEvent_mcp_server_create": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "mcp_server.create",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "mcp",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/McpServerChangeDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_mcp_server"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_mcp_server_create",
+      "type": "object"
+    },
+    "AuditEvent_mcp_server_delete": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "mcp_server.delete",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "mcp",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/McpServerDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_mcp_server"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_mcp_server_delete",
+      "type": "object"
+    },
+    "AuditEvent_mcp_server_restart": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "mcp_server.restart",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "mcp",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/McpServerDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_mcp_server"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_mcp_server_restart",
+      "type": "object"
+    },
+    "AuditEvent_mcp_server_start": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "mcp_server.start",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "mcp",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/McpServerDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_mcp_server"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_mcp_server_start",
+      "type": "object"
+    },
+    "AuditEvent_mcp_server_stop": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "mcp_server.stop",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "mcp",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/McpServerDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_mcp_server"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_mcp_server_stop",
+      "type": "object"
+    },
+    "AuditEvent_mcp_server_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "mcp_server.update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "mcp",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/McpServerChangeDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_mcp_server"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_mcp_server_update",
+      "type": "object"
+    },
+    "AuditEvent_message": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "message",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "chat",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/ChatMessageDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_message"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_message",
+      "type": "object"
+    },
+    "AuditEvent_metrics_export": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "metrics.export",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "export",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/ExportDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_export"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_metrics_export",
+      "type": "object"
+    },
+    "AuditEvent_model_denied": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "model.denied",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "access",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/AccessDeniedDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_model"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_model_denied",
+      "type": "object"
+    },
+    "AuditEvent_password_change": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "password.change",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "auth",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/PasswordChangeDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_password_change",
+      "type": "object"
+    },
+    "AuditEvent_permissions_default_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "permissions.default_update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/PermissionKeysDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_permissions"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_permissions_default_update",
+      "type": "object"
+    },
+    "AuditEvent_signup": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "signup",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "auth",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/RoleDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_signup",
+      "type": "object"
+    },
+    "AuditEvent_token_refresh_failure": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "token.refresh.failure",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "auth",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/RefreshFailureDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "details"
+      ],
+      "title": "AuditEvent_token_refresh_failure",
+      "type": "object"
+    },
+    "AuditEvent_user_create": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "user.create",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/RoleDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_user_create",
+      "type": "object"
+    },
+    "AuditEvent_user_delete": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "user.delete",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target"
+      ],
+      "title": "AuditEvent_user_delete",
+      "type": "object"
+    },
+    "AuditEvent_user_oauth_link": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "user.oauth_link",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/OAuthLinkDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_user_oauth_link",
+      "type": "object"
+    },
+    "AuditEvent_user_role_change": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "user.role_change",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/RoleChangeDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_user_role_change",
+      "type": "object"
+    },
+    "AuditEvent_user_update": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "user.update",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "admin",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/UserUpdateDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "target": {
+          "$ref": "#/$defs/Target_user"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "target",
+        "details"
+      ],
+      "title": "AuditEvent_user_update",
+      "type": "object"
+    },
+    "AuthMethod": {
+      "enum": [
+        "password",
+        "ldap",
+        "oauth",
+        "trusted_header",
+        "api_key",
+        "session",
+        "refresh_token"
+      ],
+      "title": "AuthMethod",
+      "type": "string"
+    },
+    "BulkDeleteDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "scope": {
+          "$ref": "#/$defs/DeleteScope"
+        }
+      },
+      "required": [
+        "scope",
+        "count"
+      ],
+      "title": "BulkDeleteDetails",
+      "type": "object"
+    },
+    "ChangeSource": {
+      "enum": [
+        "manual",
+        "oauth_sync"
+      ],
+      "title": "ChangeSource",
+      "type": "string"
+    },
+    "ChatMessageDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "chat_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Chat Id",
+          "type": "string"
+        },
+        "completion_tokens": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Tokens"
+        },
+        "has_files": {
+          "title": "Has Files",
+          "type": "boolean"
+        },
+        "has_knowledge": {
+          "title": "Has Knowledge",
+          "type": "boolean"
+        },
+        "has_tools": {
+          "title": "Has Tools",
+          "type": "boolean"
+        },
+        "mcp_tool": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mcp Tool"
+        },
+        "model": {
+          "pattern": "^[A-Za-z0-9._:/-]{1,128}$",
+          "title": "Model",
+          "type": "string"
+        },
+        "path": {
+          "$ref": "#/$defs/ChatPath"
+        },
+        "prompt_tokens": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt Tokens"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "total_tokens": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Tokens"
+        },
+        "web_search": {
+          "title": "Web Search",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "chat_id",
+        "model",
+        "provider",
+        "path",
+        "has_files",
+        "web_search",
+        "has_knowledge",
+        "has_tools"
+      ],
+      "title": "ChatMessageDetails",
+      "type": "object"
+    },
+    "ChatPath": {
+      "enum": [
+        "http_background",
+        "http_stream",
+        "http_json",
+        "crewai"
+      ],
+      "title": "ChatPath",
+      "type": "string"
+    },
+    "ChatShareDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "share_id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Share Id"
+        }
+      },
+      "title": "ChatShareDetails",
+      "type": "object"
+    },
+    "Client": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "format": "ipvanyaddress",
+          "title": "Address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "title": "Client",
+      "type": "object"
+    },
+    "ConfigDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "keys": {
+          "items": {
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 200,
+          "minItems": 1,
+          "title": "Keys",
+          "type": "array"
+        },
+        "section": {
+          "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+          "title": "Section",
+          "type": "string"
+        }
+      },
+      "required": [
+        "section",
+        "keys"
+      ],
+      "title": "ConfigDetails",
+      "type": "object"
+    },
+    "Correlation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9._-]{8,64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9._-]{8,64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        }
+      },
+      "title": "Correlation",
+      "type": "object"
+    },
+    "DeleteScope": {
+      "enum": [
+        "own",
+        "all_users"
+      ],
+      "title": "DeleteScope",
+      "type": "string"
+    },
+    "ExportDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "date_range_end": {
+          "maximum": 1099511627776,
+          "minimum": 0,
+          "title": "Date Range End",
+          "type": "integer"
+        },
+        "date_range_start": {
+          "maximum": 1099511627776,
+          "minimum": 0,
+          "title": "Date Range Start",
+          "type": "integer"
+        },
+        "file_size_bytes": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "File Size Bytes",
+          "type": "integer"
+        },
+        "row_count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Row Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "row_count",
+        "file_size_bytes",
+        "date_range_start",
+        "date_range_end"
+      ],
+      "title": "ExportDetails",
+      "type": "object"
+    },
+    "FileUploadDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "knowledge_id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Knowledge Id"
+        },
+        "mime_group": {
+          "$ref": "#/$defs/MimeGroup"
+        },
+        "size_bucket": {
+          "$ref": "#/$defs/SizeBucket"
+        }
+      },
+      "required": [
+        "mime_group",
+        "size_bucket"
+      ],
+      "title": "FileUploadDetails",
+      "type": "object"
+    },
+    "GroupChangeDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "ids_truncated": {
+          "default": false,
+          "title": "Ids Truncated",
+          "type": "boolean"
+        },
+        "member_count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Member Count",
+          "type": "integer"
+        },
+        "member_ids_added": {
+          "default": [],
+          "items": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Member Ids Added",
+          "type": "array"
+        },
+        "member_ids_removed": {
+          "default": [],
+          "items": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Member Ids Removed",
+          "type": "array"
+        },
+        "permissions_changed": {
+          "default": false,
+          "title": "Permissions Changed",
+          "type": "boolean"
+        },
+        "source": {
+          "$ref": "#/$defs/ChangeSource"
+        }
+      },
+      "required": [
+        "source",
+        "member_count"
+      ],
+      "title": "GroupChangeDetails",
+      "type": "object"
+    },
+    "GroupDeleteDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "member_count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Member Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "member_count"
+      ],
+      "title": "GroupDeleteDetails",
+      "type": "object"
+    },
+    "Initiator": {
+      "enum": [
+        "self",
+        "admin"
+      ],
+      "title": "Initiator",
+      "type": "string"
+    },
+    "KnowledgeFilesDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "file_count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "File Count",
+          "type": "integer"
+        },
+        "file_ids": {
+          "items": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "File Ids",
+          "type": "array"
+        },
+        "ids_truncated": {
+          "default": false,
+          "title": "Ids Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "file_ids",
+        "file_count"
+      ],
+      "title": "KnowledgeFilesDetails",
+      "type": "object"
+    },
+    "KnowledgeResetDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "file_count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "File Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file_count"
+      ],
+      "title": "KnowledgeResetDetails",
+      "type": "object"
+    },
+    "LoginFailureDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "$ref": "#/$defs/LoginFailureReason"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "LoginFailureDetails",
+      "type": "object"
+    },
+    "LoginFailureReason": {
+      "enum": [
+        "invalid_credentials",
+        "invalid_trusted_header",
+        "ldap_error",
+        "rate_limited",
+        "internal_error"
+      ],
+      "title": "LoginFailureReason",
+      "type": "string"
+    },
+    "McpServerChangeDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "changed_fields": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/McpServerField"
+          },
+          "maxItems": 12,
+          "title": "Changed Fields",
+          "type": "array"
+        },
+        "server_type": {
+          "$ref": "#/$defs/McpServerType"
+        },
+        "transport": {
+          "$ref": "#/$defs/McpTransport"
+        }
+      },
+      "required": [
+        "server_type",
+        "transport"
+      ],
+      "title": "McpServerChangeDetails",
+      "type": "object"
+    },
+    "McpServerDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "server_type": {
+          "$ref": "#/$defs/McpServerType"
+        }
+      },
+      "required": [
+        "server_type"
+      ],
+      "title": "McpServerDetails",
+      "type": "object"
+    },
+    "McpServerField": {
+      "enum": [
+        "name",
+        "description",
+        "command",
+        "args",
+        "env",
+        "transport",
+        "url",
+        "port",
+        "is_active",
+        "capabilities",
+        "tools",
+        "access_control"
+      ],
+      "title": "McpServerField",
+      "type": "string"
+    },
+    "McpServerType": {
+      "enum": [
+        "built_in",
+        "user_created"
+      ],
+      "title": "McpServerType",
+      "type": "string"
+    },
+    "McpTransport": {
+      "enum": [
+        "stdio",
+        "http"
+      ],
+      "title": "McpTransport",
+      "type": "string"
+    },
+    "MimeGroup": {
+      "enum": [
+        "pdf",
+        "image",
+        "office",
+        "text",
+        "audio",
+        "video",
+        "archive",
+        "other"
+      ],
+      "title": "MimeGroup",
+      "type": "string"
+    },
+    "OAuthLinkDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "oauth_provider": {
+          "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+          "title": "Oauth Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "oauth_provider"
+      ],
+      "title": "OAuthLinkDetails",
+      "type": "object"
+    },
+    "Outcome": {
+      "enum": [
+        "success",
+        "failure",
+        "denied",
+        "error",
+        "cancelled"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "PasswordChangeDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "initiated_by": {
+          "$ref": "#/$defs/Initiator"
+        }
+      },
+      "required": [
+        "initiated_by"
+      ],
+      "title": "PasswordChangeDetails",
+      "type": "object"
+    },
+    "PermissionKeysDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "changed_keys": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_.]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 200,
+          "minItems": 1,
+          "title": "Changed Keys",
+          "type": "array"
+        }
+      },
+      "required": [
+        "changed_keys"
+      ],
+      "title": "PermissionKeysDetails",
+      "type": "object"
+    },
+    "Provider": {
+      "enum": [
+        "openai",
+        "ollama",
+        "arena",
+        "function",
+        "crewai",
+        "other"
+      ],
+      "title": "Provider",
+      "type": "string"
+    },
+    "RefreshFailureDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "$ref": "#/$defs/RefreshFailureReason"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "RefreshFailureDetails",
+      "type": "object"
+    },
+    "RefreshFailureReason": {
+      "enum": [
+        "missing_refresh_token",
+        "invalid_refresh_token",
+        "session_conflict"
+      ],
+      "title": "RefreshFailureReason",
+      "type": "string"
+    },
+    "Role": {
+      "enum": [
+        "admin",
+        "user",
+        "pending"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "RoleChangeDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "from_role": {
+          "$ref": "#/$defs/Role"
+        },
+        "source": {
+          "$ref": "#/$defs/ChangeSource"
+        },
+        "to_role": {
+          "$ref": "#/$defs/Role"
+        }
+      },
+      "required": [
+        "from_role",
+        "to_role",
+        "source"
+      ],
+      "title": "RoleChangeDetails",
+      "type": "object"
+    },
+    "RoleDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/Role"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "title": "RoleDetails",
+      "type": "object"
+    },
+    "SizeBucket": {
+      "enum": [
+        "lt_1mb",
+        "1mb_10mb",
+        "10mb_100mb",
+        "gte_100mb"
+      ],
+      "title": "SizeBucket",
+      "type": "string"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "environment": {
+          "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+          "title": "Environment",
+          "type": "string"
+        },
+        "service": {
+          "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+          "title": "Service",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[0-9A-Za-z.+-]{1,32}$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service",
+        "version",
+        "environment"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "Target_chat": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "chat",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_chat",
+      "type": "object"
+    },
+    "Target_config": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "config",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "Target_config",
+      "type": "object"
+    },
+    "Target_domain": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "domain",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_domain",
+      "type": "object"
+    },
+    "Target_export": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "export",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_export",
+      "type": "object"
+    },
+    "Target_file": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "file",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_file",
+      "type": "object"
+    },
+    "Target_group": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "group",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_group",
+      "type": "object"
+    },
+    "Target_knowledge": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "knowledge",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_knowledge",
+      "type": "object"
+    },
+    "Target_mcp_server": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[a-z0-9][a-z0-9_-]{0,63})$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "mcp_server",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_mcp_server",
+      "type": "object"
+    },
+    "Target_message": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "message",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_message",
+      "type": "object"
+    },
+    "Target_model": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[A-Za-z0-9._:/-]{1,128}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "model",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_model",
+      "type": "object"
+    },
+    "Target_permissions": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "permissions",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "Target_permissions",
+      "type": "object"
+    },
+    "Target_user": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "user",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Target_user",
+      "type": "object"
+    },
+    "UserField": {
+      "enum": [
+        "name",
+        "email",
+        "profile_image_url",
+        "password"
+      ],
+      "title": "UserField",
+      "type": "string"
+    },
+    "UserUpdateDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "changed_fields": {
+          "items": {
+            "$ref": "#/$defs/UserField"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Changed Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "changed_fields"
+      ],
+      "title": "UserUpdateDetails",
+      "type": "object"
+    }
+  },
+  "$id": "https://canchat.ssc-spc.gc.ca/schemas/audit-event/v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "discriminator": {
+    "mapping": {
+      "api_key.create": "#/$defs/AuditEvent_api_key_create",
+      "api_key.delete": "#/$defs/AuditEvent_api_key_delete",
+      "chat.share": "#/$defs/AuditEvent_chat_share",
+      "chat.unshare": "#/$defs/AuditEvent_chat_unshare",
+      "config.import": "#/$defs/AuditEvent_config_import",
+      "config.update": "#/$defs/AuditEvent_config_update",
+      "domain.create": "#/$defs/AuditEvent_domain_create",
+      "domain.delete": "#/$defs/AuditEvent_domain_delete",
+      "domain.update": "#/$defs/AuditEvent_domain_update",
+      "file.delete": "#/$defs/AuditEvent_file_delete",
+      "file.delete_all": "#/$defs/AuditEvent_file_delete_all",
+      "file.update": "#/$defs/AuditEvent_file_update",
+      "file.upload": "#/$defs/AuditEvent_file_upload",
+      "group.create": "#/$defs/AuditEvent_group_create",
+      "group.delete": "#/$defs/AuditEvent_group_delete",
+      "group.update": "#/$defs/AuditEvent_group_update",
+      "knowledge.create": "#/$defs/AuditEvent_knowledge_create",
+      "knowledge.delete": "#/$defs/AuditEvent_knowledge_delete",
+      "knowledge.delete_all": "#/$defs/AuditEvent_knowledge_delete_all",
+      "knowledge.file_add": "#/$defs/AuditEvent_knowledge_file_add",
+      "knowledge.file_remove": "#/$defs/AuditEvent_knowledge_file_remove",
+      "knowledge.reset": "#/$defs/AuditEvent_knowledge_reset",
+      "knowledge.update": "#/$defs/AuditEvent_knowledge_update",
+      "login.failure": "#/$defs/AuditEvent_login_failure",
+      "login.success": "#/$defs/AuditEvent_login_success",
+      "logout": "#/$defs/AuditEvent_logout",
+      "mcp.config_update": "#/$defs/AuditEvent_mcp_config_update",
+      "mcp_server.create": "#/$defs/AuditEvent_mcp_server_create",
+      "mcp_server.delete": "#/$defs/AuditEvent_mcp_server_delete",
+      "mcp_server.restart": "#/$defs/AuditEvent_mcp_server_restart",
+      "mcp_server.start": "#/$defs/AuditEvent_mcp_server_start",
+      "mcp_server.stop": "#/$defs/AuditEvent_mcp_server_stop",
+      "mcp_server.update": "#/$defs/AuditEvent_mcp_server_update",
+      "message": "#/$defs/AuditEvent_message",
+      "metrics.export": "#/$defs/AuditEvent_metrics_export",
+      "model.denied": "#/$defs/AuditEvent_model_denied",
+      "password.change": "#/$defs/AuditEvent_password_change",
+      "permissions.default_update": "#/$defs/AuditEvent_permissions_default_update",
+      "signup": "#/$defs/AuditEvent_signup",
+      "token.refresh.failure": "#/$defs/AuditEvent_token_refresh_failure",
+      "user.create": "#/$defs/AuditEvent_user_create",
+      "user.delete": "#/$defs/AuditEvent_user_delete",
+      "user.oauth_link": "#/$defs/AuditEvent_user_oauth_link",
+      "user.role_change": "#/$defs/AuditEvent_user_role_change",
+      "user.update": "#/$defs/AuditEvent_user_update"
+    },
+    "propertyName": "action"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/AuditEvent_login_success"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_login_failure"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_logout"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_token_refresh_failure"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_signup"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_password_change"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_api_key_create"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_api_key_delete"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_user_create"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_user_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_user_role_change"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_user_delete"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_user_oauth_link"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_group_create"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_group_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_group_delete"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_permissions_default_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_config_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_config_import"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_domain_create"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_domain_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_domain_delete"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_model_denied"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_file_upload"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_file_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_file_delete"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_file_delete_all"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_knowledge_create"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_knowledge_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_knowledge_delete"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_knowledge_delete_all"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_knowledge_file_add"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_knowledge_file_remove"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_knowledge_reset"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_mcp_server_create"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_mcp_server_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_mcp_server_delete"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_mcp_server_start"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_mcp_server_stop"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_mcp_server_restart"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_mcp_config_update"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_metrics_export"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_message"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_chat_share"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_chat_unshare"
+    }
+  ],
+  "title": "CANChat audit event v1.0"
+}

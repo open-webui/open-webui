@@ -465,6 +465,9 @@ All settings are environment variables read once at startup in `observability/__
 | `AUDIT_SIEM_URL`, `AUDIT_SIEM_AUTH_*` | unset | 3–4 | SSC-approved SIEM/archive adapter |
 | `AUDIT_FAIL_POLICY` | `block_privileged` | 3 | `block_privileged` (admin/config/export actions fail closed, chat/auth fail open with alert) or `block_all` |
 | `AUDIT_PSEUDONYM_KEY_ID` | unset | 3 | Keyed pseudonymization key reference for failed-login correlation |
+| `AUDIT_PSEUDONYM_KEY_FILE` | unset | 3 | Active pseudonym key (≥ 32 bytes); required in production when `AUDIT_ENABLED=true`. See [OBS-04 §6](Canchat-v2-OBS-04-Audit-Event-Schema.md#6-failed-login-pseudonymization) |
+| `AUDIT_OUTBOX_KEY_FILE`, `AUDIT_OUTBOX_KEY_ID` | unset | 3 | AES-256-GCM key for outbox payloads at rest |
+| `AUDIT_OUTBOX_RETENTION_DAYS` | `7` | 3 | Days an outbox row is kept after its SIEM receipt; rows without a receipt are never purged automatically |
 | `ENABLE_CONTENT_AUDIT` | `false` | 8 | Restricted content repository; see §8 gates |
 | `CONTENT_AUDIT_MAX_BYTES` | `65536` | 8 | Per-record truncation with marker |
 | `ENABLE_FARO` | `true` / `false` | 6 | Exposed through `/api/config` |
@@ -479,12 +482,88 @@ Collector, Alloy, Loki, Tempo, Prometheus and Grafana configuration lives in `do
 ### Implementation gates
 
 Before treating this plan as implementation-ready:
-1. Pin and validate Faro/Alloy/collector/store versions, real payload schemas, source-map behavior, SDK session semantics and exporter/metric names. The component APIs in this document are design references, not tested deployment configuration.
-2. Approve the event schema, cardinality limits, analytics windows and runtime validation rules; prove aggregate-only users cannot query raw data.
+1. Pin and validate collector/store versions and backend instrumentation dependencies; the OBS-03 result is recorded in [Gate 1](#gate-1-obs-03-dependency-resolution). Faro/Alloy versions, real browser payload schemas, source-map behavior and SDK session semantics are deferred to OBS-70/OBS-76. Exporter/metric names and deployed configuration still need validation with the pinned binaries.
+2. Approve the event schema, cardinality limits, analytics windows and runtime validation rules; prove aggregate-only users cannot query raw data. Audit schema v1, fail policy, pseudonymization and metric label limits are proposed in [OBS-04](Canchat-v2-OBS-04-Audit-Event-Schema.md).
 3. Confirm the SSC record mapping, retention clocks, authorized hold/release process and content-audit need. Do not enable full-content capture until its restricted lifecycle is implemented.
-4. Define SIEM/archive delivery receipts, outage behavior, queue sizing, retention of undelivered events and the audit-persistence failure policy. Demonstrate replay after crashes without silent loss or duplicate logical events.
+4. Define SIEM/archive delivery receipts, outage behavior, queue sizing, retention of undelivered events and the audit-persistence failure policy. Demonstrate replay after crashes without silent loss or duplicate logical events. Definitions are proposed in [OBS-04 §5 and §8](Canchat-v2-OBS-04-Audit-Event-Schema.md#8-siemarchive-delivery); the replay demonstration remains OBS-42.
 5. Specify production capacity, availability, infrastructure ownership, network access, egress restrictions and recovery tests. Dependency-client traces alone do not provide DB, Redis, GPU or model-server health monitoring; integrate available platform metrics where required.
 6. Resolve the two design decisions that change what PR 2/3 instrument: `message_metrics` as the single chat-metadata write point (§5, option a) versus a separate audit table, and the session-injection refactor needed for same-transaction audit writes (§5).
+
+#### Gate 1: OBS-03 dependency resolution
+
+**Recorded 2026-10-08.** The complete backend requirements plus the seven instrumentors below resolved and installed in a clean Linux x86_64 virtualenv using Python **3.11.14** and pip **24.0**, without changing any production requirement. `pip check` reported **No broken requirements found**. The [415-package installed version snapshot](obs03-resolved-requirements.txt) records the complete set, including otherwise floating dependencies. It is a platform-specific constraints snapshot, not a hash-verified production lockfile; Python 3.12 and other platforms have not been tested in this spike.
+
+**Pins ready for OBS-20:** retain CrewAI `1.15.14` with `azure-ai-inference`, LiteLLM `1.92.0`, OpenAI `2.30.0` and the existing OTel `1.42.0` pins. Add these direct requirements:
+
+```requirements
+opentelemetry-instrumentation-fastapi==0.63b0
+opentelemetry-instrumentation-aiohttp-client==0.63b0
+opentelemetry-instrumentation-requests==0.63b0
+opentelemetry-instrumentation-sqlalchemy==0.63b0
+opentelemetry-instrumentation-redis==0.63b0
+opentelemetry-instrumentation-logging==0.63b0
+opentelemetry-instrumentation-httpx==0.63b0
+```
+
+| Resolved package(s) | Version | Constraint / disposition |
+|---|---|---|
+| `crewai`, `crewai-core`, `crewai-cli`, `crewai-tools` | `1.15.14` | CrewAI/core require OTel API/SDK/HTTP exporter `~=1.42.0`; the existing tools lower bound resolved to this version. |
+| `litellm`, `openai`, `pydantic`, `pydantic-settings` | `1.92.0`, `2.30.0`, `2.11.9`, `2.15.0` | No conflict with the pinned CrewAI metadata. Do not enable LiteLLM's `proxy-runtime` extra: it pins OTel `1.28.0` and FastAPI instrumentation `0.49b0`. |
+| `opentelemetry-api`, `opentelemetry-sdk`, `opentelemetry-proto`, `opentelemetry-exporter-otlp`, `opentelemetry-exporter-otlp-proto-{common,http,grpc}` | `1.42.0` | Keep the stable release family aligned. The OTLP meta-package installs both HTTP and gRPC exporters. |
+| `opentelemetry-instrumentation`, `opentelemetry-instrumentation-asgi`, `opentelemetry-semantic-conventions`, `opentelemetry-util-http`, all seven direct instrumentors | `0.63b0` | SDK `1.42.0` requires semantic conventions exactly `0.63b0`; ASGI/base/util packages are transitive. |
+| `grpcio`, `grpcio-status`, `grpcio-tools`, `protobuf`, `googleapis-common-protos` | `1.67.1`, `1.67.1`, `1.67.1`, `5.29.6`, `1.63.2` | Compatible with the repository's gRPC ceiling and protobuf pins on Python 3.11. |
+| `httpx`, `httpcore`, `requests`, `aiohttp`, `wrapt`, `importlib_metadata` | `0.28.1`, `1.0.9`, `2.33.0`, `3.14.3`, `2.5.0`, `8.9.0` | Instrumentor/client support set; HTTPX is an additional requirement for LiteLLM/OpenAI coverage. |
+| `azure-ai-inference`, `azure-core` | `1.0.0b9`, `1.38.0` | CrewAI native Azure transport uses this SDK, not necessarily LiteLLM. |
+
+**Logging bridge verified:** [the OBS-03 proof of concept](../backend/open_webui/test/util/test_otel_dependencies_poc.py) sends a synthetic log to a loopback OTLP/HTTP receiver and decodes the real protobuf payload. Both `opentelemetry.sdk._logs.LoggingHandler` and `opentelemetry.instrumentation.logging.handler.LoggingHandler` work with `LoggerProvider`, `BatchLogRecordProcessor` and `opentelemetry.exporter.otlp.proto.http._log_exporter.OTLPLogExporter` at the versions above. Assertions cover body, severity, resource, custom attributes, trace/span IDs and `force_flush`; providers and receiver shut down afterward without changing global providers or root logging. The SDK handler emits a **deprecation warning**; prefer the instrumentation package's handler for new bootstrap code. Configure one explicit exporting handler, not both handlers or an additional auto-installed root handler. Correlation injection alone is not evidence of export. Production filtering, failure/retry behavior and full application shutdown wiring remain implementation work.
+
+**HTTP client findings (installed source plus synthetic runtime probes):** the application calls `LLM(model="azure/<deployment>", timeout=30)` in [the CrewAI adapter](../backend/mcp_backend/integration/crew_mcp_integration.py#L251), without forcing `is_litellm=True`. Its comments mentioning CrewAI `1.7.2` are outdated for the pinned `1.15.14` factory.
+
+| Path in the pinned packages | Actual HTTP transport | Coverage |
+|---|---|---|
+| CrewAI `LLM.__new__` -> native `AzureCompletion` -> `azure.ai.inference.ChatCompletionsClient` / async equivalent (default chat-completions path) | Azure Core `RequestsTransport` (`requests.Session`) / `AioHttpTransport` (`aiohttp.ClientSession`); confirmed for synthetic named deployments | Requested `requests` / `aiohttp-client` instrumentors cover the underlying HTTP calls. |
+| CrewAI native OpenAI provider, or Azure Responses API delegate | OpenAI SDK sync/async clients use HTTPX | Add `httpx` instrumentor `0.63b0`; requests/aiohttp instrumentation does not cover HTTPX. |
+| CrewAI LiteLLM fallback / explicitly forced LiteLLM, Azure/OpenAI completions | LiteLLM `llms/azure/azure.py` uses `AzureOpenAI` / `AsyncAzureOpenAI` and `custom_httpx.http_handler` (`httpx.Client` / `httpx.AsyncClient`) | Same HTTPX instrumentor; both client modes pass span/traceparent tests. Other LiteLLM providers may use aiohttp or another SDK, so this is not a universal provider claim. |
+
+No real provider request or credential was used. The HTTPX tests use mock transports with `instrument_client`; they verify client-span creation and propagation, not the production global-instrumentation bootstrap or LLM streaming semantics. HTTP spans do not create crew/model/tool lifecycle spans or solve executor context propagation; those remain OBS-26. Provider/model-level instrumentation must not capture prompts, responses or credentials by default.
+
+**Proposed infrastructure image pins:** upstream stable release tags were checked on 2026-10-08. These are proposals for the infrastructure tickets, not a deployed or integration-tested stack.
+
+| Component | Proposed image | Release evidence / follow-up |
+|---|---|---|
+| Collector-contrib | `otel/opentelemetry-collector-contrib:0.162.0` | [v0.162.0](https://github.com/open-telemetry/opentelemetry-collector-releases/releases/tag/v0.162.0); use native OTLP/HTTP to Loki, not the legacy Loki exporter. |
+| Loki 3.x | `grafana/loki:3.7.8` | [v3.7.8](https://github.com/grafana/loki/releases/tag/v3.7.8); validate schema v13/TSDB, structured metadata, tenant enforcement and compactor retention. |
+| Tempo | `grafana/tempo:3.1.0` | [v3.1.0](https://github.com/grafana/tempo/releases/tag/v3.1.0); review the 3.x Kafka/topology requirements and changed configuration before adopting it in the currently proposed stack. Do not treat a 2.x config as compatible. |
+| Prometheus | `prom/prometheus:v3.15.0` | [v3.15.0](https://github.com/prometheus/prometheus/releases/tag/v3.15.0); same version for operations and isolated analytics instances. Validate translated metric names and histogram behavior. |
+| Grafana OSS | `grafana/grafana:13.2.3` | [v13.2.3](https://github.com/grafana/grafana/releases/tag/v13.2.3); validate provisioned organizations, data sources and permissions. |
+
+Resolve registry manifest digests for the target architectures, verify image signatures/security scans and validate configuration with these exact binaries before deployment. No image was pulled or configuration tested here. Alloy and Faro versions/payload validation are explicitly deferred to **OBS-70/OBS-76** and do not block these backend package pins. Infrastructure topology approval remains Gate 5 / OBS-06.
+
+**Reproduction (from the repository root, supported Python 3.11):**
+
+```bash
+python3.11 -m venv /tmp/canchat-obs03-venv
+/tmp/canchat-obs03-venv/bin/python -m pip install pip==24.0
+/tmp/canchat-obs03-venv/bin/python -m pip install \
+  -r backend/requirements.txt -c docs/obs03-resolved-requirements.txt \
+  opentelemetry-instrumentation-fastapi==0.63b0 \
+  opentelemetry-instrumentation-aiohttp-client==0.63b0 \
+  opentelemetry-instrumentation-requests==0.63b0 \
+  opentelemetry-instrumentation-sqlalchemy==0.63b0 \
+  opentelemetry-instrumentation-redis==0.63b0 \
+  opentelemetry-instrumentation-logging==0.63b0 \
+  opentelemetry-instrumentation-httpx==0.63b0
+/tmp/canchat-obs03-venv/bin/python -m pip check
+DATA_DIR=$(mktemp -d /tmp/canchat-obs03-pytest.XXXXXX) \
+  HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 OTEL_SDK_DISABLED=true \
+  /tmp/canchat-obs03-venv/bin/python -m pytest -q -rs --disable-warnings
+```
+
+For a full fresh resolver report, add `--dry-run --ignore-installed --report /tmp/canchat-obs03-resolution.json` to the install command. Constraints do not install packages on their own; retain the original requirements and explicit instrumentor arguments. The unconstrained fresh resolver selected 415 distributions; the retained snapshot records installed versions rather than wheel URLs or local interpreter paths. Retest resolution when updating CrewAI, LiteLLM, SDK or instrumentor families.
+
+**Verification result:** clean install and `pip check` passed. All four new proof-of-concept cases ran and passed; the complete suite finished with **288 passed, 5 skipped** (59 upstream/existing deprecation and collection warnings). The five skipped concurrency tests require unavailable Qdrant/Redis integration services; rerun them with those services before claiming the common DoD's complete integration coverage. Instrumentor-dependent proof-of-concept cases use `importorskip` until OBS-20 adds the packages to normal CI; no new case was skipped in this spike environment.
+
+The real backend was imported and its FastAPI lifespan started/stopped via `TestClient`; `GET /health` returned HTTP 200 and `{"status": true}`. Smoke settings used a temporary `DATA_DIR`, `PYTHONPATH=backend`, `OFFLINE_MODE=true`, `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, `RAG_EMBEDDING_ENGINE=openai`, `ENABLE_MCP_API=false`, `ENABLE_WIKIPEDIA_GROUNDING=false`, `ENABLE_VERSION_UPDATE_CHECK=false`, and `OTEL_SDK_DISABLED=true`. Existing cached model assets were available; this was a local-development startup, not proof that external services or model provisioning work on an empty machine. No production bootstrap, environment setting, dependency pin or deployment file is changed by OBS-03. PR review/merge and the remaining integration/deployment checks are not claimed complete.
 
 ## Rollout (separate PRs)
 1. **Safe foundations:** remove sensitive source logging first (the prompt and token fragments at [socket/main.py:434](../backend/open_webui/socket/main.py#L434) and [:481](../backend/open_webui/socket/main.py#L481), then the DEBUG path in `web_search_logger.py`); fix the global [`set_user_token`](../backend/open_webui/socket/main.py#L500-L512) so the Graph token is passed per CrewAI invocation; centralize in-process logging without breaking subprocess entrypoints; add per-handler filtering, pure ASGI completion logging/context, operational OTel switch and metric-definition parsing. Document startup/shutdown and middleware order. Record the `message_metrics`-vs-audit-table decision (§5) as part of this PR's design notes.
