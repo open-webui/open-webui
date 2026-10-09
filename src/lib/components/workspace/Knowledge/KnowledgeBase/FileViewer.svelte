@@ -257,12 +257,6 @@
 					class="shrink-0 px-1 py-0.5 text-gray-500"
 					on:click={() => {
 						state = { ...state, mode: 'indexed', editing: true, draft: state.indexed ?? '' };
-						toast.info(
-							$i18n.t(
-								'Edits change retrieval text in all linked collections; the original file stays unchanged.'
-							),
-							{ position: 'bottom-center', duration: 5000 }
-						);
 					}}>{$i18n.t('Edit')}</button
 				>
 			{/if}
