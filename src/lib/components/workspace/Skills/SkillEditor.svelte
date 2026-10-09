@@ -63,6 +63,7 @@
 	let historyLoading = false;
 	let historyError = false;
 	let commitMessage = '';
+	let selectedCommitMessage = '';
 	let conflict = false;
 	let baseline = '';
 	let historyDiff: any = null;
@@ -150,6 +151,7 @@
 			description = entry.snapshot.description || '';
 			meta = entry.snapshot.meta || {};
 			versionId = selected;
+			selectedCommitMessage = entry.commit_message || '';
 			reloadKey++;
 			remember();
 			historyDiff = null;
@@ -259,6 +261,7 @@
 				...(!edit ? { access_grants: accessGrants } : {})
 			});
 			if (result) {
+				if (versionId !== result.version_id) selectedCommitMessage = commitMessage;
 				currentVersionId = result.version_id;
 				versionId = result.version_id;
 				commitMessage = '';
@@ -288,10 +291,10 @@
 			accessGrants = skill?.access_grants === undefined ? [] : skill?.access_grants;
 		}
 		remember();
-		ready = true;
 		const requestedVersion = new URLSearchParams(location.search).get('version_id');
-		if (edit && requestedVersion && requestedVersion !== versionId)
-			await selectVersion(requestedVersion);
+		if (edit && (requestedVersion || versionId))
+			await selectVersion(requestedVersion || versionId!);
+		ready = true;
 	});
 </script>
 
@@ -483,7 +486,11 @@
 										class="flex h-7 max-w-full items-center gap-2 rounded-lg bg-transparent px-2 text-xs text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
 									>
 										<span class="truncate"
-											>{name} · {historical ? versionId?.slice(0, 7) : $i18n.t('Current')}</span
+											>{historical
+												? versionId?.slice(0, 7)
+												: $i18n.t('Current')}{selectedCommitMessage
+												? ` · ${selectedCommitMessage}`
+												: ''}</span
 										>
 										<ChevronDown className="size-3 shrink-0" />
 									</button>
