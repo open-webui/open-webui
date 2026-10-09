@@ -184,6 +184,10 @@
 		}
 	};
 	const submitHandler = async () => {
+		if (disabled) {
+			toast.error($i18n.t('You do not have permission to edit this prompt.'));
+			return;
+		}
 		if (loading || readOnly || historyLoading) return;
 		if (!name.trim() || !content.trim() || !validateCommandString(command)) {
 			toast.error($i18n.t('Enter a name, content, and a valid command.'));
@@ -234,7 +238,11 @@
 		}
 	};
 	const setAsProduction = async () => {
-		if (disabled || !selectedHistoryEntry || loading) return;
+		if (disabled) {
+			toast.error($i18n.t('You do not have permission to edit this prompt.'));
+			return;
+		}
+		if (!selectedHistoryEntry || loading) return;
 		if (debounceTimer) clearTimeout(debounceTimer);
 		loading = true;
 		try {
@@ -390,6 +398,7 @@
 >
 	<form
 		class="flex h-full min-h-0 min-w-0 flex-col"
+		aria-label={edit ? $i18n.t('Edit Prompt') : $i18n.t('Create Prompt')}
 		inert={loading}
 		on:submit|preventDefault={submitHandler}
 	>
@@ -432,16 +441,19 @@
 			<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
 				<Tooltip
 					className="min-w-0 flex-1"
-					content={$i18n.t('Activate this command by typing "/{{COMMAND}}" to chat input.', {
-						COMMAND: command
-					})}
+					content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
+						'Activate this command by typing "/{{COMMAND}}" to chat input.',
+						{
+							COMMAND: command
+						}
+					)}`}
 					placement="bottom-start"
 				>
 					<div class="flex min-w-0 items-center gap-0.5">
 						<span>/</span>
 						<input
 							class="min-w-0 flex-1 bg-transparent outline-hidden"
-							placeholder={$i18n.t('Command')}
+							placeholder={$i18n.t('command')}
 							aria-label={$i18n.t('Command')}
 							bind:value={command}
 							on:input={() => {
@@ -506,16 +518,14 @@
 							<Dropdown bind:show={showHistory}>
 								<button
 									type="button"
-									aria-label={$i18n.t('Select version')}
+									aria-label={$i18n.t('History')}
 									class="flex max-w-full items-center gap-2 py-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
 									disabled={loading}
 								>
 									<span class="truncate"
 										>{historical
 											? selectedHistoryEntry.commit_message || selectedVersionId.slice(0, 7)
-											: $i18n.t('Production')}{editingHistory
-											? ` · ${$i18n.t('Editing')}`
-											: ''}</span
+											: $i18n.t('Live')}{editingHistory ? ` · ${$i18n.t('Editing')}` : ''}</span
 									><ChevronDown className="size-3 shrink-0" />
 								</button>
 								<div slot="content">
@@ -523,7 +533,10 @@
 										<VersionMenuItem
 											entry={history.find((entry) => entry.id === prompt?.version_id) ||
 												(productionEntry?.id === prompt?.version_id ? productionEntry : null)}
-											status={$i18n.t('Production')}
+											status={$i18n.t('Live')}
+											deleteDisabledReason={disabled
+												? ''
+												: $i18n.t('Cannot delete the production version')}
 											selected={!historical}
 											onSelect={() => chooseVersion()}
 										/>
@@ -553,6 +566,9 @@
 												type="button"
 												on:click={() => loadHistory(historyPage === 0)}>{$i18n.t('Retry')}</button
 											>
+										{:else if !history.length}<div class="px-2 py-2 text-xs text-gray-400">
+												{$i18n.t('No history available')}
+											</div>
 										{:else if historyHasMore}<hr class="border-gray-100 dark:border-gray-800" />
 											<button type="button" on:click={() => loadHistory()}
 												>{$i18n.t('Load more')}</button
@@ -562,8 +578,9 @@
 							</Dropdown>
 						{:else}<span class="text-gray-500">{$i18n.t('Prompt Content')}</span>{/if}
 					</div>
-					<Tooltip content={$i18n.t('Use {{variable}} for placeholders')}
-						><span class="px-1 text-gray-400">{'{{variable}}'}</span></Tooltip
+					<Tooltip
+						content={`${$i18n.t('Use')} {{${$i18n.t('variable')}}} ${$i18n.t('for placeholders')}`}
+						><span class="px-1 text-gray-400">{'{{'}{$i18n.t('variable')}{'}}'}</span></Tooltip
 					>
 					<button
 						type="button"
@@ -633,7 +650,7 @@
 			<div class="flex shrink-0 flex-wrap items-center gap-2 py-2">
 				{#if edit}<input
 						class="min-w-0 flex-1 bg-transparent px-2 text-xs outline-hidden"
-						placeholder={$i18n.t('Describe this change')}
+						placeholder={$i18n.t('Describe what changed...')}
 						aria-label={$i18n.t('Commit Message')}
 						bind:value={commitMessage}
 					/>{:else}<div class="flex-1"></div>{/if}

@@ -203,6 +203,7 @@
 		const { parent, name } = creating;
 		try {
 			await createKnowledgeDirectory(localStorage.token, knowledge.id, name.trim(), parent);
+			toast.success($i18n.t('Directory created.'));
 			creating = null;
 			await reload([parent]);
 		} catch (error) {
@@ -233,6 +234,7 @@
 	const renameFile = async (file: KnowledgeFile, name: string) => {
 		try {
 			await renameFileById(localStorage.token, file.id!, name);
+			toast.success($i18n.t('File renamed.'));
 			onChanged({ ...file, filename: name, name, meta: { ...file.meta, name } });
 			await reload([file.directory_id ?? null]);
 		} catch (error) {
@@ -243,6 +245,7 @@
 	const renameDirectory = async (directory: KnowledgeDirectory, name: string) => {
 		try {
 			await updateKnowledgeDirectory(localStorage.token, knowledge.id, directory.id, { name });
+			toast.success($i18n.t('Directory renamed.'));
 			await reload();
 		} catch (error) {
 			report(error);
@@ -255,6 +258,7 @@
 			if (kind === 'file') await moveFileInKnowledge(localStorage.token, knowledge.id, id, target);
 			else
 				await updateKnowledgeDirectory(localStorage.token, knowledge.id, id, { parent_id: target });
+			toast.success(kind === 'file' ? $i18n.t('File moved.') : $i18n.t('Directory moved.'));
 			if (target) expanded = new Set([...expanded, target]);
 			await reload();
 		} catch (error) {
@@ -266,6 +270,7 @@
 		try {
 			if (deletion.file) {
 				await removeFileFromKnowledgeById(localStorage.token, knowledge.id, deletion.file.id!);
+				toast.success($i18n.t('File removed successfully.'));
 				onChanged(undefined, [deletion.file.id!]);
 			} else if (deletion.directory) {
 				await deleteKnowledgeDirectory(
@@ -274,6 +279,7 @@
 					deletion.directory.id,
 					!deleteContents
 				);
+				toast.success($i18n.t('Directory deleted.'));
 				// The selected document may be in an unloaded descendant; let the browser verify membership.
 				onChanged();
 				expanded.delete(deletion.directory.id);
@@ -325,7 +331,10 @@
 
 <ConfirmDialog
 	bind:show={showDelete}
-	title={deletion?.directory ? $i18n.t('Delete folder?') : $i18n.t('Remove file from knowledge?')}
+	title={deletion?.directory
+		? $i18n.t('Delete directory?')
+		: $i18n.t('Remove file from knowledge?')}
+	message={deletion?.directory ? $i18n.t('Are you sure you want to delete this directory?') : ''}
 	on:confirm={remove}
 >
 	{#if deletion?.directory}<label class="flex items-center gap-2 text-xs"

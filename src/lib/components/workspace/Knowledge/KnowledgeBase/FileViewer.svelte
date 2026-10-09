@@ -81,7 +81,10 @@
 					draft: state.editing && state.indexed !== null ? state.draft : content
 				};
 		} catch (error) {
-			if (!signal.aborted) indexedError = message(error);
+			if (!signal.aborted) {
+				indexedError = message(error);
+				toast.error($i18n.t('Failed to load file content.'));
+			}
 		} finally {
 			if (!signal.aborted) indexedLoading = false;
 		}
@@ -197,7 +200,7 @@
 		try {
 			const result = await updateFileDataContentById(localStorage.token, file.id!, state.draft);
 			state = { ...state, indexed: result.content, draft: result.content, editing: false };
-			toast.success($i18n.t('Indexed text saved.'));
+			toast.success($i18n.t('File content updated successfully.'));
 			await onSaved();
 		} catch (error) {
 			toast.error(message(error));
@@ -311,9 +314,14 @@
 				bind:this={indexedEditor}
 				bind:value={state.draft}
 				filePath="indexed.txt"
+				ariaLabel={$i18n.t('File content')}
+				placeholder={state.editing ? $i18n.t('Add content here') : ''}
 				readOnly={!writeAccess || !state.editing || saving}
 				onSave={save}
 			/>
 		</div>
+		{#if !state.indexed && !state.editing}<p class="px-3 py-2 text-xs text-gray-500">
+				{$i18n.t('No content found')}
+			</p>{/if}
 	{/if}
 </div>
