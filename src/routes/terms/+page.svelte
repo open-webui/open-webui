@@ -250,6 +250,11 @@
 		font-size: 1.25rem;
 	}
 
+	:global(.terms-markdown > h2:first-child) {
+		margin-top: 0;
+	}
+
+
 	:global(.terms-markdown h3) {
 		font-size: 1.125rem;
 	}
