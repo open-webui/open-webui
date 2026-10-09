@@ -1551,9 +1551,10 @@ async def chat_completion(
                             for mid, message in turn['messages'].items()
                         }
                         await event_emitter({'type': 'chat:messages', 'data': turn})
-                        await emit_chat_list_event({**metadata, 'message_id': user_message['id']}, chat_id)
+                        user_message_id = user_message.get('id')
+                        await emit_chat_list_event({**metadata, 'message_id': user_message_id}, chat_id)
                         for message_id, message in turn['messages'].items():
-                            if message_id != user_message['id'] and message.get('parentId') != user_message['id']:
+                            if message_id != user_message_id and message.get('parentId') != user_message_id:
                                 continue
                             await publish_event(
                                 request,

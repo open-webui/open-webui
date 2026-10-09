@@ -1196,43 +1196,62 @@ class ChatTable:
                 raise HTTPException(404, 'Chat not found.')
             history = (chat.chat or {}).get('history') or {'messages': {}, 'currentId': None}
             messages = history.get('messages') or {}
-            ids = [user_message.get('id'), *[entry.get('message_id') for entry in message_ids]]
+            # A completion without a user message (reply-only) has no user turn to
+            # insert; the reply is saved without a parent.
+            user_message_id = user_message.get('id') if isinstance(user_message, dict) else None
+            ids = [user_message_id, *[entry.get('message_id') for entry in message_ids]]
             if (
-                not all(isinstance(mid, str) and mid for mid in ids)
+                (user_message_id is not None and not isinstance(user_message_id, str))
+                or not all(isinstance(mid, str) and mid for mid in ids[1:])
                 or len(set(ids)) != len(ids)
-                or any(mid in messages for mid in ids[1:])
             ):
                 raise HTTPException(409, 'Message already exists or has an invalid ID.')
-            existing = messages.get(ids[0])
+            existing = messages.get(user_message_id) if user_message_id else None
             if existing and (existing.get('role') != 'user' or (existing.get('user_id') or chat.user_id) != user.id):
                 raise HTTPException(403, 'You can only regenerate your own messages.')
-            parent_id = existing.get('parentId') if existing else user_message.get('parentId')
+            parent_id = (
+                existing.get('parentId') if existing else (user_message.get('parentId') if user_message_id else None)
+            )
             if parent_id is not None and parent_id not in messages:
                 raise HTTPException(409, 'Parent message no longer exists.')
-            message = existing or (
-                dict(user_message)
-                if chat.user_id == user.id
-                else {key: user_message[key] for key in ('content', 'files', 'models') if key in user_message}
-            )
-            if not existing:
-                message.update(
-                    id=ids[0],
-                    parentId=parent_id,
-                    role='user',
-                    childrenIds=[],
-                    timestamp=int(time.time()),
-                    user_id=user.id,
-                    user={'id': user.id, 'name': user.name},
+            turn = {}
+            if user_message_id:
+                message = existing or (
+                    dict(user_message)
+                    if chat.user_id == user.id
+                    else {key: user_message[key] for key in ('content', 'files', 'models') if key in user_message}
                 )
-            turn = {ids[0]: self.upsert_message_to_history(history, ids[0], self._clean_null_bytes(message))}
+                if not existing:
+                    message.update(
+                        id=user_message_id,
+                        parentId=parent_id,
+                        role='user',
+                        childrenIds=[],
+                        timestamp=int(time.time()),
+                        user_id=user.id,
+                        user={'id': user.id, 'name': user.name},
+                    )
+                turn[user_message_id] = self.upsert_message_to_history(
+                    history, user_message_id, self._clean_null_bytes(message)
+                )
             for entry in message_ids:
                 mid = entry['message_id']
+                if mid in messages and (
+                    messages[mid].get('role') != 'assistant'
+                    or messages[mid].get('content')
+                    or messages[mid].get('done') is True
+                ):
+                    # A reply id already in the chat is only acceptable as a
+                    # pre-written empty assistant placeholder (the documented API
+                    # flow and the automations/timers/sub-agent callers); anything
+                    # else is a duplicate insert.
+                    raise HTTPException(409, 'Message already exists or has an invalid ID.')
                 turn[mid] = self.upsert_message_to_history(
                     history,
                     mid,
                     {
                         'id': mid,
-                        'parentId': ids[0],
+                        'parentId': user_message_id,
                         'childrenIds': [],
                         'role': 'assistant',
                         'content': '',
@@ -1245,6 +1264,10 @@ class ChatTable:
                 )
             chat.chat = {**(chat.chat or {}), 'history': history}
             flag_modified(chat, 'chat')
+            if ids[1:]:
+                # Adopted placeholders re-enter the merge branch of
+                # upsert_message_to_history, which leaves currentId alone.
+                history['currentId'] = ids[-1]
             chat.current_message_id = history['currentId']
             chat.updated_at = int(time.time())
             for mid, message in turn.items():
