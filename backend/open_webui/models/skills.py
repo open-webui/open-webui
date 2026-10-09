@@ -408,7 +408,7 @@ class SkillsTable:
                 snapshot['data'] = {'files': files}
                 snapshot['content'] = next(f['content'] for f in files if f['path'] == 'SKILL.md')
                 values = {'is_active': updated.get('is_active', skill.is_active)}
-                if snapshot != old or updated.get('_restore'):
+                if snapshot != old:
                     entry = SkillHistories.new_entry(
                         id, snapshot, user_id or skill.user_id, skill.version_id, updated.get('commit_message')
                     )
@@ -433,6 +433,41 @@ class SkillsTable:
                     .all()
                 )
                 return await self._to_skill_model(skill, [AccessGrantModel.model_validate(g) for g in grants])
+            except Exception:
+                await session.rollback()
+                raise
+
+    async def update_skill_version(
+        self, id: str, version_id: str, expected_version_id: str, db=None
+    ) -> Optional[SkillModel]:
+        async with get_async_db_context(db) as session:
+            try:
+                # Lock before reading the target revision so deletion cannot race promotion.
+                await session.execute(update(Skill).where(Skill.id == id).values(version_id=Skill.version_id))
+                skill = await session.get(Skill, id, populate_existing=True)
+                if not skill:
+                    return None
+                if expected_version_id != skill.version_id:
+                    raise HTTPException(409, {'code': 'version_conflict', 'current_version_id': skill.version_id})
+                entry = await SkillHistories.get_history_by_id(id, version_id, db=session)
+                if not entry:
+                    raise HTTPException(404, 'Skill version not found')
+                snapshot = entry.snapshot
+                result = await session.execute(
+                    update(Skill)
+                    .where(Skill.id == id, Skill.version_id == expected_version_id)
+                    .values(
+                        **{key: snapshot[key] for key in ('name', 'description', 'content', 'data', 'meta')},
+                        version_id=version_id,
+                        updated_at=int(time.time()),
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+                if result.rowcount != 1:
+                    raise HTTPException(409, {'code': 'version_conflict'})
+                await session.commit()
+                await session.refresh(skill)
+                return await self._to_skill_model(skill, db=session)
             except Exception:
                 await session.rollback()
                 raise

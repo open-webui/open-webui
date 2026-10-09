@@ -25,8 +25,9 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import {
 		getSkillHistory,
+		deleteSkillHistoryVersion,
 		getSkillVersion,
-		restoreSkillVersion,
+		setProductionSkillVersion,
 		getSkillById,
 		createNewSkill,
 		exportSkillBundle,
@@ -67,6 +68,8 @@
 	let historyDiff: any = null;
 	let comparing = false;
 	let discard = false;
+	let showDeleteVersion = false;
+	let deleteVersionId: string | null = null;
 	let discardAction = () => {};
 	$: historical = edit && versionId !== currentVersionId;
 	$: readOnly = disabled || historical;
@@ -104,6 +107,21 @@
 	const chooseVersion = (selected: string) => {
 		showHistory = false;
 		if (selected !== versionId) confirmDiscard(() => selectVersion(selected));
+	};
+	const deleteVersion = async () => {
+		if (disabled || loading || !deleteVersionId || deleteVersionId === currentVersionId) return;
+		loading = true;
+		try {
+			await deleteSkillHistoryVersion(localStorage.token, id, deleteVersionId);
+			if (versionId === deleteVersionId) await reload();
+			historyPage = 1;
+			await loadHistory();
+			toast.success($i18n.t('Version deleted'));
+		} catch (error) {
+			toast.error(skillError(error));
+		} finally {
+			loading = false;
+		}
 	};
 	const compareToCurrent = async () => {
 		if (comparing || historyDiff) return;
@@ -149,23 +167,27 @@
 			toast.error(skillError(error));
 		}
 	};
-	const restore = async () => {
+	const setProductionVersion = async () => {
+		if (disabled || !historical || loading) return;
+		loading = true;
 		try {
-			const restored = await restoreSkillVersion(
+			const updated = await setProductionSkillVersion(
 				localStorage.token,
 				id,
 				versionId!,
 				currentVersionId!
 			);
-			currentVersionId = restored.version_id;
-			versionId = restored.version_id;
+			currentVersionId = updated.version_id;
+			versionId = updated.version_id;
 			historyDiff = null;
 			remember();
 			await loadHistory();
-			toast.success($i18n.t('Saved'));
+			toast.success($i18n.t('Production version updated'));
 		} catch (error) {
 			if ((error as any)?.code === 'version_conflict') conflict = true;
 			toast.error(skillError(error));
+		} finally {
+			loading = false;
 		}
 	};
 	const exportVersion = async (format: 'json' | 'zip') => {
@@ -274,6 +296,16 @@
 		remember();
 		discardAction();
 	}}
+/>
+
+<ConfirmDialog
+	bind:show={showDeleteVersion}
+	title={$i18n.t('Delete Version')}
+	message={$i18n.t(
+		"Are you sure you want to delete this version? Child versions will be relinked to this version's parent."
+	)}
+	confirmLabel={$i18n.t('Delete')}
+	onConfirm={deleteVersion}
 />
 
 <AccessControlModal
@@ -475,6 +507,13 @@
 														{entry}
 														selected={entry.id === versionId}
 														onSelect={() => chooseVersion(entry.id)}
+														onDelete={disabled
+															? undefined
+															: () => {
+																	deleteVersionId = entry.id;
+																	showHistory = false;
+																	showDeleteVersion = true;
+																}}
 													/>
 												{:else}
 													{#if historyPage > 1}
@@ -542,7 +581,7 @@
 					{#if !disabled}<button
 							type="button"
 							class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-							on:click={restore}>{$i18n.t('Restore as new version')}</button
+							on:click={setProductionVersion}>{$i18n.t('Set as Production')}</button
 						>{/if}
 				</div>
 			</div>

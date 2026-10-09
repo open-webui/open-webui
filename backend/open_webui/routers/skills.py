@@ -694,25 +694,33 @@ async def get_skill_history_entry(
     }
 
 
-class RestoreSkillForm(BaseModel):
+@router.delete('/id/{id}/history/{history_id}', response_model=bool)
+async def delete_skill_history_entry(
+    id: str, history_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    await authorized_skill(id, user, 'write', db)
+    if not await SkillHistories.delete_history_entry(id, history_id, db):
+        raise HTTPException(404, 'Version not found')
+    return True
+
+
+class SkillVersionUpdateForm(BaseModel):
+    version_id: str
     expected_version_id: str
-    commit_message: str | None = None
 
 
-@router.post('/id/{id}/history/{history_id}/restore')
-async def restore_skill(
+@router.post('/id/{id}/update/version', response_model=SkillModel | None)
+async def set_skill_version(
     id: str,
-    history_id: str,
     request: Request,
-    form_data: RestoreSkillForm,
+    form_data: SkillVersionUpdateForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    skill = await authorized_skill(id, user, 'write', db)
-    entry = await selected_history(skill, history_id, db)
-    result = await Skills.update_skill_by_id(
-        id, {**entry.snapshot, **form_data.model_dump(), '_restore': True}, db=db, user_id=user.id
-    )
+    await authorized_skill(id, user, 'write', db)
+    result = await Skills.update_skill_version(id, form_data.version_id, form_data.expected_version_id, db=db)
+    if not result:
+        raise HTTPException(404, 'Skill not found')
     await publish_event(request, EVENTS.SKILL_UPDATED, actor=user, subject_id=id, data={'name': result.name})
     return result
 

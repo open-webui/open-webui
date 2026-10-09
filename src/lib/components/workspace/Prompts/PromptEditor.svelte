@@ -12,7 +12,6 @@
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
 	import { slugify, formatDate, copyToClipboard } from '$lib/utils';
@@ -31,7 +30,6 @@
 	} from '$lib/apis/prompts';
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
-	import PromptHistoryMenu from './PromptHistoryMenu.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import VersionMenuItem from '../common/VersionMenuItem.svelte';
 	import VersionDiff from '../common/VersionDiff.svelte';
@@ -79,6 +77,8 @@
 	let metadataSave: Promise<void> = Promise.resolve();
 	let suggestionTags: { name: string }[] = [];
 	let showDiscard = false;
+	let showDeleteVersion = false;
+	let deleteVersionId: string | null = null;
 	let discardAction: () => void = () => {};
 
 	$: selectedVersionId = selectedHistoryEntry?.id ?? prompt?.version_id;
@@ -258,7 +258,7 @@
 		}
 	};
 	const handleDeleteHistory = async (historyId: string) => {
-		if (disabled || loading) return;
+		if (disabled || loading || historyId === prompt.version_id) return;
 		loading = true;
 		try {
 			await deletePromptHistoryVersion(localStorage.token, prompt.id, historyId);
@@ -366,6 +366,21 @@
 	title={$i18n.t('Discard unsaved changes?')}
 	confirmLabel={$i18n.t('Discard')}
 	onConfirm={discardAction}
+/>
+
+<ConfirmDialog
+	bind:show={showDeleteVersion}
+	title={$i18n.t('Delete Version')}
+	message={$i18n.t(
+		"Are you sure you want to delete this version? Child versions will be relinked to this version's parent."
+	) +
+		(deleteVersionId === selectedVersionId && dirty
+			? ' ' + $i18n.t('Unsaved changes to this version will be discarded.')
+			: '')}
+	confirmLabel={$i18n.t('Delete')}
+	onConfirm={() => {
+		if (deleteVersionId) return handleDeleteHistory(deleteVersionId);
+	}}
 />
 
 <div
@@ -520,6 +535,13 @@
 												{entry}
 												selected={selectedVersionId === entry.id}
 												onSelect={() => chooseVersion(entry)}
+												onDelete={disabled
+													? undefined
+													: () => {
+															deleteVersionId = entry.id;
+															showHistory = false;
+															showDeleteVersion = true;
+														}}
 											/>
 										{/each}
 										{#if historyLoading}<div
@@ -552,20 +574,6 @@
 								className="size-3.5"
 							/>{/if}</button
 					>
-					{#if edit && !disabled && selectedVersionId && !editingHistory}
-						<PromptHistoryMenu
-							isProduction={!historical}
-							onDelete={() => handleDeleteHistory(selectedVersionId)}
-							onClose={() => {}}
-						>
-							<button
-								type="button"
-								aria-label={$i18n.t('More Options')}
-								class="shrink-0 p-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-								><EllipsisHorizontal className="size-3.5" /></button
-							>
-						</PromptHistoryMenu>
-					{/if}
 				</div>
 				<textarea
 					bind:this={contentInput}

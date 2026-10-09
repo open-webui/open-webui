@@ -370,16 +370,18 @@ export const getSkillHistory = async (token: string, id: string, page = 1) =>
 	(await skillRequest(token, `/id/${id}/history?page=${page}`)).json();
 export const getSkillVersion = async (token: string, id: string, versionId: string) =>
 	(await skillRequest(token, `/id/${id}/history/${versionId}`)).json();
-export const restoreSkillVersion = async (
+export const deleteSkillHistoryVersion = async (token: string, id: string, versionId: string) =>
+	(await skillRequest(token, `/id/${id}/history/${versionId}`, { method: 'DELETE' })).json();
+export const setProductionSkillVersion = async (
 	token: string,
 	id: string,
 	versionId: string,
 	expectedVersionId: string
 ) =>
 	(
-		await skillRequest(token, `/id/${id}/history/${versionId}/restore`, {
+		await skillRequest(token, `/id/${id}/update/version`, {
 			method: 'POST',
-			body: JSON.stringify({ expected_version_id: expectedVersionId })
+			body: JSON.stringify({ version_id: versionId, expected_version_id: expectedVersionId })
 		})
 	).json();
 export const cloneSkill = async (
