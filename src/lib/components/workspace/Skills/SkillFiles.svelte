@@ -17,6 +17,8 @@
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import FileCodeEditor from '$lib/components/chat/FileNav/FileCodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import {
@@ -651,6 +653,15 @@
 	<div class="h-full min-h-0 w-full overflow-auto p-1.5">
 		<div class="mb-1 flex w-full items-center gap-1">
 			<div class="min-w-0 flex-1">{@render version()}</div>
+			{#if readOnly}
+				<Tooltip content={$i18n.t('Read Only')}>
+					<span
+						class="flex items-center px-0.5 text-gray-400"
+						role="img"
+						aria-label={$i18n.t('Read Only')}><LockClosed className="size-3" /></span
+					>
+				</Tooltip>
+			{/if}
 			{#if !readOnly || canExport}
 				<Dropdown closeOnSelect align="end">
 					<button

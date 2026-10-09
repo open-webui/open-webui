@@ -6,7 +6,7 @@
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
+	import VersionMenuItem from '../common/VersionMenuItem.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -21,6 +21,7 @@
 	import { updateSkillAccessGrants } from '$lib/apis/skills';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import SkillFiles from './SkillFiles.svelte';
+	import VersionDiff from '../common/VersionDiff.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import {
 		getSkillHistory,
@@ -55,16 +56,16 @@
 	let versionId: string | null = null;
 	let currentVersionId: string | null = null;
 	let history: any[] = [];
+	let currentHistoryEntry: any = null;
 	let historyPage = 1;
 	let showHistory = false;
 	let historyLoading = false;
 	let historyError = false;
-	let currentVersionName = '';
 	let commitMessage = '';
 	let conflict = false;
 	let baseline = '';
 	let historyDiff: any = null;
-	let fileDiff = '';
+	let comparing = false;
 	let discard = false;
 	let discardAction = () => {};
 	$: historical = edit && versionId !== currentVersionId;
@@ -88,6 +89,11 @@
 		historyError = false;
 		try {
 			history = await getSkillHistory(localStorage.token, id, historyPage);
+			currentHistoryEntry =
+				history.find((entry) => entry.id === currentVersionId) ||
+				(currentHistoryEntry?.id === currentVersionId
+					? currentHistoryEntry
+					: await getSkillVersion(localStorage.token, id, currentVersionId!));
 		} catch (error) {
 			historyError = true;
 			toast.error(skillError(error));
@@ -100,17 +106,23 @@
 		if (selected !== versionId) confirmDiscard(() => selectVersion(selected));
 	};
 	const compareToCurrent = async () => {
+		if (comparing || historyDiff) return;
+		const fromId = versionId!;
+		const toId = currentVersionId!;
+		comparing = true;
 		try {
-			historyDiff = await (
+			const result = await (
 				await skillRequest(
 					localStorage.token,
-					`/id/${id}/history/diff?${new URLSearchParams({ from_id: versionId!, to_id: currentVersionId! })}`
+					`/id/${id}/history/diff?${new URLSearchParams({ from_id: fromId, to_id: toId })}`
 				)
 			).json();
-			historyDiff.fromId = versionId;
-			fileDiff = '';
+			if (versionId === fromId && currentVersionId === toId)
+				historyDiff = { ...result, fromId, toId };
 		} catch (error) {
 			toast.error(skillError(error));
+		} finally {
+			comparing = false;
 		}
 	};
 	const selectVersion = async (selected: string) => {
@@ -123,7 +135,6 @@
 			reloadKey++;
 			remember();
 			historyDiff = null;
-			fileDiff = '';
 		} catch (error) {
 			toast.error(skillError(error));
 		}
@@ -132,7 +143,6 @@
 		try {
 			const latest = await getSkillById(localStorage.token, id);
 			currentVersionId = latest.version_id;
-			currentVersionName = latest.name;
 			await selectVersion(latest.version_id);
 			conflict = false;
 		} catch (error) {
@@ -148,10 +158,8 @@
 				currentVersionId!
 			);
 			currentVersionId = restored.version_id;
-			currentVersionName = restored.name;
 			versionId = restored.version_id;
 			historyDiff = null;
-			fileDiff = '';
 			remember();
 			await loadHistory();
 			toast.success($i18n.t('Saved'));
@@ -224,7 +232,6 @@
 			});
 			if (result) {
 				currentVersionId = result.version_id;
-				currentVersionName = result.name;
 				versionId = result.version_id;
 				commitMessage = '';
 				conflict = false;
@@ -249,7 +256,6 @@
 			description = skill.description || '';
 			content = skill.content || '';
 			currentVersionId = skill.version_id || null;
-			currentVersionName = skill.name;
 			versionId = currentVersionId;
 			accessGrants = skill?.access_grants === undefined ? [] : skill?.access_grants;
 		}
@@ -373,57 +379,6 @@
 			</div>
 		</div>
 
-		{#if historical}
-			<div class="flex w-full flex-wrap items-center gap-3 px-1 py-2 text-xs text-gray-500">
-				<span>{$i18n.t('Read Only')}</span>
-				<button
-					type="button"
-					class="hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={compareToCurrent}>{$i18n.t('Compare to current')}</button
-				>
-				{#if !disabled}<button
-						type="button"
-						class="hover:text-gray-900 dark:hover:text-gray-100"
-						on:click={restore}>{$i18n.t('Restore as new version')}</button
-					>{/if}
-			</div>
-		{/if}
-		{#if historyDiff}
-			<div
-				class="max-h-56 shrink-0 overflow-auto rounded-lg border border-gray-100 p-2 text-xs dark:border-gray-800"
-			>
-				<button
-					type="button"
-					class="mb-2 text-gray-500"
-					on:click={() => {
-						historyDiff = null;
-						fileDiff = '';
-					}}>{$i18n.t('Close')}</button
-				>
-
-				{#each Object.entries(historyDiff.metadata) as [key, values]}<p>
-						{key}: {JSON.stringify(values)}
-					</p>{/each}
-				{#each historyDiff.files as file}<button
-						type="button"
-						class="block py-1"
-						on:click={async () => {
-							try {
-								const result = await (
-									await skillRequest(
-										localStorage.token,
-										`/id/${id}/history/diff/file?${new URLSearchParams({ from_id: historyDiff.fromId, to_id: currentVersionId!, path: file.path })}`
-									)
-								).json();
-								fileDiff = result.binary ? 'Binary file changed' : result.diff;
-							} catch (error) {
-								toast.error(skillError(error));
-							}
-						}}>{file.status}: {file.path}</button
-					>{/each}
-				<pre class="whitespace-pre-wrap">{fileDiff}</pre>
-			</div>
-		{/if}
 		{#if conflict}<div
 				role="alert"
 				class="flex flex-wrap gap-3 bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100"
@@ -439,7 +394,24 @@
 		<div
 			class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/60 dark:border-white/5 dark:bg-white/[0.03]"
 		>
-			{#if ready}<SkillFiles
+			{#if historyDiff}
+				<VersionDiff
+					diff={historyDiff}
+					onClose={() => (historyDiff = null)}
+					loadFileDiff={async (path) => {
+						try {
+							return await (
+								await skillRequest(
+									localStorage.token,
+									`/id/${id}/history/diff/file?${new URLSearchParams({ from_id: historyDiff.fromId, to_id: historyDiff.toId, path })}`
+								)
+							).json();
+						} catch (error) {
+							throw new Error(skillError(error));
+						}
+					}}
+				/>
+			{:else if ready}<SkillFiles
 					bind:this={fileEditor}
 					skillId={id}
 					{versionId}
@@ -477,21 +449,17 @@
 										<ChevronDown className="size-3 shrink-0" />
 									</button>
 									<div slot="content">
-										<DropdownMenu className="w-56 max-w-[calc(100vw-2rem)]">
-											<button
-												type="button"
-												role="menuitemradio"
-												aria-checked={versionId === currentVersionId}
-												on:click={() => chooseVersion(currentVersionId!)}
-												title={currentVersionId || ''}
-											>
-												<span class="min-w-0 flex-1 truncate text-left"
-													>{currentVersionName} · {$i18n.t('Current')}</span
-												>
-												{#if versionId === currentVersionId}<Check
-														className="size-3.5 text-blue-500"
-													/>{/if}
-											</button>
+										<DropdownMenu
+											className="w-56 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto"
+										>
+											<VersionMenuItem
+												entry={currentHistoryEntry?.id === currentVersionId
+													? currentHistoryEntry
+													: null}
+												status={$i18n.t('Current')}
+												selected={versionId === currentVersionId}
+												onSelect={() => chooseVersion(currentVersionId!)}
+											/>
 											{#if historyLoading || historyError || history.some((entry) => entry.id !== currentVersionId)}
 												<hr class="border-gray-100 dark:border-gray-800" />
 											{/if}
@@ -503,20 +471,11 @@
 												<button type="button" on:click={loadHistory}>{$i18n.t('Retry')}</button>
 											{:else}
 												{#each history.filter((entry) => entry.id !== currentVersionId) as entry}
-													<button
-														type="button"
-														role="menuitemradio"
-														aria-checked={entry.id === versionId}
-														title={`${entry.id} · ${new Date(entry.created_at * 1000).toLocaleString()} · ${entry.user?.name || entry.user_id}`}
-														on:click={() => chooseVersion(entry.id)}
-													>
-														<span class="min-w-0 flex-1 truncate text-left"
-															>{entry.commit_message || entry.id.slice(0, 7)}</span
-														>
-														{#if entry.id === versionId}<Check
-																className="size-3.5 text-blue-500"
-															/>{/if}
-													</button>
+													<VersionMenuItem
+														{entry}
+														selected={entry.id === versionId}
+														onSelect={() => chooseVersion(entry.id)}
+													/>
 												{:else}
 													{#if historyPage > 1}
 														<div class="px-2 py-2 text-xs text-gray-500">
@@ -564,6 +523,30 @@
 					{/snippet}
 				</SkillFiles>{/if}
 		</div>
+
+		{#if historical}
+			<div
+				class="flex w-full shrink-0 flex-wrap items-center gap-2 px-1 py-2 text-xs text-gray-500"
+			>
+				<span class="mr-auto">{$i18n.t('Read Only')}</span>
+				<div class="ml-auto flex flex-wrap justify-end gap-2">
+					<button
+						type="button"
+						class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 disabled:opacity-60 dark:bg-gray-850 dark:text-gray-200"
+						disabled={comparing || !!historyDiff}
+						on:click={compareToCurrent}
+						>{#if comparing}<Spinner className="mr-1.5 size-3" />{/if}{$i18n.t(
+							'Compare to current'
+						)}</button
+					>
+					{#if !disabled}<button
+							type="button"
+							class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							on:click={restore}>{$i18n.t('Restore as new version')}</button
+						>{/if}
+				</div>
+			</div>
+		{/if}
 
 		{#if !readOnly}
 			<div class="flex shrink-0 justify-end gap-3 py-2">

@@ -664,7 +664,8 @@ async def diff_skill_file(
     return {
         'binary': False,
         'diff': ''.join(
-            difflib.unified_diff(
+            line if line.endswith('\n') else line + '\n\\ No newline at end of file\n'
+            for line in difflib.unified_diff(
                 (files[0] or {}).get('content', '').splitlines(True),
                 (files[1] or {}).get('content', '').splitlines(True),
                 fromfile=f'{from_id[:7]}/{path}',

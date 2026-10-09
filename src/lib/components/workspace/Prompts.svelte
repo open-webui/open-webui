@@ -258,10 +258,7 @@
 	};
 
 	const createPromptHandler = async (prompt: PromptDraft) => {
-		const res = await createNewPrompt(localStorage.token, prompt).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		const res = await createNewPrompt(localStorage.token, prompt);
 
 		if (res) {
 			toast.success($i18n.t('Prompt created successfully'));
@@ -269,6 +266,7 @@
 			await getPromptList();
 			await closeCreateModal();
 		}
+		return res;
 	};
 
 	const cloneHandler = async (prompt) => {

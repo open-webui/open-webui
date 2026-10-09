@@ -339,7 +339,7 @@
 					{entry.name}
 				</span>
 			{/if}
-			{#if !writable && !renaming}
+			{#if !writable && !renaming && variant !== 'workspace'}
 				<span class="text-[0.625rem] text-gray-400 shrink-0">{$i18n.t('Read-only')}</span>
 			{/if}
 			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
