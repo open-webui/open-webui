@@ -19,6 +19,7 @@
 
 	const loadUser = async (userId: string) => {
 		requestedUserId = userId;
+		user = null;
 
 		const loadedUser = await getUserInfoById(localStorage.token, userId).catch((error) => {
 			if (requestedUserId === userId) {
@@ -35,6 +36,8 @@
 
 	$: if (openPreview && id && id !== requestedUserId) {
 		loadUser(id);
+	} else if (!openPreview) {
+		requestedUserId = null;
 	}
 </script>
 

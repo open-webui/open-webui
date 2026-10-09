@@ -18,6 +18,7 @@
 
 	let idType = null;
 	let id = '';
+	let openPreview = false;
 
 	$: if (token && $i18n && $models && $channels) {
 		init();
@@ -81,7 +82,7 @@
 	};
 </script>
 
-<LinkPreview.Root openDelay={0} closeDelay={0}>
+<LinkPreview.Root openDelay={0} closeDelay={0} bind:open={openPreview}>
 	<LinkPreview.Trigger class=" cursor-pointer no-underline! font-normal! ">
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -117,6 +118,6 @@
 	</LinkPreview.Trigger>
 
 	{#if triggerChar === '@' && idType === 'U'}
-		<UserStatusLinkPreview {id} />
+		<UserStatusLinkPreview {id} {openPreview} />
 	{/if}
 </LinkPreview.Root>
