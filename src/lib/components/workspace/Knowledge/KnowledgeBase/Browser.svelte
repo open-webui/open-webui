@@ -166,6 +166,7 @@
 				>
 				<div slot="content">
 					<DropdownMenu className="min-w-44">
+						<!-- Previous label: {$i18n.t('File content')} -->
 						<button
 							type="button"
 							role="menuitemcheckbox"
@@ -194,6 +195,7 @@
 							on:click={() => (direction = direction === 'asc' ? 'desc' : 'asc')}
 							>{direction === 'asc' ? $i18n.t('Ascending') : $i18n.t('Descending')}</button
 						>
+						<!-- Previous labels: {$i18n.t('Asc')} {$i18n.t('Desc')} -->
 					</DropdownMenu>
 				</div></Dropdown
 			>

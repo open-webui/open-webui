@@ -21,6 +21,7 @@
 	export let selected = false;
 	export let onSelect: () => void;
 	export let onDelete: (() => void) | undefined = undefined;
+	export let deleteDisabledReason = '';
 	const i18n = getContext<any>('i18n');
 	$: authorId = entry?.user?.id || entry?.user_id;
 	$: message = entry?.commit_message || entry?.id.slice(0, 7) || status;
@@ -56,7 +57,7 @@
 		{#if status && entry}<span class="shrink-0 text-[0.625rem] text-gray-400">{status}</span>{/if}
 		{#if selected}<Check className="size-3.5 shrink-0 text-blue-500" />{/if}
 	</button>
-	{#if onDelete}
+	{#if onDelete || deleteDisabledReason}
 		<Dropdown bind:show={showActions} align="end">
 			<button
 				type="button"
@@ -68,6 +69,9 @@
 				<DropdownMenu className="min-w-32">
 					<button
 						type="button"
+						disabled={!!deleteDisabledReason}
+						class="disabled:cursor-not-allowed disabled:opacity-40"
+						title={deleteDisabledReason || undefined}
 						on:click={() => {
 							showActions = false;
 							onDelete?.();

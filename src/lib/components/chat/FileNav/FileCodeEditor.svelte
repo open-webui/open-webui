@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '$lib/utils/codemirror';
 	import { basicSetup, EditorView } from 'codemirror';
-	import { keymap } from '@codemirror/view';
+	import { keymap, placeholder as editorPlaceholder } from '@codemirror/view';
 	import { Compartment, EditorState } from '@codemirror/state';
 	import { indentWithTab } from '@codemirror/commands';
 	import { indentUnit, LanguageDescription } from '@codemirror/language';
@@ -11,6 +11,8 @@
 
 	export let value = '';
 	export let readOnly = false;
+	export let placeholder = '';
+	export let ariaLabel = '';
 	export let filePath: string | null = null;
 	export let onSave: ((content: string) => Promise<void>) | null = null;
 	export let searchTarget: {
@@ -75,7 +77,9 @@
 		editor.dispatch({
 			effects: editorReadOnly.reconfigure([
 				EditorState.readOnly.of(readOnly),
-				EditorView.editable.of(!readOnly)
+				EditorView.editable.of(!readOnly),
+				EditorView.contentAttributes.of(ariaLabel ? { 'aria-label': ariaLabel } : {}),
+				placeholder ? editorPlaceholder(placeholder) : []
 			])
 		});
 
@@ -123,7 +127,12 @@
 			}),
 			editorTheme.of(isDark ? oneDark : []),
 			editorLanguage.of([]),
-			editorReadOnly.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
+			editorReadOnly.of([
+				EditorState.readOnly.of(readOnly),
+				EditorView.editable.of(!readOnly),
+				EditorView.contentAttributes.of(ariaLabel ? { 'aria-label': ariaLabel } : {}),
+				placeholder ? editorPlaceholder(placeholder) : []
+			]),
 			EditorView.theme({
 				'&': { fontSize: '0.75rem', height: '100%' },
 				'.cm-content': {
