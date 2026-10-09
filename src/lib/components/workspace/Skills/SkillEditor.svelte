@@ -430,7 +430,7 @@
 				>
 			</div>{/if}
 		<div
-			class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/60 dark:border-white/5 dark:bg-white/[0.03]"
+			class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-gray-100/80 bg-gray-50/60 dark:border-white/[0.04] dark:bg-white/[0.03]"
 		>
 			{#if historyDiff}
 				<VersionDiff

@@ -911,7 +911,7 @@
 		</div>
 		<div class="mb-2 min-h-0 flex-1">
 			{#if isExternalKnowledge}<div
-					class="h-full overflow-auto rounded-2xl border border-gray-100 dark:border-white/5"
+					class="h-full overflow-auto rounded-2xl border border-gray-100/80 dark:border-white/[0.04]"
 				>
 					<div class="p-5 flex flex-col gap-4">
 						<div class="flex flex-wrap gap-2 text-xs">
