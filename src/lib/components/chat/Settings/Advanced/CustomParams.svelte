@@ -92,7 +92,7 @@
 		}}
 	>
 		<Plus className={compact ? 'size-3' : 'size-4'} /><span
-			>{$i18n.t(compact ? 'Add parameter' : 'Add Custom Parameter')}</span
+			>{compact ? $i18n.t('Add parameter') : $i18n.t('Add Custom Parameter')}</span
 		>
 	</button>
 </div>

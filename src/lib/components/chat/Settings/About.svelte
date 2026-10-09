@@ -1,4 +1,7 @@
 <script lang="ts">
+	// Keep keys in nested template expressions visible to i18next-parser.
+	// $i18n.t("licensed under");
+
 	import { getVersionUpdates } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { WEBUI_BUILD_CHANNEL, WEBUI_VERSION } from '$lib/constants';
