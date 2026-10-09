@@ -193,7 +193,11 @@
 					aria-pressed={state === mode}
 					on:click={() => preview(mode as typeof state)}
 				>
-					{$i18n.t(mode === 'idle' ? 'Idle' : mode === 'listening' ? 'Listening' : 'Speaking')}
+					{mode === 'idle'
+						? $i18n.t('Idle')
+						: mode === 'listening'
+							? $i18n.t('Listening')
+							: $i18n.t('Speaking')}
 				</button>
 			{/each}
 		</div>
@@ -227,7 +231,11 @@
 				<div class="flex items-center justify-between gap-3 py-2">
 					<div class="min-w-0">
 						<div>
-							{$i18n.t(mode === 'idle' ? 'Idle' : mode === 'listening' ? 'Listening' : 'Speaking')}
+							{mode === 'idle'
+								? $i18n.t('Idle')
+								: mode === 'listening'
+									? $i18n.t('Listening')
+									: $i18n.t('Speaking')}
 						</div>
 						<div class="text-gray-500 truncate max-w-44">
 							{asset
@@ -246,7 +254,7 @@
 							type="button"
 							aria-label={`${$i18n.t('Upload')} ${mode} VRMA`}
 							on:click={() => uploadAnimation(mode as AvatarState)}
-							>{$i18n.t(asset ? 'Replace' : 'Upload')}</button
+							>{asset ? $i18n.t('Replace') : $i18n.t('Upload')}</button
 						>
 						{#if asset}<button
 								type="button"
@@ -303,7 +311,7 @@
 							class="shrink-0 whitespace-nowrap text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 							aria-label={`${$i18n.t('Upload gesture')} ${i + 1} VRMA`}
 							on:click={() => uploadAnimation(i)}
-							>{$i18n.t(gesture.file_id ? 'Replace clip' : 'Upload VRMA')}</button
+							>{gesture.file_id ? $i18n.t('Replace clip') : $i18n.t('Upload VRMA')}</button
 						>
 						<button
 							type="button"
@@ -354,7 +362,8 @@
 		<button
 			type="button"
 			class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-850"
-			on:click={() => input.click()}>{$i18n.t(value ? 'Replace avatar' : 'Upload VRM')}</button
+			on:click={() => input.click()}
+			>{value ? $i18n.t('Replace avatar') : $i18n.t('Upload VRM')}</button
 		>
 		{#if value}<button type="button" class="text-gray-500" on:click={remove}
 				>{$i18n.t('Use orb')}</button
