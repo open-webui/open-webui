@@ -9,6 +9,8 @@
 	export let className = '';
 	export let zIndexClass = 'z-999';
 	export let onClose = () => {};
+	export let onRequestClose: (() => void) | null = null;
+	const requestClose = () => (onRequestClose ? onRequestClose() : (show = false));
 
 	let modalElement = null;
 	let mounted = false;
@@ -20,8 +22,7 @@
 					matchKeybinding(event) === Shortcut.CLOSE_MODAL)) &&
 			isTopModal()
 		) {
-			console.log('Escape');
-			show = false;
+			requestClose();
 		}
 	};
 
@@ -67,9 +68,7 @@
 		bind:this={modalElement}
 		class="modal fixed right-0 bottom-0 left-0 {zIndexClass} flex h-screen max-h-[100dvh] w-full justify-center overflow-hidden overscroll-contain bg-black/60"
 		in:fly={{ y: 100, duration: 100 }}
-		on:mousedown={() => {
-			show = false;
-		}}
+		on:mousedown={requestClose}
 	>
 		<div
 			class=" mt-auto w-full bg-gray-50 dark:bg-gray-900 dark:text-gray-100 {className} scrollbar-hidden max-h-[100dvh] overflow-y-auto"

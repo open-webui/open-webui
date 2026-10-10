@@ -15,11 +15,13 @@
 
 {#if terminals.length > 0}
 	<div class="flex w-full justify-between mb-1">
-		<div class="self-center text-xs font-normal text-gray-500">{$i18n.t('Terminal')}</div>
+		<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+			{$i18n.t('Terminal')}
+		</div>
 	</div>
 
 	<select
-		class="w-full text-sm bg-transparent outline-hidden cursor-pointer"
+		class="block h-5 w-full py-0 text-xs leading-5 bg-transparent outline-hidden cursor-pointer font-normal text-gray-900 dark:text-gray-100"
 		bind:value={terminalId}
 	>
 		<option value="">{$i18n.t('None')}</option>

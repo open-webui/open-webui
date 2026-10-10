@@ -413,11 +413,15 @@
 						<td class=" px-3 py-1 max-w-48 truncate"> {user.email} </td>
 
 						<td class=" px-3 py-1">
-							{dayjs(user.last_active_at * 1000).fromNow()}
+							{dayjs(user.last_active_at * 1000)
+								.locale($i18n.language)
+								.fromNow()}
 						</td>
 
 						<td class=" px-3 py-1">
-							{dayjs(user.created_at * 1000).format('LL')}
+							{dayjs(user.created_at * 1000)
+								.locale($i18n.language)
+								.format('LL')}
 						</td>
 
 						<td class="px-3 py-1 text-right">

@@ -18,6 +18,9 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Select from '$lib/components/common/Select.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -315,7 +318,7 @@
 							{/if}
 						</div>
 
-						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
+						<div class="flex-1 min-w-0 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
 							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
 								{#if selectedTab == 'general'}
 									<General
@@ -343,24 +346,36 @@
 										defaultPermissions={custom ? inheritedPermissions : defaultPermissions}
 									/>
 								{:else if selectedTab == 'users'}
-									<div class="flex gap-3 mb-3 text-sm">
-										<button
-											type="button"
-											class:underline={membershipTab === 'direct'}
-											on:click={() => (membershipTab = 'direct')}
-											>{$i18n.t('Direct members')}</button
-										>
-										<button
-											type="button"
-											class:underline={membershipTab === 'inherited'}
-											on:click={() => (membershipTab = 'inherited')}
-											>{$i18n.t('Inherited members')}</button
-										>
-									</div>
+									{#snippet membershipFilter()}
+										<div class="shrink-0">
+											<Select
+												bind:value={membershipTab}
+												items={[
+													{ value: 'direct', label: $i18n.t('Direct') },
+													{ value: 'inherited', label: $i18n.t('Inherited') }
+												]}
+												align="end"
+												triggerClass="flex items-center gap-1 rounded-lg px-1 py-0.5 text-xs font-normal text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+											>
+												<svelte:fragment slot="trigger" let:selectedLabel>
+													<span>{selectedLabel}</span>
+													<ChevronDown className="size-2.5" strokeWidth="2.5" />
+												</svelte:fragment>
+												<svelte:fragment slot="item" let:item let:selected>
+													<span class="flex-1 text-left">{item.label}</span>
+													<Check className="size-3.5 {selected ? '' : 'invisible'}" />
+												</svelte:fragment>
+											</Select>
+										</div>
+									{/snippet}
 									{#if membershipTab === 'direct'}
-										<Users bind:userCount groupId={group?.id} {onMemberChange} />
+										<Users bind:userCount groupId={group?.id} {onMemberChange}>
+											<svelte:fragment slot="filter">{@render membershipFilter()}</svelte:fragment>
+										</Users>
 									{:else}
-										<InheritedMembers groupId={group?.id} {groups} />
+										<InheritedMembers groupId={group?.id} {groups}>
+											<svelte:fragment slot="filter">{@render membershipFilter()}</svelte:fragment>
+										</InheritedMembers>
 									{/if}
 								{:else if selectedTab == 'preview'}
 									<GroupPreviewPanel groupId={group?.id} />

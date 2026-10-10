@@ -1781,6 +1781,7 @@ export interface ModelConfig {
 }
 
 export interface ModelMeta {
+	voice_avatar?: import('$lib/utils/voice-avatar').VoiceAvatarConfig | null;
 	voice?: { voice?: string };
 	toolIds: never[];
 	description?: string;

@@ -12,6 +12,7 @@
 	import TranslationTable from '$lib/components/common/TranslationTable.svelte';
 	const i18n = getContext<any>('i18n');
 	export let id = '';
+	export let readOnly = false;
 	export let kind: 'tool' | 'function';
 	export let locale: string;
 	export let translations: Record<string, Record<string, string>> = {};
@@ -23,7 +24,7 @@
 		Object.entries(translations?.[locale] ?? {}).filter(([key]) => !headerFields.includes(key))
 	);
 	const load = async () => {
-		if (!id) return;
+		if (!id || readOnly) return;
 		loadError = false;
 		const loaders =
 			kind === 'tool'
@@ -44,6 +45,7 @@
 		);
 	};
 	const changed = (next: Record<string, string>) => {
+		if (readOnly) return;
 		translations = {
 			...translations,
 			[locale]: {
@@ -63,6 +65,7 @@
 		>
 	</div>{/if}
 <TranslationTable
+	{readOnly}
 	value={values}
 	{source}
 	filename={`${kind}-${id}-${locale}.json`}

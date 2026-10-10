@@ -7,7 +7,7 @@
 	dayjs.extend(relativeTime);
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -150,9 +150,15 @@
 
 		<div class="flex items-center gap-2 shrink-0">
 			{#if directory.updated_at}
-				<Tooltip content={dayjs(directory.updated_at * 1000).format('LLLL')}>
+				<Tooltip
+					content={dayjs(directory.updated_at * 1000)
+						.locale($i18n.language)
+						.format('LLLL')}
+				>
 					<div class="text-xs text-gray-400">
-						{dayjs(directory.updated_at * 1000).fromNow()}
+						{dayjs(directory.updated_at * 1000)
+							.locale($i18n.language)
+							.fromNow()}
 					</div>
 				</Tooltip>
 			{/if}

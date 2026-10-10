@@ -12,7 +12,7 @@
 		resolveLocalizedModelName
 	} from '$lib/utils/localizedContent';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let query = '';
 	export let onSelect = (e) => {};
@@ -20,7 +20,7 @@
 	let selectedIdx = 0;
 	export let filteredItems = [];
 
-	let fuse = new Fuse(
+	$: fuse = new Fuse(
 		$models
 			.filter((model) => !model?.info?.meta?.hidden)
 			.map((model) => {

@@ -1615,6 +1615,7 @@ async def download_file_stream(
                 progress = round((current_size / progress_total) * 100, 2)
                 yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
 
+            await f.flush()
             done = True
             hashed = await asyncio.to_thread(calculate_sha256, file_path, chunk_size)
 

@@ -233,7 +233,7 @@
 			</Tooltip>
 
 			<div slot="content">
-				<DropdownMenu className="w-[10.625rem] shadow-sm">
+				<DropdownMenu className="min-w-[10.625rem] shadow-sm">
 					<button
 						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
 						disabled={loading || chatCount === 0}
@@ -330,14 +330,16 @@
 							class="hidden w-24 shrink-0 self-center justify-end text-gray-400 dark:text-gray-600 sm:flex"
 						>
 							{$i18n.t(
-								dayjs(chat?.updated_at * 1000).calendar(null, {
-									sameDay: '[Today]',
-									nextDay: '[Tomorrow]',
-									nextWeek: 'dddd',
-									lastDay: '[Yesterday]',
-									lastWeek: '[Last] dddd',
-									sameElse: 'L'
-								})
+								dayjs(chat?.updated_at * 1000)
+									.locale($i18n.language)
+									.calendar(null, {
+										sameDay: '[Today]',
+										nextDay: '[Tomorrow]',
+										nextWeek: 'dddd',
+										lastDay: '[Yesterday]',
+										lastWeek: '[Last] dddd',
+										sameElse: 'L'
+									})
 							)}
 						</div>
 						<div class="flex shrink-0 items-center justify-end text-gray-500 dark:text-gray-500">

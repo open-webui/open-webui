@@ -1,13 +1,11 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { mfaRequest, type MfaChallenge } from '$lib/apis/auths/mfa';
-	import MfaChallengeForm from '$lib/components/auth/MfaChallenge.svelte';
-	import MfaRecoveryCodes from '$lib/components/auth/MfaRecoveryCodes.svelte';
+	import { mfaRequest } from '$lib/apis/auths/mfa';
+	import type { MfaManagementFlow } from '$lib/components/auth/MfaManagement.svelte';
 	const i18n: any = getContext('i18n');
+	const showMfaManagement = getContext<(flow: MfaManagementFlow) => void>('showMfaManagement');
 	let status: { enabled: boolean; required: boolean; recovery_codes_remaining: number } | null =
 		null;
-	let challenge: MfaChallenge | null = null;
-	let codes: string[] = [];
 	let code = '';
 	let recovery = false;
 	let busy = false;
@@ -28,17 +26,18 @@
 		window.location.href = '/auth?state=logout&form=signin';
 	};
 	const manage = async (replace: boolean) => {
+		if (busy) return;
+		if (!replace) {
+			showMfaManagement({ code, recovery, token: localStorage.token });
+			code = '';
+			return;
+		}
 		busy = true;
 		error = '';
 		try {
-			const response = await mfaRequest(
-				replace ? 'replace' : 'recovery/codes',
-				{ code, recovery },
-				localStorage.token
-			);
+			const response = await mfaRequest('replace', { code, recovery }, localStorage.token);
 			code = '';
-			if (replace) challenge = response;
-			else codes = response.recovery_codes;
+			showMfaManagement({ challenge: response });
 		} catch (e) {
 			reauthenticate = e instanceof Error && e.message === 'reauthentication_required';
 			error = reauthenticate
@@ -53,19 +52,7 @@
 </script>
 
 <div class="space-y-2.5 text-xs">
-	{#if codes.length}
-		<div class="w-full sm:max-w-md"><MfaRecoveryCodes {codes} onContinue={signIn} /></div>
-	{:else if challenge}
-		<div class="w-full sm:max-w-md">
-			<MfaChallengeForm
-				{challenge}
-				onComplete={signIn}
-				onCancel={() => {
-					challenge = null;
-				}}
-			/>
-		</div>
-	{:else if status}
+	{#if status}
 		<div class="flex items-center justify-between gap-2.5">
 			<span class="text-gray-600 dark:text-gray-400"
 				>{status.enabled

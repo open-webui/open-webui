@@ -220,7 +220,7 @@ class QdrantClient(VectorDBBase):
         # Insert the items into the collection, if the collection does not exist, it will be created.
         self._create_collection_if_not_exists(collection_name, len(items[0]['vector']))
         points = self._create_points(items)
-        self.client.upload_points(f'{self.collection_prefix}_{collection_name}', points)
+        self.client.upload_points(f'{self.collection_prefix}_{collection_name}', points, wait=True)
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.

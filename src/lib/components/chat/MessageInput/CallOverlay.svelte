@@ -67,7 +67,7 @@
 				...videoInputDevices,
 				{
 					deviceId: 'screen',
-					label: $i18n.t('Screen Share')
+					label: ''
 				}
 			];
 		}
@@ -1048,7 +1048,9 @@
 			<div class="flex items-center justify-center gap-4 z-10">
 				{#if camera}
 					<VideoInputMenu
-						devices={videoInputDevices}
+						devices={videoInputDevices.map((device) =>
+							device.deviceId === 'screen' ? { ...device, label: $i18n.t('Screen Share') } : device
+						)}
 						on:change={async (e) => {
 							console.log(e.detail);
 							selectedVideoInputDeviceId = e.detail;

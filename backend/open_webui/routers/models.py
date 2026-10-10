@@ -5,6 +5,7 @@ import base64
 import io
 import logging
 import posixpath
+from copy import deepcopy
 from typing import Optional
 from urllib.parse import unquote
 
@@ -31,6 +32,7 @@ from open_webui.models.access_grants import AccessGrants, normalize_access_grant
 from open_webui.models.config import Config
 from open_webui.models.files import Files
 from open_webui.models.groups import Groups
+from open_webui.models.model_history import ModelHistories, ModelHistoryModel, ModelHistoryResponse
 from open_webui.models.models import (
     ModelAccessListResponse,
     ModelAccessResponse,
@@ -50,6 +52,12 @@ from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import get_all_models
 from open_webui.utils.validate import BACKGROUND_IMAGE_MAX_BYTES, validate_background_image
+from open_webui.utils.voice_avatar import (
+    AVATAR_MAX_BYTES,
+    ANIMATION_MAX_BYTES,
+    validate_voice_avatar,
+    validate_voice_animation,
+)
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -148,6 +156,39 @@ async def _verify_background_image(url: str | None, user, db, previous_url: str 
     if (file.meta or {}).get('content_type') != content_type:
         if not await Files.update_file_metadata_by_id(file_id, {'content_type': content_type}, db=db):
             raise HTTPException(status_code=500, detail='Could not validate background image.')
+
+
+async def _verify_voice_avatar(avatar, user, db, previous=None) -> None:
+    if not avatar:
+        return
+    assets = {avatar.file_id: (AVATAR_MAX_BYTES, validate_voice_avatar)}
+    for asset in [*avatar.states.values(), *avatar.gestures]:
+        if asset.file_id == avatar.file_id:
+            raise HTTPException(status_code=400, detail='An animation must be a VRMA file, not the avatar.')
+        assets[asset.file_id] = (ANIMATION_MAX_BYTES, validate_voice_animation)
+    previous_assets = (
+        (
+            {previous.file_id: validate_voice_avatar}
+            | {asset.file_id: validate_voice_animation for asset in [*previous.states.values(), *previous.gestures]}
+        )
+        if previous
+        else {}
+    )
+    for file_id, (limit, validate) in assets.items():
+        if previous_assets.get(file_id) is validate:
+            continue
+        file = await Files.get_file_by_id(file_id, db=db)
+        if not file or not (
+            user.role == 'admin' or file.user_id == user.id or await has_access_to_file(file_id, 'read', user, db=db)
+        ):
+            raise HTTPException(status_code=403, detail='Avatar or animation file is not accessible. Upload it again.')
+        try:
+            path = await asyncio.to_thread(Storage.get_file, file.path)
+            with open(path, 'rb') as source:
+                data = await asyncio.to_thread(source.read, limit + 1)
+            await asyncio.to_thread(validate, data)
+        except (ValueError, OSError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 async def _verify_knowledge_file_access(
@@ -370,6 +411,7 @@ async def create_new_model(
     )
 
     await _verify_background_image(form_data.meta.background_image_url, user, db)
+    await _verify_voice_avatar(form_data.meta.voice_avatar, user, db)
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
@@ -632,6 +674,7 @@ async def import_models(
 
                     await _check_model_controls(imported_model, existing_model, user, request)
                     uploaded = None
+                    save_attempted = False
                     try:
                         encoded = model_data.pop('background_image_data', None)
                         if encoded is not None:
@@ -666,15 +709,25 @@ async def import_models(
                             db,
                             existing_model.meta.background_image_url if existing_model else None,
                         )
+                        if existing_model and 'voice_avatar' not in imported_model.meta.model_fields_set:
+                            imported_model.meta.voice_avatar = existing_model.meta.voice_avatar
+                        await _verify_voice_avatar(
+                            imported_model.meta.voice_avatar,
+                            user,
+                            db,
+                            existing_model.meta.voice_avatar if existing_model else None,
+                        )
+                        save_attempted = True
                         saved = (
-                            await Models.update_model_by_id(model_id, imported_model, db=db)
+                            await Models.update_model_by_id(model_id, imported_model, db=db, user_id=user.id)
                             if existing_model
                             else await Models.insert_new_model(user_id=user.id, form_data=imported_model, db=db)
                         )
                         if not saved:
                             raise HTTPException(status_code=500, detail=f'Could not import model {model_id}.')
                     except Exception:
-                        if uploaded:
+                        # A failed response can follow a commit; history may retain this upload.
+                        if uploaded and not save_attempted:
                             try:
                                 await Files.delete_file_by_id(uploaded.id, db=db)
                                 await asyncio.to_thread(Storage.delete_file, uploaded.path)
@@ -722,6 +775,9 @@ async def sync_models(
     for model in form_data.models:
         previous = existing.get(model.id)
         await _check_model_controls(model, previous, user, request)
+        if previous and 'voice_avatar' not in model.meta.model_fields_set:
+            model.meta.voice_avatar = previous.meta.voice_avatar
+        await _verify_voice_avatar(model.meta.voice_avatar, user, db, previous.meta.voice_avatar if previous else None)
         if previous and 'background_image_url' not in model.meta.model_fields_set:
             model.meta.background_image_url = previous.meta.background_image_url
         await _verify_background_image(
@@ -800,6 +856,146 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
 ###########################
 # GetModelById
 ###########################
+
+
+async def authorized_model_history(id, user, db):
+    model = await Models.get_model_by_id(id, db=db)
+    if not model:
+        raise HTTPException(404, ERROR_MESSAGES.NOT_FOUND)
+    if not (
+        user.id == model.user_id
+        or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='model', resource_id=id, permission='write', db=db
+        )
+    ):
+        raise HTTPException(403, ERROR_MESSAGES.ACCESS_PROHIBITED)
+    return model
+
+
+@router.get('/model/history', response_model=list[ModelHistoryResponse])
+async def get_model_history(
+    id: str,
+    page: int = 1,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await authorized_model_history(id, user, db)
+    return await ModelHistories.get_history_by_model_id(id, page, db=db)
+
+
+@router.get('/model/history/{history_id}', response_model=ModelHistoryModel)
+async def get_model_history_entry(
+    id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await authorized_model_history(id, user, db)
+    entry = await ModelHistories.get_history_by_id(id, history_id, db=db)
+    if not entry:
+        raise HTTPException(404, 'Model version not found')
+    if user.role != 'admin':
+        entry.snapshot = deepcopy(entry.snapshot)
+        entry.snapshot.get('params', {}).pop('model_controls', None)
+    return entry
+
+
+@router.delete('/model/history/{history_id}', response_model=bool)
+async def delete_model_history_entry(
+    id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await authorized_model_history(id, user, db)
+    if not await ModelHistories.delete_history_entry(id, history_id, db):
+        raise HTTPException(404, 'Model version not found')
+    return True
+
+
+async def _verify_version_dependencies(request, form, user, db):
+    from open_webui.models.functions import Functions
+    from open_webui.models.knowledge import Knowledges
+    from open_webui.models.skills import Skills
+    from open_webui.routers.terminals import list_terminal_servers
+    from open_webui.routers.tools import get_tools
+
+    async def require_resource(resource_type, resource_id, resource):
+        if not resource or getattr(resource, 'is_active', True) is False:
+            raise HTTPException(400, f'Referenced {resource_type} is unavailable: {resource_id}')
+        if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) and resource.user_id != user.id:
+            if not await AccessGrants.has_access(
+                user_id=user.id, resource_type=resource_type, resource_id=resource_id, permission='read', db=db
+            ):
+                raise HTTPException(403, f'Referenced {resource_type} is not accessible: {resource_id}')
+
+    if form.base_model_id:
+        available = await get_all_models(request, user=user)
+        if not any(model['id'] == form.base_model_id for model in available):
+            raise HTTPException(400, 'The base model is unavailable.')
+    for item in form.meta.knowledge or []:
+        if not isinstance(item, dict) or not item.get('id') or item.get('legacy'):
+            continue
+        if item.get('type') == 'file':
+            file = await Files.get_file_by_id(item['id'], db=db)
+            if not file or not (user.role == 'admin' or await has_access_to_file(file.id, 'read', user, db=db)):
+                raise HTTPException(400, 'A referenced knowledge file is missing or inaccessible.')
+        else:
+            await require_resource('knowledge', item['id'], await Knowledges.get_knowledge_by_id(item['id'], db=db))
+    for skill_id in getattr(form.meta, 'skillIds', None) or []:
+        await require_resource('skill', skill_id, await Skills.get_skill_by_id(skill_id, db=db))
+    tool_ids = set(getattr(form.meta, 'toolIds', None) or [])
+    if tool_ids:
+        available_tools = {tool.id for tool in await get_tools(request, user=user, db=db)}
+        if not tool_ids.issubset(available_tools):
+            raise HTTPException(400, 'A referenced tool is missing or inaccessible.')
+    for key in ('filterIds', 'defaultFilterIds', 'actionIds'):
+        for function_id in getattr(form.meta, key, None) or []:
+            function = await Functions.get_function_by_id(function_id, db=db)
+            if not function or not function.is_active:
+                raise HTTPException(400, f'A referenced function is unavailable: {function_id}')
+    terminal_id = getattr(form.meta, 'terminalId', None)
+    if terminal_id and terminal_id not in {t['id'] for t in await list_terminal_servers(request, user=user)}:
+        raise HTTPException(400, 'The referenced terminal is missing or inaccessible.')
+
+
+class ModelVersionForm(BaseModel):
+    version_id: str
+
+
+@router.post('/model/update/version', response_model=ModelModel)
+async def set_model_version(
+    request: Request,
+    id: str,
+    form_data: ModelVersionForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await authorized_model_history(id, user, db)
+    entry = await ModelHistories.get_history_by_id(id, form_data.version_id, db=db)
+    if not entry:
+        raise HTTPException(404, 'Model version not found')
+    form = ModelForm(id=id, **deepcopy(entry.snapshot))
+    # A missing historical controls key means an empty configuration, not "preserve current".
+    form.params.model_fields_set.add('model_controls')
+    if user.role != 'admin' and model.base_model_id and not form.base_model_id:
+        raise HTTPException(403, ERROR_MESSAGES.ACCESS_PROHIBITED)
+    await _check_model_controls(form, model, user, request)
+    await _verify_version_dependencies(request, form, user, db)
+    await _verify_background_image(form.meta.background_image_url, user, db)
+    await _verify_voice_avatar(form.meta.voice_avatar, user, db)
+    result = await Models.update_model_by_id(id, form, db=db, user_id=user.id, production_version_id=entry.id)
+    if result is None:
+        raise HTTPException(404, ERROR_MESSAGES.NOT_FOUND)
+    await publish_event(
+        request,
+        EVENTS.MODEL_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'name': result.name, 'version_id': result.version_id},
+    )
+    return model_response(result, user)
 
 
 @router.get('/model/profile/image')
@@ -1014,6 +1210,9 @@ async def update_model_by_id(
     if 'profile_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.profile_image_url = model.meta.profile_image_url
 
+    if 'voice_avatar' not in form_data.meta.model_fields_set:
+        form_data.meta.voice_avatar = model.meta.voice_avatar
+    await _verify_voice_avatar(form_data.meta.voice_avatar, user, db, model.meta.voice_avatar)
     if 'background_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.background_image_url = model.meta.background_image_url
     await _verify_background_image(form_data.meta.background_image_url, user, db, model.meta.background_image_url)
@@ -1043,7 +1242,7 @@ async def update_model_by_id(
         )
 
     await _check_model_controls(form_data, model, user, request)
-    model = await Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()), db=db)
+    model = await Models.update_model_by_id(form_data.id, form_data, db=db, user_id=user.id)
     if model:
         await publish_event(
             request,

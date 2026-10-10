@@ -39,11 +39,10 @@ Follow the Open WebUI skill-authoring standards:
 
 Frontmatter:
 - name: lowercase-hyphenated, <=64 chars, no spaces.
-- description: one sentence, <=60 characters, ends with a period. State the
+- description: a clear description, <=1024 characters, ends with a period. State the
   capability, not the implementation. Do not repeat the skill name. Avoid
   marketing words like powerful, comprehensive, seamless, advanced, or robust.
   Count the characters before saving.
-- version: 0.1.0.
 - platforms: declare [macos], [linux], or [windows] only when the skill uses
   OS-bound primitives. Omit it for portable skills.
 
@@ -87,7 +86,7 @@ def _build_skill_create_prompt(user_request: str) -> str:
         )
     return (
         '[/skills:create] The user wants you to create a reusable Open WebUI skill '
-        'for the selected Open Terminal and save it.\n\n'
+        'in the workspace and save it with create_skill. No terminal is required.\n\n'
         f'THE REQUEST:\n{req}\n\n'
         'The request is open-ended and may mix SOURCES to gather (directories, '
         'file paths, URLs, what we just did, pasted notes) and REQUIREMENTS that '
@@ -104,12 +103,9 @@ def _build_skill_create_prompt(user_request: str) -> str:
         '2. Apply every requirement, focus, and constraint in the request to what '
         'the skill covers and emphasizes.\n'
         '3. Author one SKILL.md using the standards below.\n'
-        '4. Save with the selected terminal tools under the terminal root cwd: '
-        '<terminal-root-cwd>/.agents/skills/<skill-name>/SKILL.md. Do not save '
-        'under a browsed subfolder or transient shell pwd. If the terminal root '
-        'is unavailable, use `pwd` as the fallback. If the skill needs '
-        'supporting files, add them under scripts/, references/, templates/, '
-        'or assets/.\n\n'
+        '4. Save using create_skill with the complete SKILL.md content and any supporting '
+        'UTF-8 files. Use update_skill_files with file operations to revise an existing '
+        'writable skill. These workspace files do not execute scripts.\n\n'
         f'{OPEN_WEBUI_SKILL_AUTHORING_STANDARDS}\n\n'
         'When done, tell the user the skill name, location, and one-line summary.'
     )
@@ -120,7 +116,7 @@ def _message_has_real_content(message: dict) -> bool:
     return bool(text or message.get('tool_calls') or message.get('output'))
 
 
-def has_prior_real_chat_content(messages: list[dict]) -> bool:
+def has_prior_user_message(messages: list[dict]) -> bool:
     last_user_idx = next(
         (idx for idx in range(len(messages) - 1, -1, -1) if messages[idx].get('role') == 'user'),
         len(messages),
@@ -133,7 +129,7 @@ def has_prior_real_chat_content(messages: list[dict]) -> bool:
 def _build_skill_create_gate_prompt(reason: str = 'empty_chat') -> str:
     if reason == 'disabled':
         return (
-            '[/skills:create] Skill creation requires a selected Open Terminal. '
+            '[/skills:create] Skill creation requires workspace skill permission and a model with skill tools enabled. '
             'Explain this briefly and do not try to create or update a skill.'
         )
     return (

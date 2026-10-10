@@ -174,7 +174,7 @@
 		<div class="flex w-full items-center gap-2 mb-1">
 			<div class="min-w-0">
 				<slot name="label">
-					<div class=" self-center text-xs text-gray-500">
+					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('Knowledge')}
 					</div>
 				</slot>
@@ -228,7 +228,7 @@
 				{#each selectedItems as file, fileIdx}
 					<Tooltip content={file.description || file.name || file.id}>
 						<div
-							class="flex max-w-56 items-center gap-1.5 py-0.5 pr-2 text-xs text-gray-700 dark:text-gray-200"
+							class="flex max-w-56 items-center gap-1.5 py-0.5 pr-2 text-xs font-normal text-gray-900 dark:text-gray-100"
 						>
 							<button
 								type="button"

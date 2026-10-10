@@ -117,6 +117,7 @@
 	import AskUserCard from './AskUserCard.svelte';
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
+	import Skeleton from './Messages/Skeleton.svelte';
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
@@ -134,6 +135,12 @@
 
 	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
+	export let typingUsers: { id: string; name: string }[] = [];
+
+	const handleTypingInput = (event: Event) => {
+		const input = event.target as HTMLElement;
+		if (input.isContentEditable) dispatch('typing', Boolean(input.textContent?.trim()));
+	};
 	export let onWebSearchToggle: Function = () => {};
 
 	export let createMessagePair: Function;
@@ -1213,7 +1220,7 @@
 		}
 
 		const res = await createNoteHandler(
-			dayjs().format('YYYY-MM-DD'),
+			dayjs().locale($i18n.language).format('YYYY-MM-DD'),
 			inputContent?.md,
 			inputContent?.html
 		);
@@ -1672,6 +1679,7 @@
 
 <InputModal
 	bind:show={showInputModal}
+	oninput={handleTypingInput}
 	bind:value={prompt}
 	bind:inputContent
 	onChange={(content) => {
@@ -1693,6 +1701,21 @@
 					: 'max-w-[58rem]'} w-full"
 			>
 				<div class="relative">
+					{#if typingUsers.length > 0}
+						<div
+							class="absolute -top-7 inset-x-0 pointer-events-none select-none bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-2.5"
+						>
+							<div class="text-xs px-1 mt-1.5 flex items-center gap-1.5">
+								<Skeleton size="xs" />
+								<div class="min-w-0 truncate">
+									<span class="font-normal text-black dark:text-white">
+										{typingUsers.map((user) => user.name).join(', ')}
+									</span>
+									{typingUsers.length === 1 ? $i18n.t('is typing...') : $i18n.t('are typing...')}
+								</div>
+							</div>
+						</div>
+					{/if}
 					{#if autoScroll === false && history?.currentId}
 						<div
 							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
@@ -1912,7 +1935,7 @@
 							id="message-input-container"
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
 								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
-								: ' border-gray-100/30 dark:border-gray-850/30 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'} {($settings?.highContrastMode ??
+								: ' border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'} {($settings?.highContrastMode ??
 							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
 								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
@@ -2062,6 +2085,7 @@
 											: 'pt-2'
 										: ''}"
 									id="chat-input-container"
+									on:input={handleTypingInput}
 								>
 									{#if suggestions}
 										{#key $settings?.richTextInput ?? true}
@@ -2691,7 +2715,9 @@
 										{#if !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
-												<Tooltip content={$i18n.t(callActive ? 'Call in progress' : 'Voice mode')}>
+												<Tooltip
+													content={callActive ? $i18n.t('Call in progress') : $i18n.t('Voice mode')}
+												>
 													<button
 														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-[0.3125rem] self-center"
 														class:call-active={callActive}
@@ -2757,7 +2783,9 @@
 																);
 															}
 														}}
-														aria-label={$i18n.t(callActive ? 'Return to call' : 'Voice mode')}
+														aria-label={callActive
+															? $i18n.t('Return to call')
+															: $i18n.t('Voice mode')}
 													>
 														<Voice className="size-5" strokeWidth="2.5" />
 													</button>

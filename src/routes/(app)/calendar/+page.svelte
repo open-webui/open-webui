@@ -22,7 +22,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	let loaded = false;
 	let calendars: CalendarModel[] = [];
@@ -261,7 +261,7 @@
 						<button
 							class="p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={() => navigateCalendar(-1)}
-							aria-label="Previous"
+							aria-label={$i18n.t('Previous')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -280,7 +280,7 @@
 						<button
 							class="p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={() => navigateCalendar(1)}
-							aria-label="Next"
+							aria-label={$i18n.t('Next')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -370,8 +370,7 @@
 					bind:currentDate
 					on:createEvent={handleCreateEvent}
 					on:eventClick={handleEventClick}
-					on:navigate={handleNavigate}
-					on:viewChange={handleNavigate}
+					onNavigate={handleNavigate}
 				/>
 			</div>
 		</div>

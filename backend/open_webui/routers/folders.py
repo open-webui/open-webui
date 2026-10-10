@@ -12,6 +12,7 @@ from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
+from open_webui.models.shared_chats import ChatShareMode
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.config import Config
 from open_webui.models.chats import Chats
@@ -244,15 +245,14 @@ async def get_shared_folders(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Get all folders shared with the current user (not owned by them)."""
+    """Get folders shared with or by the current user."""
     await check_folders_permission(request, user, db=db)
     groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     group_ids = {g.id for g in groups}
 
     folder_perms = await Folders.get_shared_folder_ids_for_user(user.id, group_ids, db=db)
 
-    folders = await Folders.get_folders_by_ids(list(folder_perms.keys()), db=db)
-    shared_folders = [folder for folder in folders if folder.user_id != user.id]
+    shared_folders = await Folders.get_folders_by_ids(list(folder_perms.keys()), db=db)
 
     owners = await Users.get_users_by_user_ids([folder.user_id for folder in shared_folders], db=db)
     owner_names = {owner.id: owner.name for owner in owners}
@@ -261,7 +261,7 @@ async def get_shared_folders(
         {
             **folder.model_dump(),
             'owner_name': owner_names.get(folder.user_id, 'Unknown'),
-            'permission': folder_perms[folder.id],
+            'permission': 'write' if folder.user_id == user.id else folder_perms[folder.id],
         }
         for folder in shared_folders
     ]
@@ -277,7 +277,7 @@ async def get_shared_folders(
                     {
                         **child.model_dump(),
                         'owner_name': owner_names.get(child.user_id, 'Unknown'),
-                        'permission': folder_perms[folder.id],
+                        'permission': 'write' if child.user_id == user.id else folder_perms[folder.id],
                     }
                 )
 
@@ -349,6 +349,18 @@ async def update_folder_name_by_id(
             )
 
     if folder:
+        if (
+            user.role != 'admin'
+            and user.id != folder.user_id
+            and form_data.data
+            and 'share_mode' in form_data.data
+            and form_data.data['share_mode'] != (folder.data or {}).get('share_mode')
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
         if form_data.name is not None:
             # Check if folder with same name exists
             existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
@@ -514,6 +526,7 @@ async def update_folder_is_expanded_by_id(
 
 class FolderAccessGrantsForm(BaseModel):
     access_grants: list[dict]
+    share_mode: ChatShareMode = None
 
 
 @router.post('/{id}/access/update')
@@ -532,13 +545,12 @@ async def update_folder_access_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Only owner, admin, or write-granted user can update access
+    # Editing folder contents does not grant permission to manage sharing.
     if user.role != 'admin' and user.id != folder.user_id:
-        if not await _has_folder_access(user.id, folder, 'write', db):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
@@ -550,6 +562,10 @@ async def update_folder_access_by_id(
     )
 
     await AccessGrants.set_access_grants('folder', id, form_data.access_grants, db=db)
+    if 'share_mode' in form_data.model_fields_set:
+        folder = await Folders.update_folder_by_id_and_user_id(
+            id, folder.user_id, FolderUpdateForm(data={'share_mode': form_data.share_mode}), db=db
+        )
 
     grants = await AccessGrants.get_grants_by_resource('folder', id, db=db)
     await publish_event(

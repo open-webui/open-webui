@@ -108,8 +108,8 @@
 
 <div
 	class={layout === 'grid'
-		? 'grid grid-cols-1 gap-x-5 gap-y-1 pb-safe-bottom text-xs text-gray-600 dark:text-gray-400 sm:grid-cols-2 lg:grid-cols-3'
-		: 'space-y-1 pb-safe-bottom text-xs text-gray-600 dark:text-gray-400'}
+		? 'grid grid-cols-1 gap-x-5 gap-y-1 pb-safe-bottom text-xs text-gray-900 dark:text-gray-100 sm:grid-cols-2 lg:grid-cols-3'
+		: 'space-y-1 pb-safe-bottom text-xs text-gray-900 dark:text-gray-100'}
 >
 	<div>
 		<Tooltip
@@ -118,11 +118,11 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.streamChatResponse.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition font-normal text-gray-900 dark:text-gray-100"
 					on:click={() => {
 						params.stream_response =
 							(params?.stream_response ?? null) === null
@@ -153,11 +153,11 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('settings.personal.general.parameters.streamDeltaChunkSize.label')}
 					</div>
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 						type="button"
 						on:click={() => {
 							params.stream_delta_chunk_size =
@@ -195,11 +195,11 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('settings.personal.general.parameters.contextCompactionThreshold.label')}
 					</div>
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 						type="button"
 						on:click={() => {
 							params.compact_token_threshold =
@@ -219,7 +219,7 @@
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" flex-1">
 						<input
-							class="text-sm w-full bg-transparent outline-hidden outline-none"
+							class="text-sm w-full bg-transparent outline-hidden outline-none font-normal text-gray-900 dark:text-gray-100"
 							type="number"
 							aria-label={$i18n.t(
 								'settings.personal.general.parameters.contextCompactionThreshold.label'
@@ -243,11 +243,11 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.functionCalling.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition font-normal text-gray-900 dark:text-gray-100"
 					on:click={() => {
 						if ((params?.function_calling ?? null) === null) {
 							params.function_calling = 'native';
@@ -278,11 +278,11 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.reasoningTags.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						if ((params?.reasoning_tags ?? null) === null) {
@@ -313,7 +313,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						class="text-sm w-full bg-transparent outline-hidden outline-none font-normal text-gray-900 dark:text-gray-100"
 						type="text"
 						aria-label={$i18n.t('Start Tag')}
 						placeholder={$i18n.t('Start Tag')}
@@ -324,7 +324,7 @@
 
 				<div class=" flex-1">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						class="text-sm w-full bg-transparent outline-hidden outline-none font-normal text-gray-900 dark:text-gray-100"
 						type="text"
 						aria-label={$i18n.t('End Tag')}
 						placeholder={$i18n.t('End Tag')}
@@ -343,12 +343,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.seed.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.seed = (params?.seed ?? null) === null ? 0 : null;
@@ -367,7 +367,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						class="text-sm w-full bg-transparent outline-hidden outline-none font-normal text-gray-900 dark:text-gray-100"
 						type="number"
 						aria-label={$i18n.t('settings.personal.general.parameters.seed.label')}
 						placeholder={$i18n.t('Enter Seed')}
@@ -387,12 +387,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.stopSequence.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.stop = (params?.stop ?? null) === null ? '' : null;
@@ -411,7 +411,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						class="text-sm w-full bg-transparent outline-hidden outline-none font-normal text-gray-900 dark:text-gray-100"
 						type="text"
 						aria-label={$i18n.t('settings.personal.general.parameters.stopSequence.label')}
 						placeholder={$i18n.t('Enter stop sequence')}
@@ -430,11 +430,11 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.temperature.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.temperature = (params?.temperature ?? null) === null ? 0.8 : null;
@@ -467,11 +467,11 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.reasoningEffort.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.reasoning_effort = (params?.reasoning_effort ?? null) === null ? 'medium' : null;
@@ -490,7 +490,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						class="text-sm w-full bg-transparent outline-hidden outline-none font-normal text-gray-900 dark:text-gray-100"
 						type="text"
 						aria-label={$i18n.t('settings.personal.general.parameters.reasoningEffort.label')}
 						placeholder={$i18n.t('Enter reasoning effort')}
@@ -511,11 +511,11 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.logitBias.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.logit_bias = (params?.logit_bias ?? null) === null ? '' : null;
@@ -534,7 +534,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						class="text-sm w-full bg-transparent outline-hidden outline-none font-normal text-gray-900 dark:text-gray-100"
 						type="text"
 						aria-label={$i18n.t('settings.personal.general.parameters.logitBias.label')}
 						placeholder={$i18n.t(
@@ -557,12 +557,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.maxTokens.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;
@@ -599,11 +599,11 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.topK.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
@@ -657,12 +657,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.topP.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.top_p = (params?.top_p ?? null) === null ? 0.9 : null;
@@ -697,11 +697,11 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.minP.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
@@ -736,12 +736,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.frequencyPenalty.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.frequency_penalty = (params?.frequency_penalty ?? null) === null ? 1.1 : null;
@@ -776,12 +776,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.presencePenalty.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.presence_penalty = (params?.presence_penalty ?? null) === null ? 0.0 : null;
@@ -814,11 +814,11 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.mirostat.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.mirostat = (params?.mirostat ?? null) === null ? 0 : null;
@@ -854,11 +854,11 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.mirostatEta.label')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.mirostat_eta = (params?.mirostat_eta ?? null) === null ? 0.1 : null;
@@ -893,12 +893,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.mirostatTau.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.mirostat_tau = (params?.mirostat_tau ?? null) === null ? 5.0 : null;
@@ -931,12 +931,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.repeatLastN.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.repeat_last_n = (params?.repeat_last_n ?? null) === null ? 64 : null;
@@ -972,12 +972,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.tfsZ.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.tfs_z = (params?.tfs_z ?? null) === null ? 1 : null;
@@ -1012,12 +1012,12 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.repeatPenalty.label')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.repeat_penalty = (params?.repeat_penalty ?? null) === null ? 1.1 : null;
@@ -1053,11 +1053,11 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('settings.personal.general.parameters.useMmap.label')}
 					</div>
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 						type="button"
 						on:click={() => {
 							params.use_mmap = (params?.use_mmap ?? null) === null ? true : null;
@@ -1096,12 +1096,12 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('settings.personal.general.parameters.useMlock.label')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 						type="button"
 						on:click={() => {
 							params.use_mlock = (params?.use_mlock ?? null) === null ? true : null;
@@ -1140,13 +1140,13 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.think.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition font-normal text-gray-900 dark:text-gray-100"
 					on:click={() => {
 						if ((params?.think ?? null) === null) {
 							params.think = true;
@@ -1177,7 +1177,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						class="text-sm w-full bg-transparent outline-hidden outline-none font-normal text-gray-900 dark:text-gray-100"
 						type="text"
 						aria-label={`${$i18n.t('settings.personal.general.parameters.think.label')} (${$i18n.t('settings.personal.general.parameters.ollama.label')})`}
 						placeholder={$i18n.t("e.g. 'low', 'medium', 'high'")}
@@ -1196,13 +1196,13 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.format.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition font-normal text-gray-900 dark:text-gray-100"
 					on:click={() => {
 						params.format = (params?.format ?? null) === null ? 'json' : null;
 					}}
@@ -1238,14 +1238,14 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.numKeep.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.num_keep = (params?.num_keep ?? null) === null ? 24 : null;
@@ -1280,14 +1280,14 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.numCtx.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.num_ctx = (params?.num_ctx ?? null) === null ? 2048 : null;
@@ -1324,14 +1324,14 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 					{$i18n.t('settings.personal.general.parameters.numBatch.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 					type="button"
 					on:click={() => {
 						params.num_batch = (params?.num_batch ?? null) === null ? 512 : null;
@@ -1369,14 +1369,14 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('settings.personal.general.parameters.numThread.label')} ({$i18n.t(
 							'settings.personal.general.parameters.ollama.label'
 						)})
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 						type="button"
 						on:click={() => {
 							params.num_thread = (params?.num_thread ?? null) === null ? 2 : null;
@@ -1412,14 +1412,14 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('settings.personal.general.parameters.numGpu.label')} ({$i18n.t(
 							'settings.personal.general.parameters.ollama.label'
 						)})
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden font-normal text-gray-900 dark:text-gray-100"
 						type="button"
 						on:click={() => {
 							params.num_gpu = (params?.num_gpu ?? null) === null ? 0 : null;
@@ -1455,13 +1455,13 @@
 				className="inline-tooltip"
 			>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('settings.personal.general.parameters.keepAlive.label')} ({$i18n.t(
 							'settings.personal.general.parameters.ollama.label'
 						)})
 					</div>
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-xs flex rounded-sm transition font-normal text-gray-900 dark:text-gray-100"
 						on:click={() => {
 							params.keep_alive = (params?.keep_alive ?? null) === null ? '5m' : null;
 						}}
@@ -1479,7 +1479,7 @@
 			{#if (params?.keep_alive ?? null) !== null}
 				<div class="flex mt-0.5 space-x-2">
 					<input
-						class="w-full text-sm bg-transparent outline-hidden"
+						class="w-full text-sm bg-transparent outline-hidden font-normal text-gray-900 dark:text-gray-100"
 						type="text"
 						aria-label={`${$i18n.t('settings.personal.general.parameters.keepAlive.label')} (${$i18n.t('settings.personal.general.parameters.ollama.label')})`}
 						placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}

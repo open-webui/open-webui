@@ -79,9 +79,9 @@
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import MfaManagement from '$lib/components/auth/MfaManagement.svelte';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import { getUserSettings } from '$lib/apis/users';
-	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
 	import { resolveTerminalConnection, terminalRequest } from '$lib/apis/terminal';
 
@@ -101,13 +101,22 @@
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(async ({ willUnload, to }) => {
-		if (updated.current && !willUnload && to?.url) {
+		if (updated.current && !mfaManagement && !willUnload && to?.url) {
 			await unregisterServiceWorkers();
 			location.href = to.url.href;
 		}
 	});
 
 	setContext('i18n', i18n);
+	/** @type {import('$lib/components/auth/MfaManagement.svelte').MfaManagementFlow | null} */
+	let mfaManagement = null;
+	setContext(
+		'showMfaManagement',
+		/** @param {import('$lib/components/auth/MfaManagement.svelte').MfaManagementFlow} flow */
+		(flow) => {
+			mfaManagement = flow;
+		}
+	);
 
 	const bc = new BroadcastChannel('active-tab-channel');
 
@@ -208,8 +217,9 @@
 
 			if (version !== null || deploymentId !== null) {
 				if (
-					($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) ||
-					($WEBUI_DEPLOYMENT_ID !== null && deploymentId !== $WEBUI_DEPLOYMENT_ID)
+					!mfaManagement &&
+					(($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) ||
+						($WEBUI_DEPLOYMENT_ID !== null && deploymentId !== $WEBUI_DEPLOYMENT_ID))
 				) {
 					await unregisterServiceWorkers();
 					location.href = location.href;
@@ -568,6 +578,7 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
+		if (event.shared) return;
 		// Answer this session's availability check even when another chat is active.
 		if (
 			event?.data?.type === 'request:terminal:state' &&
@@ -1296,10 +1307,7 @@
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
-		await initI18n(
-			localStorage?.locale ?? backendConfig?.default_locale,
-			backendConfig?.i18n ?? {}
-		);
+		await initI18n(backendConfig?.default_locale, backendConfig?.i18n ?? {});
 		if (!localStorage.locale) {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
@@ -1309,7 +1317,6 @@
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			await changeLanguage(lang);
-			dayjs.locale(lang);
 		}
 
 		if (backendConfig) {
@@ -1465,7 +1472,9 @@
 {/if}
 
 {#if loaded}
-	{#if $isApp}
+	{#if mfaManagement}
+		<MfaManagement flow={mfaManagement} onClose={() => (mfaManagement = null)} />
+	{:else if $isApp}
 		<div class="flex flex-row h-screen">
 			<AppSidebar />
 

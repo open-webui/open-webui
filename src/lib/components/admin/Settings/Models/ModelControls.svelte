@@ -23,7 +23,7 @@
 	const actionClass =
 		'flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-black/5 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200';
 	const inputClass =
-		'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700';
+		'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100';
 
 	const keyFor = (label: string, items: object) => {
 		let base = label
@@ -40,7 +40,7 @@
 	};
 	const focus = (node: HTMLInputElement) => node.focus();
 	const addOption = () => {
-		options = [...options, { id: crypto.randomUUID(), label: '', params: {} }];
+		options = [...options, { id: crypto.randomUUID(), label: '', params: { '': '' } }];
 	};
 	const edit = async (key = '') => {
 		editingKey = key;
@@ -134,7 +134,9 @@
 
 <div>
 	<div class="flex h-7 w-full items-center justify-between">
-		<span class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Model controls')}</span>
+		<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+			>{$i18n.t('Model controls')}</span
+		>
 		<button
 			type="button"
 			class="rounded p-1 text-gray-500 transition hover:bg-black/5 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
@@ -159,7 +161,7 @@
 				>
 				<button
 					type="button"
-					class="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left text-[0.8125rem] text-gray-700 dark:text-gray-300"
+					class="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left text-[0.8125rem] font-normal text-gray-900 dark:text-gray-100"
 					aria-label={`${$i18n.t('Edit')} ${control.label}`}
 					on:click={() => edit(key)}
 				>
@@ -190,7 +192,7 @@
 	<div class="px-5 pb-5 pt-4 dark:text-gray-200">
 		<div class="mb-3 flex items-center justify-between gap-3">
 			<div class="font-primary text-lg font-medium">
-				{$i18n.t(editingKey ? 'Edit control' : 'Add control')}
+				{editingKey ? $i18n.t('Edit control') : $i18n.t('Add control')}
 			</div>
 			<button
 				type="button"
@@ -202,7 +204,8 @@
 		<form class="space-y-2.5" on:submit|preventDefault|stopPropagation={apply}>
 			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)] gap-4">
 				<label class="block min-w-0 text-xs leading-4">
-					<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Name')}</span>
+					<span class="text-xs font-normal text-gray-600 dark:text-gray-400">{$i18n.t('Name')}</span
+					>
 					<input
 						bind:this={nameInput}
 						class={inputClass}
@@ -213,7 +216,9 @@
 					/>
 				</label>
 				<label class="block min-w-0 text-xs leading-4">
-					<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Default option')}</span>
+					<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+						>{$i18n.t('Default option')}</span
+					>
 					<NativeSelect
 						value={defaultOption}
 						options={[
@@ -228,11 +233,15 @@
 				</label>
 			</div>
 			<label class="block text-xs leading-4">
-				<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Description')}</span>
+				<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+					>{$i18n.t('Description')}</span
+				>
 				<input class={inputClass} placeholder={$i18n.t('Optional')} bind:value={description} />
 			</label>
 			<div class="flex items-center justify-between">
-				<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Display')}</span>
+				<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+					>{$i18n.t('Display')}</span
+				>
 				<div class="flex gap-1">
 					{#each ['menu', 'slider'] as mode}
 						<button
@@ -243,22 +252,15 @@
 								: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
 							on:click={() => (display = mode as 'menu' | 'slider')}
 						>
-							{$i18n.t(mode === 'slider' ? 'Slider' : 'Menu')}
+							{mode === 'slider' ? $i18n.t('Slider') : $i18n.t('Menu')}
 						</button>
 					{/each}
 				</div>
 			</div>
 			<div>
-				<div class="flex items-center justify-between">
-					<span class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Options')}</span>
-					<button
-						type="button"
-						class="rounded p-1 text-gray-500 transition hover:bg-black/5 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
-						aria-label={$i18n.t('Add option')}
-						title={$i18n.t('Add option')}
-						on:click={addOption}><Plus className="size-3" /></button
-					>
-				</div>
+				<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+					>{$i18n.t('Options')}</span
+				>
 				<div class="divide-y divide-gray-100/60 dark:divide-gray-850/60" use:sortable={moveOption}>
 					{#each options as option, index (option.id)}
 						<div class="py-1.5">
@@ -293,6 +295,14 @@
 						</div>
 					{/each}
 				</div>
+				<button
+					type="button"
+					class="mt-1 flex items-center gap-1.5 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+					on:click={addOption}
+				>
+					<Plus className="size-3" />
+					<span>{$i18n.t('Add option')}</span>
+				</button>
 			</div>
 			{#if display === 'slider' && options.length < 2}
 				<p class="text-xs text-gray-500 dark:text-gray-400">

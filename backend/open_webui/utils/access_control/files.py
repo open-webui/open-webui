@@ -8,6 +8,7 @@ from open_webui.models.folders import FolderModel
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
+from open_webui.models.notes import Notes
 from open_webui.models.users import UserModel, Users
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +30,7 @@ async def has_access_to_file(
     - Shared workspace models that attach the file directly
     - Channels the user is a member of
     - Shared chats
+    - Shared notes whose owner owns the attached file (read only)
 
     NOTE: This does NOT check direct file ownership — callers should check
     file.user_id == user.id separately before calling this.
@@ -82,6 +84,22 @@ async def has_access_to_file(
             db=db,
         )
         if accessible_ids:
+            return True
+        for chat_id in shared_chat_ids:
+            if await Chats.get_accessible_chat_by_id(chat_id, user, db=db):
+                return True
+
+    # Note attachment JSON is user-controlled, so only the file owner's notes can grant access.
+    if access_type == 'read':
+        note_ids = await Notes.get_note_ids_by_file_id(file.id, owner_id=file.user_id, db=db)
+        if note_ids and await AccessGrants.get_accessible_resource_ids(
+            user_id=user.id,
+            resource_type='note',
+            resource_ids=note_ids,
+            permission='read',
+            user_group_ids=user_group_ids,
+            db=db,
+        ):
             return True
 
     # Check if the file is directly attached to a shared workspace model (per the ownership
@@ -144,8 +162,6 @@ async def get_accessible_folder_files(
                 accessible.append(entry)
         elif entry_type == 'note':
             # Owner has no self-grant (notes are private by default), so check ownership too.
-            from open_webui.models.notes import Notes
-
             note = await Notes.get_note_by_id(entry_id, db=db)
             if note and (
                 note.user_id == user.id

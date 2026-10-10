@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -33,6 +34,7 @@
 	export let hideHandler: Function;
 	export let pinModelHandler: Function;
 	export let deleteHandler: Function;
+	export let accessHandler: (() => void) | null = null;
 	export let onClose: Function;
 
 	export let writeAccess: boolean = true;
@@ -78,6 +80,18 @@
 				>
 					<Pencil />
 					<div class="flex items-center">{$i18n.t('Edit')}</div>
+				</button>
+			{/if}
+			{#if accessHandler && writeAccess}
+				<button
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={() => {
+						runAndClose(() => accessHandler?.());
+					}}
+				>
+					<LockClosed className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Access')}</div>
 				</button>
 			{/if}
 

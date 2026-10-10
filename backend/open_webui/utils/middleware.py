@@ -53,7 +53,6 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.models import Models
 from open_webui.models.notes import Notes
-from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import UserModel, Users
 from open_webui.retrieval.utils import filter_source_metadata, get_sources_from_items
 from open_webui.routers.images import (
@@ -127,6 +126,7 @@ from open_webui.utils.misc import (
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
+from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
@@ -134,7 +134,7 @@ from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skills import (
     apply_skills_create_prompt,
     extract_skill_ids_from_messages,
-    has_prior_real_chat_content,
+    has_prior_user_message,
     strip_skill_mentions,
 )
 from open_webui.utils.task import (
@@ -692,7 +692,21 @@ def handle_responses_streaming_event(
             delta_type = parts[1]
             delta = data.get('delta', '')
 
-            output_index = data.get('output_index', len(current_output) - 1)
+            output_index = data.get('output_index', max(len(current_output) - 1, 0))
+
+            # Chat Completions can start an item with a delta, without an added event.
+            if output_index >= len(current_output):
+                current_output = list(current_output)
+                while len(current_output) <= output_index:
+                    current_output.append(
+                        {'type': 'message', 'status': 'in_progress', 'role': 'assistant', 'content': []}
+                    )
+                current_output[output_index].update(
+                    id=data.get('item_id'),
+                    type='reasoning'
+                    if delta_type.startswith('reasoning')
+                    else ('function_call' if delta_type == 'function_call_arguments' else 'message'),
+                )
 
             if current_output and 0 <= output_index < len(current_output):
                 new_output = list(current_output)
@@ -1766,7 +1780,7 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
         if not url:
             continue
 
-        if url.startswith('data:image/png;base64'):
+        if re.match(r'data:image/\w+;base64', url):
             url = await get_image_url_from_base64(request, url, metadata, user)
 
         image_urls.append(url)
@@ -1832,10 +1846,10 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     if not is_saved_chat_id(chat_id):
         message_list = form_data.get('messages', [])
     else:
-        chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+        chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
 
         messages_map = chat.chat.get('history', {}).get('messages', {})
-        message_id = chat.chat.get('history', {}).get('currentId')
+        message_id = metadata.get('user_message_id') or chat.chat.get('history', {}).get('currentId')
         message_list = get_message_list(messages_map, message_id)
 
     user_message = get_last_user_message(message_list)
@@ -2208,7 +2222,7 @@ async def convert_url_images_to_base64(form_data, user=None):
     return form_data
 
 
-MESSAGE_REPLAY_KEYS = ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage', 'model')
+MESSAGE_REPLAY_KEYS = ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage', 'model', 'meta')
 
 
 async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
@@ -2270,6 +2284,33 @@ def process_messages_with_output(
     processed = []
 
     for message in messages:
+        meta = message.get('meta')
+        voice = meta.get('voice') if isinstance(meta, dict) else None
+        voice = voice if isinstance(voice, dict) else {}
+        spoken = (
+            message.get('role') == 'assistant'
+            and voice
+            and message.get('model') == voice.get('model')
+            and not message.get('output')
+        )
+        # Keep voice speech available for follow-ups without attributing its status claims
+        # to the reasoning model. A completed chat answer can predate a stale spoken reply.
+        transcripts = []
+        if message.get('role') == 'assistant':
+            transcripts = voice.get('speech') or []
+        if spoken:
+            transcripts = [{'transcript': message.get('content', '')}]
+        speech = [
+            {
+                'role': 'assistant',
+                'content': '[Historical voice assistant transcript; not current task status]\n' + item['transcript'],
+            }
+            for item in transcripts
+            if isinstance(item, dict) and isinstance(item.get('transcript'), str) and item['transcript']
+        ]
+        if spoken:
+            processed.extend(speech)
+            continue
         if message.get('role') == 'assistant' and message.get('output'):
             # Use output items for clean OpenAI-format messages
             output_messages = convert_output_to_messages(
@@ -2280,14 +2321,16 @@ def process_messages_with_output(
             )
             if output_messages:
                 processed.extend(output_messages)
+                processed.extend(speech)
                 continue
             if not message.get('content'):
                 continue
 
         clean_message = dict(message)
-        for key in ('id', 'output', 'model', 'contextSummary', 'context_summary', 'usage'):
+        for key in ('id', 'output', 'model', 'contextSummary', 'context_summary', 'usage', 'meta'):
             clean_message.pop(key, None)
         processed.append(clean_message)
+        processed.extend(speech)
 
     if include_file_context:
         add_file_context(processed)
@@ -2356,8 +2399,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['model'] = selected_model_id
             metadata['selected_model_id'] = selected_model_id
 
-    # Captured before apply_params_to_form_data pops 'params'; populates metadata['system_prompt'] below
-    model_system_prompt = (form_data.get('params') or {}).get('system')
+    # Keep the template before apply_params_to_form_data consumes the model parameters.
+    model_system_prompt_template = (form_data.get('params') or {}).get('system')
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug('form_data: %s', form_data)
@@ -2369,6 +2412,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # which the frontend strips, causing tool calls to be merged into content.
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
+    pending_assistant_message = None
     payload_tools = form_data.get('tools', None)  # snapshot before filters
     chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
     is_note_chat = bool(chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
@@ -2390,7 +2434,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if assistant_message_id:
                 assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
                 if assistant_message and (assistant_message.get('content') or assistant_message.get('output')):
-                    db_messages.append({k: v for k, v in assistant_message.items() if k in MESSAGE_REPLAY_KEYS})
+                    assistant_message = {k: v for k, v in assistant_message.items() if k in MESSAGE_REPLAY_KEYS}
+                    db_messages.append(assistant_message)
+                    output = assistant_message.get('output')
+                    output = output if isinstance(output, list) else []
+                    result_call_ids = {
+                        item.get('call_id') for item in output if item.get('type') == 'function_call_output'
+                    }
+                    if any(
+                        item.get('type') == 'function_call'
+                        and item.get('status') in {'pending', 'queued', 'requires_approval'}
+                        and item.get('call_id') not in result_call_ids
+                        for item in output
+                    ):
+                        pending_assistant_message = assistant_message
 
             system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
@@ -2430,7 +2487,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             compaction_models = request.app.state.MODELS
 
         system_message = get_system_message(form_data.get('messages', []))
-        system_prompt = get_content_from_message(system_message) if system_message else ''
+        chat_system_prompt = get_content_from_message(system_message) if system_message else ''
 
         try:
             form_data['messages'], context_summary, _ = await compact_messages_for_request(
@@ -2440,7 +2497,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 metadata,
                 form_data.get('model'),
                 compaction_models,
-                system_prompt,
+                chat_system_prompt,
             )
             if context_summary:
                 form_data['messages'] = add_or_update_system_message(
@@ -2451,9 +2508,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception:
             log.exception('Context compaction failed; continuing with full chat history')
 
-        metadata['context_start_message_id'] = next(
-            (message.get('id') for message in form_data.get('messages', []) if message.get('role') != 'system'), None
-        )
+    # Compact the full chain, but prepare history separately from the response being resumed.
+    if pending_assistant_message is not None:
+        form_data['messages'] = [
+            message for message in form_data['messages'] if message.get('id') != pending_assistant_message.get('id')
+        ]
 
     # Process messages with OR-aligned output items for clean LLM messages
     for message in form_data.get('messages', []):
@@ -2532,8 +2591,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             folder = None
 
         if folder and folder.data:
-            # A sub-agent already gets it in the parent's system prompt
-            if 'system_prompt' in folder.data and not metadata.get('internal'):
+            if 'system_prompt' in folder.data:
                 form_data = await apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
             if 'files' in folder.data:
                 if metadata.get('params', {}).get('function_calling') == 'legacy':
@@ -2704,8 +2762,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     files = form_data.pop('files', None)
     form_data.pop('folder_id', None)
     metadata['terminal_id'] = terminal_id
-    skill_authoring_allowed = bool(terminal_id) and has_prior_real_chat_content(form_data.get('messages', []))
-    skill_create_denial_reason = 'empty_chat' if terminal_id else 'disabled'
+    can_author_skills = (
+        use_builtin_tools
+        and (model.get('info', {}).get('meta', {}).get('builtinTools') or {}).get('skills', True)
+        and (
+            user.role == 'admin'
+            or await has_permission(user.id, 'workspace.skills', await Config.get('user.permissions'))
+        )
+    )
+    skill_authoring_allowed = can_author_skills and has_prior_user_message(form_data.get('messages', []))
+    skill_create_denial_reason = 'empty_chat' if can_author_skills else 'disabled'
     apply_skills_create_prompt(
         form_data.get('messages', []),
         allowed=skill_authoring_allowed,
@@ -2716,8 +2782,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Otherwise, save any tools that filter inlets added for merging later.
     inlet_filter_tools = None if payload_tools is not None else form_data.get('tools', None)
 
-    # Mentioned skills get full content; selected/default skills can be loaded through view_skill.
-    mentioned_skill_ids = extract_skill_ids_from_messages(form_data.get('messages', []))
+    # Mentioned skills get bounded content; selected/default skills can be loaded through view_skill.
+    chat_context = metadata.get('chat_context') or {}
+    metadata['chat_context'] = chat_context
+    skill_versions = chat_context.setdefault('skill_versions', {})
+    mentioned_skill_ids = set(chat_context.get('mentioned_skill_ids') or []) | extract_skill_ids_from_messages(
+        form_data.get('messages', [])
+    )
     skill_ids = sorted(
         set(form_data.pop('skill_ids', None) or [])
         | set(model.get('info', {}).get('meta', {}).get('skillIds', []))
@@ -2749,8 +2820,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if note_files:
                 files = [*(files or []), *note_files]
 
-    if skill_ids or use_builtin_tools:
+    model_builtin_tools = model.get('info', {}).get('meta', {}).get('builtinTools') or {}
+
+    if skill_ids or (use_builtin_tools and model_builtin_tools.get('skills', True)):
         from open_webui.models.skills import Skills as SkillsModel
+        from open_webui.utils.skill_files import bounded_skill_manifest, format_skill_content, skill_content_page
         from open_webui.utils.terminals import (
             format_terminal_skill_context,
             format_terminal_skill_manifest_entry,
@@ -2762,7 +2836,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         db_skill_ids = [sid for sid in skill_ids if not sid.startswith(terminal_skill_prefix)]
         terminal_skill_ids = [sid for sid in skill_ids if sid.startswith(terminal_skill_prefix)]
 
-        if use_builtin_tools:
+        if use_builtin_tools and model_builtin_tools.get('skills', True):
             accessible_skills = {s.id: s for s in await SkillsModel.get_skills(user_id=user.id)}
             db_skill_ids = sorted(accessible_skills)
         else:
@@ -2775,9 +2849,37 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         skill_manifest = ''
         for skill in available_skills:
-            if skill.id in mentioned_skill_ids or not use_builtin_tools:
+            if skill.id in mentioned_skill_ids or not use_builtin_tools or not model_builtin_tools.get('skills', True):
+                from open_webui.models.skills import get_skill_snapshot
+
+                version_id = skill_versions.get(skill.id) or skill.version_id
+                try:
+                    snapshot = await get_skill_snapshot(skill, version_id)
+                except HTTPException as error:
+                    if error.status_code != 404:
+                        raise
+                    continue
+                skill_versions[skill.id] = version_id
+                skill_tools_enabled = use_builtin_tools and model_builtin_tools.get('skills', True)
+                root_content = format_skill_content(
+                    skill_content_page(snapshot['content']), skill.id, skill_tools_enabled
+                )
+                manifest = bounded_skill_manifest(
+                    [f['path'] for f in snapshot['data']['files'] if f['path'] != 'SKILL.md']
+                )
+                resources = '\n'.join(manifest['files'])
+                resource_hint = (
+                    f'\nRead supporting files with read_skill_file(id="{skill.id}", path=...).\n{resources}'
+                    if use_builtin_tools and model_builtin_tools.get('skills', True)
+                    else '\nSupporting files require a model with skill tools enabled.'
+                    if resources
+                    else ''
+                )
+                if manifest.get('notice'):
+                    resource_hint += '\n' + manifest['notice']
                 form_data['messages'] = add_or_update_system_message(
-                    f'<skill name="{skill.name}">\n{skill.content}\n</skill>',
+                    f'<skill id="{skill.id}" version_id="{version_id}" name="{skill.name}">\n'
+                    f'{root_content}{resource_hint}\n</skill>',
                     form_data['messages'],
                     append=True,
                 )
@@ -2796,7 +2898,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         listed_terminal_skills = listed if isinstance(listed, list) else []
 
-        if terminal_id and use_builtin_tools:
+        if terminal_id and use_builtin_tools and model_builtin_tools.get('skills', True):
             terminal_skills = listed_terminal_skills
         elif terminal_skill_ids:
             terminal_skill_map = {skill['id']: skill for skill in listed_terminal_skills}
@@ -2804,12 +2906,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         for skill in terminal_skills:
             sid = skill['id']
-            if sid in mentioned_skill_ids or not use_builtin_tools:
+            if sid in mentioned_skill_ids or not use_builtin_tools or not model_builtin_tools.get('skills', True):
                 skill_name = unquote(sid.removeprefix(terminal_skill_prefix))
                 loaded = await get_terminal_skill(request, user.model_dump(), metadata, skill_name, extra_params)
                 if loaded:
                     form_data['messages'] = add_or_update_system_message(
-                        format_terminal_skill_context(loaded),
+                        format_terminal_skill_context(
+                            loaded, sid, use_builtin_tools and model_builtin_tools.get('skills', True)
+                        ),
                         form_data['messages'],
                         append=True,
                     )
@@ -2826,6 +2930,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Strip only resolved skill mentions; ordinary text such as Perl's <$fh> stays intact.
     resolved_skill_ids = {s.id for s in available_skills} | {s['id'] for s in terminal_skills}
+    chat_context['mentioned_skill_ids'] = sorted(mentioned_skill_ids & resolved_skill_ids)
     strip_skill_mentions(form_data.get('messages', []), resolved_skill_ids)
 
     prompt = get_last_user_message(form_data['messages'])
@@ -2891,7 +2996,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             server_id,
                             user,
                             metadata,
-                            extra_params,
                         )
                         if result is None:
                             continue
@@ -2932,8 +3036,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         if event_emitter:
                             await event_emitter(
                                 {
-                                    'type': 'chat:message:error',
-                                    'data': {'error': {'content': f"Failed to connect to MCP server '{server_id}'"}},
+                                    'type': 'status',
+                                    'data': {
+                                        'action': 'tool_connection',
+                                        'description': f"Failed to connect to MCP server '{server_id}'",
+                                        'error': True,
+                                        'done': True,
+                                    },
                                 }
                             )
                         continue
@@ -2971,15 +3080,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     extra_params,
                 )
                 if isinstance(terminal_result, tuple):
-                    terminal_tools, system_prompt = terminal_result
+                    terminal_tools, terminal_system_prompt = terminal_result
                 else:
                     terminal_tools = terminal_result
-                    system_prompt = None
+                    terminal_system_prompt = None
                 if terminal_tools:
                     tools_dict = {**tools_dict, **terminal_tools}
-                if system_prompt:
+                if terminal_system_prompt:
                     form_data['messages'] = add_or_update_system_message(
-                        system_prompt,
+                        terminal_system_prompt,
                         form_data['messages'],
                         append=True,
                     )
@@ -2993,10 +3102,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     continue
                 # Copy so the pops below keep metadata intact for sub-agents and approval resumes
                 tool_server = dict(tool_server)
-                system_prompt = tool_server.pop('system_prompt', None)
-                if system_prompt:
+                tool_server_system_prompt = tool_server.pop('system_prompt', None)
+                if tool_server_system_prompt:
                     form_data['messages'] = add_or_update_system_message(
-                        system_prompt,
+                        tool_server_system_prompt,
                         form_data['messages'],
                         append=True,
                     )
@@ -3024,7 +3133,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Only inject when the request originates from the UI (identified by session_id).
         # API callers don't expect hidden tools; they can explicitly request tools via tool_ids.
         if use_builtin_tools:
-            if (model.get('info', {}).get('meta', {}).get('builtinTools') or {}).get('knowledge', True):
+            if model_builtin_tools.get('knowledge', True):
                 from html import escape
 
                 knowledge_tags = []
@@ -3060,7 +3169,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
 
-        # Only advertise user-shell tools when the originating browser has a connected shell.
+        # Connections can keep shell tools advertised across browser disconnects for prompt caching.
         shell_tools = {
             name: tool
             for name, tool in tools_dict.items()
@@ -3068,7 +3177,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             and (tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
         }
         selected = {
-            name
+            name: tool
             for name, tool in shell_tools.items()
             if terminal_id
             and (
@@ -3076,9 +3185,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
             )
         }
-        connected = False
+        connected = (
+            any(
+                tool.get('user_shell_tools') == 'always'
+                or (
+                    tool.get('direct')
+                    and (tool.get('server', {}).get('config') or {}).get('user_shell_tools') == 'always'
+                )
+                for tool in selected.values()
+            )
+            and not metadata.get('automation_id')
+            and not metadata.get('internal')
+        )
         if (
             selected
+            and not connected
             and event_caller
             and metadata.get('session_id')
             and metadata.get('chat_id')
@@ -3136,22 +3257,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             log.exception(e)
 
-    # Save the pre-RAG message state so the native tool call loop can
-    # restore to the true original (before file-source injection) rather
-    # than a snapshot that already has the RAG template baked in.
+    # The tool loop restores these prompts before rebuilding file and tool source context.
     system_message = get_system_message(form_data['messages'])
-    system_content = get_content_from_message(system_message) if system_message else ''
+    base_system_prompt = get_content_from_message(system_message) if system_message else ''
     resolved_model_system_prompt = await resolve_system_prompt(
-        model_system_prompt,
+        model_system_prompt_template,
         metadata,
         user,
     )
     if resolved_model_system_prompt:
-        system_content = (
-            f'{resolved_model_system_prompt}\n{system_content}' if system_content else resolved_model_system_prompt
+        base_system_prompt = (
+            f'{resolved_model_system_prompt}\n{base_system_prompt}'
+            if base_system_prompt
+            else resolved_model_system_prompt
         )
-    metadata['system_prompt'] = system_content or None
-    metadata['user_prompt'] = get_last_user_message(form_data['messages'])
+    metadata['base_system_prompt'] = base_system_prompt or None
+    metadata['base_user_prompt'] = get_last_user_message(form_data['messages'])
     metadata['sources'] = sources[:] if sources else []
 
     # If context is not empty, insert it into the messages
@@ -3181,6 +3302,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
+    if pending_assistant_message is not None:
+        if await resume_tool_calls(request, form_data, user, model, metadata, pending_assistant_message):
+            return form_data, metadata, events, True
+        assistant_message = dict(pending_assistant_message)
+        if assistant_message.get('model') != model['id'] and isinstance(assistant_message.get('output'), list):
+            assistant_message['output'] = strip_reasoning_details(assistant_message['output'])
+        form_data['messages'].extend(
+            process_messages_with_output([assistant_message], reasoning_format=get_reasoning_format(model))
+        )
+        await convert_url_images_to_base64(form_data, user=user)
+
     if ENABLE_FUNCTIONS:
         try:
             form_data, _ = await process_filter_functions(
@@ -3196,7 +3328,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = normalize_messages_for_model(form_data)
 
-    return form_data, metadata, events
+    return form_data, metadata, events, False
 
 
 async def get_event_emitter_and_caller(metadata):
@@ -3304,16 +3436,11 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     return params, result, tool, tool_type, direct_tool
 
 
-async def resume_tool_calls(request, form_data, user, model, metadata) -> bool:
-    """Execute approved calls on a saved message; return whether it is still paused."""
+async def resume_tool_calls(request, form_data, user, model, metadata, message) -> bool:
+    """Execute approved calls in the supplied response without rebuilding prepared history."""
     chat_id = metadata.get('chat_id')
-    assistant_message_id = metadata.get('assistant_message_id')
-    if not is_saved_chat_id(chat_id) or not assistant_message_id:
-        return False
-
-    message_id = metadata.get('message_id') or assistant_message_id
-    message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
-    output = message.get('output') if message else None
+    message_id = metadata.get('message_id') or metadata.get('assistant_message_id')
+    output = message.get('output')
     if not isinstance(output, list):
         return False
 
@@ -3339,9 +3466,54 @@ async def resume_tool_calls(request, form_data, user, model, metadata) -> bool:
         for item in output
     )
     if not approved_calls and not needs_approval:
-        return False
+        return any(
+            item.get('type') == 'function_call'
+            and item.get('call_id')
+            and item.get('status') in {'pending', 'queued', 'requires_approval'}
+            and item.get('call_id') not in result_call_ids
+            for item in output
+        )
 
     event_emitter, event_caller = await get_event_emitter_and_caller(metadata)
+
+    # Request filters must be able to reject the complete request before tool side effects.
+    # Give tools their filtered view without letting it overwrite the prepared history.
+    assistant_message = dict(message)
+    if assistant_message.get('model') != model['id']:
+        assistant_message['output'] = strip_reasoning_details(output)
+    form_data = {
+        **form_data,
+        'messages': copy.deepcopy(
+            [
+                *form_data['messages'],
+                *process_messages_with_output([assistant_message], reasoning_format=get_reasoning_format(model)),
+            ]
+        ),
+    }
+    await convert_url_images_to_base64(form_data, user=user)
+    if ENABLE_FUNCTIONS:
+        filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
+        if filter_functions:
+            form_data, _ = await process_filter_functions(
+                request=request,
+                filter_context=get_filter_context(request),
+                filter_functions=filter_functions,
+                filter_type='request',
+                form_data=form_data,
+                extra_params={
+                    '__event_emitter__': event_emitter,
+                    '__event_call__': event_caller,
+                    '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+                    '__metadata__': metadata,
+                    '__oauth_token__': await get_system_oauth_token(request, user),
+                    '__request__': request,
+                    '__model__': model,
+                    '__chat_id__': metadata.get('chat_id'),
+                    '__message_id__': metadata.get('message_id'),
+                },
+            )
+    normalize_messages_for_model(form_data)
+
     for item in approved_calls:
         if item.get('name') == 'ask_user':
             item['status'] = 'pending'
@@ -3436,61 +3608,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata) -> bool:
             }
         )
 
-    if paused:
-        return True
-
-    db_messages = await load_messages_from_db(chat_id, metadata.get('user_message_id'))
-    if db_messages:
-        assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
-        if assistant_message:
-            db_messages.append({k: v for k, v in assistant_message.items() if k in MESSAGE_REPLAY_KEYS})
-        context_start_message_id = metadata.get('context_start_message_id')
-        start_index = next(
-            (index for index, message in enumerate(db_messages) if message.get('id') == context_start_message_id), 0
-        )
-        db_messages = db_messages[start_index:]
-        for message in db_messages:
-            output = message.get('output')
-            # reasoning_details can be model/provider-bound, so only replay them
-            # for output produced by the same model.
-            if message.get('role') == 'assistant' and message.get('model') != model['id'] and isinstance(output, list):
-                message['output'] = strip_reasoning_details(output)
-
-        system_message = get_system_message(form_data.get('messages', []))
-        form_data['messages'] = process_messages_with_output(
-            [system_message, *db_messages] if system_message else db_messages,
-            reasoning_format=get_reasoning_format(model),
-            include_file_context=metadata.get('include_file_context', False),
-        )
-        form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
-
-    if ENABLE_FUNCTIONS:
-        filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
-        if filter_functions:
-            filtered_form_data, _ = await process_filter_functions(
-                request=request,
-                filter_context=get_filter_context(request),
-                filter_functions=filter_functions,
-                filter_type='request',
-                form_data=form_data,
-                extra_params={
-                    '__event_emitter__': event_emitter,
-                    '__event_call__': event_caller,
-                    '__user__': user.model_dump() if isinstance(user, UserModel) else {},
-                    '__metadata__': metadata,
-                    '__oauth_token__': await get_system_oauth_token(request, user),
-                    '__request__': request,
-                    '__model__': model,
-                    '__chat_id__': metadata.get('chat_id'),
-                    '__message_id__': metadata.get('message_id'),
-                },
-            )
-            if filtered_form_data is not form_data:
-                form_data.clear()
-                form_data.update(filtered_form_data)
-
-    normalize_messages_for_model(form_data)
-    return False
+    return paused
 
 
 async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[dict], form_data: dict, metadata: dict):
@@ -3626,6 +3744,8 @@ def update_assistant_message_from_stream(assistant_message, raw):
             assistant_message['usage'] = merge_usage(assistant_message.get('usage'), raw_usage)
 
         for choice in data.get('choices', []):
+            if choice.get('finish_reason'):
+                assistant_message['finish_reason'] = choice['finish_reason']
             delta = choice.get('delta', {}) or {}
             content = delta.get('content')
             reasoning_content = delta.get('reasoning_content') or delta.get('reasoning') or delta.get('thinking')
@@ -3674,42 +3794,6 @@ def update_assistant_message_from_stream(assistant_message, raw):
                     append_to_text_field(assistant_message, 'content', content)
                 else:
                     assistant_message['content'] = '' + content
-
-
-async def get_system_oauth_token(request, user):
-    """Get the system OAuth token for a user.
-
-    Primary path: use the oauth_session_id cookie (browser requests).
-    Fallback: look up the user's most recent OAuth session from the DB
-    (covers automations, API calls, and other cookie-less contexts).
-    """
-    oauth_token = None
-    try:
-        oauth_session_id = request.cookies.get('oauth_session_id', None)
-        if oauth_session_id:
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                user.id,
-                oauth_session_id,
-            )
-
-        # Fallback: no cookie (automation, API key, etc.) — use most recent session
-        if oauth_token is None:
-            from open_webui.models.oauth_sessions import OAuthSessions
-
-            sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
-            # Filter out MCP-provider sessions — their token refresh is handled
-            # separately by oauth_client_manager.  Passing them to the SSO
-            # oauth_manager causes a failed refresh and session deletion (#24618).
-            sessions = [s for s in sessions if not (s.provider or '').startswith('mcp:')]
-            if sessions:
-                best = max(sessions, key=lambda s: s.updated_at)
-                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                    user.id,
-                    best.id,
-                )
-    except Exception as e:
-        log.error(f'Error getting OAuth token: {e}')
-    return oauth_token
 
 
 async def background_tasks_handler(ctx):
@@ -4003,6 +4087,7 @@ async def outlet_filter_handler(ctx):
             if not message_list:
                 return
 
+        finish_reason = (ctx.get('assistant_message') or {}).get('finish_reason')
         outlet_data = {
             'model': model_id,
             'messages': [
@@ -4016,6 +4101,7 @@ async def outlet_filter_handler(ctx):
                     **({'output': copy.deepcopy(m['output'])} if m.get('output') else {}),
                     **({'usage': m['usage']} if m.get('usage') else {}),
                     **({'sources': m['sources']} if m.get('sources') else {}),
+                    **({'finish_reason': finish_reason} if finish_reason and m.get('id') == message_id else {}),
                 }
                 for m in message_list
             ],
@@ -4149,12 +4235,14 @@ async def non_streaming_chat_response_handler(response, ctx):
 
             choices = response_data.get('choices', [])
             response_output = response_data.get('output')
-            content = choices[0].get('message', {}).get('content') if choices else ''
+            content = (choices[0].get('message', {}).get('content') or '') if choices else ''
+            # Native tools only run on the streaming path; still finish the turn.
+            tool_calls = choices[0].get('message', {}).get('tool_calls') if choices else None
 
             if (continuing and 'error' not in response_data) or (
-                not continuing and choices and (content or response_output)
+                not continuing and choices and (content or response_output or tool_calls)
             ):
-                if content or response_output or continuing:
+                if content or response_output or tool_calls or continuing:
                     if not continuing:
                         await event_emitter(
                             {
@@ -4244,6 +4332,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
+                    finish_reason = choices[0].get('finish_reason') if choices else None
 
                     if save_to_chat:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -4263,6 +4352,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         'content': content,
                         'output': response_output,
                         **({'usage': usage} if usage else {}),
+                        **({'finish_reason': finish_reason} if finish_reason else {}),
                     }
                     await outlet_filter_handler(ctx)
                     await background_tasks_handler(ctx)
@@ -4298,10 +4388,12 @@ async def non_streaming_chat_response_handler(response, ctx):
     content = choices[0].get('message', {}).get('content') if choices else ''
     if ENABLE_API_OUTLET_FILTERS and (content or output):
         usage = normalize_usage(response_data.get('usage', {}) or {})
+        finish_reason = choices[0].get('finish_reason') if choices else None
         ctx['assistant_message'] = {
             **({'content': content} if content else {}),
             **({'output': output} if output else {}),
             **({'usage': usage} if usage else {}),
+            **({'finish_reason': finish_reason} if finish_reason else {}),
         }
         await outlet_filter_handler(ctx)
 
@@ -4705,6 +4797,7 @@ async def streaming_chat_response_handler(response, ctx):
                 content_parts = []
 
             usage = None
+            finish_reason = None
             last_response_id = None
 
             def full_output():
@@ -4804,6 +4897,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 async def stream_body_handler(response, form_data):
                     nonlocal usage
+                    nonlocal finish_reason
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
@@ -5148,6 +5242,9 @@ async def streaming_chat_response_handler(response, ctx):
                                             )
                                         continue
 
+                                    if choices[0].get('finish_reason'):
+                                        finish_reason = choices[0]['finish_reason']
+
                                     delta = choices[0].get('delta', {})
                                     delta_type = 'content'
 
@@ -5329,9 +5426,10 @@ async def streaming_chat_response_handler(response, ctx):
                                             if message_files is None:
                                                 message_files = image_file_list
 
+                                        # 'files' would make the emitter save these again.
                                         await event_emitter(
                                             {
-                                                'type': 'files',
+                                                'type': 'chat:message:files',
                                                 'data': {'files': message_files},
                                             }
                                         )
@@ -5401,6 +5499,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                     output.insert(message_index, reasoning_item)
                                                 else:
                                                     output.append(reasoning_item)
+                                                await emit_response_completion_event(
+                                                    {
+                                                        'type': 'response.output_item.added',
+                                                        'output_index': output.index(reasoning_item),
+                                                        'item': reasoning_item.copy(),
+                                                    }
+                                                )
                                             else:
                                                 reasoning_item = output[-1]
 
@@ -5428,20 +5533,20 @@ async def streaming_chat_response_handler(response, ctx):
                                                 ),
                                                 'delta': reasoning_content,
                                             }
-                                            delta_type = 'response.reasoning_text.delta'
+                                            await emit_response_completion_event(data)
+                                            data = None
 
                                         if reasoning_detail_items:
                                             merge_streamed_reasoning_details(
                                                 reasoning_item.setdefault('reasoning_details', []),
                                                 reasoning_detail_items,
                                             )
+                                            await flush_pending_delta_data()
+                                            await event_emitter(
+                                                {'type': 'chat:completion', 'data': {'output': full_output()}}
+                                            )
                                             await save_current_response_stream()
-                                            # Providers such as OpenRouter send reasoning_details
-                                            # alongside the reasoning text: only drop the event when
-                                            # the details were all there was to report, otherwise the
-                                            # reasoning delta never reaches the client.
-                                            if not reasoning_content:
-                                                data = None
+                                            data = None
 
                                     if value:
                                         if (
@@ -5455,6 +5560,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                 reasoning_item['ended_at'] - reasoning_item['started_at']
                                             )
                                             reasoning_item['status'] = 'completed'
+                                            await emit_response_completion_event(
+                                                {
+                                                    'type': 'response.output_item.done',
+                                                    'output_index': len(output) - 1,
+                                                    'item': reasoning_item.copy(),
+                                                }
+                                            )
 
                                             output.append(
                                                 {
@@ -5567,11 +5679,15 @@ async def streaming_chat_response_handler(response, ctx):
                                         tag_output = None
 
                                         if DETECT_REASONING_TAGS:
-                                            tag_output, _ = tag_output_handler(
-                                                'reasoning',
-                                                reasoning_tags,
-                                                output,
-                                            )
+                                            if not any(
+                                                item.get('attributes', {}).get('type') == 'reasoning_content'
+                                                for item in output
+                                            ):
+                                                tag_output, _ = tag_output_handler(
+                                                    'reasoning',
+                                                    reasoning_tags,
+                                                    output,
+                                                )
 
                                             solution_output, _ = tag_output_handler(
                                                 'solution',
@@ -5749,15 +5865,11 @@ async def streaming_chat_response_handler(response, ctx):
                     'citations', True
                 )
 
-                # Use the pre-RAG system content captured before the
-                # initial file-source injection in process_chat_payload.
-                # This ensures restore truly undoes the RAG template.
-                original_system_content = metadata.get('system_prompt')
-                if original_system_content is None:
-                    original_system_message = get_system_message(form_data['messages'])
-                    original_system_content = (
-                        get_content_from_message(original_system_message) if original_system_message else None
-                    )
+                # Requests that bypass payload processing have no saved source-free prompt.
+                base_system_prompt = metadata.get('base_system_prompt')
+                if base_system_prompt is None:
+                    system_message = get_system_message(form_data['messages'])
+                    base_system_prompt = get_content_from_message(system_message) if system_message else None
 
                 async def emit_output():
                     # Channels publish whole messages; Continue can merge into the preceding item.
@@ -6011,27 +6123,23 @@ async def streaming_chat_response_handler(response, ctx):
                         for source in tool_call_sources:
                             await event_emitter({'type': 'source', 'data': source})
 
-                        # Apply tool source context to messages for the model.
-                        # Restoring to pre-RAG original prevents duplicating
-                        # the RAG template across file and tool sources.
+                        # Rebuild source context from the saved prompts so it never accumulates.
                         all_tool_call_sources.extend(tool_call_sources)
                         if all_tool_call_sources and user_message:
-                            # Restore pre-RAG message state before re-applying
-                            # to prevent RAG template duplication.
-                            original_user_message = metadata.get('user_prompt') or user_message
+                            base_user_prompt = metadata.get('base_user_prompt') or user_message
                             set_last_user_message_content(
-                                original_user_message,
+                                base_user_prompt,
                                 form_data['messages'],
                             )
-                            if original_system_content is not None:
+                            if base_system_prompt is not None:
                                 if get_system_message(form_data['messages']):
                                     replace_system_message_content(
-                                        original_system_content,
+                                        base_system_prompt,
                                         form_data['messages'],
                                     )
                                 else:
                                     form_data['messages'] = add_or_update_system_message(
-                                        original_system_content,
+                                        base_system_prompt,
                                         form_data['messages'],
                                     )
                             else:
@@ -6154,6 +6262,8 @@ async def streaming_chat_response_handler(response, ctx):
                             # keeps indices aligned. The display prefix
                             # ensures the UI shows tool history during
                             # streaming.
+                            continued_output = prior_output
+                            round_output = output
                             prior_output = list(full_output())
                             # Trim the trailing empty placeholder message
                             # so it doesn't persist as a ghost item once
@@ -6166,11 +6276,13 @@ async def streaming_chat_response_handler(response, ctx):
                                 msg_parts = prior_output[-1].get('content', [])
                                 if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
                                     prior_output.pop()
+                                    round_output = round_output[:-1]
                             output = []
                             output_start = len(prior_output)
                             await stream_body_handler(res, new_form_data)
-                            output = full_output()
-                            prior_output = []
+                            # A continued reply's earlier items are already in form_data['messages']
+                            output = [*round_output, *output]
+                            prior_output = continued_output
                         elif getattr(res, 'status_code', 200) >= 400:
                             await emit_message_error(get_message_error_content(get_response_error_detail(res)))
                             break
@@ -6382,7 +6494,7 @@ async def streaming_chat_response_handler(response, ctx):
                             break
 
                 # Mark all in-progress items as completed
-                for item in output:
+                for item in [*prior_output, *output]:
                     if item.get('status') == 'in_progress':
                         item['status'] = 'completed'
 
@@ -6431,6 +6543,7 @@ async def streaming_chat_response_handler(response, ctx):
                     else ''.join(content_parts) or get_output_text(current_output),
                     'output': current_output,
                     **({'usage': usage} if usage else {}),
+                    **({'finish_reason': finish_reason} if finish_reason else {}),
                 }
                 await outlet_filter_handler(ctx)
                 await background_tasks_handler(ctx)

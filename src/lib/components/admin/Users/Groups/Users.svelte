@@ -293,8 +293,8 @@
 			on:change={handleFileChange}
 		/>
 
-		<div class="flex flex-1 h-fit items-center gap-2">
-			<div class="flex min-w-0 flex-1 items-center">
+		<div class="flex flex-1 flex-wrap h-fit items-center gap-2">
+			<div class="flex min-w-0 flex-1 basis-full items-center sm:basis-0">
 				<div class=" self-center mr-3">
 					<Search />
 				</div>
@@ -351,6 +351,8 @@
 					</DropdownMenu>
 				</div>
 			</Dropdown>
+
+			<slot name="filter" />
 		</div>
 	</div>
 
@@ -496,7 +498,9 @@
 								</td>
 
 								<td class=" px-3 py-1">
-									{dayjs(user.last_active_at * 1000).fromNow()}
+									{dayjs(user.last_active_at * 1000)
+										.locale($i18n.language)
+										.fromNow()}
 								</td>
 							</tr>
 						{/each}

@@ -2,10 +2,13 @@ import logging
 import time
 from typing import Optional
 
+from fastapi import HTTPException
 from open_webui.internal.db import Base, get_async_db_context
-from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.models.access_grants import AccessGrant, AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
+from open_webui.models.skill_history import SkillHistories, SkillHistory
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.skill_files import SkillFile, SkillFileOperation, apply_operations, validate_files
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +28,8 @@ class Skill(Base):
     name = Column(Text, unique=True)
     description = Column(Text, nullable=True)
     content = Column(Text)
+    data = Column(JSON, nullable=True)
+    version_id = Column(Text, nullable=True)
     meta = Column(JSON)
     is_active = Column(Boolean, default=True)
 
@@ -43,6 +48,8 @@ class SkillModel(BaseModel):
     name: str
     description: Optional[str] = None
     content: str
+    data: dict
+    version_id: str | None = None
     meta: SkillMeta
     is_active: bool = True
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
@@ -63,6 +70,7 @@ class SkillUserModel(SkillModel):
 
 
 class SkillResponse(BaseModel):
+    version_id: str | None = None
     id: str
     user_id: str
     name: str
@@ -77,19 +85,33 @@ class SkillResponse(BaseModel):
 class SkillUserResponse(SkillResponse):
     user: Optional[UserResponse] = None
 
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra='ignore')
 
 
 class SkillAccessResponse(SkillUserResponse):
     write_access: Optional[bool] = False
 
 
+class SkillDetailResponse(SkillAccessResponse):
+    content: str
+
+
+class SkillData(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    files: list[SkillFile]
+
+
 class SkillForm(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    content: str
-    meta: SkillMeta = SkillMeta()
+    content: str | None = None
+    files: list[SkillFile] | None = None
+    data: SkillData | None = None
+    operations: list[SkillFileOperation] | None = None
+    expected_version_id: str | None = None
+    commit_message: str | None = None
+    meta: SkillMeta = Field(default_factory=SkillMeta)
     is_active: bool = True
     access_grants: Optional[list[dict]] = None
 
@@ -102,6 +124,25 @@ class SkillListResponse(BaseModel):
 class SkillAccessListResponse(BaseModel):
     items: list[SkillAccessResponse] = []
     total: int = 0
+
+
+def skill_snapshot(skill) -> dict:
+    return {
+        'name': skill.name,
+        'description': skill.description,
+        'content': skill.content,
+        'data': skill.data,
+        'meta': SkillMeta.model_validate(skill.meta or {}).model_dump(),
+    }
+
+
+async def get_skill_snapshot(skill, version_id=None, db=None) -> dict:
+    if not version_id or version_id == skill.version_id:
+        return skill_snapshot(skill)
+    entry = await SkillHistories.get_history_by_id(skill.id, version_id, db=db)
+    if not entry:
+        raise HTTPException(404, 'Skill version not found')
+    return entry.snapshot
 
 
 class SkillsTable:
@@ -126,26 +167,45 @@ class SkillsTable:
         form_data: SkillForm,
         db: Optional[AsyncSession] = None,
     ) -> Optional[SkillModel]:
-        async with get_async_db_context(db) as db:
+        data = form_data.model_dump(exclude_none=True)
+        if data.get('data') is not None and data.get('files') is not None:
+            raise ValueError('Provide data or files, not both')
+        files = (
+            data['data']['files']
+            if data.get('data') is not None
+            else data.get('files', [{'path': 'SKILL.md', 'content': data.get('content', '')}])
+        )
+        files = validate_files(files)
+        snapshot = {
+            'name': form_data.name,
+            'description': form_data.description,
+            'meta': form_data.meta.model_dump(),
+            'content': next(f['content'] for f in files if f['path'] == 'SKILL.md'),
+            'data': {'files': files},
+        }
+        entry = SkillHistories.new_entry(form_data.id, snapshot, user_id, commit_message=form_data.commit_message)
+        async with get_async_db_context(db) as session:
             try:
                 result = Skill(
-                    **{
-                        **form_data.model_dump(exclude={'access_grants'}),
-                        'user_id': user_id,
-                        'updated_at': int(time.time()),
-                        'created_at': int(time.time()),
-                    }
+                    id=form_data.id,
+                    user_id=user_id,
+                    name=form_data.name,
+                    description=form_data.description,
+                    meta=snapshot['meta'],
+                    content=snapshot['content'],
+                    data=snapshot['data'],
+                    is_active=form_data.is_active,
+                    version_id=entry.id,
+                    created_at=int(time.time()),
+                    updated_at=int(time.time()),
                 )
-                db.add(result)
-                await db.commit()
-                await AccessGrants.set_access_grants('skill', result.id, form_data.access_grants, db=db)
-                if result:
-                    return await self._to_skill_model(result, db=db)
-                else:
-                    return None
-            except Exception as e:
-                log.exception(f'Error creating a new skill: {e}')
-                return None
+                session.add_all([result, entry])
+                grants = await AccessGrants.replace_access_grants(session, 'skill', result.id, form_data.access_grants)
+                await session.commit()
+                return await self._to_skill_model(result, [AccessGrantModel.model_validate(g) for g in grants])
+            except Exception:
+                await session.rollback()
+                raise
 
     async def get_skill_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[SkillModel]:
         try:
@@ -316,22 +376,101 @@ class SkillsTable:
             log.exception(f'Error searching skills: {e}')
             return SkillListResponse(items=[], total=0)
 
-    async def update_skill_by_id(
-        self, id: str, updated: dict, db: Optional[AsyncSession] = None
-    ) -> Optional[SkillModel]:
-        try:
-            async with get_async_db_context(db) as db:
-                access_grants = updated.pop('access_grants', None)
-                await db.execute(update(Skill).filter_by(id=id).values(**updated, updated_at=int(time.time())))
-                await db.commit()
-                if access_grants is not None:
-                    await AccessGrants.set_access_grants('skill', id, access_grants, db=db)
+    async def update_skill_by_id(self, id: str, updated: dict, db=None, user_id=None) -> Optional[SkillModel]:
+        async with get_async_db_context(db) as session:
+            try:
+                skill = await session.get(Skill, id, populate_existing=True)
+                if not skill:
+                    return None
+                expected = updated.get('expected_version_id')
+                if expected is not None and expected != skill.version_id:
+                    raise HTTPException(409, {'code': 'version_conflict', 'current_version_id': skill.version_id})
+                if any(updated.get(key) is not None for key in ('files', 'data', 'operations')) and expected is None:
+                    raise HTTPException(400, 'expected_version_id is required for file updates')
+                old = skill_snapshot(skill)
+                if sum(updated.get(key) is not None for key in ('files', 'data', 'operations')) > 1:
+                    raise ValueError('Provide data, files, or operations, not more than one')
+                files = (
+                    SkillData.model_validate(updated['data']).model_dump(exclude_none=True)['files']
+                    if updated.get('data') is not None
+                    else updated.get('files')
+                )
+                files = files if files is not None else skill.data['files']
+                if updated.get('operations') is not None:
+                    files = apply_operations(files, updated['operations'])
+                if updated.get('content') is not None:
+                    files = [f for f in files if f['path'] != 'SKILL.md'] + [
+                        {'path': 'SKILL.md', 'content': updated['content']}
+                    ]
+                files = validate_files(files, skill.data['files'])
+                snapshot = {key: updated.get(key, old.get(key)) for key in ('name', 'description', 'meta')}
+                snapshot['meta'] = SkillMeta.model_validate(snapshot['meta'] or {}).model_dump()
+                snapshot['data'] = {'files': files}
+                snapshot['content'] = next(f['content'] for f in files if f['path'] == 'SKILL.md')
+                values = {'is_active': updated.get('is_active', skill.is_active)}
+                if snapshot != old:
+                    entry = SkillHistories.new_entry(
+                        id, snapshot, user_id or skill.user_id, skill.version_id, updated.get('commit_message')
+                    )
+                    session.add(entry)
+                    values.update(snapshot, version_id=entry.id)
+                values['updated_at'] = int(time.time())
+                result = await session.execute(
+                    update(Skill)
+                    .where(Skill.id == id, Skill.version_id == skill.version_id)
+                    .values(**values)
+                    .execution_options(synchronize_session=False)
+                )
+                if result.rowcount != 1:
+                    raise HTTPException(409, {'code': 'version_conflict'})
+                if updated.get('access_grants') is not None:
+                    await AccessGrants.replace_access_grants(session, 'skill', id, updated['access_grants'])
+                await session.commit()
+                await session.refresh(skill)
+                grants = (
+                    (await session.execute(select(AccessGrant).filter_by(resource_type='skill', resource_id=id)))
+                    .scalars()
+                    .all()
+                )
+                return await self._to_skill_model(skill, [AccessGrantModel.model_validate(g) for g in grants])
+            except Exception:
+                await session.rollback()
+                raise
 
-                # populate_existing: the Core update above bypasses any identity-map copy
-                skill = await db.get(Skill, id, populate_existing=True)
-                return await self._to_skill_model(skill, db=db)
-        except Exception:
-            return None
+    async def update_skill_version(
+        self, id: str, version_id: str, expected_version_id: str, db=None
+    ) -> Optional[SkillModel]:
+        async with get_async_db_context(db) as session:
+            try:
+                # Lock before reading the target revision so deletion cannot race promotion.
+                await session.execute(update(Skill).where(Skill.id == id).values(version_id=Skill.version_id))
+                skill = await session.get(Skill, id, populate_existing=True)
+                if not skill:
+                    return None
+                if expected_version_id != skill.version_id:
+                    raise HTTPException(409, {'code': 'version_conflict', 'current_version_id': skill.version_id})
+                entry = await SkillHistories.get_history_by_id(id, version_id, db=session)
+                if not entry:
+                    raise HTTPException(404, 'Skill version not found')
+                snapshot = entry.snapshot
+                result = await session.execute(
+                    update(Skill)
+                    .where(Skill.id == id, Skill.version_id == expected_version_id)
+                    .values(
+                        **{key: snapshot[key] for key in ('name', 'description', 'content', 'data', 'meta')},
+                        version_id=version_id,
+                        updated_at=int(time.time()),
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+                if result.rowcount != 1:
+                    raise HTTPException(409, {'code': 'version_conflict'})
+                await session.commit()
+                await session.refresh(skill)
+                return await self._to_skill_model(skill, db=session)
+            except Exception:
+                await session.rollback()
+                raise
 
     async def toggle_skill_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[SkillModel]:
         async with get_async_db_context(db) as db:
@@ -352,7 +491,8 @@ class SkillsTable:
     async def delete_skill_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await AccessGrants.revoke_all_access('skill', id, db=db)
+                await db.execute(delete(AccessGrant).filter_by(resource_type='skill', resource_id=id))
+                await db.execute(delete(SkillHistory).filter_by(skill_id=id))
                 await db.execute(delete(Skill).filter_by(id=id))
                 await db.commit()
 

@@ -51,7 +51,7 @@
 
 <div class="space-y-2">
 	<div class="mb-1 flex min-h-7 w-full flex-wrap items-center justify-between gap-x-2 gap-y-1">
-		<div class="min-w-fit flex-1 self-center text-xs text-gray-500 dark:text-gray-400">
+		<div class="min-w-fit flex-1 self-center text-xs font-normal text-gray-600 dark:text-gray-400">
 			<slot name="label">{$i18n.t('Default Prompt Suggestions')}</slot>
 		</div>
 
@@ -163,7 +163,7 @@
 						<div class="grid min-w-0 gap-1 md:grid-cols-2 md:gap-1.5">
 							<Tooltip content={$i18n.t('e.g. Tell me a fun fact')} placement="top-start">
 								<input
-									class="w-full bg-transparent text-[0.8125rem] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
+									class="w-full bg-transparent text-[0.8125rem] leading-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
 									placeholder={$i18n.t('Title')}
 									aria-label={$i18n.t('Title')}
 									value={prompt.title[0]}
@@ -176,7 +176,7 @@
 
 							<Tooltip content={$i18n.t('e.g. about the Roman Empire')} placement="top-start">
 								<input
-									class="w-full bg-transparent text-[0.8125rem] leading-5 text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+									class="w-full bg-transparent text-[0.8125rem] leading-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
 									placeholder={$i18n.t('Subtitle')}
 									aria-label={$i18n.t('Subtitle')}
 									value={prompt.title[1]}
@@ -194,7 +194,7 @@
 							placement="top-start"
 						>
 							<textarea
-								class="min-h-5 w-full resize-none overflow-hidden bg-transparent text-[0.8125rem] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
+								class="min-h-5 w-full resize-none overflow-hidden bg-transparent text-[0.8125rem] leading-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
 								placeholder={$i18n.t('Content')}
 								aria-label={$i18n.t('Content')}
 								rows="1"

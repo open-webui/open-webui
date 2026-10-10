@@ -1121,6 +1121,28 @@ class NotificationEventSink:
 
 class SocketSessionEventSink:
     async def handle_event(self, app: Any, event: Event, request: Any | None = None) -> None:
+        from open_webui.socket.main import refresh_chat_access
+
+        if event.event in {
+            EVENTS.FOLDER_ACCESS_UPDATED.name,
+            EVENTS.FOLDER_UPDATED.name,
+            EVENTS.FOLDER_PARENT_UPDATED.name,
+            EVENTS.FOLDER_DELETED.name,
+            EVENTS.GROUP_MEMBER_REMOVED.name,
+            EVENTS.GROUP_MEMBER_ADDED.name,
+            EVENTS.GROUP_UPDATED.name,
+            EVENTS.GROUP_DELETED.name,
+            EVENTS.CHAT_DELETED_ALL.name,
+        }:
+            await refresh_chat_access()
+        elif event.event in {
+            EVENTS.CHAT_SHARED.name,
+            EVENTS.CHAT_UNSHARED.name,
+            EVENTS.CHAT_FOLDER_UPDATED.name,
+            EVENTS.CHAT_DELETED.name,
+        }:
+            await refresh_chat_access((event.subject or {}).get('id'))
+
         if event.event not in {EVENTS.USER_DELETED.name, EVENTS.USER_ROLE_UPDATED.name}:
             return
 

@@ -69,6 +69,7 @@ from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
+from open_webui.utils.skill_files import SkillFile, SkillFileOperation, bounded_skill_manifest, skill_content_page
 
 log = logging.getLogger(__name__)
 
@@ -3316,6 +3317,7 @@ async def query_knowledge_files(
                 queries=[query],
                 embedding_function=lambda queries, prefix: embedding_function(queries, prefix=prefix, user=user_model),
                 k=count,
+                user=user_model,
             )
 
             if query_results and 'documents' in query_results:
@@ -3486,19 +3488,12 @@ async def view_skill(
     __metadata__: dict = None,
     __event_call__: callable = None,
 ) -> str:
+    """Read skill instructions and file list. Use read_skill_file to continue from next_offset.
+
+    :param id: Skill ID from the available skills manifest.
     """
-    Load the full instructions of a skill by its id from the available skills manifest.
-    Use this when you need detailed instructions for a skill listed in <available_skills>.
-
-    :param id: The id of the skill to load (as shown in the manifest)
-    :return: The full skill instructions as markdown content
-    """
-    if __request__ is None:
-        return JSONCodec.dumps({'error': 'Request context not available'})
-
-    if not __user__:
-        return JSONCodec.dumps({'error': 'User context not available'})
-
+    if __request__ is None or not __user__:
+        return JSONCodec.dumps({'error': 'Request and user context required'})
     try:
         terminal_skill_prefix = 'terminal:'
         if isinstance(id, str) and id.startswith(terminal_skill_prefix):
@@ -3512,42 +3507,218 @@ async def view_skill(
                 return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
             return JSONCodec.dumps(skill, ensure_ascii=False)
 
-        from open_webui.models.access_grants import AccessGrants
-        from open_webui.models.skills import Skills
+        from types import SimpleNamespace
+        from open_webui.models.skills import get_skill_snapshot
+        from open_webui.routers.skills import authorized_skill
+        from open_webui.utils.skill_files import file_summaries
 
-        user_id = __user__.get('id')
-
-        # Direct DB lookup by id (case-insensitive since IDs are stored lowercase)
-        skill = await Skills.get_skill_by_id(id.lower())
-
-        if not skill or not skill.is_active:
-            return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
-
-        # Check user access
-        user_role = __user__.get('role', 'user')
-        if user_role != 'admin' and skill.user_id != user_id:
-            user_group_ids = [
-                group.id for group in await Groups.get_groups_by_member_id(user_id, include_inherited=True)
-            ]
-            if not await AccessGrants.has_access(
-                user_id=user_id,
-                resource_type='skill',
-                resource_id=skill.id,
-                permission='read',
-                user_group_ids=set(user_group_ids),
-            ):
-                return JSONCodec.dumps({'error': 'Access denied'})
-
+        actor = SimpleNamespace(**__user__)
+        skill = await authorized_skill(id.lower(), actor)
+        if not skill.is_active:
+            await authorized_skill(skill.id, actor, 'write')
+        metadata = __metadata__ if __metadata__ is not None else {}
+        context = metadata.get('chat_context') or {}
+        metadata['chat_context'] = context
+        versions = context.setdefault('skill_versions', {})
+        version_id = skill.version_id
+        snapshot = await get_skill_snapshot(skill, version_id)
+        versions[skill.id] = version_id
         return JSONCodec.dumps(
             {
-                'name': skill.name,
-                'content': skill.content,
+                'id': skill.id,
+                'version_id': version_id,
+                'name': snapshot['name'],
+                **skill_content_page(snapshot['content']),
+                **bounded_skill_manifest(file_summaries(snapshot['data']['files'])),
             },
             ensure_ascii=False,
         )
-    except Exception as e:
-        log.exception(f'view_skill error: {e}')
-        return JSONCodec.dumps({'error': str(e)})
+    except Exception as error:
+        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+
+
+async def read_skill_file(
+    id: str,
+    path: str,
+    offset: int = 0,
+    max_chars: int = 10000,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+    __event_call__: callable = None,
+) -> str:
+    """Read a skill file from the loaded snapshot. Terminal skills support SKILL.md only.
+
+    :param id: Skill ID.
+    :param path: Relative path within the skill.
+    :param offset: Character offset for paging text.
+    :param max_chars: Maximum characters to return, up to 100000.
+    """
+    try:
+        from types import SimpleNamespace
+        from urllib.parse import urlencode
+        from open_webui.models.skills import get_skill_snapshot
+        from open_webui.routers.skills import authorized_skill
+        from open_webui.utils.skill_files import file_summaries
+
+        if not __user__ or __request__ is None:
+            raise ValueError('Request and user context required')
+        if id.startswith('terminal:'):
+            from open_webui.utils.terminals import get_terminal_skill
+
+            if path != 'SKILL.md':
+                raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
+            skill = await get_terminal_skill(
+                __request__,
+                __user__,
+                __metadata__ if __metadata__ is not None else {},
+                unquote(id.removeprefix('terminal:')),
+                {'__event_call__': __event_call__},
+                offset=offset,
+                max_chars=max_chars,
+                refresh=False,
+            )
+            if not skill:
+                raise ValueError(f"Skill '{id}' not found")
+            return JSONCodec.dumps(
+                {'path': path, 'content': skill['content'], 'next_offset': skill['next_offset']}, ensure_ascii=False
+            )
+        skill = await authorized_skill(id, SimpleNamespace(**__user__))
+        if not skill.is_active:
+            await authorized_skill(id, SimpleNamespace(**__user__), 'write')
+        metadata = __metadata__ if __metadata__ is not None else {}
+        context = metadata.get('chat_context') or {}
+        metadata['chat_context'] = context
+        versions = context.setdefault('skill_versions', {})
+        version_id = versions.get(skill.id) or skill.version_id
+        snapshot = await get_skill_snapshot(skill, version_id)
+        versions[skill.id] = version_id
+        file = next((f for f in snapshot['data']['files'] if f['path'] == path), None)
+        if file is None:
+            raise ValueError('File not found')
+        if file.get('encoding'):
+            return JSONCodec.dumps(
+                {
+                    **file_summaries([file])[0],
+                    'version_id': version_id,
+                    'url': '/workspace/skills/edit?' + urlencode({'id': id, 'version_id': version_id, 'path': path}),
+                }
+            )
+        return JSONCodec.dumps(
+            {
+                'path': path,
+                'version_id': version_id,
+                **skill_content_page(file['content'], offset, max_chars),
+            },
+            ensure_ascii=False,
+        )
+    except Exception as error:
+        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+
+
+async def create_skill(
+    id: str,
+    name: str,
+    content: str,
+    files: list[SkillFile] = None,
+    commit_message: str = None,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """Create a private workspace skill with SKILL.md and optional UTF-8 supporting files. No terminal is needed.
+
+    :param id: Unique lowercase skill slug.
+    :param name: Display name.
+    :param content: Complete SKILL.md text, including name and description frontmatter.
+    :param files: Optional supporting files, each with path and content. UTF-8 text only.
+    :param commit_message: Optional description of this save.
+    """
+    try:
+        from types import SimpleNamespace
+        from open_webui.routers.skills import create_new_skill
+        from open_webui.models.skills import SkillForm
+        from open_webui.utils.skill_files import frontmatter
+        from open_webui.utils.access_control import has_permission
+
+        if __request__ is None or not __user__:
+            raise ValueError('Request and user context required')
+        files = [f.model_dump(exclude_none=True) if isinstance(f, SkillFile) else f for f in files or []]
+        if any(f.get('encoding') or f.get('path') == 'SKILL.md' for f in files):
+            raise ValueError('Supporting files must be UTF-8 text; pass SKILL.md in content')
+        # Agent authoring requires the workspace editor permission, not just import access.
+        if __user__.get('role') != 'admin' and not await has_permission(
+            __user__['id'], 'workspace.skills', await Config.get('user.permissions')
+        ):
+            raise ValueError('Skill authoring permission required')
+        result = await create_new_skill(
+            __request__,
+            SkillForm(
+                id=id,
+                name=name,
+                content=content,
+                description=str(frontmatter(content).get('description', '')),
+                files=[{'path': 'SKILL.md', 'content': content}, *(files or [])],
+                commit_message=commit_message,
+                access_grants=[],
+            ),
+            SimpleNamespace(**__user__),
+            None,
+        )
+        return JSONCodec.dumps(
+            {'id': result.id, 'version_id': result.version_id, 'url': '/workspace/skills/edit?id=' + result.id}
+        )
+    except Exception as error:
+        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+
+
+async def update_skill_files(
+    id: str,
+    operations: list[SkillFileOperation],
+    commit_message: str = None,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+) -> str:
+    """Save file operations as a new skill version, preserving untouched files. If the skill changed since it was read, call view_skill again and reapply the edit.
+
+    :param id: Skill to edit. Requires write access.
+    :param operations: File operations: {op: put, path, content}, {op: move, path, destination}, or {op: delete, path}. Use put with path SKILL.md to edit the instructions. Text writes only.
+    :param commit_message: Optional description of the change.
+    """
+    try:
+        from types import SimpleNamespace
+        from open_webui.routers.skills import authorized_skill
+        from open_webui.models.skills import Skills
+        from open_webui.events import EVENTS, publish_event
+
+        if __request__ is None or not __user__:
+            raise ValueError('Request and user context required')
+        user = SimpleNamespace(**__user__)
+        skill = await authorized_skill(id, user, 'write')
+        metadata = __metadata__ if __metadata__ is not None else {}
+        context = metadata.get('chat_context') or {}
+        metadata['chat_context'] = context
+        versions = context.setdefault('skill_versions', {})
+        expected_version_id = versions.get(skill.id) or skill.version_id
+        operations = [
+            op.model_dump(exclude_none=True) if isinstance(op, SkillFileOperation) else op for op in operations or []
+        ]
+        if any(op.get('encoding') for op in operations):
+            raise ValueError('Agent file writes support UTF-8 text only')
+        result = await Skills.update_skill_by_id(
+            id,
+            {
+                'expected_version_id': expected_version_id,
+                'operations': operations or [],
+                'commit_message': commit_message,
+            },
+            user_id=user.id,
+        )
+        versions[skill.id] = result.version_id
+        await publish_event(__request__, EVENTS.SKILL_UPDATED, actor=user, subject_id=id, data={'name': result.name})
+        return JSONCodec.dumps({'id': result.id, 'version_id': result.version_id})
+    except Exception as error:
+        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
 
 
 # =============================================================================

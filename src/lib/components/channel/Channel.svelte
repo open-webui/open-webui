@@ -404,7 +404,7 @@
 					</div>
 				</div>
 
-				<div class=" pb-[1rem] px-2.5">
+				<div class=" pb-3 px-3">
 					<MessageInput
 						id="root"
 						bind:chatInputElement
@@ -460,7 +460,7 @@
 				maxWidth={640}
 				className="h-full"
 			>
-				<div class="h-full w-full shadow-xl">
+				<div class="h-full w-full border-l border-gray-100/60 dark:border-gray-800/40">
 					<Thread
 						{threadId}
 						{channel}

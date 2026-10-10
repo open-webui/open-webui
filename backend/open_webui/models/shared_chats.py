@@ -1,7 +1,7 @@
 import logging
 import time
 import uuid
-from typing import Optional
+from typing import Literal, Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
@@ -9,6 +9,13 @@ from sqlalchemy import JSON, BigInteger, Column, ForeignKey, Text, delete, selec
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+
+ChatShareMode = Literal['continue'] | None
+
+
+class ShareChatForm(BaseModel):
+    share_mode: ChatShareMode = None
+
 
 ####################
 # SharedChat DB Schema
@@ -58,7 +65,9 @@ class SharedChatResponse(BaseModel):
 
 
 class SharedChatsTable:
-    async def create(self, chat_id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[SharedChatModel]:
+    async def create(
+        self, chat_id: str, user_id: str, db: Optional[AsyncSession] = None, *, share_mode: ChatShareMode = None
+    ) -> Optional[SharedChatModel]:
         """
         Create a snapshot of the chat for link sharing.
         Returns the SharedChatModel with the share token as its id.
@@ -78,7 +87,7 @@ class SharedChatsTable:
                 chat_id=chat_id,
                 user_id=user_id,
                 title=chat.title,
-                chat=chat.chat,
+                chat={**chat.chat, 'share_mode': share_mode},
                 created_at=now,
                 updated_at=now,
             )
@@ -88,7 +97,9 @@ class SharedChatsTable:
 
             return SharedChatModel.model_validate(shared_chat)
 
-    async def update(self, share_id: str, db: Optional[AsyncSession] = None) -> Optional[SharedChatModel]:
+    async def update(
+        self, share_id: str, form_data: ShareChatForm | None = None, db: Optional[AsyncSession] = None
+    ) -> Optional[SharedChatModel]:
         """
         Re-snapshot: update the shared chat with the current state of the original chat.
         """
@@ -104,12 +115,30 @@ class SharedChatsTable:
                 return None
 
             shared_chat.title = chat.title
-            shared_chat.chat = chat.chat
+            shared_chat.chat = {
+                **chat.chat,
+                'share_mode': shared_chat.chat.get('share_mode'),
+                **(form_data.model_dump(exclude_unset=True) if form_data else {}),
+            }
             shared_chat.updated_at = int(time.time())
 
             await db.commit()
             await db.refresh(shared_chat)
             return SharedChatModel.model_validate(shared_chat)
+
+    async def set_share_mode(self, share_id: str, share_mode: ChatShareMode, db: Optional[AsyncSession] = None):
+        async with get_async_db_context(db) as db:
+            shared = await db.get(SharedChat, share_id)
+            if shared:
+                if share_mode is None and shared.chat.get('share_mode') == 'continue':
+                    from open_webui.models.chats import Chat
+
+                    chat = await db.get(Chat, shared.chat_id)
+                    if chat:
+                        shared.chat = chat.chat
+                        shared.title = chat.title
+                shared.chat = {**shared.chat, 'share_mode': share_mode}
+                await db.commit()
 
     async def get_by_id(self, share_id: str, db: Optional[AsyncSession] = None) -> Optional[SharedChatModel]:
         """Get a shared chat by its share token."""

@@ -3,6 +3,7 @@
 	import { config, showCallOverlay, showControls } from '$lib/stores';
 	import type { RealtimeCall } from '$lib/utils/realtime';
 	import CallOverlay from './CallOverlay.svelte';
+	import BridgeCallOverlay from './CallOverlay/BridgeCallOverlay.svelte';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext<any>('i18n');
@@ -36,18 +37,28 @@
 		started = true;
 	});
 
-	$: if (started && callMode === 'bridge' && !bridge?.connected && !bridge?.connecting) close();
+	$: if (
+		started &&
+		callMode === 'bridge' &&
+		!bridge?.connected &&
+		!bridge?.connecting &&
+		!bridge?.error
+	)
+		close();
 </script>
 
 {#if started}
-	<CallOverlay
-		bind:files
-		{submitPrompt}
-		{stopResponse}
-		{modelId}
-		{chatId}
-		{eventTarget}
-		bridge={callMode === 'bridge' ? bridge : undefined}
-		on:close
-	/>
+	{#if callMode === 'bridge'}
+		<BridgeCallOverlay {bridge} {modelId} on:close />
+	{:else}
+		<CallOverlay
+			bind:files
+			{submitPrompt}
+			{stopResponse}
+			{modelId}
+			{chatId}
+			{eventTarget}
+			on:close
+		/>
+	{/if}
 {/if}

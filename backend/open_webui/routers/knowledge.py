@@ -1747,7 +1747,7 @@ async def delete_knowledge_by_id(
                 log.info('Updating model %s to remove knowledge base %s', model.id, id)
                 model.meta.knowledge = updated_knowledge
                 model_form = ModelForm(**model.model_dump())
-                await Models.update_model_by_id(model.id, model_form, db=db)
+                await Models.update_model_by_id(model.id, model_form, db=db, user_id=user.id)
 
     # Clean up vector DB
     if is_external_knowledge(knowledge):

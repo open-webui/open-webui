@@ -1,4 +1,6 @@
 <script lang="ts">
+	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
+	let accessModal: WorkspaceAccessModal;
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
@@ -7,7 +9,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	const i18n = getContext<any>('i18n');
 	dayjs.extend(relativeTime);
@@ -97,7 +99,13 @@
 	let models = null;
 	let total = null;
 
-	let searchDebounceTimer;
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+		searchController?.abort();
+	});
 
 	$: if (loaded) {
 		workspaceActions.set([
@@ -193,6 +201,11 @@
 	const getModelList = async () => {
 		if (!loaded) return;
 
+		clearTimeout(searchDebounceTimer);
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
+
 		try {
 			const res = await getWorkspaceModels(
 				localStorage.token,
@@ -201,11 +214,14 @@
 				selectedTag,
 				sortKey,
 				sortDirection,
-				page
+				page,
+				signal
 			).catch((error) => {
-				toast.error(`${error}`);
+				if (!signal.aborted) toast.error(`${error}`);
 				return null;
 			});
+
+			if (signal.aborted) return;
 
 			if (res) {
 				models = res.items;
@@ -213,10 +229,11 @@
 				workspaceCounts.update((counts) => ({ ...counts, models: total }));
 
 				// get tags
-				tags = await getModelTags(localStorage.token).catch((error) => {
-					toast.error(`${error}`);
+				const fetchedTags = await getModelTags(localStorage.token).catch((error) => {
+					if (!signal.aborted) toast.error(`${error}`);
 					return [];
 				});
+				if (!signal.aborted) tags = fetchedTags;
 			}
 		} catch (err) {
 			console.error(err);
@@ -491,6 +508,8 @@
 	});
 </script>
 
+<WorkspaceAccessModal bind:this={accessModal} resourceType="models" onUpdated={getModelList} />
+
 <svelte:head>
 	<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -571,6 +590,7 @@
 					placeholder={$i18n.t('Search Models')}
 					maxlength="500"
 					on:input={() => {
+						searchController?.abort();
 						clearTimeout(searchDebounceTimer);
 						searchDebounceTimer = setTimeout(() => {
 							page = 1;
@@ -646,7 +666,7 @@
 					</Tooltip>
 
 					<div slot="content">
-						<DropdownMenu className="w-[10.625rem] shadow-sm">
+						<DropdownMenu className="min-w-[10.625rem] shadow-sm">
 							<button
 								class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 								type="button"
@@ -701,10 +721,11 @@
 		{#if models !== null}
 			{#if (models ?? []).length !== 0}
 				<div class="my-1" id="model-list">
-					<div class="flex items-center gap-3 px-2 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
-						<span>{$i18n.t('Sort by')}</span>
+					<div
+						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+					>
 						<button
-							class="flex items-center gap-1 py-0.5"
+							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
 							type="button"
 							on:click={() => setSortKey('name')}
 						>
@@ -718,8 +739,10 @@
 							{/if}
 						</button>
 
+						<div class="hidden w-44 shrink-0 md:block"></div>
+
 						<button
-							class="flex items-center gap-1 py-0.5"
+							class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
 							type="button"
 							on:click={() => setSortKey('updated_at')}
 						>
@@ -816,11 +839,15 @@
 												</div>
 
 												<Tooltip
-													content={dayjs(model.updated_at * 1000).format('LLLL')}
+													content={dayjs(model.updated_at * 1000)
+														.locale($i18n.language)
+														.format('LLLL')}
 													className="hidden shrink-0 sm:flex"
 												>
 													<span class="text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-500"
-														>{dayjs(model.updated_at * 1000).fromNow()}</span
+														>{dayjs(model.updated_at * 1000)
+															.locale($i18n.language)
+															.fromNow()}</span
 													>
 												</Tooltip>
 
@@ -904,6 +931,7 @@
 									{:else}
 										<div class="flex shrink-0 flex-row items-center gap-1 self-center">
 											<ModelMenu
+												accessHandler={() => accessModal.open(model.id)}
 												user={$user}
 												{model}
 												writeAccess={model.write_access}
@@ -986,7 +1014,7 @@
 
 	{#if $config?.features.enable_community_sharing}
 		<CommunityDiscover
-			href="https://openwebui.com/models"
+			href="https://openwebui.com/search?type=model"
 			title={$i18n.t('Discover a model')}
 			description={$i18n.t('Discover, download, and explore model presets')}
 		/>

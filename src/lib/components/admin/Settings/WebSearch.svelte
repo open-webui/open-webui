@@ -50,7 +50,14 @@
 		'linkup',
 		'openserp'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'microsoft_web_iq', 'external'];
+	let webLoaderEngines = [
+		'playwright',
+		'firecrawl',
+		'tavily',
+		'exa',
+		'microsoft_web_iq',
+		'external'
+	];
 
 	let webConfig: any = null;
 	const inputClass =
@@ -1258,7 +1265,23 @@
 					</SettingsSelect>
 				</AdminSettingRow>
 
-				{#if webConfig.WEB_LOADER_ENGINE === '' || webConfig.WEB_LOADER_ENGINE === 'safe_web'}
+				{#if webConfig.WEB_LOADER_ENGINE === 'exa'}
+					{#if webConfig.WEB_SEARCH_ENGINE === 'exa'}
+						<p class="text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t('Exa search and web loading share the API key configured above.')}
+						</p>
+					{:else}
+						<AdminSettingField label={$i18n.t('settings.admin.web.exaApiKey.label')}>
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('Enter Exa API Key')}
+								bind:value={webConfig.EXA_API_KEY}
+							/>
+						</AdminSettingField>
+					{/if}
+				{/if}
+
+				{#if ['', 'safe_web', 'exa'].includes(webConfig.WEB_LOADER_ENGINE)}
 					<AdminSettingField
 						label={$i18n.t('settings.admin.web.timeout.label')}
 						description={$i18n.t('settings.admin.web.timeout.description')}

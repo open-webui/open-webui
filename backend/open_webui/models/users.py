@@ -310,6 +310,8 @@ class UserInfoResponse(UserStatus):
     email: str
     role: str
     bio: str | None = None
+    last_active_at: int | None = None
+    timezone: str | None = None
     groups: list | None = []
     is_active: bool = False
 

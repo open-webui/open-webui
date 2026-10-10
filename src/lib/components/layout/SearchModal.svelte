@@ -251,7 +251,7 @@
 		}
 	};
 
-	let actions = [
+	$: actions = [
 		{
 			label: $i18n.t('Start a new conversation'),
 			onClick: async () => {
@@ -260,7 +260,21 @@
 				onClose();
 			},
 			icon: EditPencilIcon
-		}
+		},
+		...(($config?.features?.enable_notes ?? false) &&
+		($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
+			? [
+					{
+						label: $i18n.t('Create a new note'),
+						onClick: async () => {
+							await goto(`/notes/new?content=${encodeURIComponent(query)}`);
+							show = false;
+							onClose();
+						},
+						icon: NotesIcon
+					}
+				]
+			: [])
 	];
 
 	let query = '';
@@ -522,24 +536,6 @@
 	};
 
 	onMount(() => {
-		actions = [
-			...actions,
-			...(($config?.features?.enable_notes ?? false) &&
-			($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
-				? [
-						{
-							label: $i18n.t('Create a new note'),
-							onClick: async () => {
-								await goto(`/notes/new?content=${encodeURIComponent(query)}`);
-								show = false;
-								onClose();
-							},
-							icon: NotesIcon
-						}
-					]
-				: [])
-		];
-
 		document.addEventListener('keydown', onKeyDown);
 		document.addEventListener('keydown', onShiftKeyDown);
 		document.addEventListener('keyup', onShiftKeyUp);
@@ -768,14 +764,16 @@
 							>
 								<div class="text-gray-500 dark:text-gray-400 text-xs">
 									{$i18n.t(
-										dayjs(chat?.updated_at * 1000).calendar(null, {
-											sameDay: '[Today]',
-											nextDay: '[Tomorrow]',
-											nextWeek: 'dddd',
-											lastDay: '[Yesterday]',
-											lastWeek: '[Last] dddd',
-											sameElse: 'L'
-										})
+										dayjs(chat?.updated_at * 1000)
+											.locale($i18n.language)
+											.calendar(null, {
+												sameDay: '[Today]',
+												nextDay: '[Tomorrow]',
+												nextWeek: 'dddd',
+												lastDay: '[Yesterday]',
+												lastWeek: '[Last] dddd',
+												sameElse: 'L'
+											})
 									)}
 								</div>
 

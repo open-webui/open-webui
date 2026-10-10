@@ -26,6 +26,7 @@ from open_webui.retrieval.vector.dbs.milvus import (
     _metadata_exprs,
     _supports_bm25,
     _truncate_text,
+    _write_in_batches,
 )
 from open_webui.retrieval.vector.main import (
     GetResult,
@@ -237,7 +238,7 @@ class MilvusClient(VectorDBBase):
             )
 
         try:
-            self.client.insert(collection_name=mt_collection, data=entities)
+            _write_in_batches(self.client.insert, mt_collection, entities)
         except MilvusException as e:
             log.error(
                 f'Milvus insert failed (collection={mt_collection}, '

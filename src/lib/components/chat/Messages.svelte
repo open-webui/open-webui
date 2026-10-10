@@ -45,6 +45,7 @@
 	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
+	export let shareMode: 'continue' | null = null;
 	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
@@ -143,15 +144,18 @@
 		})();
 	}
 
-	const scrollToBottom = () => {
+	export const scrollToBottom = () => {
 		const element = getMessagesContainer();
 		if (element) {
 			element.scrollTop = element.scrollHeight;
 
-			// Follow-up scroll to account for content-visibility: auto re-layouts
+			// Re-scroll across two frames as content-visibility resolves message heights.
 			requestAnimationFrame(() => {
 				if (element) {
 					element.scrollTop = element.scrollHeight;
+					requestAnimationFrame(() => {
+						element.scrollTop = element.scrollHeight;
+					});
 				}
 			});
 		}
@@ -332,6 +336,8 @@
 					parentId: history.messages[messageId].parentId,
 					childrenIds: [],
 					role: 'user',
+					user_id: $_user?.id,
+					user: { id: $_user?.id, name: $_user?.name },
 					content: userPrompt,
 					...(files && { files: files }),
 					models: selectedModels,
@@ -530,6 +536,7 @@
 								{editCodeBlock}
 								{topPadding}
 								{onInsertToNote}
+								{shareMode}
 							/>
 						{/each}
 					</ul>

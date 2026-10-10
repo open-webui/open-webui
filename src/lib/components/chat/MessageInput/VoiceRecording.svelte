@@ -11,7 +11,7 @@
 	import LocalizedFormat from 'dayjs/plugin/localizedFormat';
 	dayjs.extend(LocalizedFormat);
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let recording = false;
 	export let transcribe = true;
@@ -175,7 +175,10 @@
 		// Create a blob from the audio chunks
 
 		await tick();
-		const file = blobToFile(audioBlob, `Recording-${dayjs().format('L LT')}.${ext}`);
+		const file = blobToFile(
+			audioBlob,
+			`Recording-${dayjs().locale($i18n.language).format('L LT')}.${ext}`
+		);
 
 		if (transcribe) {
 			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {

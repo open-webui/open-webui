@@ -45,7 +45,7 @@
 	import Skeleton from '../chat/Messages/Skeleton.svelte';
 	import XMark from '../icons/XMark.svelte';
 
-	export let placeholder = $i18n.t('Type here...');
+	export let placeholder: string | undefined = undefined;
 	export let chatInputElement: any;
 
 	export let id: string | null = null;
@@ -894,13 +894,15 @@
 						{/if}
 						<div
 							id="message-input-container"
-							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850/30 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-0.5 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
+							class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-gray-100/60 dark:border-gray-800/50 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition bg-white dark:bg-gray-400/5 dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if replyToMessage !== null}
-								<div class="px-3 pt-3 text-left w-full flex flex-col z-10">
+								<div class="px-3 pt-2 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">
-										<div class="pl-[0.0625rem] flex items-center gap-2 text-sm">
+										<div
+											class="min-w-0 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+										>
 											<div class="translate-y-[0.5px]">
 												<span class=""
 													>{$i18n.t('Replying to {{NAME}}', {
@@ -911,12 +913,14 @@
 										</div>
 										<div>
 											<button
-												class="flex items-center dark:text-gray-500"
+												class="flex size-6 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
+												aria-label={$i18n.t('Cancel')}
+												type="button"
 												on:click={() => {
 													replyToMessage = null;
 												}}
 											>
-												<XMark />
+												<XMark className="size-3.5" />
 											</button>
 										</div>
 									</div>
@@ -992,11 +996,12 @@
 									{#key $settings?.richTextInput && $settings?.showFormattingToolbar}
 										<RichTextInput
 											id="chat-input"
+											className="input-prose min-h-fit h-full text-sm!"
 											bind:this={chatInputElement}
 											json={true}
 											messageInput={true}
 											editable={!disabled}
-											{placeholder}
+											placeholder={placeholder ?? $i18n.t('Type here...')}
 											richText={$settings?.richTextInput ?? true}
 											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
@@ -1087,8 +1092,8 @@
 								</div>
 							</div>
 
-							<div class=" flex justify-between mt-0.5 mb-2 mx-0.5 max-w-full">
-								<div class="ml-1 self-end flex items-center flex-1 min-w-0">
+							<div class=" flex items-center justify-between gap-2 p-1.5 pt-0.5 max-w-full">
+								<div class="flex items-center flex-1 min-w-0">
 									<slot name="menu">
 										{#if acceptFiles}
 											<InputMenu
@@ -1099,7 +1104,7 @@
 											>
 												<button
 													id="input-menu-button"
-													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+													class="bg-transparent hover:bg-gray-100 text-gray-500 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg size-7 flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 													type="button"
 													aria-label={$i18n.t('More')}
 												>
@@ -1107,7 +1112,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														viewBox="0 0 20 20"
 														fill="currentColor"
-														class="size-5"
+														class="size-4"
 													>
 														<path
 															d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
@@ -1119,12 +1124,12 @@
 									</slot>
 								</div>
 
-								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.03125rem]">
+								<div class="flex items-center gap-1 shrink-0">
 									{#if content === ''}
 										<Tooltip content={$i18n.t('Record voice')}>
 											<button
 												id="voice-input-button"
-												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-[0.3125rem] mr-0.5 self-center"
+												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-lg size-7 flex items-center justify-center"
 												type="button"
 												on:click={async () => {
 													try {
@@ -1158,7 +1163,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
 													fill="currentColor"
-													class="w-5 h-5 translate-y-[0.5px]"
+													class="size-4"
 												>
 													<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
 													<path
@@ -1175,7 +1180,7 @@
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
 														aria-label={$i18n.t('Stop')}
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-[0.3125rem]"
+														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full size-7 flex items-center justify-center"
 														on:click={() => {
 															onStop();
 														}}
@@ -1184,7 +1189,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 24 24"
 															fill="currentColor"
-															class="size-5"
+															class="size-4"
 														>
 															<path
 																fill-rule="evenodd"
@@ -1203,7 +1208,7 @@
 														aria-label={$i18n.t('Send message')}
 														class="{content !== '' || files.length !== 0
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full size-7 flex items-center justify-center self-center"
 														type="submit"
 														disabled={content === '' && files.length === 0}
 													>
@@ -1211,7 +1216,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 16 16"
 															fill="currentColor"
-															class="size-5"
+															class="size-4"
 														>
 															<path
 																fill-rule="evenodd"

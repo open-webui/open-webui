@@ -69,7 +69,7 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
-	import { RealtimeCall, type BridgeSubmission } from '$lib/utils/realtime';
+	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
 
@@ -82,11 +82,12 @@
 		getAllTags,
 		getChatById,
 		getTagsById,
+		importChats,
 		resolveChatMessageToolCall,
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
 	import {
 		getAndUpdateUserLocation,
@@ -163,6 +164,7 @@
 	let navbarElement;
 
 	let showEventConfirmation = false;
+	let pendingUrlActions: { urls: string[]; call: boolean } | null = null;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
 	let eventConfirmationInput = false;
@@ -376,11 +378,38 @@
 	let generationController = null;
 	let contextCompactionToastId = null;
 
-	let chat = null;
+	let chat: any = null;
 	let tags = [];
 
 	// Read-only when viewing someone else's chat (e.g. via shared folder access)
 	$: readOnly = chat != null && chat.user_id !== $user?.id;
+	$: canClone = readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
+	let cloning = false;
+
+	const cloneSharedChat = async () => {
+		if (!canClone || cloning) return;
+		cloning = true;
+		try {
+			const [copy] = await importChats(localStorage.token, [
+				{
+					chat: {
+						...chat.chat,
+						title: $i18n.t('Clone of {{TITLE}}', { TITLE: chat.title }),
+						originalChatId: chat.id,
+						branchPointMessageId: history.currentId
+					}
+				}
+			]);
+			if (copy) {
+				await goto(`/c/${copy.id}`);
+				await refreshChatList(localStorage.token);
+			}
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			cloning = false;
+		}
+	};
 
 	let chatOwner = null;
 
@@ -446,7 +475,7 @@
 			}
 		);
 
-		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
+		if (!readOnly && $chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, { params }).catch((err) => {
 				console.error('[tool permissions chat]', err);
 				return null;
@@ -457,6 +486,7 @@
 		if (tool_approval_mode === 'full') {
 			const messages = [...Object.values(history?.messages ?? {})].reverse() as any[];
 			for (const message of messages) {
+				if ((message.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id) continue;
 				const output = (Array.isArray(message?.output) ? message.output : []) as any[];
 				const resultCallIds = new Set(
 					output
@@ -538,6 +568,7 @@
 			? createMessagesList(chatHistory, chatHistory.currentId)
 			: Object.values(chatHistory.messages);
 		for (const message of [...messages].reverse()) {
+			if ((message.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id) continue;
 			const pending = getPendingAskUserFromMessage(message);
 			if (pending) return pending;
 		}
@@ -705,6 +736,7 @@
 
 	const saveChatVariables = async (values) => {
 		chatVariables = { ...chatVariables, ...values };
+		if (readOnly) return;
 
 		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, {}, chatVariables).catch(
@@ -1231,8 +1263,121 @@
 		}
 	};
 
+	let joinedChatId = '';
+	let chatRefresh: { id: string; promise: Promise<void> } | null = null;
+	let typingUsers: { id: string; name: string }[] = [];
+	let typingUsersTimeout: Record<string, ReturnType<typeof setTimeout>> = {};
+	let lastTypingEmit = 0;
+
+	const emitTyping = (typing: boolean) => {
+		if (!$socket?.connected || !joinedChatId) return;
+		if (typing && (joinedChatId !== $chatId || (readOnly && chat?.chat?.share_mode !== 'continue')))
+			return;
+		if (typing ? Date.now() - lastTypingEmit < 2000 : !lastTypingEmit) return;
+		lastTypingEmit = typing ? Date.now() : 0;
+		$socket.emit('events:chat', {
+			chat_id: joinedChatId,
+			data: { type: 'typing', data: { typing } }
+		});
+	};
+
+	const removeTypingUser = (id: string) => {
+		clearTimeout(typingUsersTimeout[id]);
+		delete typingUsersTimeout[id];
+		typingUsers = typingUsers.filter((user) => user.id !== id);
+	};
+
+	const clearTyping = () => {
+		emitTyping(false);
+		Object.values(typingUsersTimeout).forEach(clearTimeout);
+		typingUsersTimeout = {};
+		typingUsers = [];
+		lastTypingEmit = 0;
+	};
+	$: if (!prompt.trim()) emitTyping(false);
+
+	const mergeChatMessages = (
+		incoming: typeof history,
+		baseline: Record<string, any> | null = null
+	) => {
+		const currentId = history.currentId;
+		const next = incoming?.messages ?? {};
+		const follow =
+			!generating &&
+			!(
+				taskIds?.length &&
+				Object.values(history.messages).some(
+					(message: any) =>
+						message.role === 'assistant' &&
+						message.done === false &&
+						(message.user_id ?? chat?.user_id) === $user?.id
+				)
+			) &&
+			Object.keys(next).some((id) => !history.messages[id]);
+		for (const [id, message] of Object.entries(next) as [string, any][]) {
+			const local = history.messages[id];
+			const ownActive =
+				local?.done === false &&
+				(local.user_id ?? chat?.user_id) === $user?.id &&
+				(taskIds?.length || generating);
+			if (!local || (!ownActive && (!baseline || baseline[id] === local))) {
+				history.messages[id] = { ...local, ...message };
+			}
+			if (local) {
+				history.messages[id].childrenIds = [
+					...new Set([...(local.childrenIds ?? []), ...(message.childrenIds ?? [])])
+				];
+			}
+		}
+		if ((!currentId || follow) && incoming.currentId && next[incoming.currentId]) {
+			history.currentId = incoming.currentId;
+			autoScrollToBottom();
+		}
+		history = history;
+	};
+
+	const refreshChat = () => {
+		const id = $chatId;
+		if (!id || $temporaryChatEnabled) return Promise.resolve();
+		if (chatRefresh?.id === id) return chatRefresh.promise;
+		const baseline = { ...history.messages };
+		const promise = (async () => {
+			try {
+				const fresh = await getChatById(localStorage.token, id);
+				if ($chatId !== id || joinedChatId !== id) return;
+				chat = fresh;
+				mergeChatMessages(fresh.chat.history, baseline);
+			} catch (error) {
+				if ($chatId === id && joinedChatId === id) {
+					chat = null;
+					history = { messages: {}, currentId: null };
+					if (!embedded) await goto('/');
+				}
+			} finally {
+				if (chatRefresh?.id === id) chatRefresh = null;
+			}
+		})();
+		chatRefresh = { id, promise };
+		return promise;
+	};
+
+	const syncChatRoom = (socket: typeof $socket, id: string, temporary: boolean) => {
+		const next = socket && id && !temporary && !isTemporaryChatId(id) ? id : '';
+		if (next === joinedChatId) return;
+		clearTyping();
+		if (joinedChatId)
+			socket?.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
+		joinedChatId = next;
+		if (next)
+			socket?.emit('events:chat', { chat_id: next, data: { type: 'join' } }, () => {
+				if ($chatId === next) void refreshChat();
+			});
+	};
+	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
+
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
+		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
 
 		// A new chat's title can arrive before its id; the response message already exists.
 		if (
@@ -1241,6 +1386,38 @@
 		) {
 			await tick();
 			const type = event?.data?.type ?? null;
+			if (type === 'typing') {
+				const sender = event.user;
+				if (
+					!sender?.id ||
+					sender.id === $user?.id ||
+					(readOnly && chat?.chat?.share_mode !== 'continue')
+				)
+					return;
+				if (event.data.data?.typing) {
+					if (!typingUsers.some((entry) => entry.id === sender.id))
+						typingUsers = [...typingUsers, { id: sender.id, name: sender.name }];
+					clearTimeout(typingUsersTimeout[sender.id]);
+					typingUsersTimeout[sender.id] = setTimeout(() => removeTypingUser(sender.id), 5000);
+				} else {
+					removeTypingUser(sender.id);
+				}
+				return;
+			}
+			if (event.shared) {
+				if (type === 'chat:messages') {
+					removeTypingUser(event.user_id);
+					mergeChatMessages(event.data.data);
+					return;
+				}
+				if (type === 'chat:access' || type === 'chat:active') {
+					if (type === 'chat:access') clearTyping();
+					if (type === 'chat:access' || event.data.data?.active === false) await refreshChat();
+					return;
+				}
+				if (!history.messages[event.message_id]) await refreshChat();
+				if ($chatId !== event.chat_id) return;
+			}
 			if (type === 'chat:reload') {
 				await loadChat();
 				return;
@@ -1249,6 +1426,7 @@
 				return;
 			}
 			let message = history.messages[event.message_id];
+			if (message) message = { ...message };
 
 			if (message) {
 				const data = event?.data?.data ?? null;
@@ -1280,17 +1458,17 @@
 					if (type === 'response:completion') {
 						responseCompletionEventHandler(data, message);
 					} else {
-						await chatCompletionEventHandler(data, message, event.chat_id);
+						await chatCompletionEventHandler(data, message, event.chat_id, event.shared);
 					}
 					autoScrollToBottom();
 				} else if (type === 'chat:tasks:cancel') {
 					message.bridgeCancelled = true;
 					bridgeCancellations.get(event.message_id)?.();
-					dismissContextCompactionToast();
+					if (!event.shared) dismissContextCompactionToast();
 					if (data?.output) {
 						message.output = data.output;
 					}
-					if (event.message_id === history.currentId) {
+					if (!event.shared && event.message_id === history.currentId) {
 						taskIds = null;
 						// Set all response messages to done
 						for (const messageId of history.messages[message.parentId].childrenIds) {
@@ -1307,7 +1485,9 @@
 				} else if (type === 'chat:message:voice') {
 					message.meta = { ...message.meta, voice: data.voice };
 				} else if (type === 'chat:message:files' || type === 'files') {
-					message.files = data.files;
+					message.files = isTemporaryChatId(event.chat_id)
+						? [...(message.files ?? []), ...data.files]
+						: data.files;
 				} else if (type === 'chat:message:tasks') {
 					chatTasks = data.tasks;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
@@ -1322,9 +1502,12 @@
 						}
 					}, 100);
 				} else if (type === 'chat:message:error') {
-					message.error = data.error;
-					if (data.done === true && !message.done) {
+					const responseCompleted = message.done;
+					if (event.shared) {
+						message.error = data.error;
 						message.done = true;
+					} else handleOpenAIError(data.error, message);
+					if (!event.shared && !responseCompleted) {
 						dismissContextCompactionToast();
 						if (event.message_id === history.currentId) {
 							await processNextInQueue(event.chat_id);
@@ -1555,22 +1738,13 @@
 		);
 
 	const handleSocketConnect = async () => {
-		// Gate on $chatId, not chatIdProp: chats started from the home page keep an empty chatIdProp
-		if (!$chatId || $temporaryChatEnabled) {
-			return;
-		}
-
-		if (!hasPendingAssistantLeaf()) {
-			return;
-		}
-
-		const pendingTaskIds = await getTaskIdsByChatId(localStorage.token, $chatId)
-			.then((res) => res?.task_ids ?? [])
-			.catch(() => null);
-
-		if (pendingTaskIds?.length === 0) {
-			await loadChat();
-		}
+		clearTyping();
+		if (!$chatId || $temporaryChatEnabled) return;
+		joinedChatId = '';
+		syncChatRoom($socket, $chatId, $temporaryChatEnabled);
+		const id = $chatId;
+		const tasks = await getTaskIdsByChatId(localStorage.token, id).catch(() => null);
+		if ($chatId === id && tasks) taskIds = tasks.task_ids?.length ? tasks.task_ids : null;
 	};
 
 	onMount(() => {
@@ -1579,6 +1753,7 @@
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', handleSocketConnect);
+		$socket?.on('disconnect', clearTyping);
 
 		$audioQueue?.destroy();
 
@@ -1673,12 +1848,17 @@
 				// Clear the selected chat when leaving the chat surface (e.g. navigating
 				// to the admin panel), otherwise the previously-viewed chat stays selected
 				// in the sidebar and deleting/archiving it wrongly navigates away.
+				clearTyping();
+				if (joinedChatId)
+					$socket?.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
+				joinedChatId = '';
 				chatId.set('');
 				chatTitle.set('');
 
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('connect', handleSocketConnect);
+				$socket?.off('disconnect', clearTyping);
 				dismissContextCompactionToast();
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
@@ -1925,6 +2105,7 @@
 
 	const onHistoryChange = (history) => {
 		if (history) {
+			bridge?.update();
 			clearTimeout(contentsRAF);
 			contentsRAF = setTimeout(() => {
 				getContents();
@@ -1949,6 +2130,15 @@
 		voice: any,
 		parentId: string | null = history.currentId
 	) => {
+		const branch = createMessagesList(history, history.currentId);
+		let parentIndex = branch.findIndex((entry) => entry.id === parentId);
+		// A chat answer can have been inserted while this spoken reply was being generated.
+		// Keep the reply on that branch, before the next user turn, rather than losing it as a sibling.
+		if (role === 'assistant' && parentIndex >= 0) {
+			while (branch[parentIndex + 1]?.role === 'assistant') parentIndex++;
+			parentId = branch[parentIndex].id;
+		}
+		const nextMessage = parentIndex >= 0 ? branch[parentIndex + 1] : null;
 		const id = uuidv4();
 		const message = {
 			id,
@@ -1962,9 +2152,6 @@
 			...(role === 'assistant' ? { model: voice.model, modelName: voice.model, modelIdx: 0 } : {})
 		};
 		const changedMessages: Record<string, any> = { [id]: message };
-		const branch = createMessagesList(history, history.currentId);
-		const parentIndex = branch.findIndex((entry) => entry.id === parentId);
-		const nextMessage = parentIndex >= 0 ? branch[parentIndex + 1] : null;
 		history.messages[id] = message;
 		if (parentId && history.messages[parentId]) {
 			history.messages[parentId].childrenIds.push(id);
@@ -2025,10 +2212,27 @@
 					modelId: model && !('direct' in model && model.direct) ? model.id : '',
 					voiceModel: $config?.audio?.realtime?.model,
 					voice: model?.info?.meta?.voice?.voice || $config?.audio?.realtime?.voice,
-					messages: createMessagesList(history, history.currentId).map((message) => ({
-						role: message.role,
-						content: visibleMessageText(message)
-					}))
+					messages: createMessagesList(history, history.currentId).map((message) => {
+						const voice = message.meta?.voice;
+						const spoken = voice && message.model === voice.model && !message.output?.length;
+						const state = getBridgeTurnState(message);
+						const speech = !spoken
+							? (voice?.speech ?? [])
+									.map((item: any) => item.transcript)
+									.filter(Boolean)
+									.join('\n')
+							: '';
+						let content = visibleMessageText(message);
+						if (message.role === 'assistant') {
+							const source = spoken
+								? 'Historical voice transcript, not current task status'
+								: 'Chat model';
+							content = `[${source}; message_id=${message.id}; state=${state}]\n${state === 'completed' ? content : ''}`;
+							if (speech)
+								content += `\n[Historical voice transcript, not current task status]\n${speech}`;
+						}
+						return { role: message.role, content };
+					})
 				};
 			},
 			addMessage: addVoiceMessage,
@@ -2061,12 +2265,15 @@
 		});
 		return () => bridge?.end();
 	});
-	beforeNavigate(() => bridge?.end());
+	beforeNavigate(() => {
+		bridge?.end();
+		pendingUrlActions = null;
+	});
 	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
 	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
 
 	const dispatchCallOverlayAudio = (message, final = false) => {
-		if (!$showCallOverlay || callMode !== 'current') {
+		if (message.error || !$showCallOverlay || callMode !== 'current') {
 			return;
 		}
 
@@ -2337,13 +2544,16 @@
 		taskIds = null;
 		chatTasks = [];
 
-		if ($page.url.searchParams.get('youtube')) {
-			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
-		}
-
-		if ($page.url.searchParams.get('load-url')) {
-			await uploadWeb($page.url.searchParams.get('load-url'));
-		}
+		const youtube = $page.url.searchParams.get('youtube');
+		const loadUrl = $page.url.searchParams.get('load-url');
+		const urls = [
+			...(youtube ? [`https://www.youtube.com/watch?v=${youtube}`] : []),
+			...(loadUrl ? [loadUrl] : [])
+		];
+		const call =
+			$page.url.searchParams.get('call') === 'true' ||
+			$page.url.searchParams.get('voice') === 'true';
+		pendingUrlActions = urls.length || call ? { urls, call } : null;
 
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
@@ -2378,10 +2588,6 @@
 			if (!selectedToolIds.includes(pendingToolId)) {
 				selectedToolIds = [...selectedToolIds, pendingToolId];
 			}
-		}
-
-		if ($page.url.searchParams.get('call') === 'true') {
-			openCallOverlay();
 		}
 
 		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
@@ -2419,11 +2625,7 @@
 		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 
-			if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
-				messageInput?.setText(q, () => submitHandler(prompt));
-			} else {
-				messageInput?.setText(q);
-			}
+			messageInput?.setText(q);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -2582,6 +2784,7 @@
 						for (const message of Object.values(history.messages)) {
 							if (
 								message?.role === 'assistant' &&
+								(message.user_id ?? chat?.user_id) === $user?.id &&
 								!message.done &&
 								!messageHasPendingAskUser(message)
 							) {
@@ -2850,6 +3053,8 @@
 				parentId: parentMessage ? parentMessage.id : null,
 				childrenIds: [responseMessageId],
 				role: 'user',
+				user_id: $user?.id,
+				user: { id: $user?.id, name: $user?.name },
 				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
 				timestamp: Math.floor(Date.now() / 1000)
 			};
@@ -2859,6 +3064,7 @@
 				parentId: userMessageId,
 				childrenIds: [],
 				role: 'assistant',
+				user_id: $user?.id,
 				content: `[RESPONSE] ${responseMessageId}`,
 				done: true,
 
@@ -2975,8 +3181,13 @@
 		history = history;
 	};
 
-	const chatCompletionEventHandler = async (data, message, chatId) => {
+	const chatCompletionEventHandler = async (data, message, chatId, shared = false) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+
+		if (error) {
+			if (shared) message.error = error;
+			else handleOpenAIError(error, message);
+		}
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
@@ -2984,16 +3195,13 @@
 			message.content = getOutputText(output);
 			if (
 				data.type === 'response.output_text.delta' &&
+				!shared &&
 				navigator.vibrate &&
 				$settings?.hapticFeedback
 			) {
 				navigator.vibrate(5);
 			}
-			dispatchCallOverlayAudio(message);
-		}
-
-		if (error) {
-			await handleOpenAIError(error, message);
+			if (!shared) dispatchCallOverlayAudio(message);
 		}
 
 		if (sources && !message?.sources) {
@@ -3004,7 +3212,7 @@
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
-				dispatchCallOverlayAudio(message);
+				if (!shared) dispatchCallOverlayAudio(message);
 			} else {
 				// Stream response
 				let value = choices[0]?.delta?.content ?? '';
@@ -3013,10 +3221,10 @@
 				} else {
 					message.content += value;
 
-					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+					if (!shared && navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
 					}
-					dispatchCallOverlayAudio(message);
+					if (!shared) dispatchCallOverlayAudio(message);
 				}
 			}
 		}
@@ -3025,10 +3233,10 @@
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
 
-			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+			if (!shared && navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
 			}
-			dispatchCallOverlayAudio(message);
+			if (!shared) dispatchCallOverlayAudio(message);
 		}
 
 		if (selected_model_id) {
@@ -3045,6 +3253,13 @@
 
 		if (done) {
 			message.done = true;
+			if (shared) return;
+			if (message.error) {
+				dismissContextCompactionToast();
+				bridge?.update();
+				await processNextInQueue(chatId);
+				return;
+			}
 			const visibleContent =
 				getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
 
@@ -3122,6 +3337,8 @@
 			parentId: history.currentId ?? null,
 			childrenIds: [],
 			role: 'user',
+			user: { id: $user?.id, name: $user?.name },
+			user_id: $user?.id,
 			content: inputContent,
 			files: _files.length > 0 ? _files : undefined,
 			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
@@ -3297,6 +3514,7 @@
 			bridge: bridgeRequest = null
 		}: { _raw?: boolean; bridge?: { userMessageId: string; modelId: string } | null } = {}
 	): Promise<BridgeSubmission> => {
+		emitTyping(false);
 		if (bridgeRequest && (selectedModelIds.length !== 1 || !bridgeRequest.modelId))
 			return { status: 'rejected' };
 
@@ -3482,6 +3700,7 @@
 					id: responseMessageId,
 					childrenIds: [],
 					role: 'assistant',
+					user_id: $user?.id,
 					content: '',
 					done: false,
 					model: model.id,
@@ -3736,7 +3955,12 @@
 					);
 
 					if (message.output && message.role === 'assistant') {
-						return { role: message.role, model: message.model, output: message.output };
+						return {
+							role: message.role,
+							model: message.model,
+							output: message.output,
+							meta: message.meta
+						};
 					}
 
 					if (message.role === 'user' && imageFiles.length > 0) {
@@ -3759,7 +3983,9 @@
 
 					return {
 						role: message.role,
-						content: message?.merged?.content ?? message.content
+						content: message?.merged?.content ?? message.content,
+						model: message.model,
+						meta: message.meta
 					};
 				})
 				.filter(
@@ -3945,50 +4171,24 @@
 		return res;
 	};
 
-	const handleOpenAIError = async (error, responseMessage) => {
-		let errorMessage = '';
-		let innerError;
-
-		if (error) {
-			innerError = error;
-		}
-
-		console.error(innerError);
-		if ('detail' in innerError) {
-			// FastAPI error
-			toast.error(innerError.detail);
-			errorMessage = innerError.detail;
-		} else if ('error' in innerError) {
-			// OpenAI error
-			if ('message' in innerError.error) {
-				toast.error(innerError.error.message);
-				errorMessage = innerError.error.message;
-			} else {
-				toast.error(innerError.error);
-				errorMessage = innerError.error;
-			}
-		} else if ('message' in innerError) {
-			// OpenAI error
-			toast.error(innerError.message);
-			errorMessage = innerError.message;
-		}
-
-		responseMessage.error = {
-			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
-		};
+	const handleOpenAIError = (error, responseMessage) => {
+		const responseFailed = responseMessage.done && responseMessage.error;
+		const errorMessage = getErrorMessage(error, $i18n.t('Server connection failed'));
+		responseMessage.error = { content: errorMessage };
 		responseMessage.done = true;
-
 		if (responseMessage.statusHistory) {
 			responseMessage.statusHistory = responseMessage.statusHistory.filter(
 				(status) => status.action !== 'knowledge_search'
 			);
 		}
-
 		history.messages[responseMessage.id] = responseMessage;
+		if (!responseFailed) toast.error(errorMessage);
 	};
 
 	const stopResponse = async (processQueue = true, messageId = history.currentId) => {
 		const responseMessage = messageId ? history.messages[messageId] : null;
+		if (responseMessage && (responseMessage.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id)
+			return;
 		if (bridge?.connected && responseMessage) responseMessage.bridgeStopping = true;
 		const hasTaskIds = (taskIds?.length ?? 0) > 0;
 		const hasPendingAssistantResponse =
@@ -4048,6 +4248,8 @@
 			parentId: parentId,
 			childrenIds: [],
 			role: 'user',
+			user_id: $user?.id,
+			user: { id: $user?.id, name: $user?.name },
 			content: userPrompt,
 			models: selectedModels,
 			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
@@ -4233,6 +4435,7 @@
 	};
 
 	const saveChatHandler = async (_chatId, history) => {
+		if (readOnly) return;
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
@@ -4247,6 +4450,7 @@
 	};
 
 	const saveControls = async () => {
+		if (readOnly) return;
 		if (!$chatId || $temporaryChatEnabled) return;
 		const loaded = chat?.chat ?? {};
 		if (equal(params, loaded.params ?? {}) && equal(chatFiles, loaded.files ?? [])) return;
@@ -4385,6 +4589,7 @@
 				initNewChat();
 				await goto('/');
 				await refreshChatList(localStorage.token, { refreshPinned: true });
+				await refreshFolderChatLists();
 				allTags.set(await getAllTags(localStorage.token));
 				toast.success($i18n.t('Chat deleted.'));
 			}
@@ -4448,6 +4653,35 @@
 		onSave={saveChatVariables}
 	/>
 {/if}
+
+<EventConfirmDialog
+	show={pendingUrlActions !== null}
+	title={$i18n.t('Open link')}
+	on:confirm={async () => {
+		const actions = pendingUrlActions;
+		const url = $page.url.href;
+		pendingUrlActions = null;
+		if (!actions) return;
+		for (const source of actions.urls) {
+			if ($page.url.href !== url) return;
+			await uploadWeb(source);
+		}
+		if (actions.call && $page.url.href === url) openCallOverlay();
+	}}
+	on:cancel={() => (pendingUrlActions = null)}
+>
+	<div class="text-sm text-gray-500 space-y-2 max-h-60 overflow-auto break-words">
+		{#if pendingUrlActions?.urls.length}
+			<p>{$i18n.t('Load content from these URLs?')}</p>
+			{#each pendingUrlActions.urls as url}
+				<p>{url}</p>
+			{/each}
+		{/if}
+		{#if pendingUrlActions?.call}
+			<p>{$i18n.t('Start a voice call using your microphone?')}</p>
+		{/if}
+	</div>
+</EventConfirmDialog>
 
 <WebSearchConfirmDialog
 	bind:show={showWebSearchConfirm}
@@ -4633,8 +4867,9 @@
 									<Messages
 										bind:this={messagesRef}
 										chatId={$chatId}
-										user={chatOwner ?? $user}
+										user={chatOwner ?? (chat ? { id: chat.user_id } : $user)}
 										{readOnly}
+										shareMode={chat?.chat?.share_mode ?? null}
 										bind:history
 										bind:autoScroll
 										bind:prompt
@@ -4663,18 +4898,35 @@
 								</div>
 							</div>
 
-							{#if readOnly}
-								<div class="pb-6 z-10">
-									<div class="text-xs text-gray-400 dark:text-gray-500 text-center">
-										{$i18n.t('Read only')}
+							{#if readOnly && chat?.chat?.share_mode !== 'continue'}
+								{#if canClone}
+									<div
+										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
+									>
+										<button
+											class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
+											disabled={generating || !!taskIds?.length || !history.currentId}
+											on:click={() => handleForkChat()}
+										>
+											{$i18n.t('Fork chat')}
+										</button>
+										<button
+											class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
+											disabled={cloning}
+											on:click={cloneSharedChat}
+										>
+											{$i18n.t('Clone Chat')}
+										</button>
 									</div>
-								</div>
+								{/if}
 							{:else}
 								<div
 									id={embedded ? messageInputDropzoneId : undefined}
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
+										{typingUsers}
+										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
 										bind:this={messageInput}
 										{history}
@@ -4768,6 +5020,8 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
+										{typingUsers}
+										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
 										bind:this={messageInput}
 										{history}

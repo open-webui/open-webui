@@ -496,3 +496,93 @@ export const updateUserValvesById = async (token: string, id: string, valves: ob
 
 	return res;
 };
+
+export type ToolHistoryEntry = {
+	id: string;
+	tool_id: string;
+	parent_id: string | null;
+	user_id: string;
+	commit_message: string | null;
+	created_at: number;
+	user?: { name: string } | null;
+};
+
+export type ToolSnapshot = {
+	name: string;
+	content: string;
+	meta: Record<string, any>;
+};
+
+export const getToolHistory = async (
+	token: string,
+	id: string,
+	page = 1
+): Promise<ToolHistoryEntry[]> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/id/${encodeURIComponent(id)}/history?page=${page}`,
+		{
+			method: 'GET',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const getToolHistoryEntry = async (
+	token: string,
+	id: string,
+	versionId: string
+): Promise<ToolHistoryEntry & { snapshot: ToolSnapshot }> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/id/${encodeURIComponent(id)}/history/${encodeURIComponent(versionId)}`,
+		{
+			method: 'GET',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const getToolHistoryDiff = async (
+	token: string,
+	id: string,
+	fromId: string,
+	toId: string
+) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/id/${encodeURIComponent(id)}/history/diff?${new URLSearchParams({ from_id: fromId, to_id: toId })}`,
+		{
+			method: 'GET',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const deleteToolHistoryVersion = async (token: string, id: string, versionId: string) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/id/${encodeURIComponent(id)}/history/${encodeURIComponent(versionId)}`,
+		{
+			method: 'DELETE',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const setProductionToolVersion = async (token: string, id: string, versionId: string) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/id/${encodeURIComponent(id)}/update/version`,
+		{
+			method: 'POST',
+			headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ version_id: versionId })
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
