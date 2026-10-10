@@ -71,7 +71,11 @@
 	import { AudioQueue } from '$lib/utils/audio';
 	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
-	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
+	import {
+		applyResponseStreamEvent,
+		getOutputText,
+		setOutputText
+	} from './Messages/structuredOutput';
 
 	import {
 		archiveChatById,
@@ -2998,6 +3002,9 @@
 					...history.messages[message.id],
 					...(history.messages[message.id].content !== message.content
 						? { originalContent: history.messages[message.id].content }
+						: {}),
+					...(typeof message.content === 'string' && history.messages[message.id].output?.length
+						? { output: setOutputText(history.messages[message.id].output, message.content) }
 						: {}),
 					...message
 				};
