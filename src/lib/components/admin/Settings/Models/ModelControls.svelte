@@ -321,7 +321,7 @@
 			<div class="flex justify-end gap-1.5 pt-1 text-sm font-medium">
 				<button
 					type="button"
-					class="rounded-full px-3.5 py-1.5 transition hover:bg-gray-100 dark:hover:bg-gray-850"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 hover:bg-gray-100 dark:hover:bg-gray-850"
 					on:click={() => (show = false)}>{$i18n.t('Cancel')}</button
 				>
 				<button
@@ -330,7 +330,7 @@
 						!options.length ||
 						(display === 'slider' && options.length < 2) ||
 						options.some((option) => !option.label.trim())}
-					class="rounded-full bg-black px-3.5 py-1.5 text-white transition hover:bg-gray-950 disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 					>{$i18n.t('Apply')}</button
 				>
 			</div>

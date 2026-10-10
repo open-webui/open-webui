@@ -265,14 +265,14 @@
 				<div class="flex items-center gap-1.5">
 					<button
 						type="button"
-						class="rounded-full py-1 pr-2.5 text-xs text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
 						on:click={cancel}
 					>
 						{$i18n.t('Cancel')}
 					</button>
 					<button
 						type="button"
-						class="rounded-full px-2.5 py-1 text-xs text-gray-500 transition-colors hover:text-gray-800 disabled:opacity-30 dark:text-gray-400 dark:hover:text-gray-100"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
 						disabled={questionIndex === 0}
 						on:click={() => (questionIndex -= 1)}
 					>
@@ -282,7 +282,7 @@
 				{#if questionIndex < questions.length - 1}
 					<button
 						type="button"
-						class="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition hover:opacity-90 active:scale-[0.98] dark:bg-white dark:text-black"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 						on:click={() => (questionIndex += 1)}
 					>
 						{$i18n.t('Next')}
@@ -290,7 +290,7 @@
 				{:else}
 					<button
 						type="button"
-						class="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 						disabled={!complete}
 						on:click={() => submit()}
 					>
