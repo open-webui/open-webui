@@ -111,9 +111,12 @@
 	</div>
 {/if}
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
 	class=" my-2.5 rounded-xl px-4 py-3 border border-gray-100/30 dark:border-gray-850/30"
 	id="message-feedback-{message.id}"
+	on:click|stopPropagation
 >
 	<div class="flex justify-between items-center">
 		<div class="text-sm font-normal">{$i18n.t('How would you rate this response?')}</div>
