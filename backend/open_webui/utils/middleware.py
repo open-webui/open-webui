@@ -135,6 +135,7 @@ from open_webui.utils.skills import (
     apply_skills_create_prompt,
     extract_skill_ids_from_messages,
     has_prior_user_message,
+    replace_skill_mentions_with_labels,
     strip_skill_mentions,
 )
 from open_webui.utils.task import (
@@ -3943,7 +3944,7 @@ async def background_tasks_handler(ctx):
                                 title = ''
 
                             if not title:
-                                title = messages[0].get('content', user_message)
+                                title = replace_skill_mentions_with_labels(messages[0].get('content', user_message))
 
                             await Chats.update_chat_title_by_id(metadata['chat_id'], title)
 
@@ -3955,7 +3956,7 @@ async def background_tasks_handler(ctx):
                             )
 
                     if title == None and len(messages) == 2 and (not messages_map or len(messages_map) <= 2):
-                        title = messages[0].get('content', user_message)
+                        title = replace_skill_mentions_with_labels(messages[0].get('content', user_message))
 
                         await Chats.update_chat_title_by_id(metadata['chat_id'], title)
 
