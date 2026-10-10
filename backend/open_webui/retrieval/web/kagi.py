@@ -27,6 +27,8 @@ def search_kagi(api_key: str, query: str, count: int, filter_list: Optional[list
     response.raise_for_status()
     json_response = response.json()
     search_results = json_response.get('data', {}).get('search', [])
+    if filter_list:
+        search_results = get_filtered_results(search_results, filter_list)
 
     results = [
         SearchResult(link=result['url'], title=result['title'], snippet=result.get('snippet'))
@@ -34,8 +36,5 @@ def search_kagi(api_key: str, query: str, count: int, filter_list: Optional[list
     ]
 
     print(results)
-
-    if filter_list:
-        results = get_filtered_results(results, filter_list)
 
     return results
