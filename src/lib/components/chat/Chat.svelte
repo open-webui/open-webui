@@ -3103,6 +3103,7 @@
 	};
 
 	const createMessagePair = async (userPrompt) => {
+		if (readOnly) return;
 		messageInput?.setText('');
 		if (selectedModels.length === 0) {
 			toast.error($i18n.t('Model not selected'));
