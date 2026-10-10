@@ -120,6 +120,7 @@
 	let showSystemPrompt = true;
 	let showAdvanced = false;
 	let showPreview = false;
+	let customPromptDraft: any[] | null = null;
 	let showAccessControlModal = false;
 
 	let loaded = false;
@@ -584,6 +585,7 @@
 	};
 
 	const loadModel = async (value: any) => {
+		customPromptDraft = null;
 		model = value ? structuredClone(value) : null;
 		backgroundFile = null;
 		avatarFile = null;
@@ -970,7 +972,7 @@
 										<!-- LICENSE covers this Open WebUI fallback logo.
 									Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									https://docs.openwebui.com/license. -->
-										<div class="group relative size-11 shrink-0">
+										<div class="group relative size-12 shrink-0">
 											<button
 												class="group relative flex size-full items-center overflow-hidden rounded-xl {info
 													.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
@@ -1394,46 +1396,57 @@
 
 							<fieldset disabled={readOnly} class="min-w-0">
 								<section class="my-3">
-									<div class="flex w-full items-center justify-between">
+									<ModelSettingsSection
+										label={$i18n.t('Prompts')}
+										summary={editingLocale
+											? Array.isArray(info.meta.i18n?.[editingLocale]?.suggestion_prompts)
+												? $i18n.t('Custom')
+												: $i18n.t('Default')
+											: info.meta.suggestion_prompts == null
+												? $i18n.t('Default')
+												: `${$i18n.t('Custom')} · ${info.meta.suggestion_prompts.length}`}
+									>
 										{#if editingLocale}
-											<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
-												{$i18n.t('Prompts')}
-											</div>
-										{:else}
-											<button
-												class="flex w-full items-center justify-between gap-3 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-												type="button"
-												aria-pressed={(info?.meta?.suggestion_prompts ?? null) !== null}
-												on:click={() => {
-													if ((info?.meta?.suggestion_prompts ?? null) === null) {
-														info.meta.suggestion_prompts = [{ content: '', title: ['', ''] }];
-													} else {
-														info.meta.suggestion_prompts = null;
-													}
-												}}
+											<LocalizedPromptSuggestions
+												promptSuggestions={info.meta.suggestion_prompts ?? []}
+												bind:localizedPromptSuggestions={info.meta.i18n}
+												locale={editingLocale}
+												localeLabel={editingLocaleLabel}
+												disabled={readOnly}
+											/>
+										{:else if info.meta.suggestion_prompts != null}
+											<PromptSuggestions
+												bind:promptSuggestions={info.meta.suggestion_prompts}
+												disabled={readOnly}
 											>
-												<span class="font-normal text-gray-600 dark:text-gray-400"
-													>{$i18n.t('Prompts')}</span
+												<button
+													slot="label"
+													disabled={readOnly}
+													type="button"
+													class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+													on:click={() => {
+														customPromptDraft = structuredClone(info.meta.suggestion_prompts);
+														info.meta.suggestion_prompts = null;
+													}}>{$i18n.t('Use default')}</button
 												>
-												{#if (info?.meta?.suggestion_prompts ?? null) === null}
-													<span>{$i18n.t('Default')}</span>
-												{:else}
-													<span>{$i18n.t('Custom')}</span>
-												{/if}
-											</button>
+											</PromptSuggestions>
+										{:else}
+											<div
+												class="flex items-center justify-between gap-3 px-1 py-1 text-xs text-gray-500 dark:text-gray-400"
+											>
+												<span>{$i18n.t('Using default prompt suggestions')}</span>
+												<button
+													type="button"
+													class="shrink-0 hover:text-gray-900 dark:hover:text-gray-100"
+													on:click={() => {
+														info.meta.suggestion_prompts = customPromptDraft ?? [
+															{ content: '', title: ['', ''] }
+														];
+													}}>{$i18n.t('Customize')}</button
+												>
+											</div>
 										{/if}
-									</div>
-
-									{#if editingLocale}
-										<LocalizedPromptSuggestions
-											promptSuggestions={info.meta.suggestion_prompts ?? []}
-											bind:localizedPromptSuggestions={info.meta.i18n}
-											locale={editingLocale}
-											localeLabel={editingLocaleLabel}
-										/>
-									{:else if info?.meta?.suggestion_prompts}
-										<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
-									{/if}
+									</ModelSettingsSection>
 								</section>
 
 								<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />

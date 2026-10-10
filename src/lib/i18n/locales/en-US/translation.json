@@ -3820,5 +3820,11 @@
 	"Default terminal": "Default terminal",
 	"No terminal servers available": "No terminal servers available",
 	"Add tools in the Tools workspace or connect a tool server.": "Add tools in the Tools workspace or connect a tool server.",
-	"Used in native function calling mode. Workspace settings and user permissions still apply.": "Used in native function calling mode. Workspace settings and user permissions still apply."
+	"Used in native function calling mode. Workspace settings and user permissions still apply.": "Used in native function calling mode. Workspace settings and user permissions still apply.",
+	"Prompt actions": "Prompt actions",
+	"Write a prompt…": "Write a prompt…",
+	"Display text": "Display text",
+	"Add prompt": "Add prompt",
+	"Using default prompt suggestions": "Using default prompt suggestions",
+	"Customize": "Customize"
 }
