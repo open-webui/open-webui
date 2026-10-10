@@ -1398,7 +1398,7 @@
 									</button>
 
 									{#if showAdvanced}
-										<fieldset disabled={readOnly} class="min-w-0 my-2">
+										<fieldset disabled={readOnly} class="min-w-0 my-2 pl-3">
 											<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
 										</fieldset>
 									{/if}
