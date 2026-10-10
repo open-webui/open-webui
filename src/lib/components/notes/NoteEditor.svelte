@@ -885,7 +885,8 @@ ${content}
 			note.access_grants = _note.access_grants;
 		}
 
-		if (_note.data && 'files' in _note.data) {
+		// A pending local save holds newer files than an echo of an earlier save.
+		if (_note.data && 'files' in _note.data && !debounceTimeout) {
 			files = _note.data.files ?? [];
 			note.data.files = files.length > 0 ? files : null;
 		}
