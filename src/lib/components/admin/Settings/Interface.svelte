@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { getChatConfig, updateChatConfig } from '$lib/apis/chats';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import { getBaseModels } from '$lib/apis/models';
@@ -17,7 +17,7 @@
 	import AdminSettingSection from './AdminSettingSection.svelte';
 	import { config as appConfig } from '$lib/stores';
 
-	const dispatch = createEventDispatcher();
+	export let saveHandler: () => void;
 
 	const i18n: any = getContext('i18n');
 
@@ -50,8 +50,13 @@
 		CONTEXT_COMPACTION_TOKEN_CAP: 80000,
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: '',
-		ENABLE_TOOL_PERMISSIONS: false
+		ENABLE_TOOL_PERMISSIONS: false,
+		ENABLE_TOOL_SEARCH: false,
+		TOOL_SEARCH_DEFER_THRESHOLD: 400,
+		TOOL_SEARCH_ALWAYS_LOADED: [] as string[],
+		TOOL_SEARCH_DEFER_BUILTIN_TOOLS: true
 	};
+	let toolSearchAlwaysLoaded = '';
 	let showTaskParameters = false;
 
 	const configuredParams = (params: Record<string, any> = {}) =>
@@ -67,10 +72,24 @@
 			TASK_MODEL_PARAMS: configuredParams(taskConfig.TASK_MODEL_PARAMS)
 		};
 
-		[taskConfig, chatConfig] = await Promise.all([
-			updateTaskConfig(localStorage.token, taskConfigPayload),
-			updateChatConfig(localStorage.token, chatConfig)
-		]);
+		try {
+			[taskConfig, chatConfig] = await Promise.all([
+				updateTaskConfig(localStorage.token, taskConfigPayload),
+				updateChatConfig(localStorage.token, {
+					...chatConfig,
+					TOOL_SEARCH_ALWAYS_LOADED: toolSearchAlwaysLoaded
+						.split(',')
+						.map((item) => item.trim())
+						.filter((item) => item !== '')
+				})
+			]);
+		} catch (error) {
+			toast.error(
+				Array.isArray(error) ? error.map((entry) => entry.msg).join('\n') : String(error)
+			);
+			return;
+		}
+		toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
 		appConfig.update((current) =>
 			current
 				? {
@@ -83,6 +102,7 @@
 					}
 				: current
 		);
+		saveHandler();
 	};
 
 	let workspaceModels: any[] = [];
@@ -123,6 +143,7 @@
 				getChatConfig(localStorage.token)
 			]);
 			taskConfig.TASK_MODEL_PARAMS = taskConfig.TASK_MODEL_PARAMS ?? {};
+			toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
 
 			workspaceModels = await getBaseModels(localStorage.token);
 			baseModels = await getModels(localStorage.token, null, false);
@@ -165,7 +186,6 @@
 		class="flex h-full flex-col justify-between text-sm"
 		on:submit|preventDefault={() => {
 			updateInterfaceHandler();
-			dispatch('save');
 		}}
 	>
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
@@ -360,6 +380,59 @@
 							<code>{'{{MESSAGES}}'}</code>,
 							<code>{'{{CURRENT_DATE}}'}</code>
 						</div>
+					</AdminSettingField>
+				{/if}
+
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.interface.toolSearch.label')}
+					description={$i18n.t('settings.admin.interface.toolSearch.description')}
+					let:labelId
+				>
+					<div slot="label" class="flex items-center gap-2">
+						<span>{$i18n.t('settings.admin.interface.toolSearch.label')}</span>
+						<ExperimentalBadge />
+					</div>
+					<Switch bind:state={chatConfig.ENABLE_TOOL_SEARCH} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
+				{#if chatConfig.ENABLE_TOOL_SEARCH}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.interface.toolSearchDeferBuiltinTools.label')}
+						description={$i18n.t(
+							'settings.admin.interface.toolSearchDeferBuiltinTools.description'
+						)}
+						let:labelId
+					>
+						<Switch
+							bind:state={chatConfig.TOOL_SEARCH_DEFER_BUILTIN_TOOLS}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+
+					<AdminSettingField
+						label={$i18n.t('settings.admin.interface.toolSearchThreshold.label')}
+						description={$i18n.t('settings.admin.interface.toolSearchThreshold.description')}
+					>
+						<input
+							type="number"
+							min="0"
+							step="1"
+							class={inputClass}
+							bind:value={chatConfig.TOOL_SEARCH_DEFER_THRESHOLD}
+						/>
+					</AdminSettingField>
+
+					<AdminSettingField
+						label={$i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.label')}
+						description={$i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.description')}
+					>
+						<input
+							class={inputClass}
+							type="text"
+							placeholder={$i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.placeholder')}
+							bind:value={toolSearchAlwaysLoaded}
+							autocomplete="off"
+						/>
 					</AdminSettingField>
 				{/if}
 			</AdminSettingSection>
@@ -560,7 +633,7 @@
 
 		<div class="flex justify-end pt-6 text-sm font-normal">
 			<button
-				class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 				type="submit"
 			>
 				{$i18n.t('Save')}

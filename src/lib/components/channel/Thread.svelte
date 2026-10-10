@@ -71,7 +71,7 @@
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === threadId) {
 					if (messages) {
-						messages = [data, ...messages];
+						messages = [{ ...data, temp_id: null }, ...messages];
 
 						if (typingUsers.find((user) => user.id === event.user.id)) {
 							typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
@@ -141,22 +141,32 @@
 		}
 	};
 
-	const submitHandler = async ({ content, data }) => {
+	const submitHandler = async ({
+		content,
+		data,
+		channel_id,
+		parent_id,
+		reply_to_message
+	}: {
+		content: string;
+		data: any;
+		channel_id: string;
+		parent_id: string | null;
+		reply_to_message: any;
+	}) => {
 		if (!content && (data?.files ?? []).length === 0) {
 			return;
 		}
 
-		const res = await sendMessage(localStorage.token, channel.id, {
-			parent_id: threadId,
-			reply_to_id: replyToMessage?.id ?? null,
+		const res = await sendMessage(localStorage.token, channel_id, {
+			parent_id: parent_id ?? undefined,
+			reply_to_id: reply_to_message?.id ?? null,
 			content: content,
 			data: data
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
-
-		replyToMessage = null;
 	};
 
 	const onChange = async () => {
@@ -182,18 +192,22 @@
 </script>
 
 {#if channel}
-	<div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-850">
-		<div class="sticky top-0 flex items-center justify-between px-3.5 py-3">
-			<div class=" font-normal text-lg">{$i18n.t('Thread')}</div>
+	<div class="flex flex-col w-full h-full bg-white dark:bg-gray-900">
+		<div
+			class="sticky top-0 flex min-h-10 items-center justify-between border-b border-gray-100/60 px-4 py-1.5 dark:border-gray-800/40"
+		>
+			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 
 			<div>
 				<button
-					class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 p-2"
+					type="button"
+					aria-label={$i18n.t('Close')}
+					class="flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-50/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-300"
 					on:click={() => {
 						onClose();
 					}}
 				>
-					<XMark />
+					<XMark className="size-4" />
 				</button>
 			</div>
 		</div>
@@ -202,7 +216,7 @@
 			class="flex-1 min-h-0 w-full overflow-y-auto will-change-transform"
 			bind:this={messagesContainerElement}
 		>
-			<div class="pt-7">
+			<div class="pt-3">
 				{#if messages !== null}
 					<Messages
 						id={threadId}
@@ -242,7 +256,7 @@
 			</div>
 		</div>
 
-		<div class=" pb-[1rem] px-2.5 w-full">
+		<div class=" pb-3 px-3 w-full">
 			<MessageInput
 				bind:replyToMessage
 				bind:chatInputElement
@@ -252,7 +266,7 @@
 				placeholder={!channel?.write_access
 					? $i18n.t('You do not have permission to send messages in this thread.')
 					: $i18n.t('Reply to thread...')}
-				typingUsersClassName="from-gray-50 dark:from-gray-850"
+				typingUsersClassName="from-white dark:from-gray-900"
 				{typingUsers}
 				userSuggestions={true}
 				channelSuggestions={true}

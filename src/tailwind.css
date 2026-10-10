@@ -3,6 +3,14 @@
 @config '../tailwind.config.js';
 
 @theme {
+	--animate-cursor-pulse: cursor-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+	@keyframes cursor-pulse {
+		50% {
+			opacity: 0.25;
+		}
+	}
+
 	--font-sans:
 		var(--app-font-family, -apple-system), BlinkMacSystemFont, 'Inter', 'Vazirmatn', ui-sans-serif,
 		system-ui, 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue',

@@ -14,7 +14,7 @@ import aiohttp
 from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_TOOL_SERVERS
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
@@ -87,8 +87,11 @@ def _sanitize_proxy_path(path: str) -> str | None:
 @router.get('/')
 async def list_terminal_servers(request: Request, user=Depends(get_verified_user)):
     """Return terminal servers the authenticated user has access to."""
+    if not ENABLE_TOOL_SERVERS:
+        return []
+
     connections = await Config.get('terminal_server.connections', []) or []
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
 
     return [
         {
@@ -107,6 +110,8 @@ PROXY_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
 
 @router.api_route('/{server_id}/{path:path}', methods=PROXY_METHODS)
+# Register the chat route before the catch-all.
+@router.api_route('/{server_id}/chats/{chat_id}/{path:path}', methods=PROXY_METHODS)
 async def proxy_terminal(
     server_id: str,
     path: str,
@@ -114,6 +119,9 @@ async def proxy_terminal(
     user=Depends(get_verified_user),
 ):
     """Proxy a request to the admin terminal server identified by *server_id*."""
+    if not ENABLE_TOOL_SERVERS:
+        return JSONResponse({'error': 'Tool servers are disabled'}, status_code=403)
+
     connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
@@ -123,7 +131,7 @@ async def proxy_terminal(
     if not connection.get('enabled', True):
         return JSONResponse({'error': 'Terminal server disabled'}, status_code=403)
 
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
     if not await has_connection_access(user, connection, user_group_ids):
         return JSONResponse({'error': 'Access denied'}, status_code=403)
 
@@ -151,7 +159,7 @@ async def proxy_terminal(
 
     headers = {'X-User-Id': user.id}
     # Forward per-session cwd tracking header
-    session_id = request.headers.get('x-session-id')
+    session_id = request.path_params.get('chat_id') or request.headers.get('x-session-id')
     if session_id:
         headers['X-Session-Id'] = session_id
         if not terminal_context_available(connection, 'chat'):
@@ -288,6 +296,10 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
 
 async def _resolve_terminal_access(ws: WebSocket, server_id: str, token: str):
     """Resolve current access for both the handshake and an open terminal session."""
+    if not ENABLE_TOOL_SERVERS:
+        await ws.close(code=4003, reason='Tool servers are disabled')
+        return None
+
     try:
         user = await get_verified_user_by_token(token, getattr(ws.app.state, 'redis', None))
         if user is None:

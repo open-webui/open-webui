@@ -2,6 +2,7 @@ import asyncio
 import http.cookiejar
 import ipaddress
 import logging
+import math
 import socket
 import ssl
 import time
@@ -35,22 +36,10 @@ from fastapi.concurrency import run_in_threadpool
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
 from open_webui.config import (
+    DEFAULT_CONFIG,
     ENABLE_LOCAL_WEB_FETCH,
-    EXTERNAL_WEB_LOADER_API_KEY,
-    EXTERNAL_WEB_LOADER_URL,
-    FIRECRAWL_API_BASE_URL,
-    FIRECRAWL_API_KEY,
-    FIRECRAWL_TIMEOUT,
     MICROSOFT_WEB_IQ_API_BASE_URL,
-    MICROSOFT_WEB_IQ_API_KEY,
-    MICROSOFT_WEB_IQ_LANGUAGE,
-    PLAYWRIGHT_TIMEOUT,
-    PLAYWRIGHT_WS_URL,
-    TAVILY_API_KEY,
-    TAVILY_EXTRACT_DEPTH,
     WEB_FETCH_FILTER_LIST,
-    WEB_LOADER_ENGINE,
-    WEB_LOADER_TIMEOUT,
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
@@ -307,6 +296,12 @@ _DROPPED_RESPONSE_HEADERS = {'connection', 'content-encoding', 'content-length',
 # The Playwright loader only reads the page HTML, which none of these feed.
 _DROPPED_RESOURCE_TYPES = {'font', 'image', 'media'}
 
+# unstructured keeps only the first <main>, so text in any others would be dropped.
+_UNWRAP_EXTRA_MAINS = (
+    '() => { const mains = document.querySelectorAll("main"); '
+    'if (mains.length > 1) mains.forEach(main => main.replaceWith(...main.childNodes)); }'
+)
+
 
 def _forwardable_request_headers(headers: Dict[str, str]) -> Dict[str, str]:
     return {name: value for name, value in headers.items() if name.lower() not in _DROPPED_REQUEST_HEADERS}
@@ -373,6 +368,111 @@ class RateLimitMixin:
             if time_since_last < min_interval:
                 time.sleep((min_interval - time_since_last).total_seconds())
         self.last_request_time = datetime.now()
+
+
+class SafeExaLoader(BaseLoader, RateLimitMixin):
+    def __init__(
+        self,
+        web_paths: Union[str, Sequence[str]],
+        api_key: str,
+        timeout: Optional[str] = None,
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        requests_per_second: Optional[float] = None,
+        continue_on_failure: bool = True,
+    ):
+        if not api_key or not api_key.strip():
+            raise ValueError('Exa web loader requires an EXA_API_KEY')
+        self.web_paths = [web_paths] if isinstance(web_paths, str) else list(web_paths)
+        self.api_key = api_key
+        try:
+            request_timeout = float(timeout)
+        except (TypeError, ValueError):
+            request_timeout = 60
+        self.timeout = request_timeout if math.isfinite(request_timeout) and request_timeout > 0 else 60
+        self.verify_ssl = verify_ssl
+        self.trust_env = trust_env
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+        self.continue_on_failure = continue_on_failure
+
+    def lazy_load(self) -> Iterator[Document]:
+        # Exa's search models import this module for URL validation.
+        from open_webui.retrieval.web.exa import EXA_API_BASE
+
+        loaded = 0
+        with requests.Session() as session:
+            session.trust_env = self.trust_env
+            session.verify = self.verify_ssl
+            session.headers.update({'Authorization': f'Bearer {self.api_key}'})
+            for offset in range(0, len(self.web_paths), 100):
+                urls = self.web_paths[offset : offset + 100]
+                self._sync_wait_for_rate_limit()
+                try:
+                    response = session.post(
+                        f'{EXA_API_BASE}/contents',
+                        json={'urls': urls, 'text': True},
+                        timeout=self.timeout,
+                        allow_redirects=False,
+                    )
+                    if response.status_code in (401, 402, 403):
+                        raise PermissionError(
+                            f'Exa web loader authentication or billing failed (HTTP {response.status_code})'
+                        )
+                    response.raise_for_status()
+                    data = response.json()
+                    if not isinstance(data, dict) or not isinstance(data.get('results'), list):
+                        raise ValueError('Invalid Exa Contents response')
+                    if data.get('statuses') is not None and not isinstance(data['statuses'], list):
+                        raise ValueError('Invalid Exa Contents statuses')
+                except PermissionError:
+                    raise
+                except (requests.RequestException, ValueError) as e:
+                    # Do not log provider bodies or exception messages, which can contain credentials.
+                    log.warning('Exa web loader batch failed (%s)', type(e).__name__)
+                    if not self.continue_on_failure:
+                        raise ValueError('Exa web loader request failed') from None
+                    continue
+
+                failed_ids = {
+                    status.get('id')
+                    for status in (data.get('statuses') or [])
+                    if isinstance(status, dict)
+                    and isinstance(status.get('id'), str)
+                    and status.get('status') != 'success'
+                }
+                documents = {}
+                for result in data['results']:
+                    if not isinstance(result, dict):
+                        continue
+                    source = next((result.get(key) for key in ('id', 'url') if result.get(key) in urls), None)
+                    content = result.get('text')
+                    if source is None or source in failed_ids or not isinstance(content, str):
+                        continue
+                    if not content.strip():
+                        continue
+                    metadata = {'source': source}
+                    if isinstance(result.get('title'), str):
+                        metadata['title'] = result['title']
+                    documents[source] = Document(page_content=content, metadata=metadata)
+
+                missing = len(set(urls) - documents.keys())
+                if missing:
+                    log.warning('Exa web loader could not load %s URL(s)', missing)
+                    if not self.continue_on_failure:
+                        raise ValueError(f'Exa web loader could not load {missing} URL(s)')
+                for url in urls:
+                    if url in documents:
+                        loaded += 1
+                        yield documents[url]
+
+        if not loaded:
+            raise ValueError('Exa web loader could not load any page content')
+
+    async def alazy_load(self) -> AsyncIterator[Document]:
+        docs = await run_in_threadpool(lambda: list(self.lazy_load()))
+        for doc in docs:
+            yield doc
 
 
 class URLProcessingMixin:
@@ -878,6 +978,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                 for element in page.locator(selector).all():
                                     if element.is_visible():
                                         element.evaluate('element => element.remove()')
+                            page.evaluate(_UNWRAP_EXTRA_MAINS)
                             text = self._extract_html(page.content())
                             page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}
@@ -918,6 +1019,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                 for element in await page.locator(selector).all():
                                     if await element.is_visible():
                                         await element.evaluate('element => element.remove()')
+                            await page.evaluate(_UNWRAP_EXTRA_MAINS)
                             text = await asyncio.to_thread(self._extract_html, await page.content())
                             await page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}
@@ -1048,10 +1150,7 @@ class SafeWebBaseLoader(BaseLoader):
 
 def get_web_loader(
     urls: Union[str, Sequence[str]],
-    verify_ssl: bool = True,
-    requests_per_second: int = 2,
-    trust_env: bool = False,
-    loader_config: Optional[dict] = None,
+    config: dict,
 ):
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
@@ -1060,22 +1159,20 @@ def get_web_loader(
         log.warning(f'All provided URLs were blocked or invalid: {urls}')
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
-    loader_config = loader_config or {}
+    def cfg(key):
+        # Preserve the web loaders' fallback for legacy null settings.
+        value = config.get(key)
+        return DEFAULT_CONFIG[key] if value is None else value
 
-    def cfg(key, env_value):
-        # Admin-saved DB value wins; env constant covers keys never saved.
-        value = loader_config.get(key)
-        return env_value if value is None else value
-
-    engine = cfg('web_loader_engine', WEB_LOADER_ENGINE)
-    web_loader_timeout = cfg('web_loader_timeout', WEB_LOADER_TIMEOUT)
+    engine = cfg('web.loader.engine')
+    web_loader_timeout = cfg('web.loader.timeout')
 
     web_loader_args = {
         'web_paths': safe_urls,
-        'verify_ssl': verify_ssl,
-        'requests_per_second': requests_per_second,
+        'verify_ssl': config['web.loader.ssl_verification'],
+        'requests_per_second': config['web.loader.concurrent_requests'],
         'continue_on_failure': True,
-        'trust_env': trust_env,
+        'trust_env': config['web.search.trust_env'],
     }
 
     WebLoaderClass = None
@@ -1098,16 +1195,16 @@ def get_web_loader(
 
     if engine == 'playwright':
         WebLoaderClass = SafePlaywrightURLLoader
-        web_loader_args['playwright_timeout'] = cfg('playwright_timeout', PLAYWRIGHT_TIMEOUT)
-        playwright_ws_url = cfg('playwright_ws_url', PLAYWRIGHT_WS_URL)
+        web_loader_args['playwright_timeout'] = cfg('web.loader.playwright_timeout')
+        playwright_ws_url = cfg('web.loader.playwright_ws_url')
         if playwright_ws_url:
             web_loader_args['playwright_ws_url'] = playwright_ws_url
 
     if engine == 'firecrawl':
         WebLoaderClass = SafeFireCrawlLoader
-        web_loader_args['api_key'] = cfg('firecrawl_api_key', FIRECRAWL_API_KEY)
-        web_loader_args['api_url'] = cfg('firecrawl_api_url', FIRECRAWL_API_BASE_URL)
-        firecrawl_timeout = cfg('firecrawl_timeout', FIRECRAWL_TIMEOUT)
+        web_loader_args['api_key'] = cfg('web.loader.firecrawl_api_key')
+        web_loader_args['api_url'] = cfg('web.loader.firecrawl_api_url')
+        firecrawl_timeout = cfg('web.loader.firecrawl_timeout')
         if firecrawl_timeout:
             try:
                 web_loader_args['timeout'] = int(firecrawl_timeout)
@@ -1116,14 +1213,19 @@ def get_web_loader(
 
     if engine == 'tavily':
         WebLoaderClass = SafeTavilyLoader
-        web_loader_args['api_key'] = cfg('tavily_api_key', TAVILY_API_KEY)
-        web_loader_args['extract_depth'] = cfg('tavily_extract_depth', TAVILY_EXTRACT_DEPTH)
+        web_loader_args['api_key'] = cfg('web.search.tavily_api_key')
+        web_loader_args['extract_depth'] = cfg('web.search.tavily_extract_depth')
+
+    if engine == 'exa':
+        WebLoaderClass = SafeExaLoader
+        web_loader_args['api_key'] = cfg('web.search.exa_api_key')
+        web_loader_args['timeout'] = web_loader_timeout
 
     if engine == 'microsoft_web_iq':
         WebLoaderClass = SafeMicrosoftWebIQLoader
-        web_loader_args['api_base_url'] = cfg('microsoft_web_iq_api_base_url', MICROSOFT_WEB_IQ_API_BASE_URL)
-        web_loader_args['api_key'] = cfg('microsoft_web_iq_api_key', MICROSOFT_WEB_IQ_API_KEY)
-        web_loader_args['language'] = cfg('microsoft_web_iq_language', MICROSOFT_WEB_IQ_LANGUAGE)
+        web_loader_args['api_base_url'] = cfg('web.search.microsoft_web_iq_api_base_url')
+        web_loader_args['api_key'] = cfg('web.search.microsoft_web_iq_api_key')
+        web_loader_args['language'] = cfg('web.search.microsoft_web_iq_language')
         if web_loader_timeout:
             try:
                 web_loader_args['timeout'] = int(web_loader_timeout)
@@ -1132,8 +1234,8 @@ def get_web_loader(
 
     if engine == 'external':
         WebLoaderClass = ExternalWebLoader
-        web_loader_args['external_url'] = cfg('external_web_loader_url', EXTERNAL_WEB_LOADER_URL)
-        web_loader_args['external_api_key'] = cfg('external_web_loader_api_key', EXTERNAL_WEB_LOADER_API_KEY)
+        web_loader_args['external_url'] = cfg('web.loader.external_web_loader_url')
+        web_loader_args['external_api_key'] = cfg('web.loader.external_web_loader_api_key')
 
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
@@ -1148,5 +1250,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f'Invalid WEB_LOADER_ENGINE: {engine}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'external', or 'microsoft_web_iq'."
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'exa', 'external', or 'microsoft_web_iq'."
         )

@@ -451,31 +451,36 @@ class AccessGrantsTable:
         Replace all grants for a resource from a direct access_grants list.
         """
         async with get_async_db_context(db) as db:
-            await db.execute(
-                delete(AccessGrant).filter_by(
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                )
-            )
-
-            normalized_grants = normalize_access_grants(access_grants)
-
-            results = []
-            for grant_dict in normalized_grants:
-                grant = AccessGrant(
-                    id=str(uuid.uuid4()),
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                    principal_type=grant_dict['principal_type'],
-                    principal_id=grant_dict['principal_id'],
-                    permission=grant_dict['permission'],
-                    created_at=int(time.time()),
-                )
-                db.add(grant)
-                results.append(grant)
-
+            results = await self.replace_access_grants(db, resource_type, resource_id, access_grants)
             await db.commit()
             return [AccessGrantModel.model_validate(g) for g in results]
+
+    async def replace_access_grants(self, db, resource_type, resource_id, access_grants):
+        """Replace grants in the caller's transaction without committing."""
+        await db.execute(
+            delete(AccessGrant).filter_by(
+                resource_type=resource_type,
+                resource_id=resource_id,
+            )
+        )
+
+        normalized_grants = normalize_access_grants(access_grants)
+
+        results = []
+        for grant_dict in normalized_grants:
+            grant = AccessGrant(
+                id=str(uuid.uuid4()),
+                resource_type=resource_type,
+                resource_id=resource_id,
+                principal_type=grant_dict['principal_type'],
+                principal_id=grant_dict['principal_id'],
+                permission=grant_dict['permission'],
+                created_at=int(time.time()),
+            )
+            db.add(grant)
+            results.append(grant)
+
+        return results
 
     async def get_access_control(
         self,
@@ -595,7 +600,7 @@ class AccessGrantsTable:
             if user_group_ids is None:
                 from open_webui.models.groups import Groups
 
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in user_groups}
 
             if user_group_ids:
@@ -651,7 +656,7 @@ class AccessGrantsTable:
             if user_group_ids is None:
                 from open_webui.models.groups import Groups
 
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in user_groups}
 
             if user_group_ids:
@@ -686,8 +691,7 @@ class AccessGrantsTable:
         Get all users who have the specified permission on a resource.
         Returns a list of UserModel instances.
         """
-        from open_webui.models.groups import Groups
-        from open_webui.models.users import UserModel, Users
+        from open_webui.models.users import Users
 
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -699,26 +703,68 @@ class AccessGrantsTable:
             )
             grants = result.scalars().all()
 
-            # Check for public access
-            for grant in grants:
-                if grant.principal_type == 'user' and grant.principal_id == '*':
-                    result = await Users.get_users(filter={'roles': ['!pending']}, db=db)
-                    return result.get('users', [])
-
-            user_ids_with_access = set()
-
-            for grant in grants:
-                if grant.principal_type == 'user':
-                    user_ids_with_access.add(grant.principal_id)
-                elif grant.principal_type == 'group':
-                    group_user_ids = await Groups.get_group_user_ids_by_id(grant.principal_id, db=db)
-                    if group_user_ids:
-                        user_ids_with_access.update(group_user_ids)
+            user_ids_with_access = await self.get_user_ids_by_access_grants(grants, permission, db=db)
 
             if not user_ids_with_access:
                 return []
 
             return await Users.get_users_by_user_ids(list(user_ids_with_access), db=db)
+
+    async def get_user_ids_by_access_grants(
+        self,
+        access_grants: list[AccessGrantModel],
+        permission: str = 'read',
+        db: AsyncSession | None = None,
+    ) -> set[str]:
+        """Get user IDs with the specified permission, including public and group grants."""
+        from open_webui.models.groups import Groups
+        from open_webui.models.users import Users
+
+        async with get_async_db_context(db) as db:
+            user_ids = set()
+            group_ids = []
+            for grant in access_grants:
+                if grant.permission != permission:
+                    continue
+                if grant.principal_type == PRINCIPAL_TYPE_USER:
+                    if grant.principal_id == WILDCARD_PRINCIPAL_ID:
+                        result = await Users.get_users(filter={'roles': ['!pending']}, db=db)
+                        return {user.id for user in result.get('users', [])}
+                    user_ids.add(grant.principal_id)
+                elif grant.principal_type == PRINCIPAL_TYPE_GROUP:
+                    group_ids.append(grant.principal_id)
+
+            if group_ids:
+                group_user_ids = await Groups.get_group_user_ids_by_ids(group_ids, db=db, include_inherited=True)
+                for members in group_user_ids.values():
+                    user_ids.update(members)
+            return user_ids
+
+    async def get_revoked_user_ids_by_resource(
+        self,
+        resource_type: str,
+        resource_id: str,
+        previous_access_grants: list[AccessGrantModel],
+        permission: str = 'read',
+        db: AsyncSession | None = None,
+    ) -> set[str]:
+        """Get user IDs that lost the specified permission after a resource's grants changed."""
+        async with get_async_db_context(db) as db:
+            access_grants = await self.get_grants_by_resource(resource_type, resource_id, db=db)
+            previous_principals = {
+                (grant.principal_type, grant.principal_id)
+                for grant in previous_access_grants
+                if grant.permission == permission
+            }
+            principals = {
+                (grant.principal_type, grant.principal_id) for grant in access_grants if grant.permission == permission
+            }
+            if previous_principals <= principals or (PRINCIPAL_TYPE_USER, WILDCARD_PRINCIPAL_ID) in principals:
+                return set()
+
+            previous_user_ids = await self.get_user_ids_by_access_grants(previous_access_grants, permission, db=db)
+            user_ids = await self.get_user_ids_by_access_grants(access_grants, permission, db=db)
+            return previous_user_ids - user_ids
 
     def has_permission_filter(
         self,

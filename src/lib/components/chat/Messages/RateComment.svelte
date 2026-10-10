@@ -111,9 +111,14 @@
 	</div>
 {/if}
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
 	class=" my-2.5 rounded-xl px-4 py-3 border border-gray-100/30 dark:border-gray-850/30"
 	id="message-feedback-{message.id}"
+	on:click={(e) => {
+		e.stopPropagation();
+	}}
 >
 	<div class="flex justify-between items-center">
 		<div class="text-sm font-normal">{$i18n.t('How would you rate this response?')}</div>
@@ -244,7 +249,7 @@
 		</div>
 
 		<button
-			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 			on:click={() => {
 				saveHandler();
 			}}

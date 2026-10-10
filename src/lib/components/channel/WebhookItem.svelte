@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -108,7 +108,9 @@
 			</div>
 			<div class="text-gray-500 text-xs">
 				{$i18n.t('Created on {{date}}', {
-					date: dayjs(webhook.created_at / 1000000).format('MMM D, YYYY')
+					date: dayjs(webhook.created_at / 1000000)
+						.locale($i18n.language)
+						.format('MMM D, YYYY')
 				})}
 				{#if webhook.user?.name}
 					{$i18n.t('by {{name}}', { name: webhook.user.name })}

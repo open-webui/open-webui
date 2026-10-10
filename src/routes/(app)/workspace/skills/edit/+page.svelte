@@ -4,39 +4,27 @@
 	import { skills } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	import { getSkillById, getSkills, updateSkillById } from '$lib/apis/skills';
 	import { page } from '$app/stores';
 
 	import SkillEditor from '$lib/components/workspace/Skills/SkillEditor.svelte';
 
-	let skill = null;
+	let skill: any = null;
 	let disabled = false;
 
 	$: skillId = $page.url.searchParams.get('id');
 
-	const onSubmit = async (_skill) => {
-		const updatedSkill = await updateSkillById(localStorage.token, skillId, _skill).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
+	const onSubmit = async (_skill: any) => {
+		const updatedSkill = await updateSkillById(localStorage.token, skillId!, _skill);
 
 		if (updatedSkill) {
 			toast.success($i18n.t('Skill updated successfully'));
 			await skills.set(await getSkills(localStorage.token));
-			skill = {
-				id: updatedSkill.id,
-				name: updatedSkill.name,
-				description: updatedSkill.description,
-				content: updatedSkill.content,
-				meta: updatedSkill.meta ?? {},
-				is_active: updatedSkill.is_active,
-				access_grants: updatedSkill?.access_grants === undefined ? [] : updatedSkill?.access_grants
-			};
+			skill = updatedSkill;
 		}
+		return updatedSkill;
 	};
 
 	onMount(async () => {
@@ -47,16 +35,8 @@
 			});
 
 			if (_skill) {
-				disabled = !_skill.write_access ?? true;
-				skill = {
-					id: _skill.id,
-					name: _skill.name,
-					description: _skill.description,
-					content: _skill.content,
-					meta: _skill.meta ?? {},
-					is_active: _skill.is_active,
-					access_grants: _skill?.access_grants === undefined ? [] : _skill?.access_grants
-				};
+				disabled = !_skill.write_access;
+				skill = _skill;
 			} else {
 				goto('/workspace/skills');
 			}

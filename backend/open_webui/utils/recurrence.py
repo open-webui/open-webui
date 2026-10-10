@@ -1,11 +1,14 @@
 """Recurrence calculations isolated from application/DB imports for worker processes."""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
+from functools import partial
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from anyio import fail_after, to_process
+import anyio
+from anyio import fail_after, to_process, to_thread
 from dateutil.rrule import HOURLY, MINUTELY, SECONDLY, rruleset, rrulestr
 from open_webui.constants import ERROR_MESSAGES
 
@@ -101,6 +104,12 @@ async def _get_next_occurrences(s: str, now: datetime, n: int) -> list[datetime]
             return await to_process.run_sync(_next_occurrences, s, now, n, cancellable=True)
     except TimeoutError as e:
         raise RecurrenceEvaluationTimeout('Schedule took too long to evaluate; simplify its recurrence rule.') from e
+    except NotImplementedError:
+        # Windows' SelectorEventLoop (required by psycopg) cannot spawn subprocesses.
+        run_on_proactor_loop = partial(
+            anyio.run, _get_next_occurrences, s, now, n, backend_options={'loop_factory': asyncio.ProactorEventLoop}
+        )
+        return await to_thread.run_sync(run_on_proactor_loop)
 
 
 async def validate_rrule(s: str, tz: str = None) -> None:
@@ -134,6 +143,18 @@ async def next_run_ns(s: str, tz: str = None) -> Optional[int]:
     if not occurrences:
         return None
     dt = occurrences[0]
+    if zi:
+        dt = dt.replace(tzinfo=zi)
+    return int(dt.timestamp() * 1_000_000_000)
+
+
+def schedule_start_ns(s: str, tz: str = None) -> int:
+    """DTSTART the scheduler anchors the rule to, as epoch nanoseconds."""
+    zi = _resolve_tz(tz)
+    now = datetime.now(zi).replace(tzinfo=None) if zi else datetime.now()
+    parsed = _parse_rule(s, now)
+    rule = parsed._rrule[0] if isinstance(parsed, rruleset) else parsed
+    dt = rule._dtstart
     if zi:
         dt = dt.replace(tzinfo=zi)
     return int(dt.timestamp() * 1_000_000_000)

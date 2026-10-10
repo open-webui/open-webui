@@ -14,6 +14,7 @@
 	import { getUserVariables, updateUserVariables } from '$lib/apis/users';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
+	import Mfa from './Account/Mfa.svelte';
 	import { generateInitialsImage } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -384,6 +385,8 @@
 			</UserSettingSection>
 		{/if}
 
+		<UserSettingSection title={$i18n.t('Multi-factor authentication')}><Mfa /></UserSettingSection>
+
 		{#if canUseApiKeys({ user: $user, config: $config })}
 			<UserSettingSection title={$i18n.t('settings.personal.account.sections.apiKeys.title')}>
 				<UserSettingRow description={$i18n.t('settings.personal.account.secrets.description')}>
@@ -408,6 +411,7 @@
 									<SensitiveInput variant="settings" value={localStorage.token} readOnly={true} />
 
 									<button
+										type="button"
 										class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 										aria-label={$i18n.t('Copy Token')}
 										on:click={() => {
@@ -465,6 +469,7 @@
 										<SensitiveInput variant="settings" value={APIKey} readOnly={true} />
 
 										<button
+											type="button"
 											class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 											aria-label={$i18n.t('Copy API Key')}
 											on:click={() => {
@@ -572,7 +577,7 @@
 
 	<div class="shrink-0 flex w-full justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 			type="submit"
 		>
 			{$i18n.t('Save')}
@@ -646,7 +651,7 @@
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="rounded-full bg-black px-3.5 py-1.5 text-sm font-normal text-white transition hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 					type="submit"
 				>
 					{$i18n.t('Done')}

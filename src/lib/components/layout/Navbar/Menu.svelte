@@ -278,6 +278,7 @@
 {/if}
 
 <Dropdown
+	closeOnSelect
 	onOpenChange={(state) => {
 		if (state === false) {
 			onClose();
@@ -483,7 +484,9 @@
 					}}
 				>
 					<ArchiveBox className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Archive')}</div>
+					<div class="flex items-center">
+						{chat?.archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
+					</div>
 				</button>
 
 				{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
@@ -501,7 +504,8 @@
 
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
-				<div class="flex max-h-28 overflow-y-auto px-2 py-1">
+				<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+				<div class="flex max-h-28 overflow-y-auto px-2 py-1" on:click={(e) => e.preventDefault()}>
 					<Tags chatId={chat.id} />
 				</div>
 			{/if}

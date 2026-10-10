@@ -90,7 +90,9 @@
 	};
 
 	const init = async () => {
+		page = 1;
 		chatList = await getChatListByUserId(localStorage.token, user.id, page, filter);
+		allChatsLoaded = (chatList ?? []).length === 0;
 	};
 
 	$: if (show) {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatSchedule } from '$lib/utils/schedule';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
@@ -79,7 +80,7 @@
 
 	const formatTime = (ts: number | null): string => {
 		if (!ts) return '-';
-		return new Date(ts / 1_000_000).toLocaleString(undefined, {
+		return new Date(ts / 1_000_000).toLocaleString($i18n.language, {
 			month: 'short',
 			day: 'numeric',
 			hour: '2-digit',
@@ -89,61 +90,10 @@
 
 	const formatNextRun = (ts: number | null): string => {
 		if (!ts) return $i18n.t('Not scheduled');
-		const d = dayjs(ts / 1_000_000);
-		if (d.isSame(dayjs(), 'day')) return `${$i18n.t('Today at')} ${d.format('LT')}`;
+		const d = dayjs(ts / 1_000_000).locale($i18n.language);
+		if (d.isSame(dayjs().locale($i18n.language), 'day'))
+			return `${$i18n.t('Today at')} ${d.format('LT')}`;
 		return d.format('L LT');
-	};
-
-	const formatSchedule = (rrule: string): string => {
-		const match = rrule.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
-		if (/COUNT=1(?!\d)/.test(rrule)) {
-			if (match) {
-				const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`);
-				return `${$i18n.t('Once')} · ${d.toLocaleDateString(undefined, {
-					month: 'short',
-					day: 'numeric'
-				})} ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
-			}
-			return $i18n.t('Once');
-		}
-
-		const parts: Record<string, string> = {};
-		rrule
-			.split(/\s+/)
-			.filter((line) => !line.toUpperCase().startsWith('DTSTART'))
-			.join('')
-			.replace('RRULE:', '')
-			.split(';')
-			.forEach((part) => {
-				const [key, value] = part.split('=');
-				if (key && value) parts[key] = value;
-			});
-
-		const freq = parts.FREQ || '';
-		const hour = parseInt(parts.BYHOUR || match?.[4] || '0');
-		const minute = (parts.BYMINUTE || match?.[5] || '0').padStart(2, '0');
-		const interval = parseInt(parts.INTERVAL || '1');
-		const ampm = hour >= 12 ? 'PM' : 'AM';
-		const hour12 = hour % 12 || 12;
-		const time = `${hour12}:${minute} ${ampm}`;
-
-		if (freq === 'MINUTELY')
-			return interval === 1
-				? $i18n.t('Every minute')
-				: $i18n.t('Every {{count}} minutes', { count: interval });
-		if (freq === 'HOURLY')
-			return interval === 1
-				? $i18n.t('Hourly')
-				: $i18n.t('Every {{count}} hours', { count: interval });
-		if (freq === 'DAILY') return `${$i18n.t('Daily at')} ${time}`;
-		if (freq === 'WEEKLY')
-			return parts.BYDAY
-				? `${parts.BYDAY} ${$i18n.t('at')} ${time}`
-				: `${$i18n.t('Weekly at')} ${time}`;
-		if (freq === 'MONTHLY')
-			return `${$i18n.t('Monthly')} ${parts.BYMONTHDAY ?? '1'} ${$i18n.t('at')} ${time}`;
-
-		return rrule;
 	};
 
 	const toggleHandler = async () => {
@@ -167,6 +117,7 @@
 			return null;
 		});
 		if (res) {
+			automation = res;
 			toast.success($i18n.t('Automation triggered'));
 			setTimeout(() => loadRuns(false), 2000);
 		}
@@ -301,7 +252,7 @@
 				{$i18n.t('Schedule')}
 			</span>
 			<span class="min-w-0 truncate text-xs text-gray-700 dark:text-gray-300">
-				{formatSchedule(automation.data.rrule)}
+				{formatSchedule(automation.data.rrule, $i18n)}
 			</span>
 		</div>
 

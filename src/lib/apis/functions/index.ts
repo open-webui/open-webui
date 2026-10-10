@@ -518,3 +518,101 @@ export const updateUserValvesById = async (token: string, id: string, valves: ob
 
 	return res;
 };
+
+export type FunctionHistoryEntry = {
+	id: string;
+	function_id: string;
+	parent_id: string | null;
+	user_id: string;
+	commit_message: string | null;
+	created_at: number;
+	user?: { name: string } | null;
+};
+
+export type FunctionSnapshot = {
+	name: string;
+	content: string;
+	meta: Record<string, any>;
+};
+
+export const getFunctionHistory = async (
+	token: string,
+	id: string,
+	page = 1
+): Promise<FunctionHistoryEntry[]> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/functions/id/${encodeURIComponent(id)}/history?page=${page}`,
+		{
+			method: 'GET',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const getFunctionHistoryEntry = async (
+	token: string,
+	id: string,
+	versionId: string
+): Promise<FunctionHistoryEntry & { snapshot: FunctionSnapshot }> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/functions/id/${encodeURIComponent(id)}/history/${encodeURIComponent(versionId)}`,
+		{
+			method: 'GET',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const getFunctionHistoryDiff = async (
+	token: string,
+	id: string,
+	fromId: string,
+	toId: string
+) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/functions/id/${encodeURIComponent(id)}/history/diff?${new URLSearchParams({ from_id: fromId, to_id: toId })}`,
+		{
+			method: 'GET',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const deleteFunctionHistoryVersion = async (
+	token: string,
+	id: string,
+	versionId: string
+) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/functions/id/${encodeURIComponent(id)}/history/${encodeURIComponent(versionId)}`,
+		{
+			method: 'DELETE',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const setProductionFunctionVersion = async (
+	token: string,
+	id: string,
+	versionId: string
+) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/functions/id/${encodeURIComponent(id)}/update/version`,
+		{
+			method: 'POST',
+			headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ version_id: versionId })
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};

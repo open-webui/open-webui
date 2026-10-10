@@ -1,5 +1,7 @@
 <script>
 	import { getContext, onMount, tick } from 'svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ModelSettingsLabel from '$lib/components/workspace/Models/ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
@@ -13,8 +15,6 @@
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
-	import DefaultFeatures from '$lib/components/workspace/Models/DefaultFeatures.svelte';
-	import BuiltinTools from '$lib/components/workspace/Models/BuiltinTools.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
 
@@ -43,9 +43,6 @@
 		([_, value]) => value !== null && value !== '' && value !== undefined
 	);
 	$: enabledCapabilities = Object.entries(defaultCapabilities ?? {}).filter(([_, value]) => value);
-	$: availableFeatures = enabledCapabilities
-		.filter(([key]) => ['web_search', 'code_interpreter', 'image_generation'].includes(key))
-		.map(([key]) => key);
 	$: translatedPromptLocales = Object.entries(promptSuggestionsI18n ?? {})
 		.filter(([_, value]) => Array.isArray(value?.suggestion_prompts))
 		.map(([locale]) => locale);
@@ -155,91 +152,90 @@
 </script>
 
 <div class="shrink-0">
-	<div class="flex items-center justify-between gap-4 py-0.5">
-		<button
-			class="min-w-0 flex-1 text-left text-xs text-gray-600 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-			type="button"
-			on:click={() => {
-				expanded = !expanded;
-			}}
-		>
-			{$i18n.t('settings.admin.models.defaults.modelDefaults.label')}
-		</button>
-
-		<button
-			class="shrink-0 text-[0.6875rem] text-gray-400 transition hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-			type="button"
-			on:click={() => {
-				expanded = !expanded;
-			}}
-		>
-			{expanded ? $i18n.t('Close') : $i18n.t('Configure')}
-		</button>
-	</div>
+	<button
+		class="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal text-gray-600 focus-visible:outline focus-visible:outline-2 dark:text-gray-400"
+		type="button"
+		aria-expanded={expanded}
+		on:click={() => (expanded = !expanded)}
+	>
+		<ModelSettingsLabel
+			label={$i18n.t('settings.admin.models.defaults.modelDefaults.label')}
+			description={$i18n.t(
+				'Set default capabilities, parameters, and prompt suggestions for models. Individual model settings can override these defaults.'
+			)}
+		/>
+		<ChevronRight
+			className={`size-3 text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+		/>
+	</button>
 
 	{#if expanded}
 		{#if loading}
 			<div class="py-1 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Loading...')}</div>
 		{:else}
-			<div class="space-y-1 mt-0.5">
+			<div class="space-y-0 pl-3">
 				<div>
 					<button
-						class="flex w-full items-center justify-between gap-4 py-0.5 text-left"
+						class="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left font-normal focus-visible:outline focus-visible:outline-2"
 						type="button"
+						aria-expanded={showCapabilities}
 						on:click={() => {
 							showCapabilities = !showCapabilities;
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('settings.admin.models.defaults.modelCapabilities.label')}
+							<ModelSettingsLabel
+								label={$i18n.t('settings.admin.models.defaults.modelCapabilities.label')}
+								description={$i18n.t(
+									'Set default capabilities, enabled features, and built-in tools for models. Individual models can override these settings.'
+								)}
+							/>
 						</span>
-						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{showCapabilities ? $i18n.t('Close') : $i18n.t('Configure')}
-						</span>
+						<ChevronRight
+							className={`size-3 text-gray-400 transition-transform ${showCapabilities ? 'rotate-90' : ''}`}
+						/>
 					</button>
 
 					{#if showCapabilities}
 						<div
-							class="max-h-[24rem] overflow-y-auto pb-2 pr-1 scrollbar-hover"
+							class="max-h-[24rem] overflow-y-auto pb-2 pl-3 pr-1 scrollbar-hover"
 							on:click={updateDirty}
 							on:change={updateDirty}
 						>
-							<Capabilities bind:capabilities={defaultCapabilities} />
-
-							{#if availableFeatures.length > 0}
-								<div class="mt-4">
-									<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
-								</div>
-							{/if}
-
-							{#if defaultCapabilities.builtin_tools}
-								<div class="mt-4">
-									<BuiltinTools bind:builtinTools />
-								</div>
-							{/if}
+							<Capabilities
+								bind:capabilities={defaultCapabilities}
+								bind:defaultFeatureIds
+								bind:builtinTools
+							/>
 						</div>
 					{/if}
 				</div>
 
 				<div>
 					<button
-						class="flex w-full items-center justify-between gap-4 py-0.5 text-left"
+						class="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left font-normal focus-visible:outline focus-visible:outline-2"
 						type="button"
+						aria-expanded={showParameters}
 						on:click={() => {
 							showParameters = !showParameters;
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('settings.admin.models.defaults.modelParameters.label')}
+							<ModelSettingsLabel
+								label={$i18n.t('settings.admin.models.defaults.modelParameters.label')}
+								description={$i18n.t(
+									'Set default generation parameters for models, such as temperature and token limits. Individual models can override these settings.'
+								)}
+							/>
 						</span>
-						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{showParameters ? $i18n.t('Close') : $i18n.t('Configure')}
-						</span>
+						<ChevronRight
+							className={`size-3 text-gray-400 transition-transform ${showParameters ? 'rotate-90' : ''}`}
+						/>
 					</button>
 
 					{#if showParameters}
 						<div
-							class="max-h-[24rem] overflow-y-auto pb-2 pr-1 scrollbar-hover"
+							class="max-h-[24rem] overflow-y-auto pb-2 pl-3 pr-1 scrollbar-hover"
 							on:click={updateDirty}
 							on:change={updateDirty}
 							on:input={updateDirty}
@@ -251,23 +247,29 @@
 
 				<div>
 					<button
-						class="flex w-full items-center justify-between gap-4 py-0.5 text-left"
+						class="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left font-normal focus-visible:outline focus-visible:outline-2"
 						type="button"
+						aria-expanded={showPromptSuggestions}
 						on:click={() => {
 							showPromptSuggestions = !showPromptSuggestions;
 						}}
 					>
 						<span class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('settings.admin.models.defaults.promptSuggestions.label')}
+							<ModelSettingsLabel
+								label={$i18n.t('settings.admin.models.defaults.promptSuggestions.label')}
+								description={$i18n.t(
+									'Set the starter prompts shown in new chats when a model uses default prompt suggestions.'
+								)}
+							/>
 						</span>
-						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{showPromptSuggestions ? $i18n.t('Close') : $i18n.t('Configure')}
-						</span>
+						<ChevronRight
+							className={`size-3 text-gray-400 transition-transform ${showPromptSuggestions ? 'rotate-90' : ''}`}
+						/>
 					</button>
 
 					{#if showPromptSuggestions}
 						<div
-							class="max-h-[24rem] space-y-2 overflow-y-auto pb-2 pr-1 scrollbar-hover"
+							class="max-h-[24rem] space-y-2 overflow-y-auto pb-2 pl-3 pr-1 scrollbar-hover"
 							on:click={updateDirty}
 							on:change={updateDirty}
 							on:input={updateDirty}

@@ -30,6 +30,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     BYPASS_RETRIEVAL_ACCESS_CONTROL,
+    ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
     MPS_INFERENCE_LOCK,
@@ -79,101 +80,25 @@ def is_youtube_url(url: str) -> bool:
     return re.match(youtube_regex, url) is not None
 
 
-LOADER_CONFIG_KEYS = {
-    'file_max_size': 'rag.file.max_size',
-    'youtube_language': 'rag.youtube_loader_language',
-    'youtube_proxy_url': 'rag.youtube_loader_proxy_url',
-    'web_loader_ssl_verification': 'web.loader.ssl_verification',
-    'web_loader_concurrent_requests': 'web.loader.concurrent_requests',
-    'web_search_trust_env': 'web.search.trust_env',
-    'web_loader_engine': 'web.loader.engine',
-    'web_loader_timeout': 'web.loader.timeout',
-    'playwright_ws_url': 'web.loader.playwright_ws_url',
-    'playwright_timeout': 'web.loader.playwright_timeout',
-    'firecrawl_api_key': 'web.loader.firecrawl_api_key',
-    'firecrawl_api_url': 'web.loader.firecrawl_api_url',
-    'firecrawl_timeout': 'web.loader.firecrawl_timeout',
-    'tavily_api_key': 'web.search.tavily_api_key',
-    'tavily_extract_depth': 'web.search.tavily_extract_depth',
-    'microsoft_web_iq_api_base_url': 'web.search.microsoft_web_iq_api_base_url',
-    'microsoft_web_iq_api_key': 'web.search.microsoft_web_iq_api_key',
-    'microsoft_web_iq_language': 'web.search.microsoft_web_iq_language',
-    'external_web_loader_url': 'web.loader.external_web_loader_url',
-    'external_web_loader_api_key': 'web.loader.external_web_loader_api_key',
-    'CONTENT_EXTRACTION_ENGINE': 'rag.content_extraction_engine',
-    'DATALAB_MARKER_API_KEY': 'rag.datalab_marker_api_key',
-    'DATALAB_MARKER_API_BASE_URL': 'rag.datalab_marker_api_base_url',
-    'DATALAB_MARKER_ADDITIONAL_CONFIG': 'rag.datalab_marker_additional_config',
-    'DATALAB_MARKER_SKIP_CACHE': 'rag.datalab_marker_skip_cache',
-    'DATALAB_MARKER_FORCE_OCR': 'rag.datalab_marker_force_ocr',
-    'DATALAB_MARKER_PAGINATE': 'rag.datalab_marker_paginate',
-    'DATALAB_MARKER_STRIP_EXISTING_OCR': 'rag.datalab_marker_strip_existing_ocr',
-    'DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION': 'rag.datalab_marker_disable_image_extraction',
-    'DATALAB_MARKER_FORMAT_LINES': 'rag.datalab_marker_format_lines',
-    'DATALAB_MARKER_USE_LLM': 'rag.datalab_marker_use_llm',
-    'DATALAB_MARKER_OUTPUT_FORMAT': 'rag.datalab_marker_output_format',
-    'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
-    'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
-    'EXTERNAL_DOCUMENT_LOADER_HEADERS': 'rag.external_document_loader_headers',
-    'TIKA_SERVER_URL': 'rag.tika_server_url',
-    'TIKA_SERVER_VERSION': 'rag.tika_server_version',
-    'DOCLING_SERVER_URL': 'rag.docling_server_url',
-    'DOCLING_API_KEY': 'rag.docling_api_key',
-    'DOCLING_PARAMS': 'rag.docling_params',
-    'PDF_EXTRACT_IMAGES': 'rag.pdf_extract_images',
-    'PDF_LOADER_MODE': 'rag.pdf_loader_mode',
-    'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',
-    'DOCUMENT_INTELLIGENCE_KEY': 'rag.document_intelligence_key',
-    'DOCUMENT_INTELLIGENCE_MODEL': 'rag.document_intelligence_model',
-    'MISTRAL_OCR_API_BASE_URL': 'rag.mistral_ocr_api_base_url',
-    'MISTRAL_OCR_API_KEY': 'rag.mistral_ocr_api_key',
-    'MISTRAL_OCR_USE_BASE64': 'rag.mistral_ocr_use_base64',
-    'PADDLEOCR_VL_BASE_URL': 'rag.paddleocr_vl_base_url',
-    'PADDLEOCR_VL_TOKEN': 'rag.paddleocr_vl_token',
-    'MINERU_API_MODE': 'rag.mineru_api_mode',
-    'MINERU_API_URL': 'rag.mineru_api_url',
-    'MINERU_API_KEY': 'rag.mineru_api_key',
-    'MINERU_API_TIMEOUT': 'rag.mineru_api_timeout',
-    'MINERU_PARAMS': 'rag.mineru_params',
-    'MINERU_FILE_EXTENSIONS': 'rag.mineru_file_extensions',
-}
-
-
-async def get_loader_config():
-    values = await Config.get_many(*LOADER_CONFIG_KEYS.values())
-    return {name: values.get(key) for name, key in LOADER_CONFIG_KEYS.items()}
-
-
 def get_loader(request, url: str, config: dict):
     if is_youtube_url(url):
         return YoutubeLoader(
             url,
-            language=config.get('youtube_language'),
-            proxy_url=config.get('youtube_proxy_url'),
+            language=config['rag.youtube_loader_language'],
+            proxy_url=config['rag.youtube_loader_proxy_url'],
         )
-    return get_web_loader(
-        url,
-        verify_ssl=config.get('web_loader_ssl_verification'),
-        requests_per_second=config.get('web_loader_concurrent_requests'),
-        trust_env=config.get('web_search_trust_env'),
-        loader_config=config,
-    )
+    return get_web_loader(url, config)
 
 
-def build_loader_from_config(request, config: dict):
-    """Build a Loader instance with the admin's configured extraction engine settings."""
+def build_loader_from_config(config: dict):
+    """Build a document loader with the shared retrieval settings."""
     from open_webui.retrieval.loaders.main import Loader
 
-    loader_config = {key: config.get(key) for key in LOADER_CONFIG_KEYS if key.isupper()}
-    loader_config['FILE_MAX_SIZE'] = config.get('file_max_size')
-    return Loader(
-        engine=loader_config['CONTENT_EXTRACTION_ENGINE'],
-        **{key: value for key, value in loader_config.items() if key != 'CONTENT_EXTRACTION_ENGINE'},
-    )
+    return Loader(config)
 
 
 def _extract_text_from_binary_response(
-    request, response: requests.Response, url: str, loader_config: dict
+    request, response: requests.Response, url: str, config: dict
 ) -> tuple[str, list]:
     """Download response body to a temp file and extract text using the Loader pipeline."""
     import mimetypes
@@ -198,7 +123,7 @@ def _extract_text_from_binary_response(
 
     suffix = '.' + filename.split('.')[-1].lower() if '.' in filename else ''
 
-    max_size = loader_config.get('file_max_size')
+    max_size = config['rag.file.max_size']
     max_bytes = int(max_size) * 1024 * 1024 if max_size else 0
 
     tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix)
@@ -212,7 +137,7 @@ def _extract_text_from_binary_response(
                     raise ValueError(ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'))
                 tmp.write(chunk)
 
-        loader = build_loader_from_config(request, loader_config)
+        loader = build_loader_from_config(config)
         docs = loader.load(filename, content_type, tmp_path)
         for doc in docs:
             doc.metadata['source'] = url
@@ -242,16 +167,75 @@ def _is_text_content_type(content_type: str) -> bool:
     return ct.endswith(('+xml', '+json'))
 
 
-async def get_content_from_url(request, url: str) -> str:
-    loader_config = await get_loader_config()
+async def get_content_from_url(request, url: str, *, config: dict | None = None) -> tuple[str, list]:
+    if config is None:
+        config = await Config.get_many(
+            'rag.content_extraction_engine',
+            'rag.datalab_marker_additional_config',
+            'rag.datalab_marker_api_base_url',
+            'rag.datalab_marker_api_key',
+            'rag.datalab_marker_disable_image_extraction',
+            'rag.datalab_marker_force_ocr',
+            'rag.datalab_marker_format_lines',
+            'rag.datalab_marker_output_format',
+            'rag.datalab_marker_paginate',
+            'rag.datalab_marker_skip_cache',
+            'rag.datalab_marker_strip_existing_ocr',
+            'rag.datalab_marker_use_llm',
+            'rag.docling_api_key',
+            'rag.docling_params',
+            'rag.docling_server_url',
+            'rag.document_intelligence_endpoint',
+            'rag.document_intelligence_key',
+            'rag.document_intelligence_model',
+            'web.loader.ssl_verification',
+            'web.search.exa_api_key',
+            'rag.external_document_loader_api_key',
+            'rag.external_document_loader_headers',
+            'rag.external_document_loader_url',
+            'web.loader.external_web_loader_api_key',
+            'web.loader.external_web_loader_url',
+            'rag.file.max_size',
+            'web.loader.firecrawl_api_url',
+            'web.loader.firecrawl_api_key',
+            'web.loader.firecrawl_timeout',
+            'web.search.microsoft_web_iq_api_base_url',
+            'web.search.microsoft_web_iq_api_key',
+            'web.search.microsoft_web_iq_language',
+            'rag.mineru_api_key',
+            'rag.mineru_api_mode',
+            'rag.mineru_api_timeout',
+            'rag.mineru_api_url',
+            'rag.mineru_file_extensions',
+            'rag.mineru_params',
+            'rag.mistral_ocr_api_base_url',
+            'rag.mistral_ocr_api_key',
+            'rag.mistral_ocr_use_base64',
+            'rag.paddleocr_vl_base_url',
+            'rag.paddleocr_vl_token',
+            'rag.pdf_extract_images',
+            'rag.pdf_loader_mode',
+            'web.loader.playwright_timeout',
+            'web.loader.playwright_ws_url',
+            'web.search.tavily_api_key',
+            'web.search.tavily_extract_depth',
+            'rag.tika_server_url',
+            'rag.tika_server_version',
+            'web.loader.concurrent_requests',
+            'web.loader.engine',
+            'web.loader.timeout',
+            'web.search.trust_env',
+            'rag.youtube_loader_language',
+            'rag.youtube_loader_proxy_url',
+        )
 
     # The rest of this function performs synchronous, blocking work: an SSRF-guarded
     # `requests` probe and a synchronous document loader (`loader.load()`). Run it in a
     # worker thread so the event loop stays free while waiting on network/parsing.
-    return await asyncio.to_thread(_get_content_from_url_sync, request, url, loader_config)
+    return await asyncio.to_thread(_get_content_from_url_sync, request, url, config)
 
 
-def _get_content_from_url_sync(request, url: str, loader_config):
+def _get_content_from_url_sync(request, url: str, config: dict):
     from open_webui.retrieval.web.utils import validate_url, get_ssrf_safe_requests_session
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
@@ -264,7 +248,7 @@ def _get_content_from_url_sync(request, url: str, loader_config):
     # when allow_redirects=False, causing the binary-content path to run
     # and produce empty docs → HTTP 400.
     if is_youtube_url(url):
-        loader = get_loader(request, url, loader_config)
+        loader = get_loader(request, url, config)
         docs = loader.load()
         content = ' '.join([doc.page_content for doc in docs])
         return content, docs
@@ -288,14 +272,14 @@ def _get_content_from_url_sync(request, url: str, loader_config):
     if response is None or _is_text_content_type(content_type):
         if response is not None:
             response.close()
-        loader = get_loader(request, url, loader_config)
+        loader = get_loader(request, url, config)
         docs = loader.load()
         content = ' '.join([doc.page_content for doc in docs])
         return content, docs
 
     # Binary content (PDF, DOCX, XLSX, PPTX, etc.) — download and extract
     try:
-        return _extract_text_from_binary_response(request, response, url, loader_config)
+        return _extract_text_from_binary_response(request, response, url, config)
     finally:
         response.close()
 
@@ -702,6 +686,7 @@ async def query_collection(
     queries: list[str],
     embedding_function,
     k: int,
+    user: UserModel | None = None,
 ) -> dict:
     config = await Config.get_many(
         'rag.enable_hybrid_search',
@@ -714,7 +699,7 @@ async def query_collection(
     if request and config.get('rag.enable_hybrid_search'):
         try:
             reranking_function = (
-                (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents))
+                (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
                 if request.app.state.RERANKING_FUNCTION
                 else None
             )
@@ -838,6 +823,7 @@ async def query_collection_with_hybrid_search(
             return name, await ASYNC_VECTOR_DB_CLIENT.get(collection_name=name)
         except Exception as e:
             log.exception(f'Failed to fetch collection {name}: {e}')
+            failed_collection_names.add(name)
             return name, None
 
     collection_results = dict(await asyncio.gather(*(_fetch_collection(name) for name in collection_names)))
@@ -1461,7 +1447,9 @@ async def get_sources_from_items(
         elif item.get('type') == 'chat':
             # Chat Attached
             chat = await Chats.get_chat_by_id(item.get('id'))
-            has_read_access = bool(chat and (user.role == 'admin' or chat.user_id == user.id))
+            has_read_access = bool(
+                chat and ((user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS) or chat.user_id == user.id)
+            )
 
             if chat and not has_read_access:
                 has_read_access = await AccessGrants.has_access(
@@ -1688,6 +1676,7 @@ async def get_sources_from_items(
                         queries=queries,
                         embedding_function=embedding_function,
                         k=k,
+                        user=user,
                     )
             except Exception as e:
                 log.exception(e)
@@ -1715,6 +1704,26 @@ async def get_sources_from_items(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
+
+    file_ids = {
+        metadata['file_id']
+        for source in sources
+        for metadata in source['metadata']
+        if isinstance(metadata, dict) and metadata.get('file_id') and not metadata.get('external')
+    }
+    if file_ids:
+        file_names = {
+            file.id: (file.meta or {}).get('name') for file in await Files.get_file_metadatas_by_ids(list(file_ids))
+        }
+        for source in sources:
+            for metadata in source['metadata']:
+                if isinstance(metadata, dict) and metadata.get('external'):
+                    continue
+                file_name = file_names.get(metadata.get('file_id')) if isinstance(metadata, dict) else None
+                if file_name:
+                    if metadata.get('source') == metadata.get('name'):
+                        metadata['source'] = file_name
+                    metadata['name'] = file_name
     return sources
 
 

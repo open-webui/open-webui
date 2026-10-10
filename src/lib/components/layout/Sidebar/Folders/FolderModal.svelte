@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as I18n } from 'i18next';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -8,12 +10,13 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { user, config } from '$lib/stores';
+	import { user, config, models } from '$lib/stores';
+	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import { getFolderById } from '$lib/apis/folders';
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<I18n>>('i18n');
 
 	export let show = false;
 	export let onSubmit: Function = (e) => {};
@@ -28,6 +31,7 @@
 		background_image_url: null
 	};
 	let data = {
+		model_ids: [] as string[],
 		system_prompt: '',
 		files: []
 	};
@@ -74,9 +78,11 @@
 			meta = folder.meta || {
 				background_image_url: null
 			};
-			data = folder.data || {
+			data = {
 				system_prompt: '',
-				files: []
+				files: [],
+				...folder.data,
+				model_ids: folder.data?.model_ids ?? []
 			};
 		}
 
@@ -102,6 +108,7 @@
 			background_image_url: null
 		};
 		data = {
+			model_ids: [],
 			system_prompt: '',
 			files: []
 		};
@@ -213,6 +220,44 @@
 
 					<hr class=" border-gray-50 dark:border-gray-850/30 my-2.5 w-full" />
 
+					<div class="my-1 flex items-center justify-between gap-4">
+						<label
+							for="model-selector-folder-default-button"
+							class="shrink-0 text-xs text-gray-500"
+						>
+							{$i18n.t('Default Model')}
+						</label>
+						<div class="flex min-w-0 max-w-[65%] items-center gap-2">
+							<div class="min-w-0">
+								<ModelSelector
+									id="folder-default"
+									placeholder={$i18n.t('Use default')}
+									items={$models.map((model) => ({
+										value: model.id,
+										label: model.name,
+										model
+									}))}
+									triggerClassName="text-xs"
+									placement="auto"
+									align="end"
+									selectionOnly
+									value={data.model_ids[0] ?? ''}
+									bind:values={data.model_ids}
+								/>
+							</div>
+							{#if data.model_ids.length}
+								<button
+									type="button"
+									aria-label={$i18n.t('Reset')}
+									class="shrink-0 p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+									on:click={() => (data.model_ids = [])}
+								>
+									<XMark className="size-3" />
+								</button>
+							{/if}
+						</div>
+					</div>
+
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
 						<div class="my-1">
 							<div class="mb-2 text-xs text-gray-500">{$i18n.t('System Prompt')}</div>
@@ -243,17 +288,15 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-								? ' cursor-not-allowed'
-								: ''}"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>
 							{$i18n.t('Save')}
 
 							{#if loading}
-								<div class="ml-2 self-center">
-									<Spinner />
+								<div class="shrink-0">
+									<Spinner className="size-3" />
 								</div>
 							{/if}
 						</button>

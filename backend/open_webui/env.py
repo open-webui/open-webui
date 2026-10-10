@@ -159,7 +159,7 @@ ENABLE_DB_MIGRATIONS = os.getenv('ENABLE_DB_MIGRATIONS', 'True').lower() == 'tru
 # Swap the JSON encoder/decoder used across the app (HTTP request bodies, JSONResponse
 # bodies, upstream provider responses, socket.io payloads) from the stdlib `json` module
 # to orjson. Faster, but stricter: see open_webui/utils/json_codec.py for the differences.
-ENABLE_ORJSON = os.getenv('ENABLE_ORJSON', 'False').lower() == 'true'
+ENABLE_ORJSON = os.getenv('ENABLE_ORJSON', 'True').lower() == 'true'
 
 
 # Function to parse each section
@@ -492,6 +492,12 @@ else:
 
 WEBSOCKET_REDIS_URL = os.getenv('WEBSOCKET_REDIS_URL', REDIS_URL)
 WEBSOCKET_REDIS_CLUSTER = os.getenv('WEBSOCKET_REDIS_CLUSTER', str(REDIS_CLUSTER)).lower() == 'true'
+
+# publishes room-targeted emits on per-room redis channels so instances skip
+# messages for rooms without local members; must be identical across the fleet
+# (toggle with a full restart, not a rolling one), set false for the previous
+# shared-channel-only delivery
+WEBSOCKET_REDIS_ROOM_CHANNELS = os.getenv('WEBSOCKET_REDIS_ROOM_CHANNELS', 'True').lower() == 'true'
 
 websocket_redis_lock_timeout = os.getenv('WEBSOCKET_REDIS_LOCK_TIMEOUT', '60')
 
@@ -1186,6 +1192,10 @@ VIEW_FILE_DEFAULT_MAX_CHARS = _int_env('VIEW_FILE_DEFAULT_MAX_CHARS', 10_000)
 ####################################
 
 ENABLE_PLUGINS = os.getenv('ENABLE_PLUGINS', 'True').lower() == 'true'
+# Deployment controls: the master switch always overrides all feature switches.
+ENABLE_TOOLS = ENABLE_PLUGINS and os.getenv('ENABLE_TOOLS', 'True').lower() == 'true'
+ENABLE_FUNCTIONS = ENABLE_PLUGINS and os.getenv('ENABLE_FUNCTIONS', 'True').lower() == 'true'
+ENABLE_TOOL_SERVERS = ENABLE_PLUGINS and os.getenv('ENABLE_TOOL_SERVERS', 'True').lower() == 'true'
 
 ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
     os.getenv('ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS', 'True').lower() == 'true'

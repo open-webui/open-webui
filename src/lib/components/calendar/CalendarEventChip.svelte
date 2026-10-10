@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+	const i18n = getContext<any>('i18n');
 	import { createEventDispatcher } from 'svelte';
 	import type { CalendarEventModel } from '$lib/apis/calendar';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -23,7 +25,7 @@
 		<span class="truncate">
 			{#if !event.all_day}<span class="text-gray-500 dark:text-gray-400"
 					>{new Date(event.start_at / 1_000_000)
-						.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+						.toLocaleTimeString($i18n.language, { hour: 'numeric', minute: '2-digit' })
 						.replace(' ', '')}</span
 				>{/if}
 			{event.title}

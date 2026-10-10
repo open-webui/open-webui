@@ -50,7 +50,14 @@
 		'linkup',
 		'openserp'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'microsoft_web_iq', 'external'];
+	let webLoaderEngines = [
+		'playwright',
+		'firecrawl',
+		'tavily',
+		'exa',
+		'microsoft_web_iq',
+		'external'
+	];
 
 	let webConfig: any = null;
 	const inputClass =
@@ -577,6 +584,20 @@
 									placeholder={$i18n.t('Enter Tavily API Key')}
 									bind:value={webConfig.TAVILY_API_KEY}
 								/>
+							</div>
+						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('settings.admin.web.tavilySearchDepth.label')}
+								</div>
+								<SettingsSelect bind:value={webConfig.TAVILY_SEARCH_DEPTH} className="w-full">
+									<option value="ultra-fast">{$i18n.t('Ultra-fast')}</option>
+									<option value="fast">{$i18n.t('Fast')}</option>
+									<option value="basic">{$i18n.t('Basic')}</option>
+									<option value="advanced">{$i18n.t('Advanced')}</option>
+								</SettingsSelect>
 							</div>
 						</div>
 					{:else if webConfig.WEB_SEARCH_ENGINE === 'staan'}
@@ -1244,7 +1265,23 @@
 					</SettingsSelect>
 				</AdminSettingRow>
 
-				{#if webConfig.WEB_LOADER_ENGINE === '' || webConfig.WEB_LOADER_ENGINE === 'safe_web'}
+				{#if webConfig.WEB_LOADER_ENGINE === 'exa'}
+					{#if webConfig.WEB_SEARCH_ENGINE === 'exa'}
+						<p class="text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t('Exa search and web loading share the API key configured above.')}
+						</p>
+					{:else}
+						<AdminSettingField label={$i18n.t('settings.admin.web.exaApiKey.label')}>
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('Enter Exa API Key')}
+								bind:value={webConfig.EXA_API_KEY}
+							/>
+						</AdminSettingField>
+					{/if}
+				{/if}
+
+				{#if ['', 'safe_web', 'exa'].includes(webConfig.WEB_LOADER_ENGINE)}
 					<AdminSettingField
 						label={$i18n.t('settings.admin.web.timeout.label')}
 						description={$i18n.t('settings.admin.web.timeout.description')}
@@ -1493,7 +1530,7 @@
 	</div>
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 			type="submit"
 		>
 			{$i18n.t('Save')}

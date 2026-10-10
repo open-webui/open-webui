@@ -9,7 +9,9 @@
 	const dispatch = createEventDispatcher<{ previewPort: number }>();
 
 	export let baseUrl: string;
+	export let previewBaseUrl: string | null = null;
 	export let apiKey: string;
+	export let chatId: string | null = null;
 
 	let ports: ListeningPort[] = [];
 	let expanded = false;
@@ -18,7 +20,7 @@
 
 	const loadPorts = async () => {
 		loading = true;
-		ports = await getListeningPorts(baseUrl, apiKey);
+		ports = await getListeningPorts(baseUrl, apiKey, chatId);
 		loading = false;
 	};
 
@@ -40,7 +42,7 @@
 	};
 
 	const openPortExternal = (port: number) => {
-		const url = getPortProxyUrl(baseUrl, port);
+		const url = getPortProxyUrl(previewBaseUrl ?? baseUrl, port);
 		window.open(url, '_blank', 'noopener,noreferrer');
 	};
 

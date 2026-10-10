@@ -7,6 +7,7 @@ import logging
 import mimetypes
 import re
 import uuid
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional
@@ -488,14 +489,18 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
             # that would follow arbitrary redirects.
             if trusted_base_url and _is_same_origin(data, trusted_base_url):
                 log.debug('Skipping URL validation for trusted backend: %s', data)
+                session_context = nullcontext(await get_session())
             else:
                 await asyncio.to_thread(validate_url, data)
-            session = await get_session()
-            async with session.get(
-                data,
-                headers=headers,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
+                session_context = get_ssrf_safe_session()
+            async with (
+                session_context as session,
+                session.get(
+                    data,
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as r,
+            ):
                 r.raise_for_status()
                 content_type = r.headers.get('content-type', '')
                 if content_type.split('/')[0] == 'image':
@@ -509,8 +514,9 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
                 mime_type = header.split(';')[0].lstrip('data:')
                 img_data = base64.b64decode(encoded)
             else:
-                mime_type = 'image/png'
                 img_data = base64.b64decode(data)
+                with Image.open(io.BytesIO(img_data)) as image:
+                    mime_type = Image.MIME.get(image.format, 'image/png')
             return img_data, mime_type
     except Exception as e:
         log.exception(f'Error loading image data: {e}')
@@ -520,7 +526,7 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
 async def upload_image(request, image_data, content_type, metadata, user, db=None):
     if image_data is None or content_type is None:
         raise ValueError('Failed to retrieve image data from the generation backend')
-    image_format = mimetypes.guess_extension(content_type)
+    image_format = IMAGE_FILE_EXTENSIONS.get(content_type.lower()) or mimetypes.guess_extension(content_type) or '.png'
     file = UploadFile(
         file=io.BytesIO(image_data),
         filename=f'generated-image{image_format}',  # will be converted to a unique ID on upload_file

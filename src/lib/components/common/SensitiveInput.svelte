@@ -37,7 +37,7 @@
 			: `pl-1.5 bg-transparent transition ${showButtonClassName}`;
 </script>
 
-<div class={outerClass}>
+<div class="relative {outerClass}">
 	{#if screenReader}
 		<label class="sr-only" for={id}>{placeholder || $i18n.t('Password')}</label>
 	{/if}

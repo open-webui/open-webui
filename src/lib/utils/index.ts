@@ -1,6 +1,7 @@
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import { parse as parseYaml } from 'yaml';
 import DOMPurify, { type UponSanitizeAttributeHookEvent } from 'dompurify';
 import { WEBUI_BASE_URL } from '$lib/constants';
 import type { FileNavOpenRequest } from '$lib/stores';
@@ -32,6 +33,18 @@ import { decode } from 'html-entities';
 // No one thanks the foundation, but without it the
 // house falls. Let the quiet work here hold.
 //////////////////////////
+
+export const resolveDefaultModelIds = (
+	models: { id: string; info?: { meta?: { hidden?: boolean } } }[],
+	...preferences: (string[] | null | undefined)[]
+): string[] => {
+	const available = models.filter((model) => !model.info?.meta?.hidden).map((model) => model.id);
+	for (const preference of preferences) {
+		const selected = [...new Set(preference ?? [])].filter((id) => available.includes(id));
+		if (selected.length) return selected;
+	}
+	return available.length ? [available[0]] : [];
+};
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -486,6 +499,10 @@ export const generateInitialsImage = (name) => {
 	return canvas.toDataURL();
 };
 
+// These keys are translated by callers after choosing a date format.
+// t('Today at {{LOCALIZED_TIME}}');
+// t('Yesterday at {{LOCALIZED_TIME}}');
+// t('{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}');
 export const formatDate = (inputDate) => {
 	const date = dayjs(inputDate);
 
@@ -503,16 +520,16 @@ const messageTimestampDate = (inputDate) => {
 	return Number.isNaN(date.getTime()) ? null : date;
 };
 
-export const formatMessageTimestamp = (inputDate) =>
-	messageTimestampDate(inputDate)?.toLocaleString(undefined, {
+export const formatMessageTimestamp = (inputDate, locale: string) =>
+	messageTimestampDate(inputDate)?.toLocaleString(locale, {
 		month: 'short',
 		day: 'numeric',
 		hour: 'numeric',
 		minute: '2-digit'
 	}) ?? '';
 
-export const formatMessageTimestampFull = (inputDate) =>
-	messageTimestampDate(inputDate)?.toLocaleString(undefined, {
+export const formatMessageTimestampFull = (inputDate, locale: string) =>
+	messageTimestampDate(inputDate)?.toLocaleString(locale, {
 		weekday: 'long',
 		year: 'numeric',
 		month: 'long',
@@ -1323,7 +1340,7 @@ export const getTimeRange = (timestamp) => {
 
 	if (nowYear === dateYear && nowMonth === dateMonth && nowDate === dateDate) {
 		return 'Today';
-	} else if (nowYear === dateYear && nowMonth === dateMonth && nowDate - dateDate === 1) {
+	} else if (dayjs(date).isYesterday()) {
 		return 'Yesterday';
 	} else if (diffDays <= 7) {
 		return 'Previous 7 days';
@@ -2107,10 +2124,18 @@ export const getAge = (birthDate) => {
 	return age.toString();
 };
 
+const HEIC_EXTENSION_PATTERN = /\.(heic|heif)$/i;
+
+// Browsers label HEIC photos inconsistently (Firefox uses image/heif, some leave it empty).
+export const isHeicImage = (file: File) =>
+	['image/heic', 'image/heif'].includes(file.type) || HEIC_EXTENSION_PATTERN.test(file.name);
+
 export const convertHeicToJpeg = async (file: File) => {
 	const { default: heic2any } = await import('heic2any');
 	try {
-		return await heic2any({ blob: file, toType: 'image/jpeg' });
+		const jpegBlob = (await heic2any({ blob: file, toType: 'image/jpeg' })) as Blob;
+		const jpegName = `${file.name.replace(HEIC_EXTENSION_PATTERN, '')}.jpg`;
+		return new File([jpegBlob], jpegName, { type: 'image/jpeg' });
 	} catch (err: any) {
 		if (err?.message?.includes('already browser readable')) {
 			return file;
@@ -2445,22 +2470,16 @@ export const getCodeBlockContents = (content: string): object => {
 			}))
 	};
 };
-export const parseFrontmatter = (content) => {
-	const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
-	if (match) {
-		const frontmatter = {};
-		match[1].split('\n').forEach((line) => {
-			const [key, ...value] = line.split(':');
-			if (key && value) {
-				frontmatter[key.trim()] = value
-					.join(':')
-					.trim()
-					.replace(/^["']|["']$/g, '');
-			}
-		});
-		return frontmatter;
+export const parseFrontmatter = (content: string): Record<string, unknown> => {
+	const match = content.match(/^\uFEFF?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
+	if (!match) return {};
+	try {
+		const fields = parseYaml(match[1]);
+		return fields && typeof fields === 'object' && !Array.isArray(fields) ? fields : {};
+	} catch {
+		// Incomplete frontmatter is normal while typing.
+		return {};
 	}
-	return {};
 };
 
 export const formatSkillName = (name) => {

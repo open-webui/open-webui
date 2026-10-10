@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import uuid
+import weakref
+from contextlib import asynccontextmanager
 
 import pycrdt as Y
-from open_webui.env import REDIS_KEY_PREFIX
+from open_webui.env import REDIS_KEY_PREFIX, WEBSOCKET_REDIS_LOCK_TIMEOUT
+from open_webui.tasks import has_active_tasks
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.redis import get_redis_connection
 from redis.exceptions import RedisClusterException, RedisError
@@ -16,6 +20,8 @@ log = logging.getLogger(__name__)
 
 YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
 SCAN_BATCH_SIZE = 200
+
+SOCKET_EVENT_LOCKS: weakref.WeakValueDictionary[tuple[str, str], asyncio.Lock] = weakref.WeakValueDictionary()
 
 
 class RedisLock:
@@ -240,6 +246,8 @@ class CachedRedisDict(RedisDict):
 
 class YdocManager:
     COMPACTION_THRESHOLD = 500
+    MAX_DOCUMENTS_PER_SESSION = 20
+    MAX_DOCUMENT_SIZE = 2 * 1024 * 1024
 
     def __init__(
         self,
@@ -251,20 +259,59 @@ class YdocManager:
         self._redis = redis
         self._redis_key_prefix = redis_key_prefix
 
-    async def append_to_updates(self, document_id: str, update: bytes):
-        document_id = document_id.replace(':', '_')
+    @asynccontextmanager
+    async def lock(self, document_id: str):
+        # Local FIFO ordering also covers permission checks before an update is stored.
+        async with SOCKET_EVENT_LOCKS.setdefault(('document', document_id), asyncio.Lock()):
+            if self._redis:
+                async with self._redis.lock(
+                    f'{self._redis_key_prefix}:{document_id}:lock',
+                    timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+                    blocking_timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+                ):
+                    # Cancel stalled work before another worker can acquire the expired lease.
+                    async with asyncio.timeout(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2):
+                        yield
+            else:
+                yield
+
+    async def append_to_updates(self, document_id: str, update: list[int]) -> bool:
+        if not isinstance(update, list):
+            return False
+        try:
+            update_bytes = bytes(update)
+            Y.Doc().apply_update(update_bytes)  # undecodable updates would stall compaction forever
+        except (TypeError, ValueError):
+            return False
+        update_size = len(update_bytes)
+        if update_size > self.MAX_DOCUMENT_SIZE:
+            return False
         if self._redis:
+            size_key = f'{self._redis_key_prefix}:{document_id}:size'
+            if await self._redis.incrby(size_key, update_size) > self.MAX_DOCUMENT_SIZE:
+                await self._redis.decrby(size_key, update_size)
+                return False
             redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
             await self._redis.rpush(redis_key, JSONCodec.dumps(list(update)))
             list_len = await self._redis.llen(redis_key)
             if list_len >= self.COMPACTION_THRESHOLD:
                 await self._compact_updates_redis(document_id)
         else:
+            if sum(len(u) for u in self._updates.get(document_id, [])) + update_size > self.MAX_DOCUMENT_SIZE:
+                return False
             if document_id not in self._updates:
                 self._updates[document_id] = []
-            self._updates[document_id].append(update)
+            self._updates[document_id].append(update_bytes)
             if len(self._updates[document_id]) >= self.COMPACTION_THRESHOLD:
                 self._compact_updates_memory(document_id)
+        return True
+
+    async def count_documents_for_user(self, user_id: str) -> int:
+        """Number of documents this session currently participates in."""
+        if self._redis:
+            session_key = f'{self._redis_key_prefix}:session:{user_id}:documents'
+            return await self._redis.scard(session_key)
+        return sum(1 for members in self._users.values() if user_id in members)
 
     async def _compact_updates_redis(self, document_id: str):
         """Rolling compaction: squash oldest half into one snapshot."""
@@ -276,11 +323,14 @@ class YdocManager:
         ydoc = Y.Doc()
         for raw in all_updates[:mid]:
             ydoc.apply_update(bytes(JSONCodec.loads(raw)))
-        snapshot = JSONCodec.dumps(list(ydoc.get_update()))
+        snapshot_list = list(ydoc.get_update())
+        snapshot = JSONCodec.dumps(snapshot_list)
         pipe = self._redis.pipeline()
         pipe.delete(redis_key)
         pipe.rpush(redis_key, snapshot, *all_updates[mid:])
         await pipe.execute()
+        new_size = len(snapshot_list) + sum(len(JSONCodec.loads(raw)) for raw in all_updates[mid:])
+        await self._redis.set(f'{self._redis_key_prefix}:{document_id}:size', new_size)
 
     def _compact_updates_memory(self, document_id: str):
         """Rolling compaction: squash oldest half into one snapshot."""
@@ -294,8 +344,6 @@ class YdocManager:
         self._updates[document_id] = [ydoc.get_update()] + updates[mid:]
 
     async def get_updates(self, document_id: str) -> list[bytes]:
-        document_id = document_id.replace(':', '_')
-
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
             updates = await self._redis.lrange(redis_key, 0, -1)
@@ -304,8 +352,6 @@ class YdocManager:
             return self._updates.get(document_id, [])
 
     async def document_exists(self, document_id: str) -> bool:
-        document_id = document_id.replace(':', '_')
-
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
             return await self._redis.exists(redis_key) > 0
@@ -313,8 +359,6 @@ class YdocManager:
             return document_id in self._updates
 
     async def get_users(self, document_id: str) -> list[str]:
-        document_id = document_id.replace(':', '_')
-
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:users'
             users = await self._redis.smembers(redis_key)
@@ -323,8 +367,6 @@ class YdocManager:
             return self._users.get(document_id, [])
 
     async def add_user(self, document_id: str, user_id: str):
-        document_id = document_id.replace(':', '_')
-
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:users'
             await self._redis.sadd(redis_key, user_id)
@@ -339,8 +381,6 @@ class YdocManager:
             self._users[document_id].add(user_id)
 
     async def remove_user(self, document_id: str, user_id: str):
-        document_id = document_id.replace(':', '_')
-
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:users'
             await self._redis.srem(redis_key, user_id)
@@ -350,43 +390,29 @@ class YdocManager:
         else:
             if document_id in self._users and user_id in self._users[document_id]:
                 self._users[document_id].remove(user_id)
+                if not self._users[document_id]:
+                    del self._users[document_id]
 
     async def remove_user_from_all_documents(self, user_id: str):
         if self._redis:
-            # Use the per-session reverse index instead of a cluster-wide
-            # SCAN.  This set contains only the document IDs that this
-            # session actually joined, so the cost is proportional to
-            # the session's footprint — not the total number of documents.
             session_key = f'{self._redis_key_prefix}:session:{user_id}:documents'
             document_ids = await self._redis.smembers(session_key)
+        else:
+            document_ids = [document_id for document_id, users in self._users.items() if user_id in users]
 
-            for document_id in document_ids:
-                users_key = f'{self._redis_key_prefix}:{document_id}:users'
-                await self._redis.srem(users_key, user_id)
-
-                if len(await self.get_users(document_id)) == 0:
+        for document_id in document_ids:
+            async with self.lock(document_id):
+                await self.remove_user(document_id, user_id)
+                if not await self.get_users(document_id) and not await has_active_tasks(self._redis, document_id):
                     await self.clear_document(document_id)
 
-            # Clean up the reverse index itself.
-            await self._redis.delete(session_key)
-
-        else:
-            for document_id in list(self._users.keys()):
-                if user_id in self._users[document_id]:
-                    self._users[document_id].remove(user_id)
-                    if not self._users[document_id]:
-                        del self._users[document_id]
-
-                        await self.clear_document(document_id)
-
     async def clear_document(self, document_id: str):
-        document_id = document_id.replace(':', '_')
-
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
             await self._redis.delete(redis_key)
             redis_users_key = f'{self._redis_key_prefix}:{document_id}:users'
             await self._redis.delete(redis_users_key)
+            await self._redis.delete(f'{self._redis_key_prefix}:{document_id}:size')
         else:
             if document_id in self._updates:
                 del self._updates[document_id]

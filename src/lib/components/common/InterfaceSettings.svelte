@@ -42,7 +42,6 @@
 	let userLocation = false;
 
 	// Interface
-	let defaultModelId = '';
 	let showUsername = false;
 
 	let highContrastMode = false;
@@ -123,11 +122,11 @@
 	const settingRowClass = 'flex items-center justify-between gap-2.5';
 	const settingLabelClass = 'min-w-0 text-xs text-gray-600 dark:text-gray-400';
 	const settingControlClass = 'flex shrink-0 items-center justify-end gap-1.5';
-	const sectionHeadingClass = 'mt-4 text-xs text-gray-400 dark:text-gray-600';
-	const firstSectionHeadingClass = 'text-xs text-gray-400 dark:text-gray-600';
-	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600';
+	const sectionHeadingClass = 'mt-4 text-xs text-gray-600 dark:text-gray-500';
+	const firstSectionHeadingClass = 'text-xs text-gray-600 dark:text-gray-500';
+	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-600 dark:text-gray-500';
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white';
 
 	const hasSettingPath = (source: Record<string, any>, path: string) => {
 		let current: any = source;
@@ -247,7 +246,6 @@
 		}
 
 		saveSettings({
-			models: [defaultModelId],
 			imageCompressionSize: imageCompressionSize,
 			fontFamily
 		});
@@ -386,11 +384,6 @@
 		imageCompression = currentSettings?.imageCompression ?? false;
 		imageCompressionSize = currentSettings?.imageCompressionSize ?? { width: '', height: '' };
 		imageCompressionInChannels = currentSettings?.imageCompressionInChannels ?? true;
-
-		defaultModelId = currentSettings?.models?.at(0) ?? '';
-		if ($config?.default_models) {
-			defaultModelId = $config.default_models.split(',')[0];
-		}
 
 		backgroundImageUrl = currentSettings?.backgroundImageUrl ?? null;
 		webSearch = currentSettings?.webSearch ?? null;
@@ -577,7 +570,7 @@
 			<div class="mt-1.5 flex items-center pb-1">
 				<input
 					id="font-family-input"
-					class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+					class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-600 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-500 dark:focus:border-blue-500"
 					type="text"
 					placeholder="Aptos"
 					bind:value={fontFamilyInput}

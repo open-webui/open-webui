@@ -55,7 +55,7 @@
 				<div class="self-center">
 					<Link className="size-3.5" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Import From Link')}</div>
+				<div class=" self-center truncate">{$i18n.t('Import from URL')}</div>
 			</button>
 		</DropdownMenu>
 	</div>

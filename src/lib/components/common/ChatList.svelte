@@ -10,7 +10,7 @@
 
 	dayjs.extend(calendar);
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	type SortKey = 'title' | 'updated_at' | 'user_name';
 
 	export let chatList: Array<{
@@ -161,12 +161,14 @@
 
 					<div class="{showUserInfo ? 'w-28' : 'basis-2/5'} flex items-center justify-end">
 						<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
-							{dayjs(chat.updated_at * 1000).calendar(null, {
-								sameDay: '[Today] h:mm A',
-								lastDay: '[Yesterday] h:mm A',
-								lastWeek: 'MMM D',
-								sameElse: 'MMM D, YYYY'
-							})}
+							{dayjs(chat.updated_at * 1000)
+								.locale($i18n.language)
+								.calendar(null, {
+									sameDay: '[Today] h:mm A',
+									lastDay: '[Yesterday] h:mm A',
+									lastWeek: 'MMM D',
+									sameElse: 'MMM D, YYYY'
+								})}
 						</div>
 					</div>
 				</div>

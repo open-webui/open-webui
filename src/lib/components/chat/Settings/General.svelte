@@ -81,6 +81,7 @@
 		}
 		if (canEditParams) {
 			updated.params = {
+				...$settings.params,
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
 				stream_delta_chunk_size:
 					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
@@ -115,9 +116,10 @@
 				think: params.think !== null ? params.think : undefined,
 				keep_alive: params.keep_alive !== null ? params.keep_alive : undefined,
 				format: params.format !== null ? params.format : undefined,
-				...(params.custom_params && Object.keys(params.custom_params).length > 0
-					? { custom_params: params.custom_params }
-					: {})
+				custom_params:
+					params.custom_params && Object.keys(params.custom_params).length > 0
+						? params.custom_params
+						: undefined
 			};
 		}
 		try {
@@ -320,7 +322,7 @@
 
 	<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 			on:click={() => {
 				saveHandler();
 			}}

@@ -16,7 +16,7 @@
 	const TIME_RANGES: { key: TimeRange; label: string; days: number }[] = [
 		{ key: '30d', label: '30D', days: 30 },
 		{ key: '1y', label: '1Y', days: 365 },
-		{ key: 'all', label: $i18n.t('All'), days: 0 } // 0 = all time, starts from first feedback
+		{ key: 'all', label: 'All', days: 0 } // 0 = all time, starts from first feedback
 	];
 
 	let selectedRange: TimeRange = '30d';
@@ -88,13 +88,13 @@
 						{#each TIME_RANGES as range}
 							<button
 								type="button"
-								class="rounded-full transition-all duration-200 px-2.5 py-0.5 text-xs font-normal {selectedRange ===
+								class="rounded-lg transition-all duration-200 px-2.5 py-0.5 text-xs font-normal {selectedRange ===
 								range.key
 									? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
 									: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
 								on:click={() => selectRange(range.key)}
 							>
-								{range.label}
+								{range.key === 'all' ? $i18n.t('All') : range.label}
 							</button>
 						{/each}
 					</div>
@@ -125,7 +125,7 @@
 
 			<div class="flex justify-end pt-2">
 				<button
-					class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 					type="button"
 					on:click={close}
 				>

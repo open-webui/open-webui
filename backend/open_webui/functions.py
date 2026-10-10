@@ -19,7 +19,7 @@ from starlette.responses import Response, StreamingResponse
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FUNCTIONS, GLOBAL_LOG_LEVEL
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
@@ -36,6 +36,7 @@ from open_webui.utils.misc import (
     openai_chat_completion_message_template,
     prepend_to_first_user_message_content,
 )
+from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
@@ -69,7 +70,7 @@ async def get_function_module_by_id(request: Request, pipe_id: str):
 
 
 async def get_function_models(request):
-    if not ENABLE_PLUGINS:
+    if not ENABLE_FUNCTIONS:
         return []
 
     pipes = await Functions.get_functions_by_type('pipe', active_only=True)
@@ -242,28 +243,7 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         __task__ = metadata.get('task', None)
         __task_body__ = metadata.get('task_body', None)
 
-    oauth_token = None
-    try:
-        oauth_session_id = request.cookies.get('oauth_session_id', None)
-        if oauth_session_id:
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                user.id,
-                oauth_session_id,
-            )
-
-        # Fallback: no cookie (automation, API key, etc.) — use most recent session
-        if oauth_token is None:
-            from open_webui.models.oauth_sessions import OAuthSessions
-
-            sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
-            if sessions:
-                best = max(sessions, key=lambda s: s.updated_at)
-                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                    user.id,
-                    best.id,
-                )
-    except Exception as e:
-        log.error(f'Error getting OAuth token: {e}')
+    oauth_token = await get_system_oauth_token(request, user)
 
     extra_params = {
         '__event_emitter__': __event_emitter__,

@@ -10,11 +10,11 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import MapSelector from '$lib/components/common/Valves/MapSelector.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let show = false;
 	export let variables = {};
-	export let title = $i18n.t('Input Variables');
+	export let title: string | undefined = undefined;
 
 	export let onSave = (e) => {};
 
@@ -81,7 +81,7 @@
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">
-				{title}
+				{title ?? $i18n.t('Input Variables')}
 			</div>
 			<button
 				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
@@ -368,7 +368,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal">
 						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-white hover:bg-gray-100 text-black dark:bg-black dark:text-white dark:hover:bg-gray-900 transition rounded-full"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-white hover:bg-gray-100 text-black dark:bg-black dark:text-white dark:hover:bg-gray-900"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -378,7 +378,7 @@
 						</button>
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 							type="submit"
 						>
 							{$i18n.t('Save')}

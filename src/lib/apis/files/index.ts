@@ -430,3 +430,58 @@ export const deleteAllFiles = async (token: string) => {
 
 	return res;
 };
+
+export class FileContentError extends Error {
+	constructor(
+		message: string,
+		public status: number
+	) {
+		super(message);
+	}
+}
+
+export const getFileBlobById = async (
+	token: string,
+	id: string,
+	{
+		signal,
+		attachment = false,
+		filename
+	}: { signal?: AbortSignal; attachment?: boolean; filename?: string } = {}
+): Promise<Blob> => {
+	const suffix = filename ? `/${encodeURIComponent(filename)}` : `?attachment=${attachment}`;
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/files/${encodeURIComponent(id)}/content${suffix}`,
+		{
+			headers: { authorization: `Bearer ${token}` },
+			signal
+		}
+	);
+	if (!response.ok) {
+		const error = await response.json().catch(() => null);
+		throw new FileContentError(
+			error?.detail || `Unable to load file (${response.status})`,
+			response.status
+		);
+	}
+	return response.blob();
+};
+
+export const getFileIndexedText = async (
+	token: string,
+	id: string,
+	signal?: AbortSignal
+): Promise<string> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/files/${encodeURIComponent(id)}/data/content`,
+		{
+			headers: { authorization: `Bearer ${token}` },
+			signal
+		}
+	);
+	if (!response.ok) {
+		const error = await response.json().catch(() => null);
+		throw new Error(error?.detail || 'Unable to load indexed text');
+	}
+	return (await response.json()).content ?? '';
+};

@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<import('svelte/store').Writable<import('i18next').i18n>>('i18n');
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import General from './General.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
+	import InheritedMembers from './InheritedMembers.svelte';
+	import { getGroupPreview } from '$lib/apis/groups';
 	import GroupPreviewPanel from './GroupPreviewPanel.svelte';
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
 	import { getUserDefaultPermissions, getUserDefaultPermissionsDefaults } from '$lib/apis/users';
@@ -16,6 +18,9 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Select from '$lib/components/common/Select.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -24,8 +29,38 @@
 	export let show = false;
 	export let edit = false;
 
-	export let group = null;
-	export let defaultPermissions = {};
+	export let group: any = null;
+	export let groups: import('../Groups.svelte').GroupListItem[] = [];
+	let parent_group_id: string | null = null;
+	let membershipTab = 'direct';
+	let inheritedPermissions: Record<string, any> = {};
+	let loadedParent: string | null | undefined = undefined;
+	let inheritanceRequest = 0;
+	async function loadInheritance(parentId: string | null) {
+		loadedParent = parentId;
+		const request = ++inheritanceRequest;
+		inheritedPermissions = defaultPermissions;
+		if (!parentId) return;
+		try {
+			const preview = await getGroupPreview(localStorage.token, parentId);
+			if (request === inheritanceRequest) inheritedPermissions = preview.effective_permissions;
+		} catch (e) {
+			if (request === inheritanceRequest && show) toast.error(String(e));
+		}
+	}
+	$: deleteMessage = group?.parent_group_id
+		? $i18n.t(
+				'Delete {{name}}? Its child groups will move to {{parent}}. Permissions and direct memberships belonging to this group will be removed.',
+				{
+					name: group?.name,
+					parent: groups.find((item) => item.id === group.parent_group_id)?.path
+				}
+			)
+		: $i18n.t(
+				'Delete {{name}}? Its child groups will become top-level groups. Permissions and direct memberships belonging to this group will be removed.',
+				{ name: group?.name }
+			);
+	export let defaultPermissions: Record<string, any> = {};
 
 	export let custom = true;
 
@@ -40,7 +75,7 @@
 
 	export let name = '';
 	export let description = '';
-	export let data = {};
+	export let data: Record<string, any> = {};
 
 	export let permissions = DEFAULT_PERMISSIONS;
 
@@ -51,13 +86,17 @@
 			name,
 			description,
 			data,
-			permissions
+			permissions,
+			...(custom ? { parent_group_id } : {})
 		};
 
-		await onSubmit(group);
-
-		loading = false;
-		show = false;
+		try {
+			if (await onSubmit(group)) show = false;
+		} catch (error) {
+			toast.error(String(error));
+		} finally {
+			loading = false;
+		}
 	};
 
 	const resetToDefaultsHandler = async () => {
@@ -86,8 +125,9 @@
 	const init = () => {
 		if (group) {
 			name = group.name;
+			parent_group_id = group.parent_group_id ?? null;
 			description = group.description;
-			const loadedPermissions = group?.permissions ?? {};
+			const loadedPermissions: Record<string, any> = group?.permissions ?? {};
 			// Create fresh object from defaults, then overlay loaded values
 			permissions = {
 				workspace: { ...DEFAULT_PERMISSIONS.workspace, ...loadedPermissions.workspace },
@@ -106,6 +146,13 @@
 	$: if (show) {
 		init();
 	}
+	$: if (!show) {
+		loadedParent = undefined;
+		inheritanceRequest++;
+		membershipTab = 'direct';
+	}
+
+	$: if (show && parent_group_id !== loadedParent) loadInheritance(parent_group_id);
 
 	onMount(() => {
 		selectedTab = tabs[0];
@@ -115,9 +162,14 @@
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
-	on:confirm={() => {
-		onDelete();
-		show = false;
+	title={$i18n.t('Delete group')}
+	message={deleteMessage}
+	on:confirm={async () => {
+		try {
+			if (await onDelete()) show = false;
+		} catch (error) {
+			toast.error(String(error));
+		}
 	}}
 />
 
@@ -172,7 +224,7 @@
 						>
 							{#if tabs.includes('general')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'general'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -201,7 +253,7 @@
 
 							{#if tabs.includes('permissions')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'permissions'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -219,7 +271,7 @@
 
 							{#if tabs.includes('users')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'users'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -237,7 +289,7 @@
 
 							{#if tabs.includes('preview')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'preview'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -266,10 +318,13 @@
 							{/if}
 						</div>
 
-						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
+						<div class="flex-1 min-w-0 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
 							<div class="w-full h-full overflow-y-auto scrollbar-hidden">
 								{#if selectedTab == 'general'}
 									<General
+										{groups}
+										groupId={group?.id}
+										bind:parent_group_id
 										bind:name
 										bind:description
 										bind:data
@@ -279,9 +334,49 @@
 										}}
 									/>
 								{:else if selectedTab == 'permissions'}
-									<Permissions bind:permissions {defaultPermissions} />
+									{#if custom && parent_group_id}
+										<p class="text-xs text-gray-500 mb-3">
+											{$i18n.t(
+												'Parent permissions are inherited. Disabling a local permission does not revoke inherited access.'
+											)}
+										</p>
+									{/if}
+									<Permissions
+										bind:permissions
+										defaultPermissions={custom ? inheritedPermissions : defaultPermissions}
+									/>
 								{:else if selectedTab == 'users'}
-									<Users bind:userCount groupId={group?.id} {onMemberChange} />
+									{#snippet membershipFilter()}
+										<div class="shrink-0">
+											<Select
+												bind:value={membershipTab}
+												items={[
+													{ value: 'direct', label: $i18n.t('Direct') },
+													{ value: 'inherited', label: $i18n.t('Inherited') }
+												]}
+												align="end"
+												triggerClass="flex items-center gap-1 rounded-lg px-1 py-0.5 text-xs font-normal text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+											>
+												<svelte:fragment slot="trigger" let:selectedLabel>
+													<span>{selectedLabel}</span>
+													<ChevronDown className="size-2.5" strokeWidth="2.5" />
+												</svelte:fragment>
+												<svelte:fragment slot="item" let:item let:selected>
+													<span class="flex-1 text-left">{item.label}</span>
+													<Check className="size-3.5 {selected ? '' : 'invisible'}" />
+												</svelte:fragment>
+											</Select>
+										</div>
+									{/snippet}
+									{#if membershipTab === 'direct'}
+										<Users bind:userCount groupId={group?.id} {onMemberChange}>
+											<svelte:fragment slot="filter">{@render membershipFilter()}</svelte:fragment>
+										</Users>
+									{:else}
+										<InheritedMembers groupId={group?.id} {groups}>
+											<svelte:fragment slot="filter">{@render membershipFilter()}</svelte:fragment>
+										</InheritedMembers>
+									{/if}
 								{:else if selectedTab == 'preview'}
 									<GroupPreviewPanel groupId={group?.id} />
 								{/if}
@@ -312,9 +407,7 @@
 									</div>
 
 									<button
-										class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
-											? ' cursor-not-allowed'
-											: ''}"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 										type="submit"
 										disabled={loading}
 									>
@@ -322,7 +415,7 @@
 
 										{#if loading}
 											<span class="shrink-0">
-												<Spinner />
+												<Spinner className="size-3" />
 											</span>
 										{/if}
 									</button>

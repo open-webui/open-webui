@@ -15,7 +15,7 @@ export const pinnedChats = readonly(pinnedChatsStore);
 let currentPage = 1;
 let paginationReady = false;
 let requestGeneration = 0;
-let allLoaded = false;
+export let allLoaded = false;
 let loadingNextPage = false;
 
 type RefreshChatListOptions = {
@@ -47,9 +47,9 @@ export const refreshChatList = async (
 		return { accepted: false, allLoaded };
 	}
 
-	chatsStore.set(nextChats);
 	currentPage = 1;
 	allLoaded = nextChats.length === 0;
+	chatsStore.set(nextChats);
 
 	if (options.clearPinned) {
 		pinnedChatsStore.set([]);

@@ -26,16 +26,19 @@
 	let notificationEnabled = false;
 	let notificationSound = true;
 	let targets: NotificationTarget[] = [];
+	// Keep dynamically translated event keys visible to i18next-parser.
+	// $i18n.t('Chat finished'); $i18n.t('A chat run finished successfully.');
+	// $i18n.t('Chat failed'); $i18n.t('A chat run failed.');
 	let events: { event: string; label: string; description?: string }[] = [
 		{
 			event: 'chat.finished',
-			label: $i18n.t('Chat finished'),
-			description: $i18n.t('A chat run finished successfully.')
+			label: 'Chat finished',
+			description: 'A chat run finished successfully.'
 		},
 		{
 			event: 'chat.failed',
-			label: $i18n.t('Chat failed'),
-			description: $i18n.t('A chat run failed.')
+			label: 'Chat failed',
+			description: 'A chat run failed.'
 		}
 	];
 	let loadingTargets = false;
@@ -58,13 +61,13 @@
 	}
 
 	const toggleNotifications = async () => {
-		if (!notificationEnabled) {
+		if (notificationEnabled) {
 			const permission =
 				'Notification' in window ? await Notification.requestPermission() : 'denied';
 			if (permission === 'granted') {
-				notificationEnabled = true;
 				saveSettings({ notificationEnabled });
 			} else {
+				notificationEnabled = false;
 				toast.error(
 					$i18n.t(
 						'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
@@ -72,7 +75,6 @@
 				);
 			}
 		} else {
-			notificationEnabled = false;
 			saveSettings({ notificationEnabled });
 		}
 	};
@@ -200,7 +202,7 @@
 					{$i18n.t('settings.personal.notifications.browserNotifications.label')}
 				</span>
 				<Switch
-					state={notificationEnabled}
+					bind:state={notificationEnabled}
 					ariaLabel={$i18n.t('settings.personal.notifications.browserNotifications.label')}
 					on:change={toggleNotifications}
 				/>
@@ -249,7 +251,7 @@
 						{#each targets as target, index}
 							{@const alertLabels = events
 								.filter((event) => target.events.includes(event.event))
-								.map((event) => event.label)
+								.map((event) => $i18n.t(event.label))
 								.join(', ')}
 							<div class="flex items-center gap-3 px-1 py-1.5">
 								<div class="min-w-0 flex-1">
@@ -388,7 +390,7 @@
 					type="button"
 					on:click={() => toggleFormEvent(event.event)}
 				>
-					{event.label}
+					{$i18n.t(event.label)}
 				</button>
 			{/each}
 		</div>
@@ -427,7 +429,7 @@
 				{$i18n.t('Cancel')}
 			</button>
 			<button
-				class="text-[0.8125rem] text-gray-700 transition-colors duration-100 hover:text-gray-900 disabled:opacity-30 dark:text-gray-300 dark:hover:text-white"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 				type="button"
 				on:click={saveTarget}
 				disabled={savingTarget || (!editingId && !form.url.trim())}

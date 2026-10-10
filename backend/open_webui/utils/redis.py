@@ -35,7 +35,7 @@ _SENTINEL_RETRYABLE = (
     _redis_sync.exceptions.ReadOnlyError,
     _redis_sync.exceptions.TimeoutError,
 )
-_FACTORY_METHODS = frozenset({'pipeline', 'pubsub', 'monitor', 'client', 'transaction'})
+_FACTORY_METHODS = frozenset({'pipeline', 'pubsub', 'monitor', 'client', 'transaction', 'lock'})
 _CONNECTION_POOL: dict[tuple, Any] = {}
 
 
@@ -334,7 +334,9 @@ def get_redis_connection(
         )
     elif redis_url:
         factory = getattr(redis_mod, 'from_url', None) or redis_mod.Redis.from_url
-        connection = factory(redis_url, decode_responses=decode_responses, **extra)
+        # reconnect once when Redis has closed a pooled connection, e.g. after a restart
+        retry = redis_mod.retry.Retry(_redis_sync.backoff.NoBackoff(), 1, supported_errors=(redis_mod.ConnectionError,))
+        connection = factory(redis_url, decode_responses=decode_responses, retry=retry, **extra)
 
     _CONNECTION_POOL[cache_key] = connection
     return connection

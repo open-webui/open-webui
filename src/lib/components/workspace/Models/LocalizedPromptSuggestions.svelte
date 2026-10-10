@@ -9,6 +9,7 @@
 	export let locale = '';
 	export let localeLabel = '';
 	export let onChange = () => {};
+	export let disabled = false;
 
 	const clone = (value) => JSON.parse(JSON.stringify(value ?? []));
 
@@ -47,32 +48,30 @@
 </script>
 
 {#if !locale}
-	<PromptSuggestions bind:promptSuggestions onChange={() => onChange()}>
+	<PromptSuggestions bind:promptSuggestions {disabled} onChange={() => onChange()}>
 		<span slot="label"><slot name="label" /></span>
 		<svelte:fragment slot="actions"><slot name="language" /></svelte:fragment>
 	</PromptSuggestions>
 {:else}
 	<PromptSuggestions
+		{disabled}
 		promptSuggestions={localePrompts}
 		inherited={!hasCustomLocalePrompts}
 		onChange={updateLocalePrompts}
 	>
-		<span
-			slot="label"
-			title={localeLabel}
-			class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] text-gray-400 dark:text-gray-600"
-		>
+		<svelte:fragment slot="label">
 			{#if hasCustomLocalePrompts}
 				<button
+					title={localeLabel}
 					type="button"
-					class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-					aria-label={$i18n.t('Use default')}
+					{disabled}
+					class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
 					on:click={useDefault}
 				>
 					{$i18n.t('Use default')}
 				</button>
 			{/if}
-		</span>
+		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<slot name="language" />
 		</svelte:fragment>

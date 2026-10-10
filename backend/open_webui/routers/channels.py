@@ -40,6 +40,7 @@ from open_webui.socket.main import (
     emit_to_users,
     enter_room_for_users,
     get_user_ids_from_room,
+    leave_room_for_users,
     sio,
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
@@ -125,7 +126,7 @@ async def get_channel_member_user_ids(
     user_ids = permitted_ids.get('user_ids') or []
     group_ids = permitted_ids.get('group_ids') or []
     if group_ids:
-        for member_ids in (await Groups.get_group_user_ids_by_ids(group_ids, db=db)).values():
+        for member_ids in (await Groups.get_group_user_ids_by_ids(group_ids, db=db, include_inherited=True)).values():
             user_ids.extend(member_ids)
 
     return list(dict.fromkeys([*user_ids, channel.user_id]))
@@ -641,10 +642,21 @@ async def add_members_by_id(
     if channel.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
+    if channel.type == 'dm':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
     try:
         memberships = await Channels.add_members_to_channel(
             channel.id, user.id, form_data.user_ids, form_data.group_ids, db=db
         )
+        if channel.type in ['group', 'dm']:
+            participant_ids = [member.user_id for member in memberships]
+            await emit_to_users(
+                'events:channel',
+                {'data': {'type': 'channel:created'}},
+                participant_ids,
+            )
+            await enter_room_for_users(f'channel:{channel.id}', participant_ids)
 
         await publish_event(
             request,
@@ -685,8 +697,13 @@ async def remove_members_by_id(
     if channel.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
+    if channel.type == 'dm':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
     try:
         deleted = await Channels.remove_members_from_channel(channel.id, form_data.user_ids, db=db)
+        if channel.type == 'group':
+            await leave_room_for_users(f'channel:{channel.id}', form_data.user_ids)
 
         await publish_event(
             request,
@@ -731,8 +748,18 @@ async def update_channel_by_id(
         'sharing.public_channels',
     )
 
+    previous_access_grants = channel.access_grants
+
     try:
         channel = await Channels.update_channel_by_id(id, form_data, db=db)
+        # Group and DM channels use membership instead of access grants.
+        if form_data.access_grants is not None and channel.type not in ['group', 'dm']:
+            revoked_user_ids = await AccessGrants.get_revoked_user_ids_by_resource(
+                'channel', id, previous_access_grants, db=db
+            )
+            revoked_user_ids.discard(channel.user_id)
+            await leave_room_for_users(f'channel:{id}', list(revoked_user_ids))
+
         await publish_event(
             request,
             EVENTS.CHANNEL_UPDATED,
@@ -769,6 +796,7 @@ async def delete_channel_by_id(
 
     try:
         await Channels.delete_channel_by_id(id, db=db)
+        await sio.close_room(f'channel:{id}')
         await publish_event(
             request,
             EVENTS.CHANNEL_DELETED,

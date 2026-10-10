@@ -4,11 +4,11 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
-	import equal from 'fast-deep-equal';
+	import { equalEditorJSON } from '$lib/utils/editorJson';
 
 	import { goto, onNavigate } from '$app/navigation';
 
@@ -21,7 +21,13 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { compressImage, copyToClipboard, convertHeicToJpeg } from '$lib/utils';
+	import {
+		resolveDefaultModelIds,
+		compressImage,
+		copyToClipboard,
+		convertHeicToJpeg,
+		isHeicImage
+	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getFileById, uploadFile } from '$lib/apis/files';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
@@ -44,20 +50,6 @@
 
 	import NotePanel from '$lib/components/notes/NotePanel.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
-
-	async function loadLocale(locales) {
-		for (const locale of locales) {
-			try {
-				dayjs.locale(locale);
-				break; // Stop after successfully loading the first available locale
-			} catch (error) {
-				console.error(`Could not load locale '${locale}':`, error);
-			}
-		}
-	}
-
-	// Assuming $i18n.languages is an array of language codes
-	$: loadLocale($i18n.languages);
 
 	import {
 		deleteNoteById,
@@ -340,7 +332,7 @@
 	}
 
 	function areContentsEqual(a, b) {
-		return equal(a, b);
+		return equalEditorJSON(a, b);
 	}
 
 	function insertNoteVersion(note) {
@@ -627,7 +619,7 @@ ${content}
 			return;
 		}
 
-		if (file['type'].startsWith('image/')) {
+		if (file['type'].startsWith('image/') || isHeicImage(file)) {
 			const uploadImagePromise = new Promise(async (resolve, reject) => {
 				let reader = new FileReader();
 				reader.onload = async (event) => {
@@ -654,7 +646,7 @@ ${content}
 					}
 				};
 
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+				reader.readAsDataURL(isHeicImage(file) ? await convertHeicToJpeg(file) : file);
 			});
 
 			return await uploadImagePromise;
@@ -893,7 +885,8 @@ ${content}
 			note.access_grants = _note.access_grants;
 		}
 
-		if (_note.data && 'files' in _note.data) {
+		// A pending local save holds newer files than an echo of an earlier save.
+		if (_note.data && 'files' in _note.data && !debounceTimeout) {
 			files = _note.data.files ?? [];
 			note.data.files = files.length > 0 ? files : null;
 		}
@@ -930,28 +923,9 @@ ${content}
 	onMount(async () => {
 		await tick();
 
-		if ($settings?.models) {
-			selectedModelId = $settings?.models[0];
-		} else if ($config?.default_models) {
-			selectedModelId = $config?.default_models.split(',')[0];
-		} else {
-			selectedModelId = '';
-		}
-
-		if (selectedModelId) {
-			const model = $models
-				.filter((model) => model.id === selectedModelId && !(model?.info?.meta?.hidden ?? false))
-				.find((model) => model.id === selectedModelId);
-
-			if (!model) {
-				selectedModelId = '';
-			}
-		}
-
-		if (!selectedModelId) {
-			selectedModelId =
-				$models.filter((model) => !(model?.info?.meta?.hidden ?? false)).at(0)?.id || '';
-		}
+		selectedModelId =
+			resolveDefaultModelIds($models, $settings?.models, $config?.default_models?.split(','))[0] ??
+			'';
 
 		const dropzoneElement = document.getElementById('note-editor');
 
@@ -1290,24 +1264,36 @@ ${content}
 								<div class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
 									<!-- check for same date, yesterday, last week, and other -->
 
-									{#if dayjs(note.created_at / 1000000).isSame(dayjs(), 'day')}
+									{#if dayjs(note.created_at / 1000000)
+										.locale($i18n.language)
+										.isSame(dayjs().locale($i18n.language), 'day')}
 										<span
-											>{dayjs(note.created_at / 1000000).format($i18n.t('[Today at] h:mm A'))}</span
+											>{dayjs(note.created_at / 1000000)
+												.locale($i18n.language)
+												.format($i18n.t('[Today at] h:mm A'))}</span
 										>
-									{:else if dayjs(note.created_at / 1000000).isSame(dayjs().subtract(1, 'day'), 'day')}
+									{:else if dayjs(note.created_at / 1000000)
+										.locale($i18n.language)
+										.isSame(dayjs().locale($i18n.language).subtract(1, 'day'), 'day')}
 										<span
-											>{dayjs(note.created_at / 1000000).format(
-												$i18n.t('[Yesterday at] h:mm A')
-											)}</span
+											>{dayjs(note.created_at / 1000000)
+												.locale($i18n.language)
+												.format($i18n.t('[Yesterday at] h:mm A'))}</span
 										>
-									{:else if dayjs(note.created_at / 1000000).isSame(dayjs().subtract(1, 'week'), 'week')}
+									{:else if dayjs(note.created_at / 1000000)
+										.locale($i18n.language)
+										.isSame(dayjs().locale($i18n.language).subtract(1, 'week'), 'week')}
 										<span
-											>{dayjs(note.created_at / 1000000).format(
-												$i18n.t('[Last] dddd [at] h:mm A')
-											)}</span
+											>{dayjs(note.created_at / 1000000)
+												.locale($i18n.language)
+												.format($i18n.t('[Last] dddd [at] h:mm A'))}</span
 										>
 									{:else}
-										<span>{dayjs(note.created_at / 1000000).format($i18n.t('DD/MM/YYYY'))}</span>
+										<span
+											>{dayjs(note.created_at / 1000000)
+												.locale($i18n.language)
+												.format($i18n.t('DD/MM/YYYY'))}</span
+										>
 									{/if}
 								</div>
 

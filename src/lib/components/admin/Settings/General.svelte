@@ -9,8 +9,8 @@
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
+	import BuildVersion from '$lib/components/common/BuildVersion.svelte';
+	import { WEBUI_BUILD_CHANNEL, WEBUI_VERSION } from '$lib/constants';
 	import { banners as _banners, config, showChangelog } from '$lib/stores';
 	import type { Banner } from '$lib/types';
 	import { compareVersion } from '$lib/utils';
@@ -88,6 +88,11 @@
 				I18N: cleaned
 			});
 			if (!res) throw new Error($i18n.t('Failed to update settings'));
+			if (res.sessions_revoked) {
+				localStorage.removeItem('token');
+				window.location.href = '/auth?state=logout&form=signin';
+				return;
+			}
 			await updateI18n(res.I18N ?? cleaned);
 			await updateBanners();
 			await config.set(await getBackendConfig());
@@ -112,7 +117,7 @@
 
 		banners = [...$_banners];
 
-		if ($config?.features?.enable_version_update_check) {
+		if (WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check) {
 			checkForVersionUpdates();
 		}
 	});
@@ -137,9 +142,9 @@
 							{$i18n.t('settings.admin.general.version.label')}
 						</div>
 						<div class="mt-1 flex flex-wrap gap-x-1 text-gray-700 dark:text-gray-200">
-							<Tooltip content={WEBUI_BUILD_HASH}>v{WEBUI_VERSION}</Tooltip>
+							<BuildVersion />
 
-							{#if $config?.features?.enable_version_update_check}
+							{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
 								{#if version.latest === null}
 									<span class="text-gray-500 dark:text-gray-500"
 										>{$i18n.t('Could not check for updates')}</span
@@ -171,7 +176,7 @@
 						</button>
 					</div>
 
-					{#if $config?.features?.enable_version_update_check}
+					{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
 						<button
 							class="shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 							type="button"
@@ -524,7 +529,7 @@
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 			type="submit"
 			disabled={saving}
 		>

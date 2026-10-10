@@ -41,6 +41,8 @@
 	let path = '/openapi.json';
 	let enabled = false;
 	let chatUploads: 'default' | 'filesystem' = 'default';
+	let workingDirectoryContext = true;
+	let userShellTools: 'auto' | 'always' = 'auto';
 	let chatContextMode: 'default' | 'chat_id' | 'off' = 'default';
 	let automationContextMode: 'default' | 'automation_id' | 'off' = 'default';
 	let showAdvanced = false;
@@ -78,6 +80,8 @@
 
 	const init = () => {
 		forwardCookies = connection?.forward_cookies ?? false;
+		workingDirectoryContext = connection?.config?.working_directory_context ?? true;
+		userShellTools = connection?.config?.user_shell_tools === 'always' ? 'always' : 'auto';
 		if (connection) {
 			id = connection?.id ?? '';
 			url = connection.url;
@@ -402,6 +406,8 @@
 			else delete connectionConfig.contexts;
 			if (chatUploads === 'filesystem') connectionConfig.chat_uploads = 'filesystem';
 			else delete connectionConfig.chat_uploads;
+			if (!direct) connectionConfig.working_directory_context = workingDirectoryContext;
+			connectionConfig.user_shell_tools = userShellTools;
 
 			const result = {
 				...(!direct && id.trim() ? { id: id.trim() } : {}),
@@ -853,7 +859,7 @@
 									</div>
 									<button
 										type="button"
-										class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800"
 										disabled={refreshing}
 										on:click={refreshHandler}
 									>
@@ -898,7 +904,55 @@
 							{#if !direct}
 								<div class="flex items-center justify-between gap-3 mt-2">
 									<div>
-										<label for="forward-cookies" class="text-xs text-gray-500">
+										<label
+											for="working-directory-context"
+											class="text-xs font-medium text-gray-900 dark:text-gray-100"
+										>
+											{$i18n.t('Working Directory Context')}
+										</label>
+										<p class="text-xs text-gray-500">
+											{$i18n.t('Include the current directory in tool instructions.')}
+										</p>
+									</div>
+									<Switch
+										id="working-directory-context"
+										ariaLabel={$i18n.t('Working Directory Context')}
+										bind:state={workingDirectoryContext}
+									/>
+								</div>
+							{/if}
+							<div class="flex items-center justify-between gap-3 mt-2">
+								<div>
+									<label
+										for="user-shell-tools"
+										class="text-xs font-medium text-gray-900 dark:text-gray-100"
+									>
+										{$i18n.t('User Shell Tools')}
+									</label>
+									<p class="text-xs text-gray-500">
+										{#if userShellTools === 'auto'}
+											{$i18n.t('Include tools only while your shell is connected.')}
+										{:else}
+											{$i18n.t('Keep tools listed even while your shell is closed.')}
+										{/if}
+									</p>
+								</div>
+								<select
+									id="user-shell-tools"
+									class={`text-xs shrink-0 ${selectClass}`}
+									bind:value={userShellTools}
+								>
+									<option value="auto">{$i18n.t('Automatic')}</option>
+									<option value="always">{$i18n.t('Always Include')}</option>
+								</select>
+							</div>
+							{#if !direct}
+								<div class="flex items-center justify-between gap-3 mt-2">
+									<div>
+										<label
+											for="forward-cookies"
+											class="text-xs font-medium text-gray-900 dark:text-gray-100"
+										>
 											{$i18n.t('Forward cookies')}
 										</label>
 										<p class="text-xs text-gray-500">
@@ -917,7 +971,7 @@
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between items-center mb-0.5">
 										<div class="flex gap-2 items-center">
-											<div class={`text-xs text-gray-500`}>
+											<div class="text-xs font-medium text-gray-900 dark:text-gray-100">
 												{$i18n.t('OpenAPI Spec')}
 											</div>
 										</div>
@@ -1016,7 +1070,7 @@
 							</div>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 								type="submit"
 								disabled={loading || loadingPolicy || !!policyLoadError}
 							>
@@ -1024,7 +1078,7 @@
 
 								{#if loading}
 									<span class="shrink-0">
-										<Spinner />
+										<Spinner className="size-3" />
 									</span>
 								{/if}
 							</button>
