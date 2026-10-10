@@ -1580,4 +1580,9 @@
 			{/if}
 		</div>
 	</div>
+{:else}
+	<div class="flex h-full w-full items-center justify-center" role="status">
+		<Spinner className="size-5" />
+		<span class="sr-only">{$i18n.t('Loading...')}</span>
+	</div>
 {/if}
