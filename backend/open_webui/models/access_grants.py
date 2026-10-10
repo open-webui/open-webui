@@ -451,31 +451,36 @@ class AccessGrantsTable:
         Replace all grants for a resource from a direct access_grants list.
         """
         async with get_async_db_context(db) as db:
-            await db.execute(
-                delete(AccessGrant).filter_by(
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                )
-            )
-
-            normalized_grants = normalize_access_grants(access_grants)
-
-            results = []
-            for grant_dict in normalized_grants:
-                grant = AccessGrant(
-                    id=str(uuid.uuid4()),
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                    principal_type=grant_dict['principal_type'],
-                    principal_id=grant_dict['principal_id'],
-                    permission=grant_dict['permission'],
-                    created_at=int(time.time()),
-                )
-                db.add(grant)
-                results.append(grant)
-
+            results = await self.replace_access_grants(db, resource_type, resource_id, access_grants)
             await db.commit()
             return [AccessGrantModel.model_validate(g) for g in results]
+
+    async def replace_access_grants(self, db, resource_type, resource_id, access_grants):
+        """Replace grants in the caller's transaction without committing."""
+        await db.execute(
+            delete(AccessGrant).filter_by(
+                resource_type=resource_type,
+                resource_id=resource_id,
+            )
+        )
+
+        normalized_grants = normalize_access_grants(access_grants)
+
+        results = []
+        for grant_dict in normalized_grants:
+            grant = AccessGrant(
+                id=str(uuid.uuid4()),
+                resource_type=resource_type,
+                resource_id=resource_id,
+                principal_type=grant_dict['principal_type'],
+                principal_id=grant_dict['principal_id'],
+                permission=grant_dict['permission'],
+                created_at=int(time.time()),
+            )
+            db.add(grant)
+            results.append(grant)
+
+        return results
 
     async def get_access_control(
         self,
@@ -595,7 +600,7 @@ class AccessGrantsTable:
             if user_group_ids is None:
                 from open_webui.models.groups import Groups
 
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in user_groups}
 
             if user_group_ids:
@@ -651,7 +656,7 @@ class AccessGrantsTable:
             if user_group_ids is None:
                 from open_webui.models.groups import Groups
 
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in user_groups}
 
             if user_group_ids:
@@ -730,7 +735,7 @@ class AccessGrantsTable:
                     group_ids.append(grant.principal_id)
 
             if group_ids:
-                group_user_ids = await Groups.get_group_user_ids_by_ids(group_ids, db=db)
+                group_user_ids = await Groups.get_group_user_ids_by_ids(group_ids, db=db, include_inherited=True)
                 for members in group_user_ids.values():
                     user_ids.update(members)
             return user_ids

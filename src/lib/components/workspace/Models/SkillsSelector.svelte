@@ -29,7 +29,9 @@
 
 <div>
 	<div class="flex w-full items-center gap-2 mb-1">
-		<div class=" self-center text-xs text-gray-500">{$i18n.t('Skills')}</div>
+		<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+			{$i18n.t('Skills')}
+		</div>
 
 		{#if activeSkills.length > 0}
 			<TypeaheadSelector
@@ -72,7 +74,7 @@
 						<Tooltip
 							content={resolveLocalizedResource(skill, $i18n.language, 'description') || skill.id}
 						>
-							<div class=" py-0.5 text-xs capitalize">
+							<div class="py-0.5 text-xs capitalize font-normal text-gray-900 dark:text-gray-100">
 								{resolveLocalizedResource(skill, $i18n.language)}
 							</div>
 						</Tooltip>

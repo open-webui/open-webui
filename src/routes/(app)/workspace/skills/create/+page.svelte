@@ -4,12 +4,14 @@
 	import { skills } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	import { createNewSkill, getSkills } from '$lib/apis/skills';
 	import SkillEditor from '$lib/components/workspace/Skills/SkillEditor.svelte';
 
 	let skill: {
+		meta?: any;
+		files?: any[];
 		name: string;
 		id: string;
 		description: string;
@@ -20,16 +22,13 @@
 
 	let clone = false;
 
-	const onSubmit = async (_skill) => {
-		const res = await createNewSkill(localStorage.token, _skill).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+	const onSubmit = async (_skill: any) => {
+		const res = await createNewSkill(localStorage.token, _skill);
 
 		if (res) {
 			toast.success($i18n.t('Skill created successfully'));
 			await skills.set(await getSkills(localStorage.token));
-			await goto('/workspace/skills');
+			return res;
 		}
 	};
 
@@ -44,6 +43,7 @@
 				id: _skill.id || '',
 				description: _skill.description || '',
 				content: _skill.content || '',
+				files: _skill.files,
 				meta: _skill.meta ?? {},
 				is_active: _skill.is_active ?? true,
 				access_grants: _skill.access_grants !== undefined ? _skill.access_grants : []

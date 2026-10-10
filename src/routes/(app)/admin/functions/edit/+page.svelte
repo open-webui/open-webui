@@ -42,7 +42,8 @@
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
-			content: data.content
+			content: data.content,
+			commit_message: data.commit_message
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -54,16 +55,19 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null,
 					false,
 					true
 				)
 			);
 		}
+		return res;
 	};
 
 	onMount(async () => {
-		if (!$config?.features?.enable_plugins) {
+		if (!$config?.features?.enable_functions) {
 			goto('/admin', { replaceState: true });
 			return;
 		}
@@ -91,9 +95,21 @@
 			name={func.name}
 			meta={func.meta}
 			content={func.content}
-			onSave={(value) => {
-				saveHandler(value);
+			version_id={func.version_id}
+			onProduction={async () => {
+				functions.set(await getFunctions(localStorage.token));
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null,
+						false,
+						true
+					)
+				);
 			}}
+			onSave={saveHandler}
 		/>
 	</div>
 {:else}

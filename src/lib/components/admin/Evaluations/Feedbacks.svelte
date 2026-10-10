@@ -8,7 +8,7 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import {
 		deleteFeedbackById,
@@ -279,7 +279,7 @@
 						</button>
 
 						<div slot="content">
-							<DropdownMenu className="w-[10.625rem]">
+							<DropdownMenu className="min-w-[10.625rem]">
 								<button
 									class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
 									type="button"
@@ -492,7 +492,9 @@
 								{/if}
 
 								<td class=" px-3 py-1 text-right font-normal">
-									{dayjs(feedback.updated_at * 1000).fromNow()}
+									{dayjs(feedback.updated_at * 1000)
+										.locale($i18n.language)
+										.fromNow()}
 								</td>
 
 								<td class=" px-3 py-1 text-right font-normal" on:click={(e) => e.stopPropagation()}>

@@ -20,7 +20,7 @@
 	let containerEl: HTMLDivElement;
 	let styleEl: HTMLDivElement;
 	let fallbackHtml = '';
-	let error = '';
+	let error = false;
 	let loading = false;
 	let renderId = 0;
 	let mounted = false;
@@ -36,7 +36,7 @@
 		if (containerEl) containerEl.innerHTML = '';
 		if (styleEl) styleEl.innerHTML = '';
 		fallbackHtml = '';
-		error = '';
+		error = false;
 	};
 
 	const updateFitScale = () => {
@@ -157,7 +157,7 @@
 				fallbackHtml = DOMPurify.sanitize(await docxToHtml(arrayBuffer.slice(0)));
 			} catch (fallbackError) {
 				console.error('Error rendering DOCX fallback:', fallbackError);
-				error = $i18n.t('Failed to load DOCX file. Please try downloading it instead.');
+				error = true;
 			}
 		} finally {
 			if (currentRender === renderId) loading = false;
@@ -200,7 +200,9 @@
 	{/if}
 
 	{#if error}
-		<div class="text-red-500 text-sm p-4">{error}</div>
+		<div class="text-red-500 text-sm p-4">
+			{$i18n.t('Failed to load DOCX file. Please try downloading it instead.')}
+		</div>
 	{:else if fallbackHtml}
 		<div bind:this={outerContainer} class="h-full overflow-auto overscroll-contain">
 			<div

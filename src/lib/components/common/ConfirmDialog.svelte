@@ -6,7 +6,7 @@
 	import { settings } from '$lib/stores';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const dispatch = createEventDispatcher();
 
 	import { fade } from 'svelte/transition';
@@ -18,8 +18,8 @@
 	export let title = '';
 	export let message = '';
 
-	export let cancelLabel = $i18n.t('Cancel');
-	export let confirmLabel = $i18n.t('Confirm');
+	export let cancelLabel: string | undefined = undefined;
+	export let confirmLabel: string | undefined = undefined;
 
 	export let onConfirm = () => {};
 
@@ -197,7 +197,7 @@
 						}}
 						type="button"
 					>
-						{cancelLabel}
+						{cancelLabel ?? $i18n.t('Cancel')}
 					</button>
 					<button
 						class="text-sm bg-gray-900 hover:bg-gray-900/90 text-gray-100 dark:bg-gray-100 dark:hover:bg-gray-100/90 dark:text-gray-800 font-normal w-full py-1.5 rounded-full transition"
@@ -206,7 +206,7 @@
 						}}
 						type="button"
 					>
-						{confirmLabel}
+						{confirmLabel ?? $i18n.t('Confirm')}
 					</button>
 				</div>
 			</div>

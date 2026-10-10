@@ -18,7 +18,8 @@ export const getModelItems = async (
 	selectedTag,
 	orderBy,
 	direction,
-	page
+	page,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 
@@ -44,6 +45,7 @@ export const getModelItems = async (
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/list?${searchParams.toString()}`, {
 		method: 'GET',
+		signal,
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -58,6 +60,7 @@ export const getModelItems = async (
 			return json;
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			error = err;
 			console.error(err);
 			return null;
@@ -211,8 +214,18 @@ export const getBaseModels = async (token: string = '', tag: string = '') => {
 export const createNewModel = async (token: string, model: object) => {
 	let error = null;
 
-	const { id, base_model_id, name, meta, params, access_grants, is_active } = model as any;
-	const payload = { id, base_model_id, name, meta, params, access_grants, is_active };
+	const { id, base_model_id, name, meta, params, access_grants, is_active, commit_message } =
+		model as any;
+	const payload = {
+		id,
+		base_model_id,
+		name,
+		meta,
+		params,
+		access_grants,
+		is_active,
+		commit_message
+	};
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/create`, {
 		method: 'POST',
@@ -313,8 +326,18 @@ export const toggleModelById = async (token: string, id: string) => {
 export const updateModelById = async (token: string, id: string, model: object) => {
 	let error = null;
 
-	const { base_model_id, name, meta, params, access_grants, is_active } = model as any;
-	const payload = { id, base_model_id, name, meta, params, access_grants, is_active };
+	const { base_model_id, name, meta, params, access_grants, is_active, commit_message } =
+		model as any;
+	const payload = {
+		id,
+		base_model_id,
+		name,
+		meta,
+		params,
+		access_grants,
+		is_active,
+		commit_message
+	};
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/update`, {
 		method: 'POST',
@@ -443,4 +466,76 @@ export const deleteAllModels = async (token: string) => {
 	}
 
 	return res;
+};
+
+export type ModelHistoryEntry = {
+	id: string;
+	model_id: string;
+	parent_id: string | null;
+	user_id: string;
+	commit_message: string | null;
+	created_at: number;
+	user?: { name: string } | null;
+};
+
+export type ModelSnapshot = {
+	name: string;
+	base_model_id: string | null;
+	params: Record<string, any>;
+	meta: Record<string, any>;
+};
+
+export const getModelHistory = async (
+	token: string,
+	id: string,
+	page = 1
+): Promise<ModelHistoryEntry[]> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/history?${new URLSearchParams({ id, page: String(page) })}`,
+		{
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const getModelHistoryEntry = async (
+	token: string,
+	id: string,
+	versionId: string
+): Promise<ModelHistoryEntry & { snapshot: ModelSnapshot }> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/history/${encodeURIComponent(versionId)}?${new URLSearchParams({ id })}`,
+		{
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const deleteModelHistoryVersion = async (token: string, id: string, versionId: string) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/history/${encodeURIComponent(versionId)}?${new URLSearchParams({ id })}`,
+		{
+			method: 'DELETE',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const setProductionModelVersion = async (token: string, id: string, versionId: string) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/update/version?${new URLSearchParams({ id })}`,
+		{
+			method: 'POST',
+			headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ version_id: versionId })
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
 };

@@ -295,3 +295,18 @@ export const getGroupPreview = async (token: string, id: string) => {
 
 	return res;
 };
+
+export const getGroupMembers = async (
+	token: string,
+	id: string,
+	membership: 'direct' | 'inherited' | 'effective' = 'effective',
+	query = '',
+	page = 1
+) => {
+	const params = new URLSearchParams({ membership, query, page: String(page) });
+	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}/members?${params}`, {
+		headers: { Authorization: `Bearer ${token}` }
+	});
+	if (!res.ok) throw (await res.json()).detail;
+	return res.json();
+};

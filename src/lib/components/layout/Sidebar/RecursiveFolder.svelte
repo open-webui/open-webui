@@ -543,6 +543,9 @@
 
 		await tick();
 		if (open) {
+			if (!append) {
+				pendingUpsertChats = [];
+			}
 			// Always use getSharedFolderChats so owners also see chats
 			// created by users who have write access to this folder.
 			const nextPage = append ? chatsPage + 1 : 1;
@@ -835,8 +838,7 @@
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Enter') {
-									updateHandler({ name });
-									edit = false;
+									e.currentTarget.blur();
 								}
 							}}
 							class="w-full h-full bg-transparent outline-hidden"
@@ -862,6 +864,7 @@
 						class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-gray-300"
 					>
 						<FolderMenu
+							canShare={$user?.role === 'admin' || !folders[folderId]?.shared}
 							onEdit={() => {
 								showFolderModal = true;
 							}}
@@ -955,8 +958,12 @@
 							updatedAt={chat.updated_at}
 							lastReadAt={chat.last_read_at}
 							active={chat.active ?? false}
-							ownerName={folders[folderId]?.shared ? (chat.owner_name ?? null) : null}
-							ownerUserId={folders[folderId]?.shared && chat.owner_name ? chat.user_id : null}
+							ownerName={chat.owner_name ?? null}
+							ownerUserId={folders[folderId]?.showOwnerInfo ||
+							folders[folderId]?.shared ||
+							chat.user_id !== $user?.id
+								? chat.user_id
+								: null}
 							readonly={chat.user_id !== $user?.id}
 							{shiftKey}
 							onReadStateChange={applyReadState}

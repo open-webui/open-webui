@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from contextlib import AsyncExitStack
+from datetime import timedelta
 from typing import Optional
 
 log = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     MCP_INITIALIZE_TIMEOUT,
 )
+from open_webui.utils.json_codec import JSONCodec
 
 
 def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
@@ -56,17 +58,41 @@ def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=False)
 
 
+class OAuthTokenAuth(httpx.Auth):
+    """Resolve current credentials per request and recover from concurrent token rotation."""
+
+    requires_request_body = True
+
+    def __init__(self, get_headers):
+        self.get_headers = get_headers
+
+    async def async_auth_flow(self, request):
+        headers = httpx.Headers(await self.get_headers())
+        authorization = headers.get('Authorization')
+        if not authorization:
+            raise httpx.RequestError('No OAuth access token available', request=request)
+        request.headers.update(headers)
+        response = yield request
+
+        if response.status_code == 401:
+            headers = httpx.Headers(await self.get_headers())
+            if headers.get('Authorization') and headers['Authorization'] != authorization:
+                request.headers.update(headers)
+                yield request
+
+
 class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
         self.exit_stack = None
 
-    async def connect(self, url: str, headers: Optional[dict] = None):
+    async def connect(self, url: str, headers: Optional[dict] = None, auth: Optional[httpx.Auth] = None):
         async with AsyncExitStack() as exit_stack:
             try:
                 self._streams_context = streamablehttp_client(
                     url,
                     headers=headers,
+                    auth=auth,
                     httpx_client_factory=create_httpx_client
                     if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
                     else create_insecure_httpx_client,
@@ -112,21 +138,42 @@ class MCPClient:
 
         return tool_specs
 
-    async def call_tool(self, function_name: str, function_args: dict) -> Optional[dict]:
+    async def call_tool(self, function_name: str, function_args: dict) -> list[dict]:
         if not self.session:
             raise RuntimeError('MCP client is not connected.')
 
-        result = await self.session.call_tool(function_name, function_args)
+        tool_call_timeout = None
+        if AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER is not None and AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER > 0:
+            tool_call_timeout = timedelta(seconds=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
+
+        result = await self.session.call_tool(function_name, function_args, read_timeout_seconds=tool_call_timeout)
         if not result:
             raise Exception('No result returned from MCP tool call.')
 
         result_dict = result.model_dump(mode='json')
-        result_content = result_dict.get('content', {})
+        result_content = result_dict['content']
 
         if result.isError:
             raise Exception(result_content)
-        else:
+
+        structured_content = result_dict.get('structuredContent')
+        if structured_content is None:
             return result_content
+
+        # Compare serialized JSON: Python equality treats True and 1 as the same value.
+        structured_json = JSONCodec.dumps(structured_content, sort_keys=True)
+        for item in result_content:
+            if item['type'] != 'text':
+                continue
+            try:
+                text_content = JSONCodec.loads(item['text'])
+            except JSONCodec.JSONDecodeError:
+                continue
+            if JSONCodec.dumps(text_content, sort_keys=True) == structured_json:
+                return result_content
+
+        result_content.append({'type': 'text', 'text': structured_json})
+        return result_content
 
     async def list_resources(self, cursor: Optional[str] = None) -> Optional[dict]:
         if not self.session:

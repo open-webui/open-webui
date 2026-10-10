@@ -136,6 +136,7 @@ jobs:
           sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}
+            BUILD_CHANNEL=${{ github.ref == 'refs/heads/dev' && 'dev' || (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'main' || 'unknown' }}
             ${{ matrix.variant.build_args }}
 
       - name: Export digest

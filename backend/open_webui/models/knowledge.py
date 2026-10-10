@@ -169,6 +169,9 @@ class KnowledgeForm(BaseModel):
 
 
 class FileUserResponse(FileModelResponse):
+    directory_id: str | None = None
+    directory_path: str = ''
+    has_original: bool = True
     user: Optional[UserResponse] = None
 
 
@@ -481,7 +484,7 @@ class KnowledgeTable:
         if knowledge.user_id == user_id:
             return True
         if user_group_ids is None:
-            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
             user_group_ids = {group.id for group in user_groups}
         return await AccessGrants.has_access(
             user_id=user_id,
@@ -535,7 +538,7 @@ class KnowledgeTable:
         try:
             async with get_async_db_context(db) as db:
                 stmt = (
-                    select(File, User)
+                    select(File, User, KnowledgeFile.directory_id)
                     .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
                     .outerjoin(User, User.id == KnowledgeFile.user_id)
                     .filter(KnowledgeFile.knowledge_id == knowledge_id)
@@ -603,9 +606,27 @@ class KnowledgeTable:
                 result = await db.execute(stmt)
                 items = result.all()
 
+                directories = {directory.id: directory for directory in await self.get_all_directories(knowledge_id, db=db)}
+                paths = {}
+
+                def directory_path(directory_id):
+                    if directory_id not in paths:
+                        names, seen = [], set()
+                        current = directory_id
+                        while current in directories and current not in seen:
+                            seen.add(current)
+                            directory = directories[current]
+                            names.append(directory.name)
+                            current = directory.parent_id
+                        paths[directory_id] = '/'.join(reversed(names))
+                    return paths[directory_id]
+
                 files = [
                     FileUserResponse(
                         id=file.id,
+                        directory_id=directory_id,
+                        directory_path=directory_path(directory_id),
+                        has_original=bool(file.path),
                         user_id=file.user_id,
                         hash=file.hash,
                         filename=file.filename,
@@ -614,7 +635,7 @@ class KnowledgeTable:
                         updated_at=file.updated_at,
                         user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
                     )
-                    for file, user in items
+                    for file, user, directory_id in items
                 ]
 
                 return KnowledgeFileListResponse(

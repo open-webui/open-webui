@@ -289,7 +289,7 @@ class ChannelTable:
         users.add(invited_by)
 
         for group_id in group_ids or []:
-            group_user_ids = await Groups.get_group_user_ids_by_id(group_id)
+            group_user_ids = await Groups.get_group_user_ids_by_id(group_id, include_inherited=True)
             users.update(group_user_ids)
 
         return users
@@ -393,7 +393,9 @@ class ChannelTable:
 
     async def get_channels_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[ChannelModel]:
         async with get_async_db_context(db) as db:
-            user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                group.id for group in await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+            ]
 
             result = await db.execute(
                 select(Channel)
@@ -737,7 +739,9 @@ class ChannelTable:
                 return []
 
             # Preload user's group membership
-            user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                g.id for g in await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+            ]
 
             allowed_channels = []
 
@@ -813,7 +817,9 @@ class ChannelTable:
             stmt = select(Channel).filter(Channel.id == id)
 
             # Determine user groups
-            user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                group.id for group in await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+            ]
 
             # Apply ACL rules
             stmt = self._has_permission(

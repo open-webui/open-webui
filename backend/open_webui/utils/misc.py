@@ -48,9 +48,13 @@ def get_response_error_detail(response: object) -> str:
         body = response.body
         if not isinstance(body, str):
             body = body.decode('utf-8', 'replace')
-        detail = JSONCodec.loads(body)
     except Exception:
         return fallback
+
+    try:
+        detail = JSONCodec.loads(body)
+    except JSONCodec.JSONDecodeError:
+        return body.strip() or fallback
 
     while isinstance(detail, dict):
         next_detail = None
@@ -479,7 +483,7 @@ def convert_output_to_messages(
 
     for item in output:
         item_type = item.get('type', '')
-        if item_type not in {'function_call', 'function_call_output'}:
+        if item_type != 'function_call_output':
             flush_tool_outputs()
             flush_tool_images()
 

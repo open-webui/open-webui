@@ -180,7 +180,7 @@ async def get_knowledge_bases(
     skip = (page - 1) * limit
 
     filter = {}
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -245,7 +245,7 @@ async def search_knowledge_bases(
     if direction in {'asc', 'desc'}:
         filter['direction'] = direction
 
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -301,7 +301,7 @@ async def search_knowledge_files(
     if include_content:
         filter['include_content'] = True
 
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     if groups:
         filter['group_ids'] = [group.id for group in groups]
 
@@ -1747,7 +1747,7 @@ async def delete_knowledge_by_id(
                 log.info('Updating model %s to remove knowledge base %s', model.id, id)
                 model.meta.knowledge = updated_knowledge
                 model_form = ModelForm(**model.model_dump())
-                await Models.update_model_by_id(model.id, model_form, db=db)
+                await Models.update_model_by_id(model.id, model_form, db=db, user_id=user.id)
 
     # Clean up vector DB
     if is_external_knowledge(knowledge):

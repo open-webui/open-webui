@@ -60,7 +60,7 @@
 		<span
 			slot="label"
 			title={localeLabel}
-			class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] text-gray-400 dark:text-gray-600"
+			class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] text-gray-900 dark:text-gray-100"
 		>
 			{#if hasCustomLocalePrompts}
 				<button

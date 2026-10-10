@@ -79,7 +79,7 @@
 </script>
 
 <div>
-	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">
+	<div class="mb-1.5 text-xs font-normal text-gray-600 dark:text-gray-400">
 		{$i18n.t('settings.admin.models.capabilities.title')}
 	</div>
 	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -94,7 +94,7 @@
 				/>
 				<button
 					type="button"
-					class="min-w-0 cursor-pointer text-left text-xs text-gray-600 dark:text-gray-400"
+					class="min-w-0 cursor-pointer text-left text-xs font-normal text-gray-900 dark:text-gray-100"
 					on:click={() => setCapability(capability, !capabilities[capability])}
 				>
 					<Tooltip

@@ -332,7 +332,7 @@ class QdrantClient(VectorDBBase):
         dimension = len(items[0]['vector'])
         self._ensure_collection(mt_collection, dimension)
         points = self._create_points(items, tenant_id)
-        self.client.upload_points(mt_collection, points)
+        self.client.upload_points(mt_collection, points, wait=True)
         return None
 
     def insert(self, collection_name: str, items: List[VectorItem]):

@@ -9,14 +9,25 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { isRasterImageContentType } from '$lib/utils';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	export let id: string;
 	export let content: string;
 	export let files: any[] = [];
 	export let onSendNow: (id: string) => void;
-	export let onEdit: (id: string) => void;
+	export let onEdit: ((id: string) => void) | undefined;
 	export let onDelete: (id: string) => void;
+	export let sending = false;
+	export let error = '';
+	$: uploadFailed = files.some((file) => file.status === 'error');
+	$: sendDisabled = sending || files.some((file) => ['uploading', 'error'].includes(file.status));
+	$: sendLabel = sending
+		? $i18n.t('Sending...')
+		: uploadFailed
+			? $i18n.t('Upload failed')
+			: sendDisabled
+				? $i18n.t('Waiting for upload')
+				: $i18n.t('Send now');
 </script>
 
 <div class="flex items-center gap-2 px-2 py-1.5">
@@ -71,37 +82,33 @@
 			</p>
 		{/if}
 
-		{#if files.some((file) => file.status === 'error')}
+		{#if uploadFailed}
 			<span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
 				{$i18n.t('Upload failed')}
 			</span>
+		{:else if error}
+			<span class="shrink-0 text-xs text-red-500" title={error}
+				>{$i18n.t('Failed to send message')}</span
+			>
+		{:else if sending}
+			<Spinner className="size-3 shrink-0" />
 		{/if}
 	</div>
 
 	<!-- Actions -->
 	<div class="flex items-center gap-1 shrink-0">
 		<!-- Send immediately -->
-		<Tooltip
-			content={files.some((file) => ['uploading', 'error'].includes(file.status))
-				? $i18n.t('Waiting for upload')
-				: $i18n.t('Send now')}
-		>
+		<Tooltip content={sendLabel}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 transition-colors {files.some((file) =>
-					['uploading', 'error'].includes(file.status)
-				)
+				class="p-1 text-gray-400 transition-colors {sendDisabled
 					? 'opacity-40 cursor-not-allowed'
 					: 'hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'}"
-				disabled={files.some((file) => ['uploading', 'error'].includes(file.status))}
+				disabled={sendDisabled}
 				on:click={() => {
-					if (!files.some((file) => ['uploading', 'error'].includes(file.status))) {
-						onSendNow(id);
-					}
+					if (!sendDisabled) onSendNow(id);
 				}}
-				aria-label={files.some((file) => ['uploading', 'error'].includes(file.status))
-					? $i18n.t('Waiting for upload')
-					: $i18n.t('Send now')}
+				aria-label={sendLabel}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -124,8 +131,9 @@
 		<Tooltip content={$i18n.t('Edit')}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-				on:click={() => onEdit(id)}
+				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				disabled={sending || !onEdit}
+				on:click={() => onEdit?.(id)}
 				aria-label={$i18n.t('Edit')}
 			>
 				<EditPencil className="size-3.5" />
@@ -136,7 +144,8 @@
 		<Tooltip content={$i18n.t('Delete')}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				disabled={sending}
 				on:click={() => onDelete(id)}
 				aria-label={$i18n.t('Delete')}
 			>

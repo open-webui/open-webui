@@ -484,7 +484,9 @@
 					}}
 				>
 					<ArchiveBox className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Archive')}</div>
+					<div class="flex items-center">
+						{chat?.archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
+					</div>
 				</button>
 
 				{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}

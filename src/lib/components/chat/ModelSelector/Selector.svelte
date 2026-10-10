@@ -62,9 +62,9 @@
 	export let compareEnabled = false;
 	export let multipleEnabled = false;
 	export let disabled = false;
-	export let placeholder = $i18n.t('Select a model');
+	export let placeholder: string | undefined = undefined;
 	export let searchEnabled = true;
-	export let searchPlaceholder = $i18n.t('Search a model');
+	export let searchPlaceholder: string | undefined = undefined;
 	export let selectionOnly = false;
 	export let includeHidden = false;
 
@@ -195,7 +195,7 @@
 		? compareEnabled && selectedCount > 1
 			? `${selectedModel.label} +${selectedCount - 1}`
 			: selectedModel.label
-		: placeholder;
+		: (placeholder ?? $i18n.t('Select a model'));
 
 	let searchValue = '';
 
@@ -226,7 +226,7 @@
 	const getProviderPoolKey = (connection, model: string) =>
 		`${connection.provider}:${connection.idx}:${model}`;
 
-	const fuse = new Fuse(
+	$: fuse = new Fuse(
 		items.map((item) => {
 			const _item = {
 				...item,
@@ -241,26 +241,6 @@
 			threshold: 0.4
 		}
 	);
-
-	const updateFuse = () => {
-		if (fuse) {
-			fuse.setCollection(
-				items.map((item) => {
-					const _item = {
-						...item,
-						modelName: resolveLocalizedModelName(item.model, $i18n.language),
-						tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
-						desc: resolveLocalizedModelDescription(item.model, $i18n.language)
-					};
-					return _item;
-				})
-			);
-		}
-	};
-
-	$: if (items) {
-		updateFuse();
-	}
 
 	$: filteredItems = (
 		searchValue
@@ -774,7 +754,6 @@
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL
 			});
-			await deleteModel(localStorage.token, model);
 			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
 		} else {
 			const displayModel = $MODEL_DOWNLOAD_POOL[model]?.model ?? model;
@@ -904,9 +883,9 @@
 	}}
 />
 
-<svelte:window on:click|capture={handleWindowClick} on:keydown={handleKeydown} />
+<svelte:window on:click|capture={handleWindowClick} on:keydown|capture={handleKeydown} />
 
-<div class="relative w-full">
+<div class="relative flex w-full">
 	<button
 		bind:this={triggerElement}
 		class="focus-ring relative w-full {($settings?.highContrastMode ?? false)
@@ -914,7 +893,7 @@
 			: 'outline-hidden focus:outline-hidden'}"
 		aria-label={selectedModel
 			? $i18n.t('Selected model: {{modelName}}', { modelName: triggerLabel })
-			: placeholder}
+			: (placeholder ?? $i18n.t('Select a model'))}
 		aria-haspopup="listbox"
 		aria-expanded={show}
 		id="model-selector-{id}-button"
@@ -961,7 +940,7 @@
 								id="model-search-input"
 								bind:value={searchValue}
 								class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
-								placeholder={searchPlaceholder}
+								placeholder={searchPlaceholder ?? $i18n.t('Search a model')}
 								autocomplete="off"
 								aria-label={$i18n.t('Search In Models')}
 								on:keydown={(e) => {

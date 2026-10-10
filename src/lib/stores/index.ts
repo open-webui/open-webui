@@ -124,6 +124,19 @@ export const chatRequestQueues: Writable<
 	Record<string, { id: string; prompt: string; files: any[] }[]>
 > = writable({});
 
+export type ChannelQueuedMessage = {
+	id: string;
+	prompt: string;
+	files: any[];
+	user_id: string;
+	channel_id: string;
+	parent_id: string | null;
+	reply_to_message: any;
+	sending?: boolean;
+	error?: string;
+};
+export const channelRequestQueues = writable<Record<string, ChannelQueuedMessage[]>>({});
+
 export const sidebarWidth = writable(245);
 
 export type SettingsModalRequest = {
@@ -305,8 +318,8 @@ type ModelOptions = {
 };
 
 type AudioSettings = {
-	stt: any;
-	tts: any;
+	stt?: any;
+	tts?: any;
 	STTEngine?: string;
 	TTSEngine?: string;
 	speaker?: string;
@@ -329,6 +342,11 @@ type Document = {
 };
 
 type Config = {
+	audio?: {
+		realtime?: { enabled: boolean; model: string; voice: string };
+		stt: { engine: string };
+		tts: { engine: string; voice: string; split_on: string };
+	};
 	license_metadata: any;
 	status: boolean;
 	name: string;
@@ -360,6 +378,9 @@ type Config = {
 		enable_community_sharing: boolean;
 		enable_memories: boolean;
 		enable_plugins?: boolean;
+		enable_tools?: boolean;
+		enable_functions?: boolean;
+		enable_tool_servers?: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_direct_integrations?: boolean;

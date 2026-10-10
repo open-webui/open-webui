@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { getContext, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -9,9 +10,10 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let onExport: null | Function = null;
+	export let accessHandler: (() => void) | null = null;
 	export let onClose: Function = () => {};
 
 	let show = false;
@@ -50,6 +52,20 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
+			{#if accessHandler}
+				<button
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={() => {
+						accessHandler?.();
+						closeMenu();
+					}}
+				>
+					<LockClosed className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Access')}</div>
+				</button>
+			{/if}
+
 			{#if onExport}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"

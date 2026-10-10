@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -16,12 +17,13 @@
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Bold from '$lib/components/icons/Bold.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let show = false;
 	export let className = 'max-w-[11.25rem]';
 
 	export let onDownload = (type) => {};
+	export let onAccess: (() => void) | null = null;
 	export let onDelete = () => {};
 	export let onPin = null;
 	export let isPinned = false;
@@ -48,6 +50,17 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[11.25rem]">
+			{#if onAccess}
+				<button
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={() => onAccess?.()}
+				>
+					<LockClosed className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Access')}</div>
+				</button>
+			{/if}
+
 			{#if showAutoFormat}
 				<Tooltip
 					className="w-full"

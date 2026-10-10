@@ -3,7 +3,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -11,23 +11,6 @@
 
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
-
-	async function loadLocale(locales) {
-		if (!locales || !Array.isArray(locales)) {
-			return;
-		}
-		for (const locale of locales) {
-			try {
-				dayjs.locale(locale);
-				break; // Stop after successfully loading the first available locale
-			} catch (error) {
-				console.error(`Could not load locale '${locale}':`, error);
-			}
-		}
-	}
-
-	// Assuming $i18n.languages is an array of language codes
-	$: loadLocale($i18n.languages);
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -103,7 +86,10 @@
 								})}
 							{:else}
 								{$i18n.t('Thought for {{DURATION}}', {
-									DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
+									DURATION: dayjs
+										.duration(attributes.duration, 'seconds')
+										.locale($i18n.language)
+										.humanize()
 								})}
 							{/if}
 						{:else if attributes?.done === 'true' || messageDone}

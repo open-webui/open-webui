@@ -200,9 +200,9 @@ class ElasticsearchClient(VectorDBBase):
         }
 
         for field, value in filter.items():
-            query_body['query']['bool']['filter'].append({'term': {field: value}})
+            query_body['query']['bool']['filter'].append({'term': {f'metadata.{field}': value}})
         query_body['query']['bool']['filter'].append({'term': {'collection': collection_name}})
-        size = limit if limit else 10
+        size = limit if limit else 10000
 
         try:
             result = self.client.search(

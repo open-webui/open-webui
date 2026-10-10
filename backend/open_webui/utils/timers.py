@@ -108,7 +108,7 @@ async def create_timer(
         'session_id': metadata.get('session_id'),
         'tool_ids': copy.deepcopy(metadata.get('tool_ids') or []),
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
-        'system_prompt': metadata.get('system_prompt'),
+        'chat_context': copy.deepcopy(metadata.get('chat_context') or {}),
         'filter_ids': copy.deepcopy(metadata.get('filter_ids') or []),
         'terminal_id': metadata.get('terminal_id'),
         'features': copy.deepcopy(metadata.get('features') or {}),
@@ -351,6 +351,7 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
 
                 parent.chat = parent_chat
                 history['currentId'] = assistant_message_id
+                parent.current_message_id = assistant_message_id
                 parent.updated_at = int(time.time())
                 timer_row = await db.get(Chat, timer_id)
                 if timer_row:
@@ -373,10 +374,15 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
             },
             room=f'user:{timer.user_id}',
         )
+        chat_context = copy.deepcopy(run.get('chat_context') or {})
+        # Timers saved before chat_context was introduced only have the assembled prompt.
+        if run.get('chat_context') is None and run.get('system_prompt'):
+            chat_context['messages'] = [{'role': 'system', 'content': run['system_prompt']}]
         form_data = {
             'model': model_id,
+            'params': chat_context.get('params') or {},
             'messages': [
-                *([{'role': 'system', 'content': run.get('system_prompt')}] if run.get('system_prompt') else []),
+                *chat_context.get('messages', []),
                 *message_list,
                 {'role': 'user', 'content': prompt},
             ],
@@ -393,6 +399,7 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
             'features': run.get('features') or {},
             'files': run.get('files') or [],
             'variables': run.get('variables') or {},
+            'chat_variables': chat_context.get('chat_variables'),
         }
         if run.get('terminal_id'):
             form_data['terminal_id'] = run['terminal_id']
@@ -412,6 +419,7 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         )
         request.state.token = None
         request.state.enable_api_keys = False
+        request.state.chat_context = chat_context
         try:
             await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
         except Exception as exc:

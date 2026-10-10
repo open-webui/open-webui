@@ -54,7 +54,7 @@
 			} catch (error) {
 				toast.error(`${error}`);
 			}
-			return true;
+			return res;
 		}
 		return false;
 	};

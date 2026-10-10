@@ -9,7 +9,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder } from '$lib/stores';
+	import { selectedFolder, user } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -247,6 +247,7 @@
 		{#if !readOnly}
 			<div class="flex items-center translate-x-2.5">
 				<FolderMenu
+					canShare={$user?.role === 'admin' || folder.user_id === $user?.id}
 					align="end"
 					onEdit={() => {
 						showFolderModal = true;

@@ -1,4 +1,7 @@
 <script context="module">
+	// Keep keys in nested template expressions visible to i18next-parser.
+	// $i18n.t("Unknown error");
+
 	// Persists across mount/unmount cycles (module-level, not per-instance)
 	let savedPath = '/';
 	let savedFileRoot = null;
@@ -1145,7 +1148,7 @@
 			chatId ?? undefined
 		);
 		toast[result ? 'success' : 'error'](
-			$i18n.t(result ? 'Folder created' : 'Failed to create folder')
+			result ? $i18n.t('Folder created') : $i18n.t('Failed to create folder')
 		);
 		invalidateTreeCache(currentPath);
 		await loadDir(currentPath, { preserveTree: true });
@@ -1171,7 +1174,9 @@
 
 		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
 		const result = await uploadToTerminal(terminal.url, terminal.key, currentPath, emptyFile);
-		toast[result ? 'success' : 'error']($i18n.t(result ? 'File created' : 'Failed to create file'));
+		toast[result ? 'success' : 'error'](
+			result ? $i18n.t('File created') : $i18n.t('Failed to create file')
+		);
 		invalidateTreeCache(currentPath);
 		await loadDir(currentPath, { preserveTree: true });
 	};
@@ -1183,7 +1188,9 @@
 
 		const result = await deleteEntry(terminal.url, terminal.key, path, chatId ?? undefined);
 		toast[result ? 'success' : 'error'](
-			$i18n.t(result ? '{{name}} deleted' : 'Failed to delete {{name}}', { name })
+			result
+				? $i18n.t('{{name}} deleted', { name })
+				: $i18n.t('Failed to delete {{name}}', { name })
 		);
 		invalidateTreeCache(currentPath, path);
 		await loadDir(currentPath, { preserveTree: true });
@@ -1441,8 +1448,7 @@
 			showFileNavDir.set(null);
 			filePath = normalizePath(filePath);
 			if (!isInsideFileRoot(filePath)) {
-				await loadDir(fileRoot?.path ?? '/');
-				return;
+				filePath = fileRoot?.path ?? '/';
 			}
 
 			const lastSlash = filePath.lastIndexOf('/');
@@ -1873,7 +1879,7 @@
 						const file = new File([content], fileName, { type: 'text/plain' });
 						const result = await uploadToTerminal(terminal.url, terminal.key, dir, file);
 						toast[result ? 'success' : 'error'](
-							$i18n.t(result ? 'File saved' : 'Failed to save file')
+							result ? $i18n.t('File saved') : $i18n.t('Failed to save file')
 						);
 						if (result) fileContent = content;
 					}}

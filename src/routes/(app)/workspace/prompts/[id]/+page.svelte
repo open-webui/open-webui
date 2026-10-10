@@ -17,12 +17,7 @@
 	$: promptId = $page.params.id;
 
 	const onSubmit = async (_prompt) => {
-		console.log(_prompt);
-		const updatedPrompt = await updatePromptById(localStorage.token, _prompt).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
+		const updatedPrompt = await updatePromptById(localStorage.token, _prompt);
 		if (updatedPrompt) {
 			toast.success($i18n.t('Prompt updated successfully'));
 			// Update local prompt state to reflect the new version
@@ -37,6 +32,7 @@
 					updatedPrompt?.access_grants === undefined ? [] : updatedPrompt?.access_grants
 			};
 		}
+		return updatedPrompt;
 	};
 
 	onMount(async () => {

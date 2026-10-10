@@ -62,7 +62,7 @@
 	let _token = null;
 
 	let renderHTML = null;
-	let renderError = null;
+	let renderError: { type: 'diagram' | 'visualization'; detail: string } | null = null;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -374,7 +374,7 @@
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
-				renderError = $i18n.t('Failed to render diagram') + `: ${errorMsg}`;
+				renderError = { type: 'diagram', detail: errorMsg };
 				renderHTML = null;
 			}
 		} else if (
@@ -386,7 +386,7 @@
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
-				renderError = $i18n.t('Failed to render visualization') + `: ${errorMsg}`;
+				renderError = { type: 'visualization', detail: errorMsg };
 				renderHTML = null;
 			}
 		}
@@ -453,7 +453,9 @@
 						<div
 							class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
 						>
-							{renderError}
+							{renderError.type === 'diagram'
+								? $i18n.t('Failed to render diagram')
+								: $i18n.t('Failed to render visualization')}: {renderError.detail}
 						</div>
 					{/if}
 					<pre>{code}</pre>

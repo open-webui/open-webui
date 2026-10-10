@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { tick } from 'svelte';
+	import { mobile } from '$lib/stores';
 
 	/** Whether the dropdown is open */
 	export let show = false;
@@ -275,7 +276,7 @@
 		if (show) {
 			closeDropdown();
 		} else {
-			openDropdown(true);
+			openDropdown(!$mobile);
 		}
 	}
 
@@ -289,8 +290,9 @@
 		if (!(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
-		// Submenu content is portaled outside contentEl.
-		if (event.target instanceof Element && event.target.closest('[role="menu"]')) return;
+		// Submenus and listboxes can be portaled outside contentEl.
+		if (event.target instanceof Element && event.target.closest('[role="menu"], [role="listbox"]'))
+			return;
 		event.preventDefault();
 		event.stopPropagation();
 		closeDropdown(false);

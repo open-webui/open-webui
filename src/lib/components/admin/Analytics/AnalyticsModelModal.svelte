@@ -25,7 +25,7 @@
 	const TIME_RANGES: { key: TimeRange; label: string; days: number }[] = [
 		{ key: '30d', label: '30D', days: 30 },
 		{ key: '1y', label: '1Y', days: 365 },
-		{ key: 'all', label: $i18n.t('All'), days: 0 }
+		{ key: 'all', label: 'All', days: 0 }
 	];
 	let selectedRange: TimeRange = '30d';
 	let history: Array<{ date: string; won: number; lost: number }> = [];
@@ -239,7 +239,7 @@
 										: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
 									on:click={() => selectRange(range.key)}
 								>
-									{range.label}
+									{range.key === 'all' ? $i18n.t('All') : range.label}
 								</button>
 							{/each}
 						</div>

@@ -330,19 +330,24 @@ class DoclingLoader:
 
 
 class Loader:
-    def __init__(self, engine: str = '', **kwargs):
-        self.engine = engine
-        self.user = kwargs.get('user', None)
-        self.user_groups = kwargs.get('user_groups', None)
-        self.metadata = kwargs.get('metadata', {})
-        self.kwargs = kwargs
+    def __init__(self, config: dict):
+        self.config = config
+        self.engine = config['rag.content_extraction_engine']
+        self.user = None
+        self.user_groups = None
+        self.metadata = {}
 
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         loader = self._get_loader(filename, file_content_type, file_path)
         docs = loader.load()
         # ftfy's auto mode unescapes entities on every line before the first literal '<', rewriting the document.
         return [
-            Document(page_content=ftfy.fix_text(doc.page_content, unescape_html=False), metadata=doc.metadata)
+            Document(
+                page_content=ftfy.fix_text(
+                    doc.page_content, unescape_html=False, fix_character_width=False, uncurl_quotes=False
+                ),
+                metadata=doc.metadata,
+            )
             for doc in docs
         ]
 
@@ -360,7 +365,7 @@ class Loader:
         # is offloaded to a thread without a running event loop.
         if self.engine == 'external' and self.user_groups is None:
             self.user_groups = await get_user_groups_for_custom_headers(
-                self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'), self.user
+                self.config['rag.external_document_loader_headers'], self.user
             )
 
         return await asyncio.to_thread(self.load, filename, file_content_type, file_path)
@@ -520,7 +525,7 @@ class Loader:
         file_ext = filename.split('.')[-1].lower()
 
         if file_ext in known_archive_ext or file_content_type in known_archive_content_types:
-            max_file_size = self.kwargs.get('FILE_MAX_SIZE')
+            max_file_size = self.config['rag.file.max_size']
             try:
                 max_file_size_bytes = int(max_file_size) * 1024 * 1024 if max_file_size else 100 * 1024 * 1024
             except (TypeError, ValueError):
@@ -542,36 +547,36 @@ class Loader:
 
         if (
             self.engine == 'external'
-            and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL')
-            and self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY')
+            and self.config['rag.external_document_loader_url']
+            and self.config['rag.external_document_loader_api_key']
         ):
             loader = ExternalDocumentLoader(
                 file_path=file_path,
-                url=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_URL'),
-                api_key=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY'),
+                url=self.config['rag.external_document_loader_url'],
+                api_key=self.config['rag.external_document_loader_api_key'],
                 mime_type=file_content_type,
                 user=self.user,
                 user_groups=self.user_groups,
-                headers=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'),
+                headers=self.config['rag.external_document_loader_headers'],
                 metadata={
                     **self.metadata,
                     'file_name': filename,
                     'file_content_type': file_content_type,
                 },
             )
-        elif self.engine == 'tika' and self.kwargs.get('TIKA_SERVER_URL'):
+        elif self.engine == 'tika' and self.config['rag.tika_server_url']:
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             else:
                 loader = TikaLoader(
-                    url=self.kwargs.get('TIKA_SERVER_URL'),
+                    url=self.config['rag.tika_server_url'],
                     file_path=file_path,
-                    server_version=self.kwargs.get('TIKA_SERVER_VERSION'),
-                    extract_images=self.kwargs.get('PDF_EXTRACT_IMAGES'),
+                    server_version=self.config['rag.tika_server_version'],
+                    extract_images=self.config['rag.pdf_extract_images'],
                 )
         elif (
             self.engine == 'datalab_marker'
-            and self.kwargs.get('DATALAB_MARKER_API_KEY')
+            and self.config['rag.datalab_marker_api_key']
             and file_ext
             in [
                 'pdf',
@@ -594,30 +599,30 @@ class Loader:
                 'tiff',
             ]
         ):
-            api_base_url = self.kwargs.get('DATALAB_MARKER_API_BASE_URL', '')
+            api_base_url = self.config['rag.datalab_marker_api_base_url']
             if not api_base_url or api_base_url.strip() == '':
                 api_base_url = 'https://www.datalab.to/api/v1/marker'  # https://github.com/open-webui/open-webui/pull/16867#issuecomment-3218424349
 
             loader = DatalabMarkerLoader(
                 file_path=file_path,
-                api_key=self.kwargs['DATALAB_MARKER_API_KEY'],
+                api_key=self.config['rag.datalab_marker_api_key'],
                 api_base_url=api_base_url,
-                additional_config=self.kwargs.get('DATALAB_MARKER_ADDITIONAL_CONFIG'),
-                use_llm=self.kwargs.get('DATALAB_MARKER_USE_LLM', False),
-                skip_cache=self.kwargs.get('DATALAB_MARKER_SKIP_CACHE', False),
-                force_ocr=self.kwargs.get('DATALAB_MARKER_FORCE_OCR', False),
-                paginate=self.kwargs.get('DATALAB_MARKER_PAGINATE', False),
-                strip_existing_ocr=self.kwargs.get('DATALAB_MARKER_STRIP_EXISTING_OCR', False),
-                disable_image_extraction=self.kwargs.get('DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION', False),
-                format_lines=self.kwargs.get('DATALAB_MARKER_FORMAT_LINES', False),
-                output_format=self.kwargs.get('DATALAB_MARKER_OUTPUT_FORMAT', 'markdown'),
+                additional_config=self.config['rag.datalab_marker_additional_config'],
+                use_llm=self.config['rag.datalab_marker_use_llm'],
+                skip_cache=self.config['rag.datalab_marker_skip_cache'],
+                force_ocr=self.config['rag.datalab_marker_force_ocr'],
+                paginate=self.config['rag.datalab_marker_paginate'],
+                strip_existing_ocr=self.config['rag.datalab_marker_strip_existing_ocr'],
+                disable_image_extraction=self.config['rag.datalab_marker_disable_image_extraction'],
+                format_lines=self.config['rag.datalab_marker_format_lines'],
+                output_format=self.config['rag.datalab_marker_output_format'],
             )
-        elif self.engine == 'docling' and self.kwargs.get('DOCLING_SERVER_URL'):
+        elif self.engine == 'docling' and self.config['rag.docling_server_url']:
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             else:
                 # Build params for DoclingLoader
-                params = self.kwargs.get('DOCLING_PARAMS', {})
+                params = self.config['rag.docling_params']
                 if not isinstance(params, dict):
                     try:
                         params = JSONCodec.loads(params)
@@ -626,15 +631,15 @@ class Loader:
                         params = {}
 
                 loader = DoclingLoader(
-                    url=self.kwargs.get('DOCLING_SERVER_URL'),
-                    api_key=self.kwargs.get('DOCLING_API_KEY', None),
+                    url=self.config['rag.docling_server_url'],
+                    api_key=self.config['rag.docling_api_key'],
                     file_path=file_path,
                     mime_type=file_content_type,
                     params=params,
                 )
         elif (
             self.engine == 'document_intelligence'
-            and self.kwargs.get('DOCUMENT_INTELLIGENCE_ENDPOINT') != ''
+            and self.config['rag.document_intelligence_endpoint'] != ''
             and (
                 file_ext in ['pdf', 'docx', 'ppt', 'pptx']
                 or file_content_type
@@ -645,22 +650,22 @@ class Loader:
                 ]
             )
         ):
-            if self.kwargs.get('DOCUMENT_INTELLIGENCE_KEY') != '':
+            if self.config['rag.document_intelligence_key'] != '':
                 loader = DocumentIntelligenceLoader(
                     file_path=file_path,
-                    api_endpoint=self.kwargs.get('DOCUMENT_INTELLIGENCE_ENDPOINT'),
-                    api_key=self.kwargs.get('DOCUMENT_INTELLIGENCE_KEY'),
-                    api_model=self.kwargs.get('DOCUMENT_INTELLIGENCE_MODEL'),
+                    api_endpoint=self.config['rag.document_intelligence_endpoint'],
+                    api_key=self.config['rag.document_intelligence_key'],
+                    api_model=self.config['rag.document_intelligence_model'],
                 )
             else:
                 loader = DocumentIntelligenceLoader(
                     file_path=file_path,
-                    api_endpoint=self.kwargs.get('DOCUMENT_INTELLIGENCE_ENDPOINT'),
+                    api_endpoint=self.config['rag.document_intelligence_endpoint'],
                     azure_credential=DefaultAzureCredential(),
-                    api_model=self.kwargs.get('DOCUMENT_INTELLIGENCE_MODEL'),
+                    api_model=self.config['rag.document_intelligence_model'],
                 )
-        elif self.engine == 'mineru' and file_ext in self.kwargs.get('MINERU_FILE_EXTENSIONS', ['pdf']):
-            mineru_timeout = self.kwargs.get('MINERU_API_TIMEOUT', 300)
+        elif self.engine == 'mineru' and file_ext in self.config['rag.mineru_file_extensions']:
+            mineru_timeout = self.config['rag.mineru_api_timeout']
             if mineru_timeout:
                 try:
                     mineru_timeout = int(mineru_timeout)
@@ -668,34 +673,34 @@ class Loader:
                     mineru_timeout = 300
             loader = MinerULoader(
                 file_path=file_path,
-                api_mode=self.kwargs.get('MINERU_API_MODE', 'local'),
-                api_url=self.kwargs.get('MINERU_API_URL', 'http://localhost:8000'),
-                api_key=self.kwargs.get('MINERU_API_KEY', ''),
-                params=self.kwargs.get('MINERU_PARAMS', {}),
+                api_mode=self.config['rag.mineru_api_mode'],
+                api_url=self.config['rag.mineru_api_url'],
+                api_key=self.config['rag.mineru_api_key'],
+                params=self.config['rag.mineru_params'],
                 timeout=mineru_timeout,
                 max_markdown_bytes=MINERU_MAX_MARKDOWN_BYTES,
             )
         elif (
             self.engine == 'mistral_ocr'
-            and self.kwargs.get('MISTRAL_OCR_API_KEY') != ''
+            and self.config['rag.mistral_ocr_api_key'] != ''
             and file_ext in ['pdf']  # Mistral OCR currently only supports PDF and images
         ):
             loader = MistralLoader(
-                base_url=self.kwargs.get('MISTRAL_OCR_API_BASE_URL'),
-                api_key=self.kwargs.get('MISTRAL_OCR_API_KEY'),
+                base_url=self.config['rag.mistral_ocr_api_base_url'],
+                api_key=self.config['rag.mistral_ocr_api_key'],
                 file_path=file_path,
-                use_base64=self.kwargs.get('MISTRAL_OCR_USE_BASE64', False),
+                use_base64=self.config['rag.mistral_ocr_use_base64'],
                 user=self.user,
             )
         elif (
             self.engine == 'paddleocr_vl'
-            and self.kwargs.get('PADDLEOCR_VL_BASE_URL')
-            and self.kwargs.get('PADDLEOCR_VL_TOKEN')
+            and self.config['rag.paddleocr_vl_base_url']
+            and self.config['rag.paddleocr_vl_token']
             and file_ext in PADDLEOCR_VL_SUPPORTED_EXTENSIONS
         ):
             loader = PaddleOCRVLLoader(
-                api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
-                token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),
+                api_url=self.config['rag.paddleocr_vl_base_url'],
+                token=self.config['rag.paddleocr_vl_token'],
                 file_path=file_path,
             )
         else:
@@ -715,8 +720,8 @@ class Loader:
             if file_ext == 'pdf':
                 loader = PDFLoader(
                     file_path,
-                    extract_images=self.kwargs.get('PDF_EXTRACT_IMAGES'),
-                    mode=self.kwargs.get('PDF_LOADER_MODE', 'page'),
+                    extract_images=self.config['rag.pdf_extract_images'],
+                    mode=self.config['rag.pdf_loader_mode'],
                 )
             elif file_ext == 'csv':
                 loader = CSVLoaderWithSummary(
