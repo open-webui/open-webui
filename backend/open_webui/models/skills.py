@@ -8,9 +8,10 @@ from open_webui.models.access_grants import AccessGrant, AccessGrantModel, Acces
 from open_webui.models.groups import Groups
 from open_webui.models.skill_history import SkillHistories, SkillHistory
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.misc import json_text_variants
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, apply_operations, validate_files
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, delete, func, or_, select, update
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -301,6 +302,10 @@ class SkillsTable:
                                 Skill.id.ilike(f'%{query_key}%'),
                                 User.name.ilike(f'%{query_key}%'),
                                 User.email.ilike(f'%{query_key}%'),
+                                *(
+                                    cast(Skill.meta, String).icontains(variant, autoescape=True)
+                                    for variant in json_text_variants(query_key)
+                                ),
                             )
                         )
 
