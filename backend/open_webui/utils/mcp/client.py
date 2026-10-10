@@ -162,15 +162,31 @@ class MCPClient:
 
         # Compare serialized JSON: Python equality treats True and 1 as the same value.
         structured_json = JSONCodec.dumps(structured_content, sort_keys=True)
-        for item in result_content:
-            if item['type'] != 'text':
-                continue
+        texts = [item['text'] for item in result_content if item['type'] == 'text']
+        text_jsons = []
+        for text in texts:
             try:
-                text_content = JSONCodec.loads(item['text'])
+                text_content = JSONCodec.loads(text)
             except JSONCodec.JSONDecodeError:
-                continue
-            if JSONCodec.dumps(text_content, sort_keys=True) == structured_json:
+                text_content = text
+            text_json = JSONCodec.dumps(text_content, sort_keys=True)
+            if text_json == structured_json:
                 return result_content
+            text_jsons.append(text_json)
+
+        # FastMCP wraps scalar/list results while keeping their original text blocks.
+        values = structured_content.get('result')
+        values = values if isinstance(values, list) else [values]
+        if (
+            structured_content.keys() == {'result'}
+            and texts
+            and len(texts) == len(values)
+            and all(
+                text == value or text_json == JSONCodec.dumps(value, sort_keys=True)
+                for text, text_json, value in zip(texts, text_jsons, values)
+            )
+        ):
+            return result_content
 
         result_content.append({'type': 'text', 'text': structured_json})
         return result_content
