@@ -1500,7 +1500,7 @@ async def get_event_call(request_info):
 
         interaction_id = None
         timeout = WEBSOCKET_EVENT_CALLER_TIMEOUT
-        if event_data.get('type') == 'request:user_input' or (
+        if event_data.get('type') in ('request:user_input', 'request:elicitation') or (
             event_data.get('type') == 'confirmation' and (event_data.get('data') or {}).get('tool_call')
         ):
             interaction_id = str(uuid4())

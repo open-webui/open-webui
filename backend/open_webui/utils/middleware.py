@@ -3042,13 +3042,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             request,
                             server_id,
                             user,
-                            metadata,
+                            extra_params,
                         )
                         if result is None:
                             continue
 
                         client, tool_specs = result
                         mcp_clients[server_id] = client
+
+                        if client.instructions:
+                            form_data['messages'] = add_or_update_system_message(
+                                f'MCP server {JSONCodec.dumps(server_id)} instructions:\n{client.instructions}',
+                                form_data['messages'],
+                                append=True,
+                            )
 
                         for tool_spec in tool_specs:
 

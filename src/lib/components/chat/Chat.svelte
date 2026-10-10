@@ -120,6 +120,7 @@
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
+	import ElicitationDialog from './ElicitationDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
@@ -1416,6 +1417,7 @@
 		}
 		if (
 			interactionType === 'request:user_input' ||
+			interactionType === 'request:elicitation' ||
 			(interactionType === 'confirmation' && interactionData?.tool_call)
 		) {
 			if (!cb) return;
@@ -4812,6 +4814,16 @@
 		eventCallback(false);
 	}}
 />
+
+{#if browserInteraction?.type === 'request:elicitation'}
+	{#key browserInteraction.id}
+		{@const interaction = browserInteraction}
+		<ElicitationDialog
+			data={interaction.data}
+			onResponse={(value) => resolveBrowserInteraction(interaction, value)}
+		/>
+	{/key}
+{/if}
 
 {#if browserInteraction?.data?.tool_call}
 	{#key browserInteraction.id}

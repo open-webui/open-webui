@@ -3,15 +3,19 @@ import logging
 from contextlib import AsyncExitStack
 from datetime import timedelta
 from typing import Optional
+from urllib.parse import urlsplit
 
 log = logging.getLogger(__name__)
 
 import anyio
 import httpx
+from jsonschema import Draft202012Validator, FormatChecker
 from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
+from mcp.types import ElicitRequestFormParams, ElicitResult
+from referencing import Registry
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
@@ -82,9 +86,45 @@ class OAuthTokenAuth(httpx.Auth):
 
 
 class MCPClient:
-    def __init__(self):
+    def __init__(self, event_caller=None, server_name=''):
         self.session: Optional[ClientSession] = None
         self.exit_stack = None
+        self.event_caller = event_caller
+        self.server_name = server_name
+        self.instructions: Optional[str] = None
+
+    async def elicit(self, context, params):
+        try:
+            if isinstance(params, ElicitRequestFormParams):
+                Draft202012Validator.check_schema(params.requestedSchema)
+            else:
+                url = urlsplit(params.url)
+                if url.scheme not in ('http', 'https') or not url.hostname or url.username or url.password:
+                    return ElicitResult(action='cancel')
+
+            response = await self.event_caller(
+                {
+                    'type': 'request:elicitation',
+                    'data': {
+                        **params.model_dump(mode='json', include={'mode', 'message', 'requestedSchema', 'url'}),
+                        'server_name': self.server_name,
+                    },
+                }
+            )
+            if not isinstance(response, dict) or response.get('action') not in ('accept', 'decline', 'cancel'):
+                return ElicitResult(action='cancel')
+
+            content = None
+            if response['action'] == 'accept' and isinstance(params, ElicitRequestFormParams):
+                content = response.get('content')
+                # Never fetch server-supplied schema references or coerce user answers.
+                Draft202012Validator(
+                    params.requestedSchema, format_checker=FormatChecker(), registry=Registry()
+                ).validate(content)
+            return ElicitResult(action=response['action'], content=content)
+        except Exception as e:
+            log.warning('MCP elicitation failed: %s', type(e).__name__)
+            return ElicitResult(action='cancel')
 
     async def connect(self, url: str, headers: Optional[dict] = None, auth: Optional[httpx.Auth] = None):
         async with AsyncExitStack() as exit_stack:
@@ -101,11 +141,14 @@ class MCPClient:
                 transport = await exit_stack.enter_async_context(self._streams_context)
                 read_stream, write_stream, _ = transport
 
-                self._session_context = ClientSession(read_stream, write_stream)  # pylint: disable=W0201
+                self._session_context = ClientSession(
+                    read_stream, write_stream, elicitation_callback=self.elicit if self.event_caller else None
+                )
 
                 self.session = await exit_stack.enter_async_context(self._session_context)
                 with anyio.fail_after(MCP_INITIALIZE_TIMEOUT):
-                    await self.session.initialize()
+                    result = await self.session.initialize()
+                self.instructions = result.instructions
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
                 await self.disconnect()

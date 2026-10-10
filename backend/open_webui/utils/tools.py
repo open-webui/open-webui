@@ -198,7 +198,7 @@ async def connect_mcp_server(
     request,
     server_id: str,
     user,
-    metadata: dict,
+    extra_params: dict,
 ) -> tuple[MCPClient, list[dict]] | None:
     """Resolve an MCP server connection, authenticate, and return (client, tool_specs).
 
@@ -222,6 +222,8 @@ async def connect_mcp_server(
         log.warning(f'Access denied to MCP server {server_id} for user {user.id}')
         return None
 
+    metadata = extra_params.get('__metadata__', {})
+
     async def get_headers():
         headers, _ = await build_tool_server_headers(
             mcp_server_connection, request, user, server_id=server_id, metadata=metadata
@@ -234,7 +236,10 @@ async def connect_mcp_server(
     if mcp_server_connection.get('auth_type') in ('oauth_2.1', 'oauth_2.1_static') and not headers.get('Authorization'):
         raise HTTPException(status_code=401, detail='Auth required')
 
-    client = MCPClient()
+    client = MCPClient(
+        event_caller=extra_params.get('__event_call__') if metadata.get('session_id') else None,
+        server_name=server_id,
+    )
     try:
         await client.connect(
             url=mcp_server_connection.get('url', ''),
