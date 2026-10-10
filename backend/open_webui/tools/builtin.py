@@ -370,6 +370,7 @@ async def fetch_url(
 
 async def generate_image(
     prompt: str,
+    size: Optional[str] = None,
     __request__: Request = None,
     __user__: dict = None,
     __event_emitter__: callable = None,
@@ -380,6 +381,8 @@ async def generate_image(
     Generate an image based on a text prompt.
 
     :param prompt: A detailed description of the image to generate
+    :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
+        Omit to use the configured default.
     :return: Confirmation that the image was generated, or an error message
     """
     if __request__ is None:
@@ -390,7 +393,7 @@ async def generate_image(
 
         images = await image_generations(
             request=__request__,
-            form_data=CreateImageForm(prompt=prompt),
+            form_data=CreateImageForm(prompt=prompt, size=size),
             metadata=(
                 {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
                 if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')
@@ -441,6 +444,7 @@ async def generate_image(
 async def edit_image(
     prompt: str,
     image_urls: list[str],
+    size: Optional[str] = None,
     __request__: Request = None,
     __user__: dict = None,
     __event_emitter__: callable = None,
@@ -453,6 +457,8 @@ async def edit_image(
 
     :param prompt: A description of the transformation to apply to the provided images
     :param image_urls: Source image URLs to modify or use as composition inputs
+    :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
+        Omit to use the configured default.
     :return: Confirmation that the images were edited, or an error message
     """
     if __request__ is None:
@@ -463,7 +469,7 @@ async def edit_image(
 
         images = await image_edits(
             request=__request__,
-            form_data=EditImageForm(prompt=prompt, image=image_urls),
+            form_data=EditImageForm(prompt=prompt, image=image_urls, size=size),
             metadata=(
                 {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
                 if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')
