@@ -1549,9 +1549,11 @@
 						await onEmbeddedChatTitle?.($chatId, data);
 					}
 					await refreshChatList(localStorage.token);
+					return; // The message copy is stale after the await; skip the trailing write-back.
 				} else if (type === 'chat:tags') {
 					chat = await getChatById(localStorage.token, $chatId);
 					allTags.set(await getAllTags(localStorage.token));
+					return;
 				} else if (type === 'source' || type === 'citation') {
 					if (data?.type === 'code_execution') {
 						// Code execution; update existing code execution by ID, or add new one.
