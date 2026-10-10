@@ -1425,11 +1425,9 @@
 											<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
 										</fieldset>
 									{/if}
-									{#if admin}
-										<fieldset disabled={readOnly} class="min-w-0">
-											<ModelControls bind:controls={params.model_controls} />
-										</fieldset>
-									{/if}
+									<fieldset disabled={readOnly} class="min-w-0">
+										<ModelControls bind:controls={params.model_controls} />
+									</fieldset>
 								</div>
 							</section>
 

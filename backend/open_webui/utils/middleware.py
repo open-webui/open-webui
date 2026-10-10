@@ -3431,6 +3431,23 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     params = {key: value for key, value in params.items() if key in allowed_params}
 
     try:
+        if (
+            not is_saved_chat_id(metadata.get('chat_id'))
+            and metadata.get('params', {}).get('tool_approval_mode') == 'ask'
+            and not (name == 'ask_user' and tool_type == 'builtin')
+            and (
+                not event_caller
+                or await event_caller(
+                    {
+                        'type': 'confirmation',
+                        'data': {'tool_call': {'id': tool_call.get('id'), 'name': name, 'arguments': params}},
+                    }
+                )
+                is not True  # Disconnection and timeout replies are error objects, not approval.
+            )
+        ):
+            return params, 'Error: tool call was not approved.', tool, tool_type, direct_tool
+
         if direct_tool:
             if not event_caller:
                 result = 'Error: Browser session is not connected for this direct tool.'
@@ -5927,7 +5944,7 @@ async def streaming_chat_response_handler(response, ctx):
                             for tool_call in response_tool_calls
                             if tool_call.get('function', {}).get('name') != 'ask_user'
                         ]
-                    elif ask_user_staged:
+                    elif ask_user_staged and save_to_chat:
                         if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
                             await pause_for_tool_approval(
                                 metadata['chat_id'],
@@ -5938,6 +5955,11 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                         await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
                         return
+                    elif ask_user_staged:
+                        # Live questions await the socket callback, not the saved-chat resolver.
+                        for item in output:
+                            if item.get('name') == 'ask_user' and item.get('status') == 'pending':
+                                item['status'] = 'in_progress'
 
                     # Append function_call items for each tool call
                     # (Responses API already has them from streaming, so skip duplicates)

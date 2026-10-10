@@ -177,10 +177,29 @@
 	let eventConfirmationInputType = '';
 	let eventConfirmationInputOptions: ({ label?: string; value: string } | string)[] = [];
 	let eventCallback: (value: any) => void = () => {};
-	let showAskUserDialog = false;
-	let askUserQuestions: any[] = [];
-	let askUserAllowOther = true;
-	let askUserTimeoutMs: number | null = null;
+	type BrowserInteraction = {
+		id: string;
+		messageId: string;
+		type: string;
+		data: any;
+		callback: (value: any) => void;
+	};
+	let browserInteractions: BrowserInteraction[] = [];
+	let browserApprovalMode: string | null = null;
+	$: browserInteraction = browserInteractions[0];
+
+	const resolveBrowserInteraction = (interaction: BrowserInteraction, value: any) => {
+		if (!browserInteractions.includes(interaction)) return;
+		browserInteractions = browserInteractions.filter((item) => item !== interaction);
+		interaction.callback(value);
+	};
+
+	const cancelBrowserInteractions = () => {
+		browserApprovalMode = null;
+		for (const interaction of browserInteractions) {
+			resolveBrowserInteraction(interaction, { status: 'cancelled', answers: {} });
+		}
+	};
 
 	let selectedModels = [''];
 	let selectedModelIdx = 0;
@@ -461,6 +480,7 @@
 
 	const handleToolApprovalModeChange = async (mode: string) => {
 		const tool_approval_mode = mode === 'ask' ? 'ask' : 'full';
+		browserApprovalMode = tool_approval_mode;
 		params = {
 			...params,
 			tool_approval_mode
@@ -488,6 +508,13 @@
 		}
 
 		if (tool_approval_mode === 'full') {
+			if (isTemporaryChatId($chatId)) {
+				if (browserApprovalMode !== 'full') return;
+				for (const interaction of browserInteractions) {
+					if (interaction.data?.tool_call) resolveBrowserInteraction(interaction, true);
+				}
+				return;
+			}
 			const messages = [...Object.values(history?.messages ?? {})].reverse() as any[];
 			for (const message of messages) {
 				if ((message.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id) continue;
@@ -649,20 +676,16 @@
 			}
 		: null;
 
-	$: socketAskUserPrompt = {
-		show: showAskUserDialog,
-		questions: askUserQuestions,
-		allowOther: askUserAllowOther,
-		timeoutMs: askUserTimeoutMs,
-		onConfirm: (value) => {
-			showAskUserDialog = false;
-			eventCallback(value);
-		},
-		onCancel: () => {
-			showAskUserDialog = false;
-			eventCallback({ status: 'cancelled', answers: {} });
-		}
-	};
+	$: socketAskUserPrompt = ((interaction: BrowserInteraction | undefined) => ({
+		id: interaction?.id,
+		show: interaction?.type === 'request:user_input',
+		questions: interaction?.data?.questions ?? [],
+		allowOther: interaction?.data?.allow_other ?? true,
+		timeoutMs: interaction?.data?.timeout_ms ?? null,
+		onConfirm: (value: any) => interaction && resolveBrowserInteraction(interaction, value),
+		onCancel: () =>
+			interaction && resolveBrowserInteraction(interaction, { status: 'cancelled', answers: {} })
+	}))(browserInteraction);
 
 	const mergeChatVariableSchemas = (modelIds = [], availableModels = []) => {
 		const byKey: Record<string, any> = {};
@@ -840,6 +863,7 @@
 	}
 
 	const navigateHandler = async () => {
+		cancelBrowserInteractions();
 		bridge?.end();
 		noteChatDebug('navigateHandler start');
 		// Mark the outgoing chat as read before loading the new one.
@@ -1382,6 +1406,43 @@
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
+		const interactionType = event?.data?.type;
+		const interactionData = event?.data?.data;
+		if (interactionType === 'request:interaction:done') {
+			browserInteractions = browserInteractions.filter(
+				(item) => item.id !== interactionData?.interaction_id
+			);
+			return;
+		}
+		if (
+			interactionType === 'request:user_input' ||
+			(interactionType === 'confirmation' && interactionData?.tool_call)
+		) {
+			if (!cb) return;
+			if (event.chat_id !== $chatId || !history.messages[event.message_id]) {
+				cb({ status: 'cancelled', answers: {} });
+				return;
+			}
+			if (
+				interactionData?.tool_call &&
+				isTemporaryChatId(event.chat_id) &&
+				browserApprovalMode === 'full'
+			) {
+				cb(true);
+				return;
+			}
+			browserInteractions = [
+				...browserInteractions,
+				{
+					id: interactionData?.interaction_id ?? uuidv4(),
+					messageId: event.message_id,
+					type: interactionType,
+					data: interactionData,
+					callback: cb
+				}
+			];
+			return;
+		}
 
 		// A new chat's title can arrive before its id; the response message already exists.
 		if (
@@ -1466,6 +1527,11 @@
 					}
 					autoScrollToBottom();
 				} else if (type === 'chat:tasks:cancel') {
+					for (const interaction of browserInteractions) {
+						if (interaction.messageId === event.message_id) {
+							resolveBrowserInteraction(interaction, { status: 'cancelled', answers: {} });
+						}
+					}
 					message.bridgeCancelled = true;
 					bridgeCancellations.get(event.message_id)?.();
 					if (!event.shared) dismissContextCompactionToast();
@@ -1629,13 +1695,6 @@
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.input?.type ?? data?.type ?? '';
 					eventConfirmationInputOptions = data?.input?.options ?? data?.options ?? [];
-				} else if (type === 'request:user_input') {
-					eventCallback = cb;
-					askUserQuestions = data?.questions ?? [];
-					askUserAllowOther = data?.allow_other ?? true;
-					askUserTimeoutMs =
-						typeof data?.timeout_ms === 'number' && data.timeout_ms > 0 ? data.timeout_ms : null;
-					showAskUserDialog = true;
 				} else if (type.startsWith('terminal:')) {
 					terminalEventHandler(type, data);
 				} else {
@@ -1761,6 +1820,7 @@
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', handleSocketConnect);
 		$socket?.on('disconnect', clearTyping);
+		$socket?.on('disconnect', cancelBrowserInteractions);
 
 		$audioQueue?.destroy();
 
@@ -1842,6 +1902,7 @@
 
 		return () => {
 			try {
+				cancelBrowserInteractions();
 				clearTimeout(saveControlsTimer);
 				saveControls();
 				if (chatIdProp && !$temporaryChatEnabled) {
@@ -1866,6 +1927,7 @@
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('connect', handleSocketConnect);
 				$socket?.off('disconnect', clearTyping);
+				$socket?.off('disconnect', cancelBrowserInteractions);
 				dismissContextCompactionToast();
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
@@ -2402,6 +2464,7 @@
 	};
 
 	const initNewChat = async () => {
+		cancelBrowserInteractions();
 		bridge?.end();
 		console.log('initNewChat');
 		resetWebSearchConfirmation();
@@ -4199,6 +4262,7 @@
 		const responseMessage = messageId ? history.messages[messageId] : null;
 		if (responseMessage && (responseMessage.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id)
 			return;
+		cancelBrowserInteractions();
 		if (bridge?.connected && responseMessage) responseMessage.bridgeStopping = true;
 		const hasTaskIds = (taskIds?.length ?? 0) > 0;
 		const hasPendingAssistantResponse =
@@ -4740,6 +4804,29 @@
 		eventCallback(false);
 	}}
 />
+
+{#if browserInteraction?.data?.tool_call}
+	{#key browserInteraction.id}
+		{@const interaction = browserInteraction}
+		<EventConfirmDialog
+			show={true}
+			title={$i18n.t('Tool Permissions')}
+			confirmLabel={$i18n.t('Allow')}
+			cancelLabel={$i18n.t('Deny')}
+			on:confirm={() => resolveBrowserInteraction(interaction, true)}
+			on:cancel={() => resolveBrowserInteraction(interaction, false)}
+		>
+			<div class="text-sm text-gray-500">
+				<div class="font-medium break-all">{interaction.data.tool_call.name}</div>
+				<pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify(
+						interaction.data.tool_call.arguments,
+						null,
+						2
+					)}</pre>
+			</div>
+		</EventConfirmDialog>
+	{/key}
+{/if}
 
 <div
 	class="{embedded
