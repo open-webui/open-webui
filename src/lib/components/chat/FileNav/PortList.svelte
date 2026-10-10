@@ -9,6 +9,7 @@
 	const dispatch = createEventDispatcher<{ previewPort: number }>();
 
 	export let baseUrl: string;
+	export let previewBaseUrl: string | null = null;
 	export let apiKey: string;
 	export let chatId: string | null = null;
 
@@ -41,7 +42,7 @@
 	};
 
 	const openPortExternal = (port: number) => {
-		const url = getPortProxyUrl(baseUrl, port);
+		const url = getPortProxyUrl(previewBaseUrl ?? baseUrl, port);
 		window.open(url, '_blank', 'noopener,noreferrer');
 	};
 

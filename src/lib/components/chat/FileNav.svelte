@@ -358,6 +358,11 @@
 	let selectedTerminal: { url: string; key: string } | null = null;
 	let terminalChatContextPending = false;
 	let terminalChatContextHidden = false;
+	let isPerChatTerminal = false;
+	$: portPreviewBaseUrl =
+		selectedTerminal && isPerChatTerminal && chatId
+			? `${selectedTerminal.url}/chats/${encodeURIComponent(chatId)}`
+			: (selectedTerminal?.url ?? '');
 
 	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
@@ -366,10 +371,12 @@
 			? (($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null)
 			: ($terminalServers?.[0] ?? null);
 		const chatConfig = chatContext(systemTerminal);
-		const chatScoped = !!systemTerminal && chatConfig?.context_id === 'chat_id';
+		isPerChatTerminal = !!systemTerminal && chatConfig?.context_id === 'chat_id';
 		terminalChatContextHidden =
-			!!systemTerminal && (chatConfig === false || (chatScoped && isTemporaryChatId(chatId)));
-		terminalChatContextPending = chatScoped && !terminalChatContextHidden && !isSavedChatId(chatId);
+			!!systemTerminal &&
+			(chatConfig === false || (isPerChatTerminal && isTemporaryChatId(chatId)));
+		terminalChatContextPending =
+			isPerChatTerminal && !terminalChatContextHidden && !isSavedChatId(chatId);
 		if (terminalChatContextHidden || terminalChatContextPending) return null;
 
 		const settingsValue: any = $settings;
@@ -1831,7 +1838,7 @@
 				/>
 			{:else if previewPort !== null}
 				<PortPreview
-					baseUrl={selectedTerminal?.url ?? ''}
+					baseUrl={portPreviewBaseUrl}
 					port={previewPort}
 					overlay={overlay || isDraggingHandle}
 					onClose={() => {
@@ -2108,6 +2115,7 @@
 				{#key JSON.stringify([chatId, selectedTerminal.url])}
 					<PortList
 						baseUrl={selectedTerminal.url}
+						previewBaseUrl={portPreviewBaseUrl}
 						apiKey={selectedTerminal.key}
 						{chatId}
 						on:previewPort={(e) => {
