@@ -853,6 +853,12 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+# Optional fastapi-guard security middleware (off unless WEBUI_GUARD_ENABLED).
+# Added last so it runs outermost and shields everything below it.
+from open_webui.utils.guard import attach_guard
+
+attach_guard(app)
+
 
 app.mount('/ws', socket_app)
 
