@@ -454,6 +454,13 @@
 			return null;
 		});
 
+		if (res && !res.ok) {
+			createModelLoading = false;
+			const error = await res.json();
+			toast.error(error.detail);
+			return;
+		}
+
 		if (res && res.ok) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
