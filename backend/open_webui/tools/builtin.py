@@ -3325,6 +3325,19 @@ async def query_knowledge_files(
                 metadatas = query_results.get('metadatas', [[]])[0]
                 distances = query_results.get('distances', [[]])[0]
 
+                file_ids = {metadata['file_id'] for metadata in metadatas if metadata.get('file_id')}
+                if file_ids:
+                    file_names = {
+                        file.id: (file.meta or {}).get('name')
+                        for file in await Files.get_file_metadatas_by_ids(list(file_ids))
+                    }
+                    for metadata in metadatas:
+                        file_name = file_names.get(metadata.get('file_id'))
+                        if file_name:
+                            if metadata.get('source') == metadata.get('name'):
+                                metadata['source'] = file_name
+                            metadata['name'] = file_name
+
                 for idx, doc in enumerate(documents):
                     chunk_info = {
                         **filter_source_metadata(metadatas[idx]),
