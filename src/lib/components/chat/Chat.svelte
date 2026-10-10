@@ -2865,6 +2865,7 @@
 								!messageHasPendingAskUser(message)
 							) {
 								message.done = true;
+								history = history;
 							}
 						}
 					}
