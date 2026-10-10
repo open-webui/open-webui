@@ -2287,6 +2287,7 @@ class OAuthManager:
                     httponly=True,
                     samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                     secure=WEBUI_AUTH_COOKIE_SECURE,
+                    **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
                 )
             if ENABLE_OAUTH_ID_TOKEN_COOKIE and token.get('id_token'):
                 response.set_cookie(
@@ -2295,6 +2296,7 @@ class OAuthManager:
                     httponly=True,
                     samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                     secure=WEBUI_AUTH_COOKIE_SECURE,
+                    **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
                 )
 
         return response
