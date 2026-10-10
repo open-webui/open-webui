@@ -1300,7 +1300,8 @@
 													? 'bg-gray-100 dark:bg-gray-800'
 													: ''} dark:hover:text-white hover:text-black transition disabled:cursor-progress disabled:hover:bg-transparent"
 												disabled={feedbackLoading}
-												on:click={async () => {
+												on:click={async (e) => {
+													e.stopPropagation();
 													await feedbackHandler(1);
 													window.setTimeout(() => {
 														document
@@ -1338,7 +1339,8 @@
 													? 'bg-gray-100 dark:bg-gray-800'
 													: ''} dark:hover:text-white hover:text-black transition disabled:cursor-progress disabled:hover:bg-transparent"
 												disabled={feedbackLoading}
-												on:click={async () => {
+												on:click={async (e) => {
+													e.stopPropagation();
 													await feedbackHandler(-1);
 													window.setTimeout(() => {
 														document
