@@ -1811,6 +1811,9 @@
 		const id = $chatId;
 		const tasks = await getTaskIdsByChatId(localStorage.token, id).catch(() => null);
 		if ($chatId === id && tasks) taskIds = tasks.task_ids?.length ? tasks.task_ids : null;
+		// A reply cut off by a server restart has no task left; reloading marks it finished
+		if ($chatId === id && tasks?.task_ids?.length === 0 && hasPendingAssistantLeaf())
+			await loadChat();
 	};
 
 	onMount(() => {
@@ -2859,6 +2862,7 @@
 								!messageHasPendingAskUser(message)
 							) {
 								message.done = true;
+								history = history;
 							}
 						}
 					}
