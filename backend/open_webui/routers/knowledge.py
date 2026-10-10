@@ -1886,7 +1886,6 @@ async def sync_knowledge_diff(
     await _verify_knowledge_write_access(id, user, db)
 
     # ── Index existing state ──
-    knowledge_files = await Knowledges.get_files_with_directory_ids(id, db=db)
     existing_directories = await Knowledges.get_all_directories(id, db=db)
 
     # Build directory path lookups
@@ -1904,6 +1903,18 @@ async def sync_knowledge_diff(
         full_path = '/'.join(segments)
         directory_path_by_id[directory.id] = full_path
         directory_id_by_path[full_path] = directory.id
+
+    # Retry uploads left pending by a restart after an hour.
+    pending_files = {
+        (
+            directory_path_by_id.get(file.meta.data.get('directory_id'), ''),
+            file.filename,
+            file.meta.model_dump().get('file_hash'),
+        )
+        for file in await Files.get_pending_files_for_knowledge(id, db=db)
+        if file.created_at >= int(time.time()) - 3600
+    }
+    knowledge_files = await Knowledges.get_files_with_directory_ids(id, db=db)
 
     # Index existing files by (path, filename) → {file_id, checksum}
     indexed_files: dict[tuple[str, str], dict] = {}
@@ -1925,6 +1936,10 @@ async def sync_knowledge_diff(
     for entry in form_data.manifest:
         key = (entry.path, entry.filename)
         manifest_keys.add(key)
+
+        if key not in indexed_files and (*key, entry.checksum) in pending_files:
+            unmodified_count += 1
+            continue
 
         if key not in indexed_files:
             added.append({'filename': entry.filename, 'path': entry.path})
