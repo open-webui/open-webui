@@ -160,7 +160,7 @@
 			return {
 				id: rest.id,
 				user_id: rest.user_id,
-				chat_id: data?.chat_id ?? '',
+				chat_id: rest.meta?.chat_id ?? '',
 				model_id: data?.model_id ?? '',
 				sibling_model_ids: (data?.sibling_model_ids ?? []).join(';'),
 				rating: data?.rating ?? '',
