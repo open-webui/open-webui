@@ -39,6 +39,18 @@ jobs:
           VER="${{ steps.pkg.outputs.version }}"
           awk "/^## \[${VER}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" \
             CHANGELOG.md > /tmp/release-notes.md
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = Path('/tmp/release-notes.md')
+          notes = path.read_text(encoding='utf-8')
+          # Leave room below GitHub's 125,000-character limit for the full-notes link.
+          if len(notes.encode('utf-8')) > 120000:
+              url = f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/blob/{os.environ['GITHUB_SHA']}/CHANGELOG.md"
+              notes = notes.encode('utf-8')[:120000].decode('utf-8', errors='ignore').rsplit('\n', 1)[0]
+              path.write_text(notes + f'\n\nRelease notes shortened. [Read the full changelog]({url}).\n', encoding='utf-8')
+          PY
 
       - name: Publish GitHub release
         env:
