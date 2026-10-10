@@ -61,13 +61,13 @@
 	}
 
 	const toggleNotifications = async () => {
-		if (!notificationEnabled) {
+		if (notificationEnabled) {
 			const permission =
 				'Notification' in window ? await Notification.requestPermission() : 'denied';
 			if (permission === 'granted') {
-				notificationEnabled = true;
 				saveSettings({ notificationEnabled });
 			} else {
+				notificationEnabled = false;
 				toast.error(
 					$i18n.t(
 						'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
@@ -75,7 +75,6 @@
 				);
 			}
 		} else {
-			notificationEnabled = false;
 			saveSettings({ notificationEnabled });
 		}
 	};
@@ -203,7 +202,7 @@
 					{$i18n.t('settings.personal.notifications.browserNotifications.label')}
 				</span>
 				<Switch
-					state={notificationEnabled}
+					bind:state={notificationEnabled}
 					ariaLabel={$i18n.t('settings.personal.notifications.browserNotifications.label')}
 					on:change={toggleNotifications}
 				/>
