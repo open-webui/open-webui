@@ -115,6 +115,7 @@
 				think: params.think !== null ? params.think : undefined,
 				keep_alive: params.keep_alive !== null ? params.keep_alive : undefined,
 				format: params.format !== null ? params.format : undefined,
+				model_controls: $settings?.params?.model_controls,
 				...(params.custom_params && Object.keys(params.custom_params).length > 0
 					? { custom_params: params.custom_params }
 					: {})
