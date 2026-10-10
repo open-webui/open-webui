@@ -169,6 +169,7 @@
 {#if message}
 	<div
 		class="swipe-reply-wrapper relative"
+		data-sidebar-no-gesture={disabled || edit ? undefined : ''}
 		on:touchstart={handleTouchStart}
 		on:touchmove={handleTouchMove}
 		on:touchend={handleTouchEnd}
