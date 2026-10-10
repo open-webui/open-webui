@@ -1078,6 +1078,7 @@
 														class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 absolute bottom-full right-3 mb-1 md:static md:mb-0 flex shrink-0 items-center gap-1 text-xs"
 													>
 														{#if loading}<Spinner />{/if}
+														<!-- Previous labels retained for i18n extraction: {$i18n.t('Background Image')} -->
 														{#if backgroundPreview || info.meta.background_image_url}
 															<button
 																type="button"
@@ -1392,6 +1393,7 @@
 										</button>
 									{/if}
 								</div>
+								<!-- Previous labels retained for i18n extraction: {$i18n.t('Model Params')} -->
 								<div class="mt-2 space-y-0.5">
 									<button
 										type="button"
@@ -1408,6 +1410,7 @@
 											/></span
 										>
 										<span class="text-gray-900 dark:text-gray-100">
+											<!-- Previous non-plural key retained for i18n extraction: {$i18n.t('{{count}} modified')} -->
 											{modifiedParamCount
 												? $i18n.t('{{count}} modified', { count: modifiedParamCount })
 												: $i18n.t('Default')}

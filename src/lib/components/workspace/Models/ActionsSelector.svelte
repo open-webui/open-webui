@@ -16,6 +16,10 @@
 	export let disabled = false;
 </script>
 
+<!-- Previous labels retained for i18n extraction:
+{$i18n.t('Select Action')}
+{$i18n.t('To select actions here, add them to the "Functions" workspace first.')}
+-->
 <TypeaheadSelector
 	id="model-actionsselector"
 	label={$i18n.t('Actions')}

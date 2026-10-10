@@ -14,6 +14,10 @@
 	export let disabled = false;
 </script>
 
+<!-- Previous labels retained for i18n extraction:
+{$i18n.t('Select Skill')}
+{$i18n.t('To select skills here, add them to the "Skills" workspace first.')}
+-->
 <TypeaheadSelector
 	id="model-skillsselector"
 	label={$i18n.t('Skills')}

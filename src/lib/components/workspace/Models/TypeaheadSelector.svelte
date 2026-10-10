@@ -238,6 +238,7 @@
 				<div
 					class="mt-1 flex items-center justify-between gap-3 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
 				>
+					<!-- Previous bulk action label retained for i18n extraction: {$i18n.t('Disable all')} -->
 					{#if selectedIds?.length}<button
 							type="button"
 							{disabled}

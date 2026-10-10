@@ -95,12 +95,18 @@
 	};
 </script>
 
+<!-- Previous labels retained for i18n extraction: {$i18n.t('Used in native function calling mode. Workspace settings and user permissions still apply.')} -->
 <ModelSettingsSection
 	label={$i18n.t('settings.admin.models.builtinTools.title')}
 	description={$i18n.t(
 		'Choose which built-in tools this model can use when Builtin Tools is enabled.'
 	)}
 >
+	<!-- Previous labels retained for i18n extraction:
+	{$i18n.t('All allowed')}
+	{$i18n.t('{{COUNT}} disabled')}
+	{$i18n.t('{{COUNT}} of {{TOTAL}} enabled')}
+	-->
 	<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
 		<span class="min-w-0 truncate"
 			>{enabledTools
@@ -112,6 +118,11 @@
 				>+{enabledTools.length - 3}</span
 			>{/if}
 	</span>
+	<!-- Previous labels retained for i18n extraction:
+	{$i18n.t('Search built-in tools')}
+	{$i18n.t('Assistance')}
+	{$i18n.t('Work')}
+	-->
 	<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
 		{#each allTools as key}
 			<ModelSettingToggle

@@ -111,6 +111,14 @@
 		</div>
 	</ModelSettingsSection>
 
+	<!-- Previous DefaultFeatures labels retained for i18n extraction:
+	{$i18n.t('settings.admin.models.defaultFeatures.webSearch.label')}
+	{$i18n.t('settings.admin.models.defaultFeatures.webSearch.description')}
+	{$i18n.t('settings.admin.models.defaultFeatures.imageGeneration.label')}
+	{$i18n.t('settings.admin.models.defaultFeatures.imageGeneration.description')}
+	{$i18n.t('settings.admin.models.defaultFeatures.codeInterpreter.label')}
+	{$i18n.t('settings.admin.models.defaultFeatures.codeInterpreter.description')}
+	-->
 	{#if availableFeatures.length}
 		<ModelSettingsSection
 			label={$i18n.t('settings.admin.models.defaultFeatures.title')}

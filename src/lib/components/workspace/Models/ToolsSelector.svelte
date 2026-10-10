@@ -15,6 +15,10 @@
 	export let disabled = false;
 </script>
 
+<!-- Previous labels retained for i18n extraction:
+{$i18n.t('Select Tool')}
+{$i18n.t('To select toolkits here, add them to the "Tools" workspace or enable a tool server first.')}
+-->
 <TypeaheadSelector
 	id="model-toolsselector"
 	label={$i18n.t('Tools')}

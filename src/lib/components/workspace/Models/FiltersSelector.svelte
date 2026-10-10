@@ -18,6 +18,12 @@
 	export let disabled = false;
 </script>
 
+<!-- Previous labels retained for i18n extraction:
+{$i18n.t('Select Filter')}
+{$i18n.t('To select filters here, add them to the "Functions" workspace first.')}
+{$i18n.t('Default Filters')}
+{$i18n.t('To select default filters here, enable toggleable filters for this model first.')}
+-->
 <TypeaheadSelector
 	id="model-filtersselector"
 	label={$i18n.t('Filters')}

@@ -110,6 +110,7 @@
 				: ''}"
 		>
 			<div class="flex items-start gap-2">
+				<!-- Previous labels retained for i18n extraction: {$i18n.t('e.g. Tell me a fun fact about the Roman Empire')} -->
 				<textarea
 					bind:this={promptInputs[promptIdx]}
 					class="min-h-5 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-[0.8125rem] font-normal leading-5 text-gray-900 outline-hidden placeholder:text-gray-500 dark:text-gray-100 dark:placeholder:text-gray-400"
@@ -152,6 +153,10 @@
 					{/if}
 				</summary>
 				<div class="grid gap-2 py-1.5 sm:grid-cols-2">
+					<!-- Dynamic labels retained for i18n extraction:
+					{$i18n.t('Title')}
+					{$i18n.t('Subtitle')}
+					-->
 					{#each ['Title', 'Subtitle'] as label, index}
 						<label class="flex min-w-0 flex-col gap-0.5 text-xs text-gray-500 dark:text-gray-400">
 							<span>{$i18n.t(label)}</span>
@@ -198,7 +203,9 @@
 			{$i18n.t('Add prompt')}
 		</button>
 		<div class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-3 px-2 py-1">
+			<!-- Previous labels retained for i18n extraction: {$i18n.t('Default Prompt Suggestions')} -->
 			<slot name="label" />
+			<!-- Previous labels retained for i18n extraction: {$i18n.t('Prompt actions')} -->
 			<slot name="actions" />
 			<button
 				type="button"

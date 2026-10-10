@@ -175,6 +175,10 @@
 />
 
 {#if loaded}
+	<!-- Previous labels retained for i18n extraction:
+	{$i18n.t('Select Knowledge')}
+	{$i18n.t('To attach knowledge base here, add them to the "Knowledge" workspace first.')}
+	-->
 	<KnowledgeSelector
 		bind:this={picker}
 		anchorElement={valueElement}
