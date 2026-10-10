@@ -709,7 +709,9 @@ class UsersTable:
     async def get_first_user(self, db: AsyncSession | None = None) -> UserModel | None:
         """Return the earliest-created user (bootstrap admin detection)."""
         async with get_async_db_context(db) as session:
-            stmt = select(User).order_by(User.created_at).limit(1)
+            # created_at has 1s resolution; admin wins ties
+            admin_first = case((User.role == 'admin', 0), else_=1)
+            stmt = select(User).order_by(User.created_at, admin_first, User.id).limit(1)
             row = (await session.execute(stmt)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
