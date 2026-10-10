@@ -29,7 +29,7 @@
 	placeholder={$i18n.t('Search filters')}
 	emptyLabel={$i18n.t('No filters found')}
 	emptyHint={$i18n.t('Add filters in the Functions workspace.')}
-	workspaceHref={$user?.role === 'admin' ? '/workspace/functions' : ''}
+	workspaceHref={$user?.role === 'admin' ? '/admin/functions' : ''}
 	variant="dropdown"
 	on:select={(e) => {
 		selectedFilterIds = selectedFilterIds.includes(e.detail.id)

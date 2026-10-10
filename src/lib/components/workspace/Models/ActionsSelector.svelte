@@ -26,7 +26,7 @@
 	placeholder={$i18n.t('Search actions')}
 	emptyLabel={$i18n.t('No actions found')}
 	emptyHint={$i18n.t('Add actions in the Functions workspace.')}
-	workspaceHref={$user?.role === 'admin' ? '/workspace/functions' : ''}
+	workspaceHref={$user?.role === 'admin' ? '/admin/functions' : ''}
 	variant="dropdown"
 	on:select={(e) => {
 		selectedActionIds = selectedActionIds.includes(e.detail.id)
