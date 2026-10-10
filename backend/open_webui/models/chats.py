@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from copy import deepcopy
 import logging
 import re
 import time
@@ -404,6 +405,38 @@ class ChatTable:
             chat = await session.get(Chat, id, with_for_update=True)
             yield session, chat
             await session.commit()
+
+    @asynccontextmanager
+    async def edit_message_output(self, chat_id: str, message_id: str):
+        """Read and modify tool state under the same lock, updating both message stores."""
+        async with self._chat_transaction(chat_id) as (session, chat):
+            if chat is None:
+                yield None
+                return
+            history = (chat.chat or {}).get('history') or {}
+            message = dict(history.get('messages', {}).get(message_id) or {})
+            row = await session.get(ChatMessage, f'{chat_id}-{message_id}')
+            if row is not None:
+                message.update(
+                    {
+                        ChatMessages.DB_TO_JSON_KEY_MAP.get(column.key, column.key): getattr(row, column.key)
+                        for column in ChatMessage.__table__.columns
+                        if column.key not in ChatMessages.EXCLUDED_COLUMNS
+                    }
+                )
+                message['id'] = message_id
+            if not message:
+                yield None
+                return
+            message = deepcopy(message)
+            yield message
+            message = self._clean_null_bytes(message)
+            history.setdefault('messages', {})[message_id] = message
+            chat.chat = {**(chat.chat or {}), 'history': history}
+            flag_modified(chat, 'chat')
+            await ChatMessages.upsert_message(
+                message_id, chat_id, message.get('user_id') or chat.user_id, message, db=session
+            )
 
     def _clean_null_bytes(self, obj):
         """Recursively remove null bytes from strings in dict/list structures."""

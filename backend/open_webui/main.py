@@ -1308,7 +1308,11 @@ async def chat_completion(
             or 'full'
         )
 
+        approval_resume = getattr(request.state, 'tool_approval_resume', None)
         metadata = {
+            'tool_approval_resume': approval_resume[2]
+            if approval_resume and approval_resume[:2] == (chat_id, form_data.get('assistant_message_id'))
+            else None,
             'user_id': user.id,
             'user_agent': request.headers.get('user-agent', '') or '',
             'internal': getattr(request.state, 'internal', False) is True,
@@ -1916,8 +1920,14 @@ async def resolve_chat_message_tool_call(
     db: AsyncSession = Depends(get_async_session),
 ):
     resolution = await resolve_tool_call_output(id, message_id, form_data, user, db=db)
-    payload = await build_tool_approval_resume_payload(id, message_id, chat=resolution['chat'])
-    result = await chat_completion(request, payload, user)
+    if resolution['resume'] is None:
+        return {'status': True, 'chat_id': id, 'message_id': message_id, 'task_ids': []}
+    request.state.tool_approval_resume = (id, message_id, resolution['resume'])
+    try:
+        payload = await build_tool_approval_resume_payload(id, message_id, chat=resolution['chat'])
+        result = await chat_completion(request, payload, user)
+    finally:
+        del request.state.tool_approval_resume
     return {
         'status': True,
         'chat_id': id,
