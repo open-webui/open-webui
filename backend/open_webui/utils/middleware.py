@@ -2263,6 +2263,12 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
+    for msg in db_messages:
+        skills_create = (msg.get('meta') or {}).get('skills_create')
+        # Replay the saved expansion unless the user edited the message.
+        if skills_create and skills_create.get('original_text') == get_content_from_message(msg):
+            set_last_user_message_content(skills_create['expanded_text'], [msg])
+
     return [
         {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS}
         for msg in db_messages
@@ -2797,11 +2803,26 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     skill_authoring_allowed = can_author_skills and has_prior_user_message(form_data.get('messages', []))
     skill_create_denial_reason = 'empty_chat' if can_author_skills else 'disabled'
-    apply_skills_create_prompt(
+    if apply_skills_create_prompt(
         form_data.get('messages', []),
         allowed=skill_authoring_allowed,
         denial_reason=skill_create_denial_reason,
-    )
+    ) and is_saved_chat_id(chat_id) and user_message_id:
+        stored_message = await Chats.get_message_by_id_and_message_id(chat_id, user_message_id) or {}
+        await Chats.upsert_message_to_chat_by_id_and_message_id(
+            chat_id,
+            user_message_id,
+            {
+                'meta': {
+                    **(stored_message.get('meta') or {}),
+                    'skills_create': {
+                        'original_text': get_content_from_message(stored_message),
+                        'expanded_text': get_last_user_message(form_data['messages']),
+                    },
+                }
+            },
+            touch=False,
+        )
 
     # If the original caller provided tools, use them as-is (skip resolution).
     # Otherwise, save any tools that filter inlets added for merging later.
