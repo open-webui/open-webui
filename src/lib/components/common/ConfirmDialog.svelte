@@ -136,7 +136,7 @@
 			}}
 		>
 			<div class="px-5 py-5 flex flex-col">
-				<div class="text-base font-medium dark:text-gray-200 mb-2.5">
+				<div class="text-sm font-medium dark:text-gray-200 mb-2.5">
 					{#if title !== ''}
 						{title}
 					{:else}
