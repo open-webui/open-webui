@@ -2514,14 +2514,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
     if is_saved_chat_id(chat_id) and user_message_id:
-        if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-            compaction_models = {
-                **dict(request.app.state.MODELS.items()),
-                request.state.model['id']: request.state.model,
-            }
-        else:
-            compaction_models = request.app.state.MODELS
-
         system_message = get_system_message(form_data.get('messages', []))
         chat_system_prompt = get_content_from_message(system_message) if system_message else ''
 
@@ -2532,7 +2524,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data.get('messages', []),
                 metadata,
                 form_data.get('model'),
-                compaction_models,
+                request.app.state.MODELS,
                 chat_system_prompt,
             )
             if context_summary:
@@ -5906,6 +5898,7 @@ async def streaming_chat_response_handler(response, ctx):
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
                 user_message = get_last_user_message(form_data['messages'])
+                messages = list(form_data['messages'])
 
                 # Check if citations are enabled for this model
                 citations_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
@@ -6267,13 +6260,19 @@ async def streaming_chat_response_handler(response, ctx):
                                             image_urls.append(part.get('image_url', ''))
                                     message['content'] = ''.join(text_parts)
 
-                            new_form_data['messages'] = [
-                                *form_data['messages'],
+                            # Refresh citation context without restoring compacted history.
+                            user_prompt = get_last_user_message_item(form_data['messages'])
+                            for message in messages:
+                                if message.get('contextSummary') and message.get('role') == 'user' and user_prompt:
+                                    message.update(user_prompt)
+                            messages = [
+                                *[message for message in form_data['messages'] if message.get('role') == 'system'],
+                                *[message for message in messages if message.get('role') != 'system'],
                                 *tool_messages,
                             ]
 
                             if image_urls:
-                                new_form_data['messages'].append(
+                                messages.append(
                                     {
                                         'role': 'user',
                                         'content': [
@@ -6284,6 +6283,39 @@ async def streaming_chat_response_handler(response, ctx):
                                             *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
                                         ],
                                     }
+                                )
+
+                            try:
+                                messages, context_summary, compacted = await compact_messages_for_request(
+                                    request, user, messages, metadata, model_id, request.app.state.MODELS
+                                )
+                                if compacted:
+                                    if user_prompt is not None:
+                                        messages = [message for message in messages if message != user_prompt]
+                                        messages.insert(
+                                            1 if messages and messages[0].get('role') == 'system' else 0,
+                                            dict(user_prompt),
+                                        )
+                                    checkpoint = next(
+                                        idx for idx, message in enumerate(messages) if message.get('role') != 'system'
+                                    )
+                                    messages[checkpoint] = {**messages[checkpoint], 'contextSummary': context_summary}
+                            except Exception:
+                                log.exception('Tool loop context compaction failed; keeping the current context')
+
+                            # Use the existing checkpoint format internally and strip it from the provider payload.
+                            new_form_data['messages'] = process_messages_with_output(messages)
+                            context_summary = next(
+                                (message['contextSummary'] for message in messages if message.get('contextSummary')),
+                                None,
+                            )
+                            if context_summary:
+                                new_form_data['messages'].insert(
+                                    1
+                                    if new_form_data['messages']
+                                    and new_form_data['messages'][0].get('role') == 'system'
+                                    else 0,
+                                    {'role': 'system', 'content': f'[CONVERSATION SUMMARY]\n{context_summary}'},
                                 )
 
                         new_form_data = await convert_url_images_to_base64(new_form_data, user=user)
@@ -6314,8 +6346,6 @@ async def streaming_chat_response_handler(response, ctx):
                             # keeps indices aligned. The display prefix
                             # ensures the UI shows tool history during
                             # streaming.
-                            continued_output = prior_output
-                            round_output = output
                             prior_output = list(full_output())
                             # Trim the trailing empty placeholder message
                             # so it doesn't persist as a ghost item once
@@ -6328,13 +6358,9 @@ async def streaming_chat_response_handler(response, ctx):
                                 msg_parts = prior_output[-1].get('content', [])
                                 if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
                                     prior_output.pop()
-                                    round_output = round_output[:-1]
                             output = []
                             output_start = len(prior_output)
                             await stream_body_handler(res, new_form_data)
-                            # A continued reply's earlier items are already in form_data['messages']
-                            output = [*round_output, *output]
-                            prior_output = continued_output
                         elif getattr(res, 'status_code', 200) >= 400:
                             await emit_message_error(get_message_error_content(get_response_error_detail(res)))
                             break
@@ -6503,7 +6529,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 'stream': True,
                                 'metadata': metadata,
                                 'messages': [
-                                    *form_data['messages'],
+                                    *messages,
                                     *convert_output_to_messages(
                                         output,
                                         raw=True,

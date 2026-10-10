@@ -59,6 +59,7 @@ async def compact_messages_for_request(
     messages = messages[1:] if system_messages else messages
 
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
+    system_prompt = system_prompt or (get_content_from_message(system_messages[0]) if system_messages else '')
     token_threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
     if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold) or len(messages) <= 3:
         return [*system_messages, *messages], previous_summary, False
@@ -117,7 +118,8 @@ async def compact_messages_for_request(
     checkpoint_message_id = (
         recent_messages[0].get('id') or metadata.get('user_message_id') or metadata.get('message_id')
     )
-    if is_saved_chat_id(chat_id) and checkpoint_message_id:
+    # Only whole-turn user boundaries correspond to persisted chat checkpoints.
+    if recent_messages[0].get('role') == 'user' and is_saved_chat_id(chat_id) and checkpoint_message_id:
         await Chats.upsert_message_to_chat_by_id_and_message_id(
             chat_id,
             checkpoint_message_id,
@@ -319,10 +321,12 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
     if threshold <= 0:
         return False
 
-    for idx in range(len(messages) - 1, -1, -1):
-        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
-            return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
+    # Expanded tool histories include fresh results and rebuilt prompts absent from prior usage.
+    if not any(message.get('role') == 'tool' for message in messages):
+        for idx in range(len(messages) - 1, -1, -1):
+            usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
+            if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
+                return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
     return estimated > threshold
@@ -332,7 +336,15 @@ def _find_compaction_boundary(messages: list[dict], retention_percentage: int = 
     retention_percentage = _clamp_retention_percentage(retention_percentage)
     keep_count = max(2, len(messages) * retention_percentage // 100)
     target = max(1, len(messages) - keep_count)
-    boundaries = [idx for idx, message in enumerate(messages) if message.get('role') == 'user'][1:]
+    if any(message.get('role') == 'tool' for message in messages):
+        # Keep each call/result batch and its following image messages together.
+        boundaries = [
+            idx
+            for idx, message in enumerate(messages)
+            if message.get('role') == 'assistant' and message.get('tool_calls')
+        ][1:]
+    else:
+        boundaries = [idx for idx, message in enumerate(messages) if message.get('role') == 'user'][1:]
     return next((idx for idx in reversed(boundaries) if idx <= target), 0)
 
 
@@ -348,6 +360,9 @@ async def _generate_summary(
 ) -> str:
     from open_webui.utils.chat import generate_chat_completion
 
+    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
+        models = {**dict(models.items()), request.state.model['id']: request.state.model}
+
     task_config = await Config.get_many(
         'task.model.params',
         'chat.context_compaction.model',
@@ -358,6 +373,15 @@ async def _generate_summary(
         raise ValueError('No available model for context compaction')
 
     summary_prompt_template = summary_prompt_template.strip() or DEFAULT_CONTEXT_COMPACTION_PROMPT
+    # The text-only prompt formatter otherwise omits tool names and arguments.
+    compacted_messages, recent_messages = list(compacted_messages), list(recent_messages)
+    for messages in (compacted_messages, recent_messages):
+        for idx, message in enumerate(messages):
+            if message.get('tool_calls'):
+                messages[idx] = {
+                    **message,
+                    'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(message["tool_calls"])}',
+                }
     all_messages = [*compacted_messages, *recent_messages]
     prompt = replace_prompt_variable(summary_prompt_template, get_last_user_message(all_messages) or '')
     prompt = replace_messages_variable(prompt, all_messages)
