@@ -1,18 +1,70 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as I18n } from 'i18next';
+	import { v4 as uuidv4 } from 'uuid';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	const i18n: any = getContext('i18n');
+	const i18n = getContext<Writable<I18n>>('i18n');
 	export let compact = false;
-	export let value: Record<string, any> = {};
+	export let value: Record<string, unknown> = {};
+	const id = `custom-params-${uuidv4()}`;
+
+	// Suggestions only; support depends on the provider and model.
+	// OpenAI: https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create
+	// OpenRouter: https://openrouter.ai/docs/api_reference/parameters
+	// Ollama: https://docs.ollama.com/modelfile and https://docs.ollama.com/api/chat
+	const suggestions: Record<string, string[]> = {
+		service_tier: ['auto', 'default', 'flex', 'priority', 'fast'],
+		reasoning_effort: ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'],
+		reasoning: ['{"effort":"low"}', '{"effort":"medium"}', '{"effort":"high"}'],
+		verbosity: ['low', 'medium', 'high'],
+		text: ['{"verbosity":"low"}', '{"verbosity":"medium"}', '{"verbosity":"high"}'],
+		max_completion_tokens: [],
+		max_output_tokens: [],
+		max_tokens: [],
+		parallel_tool_calls: ['true', 'false'],
+		tool_choice: ['auto', 'none', 'required'],
+		response_format: ['{"type":"text"}', '{"type":"json_object"}'],
+		temperature: [],
+		top_p: [],
+		top_k: [],
+		min_p: [],
+		frequency_penalty: [],
+		presence_penalty: [],
+		repetition_penalty: [],
+		repeat_penalty: [],
+		seed: [],
+		stop: [],
+		logprobs: ['true', 'false'],
+		top_logprobs: [],
+		prompt_cache_key: [],
+		prompt_cache_options: ['{"mode":"implicit","ttl":"30m"}', '{"mode":"explicit","ttl":"30m"}'],
+		store: ['true', 'false'],
+		provider: ['{"sort":"price"}', '{"sort":"throughput"}', '{"sort":"latency"}'],
+		num_ctx: [],
+		num_predict: [],
+		think: ['true', 'false'],
+		format: ['json'],
+		keep_alive: []
+	};
+
 	const focusNew = (node: HTMLInputElement, empty: boolean) => {
 		if (empty) node.focus();
 	};
 </script>
 
 <div class="flex flex-col justify-center">
+	<datalist id={`${id}-names`}>
+		{#each Object.keys(suggestions) as name}
+			{#if !Object.hasOwn(value ?? {}, name)}
+				<option value={name}></option>
+			{/if}
+		{/each}
+	</datalist>
 	<div class="min-w-0 flex-1">
-		{#each Object.keys(value ?? {}) as key}
+		{#each Object.keys(value ?? {}) as key, index}
+			{@const options = Object.hasOwn(suggestions, key) ? suggestions[key] : []}
 			<div
 				class={compact
 					? 'mb-1 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-3 py-1'
@@ -28,10 +80,12 @@
 							? 'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700'
 							: 'min-w-0 w-full bg-transparent text-xs text-gray-400 dark:text-gray-600 outline-none'}
 						aria-label={$i18n.t('Custom Parameter Name')}
+						list={`${id}-names`}
+						autocomplete="off"
 						placeholder={compact ? $i18n.t('e.g. temperature') : $i18n.t('Custom Parameter Name')}
-						required={compact}
-						pattern={compact ? '.*\\S.*' : undefined}
-						use:focusNew={compact && key === ''}
+						required
+						pattern={'.*\\S.*'}
+						use:focusNew={key === ''}
 						title={key}
 						value={key}
 						on:change={(event) => {
@@ -54,10 +108,19 @@
 							? 'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700'
 							: 'w-full min-w-0 bg-transparent text-[0.8125rem] text-gray-700 dark:text-gray-300 outline-none'}
 						aria-label={$i18n.t('Custom Parameter Value')}
+						list={options.length ? `${id}-values-${index}` : undefined}
+						autocomplete="off"
 						placeholder={compact ? $i18n.t('e.g. 0.7') : $i18n.t('Custom Parameter Value')}
 						value={typeof value[key] === 'object' ? JSON.stringify(value[key]) : value[key]}
 						on:input={(event) => (value = { ...value, [key]: event.currentTarget.value })}
 					/>
+					{#if options.length}
+						<datalist id={`${id}-values-${index}`}>
+							{#each options as option}
+								<option value={option}></option>
+							{/each}
+						</datalist>
+					{/if}
 				</label>
 				<button
 					type="button"
@@ -82,13 +145,10 @@
 			: 'mt-1 mb-5 flex w-full items-center justify-center gap-2 text-center'}
 		aria-label={$i18n.t('Add Custom Parameter')}
 		title={$i18n.t('Add Custom Parameter')}
-		disabled={compact && Object.hasOwn(value ?? {}, '')}
+		disabled={Object.hasOwn(value ?? {}, '')}
 		on:click={() => {
 			value = value ?? {};
-			let key = compact ? '' : 'custom_param_name';
-			let index = 2;
-			while (key in value) key = `custom_param_name_${index++}`;
-			value = { ...value, [key]: '' };
+			value = { ...value, '': '' };
 		}}
 	>
 		<Plus className={compact ? 'size-3' : 'size-4'} /><span

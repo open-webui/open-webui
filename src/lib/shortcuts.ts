@@ -132,6 +132,8 @@ export function resetKeybindings(): void {
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
 export function eventToChord(event: KeyboardEvent): string {
+	if (typeof event.key !== 'string' || !event.key) return '';
+
 	const parts: string[] = [];
 
 	if (IS_MAC) {
