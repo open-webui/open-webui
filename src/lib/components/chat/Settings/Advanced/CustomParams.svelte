@@ -71,14 +71,14 @@
 					: 'mb-1 grid grid-cols-[1fr_auto] items-center gap-y-0.5 py-0.5'}
 			>
 				<label class="min-w-0">
-					{#if compact}<span class="block text-xs text-gray-400 dark:text-gray-600"
+					{#if compact}<span class="block text-xs font-normal text-gray-600 dark:text-gray-400"
 							>{$i18n.t('Parameter')}</span
 						>{/if}
 					<input
 						type="text"
 						class={compact
-							? 'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700'
-							: 'min-w-0 w-full bg-transparent text-xs text-gray-400 dark:text-gray-600 outline-none'}
+							? 'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] font-normal text-gray-900 outline-none placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-700'
+							: 'min-w-0 w-full bg-transparent text-xs font-normal text-gray-900 dark:text-gray-100 outline-none'}
 						aria-label={$i18n.t('Custom Parameter Name')}
 						list={`${id}-names`}
 						autocomplete="off"
@@ -99,14 +99,14 @@
 					/>
 				</label>
 				<label class={compact ? 'min-w-0' : 'order-last col-span-2'}>
-					{#if compact}<span class="block text-xs text-gray-400 dark:text-gray-600"
+					{#if compact}<span class="block text-xs font-normal text-gray-600 dark:text-gray-400"
 							>{$i18n.t('Value')}</span
 						>{/if}
 					<input
 						type="text"
 						class={compact
-							? 'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700'
-							: 'w-full min-w-0 bg-transparent text-[0.8125rem] text-gray-700 dark:text-gray-300 outline-none'}
+							? 'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] font-normal text-gray-900 outline-none placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-700'
+							: 'w-full min-w-0 bg-transparent text-[0.8125rem] font-normal text-gray-900 dark:text-gray-100 outline-none'}
 						aria-label={$i18n.t('Custom Parameter Value')}
 						list={options.length ? `${id}-values-${index}` : undefined}
 						autocomplete="off"

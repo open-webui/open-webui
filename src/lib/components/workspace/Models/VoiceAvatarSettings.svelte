@@ -33,8 +33,12 @@
 
 <div class="my-3 flex items-center justify-between gap-3">
 	<div>
-		<div class="mb-1 text-xs text-gray-500">{$i18n.t('Voice avatar')}</div>
-		<div class="text-xs leading-5">{value ? $i18n.t('Custom avatar') : $i18n.t('Default orb')}</div>
+		<div class="mb-1 text-xs font-normal text-gray-600 dark:text-gray-400">
+			{$i18n.t('Voice avatar')}
+		</div>
+		<div class="text-xs leading-5 font-normal text-gray-900 dark:text-gray-100">
+			{value ? $i18n.t('Custom avatar') : $i18n.t('Default orb')}
+		</div>
 	</div>
 	<button
 		type="button"

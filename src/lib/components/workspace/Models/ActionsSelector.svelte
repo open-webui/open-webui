@@ -34,7 +34,9 @@
 {#if actions.length > 0}
 	<div>
 		<div class="flex w-full items-center gap-2 mb-1">
-			<div class=" self-center text-xs text-gray-500">{$i18n.t('Actions')}</div>
+			<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				{$i18n.t('Actions')}
+			</div>
 
 			{#if selectableActions.length > 0}
 				<TypeaheadSelector
@@ -77,7 +79,7 @@
 							/>
 						</div>
 
-						<div class=" py-0.5 text-xs capitalize">
+						<div class="py-0.5 text-xs capitalize font-normal text-gray-900 dark:text-gray-100">
 							<Tooltip
 								content={resolveLocalizedResource(action, $i18n.language, 'description') ||
 									action.id}
