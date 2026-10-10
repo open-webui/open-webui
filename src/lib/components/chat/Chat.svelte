@@ -4029,7 +4029,7 @@
 				...(messages.length > 0 ? { messages } : {}),
 				params: {
 					...$settings?.params,
-					...params,
+					...Object.fromEntries(Object.entries(params).filter(([, value]) => value !== null)),
 					model_controls: $settings?.params?.model_controls ?? {},
 					stop: getStopTokens()
 				},
