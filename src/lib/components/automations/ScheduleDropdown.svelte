@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type i18nType from '$lib/i18n';
 	import { getContext } from 'svelte';
+	import dayjs from 'dayjs';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 
@@ -52,7 +53,7 @@
 
 	$: if (frequency === 'ONCE' && !onceDate) {
 		const soon = new Date(Date.now() + 5 * 60_000);
-		onceDate = soon.toISOString().split('T')[0];
+		onceDate = dayjs(soon).format('YYYY-MM-DD');
 		onceTime = `${String(soon.getHours()).padStart(2, '0')}:${String(soon.getMinutes()).padStart(2, '0')}`;
 	}
 
@@ -233,7 +234,7 @@
 						<input
 							type="date"
 							bind:value={onceDate}
-							min={new Date().toISOString().split('T')[0]}
+							min={dayjs().format('YYYY-MM-DD')}
 							class="bg-transparent outline-hidden text-xs dark:scheme-dark"
 							on:click={(e) => e.stopPropagation()}
 							on:input={onChange}
