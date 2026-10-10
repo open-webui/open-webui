@@ -6,7 +6,7 @@
 	import { fade } from 'svelte/transition';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
@@ -53,6 +53,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
+		resolveDefaultModelIds,
 		convertMessagesToHistory,
 		copyToClipboard,
 		getMessageContentParts,
@@ -68,8 +69,13 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
-	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
+	import {
+		applyResponseStreamEvent,
+		getOutputText,
+		setOutputText
+	} from './Messages/structuredOutput';
 
 	import {
 		archiveChatById,
@@ -80,11 +86,12 @@
 		getAllTags,
 		getChatById,
 		getTagsById,
+		importChats,
 		resolveChatMessageToolCall,
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
 	import {
 		getAndUpdateUserLocation,
@@ -106,7 +113,6 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
 	import { initiateOAuthRedirect } from '$lib/apis/configs';
-	import { updateFolderById } from '$lib/apis/folders';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -162,6 +168,7 @@
 	let navbarElement;
 
 	let showEventConfirmation = false;
+	let pendingUrlActions: { urls: string[]; call: boolean } | null = null;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
 	let eventConfirmationInput = false;
@@ -170,10 +177,29 @@
 	let eventConfirmationInputType = '';
 	let eventConfirmationInputOptions: ({ label?: string; value: string } | string)[] = [];
 	let eventCallback: (value: any) => void = () => {};
-	let showAskUserDialog = false;
-	let askUserQuestions: any[] = [];
-	let askUserAllowOther = true;
-	let askUserTimeoutMs: number | null = null;
+	type BrowserInteraction = {
+		id: string;
+		messageId: string;
+		type: string;
+		data: any;
+		callback: (value: any) => void;
+	};
+	let browserInteractions: BrowserInteraction[] = [];
+	let browserApprovalMode: string | null = null;
+	$: browserInteraction = browserInteractions[0];
+
+	const resolveBrowserInteraction = (interaction: BrowserInteraction, value: any) => {
+		if (!browserInteractions.includes(interaction)) return;
+		browserInteractions = browserInteractions.filter((item) => item !== interaction);
+		interaction.callback(value);
+	};
+
+	const cancelBrowserInteractions = () => {
+		browserApprovalMode = null;
+		for (const interaction of browserInteractions) {
+			resolveBrowserInteraction(interaction, { status: 'cancelled', answers: {} });
+		}
+	};
 
 	let selectedModels = [''];
 	let selectedModelIdx = 0;
@@ -188,7 +214,7 @@
 			($settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url);
 
 	let atSelectedModel: Model | undefined;
-	let selectedModelIds = [];
+	let selectedModelIds: string[] = [];
 	$: if (atSelectedModel !== undefined) {
 		selectedModelIds = [atSelectedModel.id];
 	} else {
@@ -197,28 +223,14 @@
 	let serverContextUsage = null;
 	let contextUsage = null;
 
-	const getAvailableModelIds = () =>
-		$models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
-	const getDefaultModelIds = () =>
-		$config?.default_models ? $config.default_models.split(',') : [];
 	const normalizeSelectedModels = (modelIds: string[] = []) => {
-		const availableModels = getAvailableModelIds();
-		const defaultModels = getDefaultModelIds();
-		let normalized = (modelIds ?? []).filter(
-			(modelId) => modelId && availableModels.includes(modelId)
+		const selected = resolveDefaultModelIds(
+			$models,
+			modelIds,
+			$settings?.models,
+			$config?.default_models?.split(',')
 		);
-
-		if (normalized.length === 0 && $settings?.models?.length) {
-			normalized = $settings.models.filter((modelId) => availableModels.includes(modelId));
-		}
-		if (normalized.length === 0 && defaultModels.length > 0) {
-			normalized = defaultModels.filter((modelId) => availableModels.includes(modelId));
-		}
-		if (normalized.length === 0) {
-			normalized = availableModels.length > 0 ? [availableModels[0]] : [''];
-		}
-
-		return normalized;
+		return selected.length ? selected : [''];
 	};
 
 	$: {
@@ -257,7 +269,11 @@
 			let next = total + 4 + estimateTokens(message.content);
 			next += estimateTokens(message.output);
 			next += estimateTokens(message.tool_calls);
-			next += estimateTokens(message.files);
+			if (message.files?.length) {
+				next += estimateTokens(
+					JSON.stringify(message.files).replace(/data:[\w/+.;=%-]*;base64,[A-Za-z0-9+/=]*/g, '')
+				);
+			}
 			return next;
 		}, 0);
 
@@ -385,11 +401,38 @@
 	let generationController = null;
 	let contextCompactionToastId = null;
 
-	let chat = null;
+	let chat: any = null;
 	let tags = [];
 
-	// Read-only when viewing someone else's chat (e.g. via shared folder access)
-	$: readOnly = chat != null && chat.user_id !== $user?.id;
+	// Non-owners may reply when the sharing mode allows it, but cannot save chat edits.
+	$: isShared = chat != null && chat.user_id !== $user?.id;
+	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
+	let cloning = false;
+
+	const cloneSharedChat = async () => {
+		if (!canClone || cloning) return;
+		cloning = true;
+		try {
+			const [copy] = await importChats(localStorage.token, [
+				{
+					chat: {
+						...chat.chat,
+						title: $i18n.t('Clone of {{TITLE}}', { TITLE: chat.title }),
+						originalChatId: chat.id,
+						branchPointMessageId: history.currentId
+					}
+				}
+			]);
+			if (copy) {
+				await goto(`/c/${copy.id}`);
+				await refreshChatList(localStorage.token);
+			}
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			cloning = false;
+		}
+	};
 
 	let chatOwner = null;
 
@@ -404,7 +447,7 @@
 		});
 	};
 
-	$: if (readOnly && chat?.user_id) {
+	$: if (isShared && chat?.user_id) {
 		void resolveChatOwner(chat.user_id);
 	} else {
 		chatOwner = null;
@@ -412,7 +455,7 @@
 
 	let chatTasks = [];
 
-	let history = {
+	let history: { currentId: string | null; messages: Record<string, any> } = {
 		messages: {},
 		currentId: null
 	};
@@ -429,6 +472,7 @@
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
 
+	// Chat parameters own the approval mode; chats without an override use the user default.
 	$: toolApprovalMode =
 		(params?.tool_approval_mode ?? $settings?.params?.tool_approval_mode) === 'ask'
 			? 'ask'
@@ -436,6 +480,7 @@
 
 	const handleToolApprovalModeChange = async (mode: string) => {
 		const tool_approval_mode = mode === 'ask' ? 'ask' : 'full';
+		browserApprovalMode = tool_approval_mode;
 		params = {
 			...params,
 			tool_approval_mode
@@ -454,7 +499,7 @@
 			}
 		);
 
-		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
+		if (!isShared && $chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, { params }).catch((err) => {
 				console.error('[tool permissions chat]', err);
 				return null;
@@ -463,8 +508,16 @@
 		}
 
 		if (tool_approval_mode === 'full') {
+			if (isTemporaryChatId($chatId)) {
+				if (browserApprovalMode !== 'full') return;
+				for (const interaction of browserInteractions) {
+					if (interaction.data?.tool_call) resolveBrowserInteraction(interaction, true);
+				}
+				return;
+			}
 			const messages = [...Object.values(history?.messages ?? {})].reverse() as any[];
 			for (const message of messages) {
+				if ((message.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id) continue;
 				const output = (Array.isArray(message?.output) ? message.output : []) as any[];
 				const resultCallIds = new Set(
 					output
@@ -546,6 +599,7 @@
 			? createMessagesList(chatHistory, chatHistory.currentId)
 			: Object.values(chatHistory.messages);
 		for (const message of [...messages].reverse()) {
+			if ((message.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id) continue;
 			const pending = getPendingAskUserFromMessage(message);
 			if (pending) return pending;
 		}
@@ -622,20 +676,16 @@
 			}
 		: null;
 
-	$: socketAskUserPrompt = {
-		show: showAskUserDialog,
-		questions: askUserQuestions,
-		allowOther: askUserAllowOther,
-		timeoutMs: askUserTimeoutMs,
-		onConfirm: (value) => {
-			showAskUserDialog = false;
-			eventCallback(value);
-		},
-		onCancel: () => {
-			showAskUserDialog = false;
-			eventCallback({ status: 'cancelled', answers: {} });
-		}
-	};
+	$: socketAskUserPrompt = ((interaction: BrowserInteraction | undefined) => ({
+		id: interaction?.id,
+		show: interaction?.type === 'request:user_input',
+		questions: interaction?.data?.questions ?? [],
+		allowOther: interaction?.data?.allow_other ?? true,
+		timeoutMs: interaction?.data?.timeout_ms ?? null,
+		onConfirm: (value: any) => interaction && resolveBrowserInteraction(interaction, value),
+		onCancel: () =>
+			interaction && resolveBrowserInteraction(interaction, { status: 'cancelled', answers: {} })
+	}))(browserInteraction);
 
 	const mergeChatVariableSchemas = (modelIds = [], availableModels = []) => {
 		const byKey: Record<string, any> = {};
@@ -713,6 +763,7 @@
 
 	const saveChatVariables = async (values) => {
 		chatVariables = { ...chatVariables, ...values };
+		if (isShared) return;
 
 		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, {}, chatVariables).catch(
@@ -769,9 +820,8 @@
 			webSearchEnabled = input.webSearchEnabled ?? false;
 			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
 			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
-			if (input.toolApprovalMode) {
-				await handleToolApprovalModeChange(input.toolApprovalMode);
-			}
+			// Ignore approval modes in older drafts. Restoring input must not overwrite chat
+			// parameters or invoke the change handler, which can save settings and approve tools.
 			return true;
 		} catch (e) {
 			return false;
@@ -813,6 +863,8 @@
 	}
 
 	const navigateHandler = async () => {
+		cancelBrowserInteractions();
+		bridge?.end();
 		noteChatDebug('navigateHandler start');
 		// Mark the outgoing chat as read before loading the new one.
 		// $chatId still holds the previous chat here — loadChat() updates it.
@@ -834,6 +886,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -986,8 +1039,9 @@
 	/** Check whether a terminal ID references an available system or direct terminal. */
 	const isTerminalAvailable = (tid: string): boolean => {
 		return (
-			($terminalServers ?? []).some((t) => t.id && t.id === tid) ||
-			($settings?.terminalServers ?? []).some((s) => s.url === tid)
+			$config?.features?.enable_tool_servers === true &&
+			(($terminalServers ?? []).some((t) => t.id && t.id === tid) ||
+				($settings?.terminalServers ?? []).some((s) => s.url === tid))
 		);
 	};
 
@@ -1237,12 +1291,198 @@
 		}
 	};
 
+	let joinedChatId = '';
+	let chatRefresh: { id: string; promise: Promise<void> } | null = null;
+	let typingUsers: { id: string; name: string }[] = [];
+	let typingUsersTimeout: Record<string, ReturnType<typeof setTimeout>> = {};
+	let lastTypingEmit = 0;
+
+	const emitTyping = (typing: boolean) => {
+		if (!$socket?.connected || !joinedChatId) return;
+		if (typing && (joinedChatId !== $chatId || (isShared && chat?.chat?.share_mode !== 'continue')))
+			return;
+		if (typing ? Date.now() - lastTypingEmit < 2000 : !lastTypingEmit) return;
+		lastTypingEmit = typing ? Date.now() : 0;
+		$socket.emit('events:chat', {
+			chat_id: joinedChatId,
+			data: { type: 'typing', data: { typing } }
+		});
+	};
+
+	const removeTypingUser = (id: string) => {
+		clearTimeout(typingUsersTimeout[id]);
+		delete typingUsersTimeout[id];
+		typingUsers = typingUsers.filter((user) => user.id !== id);
+	};
+
+	const clearTyping = () => {
+		emitTyping(false);
+		Object.values(typingUsersTimeout).forEach(clearTimeout);
+		typingUsersTimeout = {};
+		typingUsers = [];
+		lastTypingEmit = 0;
+	};
+	$: if (!prompt.trim()) emitTyping(false);
+
+	const mergeChatMessages = (
+		incoming: typeof history,
+		baseline: Record<string, any> | null = null
+	) => {
+		const currentId = history.currentId;
+		const next = incoming?.messages ?? {};
+		const follow =
+			!generating &&
+			!(
+				taskIds?.length &&
+				Object.values(history.messages).some(
+					(message: any) =>
+						message.role === 'assistant' &&
+						message.done === false &&
+						(message.user_id ?? chat?.user_id) === $user?.id
+				)
+			) &&
+			Object.keys(next).some((id) => !history.messages[id]);
+		for (const [id, message] of Object.entries(next) as [string, any][]) {
+			const local = history.messages[id];
+			const ownActive =
+				local?.done === false &&
+				(local.user_id ?? chat?.user_id) === $user?.id &&
+				(taskIds?.length || generating);
+			if (!local || (!ownActive && (!baseline || baseline[id] === local))) {
+				history.messages[id] = { ...local, ...message };
+			}
+			if (local) {
+				history.messages[id].childrenIds = [
+					...new Set([...(local.childrenIds ?? []), ...(message.childrenIds ?? [])])
+				];
+			}
+		}
+		if ((!currentId || follow) && incoming.currentId && next[incoming.currentId]) {
+			history.currentId = incoming.currentId;
+			autoScrollToBottom();
+		}
+		history = history;
+	};
+
+	const refreshChat = () => {
+		const id = $chatId;
+		if (!id || $temporaryChatEnabled) return Promise.resolve();
+		if (chatRefresh?.id === id) return chatRefresh.promise;
+		const baseline = { ...history.messages };
+		const promise = (async () => {
+			try {
+				const fresh = await getChatById(localStorage.token, id);
+				if ($chatId !== id || joinedChatId !== id) return;
+				chat = fresh;
+				mergeChatMessages(fresh.chat.history, baseline);
+			} catch (error) {
+				if ($chatId === id && joinedChatId === id) {
+					chat = null;
+					history = { messages: {}, currentId: null };
+					if (!embedded) await goto('/');
+				}
+			} finally {
+				if (chatRefresh?.id === id) chatRefresh = null;
+			}
+		})();
+		chatRefresh = { id, promise };
+		return promise;
+	};
+
+	const syncChatRoom = (socket: typeof $socket, id: string, temporary: boolean) => {
+		const next = socket && id && !temporary && !isTemporaryChatId(id) ? id : '';
+		if (next === joinedChatId) return;
+		clearTyping();
+		if (joinedChatId)
+			socket?.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
+		joinedChatId = next;
+		if (next)
+			socket?.emit('events:chat', { chat_id: next, data: { type: 'join' } }, () => {
+				if ($chatId === next) void refreshChat();
+			});
+	};
+	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
+
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
+		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
+		const interactionType = event?.data?.type;
+		const interactionData = event?.data?.data;
+		if (interactionType === 'request:interaction:done') {
+			browserInteractions = browserInteractions.filter(
+				(item) => item.id !== interactionData?.interaction_id
+			);
+			return;
+		}
+		if (
+			interactionType === 'request:user_input' ||
+			(interactionType === 'confirmation' && interactionData?.tool_call)
+		) {
+			if (!cb) return;
+			if (event.chat_id !== $chatId || !history.messages[event.message_id]) {
+				cb({ status: 'cancelled', answers: {} });
+				return;
+			}
+			if (
+				interactionData?.tool_call &&
+				isTemporaryChatId(event.chat_id) &&
+				browserApprovalMode === 'full'
+			) {
+				cb(true);
+				return;
+			}
+			browserInteractions = [
+				...browserInteractions,
+				{
+					id: interactionData?.interaction_id ?? uuidv4(),
+					messageId: event.message_id,
+					type: interactionType,
+					data: interactionData,
+					callback: cb
+				}
+			];
+			return;
+		}
 
-		if (event.chat_id === $chatId) {
+		// A new chat's title can arrive before its id; the response message already exists.
+		if (
+			event.chat_id === $chatId ||
+			(!$chatId && event?.data?.type === 'chat:title' && history.messages[event.message_id])
+		) {
 			await tick();
 			const type = event?.data?.type ?? null;
+			if (type === 'typing') {
+				const sender = event.user;
+				if (
+					!sender?.id ||
+					sender.id === $user?.id ||
+					(isShared && chat?.chat?.share_mode !== 'continue')
+				)
+					return;
+				if (event.data.data?.typing) {
+					if (!typingUsers.some((entry) => entry.id === sender.id))
+						typingUsers = [...typingUsers, { id: sender.id, name: sender.name }];
+					clearTimeout(typingUsersTimeout[sender.id]);
+					typingUsersTimeout[sender.id] = setTimeout(() => removeTypingUser(sender.id), 5000);
+				} else {
+					removeTypingUser(sender.id);
+				}
+				return;
+			}
+			if (event.shared) {
+				if (type === 'chat:messages') {
+					removeTypingUser(event.user_id);
+					mergeChatMessages(event.data.data);
+					return;
+				}
+				if (type === 'chat:access' || type === 'chat:active') {
+					if (type === 'chat:access') clearTyping();
+					if (type === 'chat:access' || event.data.data?.active === false) await refreshChat();
+					return;
+				}
+				if (!history.messages[event.message_id]) await refreshChat();
+				if ($chatId !== event.chat_id) return;
+			}
 			if (type === 'chat:reload') {
 				await loadChat();
 				return;
@@ -1251,10 +1491,12 @@
 				return;
 			}
 			let message = history.messages[event.message_id];
+			if (message) message = { ...message };
 
 			if (message) {
 				const data = event?.data?.data ?? null;
 
+				queueMicrotask(() => bridge?.update());
 				if (type === 'status') {
 					if (message?.statusHistory) {
 						message.statusHistory.push(data);
@@ -1281,20 +1523,28 @@
 					if (type === 'response:completion') {
 						responseCompletionEventHandler(data, message);
 					} else {
-						await chatCompletionEventHandler(data, message, event.chat_id);
+						await chatCompletionEventHandler(data, message, event.chat_id, event.shared);
 					}
 					autoScrollToBottom();
 				} else if (type === 'chat:tasks:cancel') {
-					dismissContextCompactionToast();
+					for (const interaction of browserInteractions) {
+						if (interaction.messageId === event.message_id) {
+							resolveBrowserInteraction(interaction, { status: 'cancelled', answers: {} });
+						}
+					}
+					message.bridgeCancelled = true;
+					bridgeCancellations.get(event.message_id)?.();
+					if (!event.shared) dismissContextCompactionToast();
 					if (data?.output) {
 						message.output = data.output;
 					}
-					if (event.message_id === history.currentId) {
+					if (!event.shared && event.message_id === history.currentId) {
 						taskIds = null;
 						// Set all response messages to done
 						for (const messageId of history.messages[message.parentId].childrenIds) {
 							history.messages[messageId].done = true;
 						}
+						message.done = true;
 						await processNextInQueue($chatId);
 					} else {
 						message.done = true;
@@ -1303,8 +1553,12 @@
 					message.content += data.content;
 				} else if (type === 'chat:message' || type === 'replace') {
 					message.content = data.content;
+				} else if (type === 'chat:message:voice') {
+					message.meta = { ...message.meta, voice: data.voice };
 				} else if (type === 'chat:message:files' || type === 'files') {
-					message.files = data.files;
+					message.files = isTemporaryChatId(event.chat_id)
+						? [...(message.files ?? []), ...data.files]
+						: data.files;
 				} else if (type === 'chat:message:tasks') {
 					chatTasks = data.tasks;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
@@ -1319,9 +1573,12 @@
 						}
 					}, 100);
 				} else if (type === 'chat:message:error') {
-					message.error = data.error;
-					if (data.done === true && !message.done) {
+					const responseCompleted = message.done;
+					if (event.shared) {
+						message.error = data.error;
 						message.done = true;
+					} else handleOpenAIError(data.error, message);
+					if (!event.shared && !responseCompleted) {
 						dismissContextCompactionToast();
 						if (event.message_id === history.currentId) {
 							await processNextInQueue(event.chat_id);
@@ -1359,9 +1616,11 @@
 						await onEmbeddedChatTitle?.($chatId, data);
 					}
 					await refreshChatList(localStorage.token);
+					return; // The message copy is stale after the await; skip the trailing write-back.
 				} else if (type === 'chat:tags') {
 					chat = await getChatById(localStorage.token, $chatId);
 					allTags.set(await getAllTags(localStorage.token));
+					return;
 				} else if (type === 'source' || type === 'citation') {
 					if (data?.type === 'code_execution') {
 						// Code execution; update existing code execution by ID, or add new one.
@@ -1436,13 +1695,6 @@
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.input?.type ?? data?.type ?? '';
 					eventConfirmationInputOptions = data?.input?.options ?? data?.options ?? [];
-				} else if (type === 'request:user_input') {
-					eventCallback = cb;
-					askUserQuestions = data?.questions ?? [];
-					askUserAllowOther = data?.allow_other ?? true;
-					askUserTimeoutMs =
-						typeof data?.timeout_ms === 'number' && data.timeout_ms > 0 ? data.timeout_ms : null;
-					showAskUserDialog = true;
 				} else if (type.startsWith('terminal:')) {
 					terminalEventHandler(type, data);
 				} else {
@@ -1538,24 +1790,6 @@
 		}
 	};
 
-	const savedModelIds = async () => {
-		if (
-			$selectedFolder &&
-			selectedModels.filter((modelId) => modelId !== '').length > 0 &&
-			!equal($selectedFolder?.data?.model_ids, selectedModels)
-		) {
-			const res = await updateFolderById(localStorage.token, $selectedFolder.id, {
-				data: {
-					model_ids: selectedModels
-				}
-			});
-		}
-	};
-
-	$: if (selectedModels !== null) {
-		savedModelIds();
-	}
-
 	const stopAudio = () => {
 		try {
 			speechSynthesis.cancel();
@@ -1570,21 +1804,18 @@
 		);
 
 	const handleSocketConnect = async () => {
-		// Gate on $chatId, not chatIdProp: chats started from the home page keep an empty chatIdProp
-		if (!$chatId || $temporaryChatEnabled) {
-			return;
-		}
-
-		if (!hasPendingAssistantLeaf()) {
-			return;
-		}
-
-		const pendingTaskIds = await getTaskIdsByChatId(localStorage.token, $chatId)
-			.then((res) => res?.task_ids ?? [])
-			.catch(() => null);
-
-		if (pendingTaskIds?.length === 0) {
-			await loadChat();
+		clearTyping();
+		if (!$chatId || $temporaryChatEnabled) return;
+		joinedChatId = '';
+		syncChatRoom($socket, $chatId, $temporaryChatEnabled);
+		const id = $chatId;
+		const tasks = await getTaskIdsByChatId(localStorage.token, id).catch(() => null);
+		if ($chatId !== id || !tasks) return;
+		taskIds = tasks.task_ids?.length ? tasks.task_ids : null;
+		if (!taskIds && hasPendingAssistantLeaf()) {
+			// A server restart can leave unfinished messages without a completion event.
+			const loaded = await loadChat();
+			if (loaded && $chatId === id) await processNextInQueue(id);
 		}
 	};
 
@@ -1594,6 +1825,8 @@
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', handleSocketConnect);
+		$socket?.on('disconnect', clearTyping);
+		$socket?.on('disconnect', cancelBrowserInteractions);
 
 		$audioQueue?.destroy();
 
@@ -1628,17 +1861,19 @@
 			}
 		});
 
+		// the artifacts pane reads this list when it opens, which can be before the debounced rebuild
+		const showArtifactsSubscribe = showArtifacts.subscribe((value) => {
+			if (value) getContents();
+		});
+
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
 			// Folder default models apply to new chats only.
-			if (
-				!history.currentId &&
-				folder?.data?.model_ids &&
-				!equal(selectedModels, folder.data.model_ids)
-			) {
-				selectedModels = folder.data.model_ids;
-
-				console.log('Set selectedModels from folder data:', selectedModels);
+			if (!history.currentId && folder) {
+				const folderModels = normalizeSelectedModels(folder.data?.model_ids ?? []);
+				if (!equal(selectedModels, folderModels)) {
+					selectedModels = folderModels;
+				}
 			}
 		});
 
@@ -1673,6 +1908,7 @@
 
 		return () => {
 			try {
+				cancelBrowserInteractions();
 				clearTimeout(saveControlsTimer);
 				saveControls();
 				if (chatIdProp && !$temporaryChatEnabled) {
@@ -1680,17 +1916,24 @@
 				}
 				pageSubscribe();
 				showControlsSubscribe();
+				showArtifactsSubscribe();
 				selectedFolderSubscribe();
 
 				// Clear the selected chat when leaving the chat surface (e.g. navigating
 				// to the admin panel), otherwise the previously-viewed chat stays selected
 				// in the sidebar and deleting/archiving it wrongly navigates away.
+				clearTyping();
+				if (joinedChatId)
+					$socket?.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
+				joinedChatId = '';
 				chatId.set('');
 				chatTitle.set('');
 
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('connect', handleSocketConnect);
+				$socket?.off('disconnect', clearTyping);
+				$socket?.off('disconnect', cancelBrowserInteractions);
 				dismissContextCompactionToast();
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
@@ -1937,6 +2180,7 @@
 
 	const onHistoryChange = (history) => {
 		if (history) {
+			bridge?.update();
 			clearTimeout(contentsRAF);
 			contentsRAF = setTimeout(() => {
 				getContents();
@@ -1949,8 +2193,162 @@
 
 	$: onHistoryChange(history);
 
+	let callMode = 'current';
+	let bridge: RealtimeCall;
+	const bridgeCancellations = new Map<string, () => void>();
+	const visibleMessageText = (message: any) =>
+		getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
+
+	const addVoiceMessage = async (
+		role: string,
+		content: string,
+		voice: any,
+		parentId: string | null = history.currentId
+	) => {
+		const branch = createMessagesList(history, history.currentId);
+		let parentIndex = branch.findIndex((entry) => entry.id === parentId);
+		// A chat answer can have been inserted while this spoken reply was being generated.
+		// Keep the reply on that branch, before the next user turn, rather than losing it as a sibling.
+		if (role === 'assistant' && parentIndex >= 0) {
+			while (branch[parentIndex + 1]?.role === 'assistant') parentIndex++;
+			parentId = branch[parentIndex].id;
+		}
+		const nextMessage = parentIndex >= 0 ? branch[parentIndex + 1] : null;
+		const id = uuidv4();
+		const message = {
+			id,
+			parentId,
+			childrenIds: [] as string[],
+			role,
+			content,
+			done: true,
+			timestamp: Math.floor(Date.now() / 1000),
+			meta: { voice },
+			...(role === 'assistant' ? { model: voice.model, modelName: voice.model, modelIdx: 0 } : {})
+		};
+		const changedMessages: Record<string, any> = { [id]: message };
+		history.messages[id] = message;
+		if (parentId && history.messages[parentId]) {
+			history.messages[parentId].childrenIds.push(id);
+			// A second transcript can arrive before the first spoken reply finishes.
+			// Insert that reply before the next user message without switching branches.
+			if (role === 'assistant' && nextMessage?.role === 'user') {
+				nextMessage.parentId = id;
+				message.childrenIds.push(nextMessage.id);
+				history.messages[parentId].childrenIds = history.messages[parentId].childrenIds.filter(
+					(childId: string) => childId !== nextMessage.id
+				);
+				changedMessages[nextMessage.id] = nextMessage;
+			}
+		}
+		if (history.currentId === parentId) history.currentId = id;
+		history = history;
+		if (!$chatId) await initChatHandler(history);
+		else if (!$temporaryChatEnabled) {
+			// Patch only the new message, so a running backend turn keeps its current output.
+			await updateChatById(localStorage.token, $chatId, {
+				history: { currentId: history.currentId, messages: changedMessages }
+			});
+		}
+		return id;
+	};
+
+	const saveVoice = async (id: string, voice: any) => {
+		const message = history.messages[id];
+		if (!message) return;
+		const previous = message.meta?.voice ?? {};
+		const speech = new Map((previous.speech ?? []).map((item: any) => [item.item_id, item]));
+		for (const item of voice.speech ?? []) speech.set(item.item_id, item);
+		const merged = { ...previous, ...voice, speech: [...speech.values()] };
+		message.meta = { ...message.meta, voice: merged };
+		history = history;
+		if ($chatId && !$temporaryChatEnabled) {
+			const response = await fetch(`${WEBUI_API_BASE_URL}/chats/${$chatId}/messages/${id}`, {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${localStorage.token}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ voice: merged })
+			});
+			if (!response.ok) throw new Error('Could not save voice metadata');
+		}
+	};
+
+	onMount(() => {
+		bridge = new RealtimeCall({
+			context: () => {
+				const model =
+					selectedModelIds.length === 1
+						? $models.find((model) => model.id === selectedModelIds[0])
+						: null;
+				return {
+					chatId: isTemporaryChatId($chatId) ? undefined : $chatId || undefined,
+					modelId: model && !('direct' in model && model.direct) ? model.id : '',
+					voiceModel: $config?.audio?.realtime?.model,
+					voice: model?.info?.meta?.voice?.voice || $config?.audio?.realtime?.voice,
+					messages: createMessagesList(history, history.currentId).map((message) => {
+						const voice = message.meta?.voice;
+						const spoken = voice && message.model === voice.model && !message.output?.length;
+						const state = getBridgeTurnState(message);
+						const speech = !spoken
+							? (voice?.speech ?? [])
+									.map((item: any) => item.transcript)
+									.filter(Boolean)
+									.join('\n')
+							: '';
+						let content = visibleMessageText(message);
+						if (message.role === 'assistant') {
+							const source = spoken
+								? 'Historical voice transcript, not current task status'
+								: 'Chat model';
+							content = `[${source}; message_id=${message.id}; state=${state}]\n${state === 'completed' ? content : ''}`;
+							if (speech)
+								content += `\n[Historical voice transcript, not current task status]\n${speech}`;
+						}
+						return { role: message.role, content };
+					})
+				};
+			},
+			addMessage: addVoiceMessage,
+			submit: submitHandler,
+			message: (id) => history.messages[id],
+			visibleText: visibleMessageText,
+			saveVoice,
+			stop: async (id) => {
+				const message = history.messages[id];
+				if (!message || message.bridgeCancelled) return;
+				let timer: ReturnType<typeof setTimeout> | undefined;
+				const settled = new Promise<void>((resolve, reject) => {
+					bridgeCancellations.set(id, resolve);
+					timer = setTimeout(
+						() => reject(new Error('Backend cancellation was not confirmed')),
+						15000
+					);
+				});
+				try {
+					await Promise.all([stopResponse(false, id), settled]);
+				} finally {
+					clearTimeout(timer);
+					bridgeCancellations.delete(id);
+				}
+			},
+			change: () => {
+				bridge = bridge;
+			},
+			error: (message) => toast.error(message)
+		});
+		return () => bridge?.end();
+	});
+	beforeNavigate(() => {
+		bridge?.end();
+		pendingUrlActions = null;
+	});
+	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
+	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
+
 	const dispatchCallOverlayAudio = (message, final = false) => {
-		if (!$showCallOverlay) {
+		if (message.error || !$showCallOverlay || callMode !== 'current') {
 			return;
 		}
 
@@ -2048,13 +2446,32 @@
 	//////////////////////////
 
 	const openCallOverlay = () => {
-		setTimeout(() => {
-			showCallOverlay.set(true);
-			showControls.set(true);
-		}, 0);
+		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.call ?? true))) {
+			return;
+		}
+
+		if (selectedModels.length > 1) {
+			toast.error($i18n.t('Select only one model to call'));
+			return;
+		}
+
+		if (
+			!bridge?.connected &&
+			!bridge?.connecting &&
+			!$config?.audio?.realtime?.enabled &&
+			$config?.audio?.stt?.engine === 'web'
+		) {
+			toast.error($i18n.t('Call feature is not supported when using Web STT engine'));
+			return;
+		}
+
+		showCallOverlay.set(true);
+		showControls.set(true);
 	};
 
 	const initNewChat = async () => {
+		cancelBrowserInteractions();
+		bridge?.end();
 		console.log('initNewChat');
 		resetWebSearchConfirmation();
 
@@ -2089,7 +2506,7 @@
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
 
-		const defaultModels = $config?.default_models ? $config?.default_models.split(',') : [];
+		const defaultModels = normalizeSelectedModels();
 
 		const openModelSelectorWithSearch = async (modelId: string) => {
 			const modelSelectorButton = document.getElementById('model-selector-model-button');
@@ -2132,9 +2549,9 @@
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
-			if ($selectedFolder?.data?.model_ids) {
-				// Set from folder model IDs
-				selectedModels = $selectedFolder?.data?.model_ids;
+			if ($selectedFolder) {
+				// Folder defaults are explicit; never inherit a previous chat's selection.
+				selectedModels = normalizeSelectedModels($selectedFolder.data?.model_ids ?? []);
 			} else {
 				if (sessionStorage.selectedModels) {
 					// Set from session storage (temporary selection)
@@ -2152,7 +2569,7 @@
 			}
 
 			// Unavailable & hidden models filtering
-			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
+			selectedModels = normalizeSelectedModels(selectedModels);
 		}
 
 		// Ensure at least one model is selected
@@ -2203,13 +2620,16 @@
 		taskIds = null;
 		chatTasks = [];
 
-		if ($page.url.searchParams.get('youtube')) {
-			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
-		}
-
-		if ($page.url.searchParams.get('load-url')) {
-			await uploadWeb($page.url.searchParams.get('load-url'));
-		}
+		const youtube = $page.url.searchParams.get('youtube');
+		const loadUrl = $page.url.searchParams.get('load-url');
+		const urls = [
+			...(youtube ? [`https://www.youtube.com/watch?v=${youtube}`] : []),
+			...(loadUrl ? [loadUrl] : [])
+		];
+		const call =
+			$page.url.searchParams.get('call') === 'true' ||
+			$page.url.searchParams.get('voice') === 'true';
+		pendingUrlActions = urls.length || call ? { urls, call } : null;
 
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
@@ -2244,10 +2664,6 @@
 			if (!selectedToolIds.includes(pendingToolId)) {
 				selectedToolIds = [...selectedToolIds, pendingToolId];
 			}
-		}
-
-		if ($page.url.searchParams.get('call') === 'true') {
-			openCallOverlay();
 		}
 
 		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
@@ -2285,11 +2701,7 @@
 		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 
-			if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
-				messageInput?.setText(q, () => submitHandler(prompt));
-			} else {
-				messageInput?.setText(q);
-			}
+			messageInput?.setText(q);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -2444,12 +2856,17 @@
 				} else {
 					taskIds = null;
 					// No active tasks and message incomplete → generation was interrupted
-					if (
-						currentMessage?.role === 'assistant' &&
-						!currentMessage.done &&
-						!messageHasPendingAskUser(currentMessage)
-					) {
-						currentMessage.done = true;
+					if (pendingTaskIds.length === 0) {
+						for (const message of Object.values(history.messages)) {
+							if (
+								message?.role === 'assistant' &&
+								(message.user_id ?? chat?.user_id) === $user?.id &&
+								!message.done &&
+								!messageHasPendingAskUser(message)
+							) {
+								message.done = true;
+							}
+						}
 					}
 				}
 
@@ -2658,6 +3075,9 @@
 					...(history.messages[message.id].content !== message.content
 						? { originalContent: history.messages[message.id].content }
 						: {}),
+					...(typeof message.content === 'string' && history.messages[message.id].output?.length
+						? { output: setOutputText(history.messages[message.id].output, message.content) }
+						: {}),
 					...message
 				};
 			}
@@ -2689,6 +3109,7 @@
 	};
 
 	const createMessagePair = async (userPrompt) => {
+		if (isShared) return;
 		messageInput?.setText('');
 		if (selectedModels.length === 0) {
 			toast.error($i18n.t('Model not selected'));
@@ -2712,6 +3133,8 @@
 				parentId: parentMessage ? parentMessage.id : null,
 				childrenIds: [responseMessageId],
 				role: 'user',
+				user_id: $user?.id,
+				user: { id: $user?.id, name: $user?.name },
 				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
 				timestamp: Math.floor(Date.now() / 1000)
 			};
@@ -2721,6 +3144,7 @@
 				parentId: userMessageId,
 				childrenIds: [],
 				role: 'assistant',
+				user_id: $user?.id,
 				content: `[RESPONSE] ${responseMessageId}`,
 				done: true,
 
@@ -2837,8 +3261,13 @@
 		history = history;
 	};
 
-	const chatCompletionEventHandler = async (data, message, chatId) => {
+	const chatCompletionEventHandler = async (data, message, chatId, shared = false) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+
+		if (error) {
+			if (shared) message.error = error;
+			else handleOpenAIError(error, message);
+		}
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
@@ -2846,16 +3275,13 @@
 			message.content = getOutputText(output);
 			if (
 				data.type === 'response.output_text.delta' &&
+				!shared &&
 				navigator.vibrate &&
 				$settings?.hapticFeedback
 			) {
 				navigator.vibrate(5);
 			}
-			dispatchCallOverlayAudio(message);
-		}
-
-		if (error) {
-			await handleOpenAIError(error, message);
+			if (!shared) dispatchCallOverlayAudio(message);
 		}
 
 		if (sources && !message?.sources) {
@@ -2866,7 +3292,7 @@
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
-				dispatchCallOverlayAudio(message);
+				if (!shared) dispatchCallOverlayAudio(message);
 			} else {
 				// Stream response
 				let value = choices[0]?.delta?.content ?? '';
@@ -2875,10 +3301,10 @@
 				} else {
 					message.content += value;
 
-					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+					if (!shared && navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
 					}
-					dispatchCallOverlayAudio(message);
+					if (!shared) dispatchCallOverlayAudio(message);
 				}
 			}
 		}
@@ -2887,10 +3313,10 @@
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
 
-			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+			if (!shared && navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
 			}
-			dispatchCallOverlayAudio(message);
+			if (!shared) dispatchCallOverlayAudio(message);
 		}
 
 		if (selected_model_id) {
@@ -2907,6 +3333,13 @@
 
 		if (done) {
 			message.done = true;
+			if (shared) return;
+			if (message.error) {
+				dismissContextCompactionToast();
+				bridge?.update();
+				await processNextInQueue(chatId);
+				return;
+			}
 			const visibleContent =
 				getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
 
@@ -2914,7 +3347,7 @@
 				copyToClipboard(visibleContent);
 			}
 
-			if ($settings.responseAutoPlayback && !$showCallOverlay) {
+			if ($settings.responseAutoPlayback && !$showCallOverlay && !bridge?.connected) {
 				await tick();
 				document.getElementById(`speak-button-${message.id}`)?.click();
 			}
@@ -2951,14 +3384,18 @@
 			await processNextInQueue(chatId);
 		}
 
-		console.log(data);
+		bridge?.update();
 	};
 
 	//////////////////////////
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (inputContent, inputFiles) => {
+	const submitPrompt = async (
+		inputContent: string,
+		inputFiles: any[],
+		bridgeRequest: { userMessageId: string; modelId: string } | null = null
+	) => {
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -2974,23 +3411,27 @@
 		);
 
 		// Create user message
-		let userMessageId = uuidv4();
+		let userMessageId = bridgeRequest?.userMessageId ?? uuidv4();
 		let userMessage = {
 			id: userMessageId,
 			parentId: history.currentId ?? null,
 			childrenIds: [],
 			role: 'user',
+			user: { id: $user?.id, name: $user?.name },
+			user_id: $user?.id,
 			content: inputContent,
 			files: _files.length > 0 ? _files : undefined,
 			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
 			models: selectedModels
 		};
 
-		// Add message to history and Set currentId to messageId
+		// A transcribed Bridge message already exists in the same history.
+		const existingUserMessage = history.messages[userMessageId];
+		if (existingUserMessage) userMessage = { ...existingUserMessage, files: userMessage.files };
 		history.messages[userMessageId] = userMessage;
 
 		// Append messageId to childrenIds of parent message
-		if (history.currentId !== null) {
+		if (!existingUserMessage && history.currentId !== null) {
 			history.messages[history.currentId].childrenIds.push(userMessageId);
 		}
 
@@ -3003,7 +3444,7 @@
 
 		saveSessionSelectedModels();
 
-		await sendMessage(history, userMessageId);
+		return await sendMessage(history, userMessageId, { modelId: bridgeRequest?.modelId ?? null });
 	};
 
 	const handleManualCompact = async () => {
@@ -3146,8 +3587,16 @@
 		prompt = '';
 	};
 
-	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
-		console.log('submitHandler', userPrompt, $chatId);
+	const submitHandler = async (
+		userPrompt: string,
+		{
+			_raw = false,
+			bridge: bridgeRequest = null
+		}: { _raw?: boolean; bridge?: { userMessageId: string; modelId: string } | null } = {}
+	): Promise<BridgeSubmission> => {
+		emitTyping(false);
+		if (bridgeRequest && (selectedModelIds.length !== 1 || !bridgeRequest.modelId))
+			return { status: 'rejected' };
 
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
@@ -3160,47 +3609,47 @@
 		if (String(userPrompt).trim() === '/compact') {
 			clearCommandInput();
 			await handleManualCompact();
-			return;
+			return { status: 'rejected' };
 		}
 		if (String(userPrompt).trim() === '/status') {
 			clearCommandInput();
 			handleStatusCommand();
-			return;
+			return { status: 'rejected' };
 		}
 		if (String(userPrompt).trim() === '/fork') {
 			clearCommandInput();
 			await handleForkChat();
-			return;
+			return { status: 'rejected' };
 		}
 		const modelCommandMatch = String(userPrompt)
 			.trim()
 			.match(/^\/model(?:\s+([\s\S]+))?$/);
 		if (modelCommandMatch) {
 			handleModelCommand(modelCommandMatch[1]?.trim() ?? '');
-			return;
+			return { status: 'rejected' };
 		}
 
 		if (pendingOAuthTools.length > 0) {
 			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
-			return;
+			return { status: 'rejected' };
 		}
 		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));
-			return;
+			return { status: 'rejected' };
 		}
 		if (selectedModels.includes('')) {
 			toast.error($i18n.t('Model not selected'));
-			return;
+			return { status: 'rejected' };
 		}
 		const form = getChatVariablesForm(selectedModelIds, chatVariables, $models);
 		if (form.conflicts.length > 0) {
 			showChatVariablesModal = true;
 			toast.error($i18n.t('Chat Variables have conflicting model definitions'));
-			return;
+			return { status: 'rejected' };
 		}
 		if (form.missing || form.empty) {
 			showChatVariablesModal = true;
-			return;
+			return { status: 'deferred' };
 		}
 
 		if (
@@ -3212,7 +3661,7 @@
 					maxCount: $config?.file?.max_count
 				})
 			);
-			return;
+			return { status: 'rejected' };
 		}
 
 		if (
@@ -3220,9 +3669,9 @@
 			webSearchActive &&
 			!webSearchConfirmed
 		) {
-			pendingWebSearchPrompt = userPrompt ?? '';
+			pendingWebSearchPrompt = bridgeRequest ? null : (userPrompt ?? '');
 			openWebSearchConfirm();
-			return;
+			return { status: 'deferred' };
 		}
 
 		if (
@@ -3231,6 +3680,7 @@
 			) ||
 			(files.length > 0 && files.some((file) => ['uploading', 'error'].includes(file.status)))
 		) {
+			if (bridgeRequest) return { status: 'deferred' };
 			chatRequestQueues.update((q) => ({
 				...q,
 				[$chatId]: [...(q[$chatId] ?? []), { id: uuidv4(), prompt: userPrompt, files }]
@@ -3238,15 +3688,20 @@
 			messageInput?.setText('');
 			prompt = '';
 			files = [];
-			return;
+			return { status: 'rejected' };
 		}
 
 		// Check if the assistant is still generating the main response
 		// (don't block on background tasks like title gen, follow-ups, tags)
 		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
-		const isGenerating = lastMessage && lastMessage.role === 'assistant' && !lastMessage.done;
+		const isGenerating = bridgeRequest
+			? createMessagesList(history, bridgeRequest.userMessageId).some(
+					(message) => message.role === 'assistant' && !message.done
+				)
+			: lastMessage && lastMessage.role === 'assistant' && !lastMessage.done;
 
 		if (isGenerating) {
+			if (bridgeRequest) return { status: 'deferred' };
 			if ($settings?.enableMessageQueue ?? true) {
 				// Enqueue the request
 				const _files = structuredClone(files);
@@ -3258,7 +3713,7 @@
 				messageInput?.setText('');
 				prompt = '';
 				files = [];
-				return;
+				return { status: 'rejected' };
 			} else {
 				// Interrupt: stop current generation and proceed
 				await stopResponse();
@@ -3273,7 +3728,7 @@
 		files = [];
 		messageInput?.setText('');
 
-		await submitPrompt(userPrompt, _files);
+		return (await submitPrompt(userPrompt, _files, bridgeRequest)) ?? { status: 'rejected' };
 	};
 
 	const sendMessage = async (
@@ -3325,6 +3780,7 @@
 					id: responseMessageId,
 					childrenIds: [],
 					role: 'assistant',
+					user_id: $user?.id,
 					content: '',
 					done: false,
 					model: model.id,
@@ -3414,13 +3870,14 @@
 		const primaryModelId = selectedModelIds[0];
 		const primaryModel = $models.filter((m) => m.id === primaryModelId).at(0);
 		const primaryResponseMessageId = messageIdsList[0]?.message_id;
+		let submittedTaskIds: string[] = [];
 
 		if (primaryModel && primaryResponseMessageId) {
 			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);
 
 			try {
 				scrollToBottom();
-				await sendMessageSocket(
+				const completion = await sendMessageSocket(
 					primaryModel,
 					messages && messages.length > 0
 						? messages
@@ -3437,10 +3894,19 @@
 						regenerationPrompt
 					}
 				);
+				submittedTaskIds =
+					completion?.task_ids ?? (completion?.task_id ? [completion.task_id] : []);
 			} finally {
 				if (chatEventEmitter) clearInterval(chatEventEmitter);
 			}
 		}
+		return {
+			status: 'submitted' as const,
+			chatId: $chatId,
+			userMessageId: parentId,
+			assistantMessageId: primaryResponseMessageId,
+			taskIds: submittedTaskIds
+		};
 	};
 
 	const getFeatures = () => {
@@ -3448,7 +3914,7 @@
 
 		if ($config?.features)
 			features = {
-				voice: $showCallOverlay,
+				voice: $showCallOverlay && callMode === 'current',
 				image_generation:
 					$config?.features?.enable_image_generation &&
 					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
@@ -3540,8 +4006,8 @@
 
 		const stream =
 			model?.info?.params?.stream_response ??
-			$settings?.params?.stream_response ??
 			params?.stream_response ??
+			$settings?.params?.stream_response ??
 			true;
 		// Always include system prompt — backend extracts it and prepends to DB messages.
 		// Only temp chats need conversation messages (persisted chats load from DB).
@@ -3569,7 +4035,12 @@
 					);
 
 					if (message.output && message.role === 'assistant') {
-						return { role: message.role, model: message.model, output: message.output };
+						return {
+							role: message.role,
+							model: message.model,
+							output: message.output,
+							meta: message.meta
+						};
 					}
 
 					if (message.role === 'user' && imageFiles.length > 0) {
@@ -3592,7 +4063,9 @@
 
 					return {
 						role: message.role,
-						content: message?.merged?.content ?? message.content
+						content: message?.merged?.content ?? message.content,
+						model: message.model,
+						meta: message.meta
 					};
 				})
 				.filter(
@@ -3623,7 +4096,8 @@
 		const skillIds = [...selectedSkillIds];
 
 		// Only send terminal_id if the model has terminal capability enabled
-		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
+		const terminalEnabled =
+			$config?.features?.enable_tool_servers && (model.info?.meta?.capabilities?.terminal ?? true);
 		const useChatVariablesFallback =
 			!_chatId || $temporaryChatEnabled || isTemporaryChatId(_chatId);
 
@@ -3635,27 +4109,37 @@
 				...(messages.length > 0 ? { messages } : {}),
 				params: {
 					...$settings?.params,
-					...params,
+					...Object.fromEntries(Object.entries(params).filter(([, value]) => value !== null)),
+					model_controls: $settings?.params?.model_controls ?? {},
 					stop: getStopTokens()
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 
-				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
-				tool_ids: toolIds.length > 0 ? toolIds : undefined,
+				filter_ids:
+					$config?.features?.enable_functions && selectedFilterIds.length > 0
+						? selectedFilterIds
+						: undefined,
+				tool_ids: toolIds.filter((id) =>
+					id.startsWith('server:')
+						? $config?.features?.enable_tool_servers
+						: $config?.features?.enable_tools
+				),
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
 				terminal_id: terminalEnabled && $selectedTerminalId ? $selectedTerminalId : undefined,
-				tool_servers: [
-					...($toolServers ?? []).filter(
-						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-					),
-					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
-					...(terminalEnabled
-						? ($terminalServers ?? [])
-								.filter((server) => !server.id)
-								.map((server) => ({ ...server, is_terminal: true }))
-						: [])
-				],
+				tool_servers: $config?.features?.enable_tool_servers
+					? [
+							...($toolServers ?? []).filter(
+								(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
+							),
+							// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
+							...(terminalEnabled
+								? ($terminalServers ?? [])
+										.filter((server) => !server.id)
+										.map((server) => ({ ...server, is_terminal: true }))
+								: [])
+						]
+					: [],
 				features: getFeatures(),
 				variables: {
 					...getPromptVariables(
@@ -3764,52 +4248,29 @@
 		if (shouldAutoScrollResponse()) {
 			scrollToBottom();
 		}
+		return res;
 	};
 
-	const handleOpenAIError = async (error, responseMessage) => {
-		let errorMessage = '';
-		let innerError;
-
-		if (error) {
-			innerError = error;
-		}
-
-		console.error(innerError);
-		if ('detail' in innerError) {
-			// FastAPI error
-			toast.error(innerError.detail);
-			errorMessage = innerError.detail;
-		} else if ('error' in innerError) {
-			// OpenAI error
-			if ('message' in innerError.error) {
-				toast.error(innerError.error.message);
-				errorMessage = innerError.error.message;
-			} else {
-				toast.error(innerError.error);
-				errorMessage = innerError.error;
-			}
-		} else if ('message' in innerError) {
-			// OpenAI error
-			toast.error(innerError.message);
-			errorMessage = innerError.message;
-		}
-
-		responseMessage.error = {
-			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
-		};
+	const handleOpenAIError = (error, responseMessage) => {
+		const responseFailed = responseMessage.done && responseMessage.error;
+		const errorMessage = getErrorMessage(error, $i18n.t('Server connection failed'));
+		responseMessage.error = { content: errorMessage };
 		responseMessage.done = true;
-
 		if (responseMessage.statusHistory) {
 			responseMessage.statusHistory = responseMessage.statusHistory.filter(
 				(status) => status.action !== 'knowledge_search'
 			);
 		}
-
 		history.messages[responseMessage.id] = responseMessage;
+		if (!responseFailed) toast.error(errorMessage);
 	};
 
-	const stopResponse = async (processQueue = true) => {
-		const responseMessage = history.currentId ? history.messages[history.currentId] : null;
+	const stopResponse = async (processQueue = true, messageId = history.currentId) => {
+		const responseMessage = messageId ? history.messages[messageId] : null;
+		if (responseMessage && (responseMessage.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id)
+			return;
+		cancelBrowserInteractions();
+		if (bridge?.connected && responseMessage) responseMessage.bridgeStopping = true;
 		const hasTaskIds = (taskIds?.length ?? 0) > 0;
 		const hasPendingAssistantResponse =
 			!!$chatId &&
@@ -3839,10 +4300,6 @@
 				}
 			}
 
-			if (responseMessage) {
-				history.messages[responseMessage.id] = responseMessage;
-			}
-
 			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
 			}
@@ -3868,6 +4325,8 @@
 			parentId: parentId,
 			childrenIds: [],
 			role: 'user',
+			user_id: $user?.id,
+			user: { id: $user?.id, name: $user?.name },
 			content: userPrompt,
 			models: selectedModels,
 			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
@@ -4053,6 +4512,7 @@
 	};
 
 	const saveChatHandler = async (_chatId, history) => {
+		if (isShared) return;
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
@@ -4067,6 +4527,7 @@
 	};
 
 	const saveControls = async () => {
+		if (isShared) return;
 		if (!$chatId || $temporaryChatEnabled) return;
 		const loaded = chat?.chat ?? {};
 		if (equal(params, loaded.params ?? {}) && equal(chatFiles, loaded.files ?? [])) return;
@@ -4101,8 +4562,7 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled,
-		toolApprovalMode
+		codeInterpreterEnabled
 	});
 
 	const saveDraft = async (draft: any, chatId: string | null = null, debounce = true) => {
@@ -4166,12 +4626,12 @@
 
 	const archiveChatHandler = async (id: string) => {
 		try {
-			await archiveChatById(localStorage.token, id);
+			const res = await archiveChatById(localStorage.token, id);
 			initNewChat();
 			await goto('/');
 			await refreshChatList(localStorage.token, { refreshPinned: true });
 			await refreshFolderChatLists();
-			toast.success($i18n.t('Chat archived.'));
+			toast.success(res?.archived ? $i18n.t('Chat archived.') : $i18n.t('Chat unarchived.'));
 		} catch (error) {
 			console.error('Error archiving chat:', error);
 			toast.error($i18n.t('Failed to archive chat.'));
@@ -4206,6 +4666,7 @@
 				initNewChat();
 				await goto('/');
 				await refreshChatList(localStorage.token, { refreshPinned: true });
+				await refreshFolderChatLists();
 				allTags.set(await getAllTags(localStorage.token));
 				toast.success($i18n.t('Chat deleted.'));
 			}
@@ -4270,6 +4731,35 @@
 	/>
 {/if}
 
+<EventConfirmDialog
+	show={pendingUrlActions !== null}
+	title={$i18n.t('Open link')}
+	on:confirm={async () => {
+		const actions = pendingUrlActions;
+		const url = $page.url.href;
+		pendingUrlActions = null;
+		if (!actions) return;
+		for (const source of actions.urls) {
+			if ($page.url.href !== url) return;
+			await uploadWeb(source);
+		}
+		if (actions.call && $page.url.href === url) openCallOverlay();
+	}}
+	on:cancel={() => (pendingUrlActions = null)}
+>
+	<div class="text-sm text-gray-500 space-y-2 max-h-60 overflow-auto break-words">
+		{#if pendingUrlActions?.urls.length}
+			<p>{$i18n.t('Load content from these URLs?')}</p>
+			{#each pendingUrlActions.urls as url}
+				<p>{url}</p>
+			{/each}
+		{/if}
+		{#if pendingUrlActions?.call}
+			<p>{$i18n.t('Start a voice call using your microphone?')}</p>
+		{/if}
+	</div>
+</EventConfirmDialog>
+
 <WebSearchConfirmDialog
 	bind:show={showWebSearchConfirm}
 	title={$i18n.t('Use Web Search?')}
@@ -4321,6 +4811,29 @@
 		eventCallback(false);
 	}}
 />
+
+{#if browserInteraction?.data?.tool_call}
+	{#key browserInteraction.id}
+		{@const interaction = browserInteraction}
+		<EventConfirmDialog
+			show={true}
+			title={$i18n.t('Tool Permissions')}
+			confirmLabel={$i18n.t('Allow')}
+			cancelLabel={$i18n.t('Deny')}
+			on:confirm={() => resolveBrowserInteraction(interaction, true)}
+			on:cancel={() => resolveBrowserInteraction(interaction, false)}
+		>
+			<div class="text-sm text-gray-500">
+				<div class="font-medium break-all">{interaction.data.tool_call.name}</div>
+				<pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify(
+						interaction.data.tool_call.arguments,
+						null,
+						2
+					)}</pre>
+			</div>
+		</EventConfirmDialog>
+	{/key}
+{/if}
 
 <div
 	class="{embedded
@@ -4376,9 +4889,10 @@
 					{:else}
 						<Navbar
 							bind:this={navbarElement}
-							{readOnly}
+							readOnly={isShared}
 							chat={{
 								id: $chatId,
+								archived: chat?.archived ?? false,
 								chat: {
 									title: $chatTitle,
 									models: selectedModels,
@@ -4453,8 +4967,9 @@
 									<Messages
 										bind:this={messagesRef}
 										chatId={$chatId}
-										user={chatOwner ?? $user}
-										{readOnly}
+										user={chatOwner ?? (chat ? { id: chat.user_id } : $user)}
+										readOnly={isShared}
+										shareMode={chat?.chat?.share_mode ?? null}
 										bind:history
 										bind:autoScroll
 										bind:prompt
@@ -4483,18 +4998,36 @@
 								</div>
 							</div>
 
-							{#if readOnly}
-								<div class="pb-6 z-10">
-									<div class="text-xs text-gray-400 dark:text-gray-500 text-center">
-										{$i18n.t('Read only')}
+							{#if isShared && chat?.chat?.share_mode !== 'continue'}
+								{#if canClone}
+									<div
+										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
+									>
+										<button
+											class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
+											disabled={generating || !!taskIds?.length || !history.currentId}
+											on:click={() => handleForkChat()}
+										>
+											{$i18n.t('Fork chat')}
+										</button>
+										<button
+											class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
+											disabled={cloning}
+											on:click={cloneSharedChat}
+										>
+											{$i18n.t('Clone Chat')}
+										</button>
 									</div>
-								</div>
+								{/if}
 							{:else}
 								<div
 									id={embedded ? messageInputDropzoneId : undefined}
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
+										{typingUsers}
+										on:typing={(event) => emitTyping(event.detail)}
+										callActive={!!(bridge?.connected || bridge?.connecting)}
 										bind:this={messageInput}
 										{history}
 										{taskIds}
@@ -4587,6 +5120,9 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
+										{typingUsers}
+										on:typing={(event) => emitTyping(event.detail)}
+										callActive={!!(bridge?.connected || bridge?.connecting)}
 										bind:this={messageInput}
 										{history}
 										{taskIds}
@@ -4648,6 +5184,7 @@
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
+									callActive={!!(bridge?.connected || bridge?.connecting)}
 									bind:selectedModelIdx
 									{history}
 									bind:selectedModels
@@ -4718,6 +5255,8 @@
 						}, [])}
 						submitPrompt={submitHandler}
 						{stopResponse}
+						{bridge}
+						bind:callMode
 						{showMessage}
 						{eventTarget}
 						{codeInterpreterEnabled}

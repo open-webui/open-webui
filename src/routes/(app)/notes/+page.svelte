@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	import dayjs from '$lib/dayjs';
 	import { showSidebar } from '$lib/stores';
@@ -10,28 +10,40 @@
 
 	import Notes from '$lib/components/notes/Notes.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
+	const i18n = getContext('i18n');
+	const title = $page.url.searchParams.get('title') ?? dayjs().format('YYYY-MM-DD');
+	const content = $page.url.searchParams.get('content') ?? '';
 	let loaded = false;
+	let showConfirm = false;
 
-	onMount(async () => {
+	onMount(() => {
 		if (
 			$page.url.searchParams.get('content') !== null ||
 			$page.url.searchParams.get('title') !== null
 		) {
-			const title = $page.url.searchParams.get('title') ?? dayjs().format('YYYY-MM-DD');
-			const content = $page.url.searchParams.get('content') ?? '';
-
-			const res = await createNoteHandler(title, content);
-
-			if (res) {
-				goto(`/notes/${res.id}`, { replaceState: true });
-			}
-			return;
+			showConfirm = true;
 		}
 
 		loaded = true;
 	});
 </script>
+
+<ConfirmDialog
+	bind:show={showConfirm}
+	title={$i18n.t('Create a new note')}
+	on:confirm={async () => {
+		const res = await createNoteHandler(title, content);
+		if (res) goto(`/notes/${res.id}`, { replaceState: true });
+		else showConfirm = true;
+	}}
+>
+	<div class="text-sm text-gray-500 whitespace-pre-wrap break-words max-h-60 overflow-auto">
+		<div class="font-medium">{title}</div>
+		{content}
+	</div>
+</ConfirmDialog>
 
 <div
 	class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar

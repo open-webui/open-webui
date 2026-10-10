@@ -9,7 +9,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder } from '$lib/stores';
+	import { selectedFolder, user } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -43,14 +43,14 @@
 	let deleteFolderContents = true;
 
 	const updateHandler = async ({ name, meta, data }) => {
-		if (name === '') {
+		name = name?.trim();
+		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
 		const currentName = folder.name;
 
-		name = name.trim();
 		folder.name = name;
 
 		const res = await updateFolderById(localStorage.token, folder.id, {
@@ -140,12 +140,11 @@
 	};
 
 	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
-		if (name === '') {
+		name = name?.trim();
+		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
-
-		name = name.trim();
 
 		const res = await createNewFolder(localStorage.token, {
 			name,
@@ -248,6 +247,7 @@
 		{#if !readOnly}
 			<div class="flex items-center translate-x-2.5">
 				<FolderMenu
+					canShare={$user?.role === 'admin' || folder.user_id === $user?.id}
 					align="end"
 					onEdit={() => {
 						showFolderModal = true;

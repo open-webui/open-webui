@@ -7,7 +7,7 @@
 	import XMark from './icons/XMark.svelte';
 
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let placeholder = '';
 	export let value = '';
@@ -22,7 +22,7 @@
 	let lastWord = '';
 	$: lastWord = value ? value.split(' ').at(-1) : value;
 
-	let options = [
+	$: options = [
 		{
 			name: 'tag:',
 			description: $i18n.t('search for tags')
@@ -56,7 +56,7 @@
 
 	let filteredItems = [];
 
-	$: if (lastWord && lastWord !== null) {
+	$: if (lastWord && $i18n) {
 		initItems();
 	}
 

@@ -154,22 +154,23 @@
 		account: $i18n.t('Profile'),
 		about: $i18n.t('Profile')
 	};
+	// $i18n.t('Experience');
 	$: adminSettingGroups = {
 		'admin:general': $i18n.t('System'),
 		'admin:authentication': $i18n.t('System'),
+		'admin:interface': $i18n.t('System'),
 		'admin:connections': $i18n.t('AI'),
 		'admin:models': $i18n.t('AI'),
 		'admin:subagents': $i18n.t('AI'),
-		'admin:evaluations': $i18n.t('Quality'),
-		'admin:analytics': $i18n.t('Quality'),
 		'admin:integrations': $i18n.t('Tools'),
 		'admin:documents': $i18n.t('Tools'),
+		'admin:audio': $i18n.t('Tools'),
+		'admin:images': $i18n.t('Tools'),
 		'admin:web': $i18n.t('Tools'),
 		'admin:code-execution': $i18n.t('Tools'),
 		'admin:pipelines': $i18n.t('Tools'),
-		'admin:interface': $i18n.t('Experience'),
-		'admin:audio': $i18n.t('Experience'),
-		'admin:images': $i18n.t('Experience'),
+		'admin:evaluations': $i18n.t('Quality'),
+		'admin:analytics': $i18n.t('Quality'),
 		'admin:db': $i18n.t('Data')
 	};
 	const settingGroupTitle = (tabId: string) =>
@@ -178,7 +179,7 @@
 	const shouldShowSettingGroup = (tabIds: string[], index: number) =>
 		index === 0 || settingGroupTitle(tabIds[index]) !== settingGroupTitle(tabIds[index - 1]);
 	const settingGroupHeadingClass = (first: boolean) =>
-		`hidden md:block shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 ${
+		`hidden md:block shrink-0 text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 ${
 			first ? 'mt-0.5' : 'mt-2'
 		} mb-0.5`;
 
@@ -278,6 +279,12 @@
 			searchPrefixes: ['settings.admin.authentication.']
 		},
 		{
+			id: 'admin:interface',
+			titleKey: 'settings.admin.interface.title',
+			title: $i18n.t('settings.admin.interface.title'),
+			searchPrefixes: ['settings.admin.interface.', 'settings.personal.general.parameters.']
+		},
+		{
 			id: 'admin:connections',
 			titleKey: 'settings.admin.connections.title',
 			title: $i18n.t('settings.admin.connections.title'),
@@ -296,10 +303,16 @@
 			searchPrefixes: ['settings.admin.subagents.']
 		},
 		{
-			id: 'admin:interface',
-			titleKey: 'settings.admin.interface.title',
-			title: $i18n.t('settings.admin.interface.title'),
-			searchPrefixes: ['settings.admin.interface.', 'settings.personal.general.parameters.']
+			id: 'admin:integrations',
+			titleKey: 'settings.admin.integrations.title',
+			title: $i18n.t('settings.admin.integrations.title'),
+			searchPrefixes: ['settings.admin.integrations.']
+		},
+		{
+			id: 'admin:documents',
+			titleKey: 'settings.admin.documents.title',
+			title: $i18n.t('settings.admin.documents.title'),
+			searchPrefixes: ['settings.admin.documents.']
 		},
 		{
 			id: 'admin:audio',
@@ -312,30 +325,6 @@
 			titleKey: 'settings.admin.images.title',
 			title: $i18n.t('settings.admin.images.title'),
 			searchPrefixes: ['settings.admin.images.']
-		},
-		{
-			id: 'admin:evaluations',
-			titleKey: 'settings.admin.evaluations.title',
-			title: $i18n.t('settings.admin.evaluations.title'),
-			searchPrefixes: ['settings.admin.evaluations.']
-		},
-		{
-			id: 'admin:analytics',
-			titleKey: 'settings.admin.analytics.title',
-			title: $i18n.t('settings.admin.analytics.title'),
-			searchPrefixes: ['settings.admin.analytics.']
-		},
-		{
-			id: 'admin:integrations',
-			titleKey: 'settings.admin.integrations.title',
-			title: $i18n.t('settings.admin.integrations.title'),
-			searchPrefixes: ['settings.admin.integrations.']
-		},
-		{
-			id: 'admin:documents',
-			titleKey: 'settings.admin.documents.title',
-			title: $i18n.t('settings.admin.documents.title'),
-			searchPrefixes: ['settings.admin.documents.']
 		},
 		{
 			id: 'admin:web',
@@ -354,6 +343,18 @@
 			titleKey: 'settings.admin.pipelines.title',
 			title: $i18n.t('settings.admin.pipelines.title'),
 			searchPrefixes: ['settings.admin.pipelines.']
+		},
+		{
+			id: 'admin:analytics',
+			titleKey: 'settings.admin.analytics.title',
+			title: $i18n.t('settings.admin.analytics.title'),
+			searchPrefixes: ['settings.admin.analytics.']
+		},
+		{
+			id: 'admin:evaluations',
+			titleKey: 'settings.admin.evaluations.title',
+			title: $i18n.t('settings.admin.evaluations.title'),
+			searchPrefixes: ['settings.admin.evaluations.']
 		},
 		{
 			id: 'admin:db',
@@ -467,7 +468,7 @@
 		`flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 ${
 			active
 				? 'font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.04]'
-				: 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+				: 'text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
 		}`;
 
 	let selectedTab = 'general';
@@ -508,7 +509,7 @@
 <Modal
 	size="full"
 	containerClassName="p-4 sm:p-6 lg:p-8"
-	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(max(54rem,80dvh),calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl overflow-hidden"
+	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl overflow-hidden"
 	bind:show={modalShow}
 >
 	<nav
@@ -516,7 +517,7 @@
 		class="shrink-0 min-w-0 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
 	>
 		<button
-			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-600 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
 			type="button"
 			on:click={() => {
 				show = false;
@@ -535,7 +536,7 @@
 			<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
 			<input
 				data-settings-search
-				class="w-full text-xs bg-transparent py-1 outline-hidden dark:text-gray-300"
+				class="w-full text-xs bg-transparent py-1 outline-hidden placeholder:text-gray-600 dark:text-gray-300 dark:placeholder:text-gray-500"
 				bind:value={search}
 				id="search-input-settings-modal"
 				on:keydown={searchKeydown}
@@ -555,7 +556,7 @@
 			class="tabs scrollbar-none max-h-32 md:max-h-none flex min-w-0 flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
 		>
 			<span
-				class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mt-1.5 mb-0.5"
+				class="hidden md:block text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 mt-1.5 mb-0.5"
 			>
 				{$i18n.t('Personal')}
 			</span>
@@ -749,7 +750,7 @@
 				<div
 					class="hidden md:block shrink-0 self-stretch h-px mx-1 my-2 bg-gray-100/40 dark:bg-white/[0.025]"
 				></div>
-				<span class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mb-0.5">
+				<span class="hidden md:block text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 mb-0.5">
 					{$i18n.t('Admin')}
 				</span>
 
@@ -779,7 +780,7 @@
 			{/if}
 
 			{#if filteredSettings.length === 0}
-				<div class="px-2 py-1 text-xs text-gray-400 dark:text-gray-600">
+				<div class="px-2 py-1 text-xs text-gray-600 dark:text-gray-500">
 					{$i18n.t('No matches')}
 				</div>
 			{/if}
@@ -878,7 +879,7 @@
 				<AdminCodeExecution saveHandler={adminConfigSaveHandler} />
 			{:else if selectedTab === 'admin:interface'}
 				<AdminInterface
-					on:save={() => {
+					saveHandler={() => {
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}
 				/>

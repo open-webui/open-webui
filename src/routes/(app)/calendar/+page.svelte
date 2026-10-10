@@ -6,6 +6,7 @@
 	import {
 		getCalendars,
 		getCalendarEvents,
+		getCalendarEventById,
 		deleteCalendar,
 		type CalendarModel,
 		type CalendarEventModel
@@ -21,7 +22,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	let loaded = false;
 	let calendars: CalendarModel[] = [];
@@ -134,7 +135,7 @@
 		showEventModal = true;
 	}
 
-	function handleEventClick(e: CustomEvent<CalendarEventModel>) {
+	async function handleEventClick(e: CustomEvent<CalendarEventModel>) {
 		const evt = e.detail;
 		if (evt.meta?.automation_id) {
 			if (evt.meta?.chat_id) {
@@ -144,7 +145,9 @@
 			}
 			return;
 		}
-		editEvent = evt;
+		editEvent = evt.instance_id
+			? ((await getCalendarEventById(localStorage.token, evt.id)) ?? evt)
+			: evt;
 		defaultStartAt = null;
 		showEventModal = true;
 	}
@@ -258,7 +261,7 @@
 						<button
 							class="p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={() => navigateCalendar(-1)}
-							aria-label="Previous"
+							aria-label={$i18n.t('Previous')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -277,7 +280,7 @@
 						<button
 							class="p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={() => navigateCalendar(1)}
-							aria-label="Next"
+							aria-label={$i18n.t('Next')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -367,8 +370,7 @@
 					bind:currentDate
 					on:createEvent={handleCreateEvent}
 					on:eventClick={handleEventClick}
-					on:navigate={handleNavigate}
-					on:viewChange={handleNavigate}
+					onNavigate={handleNavigate}
 				/>
 			</div>
 		</div>

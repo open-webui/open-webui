@@ -76,7 +76,12 @@
 			contentEl.style.paddingLeft = `${sideOffset}px`;
 		} else {
 			// Open to the left: position flush with trigger, bridge gap with right padding
-			contentEl.style.right = `${window.innerWidth - rect.left}px`;
+			// Neither side fits on narrow screens: overlap the menu to stay on screen
+			const right = Math.min(
+				window.innerWidth - rect.left,
+				window.innerWidth - contentWidth - sideOffset - 16
+			);
+			contentEl.style.right = `${right}px`;
 			contentEl.style.left = 'auto';
 			contentEl.style.paddingRight = `${sideOffset}px`;
 		}

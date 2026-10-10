@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import Chat from '$lib/components/chat/Chat.svelte';
@@ -10,9 +10,9 @@
 	import { selectedFolder } from '$lib/stores';
 
 	let ready = false;
+	let loadedFolderId = '';
 
-	onMount(async () => {
-		const folderId = $page.params.folderId;
+	const init = async (folderId) => {
 		if (!folderId) {
 			await goto('/');
 			return;
@@ -27,6 +27,10 @@
 				return null;
 			});
 
+			if (folderId !== loadedFolderId) {
+				return;
+			}
+
 			if (!folder) {
 				await goto('/');
 				return;
@@ -36,7 +40,12 @@
 		}
 
 		ready = true;
-	});
+	};
+
+	$: if ($page.params.folderId !== loadedFolderId) {
+		loadedFolderId = $page.params.folderId;
+		init(loadedFolderId);
+	}
 
 	onDestroy(() => {
 		selectedFolder.set(null);

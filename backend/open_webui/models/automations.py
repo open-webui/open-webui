@@ -195,7 +195,7 @@ class AutomationTable:
                 stmt = stmt.filter(
                     or_(
                         Automation.name.ilike(f'%{query}%'),
-                        *(data_text.ilike(f'%{variant}%') for variant in json_text_variants(query)),
+                        *(data_text.icontains(variant, autoescape=True) for variant in json_text_variants(query)),
                     )
                 )
 
@@ -241,6 +241,15 @@ class AutomationTable:
                 row.is_active = form.is_active
             row.next_run_at = next_run_at
             row.updated_at = int(time.time_ns())
+            await db.commit()
+            return AutomationModel.model_validate(row)
+
+    async def update_last_run_at(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id)
+            if not row:
+                return None
+            row.last_run_at = int(time.time_ns())
             await db.commit()
             return AutomationModel.model_validate(row)
 

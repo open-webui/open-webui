@@ -4,6 +4,8 @@ import logging
 from functools import lru_cache
 
 from cryptography.fernet import Fernet, InvalidToken
+from fastapi import HTTPException
+from pydantic import ValidationError
 from open_webui.env import ENABLE_VALVE_ENCRYPTION, WEBUI_SECRET_KEY
 from open_webui.utils.json_codec import JSONCodec
 
@@ -39,3 +41,23 @@ def decrypt_valves(valves) -> dict:
         return {}
 
     return decrypted if isinstance(decrypted, dict) else {}
+
+
+def validate_valves(module, valves):
+    if hasattr(module, 'Valves'):
+        values = decrypt_valves(valves) or {}
+        try:
+            # Validate without replacing the stored values (including unused keys/secrets).
+            module.Valves(**{key: value for key, value in values.items() if value is not None})
+        except Exception as error:
+            # Required fields with no stored value yet get filled in after saving.
+            if isinstance(error, ValidationError) and all(item['type'] == 'missing' for item in error.errors()):
+                return
+            detail = (
+                '; '.join(
+                    f'{".".join(map(str, item["loc"]))}: {item["msg"]}' for item in error.errors(include_input=False)
+                )
+                if isinstance(error, ValidationError)
+                else str(error)
+            )
+            raise HTTPException(400, f'Current Valves are incompatible with this code: {detail}') from error

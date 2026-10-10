@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { tick } from 'svelte';
+	import { mobile } from '$lib/stores';
 
 	/** Whether the dropdown is open */
 	export let show = false;
@@ -11,8 +12,14 @@
 	/** Alignment: 'start' | 'end' */
 	export let align = 'start';
 
+	/** Optional positioning anchor within a larger clickable trigger. */
+	export let anchorElement: HTMLElement | null = null;
+
 	/** Close when clicking outside */
 	export let closeOnOutsideClick = true;
+
+	/** Close action menus after selection. Submenu triggers prevent the default click. */
+	export let closeOnSelect = false;
 
 	/** Called when open/close state changes */
 	export let onOpenChange: (state: boolean) => void = () => {};
@@ -110,7 +117,7 @@
 
 	function positionContentDefault() {
 		if (!triggerEl || !contentEl) return;
-		const rect = triggerEl.getBoundingClientRect();
+		const rect = (anchorElement ?? triggerEl).getBoundingClientRect();
 		resolvedMaxHeight = maxHeight;
 
 		contentEl.style.position = 'fixed';
@@ -159,7 +166,7 @@
 
 	function positionContentVisualViewport() {
 		if (!triggerEl || !contentEl) return;
-		const rect = triggerEl.getBoundingClientRect();
+		const rect = (anchorElement ?? triggerEl).getBoundingClientRect();
 		const viewport = visualViewportRect();
 		const viewportRight = viewport.left + viewport.width;
 		const viewportBottom = viewport.top + viewport.height;
@@ -268,24 +275,38 @@
 		previouslyFocused = null;
 	}
 
+	function restoreFocusAfterClose() {
+		if (contentEl?.contains(document.activeElement) && previouslyFocused?.isConnected) {
+			previouslyFocused.focus();
+		}
+		previouslyFocused = null;
+	}
+
 	function toggleOpen() {
 		if (show) {
 			closeDropdown();
 		} else {
-			openDropdown(true);
+			openDropdown(!$mobile);
 		}
 	}
 
 	// React to external show changes (e.g. bind:show toggled by parent component)
 	$: if (show) {
 		afterOpen();
+	} else {
+		restoreFocusAfterClose();
 	}
 
-	function handleWindowPointerDown(event: PointerEvent) {
-		if (!show || !closeOnOutsideClick) return;
+	function handleWindowClick(event: MouseEvent) {
+		if (!show || !closeOnOutsideClick || event.detail === 0) return;
 		if (!(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
+		// Submenus and listboxes can be portaled outside contentEl.
+		if (event.target instanceof Element && event.target.closest('[role="menu"], [role="listbox"]'))
+			return;
+		event.preventDefault();
+		event.stopPropagation();
 		closeDropdown(false);
 	}
 
@@ -302,10 +323,7 @@
 
 	import { onMount, onDestroy } from 'svelte';
 
-	let onPointerDown: ((e: PointerEvent) => void) | undefined;
 	onMount(() => {
-		onPointerDown = (e) => handleWindowPointerDown(e);
-		document.addEventListener('pointerdown', onPointerDown, true);
 		if (visualViewportAware) {
 			window.visualViewport?.addEventListener('resize', scheduleSettledPositionUpdates);
 			window.visualViewport?.addEventListener('scroll', schedulePositionUpdate);
@@ -314,9 +332,6 @@
 	onDestroy(() => {
 		if (positionFrame != null) cancelAnimationFrame(positionFrame);
 		for (const timer of settleTimers) window.clearTimeout(timer);
-		if (onPointerDown) {
-			document.removeEventListener('pointerdown', onPointerDown, true);
-		}
 		if (visualViewportAware) {
 			window.visualViewport?.removeEventListener('resize', scheduleSettledPositionUpdates);
 			window.visualViewport?.removeEventListener('scroll', schedulePositionUpdate);
@@ -325,6 +340,7 @@
 </script>
 
 <svelte:window
+	on:click|capture={handleWindowClick}
 	on:keydown={handleKeydown}
 	on:scroll|capture={positionContent}
 	on:resize={positionContent}
@@ -351,7 +367,10 @@
 		style:max-height={resolvedMaxHeight}
 		style:overflow-y="auto"
 		transition:flyAndScale
-		on:click={(e) => e.stopPropagation()}
+		on:click={(e) => {
+			e.stopPropagation();
+			if (closeOnSelect && !e.defaultPrevented) closeDropdown();
+		}}
 		on:pointerdown={(e) => e.stopPropagation()}
 	>
 		<slot name="content" />

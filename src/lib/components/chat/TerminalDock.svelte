@@ -251,8 +251,8 @@
 			on:click={() => (expanded ? (expanded = false) : select(activeId || 'shell'))}
 			class="tab-button flex h-7 w-7 shrink-0 items-center justify-center"
 			aria-expanded={expanded}
-			title={$i18n.t(expanded ? 'Collapse terminal' : 'Expand terminal')}
-			aria-label={$i18n.t(expanded ? 'Collapse terminal' : 'Expand terminal')}
+			title={expanded ? $i18n.t('Collapse terminal') : $i18n.t('Expand terminal')}
+			aria-label={expanded ? $i18n.t('Collapse terminal') : $i18n.t('Expand terminal')}
 		>
 			<Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={12} />
 		</button>

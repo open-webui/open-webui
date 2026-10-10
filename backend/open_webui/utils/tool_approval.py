@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
+from open_webui.models.users import Users
 from open_webui.socket.main import get_event_emitter
 from open_webui.utils.json_codec import JSONCodec
 
@@ -24,8 +26,8 @@ async def resolve_tool_call_output(
     user,
     db: AsyncSession | None = None,
 ) -> dict:
-    chat = await Chats.get_chat_by_id(chat_id, db=db)
-    if not chat or (chat.user_id != user.id and user.role != 'admin'):
+    chat = await Chats.get_accessible_chat_by_id(chat_id, user, db=db, permission='write')
+    if not chat:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -34,6 +36,9 @@ async def resolve_tool_call_output(
     message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
     if not message:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if (message.get('user_id') or chat.user_id) != user.id:
+        raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
     output = message.get('output') or []
     if not isinstance(output, list):
@@ -106,7 +111,7 @@ async def resolve_tool_call_output(
 
     event_emitter = await get_event_emitter(
         {
-            'user_id': chat.user_id,
+            'user_id': user.id,
             'chat_id': chat_id,
             'message_id': message_id,
         },
@@ -145,6 +150,8 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
     chat_data = chat.chat or {}
     message_meta = assistant_message.get('meta') if isinstance(assistant_message.get('meta'), dict) else {}
     chat_params = chat_data.get('params') if isinstance(chat_data.get('params'), dict) else {}
+    if (assistant_message.get('user_id') or chat.user_id) != chat.user_id:
+        chat_params = {}
     params = {
         **chat_params,
         **(message_meta.get('params') if isinstance(message_meta.get('params'), dict) else {}),
@@ -160,15 +167,24 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Tool call message model is missing.')
 
     messages = []
-    if params.get('system'):
-        messages.append({'role': 'system', 'content': params.get('system')})
+    system_prompt = params.get('system')
+    if not system_prompt:
+        # Mirror the chat UI's system prompt fallback
+        user = await Users.get_user_by_id(assistant_message.get('user_id') or chat.user_id)
+        ui_settings = (user.settings.ui if user and user.settings else None) or {}
+        system_prompt = ui_settings.get('system')
+        if system_prompt is None:
+            default_interface_settings = await Config.get('ui.default_interface_settings') or {}
+            system_prompt = default_interface_settings.get('system')
+    if system_prompt:
+        messages.append({'role': 'system', 'content': system_prompt})
 
     return {
         'stream': params.get('stream_response', True),
         'model': model_id,
         'messages': messages,
         'params': params,
-        'files': message_meta.get('files') or chat_data.get('files') or None,
+        'files': message_meta.get('files') if 'files' in message_meta else chat_data.get('files'),
         'filter_ids': message_meta.get('filter_ids') or None,
         'tool_ids': message_meta.get('tool_ids') or None,
         'skill_ids': message_meta.get('skill_ids') or None,
@@ -176,7 +192,9 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
         'tool_servers': message_meta.get('tool_servers') or None,
         'features': message_meta.get('features') or {},
         'variables': message_meta.get('variables') or {},
-        'chat_variables': chat.variables,
+        'chat_variables': chat.variables
+        if (assistant_message.get('user_id') or chat.user_id) == chat.user_id
+        else {},
         'session_id': message_meta.get('session_id'),
         'chat_id': chat_id,
         'id': message_id,

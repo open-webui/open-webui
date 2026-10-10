@@ -10,11 +10,11 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import MapSelector from '$lib/components/common/Valves/MapSelector.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let show = false;
 	export let variables = {};
-	export let title = $i18n.t('Input Variables');
+	export let title: string | undefined = undefined;
 
 	export let onSave = (e) => {};
 
@@ -81,7 +81,7 @@
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">
-				{title}
+				{title ?? $i18n.t('Input Variables')}
 			</div>
 			<button
 				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"

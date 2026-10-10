@@ -11,7 +11,7 @@
 	import { chatId } from '$lib/stores';
 	import SearchInput from './SearchInput.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let onSelect = (e) => {};
 
@@ -83,8 +83,7 @@
 					return {
 						...item,
 						type: 'chat',
-						name: item.title,
-						description: item.snippet || dayjs(item.updated_at * 1000).fromNow()
+						name: item.title
 					};
 				})
 		];
@@ -141,7 +140,10 @@
 						>
 							<div class="text-black dark:text-gray-100 flex items-center gap-1.5">
 								<Tooltip
-									content={item.description || decodeString(item?.name)}
+									content={item.snippet ||
+										dayjs(item.updated_at * 1000)
+											.locale($i18n.language)
+											.fromNow()}
 									placement="top-start"
 								>
 									<div class="line-clamp-1 flex-1">

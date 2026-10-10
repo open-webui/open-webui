@@ -167,8 +167,10 @@ async def search_users(
 
 
 @router.get('/groups')
-async def get_user_groups(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    return await Groups.get_groups_by_member_id(user.id, db=db)
+async def get_user_groups(
+    include_inherited: bool = False, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    return await user_groups_response(user.id, include_inherited, db)
 
 
 ############################
@@ -912,6 +914,21 @@ async def get_user_active_status_by_id(
 ############################
 
 
+@router.post('/{user_id}/sessions/revoke', response_model=bool)
+async def revoke_user_sessions(request: Request, user_id: str, session_user=Depends(get_admin_user)):
+    target = await Users.get_user_by_id(user_id)
+    if target is None:
+        raise HTTPException(404, 'User not found.')
+    first_user = await Users.get_first_user()
+    if first_user and first_user.id == user_id and session_user.id != user_id:
+        raise HTTPException(403, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+    await revoke_user_tokens(request, user_id)
+    await publish_event(
+        request, EVENTS.AUTH_SESSIONS_REVOKED, actor=session_user, subject_id=user_id, subject_type='user'
+    )
+    return True
+
+
 @router.post('/{user_id}/update', response_model=UserModel | None)
 async def update_user_by_id(
     request: Request,
@@ -967,7 +984,9 @@ async def update_user_by_id(
 
             hashed = await get_password_hash(form_data.password)
             if await Auths.update_user_password_by_id(user_id, hashed, db=db):
-                await revoke_user_tokens(request, user_id)
+                from open_webui.socket.main import disconnect_user_sessions
+
+                await disconnect_user_sessions(user_id)
 
         # Build update dict from only the provided fields
         update_data = {}
@@ -1091,9 +1110,12 @@ async def delete_user_by_id(
 
 @router.get('/{user_id}/groups')
 async def get_user_groups_by_id(
-    user_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+    user_id: str,
+    include_inherited: bool = False,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    return await Groups.get_groups_by_member_id(user_id, db=db)
+    return await user_groups_response(user_id, include_inherited, db)
 
 
 ############################
@@ -1116,7 +1138,7 @@ async def get_user_preview(
         )
 
     # Get all group IDs this user belongs to
-    user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+    user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
     user_group_ids = {g.id for g in user_groups}
 
     all_models = await Models.get_all_models(db=db)
@@ -1172,3 +1194,12 @@ async def get_user_preview(
             'total': len(all_tools),
         },
     }
+
+
+async def user_groups_response(user_id, include_inherited, db):
+    direct = await Groups.get_groups_by_member_id(user_id, db=db)
+    if not include_inherited:
+        return direct
+    direct_ids = {g.id for g in direct}
+    effective = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+    return [{**g.model_dump(), 'membership_type': 'direct' if g.id in direct_ids else 'inherited'} for g in effective]

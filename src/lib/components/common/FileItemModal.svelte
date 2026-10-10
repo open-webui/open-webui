@@ -4,7 +4,7 @@
 
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { formatFileSize, getLineCount } from '$lib/utils';
+	import { formatFileSize, getLineCount, safeLinkUrl } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
@@ -49,17 +49,17 @@
 	let excelSheetNames: string[] = [];
 	let selectedSheet = '';
 	let excelHtml = '';
-	let excelError = '';
+	let excelError = false;
 	let rowCount = 0;
 
 	// DOCX state
 	let docxData: ArrayBuffer | null = null;
-	let docxError = '';
+	let docxError = false;
 
 	// PPTX state
 	let pptxSlides: string[] = [];
 	let pptxCurrentSlide = 0;
-	let pptxError = '';
+	let pptxError = false;
 
 	let panzoomRef: PanzoomContainer;
 	const resetImageView = () => {
@@ -140,7 +140,7 @@
 
 	const loadExcelContent = async () => {
 		try {
-			excelError = '';
+			excelError = false;
 			const [arrayBuffer, { read }] = await Promise.all([
 				getFileContentById(item.id),
 				import('xlsx')
@@ -154,7 +154,7 @@
 			}
 		} catch (error) {
 			console.error('Error loading Excel/CSV file:', error);
-			excelError = $i18n.t('Failed to load Excel/CSV file. Please try downloading it instead.');
+			excelError = true;
 		}
 	};
 
@@ -173,17 +173,17 @@
 
 	const loadDocxContent = async () => {
 		try {
-			docxError = '';
+			docxError = false;
 			docxData = await getFileContentById(item.id);
 		} catch (error) {
 			console.error('Error loading DOCX file:', error);
-			docxError = $i18n.t('Failed to load DOCX file. Please try downloading it instead.');
+			docxError = true;
 		}
 	};
 
 	const loadPptxContent = async () => {
 		try {
-			pptxError = '';
+			pptxError = false;
 			const [arrayBuffer, { pptxToImages }] = await Promise.all([
 				getFileContentById(item.id),
 				import('$lib/utils/pptxToHtml')
@@ -193,7 +193,7 @@
 			pptxCurrentSlide = 0;
 		} catch (error) {
 			console.error('Error loading PPTX file:', error);
-			pptxError = $i18n.t('Failed to load PPTX file. Please try downloading it instead.');
+			pptxError = true;
 		}
 	};
 
@@ -264,7 +264,7 @@
 							href="#"
 							class="hover:underline line-clamp-1"
 							on:click|preventDefault={() => {
-								if (item.type === 'file' || item.url) {
+								if (item.type === 'file' || safeLinkUrl(item.url)) {
 									let fileId = item?.id ?? item?.tempId;
 									window.open(
 										item.type === 'file'
@@ -309,7 +309,9 @@
 
 							{#if item?.created_at}
 								<div class="capitalize shrink-0">
-									{dayjs(item.created_at * 1000).format('LL')}
+									{dayjs(item.created_at * 1000)
+										.locale($i18n.language)
+										.format('LL')}
 								</div>
 							{/if}
 						{/if}
@@ -519,7 +521,7 @@
 					{:else if isExcel}
 						{#if excelError}
 							<div class="text-red-500 text-sm p-4">
-								{excelError}
+								{$i18n.t('Failed to load Excel/CSV file. Please try downloading it instead.')}
 							</div>
 						{:else}
 							{#if excelSheetNames.length > 1}
@@ -567,7 +569,9 @@
 						</div>
 					{:else if isDocx}
 						{#if docxError}
-							<div class="text-red-500 text-sm p-4">{docxError}</div>
+							<div class="text-red-500 text-sm p-4">
+								{$i18n.t('Failed to load DOCX file. Please try downloading it instead.')}
+							</div>
 						{:else if docxData}
 							<DocxPreview data={docxData} className="h-[60vh]" />
 						{:else}
@@ -575,7 +579,9 @@
 						{/if}
 					{:else if isPptx}
 						{#if pptxError}
-							<div class="text-red-500 text-sm p-4">{pptxError}</div>
+							<div class="text-red-500 text-sm p-4">
+								{$i18n.t('Failed to load PPTX file. Please try downloading it instead.')}
+							</div>
 						{:else if pptxSlides.length > 0}
 							<PptxPreview
 								slides={pptxSlides}

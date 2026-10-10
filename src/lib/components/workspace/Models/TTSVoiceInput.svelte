@@ -99,7 +99,7 @@
 	bind:this={inputElement}
 	bind:value
 	id={`${id}-input`}
-	class="{className} text-sm bg-transparent outline-hidden"
+	class="{className} block h-5 py-0 text-xs leading-5 bg-transparent outline-hidden"
 	type="text"
 	{placeholder}
 	role="combobox"

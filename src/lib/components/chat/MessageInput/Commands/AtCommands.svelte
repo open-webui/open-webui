@@ -38,7 +38,6 @@
 	export let filteredItems: any[] = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	let folderItems: any[] = [];
 	let filesystemItems: any[] = [];
 	let knowledgeItems: any[] = [];
 	let fileItems: any[] = [];
@@ -98,7 +97,6 @@
 	const getItems = () => {
 		const terminal = getSelectedTerminal();
 		getFilesystemItems(terminal);
-		getFolderItems();
 		getKnowledgeItems();
 		getKnowledgeFileItems();
 	};
@@ -158,16 +156,14 @@
 		return directTerminal?.url ? { url: directTerminal.url, key: directTerminal.key ?? '' } : null;
 	};
 
-	const getFolderItems = () => {
-		folderItems = (($folders ?? []) as any[])
-			.map((folder) => ({
-				...folder,
-				type: 'folder',
-				description: $i18n.t('Folder'),
-				title: folder.name
-			}))
-			.filter((folder: any) => folder.name.toLowerCase().includes(query.toLowerCase()));
-	};
+	$: folderItems = (($folders ?? []) as any[])
+		.map((folder) => ({
+			...folder,
+			type: 'folder',
+			description: $i18n.t('Folder'),
+			title: folder.name
+		}))
+		.filter((folder: any) => folder.name.toLowerCase().includes(query.toLowerCase()));
 
 	const getKnowledgeItems = async () => {
 		const res = await searchKnowledgeBases(localStorage.token, query).catch(() => null);

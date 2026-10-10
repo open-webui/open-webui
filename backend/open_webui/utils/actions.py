@@ -4,7 +4,7 @@ import sys
 from typing import Any
 
 from fastapi import Request
-from open_webui.env import ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
+from open_webui.env import ENABLE_FUNCTIONS, GLOBAL_LOG_LEVEL
 from open_webui.models.functions import Functions
 from open_webui.models.users import UserModel
 from open_webui.socket.main import get_event_call, get_event_emitter
@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 
 
 async def chat_action(request: Request, action_id: str, form_data: dict, user: Any):
-    if not ENABLE_PLUGINS:
-        raise Exception('Plugins are disabled by ENABLE_PLUGINS=false')
+    if not ENABLE_FUNCTIONS:
+        raise Exception('Functions are disabled by ENABLE_PLUGINS or ENABLE_FUNCTIONS')
 
     if '.' in action_id:
         action_id, sub_action_id = action_id.split('.')

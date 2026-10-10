@@ -2,6 +2,7 @@
 
 import asyncio
 
+from redis.exceptions import NoPermissionError
 from socketio import AsyncRedisManager
 
 
@@ -38,6 +39,13 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
                     self._redis_connect()
                 return await self.redis.publish(channel, self.json.dumps(data))
             except error as exc:
+                if isinstance(exc, NoPermissionError):
+                    self._get_logger().error(
+                        'Redis denied publishing: %s. Check PUBLISH permission and channel ACLs '
+                        '(&%s and &%s#*). To disable room channels, set '
+                        'WEBSOCKET_REDIS_ROOM_CHANNELS=False on every instance and fully restart the fleet.',
+                        exc, self.channel, self.channel,
+                    )
                 if retries_left > 0:
                     self._get_logger().error('Cannot publish to redis... retrying', extra={'redis_exception': str(exc)})
                     self.connected = False
@@ -61,6 +69,13 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
                 async for message in self.pubsub.listen():
                     yield message
             except error as exc:
+                if isinstance(exc, NoPermissionError):
+                    self._get_logger().error(
+                        'Redis denied subscribing: %s. Check SUBSCRIBE/PSUBSCRIBE permissions and channel ACLs '
+                        '(&%s and &%s#*). To disable room channels, set '
+                        'WEBSOCKET_REDIS_ROOM_CHANNELS=False on every instance and fully restart the fleet.',
+                        exc, self.channel, self.channel,
+                    )
                 self._get_logger().error(
                     f'Cannot receive from redis... retrying in {retry_sleep} secs',
                     extra={'redis_exception': str(exc)},

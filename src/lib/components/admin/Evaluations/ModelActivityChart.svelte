@@ -57,9 +57,9 @@
 		const labels = chartData.map((h) => {
 			const date = new Date('startDate' in h ? h.startDate : h.date);
 			if (aggregateWeekly) {
-				return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+				return date.toLocaleDateString($i18n.language, { month: 'short', day: 'numeric' });
 			}
-			return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+			return date.toLocaleDateString($i18n.language, { month: 'short', day: 'numeric' });
 		});
 
 		// Diverging chart: wins go UP (positive), losses go DOWN (negative)
@@ -166,7 +166,7 @@
 		});
 	};
 
-	$: if (chartCanvas && history.length && !loading && aggregateWeekly !== undefined) {
+	$: if (chartCanvas && history.length && !loading && aggregateWeekly !== undefined && $i18n) {
 		createChart();
 	}
 

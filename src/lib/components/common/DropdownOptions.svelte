@@ -3,18 +3,14 @@
 
 	import Select from '$lib/components/common/Select.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let align = 'center';
 	export let className = '';
 
 	export let value = '';
-	export let placeholder = 'Select an option';
-	export let items = [
-		{ value: 'new', label: $i18n.t('New') },
-		{ value: 'top', label: $i18n.t('Top') }
-	];
-
+	export let placeholder: string | undefined = undefined;
+	export let items: { value: string; label: string }[] | undefined = undefined;
 	export let onChange: (value: string) => void = () => {};
 
 	let selectComponent;
@@ -25,8 +21,11 @@
 	bind:this={selectComponent}
 	bind:value
 	bind:open
-	{items}
-	{placeholder}
+	items={items ?? [
+		{ value: 'new', label: $i18n.t('New') },
+		{ value: 'top', label: $i18n.t('Top') }
+	]}
+	placeholder={placeholder ?? $i18n.t('Select an option')}
 	{align}
 	triggerClass={className
 		? className

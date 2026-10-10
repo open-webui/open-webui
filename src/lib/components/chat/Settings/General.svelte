@@ -81,6 +81,7 @@
 		}
 		if (canEditParams) {
 			updated.params = {
+				...$settings.params,
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
 				stream_delta_chunk_size:
 					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
@@ -115,9 +116,10 @@
 				think: params.think !== null ? params.think : undefined,
 				keep_alive: params.keep_alive !== null ? params.keep_alive : undefined,
 				format: params.format !== null ? params.format : undefined,
-				...(params.custom_params && Object.keys(params.custom_params).length > 0
-					? { custom_params: params.custom_params }
-					: {})
+				custom_params:
+					params.custom_params && Object.keys(params.custom_params).length > 0
+						? params.custom_params
+						: undefined
 			};
 		}
 		try {

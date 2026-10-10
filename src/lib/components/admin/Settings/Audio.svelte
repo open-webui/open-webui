@@ -31,6 +31,16 @@
 
 	export let saveHandler: () => void;
 
+	let realtime = {
+		ENABLED: false,
+		OPENAI_API_BASE_URL: 'https://api.openai.com/v1',
+		OPENAI_API_KEY: '',
+		MODEL: 'gpt-realtime-2.1-mini',
+		VOICE: 'marin',
+		TRANSCRIPTION_MODEL: 'gpt-transcribe',
+		REALTIME_CALL_PROMPT_TEMPLATE: ''
+	};
+
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
@@ -38,6 +48,7 @@
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
+	let REALTIME_TTS_PROMPT_TEMPLATE = '';
 	let TTS_OPENAI_PARAMS = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 	let TTS_AZURE_SPEECH_REGION = '';
@@ -89,10 +100,7 @@
 		if (TTS_ENGINE === '') {
 			models = [];
 		} else {
-			const res = await _getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			).catch((e) => {
+			const res = await _getModels(localStorage.token).catch((e) => {
 				toast.error(`${e}`);
 			});
 
@@ -144,6 +152,10 @@
 		}
 
 		const res = await updateAudioConfig(localStorage.token, {
+			realtime: {
+				...realtime,
+				REALTIME_CALL_PROMPT_TEMPLATE: realtime.REALTIME_CALL_PROMPT_TEMPLATE.trim() || null
+			},
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
@@ -152,6 +164,7 @@
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE,
+				REALTIME_TTS_PROMPT_TEMPLATE: REALTIME_TTS_PROMPT_TEMPLATE || null,
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
@@ -204,6 +217,7 @@
 			TTS_ENGINE = res.tts.ENGINE;
 			TTS_MODEL = res.tts.MODEL;
 			TTS_VOICE = res.tts.VOICE;
+			REALTIME_TTS_PROMPT_TEMPLATE = res.tts.REALTIME_TTS_PROMPT_TEMPLATE ?? '';
 
 			TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
 
@@ -213,6 +227,11 @@
 			TTS_MISTRAL_API_KEY = res.tts.MISTRAL_API_KEY;
 			TTS_MISTRAL_API_BASE_URL = res.tts.MISTRAL_API_BASE_URL;
 
+			realtime = {
+				...realtime,
+				...res.realtime,
+				REALTIME_CALL_PROMPT_TEMPLATE: res.realtime?.REALTIME_CALL_PROMPT_TEMPLATE ?? ''
+			};
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
 			STT_OPENAI_API_REQUEST_FORMAT = res.stt.OPENAI_API_REQUEST_FORMAT || 'multipart';
@@ -256,7 +275,52 @@
 	{/if}
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<AdminSettingSection title={$i18n.t('settings.admin.audio.sections.speechToText.title')} first>
+		<AdminSettingSection title={$i18n.t('Voice calls')} first>
+			<AdminSettingRow label={$i18n.t('Call mode')}>
+				<SettingsSelect bind:value={realtime.ENABLED} ariaLabel={$i18n.t('Call mode')}>
+					<option value={false}>{$i18n.t('Standard')}</option>
+					<option value={true}>{$i18n.t('Realtime')}</option>
+				</SettingsSelect>
+			</AdminSettingRow>
+			{#if realtime.ENABLED}
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+					<AdminSettingField label={$i18n.t('OpenAI API Base URL')}>
+						<input class={inputClass} bind:value={realtime.OPENAI_API_BASE_URL} />
+					</AdminSettingField>
+					<AdminSettingField label={$i18n.t('API Key')}>
+						<SensitiveInput
+							variant="settings"
+							placeholder={$i18n.t('API Key')}
+							bind:value={realtime.OPENAI_API_KEY}
+						/>
+					</AdminSettingField>
+				</div>
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+					<AdminSettingField label={$i18n.t('Voice Model')}>
+						<input
+							class={inputClass}
+							bind:value={realtime.MODEL}
+							placeholder="gpt-realtime-2.1-mini"
+						/>
+					</AdminSettingField>
+					<AdminSettingField label={$i18n.t('Voice')}>
+						<input class={inputClass} bind:value={realtime.VOICE} placeholder="marin" />
+					</AdminSettingField>
+				</div>
+				<AdminSettingField label={$i18n.t('Input Transcription Model')}>
+					<input class={inputClass} bind:value={realtime.TRANSCRIPTION_MODEL} />
+				</AdminSettingField>
+				<AdminSettingField label={$i18n.t('Prompt Template')}>
+					<Textarea
+						className={textareaClass}
+						bind:value={realtime.REALTIME_CALL_PROMPT_TEMPLATE}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+					/>
+				</AdminSettingField>
+			{/if}
+		</AdminSettingSection>
+
+		<AdminSettingSection title={$i18n.t('settings.admin.audio.sections.speechToText.title')}>
 			<AdminSettingRow
 				label={$i18n.t('settings.admin.audio.speechToTextEngine.label')}
 				description={$i18n.t('settings.admin.audio.speechToTextEngine.description')}
@@ -495,6 +559,9 @@
 						if (value === 'openai') {
 							TTS_VOICE = 'alloy';
 							TTS_MODEL = 'tts-1';
+						} else if (value === 'openai-realtime') {
+							TTS_VOICE = 'marin';
+							TTS_MODEL = 'gpt-realtime-2.1-mini';
 						} else if (value === 'mistral') {
 							TTS_VOICE = '';
 							TTS_MODEL = 'voxtral-mini-tts-2603';
@@ -513,13 +580,14 @@
 						>{$i18n.t('Transformers')} ({$i18n.t('Local')})</option
 					>
 					<option value="openai">{$i18n.t('OpenAI')}</option>
+					<option value="openai-realtime">{$i18n.t('OpenAI Realtime')}</option>
 					<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 					<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 					<option value="mistral">{$i18n.t('MistralAI')}</option>
 				</SettingsSelect>
 			</AdminSettingRow>
 
-			{#if TTS_ENGINE === 'openai'}
+			{#if TTS_ENGINE === 'openai' || TTS_ENGINE === 'openai-realtime'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsOpenaiApiBaseUrl.label')}>
 						<input
@@ -633,7 +701,7 @@
 						</a>
 					</div>
 				</AdminSettingField>
-			{:else if TTS_ENGINE === 'openai'}
+			{:else if TTS_ENGINE === 'openai' || TTS_ENGINE === 'openai-realtime'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsVoice.label')}>
 						<TTSVoiceInput
@@ -652,16 +720,28 @@
 						/>
 					</AdminSettingField>
 				</div>
-				<AdminSettingField
-					label={$i18n.t('settings.admin.audio.additionalParameters.label')}
-					description={$i18n.t('settings.admin.audio.additionalParameters.description')}
-				>
-					<Textarea
-						className={textareaClass}
-						bind:value={TTS_OPENAI_PARAMS}
-						placeholder={$i18n.t('Enter additional parameters in JSON format')}
-					/>
-				</AdminSettingField>
+				{#if TTS_ENGINE === 'openai'}
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.additionalParameters.label')}
+						description={$i18n.t('settings.admin.audio.additionalParameters.description')}
+					>
+						<Textarea
+							className={textareaClass}
+							bind:value={TTS_OPENAI_PARAMS}
+							placeholder={$i18n.t('Enter additional parameters in JSON format')}
+						/>
+					</AdminSettingField>
+				{:else}
+					<AdminSettingField label={$i18n.t('Prompt Template')}>
+						<Textarea
+							className={textareaClass}
+							bind:value={REALTIME_TTS_PROMPT_TEMPLATE}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
+						/>
+					</AdminSettingField>
+				{/if}
 			{:else if TTS_ENGINE === 'elevenlabs' || TTS_ENGINE === 'mistral'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsVoice.label')}>
@@ -720,11 +800,11 @@
 				description={$i18n.t('settings.admin.audio.responseSplitting.description')}
 			>
 				<SettingsSelect
-					aria-label={$i18n.t('Select how to split message text for TTS requests')}
+					ariaLabel={$i18n.t('Select how to split message text for TTS requests')}
 					bind:value={TTS_SPLIT_ON}
 				>
-					{#each Object.values(TTS_RESPONSE_SPLIT) as split}
-						<option value={split}>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option>
+					{#each [{ value: TTS_RESPONSE_SPLIT.PUNCTUATION, label: $i18n.t('Punctuation') }, { value: TTS_RESPONSE_SPLIT.PARAGRAPHS, label: $i18n.t('Paragraphs') }, { value: TTS_RESPONSE_SPLIT.NONE, label: $i18n.t('None') }] as split}
+						<option value={split.value}>{split.label}</option>
 					{/each}
 				</SettingsSelect>
 			</AdminSettingRow>

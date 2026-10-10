@@ -3,10 +3,10 @@
 
 	import Search from '$lib/components/icons/Search.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let value = '';
-	export let placeholder = $i18n.t('Search');
+	export let placeholder: string | undefined = undefined;
 </script>
 
 <div class="my-0.5 flex ml-2 mr-0.5 h-[1.6875rem] shrink-0 items-center gap-2">
@@ -15,9 +15,9 @@
 	<input
 		bind:value
 		class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
-		{placeholder}
+		placeholder={placeholder ?? $i18n.t('Search')}
 		autocomplete="off"
-		aria-label={placeholder}
+		aria-label={placeholder ?? $i18n.t('Search')}
 		on:click|stopPropagation
 		on:keydown|stopPropagation
 	/>

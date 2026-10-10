@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -7,14 +8,17 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
-	import { user } from '$lib/stores';
+	import Share from '$lib/components/icons/Share.svelte';
+	import { user, config } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let editHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
+	export let shareHandler: (() => void) | null = null;
 	export let deleteHandler: Function;
+	export let accessHandler: (() => void) | null = null;
 	export let onClose: Function;
 
 	export let show = false;
@@ -63,6 +67,34 @@
 
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</button>
+			{#if accessHandler}
+				<button
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={() => {
+						accessHandler?.();
+						closeMenu();
+					}}
+				>
+					<LockClosed className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Access')}</div>
+				</button>
+			{/if}
+
+			{#if shareHandler && $config?.features?.enable_community_sharing && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills_export)}
+				<button
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					draggable="false"
+					on:click={() => {
+						shareHandler?.();
+						closeMenu();
+					}}
+				>
+					<Share className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Share')}</div>
+				</button>
+			{/if}
 
 			<button
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
@@ -79,13 +111,20 @@
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => {
-						exportHandler();
+						exportHandler('json');
 						closeMenu();
 					}}
 				>
 					<Download className="size-3.5" />
-					<div class="flex items-center">{$i18n.t('Export')}</div>
+					<div class="flex items-center">{$i18n.t('Export JSON')}</div>
 				</button>
+				<button
+					class="flex h-7 w-full items-center gap-2 px-2 text-[0.8125rem]"
+					on:click={() => {
+						exportHandler('zip');
+						closeMenu();
+					}}><Download className="size-3.5" />Export ZIP</button
+				>
 			{/if}
 
 			<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />

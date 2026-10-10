@@ -66,7 +66,11 @@
 					if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
 						continue;
 					}
-					valves[property] = (valves[property] ?? []).join(',');
+					if (valves[property] != null) {
+						valves[property] = (Array.isArray(valves[property]) ? valves[property] : []).join(',');
+					} else {
+						valves[property] = null;
+					}
 				}
 			}
 		}
@@ -79,10 +83,14 @@
 			// Convert string to array
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
-					if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
-						continue;
+					if (typeof valves[property] === 'string') {
+						valves[property] = (valves[property] ?? '')
+							.split(',')
+							.map((v) => v.trim())
+							.filter((v) => v.length > 0);
+					} else if (valves[property] == null) {
+						valves[property] = null;
 					}
-					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
 				}
 			}
 

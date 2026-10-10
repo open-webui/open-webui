@@ -310,6 +310,8 @@ class UserInfoResponse(UserStatus):
     email: str
     role: str
     bio: str | None = None
+    last_active_at: int | None = None
+    timezone: str | None = None
     groups: list | None = []
     is_active: bool = False
 
@@ -549,7 +551,7 @@ class UsersTable:
         async with get_async_db_context(db) as session:
             # Deferred imports to avoid circular dependencies
             from open_webui.models.channels import ChannelMember
-            from open_webui.models.groups import GroupMember
+            from open_webui.models.groups import GroupMember, group_user_memberships
 
             # Join GroupMember so we can order by group_id when requested
             stmt = select(User)
@@ -587,14 +589,8 @@ class UsersTable:
                     stmt = stmt.filter(User.id.in_(user_ids))
 
                 if group_ids:
-                    stmt = stmt.filter(
-                        exists(
-                            select(GroupMember.id).where(
-                                GroupMember.user_id == User.id,
-                                GroupMember.group_id.in_(group_ids),
-                            )
-                        )
-                    )
+                    memberships = group_user_memberships(group_ids, True)
+                    stmt = stmt.filter(User.id.in_(select(memberships.c.user_id)))
 
                 roles = filter.get('roles')
                 if roles:
@@ -713,7 +709,9 @@ class UsersTable:
     async def get_first_user(self, db: AsyncSession | None = None) -> UserModel | None:
         """Return the earliest-created user (bootstrap admin detection)."""
         async with get_async_db_context(db) as session:
-            stmt = select(User).order_by(User.created_at).limit(1)
+            # created_at has 1s resolution; admin wins ties
+            admin_first = case((User.role == 'admin', 0), else_=1)
+            stmt = select(User).order_by(User.created_at, admin_first, User.id).limit(1)
             row = (await session.execute(stmt)).scalars().first()
             return UserModel.model_validate(row) if row else None
 

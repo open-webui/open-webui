@@ -1,8 +1,12 @@
-<script>
+<script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
+	import VersionDiff from '$lib/components/workspace/common/VersionDiff.svelte';
+	import FunctionHistory from './FunctionHistory.svelte';
+	import { getFunctionHistoryDiff } from '$lib/apis/functions';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	import { extractFrontmatter, formatSkillName, nameToId } from '$lib/utils';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
@@ -15,38 +19,106 @@
 	import PluginTranslations from '$lib/components/workspace/common/PluginTranslations.svelte';
 	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
 	let locale = '';
+	$: warning = [
+		$i18n.t('Warning:'),
+		$i18n.t('Functions can execute arbitrary code.'),
+		$i18n.t('Only install functions from sources you trust.')
+	].join(' ');
 
-	let formElement = null;
+	let formElement: HTMLFormElement | null = null;
 	let loading = false;
 	let showConfirm = false;
 
-	export let onSave = /** @param {any} _value */ async (_value) => {};
+	export let onSave: (value: any) => Promise<any> = async (_value) => false;
 
 	export let edit = false;
 	export let clone = false;
 
 	export let id = '';
+	export let version_id: string | null = null;
+	export let onProduction: (resource: any) => Promise<void> = async (_resource) => {};
+	let selected: any = null;
+	let selecting = false;
+	let promoting = false;
+	let historyControl: { requestPromotion: () => void };
+	let commitMessage = '';
+	let comparison: any = null;
+	let comparing = false;
+	let comparisonRequest = 0;
+	let comparisonSelection: string | null | undefined = null;
+	$: if (selected?.id !== comparisonSelection) {
+		comparisonSelection = selected?.id;
+		comparison = null;
+		comparing = false;
+		comparisonRequest++;
+	}
+	const compareToCurrent = async () => {
+		if (!selected || !version_id || comparing) return;
+		const request = ++comparisonRequest;
+		comparing = true;
+		try {
+			const result = await getFunctionHistoryDiff(localStorage.token, id, selected.id, version_id);
+			if (request === comparisonRequest) comparison = result;
+		} catch (error: any) {
+			if (request === comparisonRequest) toast.error(error?.detail || String(error));
+		} finally {
+			if (request === comparisonRequest) comparing = false;
+		}
+	};
+	const applyProduction = async (resource: any) => {
+		name = resource.name;
+		meta = structuredClone(resource.meta);
+		content = resource.content;
+		_content = content;
+		version_id = resource.version_id;
+		commitMessage = '';
+		comparison = null;
+		savedDraft = draftSnapshot(id, name, meta, content);
+	};
+	const productionHandler = async (resource: any) => {
+		await applyProduction(resource);
+		try {
+			await onProduction(resource);
+		} catch (error: any) {
+			toast.error(String(error));
+		}
+	};
 	export let name = '';
 	/** @type {{description: string, i18n?: Record<string, Record<string, string>>, manifest?: {translations?: Record<string, Record<string, string>>}}} */
-	export let meta = {
+	export let meta: {
+		description: string;
+		i18n?: Record<string, Record<string, string>>;
+		[key: string]: any;
+	} = {
 		description: ''
 	};
 	export let content = '';
 	let _content = '';
+	/** @param {string} id @param {string} name @param {Record<string, any>} meta @param {string} content */
+	const draftSnapshot = (id: string, name: string, meta: Record<string, any>, content: string) =>
+		JSON.stringify({
+			id,
+			name,
+			meta: {
+				...meta,
+				manifest: undefined,
+				has_user_valves: undefined,
+				toggle: undefined,
+				i18n: pruneEmptyLocaleEntries(meta.i18n)
+			},
+			content
+		});
+	let savedDraft = draftSnapshot(id, name, meta, content);
+	$: draft = draftSnapshot(id, name, meta, _content);
+	$: changed = draft !== savedDraft;
 
-	$: if (content) {
-		updateContent();
-	}
-
-	const updateContent = () => {
-		_content = content;
-	};
+	$: _content = content;
 
 	$: if (name && !edit && !clone) {
 		id = nameToId(name);
 	}
 
-	let codeEditor;
+	let codeEditor: CodeEditor;
 	let starterType = 'filter';
 	const filterBoilerplate = `"""
 title: Example Filter
@@ -159,7 +231,7 @@ class Event:
 	let boilerplate = filterBoilerplate;
 
 	/** @param {'filter' | 'event'} type */
-	const setStarterType = (type) => {
+	const setStarterType = (type: 'filter' | 'event') => {
 		starterType = type;
 		boilerplate = type === 'event' ? eventBoilerplate : filterBoilerplate;
 		content = boilerplate;
@@ -167,7 +239,7 @@ class Event:
 	};
 
 	/** @param {string} value */
-	const selectStarterType = (value) => {
+	const selectStarterType = (value: string) => {
 		setStarterType(value === 'event' ? 'event' : 'filter');
 	};
 
@@ -329,23 +401,35 @@ class Pipe:
 		if (!name.trim() || !meta.description?.trim()) {
 			locale = '';
 			toast.error($i18n.t('Name and description are required'));
+			loading = false;
 			return;
 		}
 		loading = true;
 		try {
-			await onSave({
+			const submittedDraft = draftSnapshot(id, name, meta, content);
+			const saved = await onSave({
+				commit_message: commitMessage || null,
 				id,
 				name,
 				meta: { ...meta, i18n: pruneEmptyLocaleEntries(meta.i18n) },
 				content
 			});
+			if (saved) {
+				if (saved.version_id && saved.content !== undefined) await applyProduction(saved);
+				else {
+					savedDraft = submittedDraft;
+					commitMessage = '';
+				}
+			}
 		} finally {
 			loading = false;
 		}
 	};
 
 	const submitHandler = async () => {
+		if (selected || selecting || promoting || loading || (edit && !changed)) return;
 		if (codeEditor) {
+			loading = true;
 			content = _content;
 			await tick();
 
@@ -369,6 +453,7 @@ class Pipe:
 		bind:this={formElement}
 		class="flex h-full min-h-0 min-w-0 flex-col"
 		on:submit|preventDefault={() => {
+			if (selected) return;
 			if (edit) {
 				submitHandler();
 			} else {
@@ -376,27 +461,63 @@ class Pipe:
 			}
 		}}
 	>
-		<button
-			class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-			type="button"
-			on:click={() => {
-				goto('/admin/functions');
-			}}
-		>
-			<ChevronLeft className="size-3" strokeWidth="2" />
-			<span>{$i18n.t('Back')}</span>
-		</button>
+		<div class="flex shrink-0 items-center justify-between gap-2">
+			<div class="flex min-w-0 items-center gap-3">
+				<button
+					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+					type="button"
+					on:click={() => {
+						goto('/admin/functions');
+					}}
+				>
+					<ChevronLeft className="size-3" strokeWidth="2" />
+					<span>{$i18n.t('Back')}</span>
+				</button>
+				{#if edit && version_id}
+					<FunctionHistory
+						bind:this={historyControl}
+						resource={{ id, version_id }}
+						bind:selected
+						bind:selecting
+						bind:promoting
+						dirty={changed || !!commitMessage}
+						disabled={loading}
+						onProduction={productionHandler}
+					/>
+				{/if}
+			</div>
+			<div class="flex shrink-0 items-center gap-1 pr-0.5">
+				<LanguageModeSelect
+					bind:value={locale}
+					translatedLocales={Object.keys(
+						pruneEmptyLocaleEntries(selected ? selected.snapshot.meta.i18n : meta.i18n)
+					)}
+				/>
+			</div>
+		</div>
 
 		<div class="flex shrink-0 flex-col gap-2 pb-2 px-1 sm:flex-row sm:items-start">
 			<div class="min-w-0 w-full flex-1">
 				<Tooltip content={$i18n.t('e.g. My Filter')} placement="top-start">
-					<LocalizedField
-						placeholder={$i18n.t('Function Name')}
-						bind:value={name}
-						bind:translations={meta.i18n}
-						{locale}
-						required
-					/>
+					{#if selected}
+						<LocalizedField
+							disabled
+							showControls={false}
+							placeholder={$i18n.t('Function Name')}
+							value={selected.snapshot.name}
+							translations={selected.snapshot.meta.i18n}
+							{locale}
+							required
+						/>
+					{:else}
+						<LocalizedField
+							placeholder={$i18n.t('Function Name')}
+							bind:value={name}
+							bind:translations={meta.i18n}
+							{locale}
+							required
+						/>
+					{/if}
 				</Tooltip>
 
 				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
@@ -427,23 +548,32 @@ class Pipe:
 						content={$i18n.t('e.g. A filter to remove profanity from text')}
 						placement="top-start"
 					>
-						<LocalizedField
-							placeholder={$i18n.t('Function Description')}
-							bind:value={meta.description}
-							bind:translations={meta.i18n}
-							{locale}
-							field="description"
-							required
-						/>
+						{#if selected}
+							<LocalizedField
+								disabled
+								showControls={false}
+								placeholder={$i18n.t('Function Description')}
+								value={selected.snapshot.meta.description}
+								translations={selected.snapshot.meta.i18n}
+								{locale}
+								field="description"
+								required
+							/>
+						{:else}
+							<LocalizedField
+								placeholder={$i18n.t('Function Description')}
+								bind:value={meta.description}
+								bind:translations={meta.i18n}
+								{locale}
+								field="description"
+								required
+							/>
+						{/if}
 					</Tooltip>
 				</div>
 			</div>
 
 			<div class="flex shrink-0 items-center gap-1">
-				<LanguageModeSelect
-					bind:value={locale}
-					translatedLocales={Object.keys(pruneEmptyLocaleEntries(meta.i18n))}
-				/>
 				{#if !edit}
 					<select
 						class="h-7 rounded-lg border border-gray-100 bg-transparent px-2 text-xs outline-hidden dark:border-gray-800"
@@ -459,25 +589,71 @@ class Pipe:
 		</div>
 
 		<div class="min-h-0 flex-1 overflow-hidden rounded-lg flex flex-col">
-			{#if locale}
-				<PluginTranslations
-					id={edit ? id : ''}
-					kind="function"
-					{locale}
-					bind:translations={meta.i18n}
+			{#if locale && !comparison}
+				{#key selected?.id}
+					{#if selected}
+						<PluginTranslations
+							{id}
+							kind="function"
+							{locale}
+							readOnly
+							translations={selected.snapshot.meta.i18n}
+						/>
+					{:else}
+						<PluginTranslations
+							id={edit ? id : ''}
+							kind="function"
+							{locale}
+							bind:translations={meta.i18n}
+						/>
+					{/if}
+				{/key}
+			{/if}
+
+			{#if comparison}
+				<VersionDiff
+					currentLabel={$i18n.t('Production')}
+					showFileHeaders={false}
+					diff={{
+						fromId: comparison.from_id,
+						toId: comparison.to_id,
+						metadata: comparison.metadata,
+						files:
+							comparison.content_diff || comparison.line_endings_only
+								? [{ path: `${id}.py`, status: 'modified', binary: false }]
+								: []
+					}}
+					loadFileDiff={async () => ({
+						diff: comparison.content_diff,
+						line_endings_only: comparison.line_endings_only
+					})}
+					onClose={() => {
+						comparison = null;
+					}}
 				/>
 			{/if}
-			<div class={locale ? 'hidden' : 'h-full'}>
+			{#if selected && !locale && !comparison}
+				<CodeEditor
+					value={selected.snapshot.content}
+					lang="python"
+					readOnly
+					className="text-[0.6875rem]"
+				/>
+			{/if}
+			<div class={locale || comparison || selected ? 'hidden' : 'h-full min-h-0'}>
 				<CodeEditor
 					bind:this={codeEditor}
 					value={content}
+					readOnly={!!selected || selecting || promoting}
 					lang="python"
 					{boilerplate}
 					className="text-[0.6875rem]"
-					onChange={(e) => {
+					onChange={(e: string) => {
+						if (selected) return;
+						content = e;
 						_content = e;
 						if (!edit) {
-							const fm = extractFrontmatter(e);
+							const fm = extractFrontmatter(e) as Record<string, string>;
 							if (fm.title && !name) {
 								name = formatSkillName(fm.title);
 								id = nameToId(fm.title);
@@ -498,24 +674,55 @@ class Pipe:
 
 		<div class="shrink-0 py-2 text-xs text-gray-500">
 			<div class="flex items-center justify-between gap-3">
-				<div class="min-w-0">
-					<span class="font-normal dark:text-gray-200">{$i18n.t('Warning:')}</span>
-					{$i18n.t('Functions can execute arbitrary code.')}
-					<span class="font-normal dark:text-gray-400">
-						{$i18n.t('Only install functions from sources you trust.')}
-					</span>
-				</div>
-
-				<button
-					class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-					type="submit"
-					disabled={loading}
+				<Tooltip
+					className="min-w-0 flex-1"
+					content={warning}
+					allowHTML={false}
+					placement="top-start"
 				>
-					{$i18n.t(edit ? 'Save' : 'Save & Create')}
-					{#if loading}
-						<Spinner className="size-3" />
+					<div class="truncate">{warning}</div>
+				</Tooltip>
+
+				<div class="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-3">
+					{#if selected}
+						{#if !comparison}
+							<button
+								type="button"
+								class="flex h-7 shrink-0 items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+								disabled={comparing || promoting || selecting}
+								on:click={compareToCurrent}
+							>
+								{$i18n.t('Compare to current')}{#if comparing}<Spinner className="size-3" />{/if}
+							</button>
+						{/if}
+						<button
+							type="button"
+							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900"
+							disabled={promoting || selecting}
+							on:click={() => historyControl?.requestPromotion()}
+						>
+							{$i18n.t('Set as Production')}{#if promoting}<Spinner className="size-3" />{/if}
+						</button>
+					{:else}
+						<input
+							class="w-32 min-w-0 flex-1 border-0 bg-transparent text-xs outline-hidden placeholder:text-gray-400"
+							aria-label={$i18n.t('Describe this change')}
+							placeholder={$i18n.t('Describe this change')}
+							bind:value={commitMessage}
+							disabled={loading}
+						/>
+						<button
+							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							type="submit"
+							disabled={loading || selecting || promoting || (edit && !changed)}
+						>
+							{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}
+							{#if loading}
+								<Spinner className="size-3" />
+							{/if}
+						</button>
 					{/if}
-				</button>
+				</div>
 			</div>
 		</div>
 	</form>

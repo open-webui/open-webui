@@ -2,7 +2,7 @@
 	import { createEventDispatcher, getContext } from 'svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-	import { formatFileSize } from '$lib/utils';
+	import { formatFileSize, safeLinkUrl } from '$lib/utils';
 	import { settings, showFileNavPath } from '$lib/stores';
 
 	import FileItemModal from './FileItemModal.svelte';
@@ -71,7 +71,7 @@
 					} else {
 						window.open(`${WEBUI_API_BASE_URL}/files/${url}/content`, '_blank').focus();
 					}
-				} else {
+				} else if (safeLinkUrl(url)) {
 					window.open(`${url}`, '_blank').focus();
 				}
 			}

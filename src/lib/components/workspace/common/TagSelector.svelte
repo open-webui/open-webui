@@ -6,10 +6,10 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Select from '$lib/components/common/Select.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let value = '';
-	export let placeholder = $i18n.t('Tag');
+	export let placeholder: string | undefined = undefined;
 	export let align = 'start';
 	export let onChange: (value: string) => void = () => {};
 	export let triggerClass =
@@ -24,7 +24,7 @@
 <Select
 	bind:value
 	{items}
-	{placeholder}
+	placeholder={placeholder ?? $i18n.t('Tag')}
 	{align}
 	{triggerClass}
 	{itemClass}
@@ -38,7 +38,7 @@
 			{#if value}
 				{selectedLabel}
 			{:else}
-				{placeholder}
+				{placeholder ?? $i18n.t('Tag')}
 			{/if}
 		</div>
 

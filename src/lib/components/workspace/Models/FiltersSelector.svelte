@@ -1,117 +1,49 @@
 <script lang="ts">
-	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext } from 'svelte';
-	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { user } from '$lib/stores';
 	import TypeaheadSelector from './TypeaheadSelector.svelte';
-
 	type Filter = {
 		id: string;
 		name?: string;
 		is_global?: boolean;
 		meta?: {
 			description?: string;
+			toggle?: boolean;
 		};
 	};
-
-	const i18n = getContext('i18n') as any;
-
+	const i18n = getContext<any>('i18n');
 	export let filters: Filter[] = [];
 	export let selectedFilterIds: string[] = [];
-
-	$: selectableFilters = filters.filter((filter) => !filter.is_global);
-	$: selectedFilters = filters.filter(
-		(filter) => filter.is_global || selectedFilterIds.includes(filter.id)
-	);
-
-	const toggleFilter = (filter: Filter) => {
-		selectedFilterIds = selectedFilterIds.includes(filter.id)
-			? selectedFilterIds.filter((id) => id !== filter.id)
-			: [...selectedFilterIds, filter.id];
-	};
+	export let defaultFilterIds: string[] = [];
+	export let disabled = false;
 </script>
 
-{#if filters.length > 0}
-	<div>
-		<div class="flex w-full items-center gap-2 mb-1">
-			<div class=" self-center text-xs text-gray-500">{$i18n.t('Filters')}</div>
-
-			{#if selectableFilters.length > 0}
-				<TypeaheadSelector
-					id="model-filters-selector"
-					items={selectableFilters.map((filter) => ({
-						...filter,
-						description: filter.meta?.description
-					}))}
-					selectedIds={selectedFilterIds}
-					placeholder={$i18n.t('Search filters')}
-					triggerLabel={$i18n.t('Select Filter')}
-					emptyLabel={$i18n.t('No filters found')}
-					variant="dropdown"
-					on:select={(e) => {
-						toggleFilter(e.detail);
-					}}
-					on:enableall={(e) => {
-						selectedFilterIds = [
-							...new Set([...selectedFilterIds, ...e.detail.map((filter) => filter.id)])
-						];
-					}}
-				/>
-			{/if}
-		</div>
-
-		<!-- TODO: Filter order matters -->
-		<div class="flex flex-col">
-			<div class=" flex items-center flex-wrap mt-1">
-				{#each selectedFilters as filter (filter.id)}
-					{@const isSelected = filter.is_global || selectedFilterIds.includes(filter.id)}
-					<div class=" flex items-center gap-2 mr-3">
-						<div class="self-center flex items-center">
-							<Checkbox
-								ariaLabel={resolveLocalizedResource(filter, $i18n.language)}
-								state={isSelected ? 'checked' : 'unchecked'}
-								disabled={filter.is_global}
-								on:change={(e) => {
-									if (filter.is_global) return;
-
-									if (e.detail === 'checked') {
-										if (!selectedFilterIds.includes(filter.id)) {
-											selectedFilterIds = [...selectedFilterIds, filter.id];
-										}
-									} else {
-										selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
-									}
-								}}
-							/>
-						</div>
-
-						<div class=" py-0.5 text-xs capitalize">
-							<Tooltip
-								content={resolveLocalizedResource(filter, $i18n.language, 'description') ||
-									filter.id}
-							>
-								{resolveLocalizedResource(filter, $i18n.language)}
-							</Tooltip>
-						</div>
-					</div>
-				{/each}
-
-				{#if selectedFilterIds.length > 0}
-					<button
-						type="button"
-						class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-						on:click={() => {
-							selectedFilterIds = [];
-						}}
-					>
-						{$i18n.t('Disable all')}
-					</button>
-				{/if}
-			</div>
-		</div>
-
-		<div class=" text-xs dark:text-gray-700">
-			{$i18n.t('To select filters here, add them to the "Functions" workspace first.')}
-		</div>
-	</div>
-{/if}
+<!-- Previous labels retained for i18n extraction:
+{$i18n.t('Select Filter')}
+{$i18n.t('To select filters here, add them to the "Functions" workspace first.')}
+{$i18n.t('Default Filters')}
+{$i18n.t('To select default filters here, enable toggleable filters for this model first.')}
+-->
+<TypeaheadSelector
+	id="model-filtersselector"
+	label={$i18n.t('Filters')}
+	description={$i18n.t('Apply functions that process messages before or after the model responds.')}
+	items={filters}
+	selectedIds={selectedFilterIds}
+	bind:defaultIds={defaultFilterIds}
+	{disabled}
+	placeholder={$i18n.t('Search filters')}
+	emptyLabel={$i18n.t('No filters found')}
+	emptyHint={$i18n.t('Add filters in the Functions workspace.')}
+	workspaceHref={$user?.role === 'admin' ? '/admin/functions' : ''}
+	variant="dropdown"
+	on:select={(e) => {
+		selectedFilterIds = selectedFilterIds.includes(e.detail.id)
+			? selectedFilterIds.filter((id) => id !== e.detail.id)
+			: [...selectedFilterIds, e.detail.id];
+	}}
+	on:enableall={(e) => {
+		selectedFilterIds = [...new Set([...selectedFilterIds, ...e.detail.map((item) => item.id)])];
+	}}
+	on:clear={() => (selectedFilterIds = [])}
+/>

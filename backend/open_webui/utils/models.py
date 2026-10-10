@@ -8,28 +8,45 @@ from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
 )
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FUNCTIONS, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
 from open_webui.functions import get_function_models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
-from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.models.users import UserModel
 from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.plugin import (
-    get_functions_cache,
     get_function_module_from_cache,
+    get_functions_cache,
 )
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 BASE_MODELS_CACHE_KEY = f'{REDIS_KEY_PREFIX}:models:base'
+
+
+def public_model_params(params):
+    controls = params.get('model_controls', {})
+    return (
+        {
+            'model_controls': {
+                key: {
+                    **{field: control[field] for field in ('label', 'description', 'default', 'display') if field in control},
+                    'options': {key: {'label': option['label']} for key, option in control['options'].items()},
+                }
+                for key, control in controls.items()
+            }
+        }
+        if controls
+        else {}
+    )
 
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
@@ -150,7 +167,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # One query per type: the global sets are subsets of the active sets, so
     # deriving them from the same rows halves the function-table queries.
-    if ENABLE_PLUGINS:
+    if ENABLE_FUNCTIONS:
         active_actions = await Functions.get_active_function_ids_by_type('action')
         global_action_ids = {function_id for function_id, is_global in active_actions if is_global}
         enabled_action_ids = {function_id for function_id, _ in active_actions}
@@ -182,8 +199,18 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
             if model:
                 if custom_model.is_active:
+                    arena_meta = model['info']['meta'] if model.get('arena') else None
                     model['name'] = custom_model.name
                     model['info'] = custom_model.model_dump()
+                    if arena_meta:
+                        # Evaluation config owns arena access grants and model_ids
+                        model['info']['meta'].update(
+                            {
+                                key: arena_meta[key]
+                                for key in ('access_grants', 'model_ids', 'filter_mode')
+                                if key in arena_meta
+                            }
+                        )
                     schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
                     if schema:
                         model['info'].setdefault('meta', {})['chat_variables_schema'] = schema
@@ -195,12 +222,11 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
                     if 'info' in model:
                         if 'meta' in model['info']:
-                            if ENABLE_PLUGINS:
+                            if ENABLE_FUNCTIONS:
                                 action_ids.extend(model['info']['meta'].get('actionIds', []))
                                 filter_ids.extend(model['info']['meta'].get('filterIds', []))
 
-                        if 'params' in model['info']:
-                            del model['info']['params']
+                        model['info']['params'] = public_model_params(model['info'].get('params', {}))
 
                     model['action_ids'] = action_ids
                     model['filter_ids'] = filter_ids
@@ -243,9 +269,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 info.setdefault('meta', {})['chat_variables_schema'] = schema
             elif isinstance(info.get('meta'), dict):
                 info['meta'].pop('chat_variables_schema', None)
-            if 'params' in info:
-                # Remove params to avoid exposing sensitive info
-                del info['params']
+            info['params'] = public_model_params(info.get('params', {}))
 
             model['info'] = info
 
@@ -255,10 +279,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             if custom_model.meta:
                 meta = custom_model.meta.model_dump()
 
-                if ENABLE_PLUGINS and 'actionIds' in meta:
+                if ENABLE_FUNCTIONS and 'actionIds' in meta:
                     action_ids.extend(meta['actionIds'])
 
-                if ENABLE_PLUGINS and 'filterIds' in meta:
+                if ENABLE_FUNCTIONS and 'filterIds' in meta:
                     filter_ids.extend(meta['filterIds'])
 
             model['action_ids'] = action_ids
@@ -466,11 +490,14 @@ async def check_model_access(user, model, model_info=None, db=None):
     if model.get('arena'):
         meta = model.get('info', {}).get('meta', {})
         access_grants = meta.get('access_grants', [])
-        if not await has_access(
-            user.id,
-            permission='read',
-            access_grants=access_grants,
-            db=db,
+        if not (
+            (not access_grants and user.role == 'admin')
+            or await has_access(
+                user.id,
+                permission='read',
+                access_grants=access_grants,
+                db=db,
+            )
         ):
             log.warning(
                 'Model access denied: user_id=%r model_id=%r reason=arena_read_denied',
@@ -494,7 +521,9 @@ async def check_model_access(user, model, model_info=None, db=None):
         # base-model hop; skipped when no check below needs it.
         user_group_ids = None
         if user.id != model_info.user_id or model_info.base_model_id:
-            user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+            user_group_ids = {
+                group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+            }
 
         if not (
             user.id == model_info.user_id
@@ -534,7 +563,9 @@ async def get_filtered_models(models, user, db=None):
             if info:
                 model_infos[model['id']] = info
 
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+        }
 
         # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
         accessible_model_ids = await AccessGrants.get_accessible_resource_ids(
@@ -551,7 +582,7 @@ async def get_filtered_models(models, user, db=None):
             if model.get('arena'):
                 meta = model.get('info', {}).get('meta', {})
                 access_grants = meta.get('access_grants', [])
-                if await has_access(
+                if (not access_grants and user.role == 'admin') or await has_access(
                     user.id,
                     permission='read',
                     access_grants=access_grants,

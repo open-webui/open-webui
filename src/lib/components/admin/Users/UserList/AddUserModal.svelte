@@ -78,7 +78,7 @@
 						const columns = row.split(',').map((col) => col.trim());
 						console.debug(idx, columns);
 
-						if (idx > 0) {
+						if (idx > 0 && !(columns.length === 1 && columns[0] === '')) {
 							if (
 								columns.length === 4 &&
 								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())

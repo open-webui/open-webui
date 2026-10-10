@@ -1,0 +1,191 @@
+<script lang="ts">
+	import { getContext, onMount } from 'svelte';
+	import { mfaRequest, type MfaChallenge } from '$lib/apis/auths/mfa';
+	import MfaRecoveryCodes from './MfaRecoveryCodes.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	const i18n: any = getContext('i18n');
+	export let challenge: MfaChallenge;
+	export let onComplete: (result: any) => void | Promise<void>;
+	export let onCancel: () => void;
+	let setup: { manual_key: string; qr_code: string } | null = null;
+	let code = '';
+	let recovery = false;
+	let busy = false;
+	let error = '';
+	let result: any = null;
+
+	const loadSetup = async () => {
+		if (challenge.next_step !== 'enroll') return;
+		busy = true;
+		try {
+			setup = await mfaRequest('enroll/start', { challenge_token: challenge.challenge_token });
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		} finally {
+			busy = false;
+		}
+	};
+	onMount(loadSetup);
+
+	const verify = async () => {
+		if (busy || !code.trim()) return;
+		busy = true;
+		error = '';
+		try {
+			if (challenge.next_step === 'recover') {
+				challenge = await mfaRequest('recover', {
+					challenge_token: challenge.challenge_token,
+					reset_token: code.trim()
+				});
+				code = '';
+				await loadSetup();
+			} else {
+				const response = await mfaRequest(
+					challenge.next_step === 'enroll' ? 'enroll/confirm' : 'verify',
+					{
+						challenge_token: challenge.challenge_token,
+						code: code.trim(),
+						recovery
+					}
+				);
+				if (response.recovery_codes) result = response;
+				else await onComplete(response);
+				code = '';
+				setup = null;
+			}
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		} finally {
+			busy = false;
+		}
+	};
+</script>
+
+<div class="space-y-3 text-left text-xs text-gray-700 dark:text-gray-300">
+	{#if result}
+		<MfaRecoveryCodes
+			codes={result.recovery_codes}
+			onContinue={async () => {
+				const { recovery_codes, ...completed } = result;
+				await onComplete(completed);
+				result = null;
+			}}
+		/>
+	{:else}
+		<div>
+			<h2 class="text-base font-medium tracking-tight text-gray-700 dark:text-gray-300">
+				{challenge.next_step === 'enroll'
+					? $i18n.t('Set up your authenticator')
+					: challenge.next_step === 'recover'
+						? $i18n.t('Recover your authenticator')
+						: $i18n.t('Verify your sign-in')}
+			</h2>
+			<p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+				{challenge.next_step === 'enroll'
+					? $i18n.t('Scan the QR code, then enter the six-digit code from your authenticator app.')
+					: challenge.next_step === 'recover'
+						? $i18n.t('Enter the recovery token from your operator.')
+						: recovery
+							? $i18n.t('Enter one of your saved recovery codes.')
+							: $i18n.t('Enter the six-digit code from your authenticator app.')}
+			</p>
+		</div>
+		{#if challenge.next_step === 'enroll'}
+			{#if setup}
+				<img
+					class="mx-auto size-40 bg-white p-1"
+					src={setup.qr_code}
+					alt={$i18n.t('Authenticator setup QR code')}
+				/>
+				<details class="group text-[0.6875rem] text-gray-500 dark:text-gray-400">
+					<summary
+						class="flex cursor-pointer list-none items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 [&::-webkit-details-marker]:hidden"
+					>
+						{$i18n.t('Enter the key manually')}
+						<ChevronRight className="size-2.5 shrink-0 transition-transform group-open:rotate-90" />
+					</summary>
+					<code
+						class="mt-2 block break-all rounded-md bg-gray-50 px-2 py-1.5 font-mono text-gray-700 select-all dark:bg-white/[0.03] dark:text-gray-300"
+						>{setup.manual_key}</code
+					>
+				</details>
+			{:else if busy}<p role="status" class="py-2 text-gray-400">
+					{$i18n.t('Preparing your authenticator…')}
+				</p>
+			{:else}<button
+					type="button"
+					class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+					on:click={loadSetup}>{$i18n.t('Retry setup')}</button
+				>{/if}
+		{/if}
+		<label
+			class="block text-[0.8125rem] leading-5 font-normal text-left text-gray-600 dark:text-gray-400"
+		>
+			{challenge.next_step === 'recover'
+				? $i18n.t('Operator recovery token')
+				: recovery
+					? $i18n.t('Recovery code')
+					: $i18n.t('Authenticator code')}
+			<input
+				class="my-0.5 w-full text-[0.8125rem] leading-5 outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+				bind:value={code}
+				readonly={busy}
+				placeholder={challenge.next_step === 'recover'
+					? $i18n.t('Enter your recovery token')
+					: recovery
+						? $i18n.t('Enter your recovery code')
+						: $i18n.t('Enter your authenticator code')}
+				autocomplete="one-time-code"
+				inputmode={recovery || challenge.next_step === 'recover' ? 'text' : 'numeric'}
+				maxlength={challenge.next_step === 'recover' ? 160 : recovery ? 128 : 6}
+				spellcheck="false"
+				autocapitalize="none"
+				on:keydown={(event) => {
+					if (event.key === 'Enter') {
+						event.preventDefault();
+						verify();
+					}
+				}}
+			/>
+		</label>
+		{#if error}<p role="alert" class="text-xs leading-4 text-red-600 dark:text-red-400">
+				{error}
+			</p>{/if}
+		<div class="flex justify-end text-gray-700 dark:text-gray-300">
+			<button
+				type="button"
+				class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-gray-200 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex items-center justify-center gap-1.5"
+				disabled={busy || !code.trim() || (challenge.next_step === 'enroll' && !setup)}
+				aria-busy={busy}
+				on:click={verify}
+			>
+				{busy ? $i18n.t('Verifying…') : $i18n.t('Continue')}
+				{#if busy}<Spinner />{/if}
+			</button>
+		</div>
+		<div
+			class="flex flex-wrap items-center justify-between gap-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+		>
+			<button
+				type="button"
+				class="transition-colors hover:text-gray-700 dark:hover:text-gray-200"
+				disabled={busy}
+				on:click={onCancel}>{$i18n.t('Back to sign in')}</button
+			>
+			{#if challenge.next_step === 'verify'}<button
+					type="button"
+					class="transition-colors hover:text-gray-700 dark:hover:text-gray-200"
+					disabled={busy}
+					on:click={() => {
+						recovery = !recovery;
+						code = '';
+						error = '';
+					}}
+					>{recovery
+						? $i18n.t('Use an authenticator code')
+						: $i18n.t('Use a recovery code')}</button
+				>{/if}
+		</div>
+	{/if}
+</div>
