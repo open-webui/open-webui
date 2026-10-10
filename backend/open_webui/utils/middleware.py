@@ -3768,10 +3768,11 @@ def build_response_object(response, response_data):
     return response
 
 
-def update_assistant_message_from_stream(assistant_message, raw):
+def update_assistant_message_from_stream(assistant_message, raw) -> bool:
+    """Accumulate the message and report whether the chunk contains [DONE]."""
     line = raw.decode('utf-8', 'replace') if isinstance(raw, bytes) else raw
     if not isinstance(line, str):
-        return
+        return False
 
     def append_output_text(item, text):
         parts = item.setdefault('content', [])
@@ -3780,9 +3781,13 @@ def update_assistant_message_from_stream(assistant_message, raw):
         else:
             parts.append({'type': 'output_text', 'text': text})
 
+    done = False
     for raw_part in line.splitlines():
         part = raw_part.removeprefix('data:').strip()
-        if not part or part == '[DONE]':
+        if part == '[DONE]':
+            done = True
+            continue
+        if not part:
             continue
 
         try:
@@ -3857,6 +3862,8 @@ def update_assistant_message_from_stream(assistant_message, raw):
                     append_to_text_field(assistant_message, 'content', content)
                 else:
                     assistant_message['content'] = '' + content
+
+    return done
 
 
 async def background_tasks_handler(ctx):
@@ -6657,18 +6664,19 @@ async def streaming_chat_response_handler(response, ctx):
                 return f'data: {item}\n\n'
 
             try:
-                assistant_message = {}
+                message = {}
+                outlet_task = None
                 filter_context = FilterContext()
-                has_api_outlet_filters = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
-                if ENABLE_API_OUTLET_FILTERS and not has_api_outlet_filters:
+                outlet_enabled = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
+                if ENABLE_API_OUTLET_FILTERS and not outlet_enabled:
                     try:
                         model_id = model.get('id') if isinstance(model, dict) else model
-                        has_api_outlet_filters = bool(
+                        outlet_enabled = bool(
                             (isinstance(model, dict) and 'pipeline' in model)
                             or get_sorted_filters(model_id, request.app.state.MODELS)
                         )
                     except Exception:
-                        has_api_outlet_filters = True
+                        outlet_enabled = True
 
                 for event in events:
                     event, _ = await process_filter_functions(
@@ -6706,12 +6714,18 @@ async def streaming_chat_response_handler(response, ctx):
                                     data = wrap_item(JSONCodec.dumps(event)) if event else None
 
                     if data:
-                        if has_api_outlet_filters:
-                            update_assistant_message_from_stream(assistant_message, data)
+                        if outlet_enabled:
+                            done = update_assistant_message_from_stream(message, data)
+                            if done and message and outlet_task is None:
+                                ctx['assistant_message'] = message
+                                # Start before yielding [DONE], which may trigger a disconnect.
+                                outlet_task = asyncio.create_task(outlet_filter_handler(ctx))
                         yield data
 
-                if has_api_outlet_filters and assistant_message:
-                    ctx['assistant_message'] = assistant_message
+                if outlet_task is not None:
+                    await asyncio.shield(outlet_task)
+                elif outlet_enabled and message:
+                    ctx['assistant_message'] = message
                     await outlet_filter_handler(ctx)
             except Exception as e:
                 log.exception('Chat completion stream failed mid-response: %s', e)
