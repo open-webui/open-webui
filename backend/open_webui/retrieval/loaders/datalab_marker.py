@@ -7,6 +7,7 @@ from typing import List, Optional
 import requests
 from fastapi import HTTPException, status
 from langchain_core.documents import Document
+from open_webui.config import UPLOAD_DIR
 from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
@@ -208,7 +209,7 @@ class DatalabMarkerLoader:
                 detail='Marker returned empty content',
             )
 
-        marker_output_dir = os.path.join('/app/backend/data/uploads', 'marker_output')
+        marker_output_dir = os.path.join(UPLOAD_DIR, 'marker_output')
         os.makedirs(marker_output_dir, exist_ok=True)
 
         file_ext_map = {'markdown': 'md', 'json': 'json', 'html': 'html'}
