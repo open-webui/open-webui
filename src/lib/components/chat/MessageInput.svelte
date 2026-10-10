@@ -2626,7 +2626,7 @@
 														oauthRedirectHandler(pendingTool, chatInputDraft);
 													}}
 													type="button"
-													class="flex h-[1.875rem] min-w-0 max-w-full translate-y-px items-center self-center gap-1 bg-transparent px-1 text-[0.8125rem] leading-none text-gray-600 transition-colors duration-150 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 dark:text-gray-300 dark:hover:text-gray-100 dark:focus-visible:outline-gray-500"
+													class="flex h-[1.875rem] min-w-0 max-w-full translate-y-[0.0625rem] items-center self-center gap-1 bg-transparent px-1 text-[0.8125rem] leading-none text-gray-600 transition-colors duration-150 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 dark:text-gray-300 dark:hover:text-gray-100 dark:focus-visible:outline-gray-500"
 												>
 													<span class="truncate">{pendingTool.name}</span>
 													<ArrowUpLeft className="size-3 shrink-0 rotate-90" strokeWidth="1.5" />
