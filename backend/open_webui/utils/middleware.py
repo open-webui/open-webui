@@ -143,6 +143,8 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
+from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
+from open_webui.utils.tool_search import apply_tool_search
 from open_webui.utils.tools import (
     connect_mcp_server,
     get_attached_knowledge,
@@ -2465,19 +2467,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if assistant_message_id:
                 assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
                 if assistant_message and (assistant_message.get('content') or assistant_message.get('output')):
+                    output = assistant_message.get('output') or []
+                    if (
+                        metadata.get('tool_approval_resume') != 'model'
+                        and not assistant_message.get('done', True)
+                        and output
+                        and output[-1].get('type') == 'message'
+                        and output[-1].get('status') == 'in_progress'
+                        and any(item.get('type') == 'function_call_output' for item in output)
+                        and not pending_tool_calls(output)
+                    ):
+                        return form_data, metadata, [], True
                     assistant_message = {k: v for k, v in assistant_message.items() if k in MESSAGE_REPLAY_KEYS}
                     db_messages.append(assistant_message)
                     output = assistant_message.get('output')
                     output = output if isinstance(output, list) else []
-                    result_call_ids = {
-                        item.get('call_id') for item in output if item.get('type') == 'function_call_output'
-                    }
-                    if any(
-                        item.get('type') == 'function_call'
-                        and item.get('status') in {'pending', 'queued', 'requires_approval'}
-                        and item.get('call_id') not in result_call_ids
-                        for item in output
-                    ):
+                    if metadata.get('tool_approval_resume') == 'tools' or pending_tool_calls(output):
                         pending_assistant_message = assistant_message
 
             system_message = get_system_message(form_data.get('messages', []))
@@ -3277,9 +3282,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             metadata['tools'] = tools_dict
 
             if metadata.get('params', {}).get('function_calling') != 'legacy':
+                deferred = await apply_tool_search(form_data, metadata, tools_dict)
+
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [
-                    {'type': 'function', 'function': tool.get('spec', {})} for tool in tools_dict.values()
+                    {'type': 'function', 'function': tool.get('spec', {})}
+                    for name, tool in tools_dict.items()
+                    if name not in deferred
                 ]
                 if inlet_filter_tools:
                     form_data['tools'].extend(inlet_filter_tools)
@@ -3507,36 +3516,6 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
     if not isinstance(output, list):
         return False
 
-    result_call_ids = {
-        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
-    }
-    approved_calls = [
-        item
-        for item in output
-        if item.get('type') == 'function_call'
-        and item.get('call_id')
-        and item.get('status') == 'queued'
-        and item.get('approved') is True
-        and item.get('call_id') not in result_call_ids
-    ]
-    needs_approval = metadata.get('params', {}).get('tool_approval_mode', 'full') == 'ask' and any(
-        item.get('type') == 'function_call'
-        and item.get('name') != 'ask_user'
-        and (item.get('call_id') or item.get('id'))
-        and item.get('status') == 'queued'
-        and item.get('approved') is not True
-        and (item.get('call_id') or item.get('id')) not in result_call_ids
-        for item in output
-    )
-    if not approved_calls and not needs_approval:
-        return any(
-            item.get('type') == 'function_call'
-            and item.get('call_id')
-            and item.get('status') in {'pending', 'queued', 'requires_approval'}
-            and item.get('call_id') not in result_call_ids
-            for item in output
-        )
-
     event_emitter, event_caller = await get_event_emitter_and_caller(metadata)
 
     # Request filters must be able to reject the complete request before tool side effects.
@@ -3577,11 +3556,34 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
             )
     normalize_messages_for_model(form_data)
 
-    for item in approved_calls:
-        if item.get('name') == 'ask_user':
-            item['status'] = 'pending'
-            item.pop('approved', None)
-            continue
+    while True:
+        async with Chats.edit_message_output(chat_id, message_id) as saved:
+            if not saved:
+                raise HTTPException(status_code=404, detail='Message not found.')
+            output = saved.get('output') or []
+            pending = pending_tool_calls(output)
+            if any(entry.get('status') == 'in_progress' for entry in pending):
+                return True
+            item = next(
+                (
+                    entry
+                    for entry in pending
+                    if entry.get('name') != 'ask_user'
+                    and (
+                        entry.get('approved') is True or metadata.get('params', {}).get('tool_approval_mode') == 'full'
+                    )
+                ),
+                None,
+            )
+            if item is None:
+                if pending:
+                    pending[0]['status'] = 'pending'
+                # A stale continuation must not start another model response.
+                return True
+            item['call_id'] = item.get('call_id') or item['id']
+            item['status'] = 'in_progress'
+            saved['done'] = False
+            item = copy.deepcopy(item)
 
         tool_call = {
             'id': item.get('call_id', ''),
@@ -3591,37 +3593,39 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                 'arguments': item.get('arguments', '{}'),
             },
         }
-        params, result, tool, tool_type, direct_tool = await execute_tool_call(
-            form_data, metadata, event_caller, tool_call
-        )
-        files, embeds = [], []
-        if result is None and tool is None:
-            result = 'Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON.'
-        elif tool:
-            name = item.get('name', '')
-            terminal_file_result = build_terminal_file_tool_result(name, params, result, tool, metadata)
-            if terminal_file_result:
-                result = terminal_file_result
-            result, files, embeds = await process_tool_result(
-                request, name, result, tool_type, direct_tool, metadata, user
+        try:
+            params, result, tool, tool_type, direct_tool = await execute_tool_call(
+                form_data, metadata, event_caller, tool_call
             )
-            await terminal_event_handler(name, params, result, event_emitter)
-        content = tool_result_content(result)
-        item['arguments'] = tool_call.get('function', {}).get('arguments', '{}')
-        output_parts = [{'type': 'input_text', 'text': content}]
-        item['status'] = 'failed' if _is_tool_result_error(content) else 'completed'
-        display_files = []
-        for file_item in files:
-            if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
-                image_url = await store_tool_result_image(request, file_item['url'], metadata, user)
-                output_parts.append({'type': 'input_image', 'image_url': image_url})
-            else:
-                display_files.append(file_item)
-                if file_item.get('type') == 'image' and file_item.get('url'):
-                    output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
+            files, embeds = [], []
+            if result is None and tool is None:
+                result = (
+                    'Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON.'
+                )
+            elif tool:
+                name = item.get('name', '')
+                terminal_file_result = build_terminal_file_tool_result(name, params, result, tool, metadata)
+                if terminal_file_result:
+                    result = terminal_file_result
+                result, files, embeds = await process_tool_result(
+                    request, name, result, tool_type, direct_tool, metadata, user
+                )
+                await terminal_event_handler(name, params, result, event_emitter)
+            content = tool_result_content(result)
+            item['arguments'] = tool_call.get('function', {}).get('arguments', '{}')
+            output_parts = [{'type': 'input_text', 'text': content}]
+            item['status'] = 'failed' if _is_tool_result_error(content) else 'completed'
+            display_files = []
+            for file_item in files:
+                if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
+                    image_url = await store_tool_result_image(request, file_item['url'], metadata, user)
+                    output_parts.append({'type': 'input_image', 'image_url': image_url})
+                else:
+                    display_files.append(file_item)
+                    if file_item.get('type') == 'image' and file_item.get('url'):
+                        output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
 
-        output.append(
-            {
+            result_item = {
                 'type': 'function_call_output',
                 'id': output_id('fco'),
                 'call_id': tool_call['id'],
@@ -3630,48 +3634,39 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                 **({'files': display_files} if display_files else {}),
                 **({'embeds': embeds} if embeds else {}),
             }
-        )
-        result_call_ids.add(tool_call['id'])
-
-    if needs_approval:
-        await pause_for_tool_approval(chat_id, message_id, output, form_data, metadata)
-    paused = any(
-        item.get('type') == 'function_call'
-        and item.get('call_id')
-        and item.get('status') in {'pending', 'queued', 'requires_approval'}
-        and item.get('call_id') not in result_call_ids
-        for item in output
-    )
-    if not paused:
-        output.append(
-            {
-                'type': 'message',
-                'id': output_id('msg'),
-                'status': 'in_progress',
-                'role': 'assistant',
-                'content': [{'type': 'output_text', 'text': ''}],
-            }
-        )
-
-    if not needs_approval:
-        await Chats.upsert_message_to_chat_by_id_and_message_id(
-            chat_id,
-            message_id,
-            {'done': False, 'output': output},
-            touch=False,
-        )
-    if event_emitter:
-        await event_emitter(
-            {
-                'type': 'chat:completion',
-                'data': {
-                    'done': False,
-                    'output': output,
-                },
-            }
-        )
-
-    return paused
+            output = await complete_tool_call(chat_id, message_id, item, result_item)
+        except BaseException:
+            item['status'] = 'incomplete'
+            await asyncio.shield(
+                complete_tool_call(
+                    chat_id,
+                    message_id,
+                    item,
+                    {
+                        'type': 'function_call_output',
+                        'id': output_id('fco'),
+                        'call_id': tool_call['id'],
+                        'status': 'incomplete',
+                        'output': [
+                            {
+                                'type': 'input_text',
+                                'text': 'Error: tool execution was interrupted; its outcome is unknown.',
+                            }
+                        ],
+                    },
+                )
+            )
+            raise
+        if event_emitter:
+            await event_emitter({'type': 'chat:completion', 'data': {'done': False, 'output': output}})
+        pending = pending_tool_calls(output)
+        if not pending:
+            message['output'] = output
+            return False
+        if metadata.get('params', {}).get('tool_approval_mode') != 'full' and not any(
+            entry.get('approved') is True for entry in pending
+        ):
+            return True
 
 
 async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[dict], form_data: dict, metadata: dict):

@@ -20,6 +20,7 @@ from open_webui.tasks import has_active_tasks
 from open_webui.utils.auth import VERIFIED_USER_ROLES
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
+from open_webui.utils.tool_search import strip_deferred_tools_manifest
 from sqlalchemy import select
 from starlette.datastructures import Headers
 
@@ -377,7 +378,9 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         chat_context = copy.deepcopy(run.get('chat_context') or {})
         # Timers saved before chat_context was introduced only have the assembled prompt.
         if run.get('chat_context') is None and run.get('system_prompt'):
-            chat_context['messages'] = [{'role': 'system', 'content': run['system_prompt']}]
+            chat_context['messages'] = [
+                {'role': 'system', 'content': strip_deferred_tools_manifest(run['system_prompt'])}
+            ]
         form_data = {
             'model': model_id,
             'params': chat_context.get('params') or {},
