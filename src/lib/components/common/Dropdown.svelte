@@ -275,6 +275,13 @@
 		previouslyFocused = null;
 	}
 
+	function restoreFocusAfterClose() {
+		if (contentEl?.contains(document.activeElement) && previouslyFocused?.isConnected) {
+			previouslyFocused.focus();
+		}
+		previouslyFocused = null;
+	}
+
 	function toggleOpen() {
 		if (show) {
 			closeDropdown();
@@ -286,6 +293,8 @@
 	// React to external show changes (e.g. bind:show toggled by parent component)
 	$: if (show) {
 		afterOpen();
+	} else {
+		restoreFocusAfterClose();
 	}
 
 	function handleWindowClick(event: MouseEvent) {
