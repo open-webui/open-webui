@@ -2014,8 +2014,6 @@ async def archive_chat_by_id(
         if chat.archived:
             # Cancel any in-flight LLM tasks before archiving
             await stop_item_tasks(request.app.state.redis, id)
-            # Archived chats are excluded from count — clean up orphans
-            await Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
         else:
             # Unarchived — ensure tag rows exist
             await Tags.ensure_tags_exist(tag_ids, user.id, db=db)
