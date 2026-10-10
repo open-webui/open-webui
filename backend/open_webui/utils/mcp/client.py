@@ -2,7 +2,7 @@ import asyncio
 import logging
 from contextlib import AsyncExitStack
 from datetime import timedelta
-from typing import Optional
+from typing import Any, Optional
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +18,16 @@ from open_webui.env import (
     MCP_INITIALIZE_TIMEOUT,
 )
 from open_webui.utils.json_codec import JSONCodec
+
+
+def _is_same_value(text: str, value: Any) -> bool:
+    if text == value:
+        return True
+    try:
+        parsed_text = JSONCodec.loads(text)
+    except JSONCodec.JSONDecodeError:
+        return False
+    return JSONCodec.dumps(parsed_text, sort_keys=True) == JSONCodec.dumps(value, sort_keys=True)
 
 
 def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
@@ -170,6 +180,15 @@ class MCPClient:
             except JSONCodec.JSONDecodeError:
                 continue
             if JSONCodec.dumps(text_content, sort_keys=True) == structured_json:
+                return result_content
+
+        # FastMCP mirrors plain return values as {'result': value} next to the text.
+        if structured_content.keys() == {'result'}:
+            result_values = structured_content['result']
+            if not isinstance(result_values, list):
+                result_values = [result_values]
+            texts = [item['text'] for item in result_content if item['type'] == 'text']
+            if texts and len(texts) == len(result_values) and all(map(_is_same_value, texts, result_values)):
                 return result_content
 
         result_content.append({'type': 'text', 'text': structured_json})
