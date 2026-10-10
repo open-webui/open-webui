@@ -72,7 +72,7 @@
 		<div class="flex justify-end gap-2 mt-5">
 			<button
 				type="button"
-				class="px-3.5 py-1.5 text-sm font-normal rounded-full transition-colors hover:bg-gray-100 dark:hover:bg-gray-850"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 hover:bg-gray-100 dark:hover:bg-gray-850"
 				on:click={() => {
 					show = false;
 				}}>{$i18n.t('Cancel')}</button
@@ -80,7 +80,7 @@
 			<button
 				type="button"
 				disabled={!valid}
-				class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition-colors rounded-full disabled:opacity-40"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 				on:click={apply}>{$i18n.t('Apply')}</button
 			>
 		</div>

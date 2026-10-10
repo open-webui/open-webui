@@ -171,17 +171,17 @@
 
 			<div>
 				<button
-					class="{modal
-						? `px-3.5 py-1.5 text-sm bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full ${loading ? 'cursor-not-allowed' : ''}`
-						: `text-sm px-4 py-2 transition rounded-lg ${loading ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-800' : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'}`} flex"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 disabled:cursor-not-allowed {modal
+						? 'bg-gray-900 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white'
+						: 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'}"
 					type="submit"
 					disabled={loading}
 				>
 					<div class=" self-center font-normal">{$i18n.t('Create Knowledge')}</div>
 
 					{#if loading}
-						<div class="ml-1.5 self-center">
-							<Spinner />
+						<div class="shrink-0">
+							<Spinner className="size-3" />
 						</div>
 					{/if}
 				</button>

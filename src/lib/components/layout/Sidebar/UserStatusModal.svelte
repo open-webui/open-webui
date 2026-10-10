@@ -146,17 +146,15 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-								? ' cursor-not-allowed'
-								: ''}"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>
 							{$i18n.t('Save')}
 
 							{#if loading}
-								<div class="ml-2 self-center">
-									<Spinner />
+								<div class="shrink-0">
+									<Spinner className="size-3" />
 								</div>
 							{/if}
 						</button>
