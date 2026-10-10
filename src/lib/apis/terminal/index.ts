@@ -615,11 +615,15 @@ export const moveEntry = async (
 
 export const getListeningPorts = async (
 	baseUrl: string,
-	apiKey: string
+	apiKey: string,
+	sessionId?: string | null
 ): Promise<ListeningPort[]> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/ports`;
 	const res = await fetch(url, {
-		headers: bearerHeaders(apiKey)
+		headers: {
+			...bearerHeaders(apiKey),
+			...(sessionId ? { 'X-Session-Id': sessionId } : {})
+		}
 	}).catch(() => null);
 	if (!res || !res.ok) return [];
 	const json = await res.json().catch(() => null);

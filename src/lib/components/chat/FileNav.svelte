@@ -403,6 +403,7 @@
 		if (terminalChanged) prevTerminalUrl = terminal.url;
 
 		if (chatChanged || terminalChanged || !terminal) comparePaths = null;
+		if (chatChanged || terminalChanged || !terminal) previewPort = null;
 
 		if (mounted && terminal) {
 			if (chatChanged && chatId && !oldChatId) {
@@ -2104,15 +2105,18 @@
 		<!-- Port detection -->
 		{#if selectedTerminal && !selectedFile && previewPort === null && !isSearching}
 			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
-				<PortList
-					baseUrl={selectedTerminal.url}
-					apiKey={selectedTerminal.key}
-					on:previewPort={(e) => {
-						selectedFile = null;
-						clearFilePreview();
-						previewPort = e.detail;
-					}}
-				/>
+				{#key JSON.stringify([chatId, selectedTerminal.url])}
+					<PortList
+						baseUrl={selectedTerminal.url}
+						apiKey={selectedTerminal.key}
+						{chatId}
+						on:previewPort={(e) => {
+							selectedFile = null;
+							clearFilePreview();
+							previewPort = e.detail;
+						}}
+					/>
+				{/key}
 			</div>
 		{/if}
 
