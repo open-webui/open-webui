@@ -126,7 +126,7 @@
 				if (k && v) parts[k] = v;
 			});
 		const freq = parts.FREQ || 'DAILY';
-		if (!['HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY'].includes(freq)) {
+		if (!['HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY'].includes(freq) || parts.COUNT || parts.UNTIL) {
 			frequency = 'CUSTOM';
 			prevFrequency = 'CUSTOM';
 			customRrule = s;
