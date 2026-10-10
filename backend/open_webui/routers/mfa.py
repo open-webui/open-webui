@@ -23,6 +23,7 @@ from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils import mfa
 from open_webui.utils.auth import create_session_response, get_human_user
+from open_webui.utils.misc import parse_duration
 from open_webui.utils.rate_limit import RateLimiter
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
@@ -79,12 +80,14 @@ async def finish_login(request, response, user, auth, challenge):
     if challenge.oauth_session_id:
         session = await OAuthSessions.get_session_by_id(challenge.oauth_session_id)
         if session and session.user_id == user.id:
+            expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
             response.set_cookie(
                 'oauth_session_id',
                 session.id,
                 httponly=True,
                 secure=WEBUI_AUTH_COOKIE_SECURE,
                 samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                max_age=int(expires_delta.total_seconds()) if expires_delta else None,
             )
     clear_challenge_cookie(response)
     return result
