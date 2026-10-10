@@ -647,7 +647,7 @@
 
 	{#if $config?.features.enable_community_sharing}
 		<CommunityDiscover
-			href="https://openwebui.com/tools"
+			href="https://openwebui.com/search?type=tool"
 			title={$i18n.t('Discover a tool')}
 			description={$i18n.t('Discover, download, and explore custom tools')}
 		/>
