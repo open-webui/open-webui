@@ -410,7 +410,13 @@ async def validate_mfa_configuration(config: MfaConfigForm | None = None):
             if value is not None:
                 mfa = MfaData.model_validate(value)
                 if mfa.secret:
-                    decrypt_secret(mfa.secret)
+                    try:
+                        cipher().decrypt(mfa.secret.encode())
+                    except InvalidToken:
+                        raise ValueError(
+                            'Stored MFA secrets cannot be decrypted. '
+                            'Restore the WEBUI_SECRET_KEY or MFA_ENCRYPTION_KEY they were encrypted with.'
+                        ) from None
 
 
 async def update_mfa_config(request, updates: dict) -> bool:
