@@ -404,9 +404,9 @@
 	let chat: any = null;
 	let tags = [];
 
-	// Read-only when viewing someone else's chat (e.g. via shared folder access)
-	$: readOnly = chat != null && chat.user_id !== $user?.id;
-	$: canClone = readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
+	// Non-owners may reply when the sharing mode allows it, but cannot save chat edits.
+	$: isShared = chat != null && chat.user_id !== $user?.id;
+	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
 	let cloning = false;
 
 	const cloneSharedChat = async () => {
@@ -447,7 +447,7 @@
 		});
 	};
 
-	$: if (readOnly && chat?.user_id) {
+	$: if (isShared && chat?.user_id) {
 		void resolveChatOwner(chat.user_id);
 	} else {
 		chatOwner = null;
@@ -499,7 +499,7 @@
 			}
 		);
 
-		if (!readOnly && $chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
+		if (!isShared && $chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, { params }).catch((err) => {
 				console.error('[tool permissions chat]', err);
 				return null;
@@ -763,7 +763,7 @@
 
 	const saveChatVariables = async (values) => {
 		chatVariables = { ...chatVariables, ...values };
-		if (readOnly) return;
+		if (isShared) return;
 
 		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, {}, chatVariables).catch(
@@ -1299,7 +1299,7 @@
 
 	const emitTyping = (typing: boolean) => {
 		if (!$socket?.connected || !joinedChatId) return;
-		if (typing && (joinedChatId !== $chatId || (readOnly && chat?.chat?.share_mode !== 'continue')))
+		if (typing && (joinedChatId !== $chatId || (isShared && chat?.chat?.share_mode !== 'continue')))
 			return;
 		if (typing ? Date.now() - lastTypingEmit < 2000 : !lastTypingEmit) return;
 		lastTypingEmit = typing ? Date.now() : 0;
@@ -1456,7 +1456,7 @@
 				if (
 					!sender?.id ||
 					sender.id === $user?.id ||
-					(readOnly && chat?.chat?.share_mode !== 'continue')
+					(isShared && chat?.chat?.share_mode !== 'continue')
 				)
 					return;
 				if (event.data.data?.typing) {
@@ -3103,7 +3103,7 @@
 	};
 
 	const createMessagePair = async (userPrompt) => {
-		if (readOnly) return;
+		if (isShared) return;
 		messageInput?.setText('');
 		if (selectedModels.length === 0) {
 			toast.error($i18n.t('Model not selected'));
@@ -4506,7 +4506,7 @@
 	};
 
 	const saveChatHandler = async (_chatId, history) => {
-		if (readOnly) return;
+		if (isShared) return;
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
@@ -4521,7 +4521,7 @@
 	};
 
 	const saveControls = async () => {
-		if (readOnly) return;
+		if (isShared) return;
 		if (!$chatId || $temporaryChatEnabled) return;
 		const loaded = chat?.chat ?? {};
 		if (equal(params, loaded.params ?? {}) && equal(chatFiles, loaded.files ?? [])) return;
@@ -4883,7 +4883,7 @@
 					{:else}
 						<Navbar
 							bind:this={navbarElement}
-							{readOnly}
+							readOnly={isShared}
 							chat={{
 								id: $chatId,
 								archived: chat?.archived ?? false,
@@ -4962,7 +4962,7 @@
 										bind:this={messagesRef}
 										chatId={$chatId}
 										user={chatOwner ?? (chat ? { id: chat.user_id } : $user)}
-										{readOnly}
+										readOnly={isShared}
 										shareMode={chat?.chat?.share_mode ?? null}
 										bind:history
 										bind:autoScroll
@@ -4992,7 +4992,7 @@
 								</div>
 							</div>
 
-							{#if readOnly && chat?.chat?.share_mode !== 'continue'}
+							{#if isShared && chat?.chat?.share_mode !== 'continue'}
 								{#if canClone}
 									<div
 										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
