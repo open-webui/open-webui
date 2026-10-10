@@ -412,6 +412,11 @@ class SkillsTable:
                     entry = SkillHistories.new_entry(
                         id, snapshot, user_id or skill.user_id, skill.version_id, updated.get('commit_message')
                     )
+                    # History is listed by whole-second save time, so keep same-second saves in order.
+                    latest_created_at = (
+                        await session.execute(select(func.max(SkillHistory.created_at)).filter_by(skill_id=id))
+                    ).scalar()
+                    entry.created_at = max(entry.created_at, latest_created_at + 1)
                     session.add(entry)
                     values.update(snapshot, version_id=entry.id)
                 values['updated_at'] = int(time.time())
