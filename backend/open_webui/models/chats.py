@@ -2502,7 +2502,7 @@ class ChatTable:
             columns = []
             for index, tag_id in enumerate(tag_ids):
                 tag_id = tag_id.replace(' ', '_').lower()
-                stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
+                stmt = select(func.count(Chat.id)).filter_by(user_id=user_id)
                 stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
                 param = f'tag_id_{index}'
                 if dialect_name == 'sqlite':
@@ -2530,7 +2530,7 @@ class ChatTable:
         db: AsyncSession | None = None,
     ) -> None:
         """Delete tag rows from *tag_ids* that appear in at most *threshold*
-        non-archived chats for *user_id*.  One query to find orphans, one to
+        chats for *user_id*.  One query to find orphans, one to
         delete them.
 
         Use threshold=0 after a tag is already removed from a chat's meta.
