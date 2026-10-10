@@ -9,9 +9,8 @@ from uuid import uuid4
 
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
-from open_webui.internal.db import get_async_db
 from open_webui.models.chat_messages import ChatMessages
-from open_webui.models.chats import Chat, ChatForm, Chats
+from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.auths import Auths
 from open_webui.models.users import UserModel, Users
@@ -20,7 +19,6 @@ from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message, get_message_list
 from open_webui.utils.tool_search import strip_deferred_tools_manifest
-from sqlalchemy import select
 from starlette.datastructures import Headers
 
 DEFAULT_SUBAGENT_SYSTEM_PROMPT = """You are a sub-agent working on a specific task assigned by the lead agent.
@@ -93,13 +91,8 @@ async def process_pending_internal_messages(
         if not user or user.role not in VERIFIED_USER_ROLES:
             return
 
-        async with get_async_db() as db:
-            stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == user_id)
-            if db.bind.dialect.name == 'postgresql':
-                stmt = stmt.with_for_update()
-            result = await db.execute(stmt)
-            chat = result.scalar_one_or_none()
-            if not chat:
+        async with Chats._chat_transaction(parent_chat_id) as (_, chat):
+            if not chat or chat.user_id != user_id:
                 return
 
             history = copy.deepcopy((chat.chat or {}).get('history') or {})
@@ -228,7 +221,6 @@ async def process_pending_internal_messages(
             chat.chat = {**(chat.chat or {}), 'history': history}
             chat.current_message_id = assistant_message_id
             chat.updated_at = int(time.time())
-            await db.commit()
 
         if removed_ids:
             await ChatMessages.delete_message_ids_by_chat_id(parent_chat_id, removed_ids)
@@ -617,13 +609,8 @@ async def delegate(
 
         lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
         async with lock:
-            async with get_async_db() as db:
-                stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == user.id)
-                if db.bind.dialect.name == 'postgresql':
-                    stmt = stmt.with_for_update()
-                result_row = await db.execute(stmt)
-                parent = result_row.scalar_one_or_none()
-                if not parent:
+            async with Chats._chat_transaction(parent_chat_id) as (_, parent):
+                if not parent or parent.user_id != user.id:
                     if cancelled:
                         raise asyncio.CancelledError
                     return result
@@ -658,7 +645,6 @@ async def delegate(
                 updated_history['messages'] = updated_messages
                 parent.chat = {**(parent.chat or {}), **updated_chat, 'history': updated_history}
                 parent.updated_at = int(time.time())
-                await db.commit()
 
             await ChatMessages.upsert_message(
                 message_id=pending_message_id,
