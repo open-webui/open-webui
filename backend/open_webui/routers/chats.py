@@ -1743,18 +1743,24 @@ async def fork_chat_by_id(
 ):
     await require_chat_import_permission(request, user, db)
 
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await Chats.get_accessible_chat_by_id(id, user, db=db)
     if not chat:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
+        chat = ChatResponse.model_validate(await get_shared_chat_by_id(id, user=user, db=db))
 
-    if await has_active_tasks(request.app.state.redis, id):
+    is_snapshot = chat.id == chat.share_id
+    is_owner = chat.user_id == user.id
+
+    if not is_snapshot and await has_active_tasks(request.app.state.redis, chat.id):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail='Wait for the current response to finish before forking.',
         )
 
     history = (chat.chat or {}).get('history') or {}
-    messages_map = await Chats.get_messages_map_by_chat_id(id) or history.get('messages') or {}
+    # A share token grants access to its snapshot, not later messages in the original chat.
+    messages_map = history.get('messages') or {}
+    if not is_snapshot:
+        messages_map = await Chats.get_messages_map_by_chat_id(chat.id) or messages_map
 
     source_message_id = (
         (form_data.message_id if form_data else None) or chat.current_message_id or history.get('currentId')
@@ -1792,6 +1798,7 @@ async def fork_chat_by_id(
 
     updated_chat = {**(chat.chat or {})}
     updated_chat.pop('currentId', None)
+    updated_chat.pop('share_mode', None)
     updated_chat.update(
         {
             'originalChatId': chat.id,
@@ -1801,14 +1808,16 @@ async def fork_chat_by_id(
             'messages': fork_messages,
         }
     )
+    if not is_owner:
+        updated_chat = (await shared_chat_response(chat.model_copy(update={'chat': updated_chat}), user, db=db))['chat']
     meta = {
-        **(chat.meta or {}),
+        **((chat.meta or {}) if is_owner else {}),
         'forked_from': chat.id,
         'forked_from_message_id': source_message_id,
     }
 
     # The source chat's folder may no longer be writable by the caller.
-    folder_id = chat.folder_id
+    folder_id = chat.folder_id if is_owner else None
     if folder_id is not None and not await has_folder_write_access(user.id, folder_id, db=db):
         folder_id = None
 
@@ -1820,13 +1829,13 @@ async def fork_chat_by_id(
         internal_meta=meta,
     )
 
-    if fork and chat.variables:
+    if fork and is_owner and chat.variables:
         fork = await Chats.update_chat_variables_by_id(fork.id, chat.variables, db=db, touch=False) or fork
 
     if not fork:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
 
-    if chat.pinned:
+    if is_owner and chat.pinned:
         fork = await Chats.toggle_chat_pinned_by_id(fork.id, db=db) or fork
 
     await publish_event(

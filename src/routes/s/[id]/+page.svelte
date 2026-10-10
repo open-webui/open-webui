@@ -9,7 +9,7 @@
 	import { settings, chatId, WEBUI_NAME, models, config, user as sessionUser } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
+	import { getChatByShareId, cloneSharedChatById, forkChatById } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 
@@ -21,6 +21,7 @@
 	dayjs.extend(localizedFormat);
 
 	let loaded = false;
+	let forking = false;
 
 	let autoScroll = true;
 	let processing = '';
@@ -150,6 +151,30 @@
 		}
 	};
 
+	const forkSharedChat = async (messageId: string | null = null) => {
+		const shareId = $page.params.id;
+		if (!canClone || !shareId || forking) return;
+		forking = true;
+		const toastId = toast.loading($i18n.t('Forking chat...'));
+		try {
+			const result = await forkChatById(
+				localStorage.token,
+				shareId,
+				messageId ?? history.currentId
+			);
+			if (result?.id) {
+				await goto(`/c/${result.id}`);
+				toast.success($i18n.t('Chat forked'), { id: toastId });
+			} else {
+				toast.error($i18n.t('Failed to fork chat'), { id: toastId });
+			}
+		} catch (error) {
+			toast.error(`${error}`, { id: toastId });
+		} finally {
+			forking = false;
+		}
+	};
+
 	const cloneSharedChat = async () => {
 		if (!canClone) {
 			toast.error($i18n.t('Access prohibited'));
@@ -224,6 +249,7 @@
 							{user}
 							chatId={$chatId}
 							readOnly={true}
+							forkHandler={canClone ? forkSharedChat : null}
 							{selectedModels}
 							{processing}
 							bind:history
@@ -240,8 +266,15 @@
 
 			{#if canClone}
 				<div
-					class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
+					class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
 				>
+					<button
+						class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
+						disabled={forking || !history.currentId}
+						on:click={() => forkSharedChat()}
+					>
+						{$i18n.t('Fork chat')}
+					</button>
 					<button
 						class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
 						on:click={cloneSharedChat}

@@ -1256,6 +1256,37 @@
 									</Tooltip>
 								{/if}
 
+								{#if $user && message.done && forkHandler && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))}
+									<Tooltip content={$i18n.t('Fork chat')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Fork chat')}
+											class="{isLastMessage || ($settings?.highContrastMode ?? false)
+												? 'visible'
+												: 'hover-reveal'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={() => {
+												forkHandler?.(message.id);
+											}}
+										>
+											<svg
+												class="w-4 h-4"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.8"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												aria-hidden="true"
+											>
+												<path d="M4 12H9" />
+												<path d="M9 12C12.5 12 12.5 7 16 7H20" />
+												<path d="M17 4L20 7L17 10" />
+												<path d="M9 12C12.5 12 12.5 17 16 17H20" />
+												<path d="M17 14L20 17L17 20" />
+											</svg>
+										</button>
+									</Tooltip>
+								{/if}
+
 								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (shareMode === 'continue' && message.user_id === $user?.id)}
 									{#if !readOnly && !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
@@ -1529,37 +1560,6 @@
 											</button>
 										</Tooltip>
 									{/each}
-
-									{#if message.done && !readOnly && forkHandler && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))}
-										<Tooltip content={$i18n.t('Fork chat')} placement="bottom">
-											<button
-												aria-label={$i18n.t('Fork chat')}
-												class="{isLastMessage || ($settings?.highContrastMode ?? false)
-													? 'visible'
-													: 'hover-reveal'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-												on:click={() => {
-													forkHandler?.(message.id);
-												}}
-											>
-												<svg
-													class="w-4 h-4"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="1.8"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													aria-hidden="true"
-												>
-													<path d="M4 12H9" />
-													<path d="M9 12C12.5 12 12.5 7 16 7H20" />
-													<path d="M17 4L20 7L17 10" />
-													<path d="M9 12C12.5 12 12.5 17 16 17H20" />
-													<path d="M17 14L20 17L17 20" />
-												</svg>
-											</button>
-										</Tooltip>
-									{/if}
 
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
 										{#if siblings.length > 1}

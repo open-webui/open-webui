@@ -4901,8 +4901,15 @@
 							{#if readOnly && chat?.chat?.share_mode !== 'continue'}
 								{#if canClone}
 									<div
-										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
+										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
 									>
+										<button
+											class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
+											disabled={generating || !!taskIds?.length || !history.currentId}
+											on:click={() => handleForkChat()}
+										>
+											{$i18n.t('Fork chat')}
+										</button>
 										<button
 											class="pointer-events-auto rounded-full bg-black px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 disabled:opacity-50"
 											disabled={cloning}
