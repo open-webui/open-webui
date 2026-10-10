@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import uuid
+import weakref
+from contextlib import asynccontextmanager
 
 import pycrdt as Y
-from open_webui.env import REDIS_KEY_PREFIX
+from open_webui.env import REDIS_KEY_PREFIX, WEBSOCKET_REDIS_LOCK_TIMEOUT
+from open_webui.tasks import has_active_tasks
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.redis import get_redis_connection
 from redis.exceptions import RedisClusterException, RedisError
@@ -16,6 +20,8 @@ log = logging.getLogger(__name__)
 
 YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
 SCAN_BATCH_SIZE = 200
+
+SOCKET_EVENT_LOCKS: weakref.WeakValueDictionary[tuple[str, str], asyncio.Lock] = weakref.WeakValueDictionary()
 
 
 class RedisLock:
@@ -253,6 +259,22 @@ class YdocManager:
         self._redis = redis
         self._redis_key_prefix = redis_key_prefix
 
+    @asynccontextmanager
+    async def lock(self, document_id: str):
+        # Local FIFO ordering also covers permission checks before an update is stored.
+        async with SOCKET_EVENT_LOCKS.setdefault(('document', document_id), asyncio.Lock()):
+            if self._redis:
+                async with self._redis.lock(
+                    f'{self._redis_key_prefix}:{document_id}:lock',
+                    timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+                    blocking_timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+                ):
+                    # Cancel stalled work before another worker can acquire the expired lease.
+                    async with asyncio.timeout(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2):
+                        yield
+            else:
+                yield
+
     async def append_to_updates(self, document_id: str, update: list[int]) -> bool:
         if not isinstance(update, list):
             return False
@@ -373,31 +395,16 @@ class YdocManager:
 
     async def remove_user_from_all_documents(self, user_id: str):
         if self._redis:
-            # Use the per-session reverse index instead of a cluster-wide
-            # SCAN.  This set contains only the document IDs that this
-            # session actually joined, so the cost is proportional to
-            # the session's footprint — not the total number of documents.
             session_key = f'{self._redis_key_prefix}:session:{user_id}:documents'
             document_ids = await self._redis.smembers(session_key)
-
-            for document_id in document_ids:
-                users_key = f'{self._redis_key_prefix}:{document_id}:users'
-                await self._redis.srem(users_key, user_id)
-
-                if len(await self.get_users(document_id)) == 0:
-                    await self.clear_document(document_id)
-
-            # Clean up the reverse index itself.
-            await self._redis.delete(session_key)
-
         else:
-            for document_id in list(self._users.keys()):
-                if user_id in self._users[document_id]:
-                    self._users[document_id].remove(user_id)
-                    if not self._users[document_id]:
-                        del self._users[document_id]
+            document_ids = [document_id for document_id, users in self._users.items() if user_id in users]
 
-                        await self.clear_document(document_id)
+        for document_id in document_ids:
+            async with self.lock(document_id):
+                await self.remove_user(document_id, user_id)
+                if not await self.get_users(document_id) and not await has_active_tasks(self._redis, document_id):
+                    await self.clear_document(document_id)
 
     async def clear_document(self, document_id: str):
         if self._redis:

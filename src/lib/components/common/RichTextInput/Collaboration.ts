@@ -1,4 +1,5 @@
 import * as Y from 'yjs';
+import { marked } from 'marked';
 import {
 	ySyncPlugin,
 	ySyncPluginKey,
@@ -103,15 +104,15 @@ export class SocketIOCollaborationProvider {
 		}
 	}
 
-	private applyInitialContent() {
-		if (!this.editor || !this.initialContent) return;
+	private applyInitialContent(content = this.initialContent) {
+		if (!this.editor || !content) return;
 
-		if (typeof this.initialContent === 'string') {
-			this.editor.commands.setContent(this.initialContent);
+		if (typeof content === 'string') {
+			this.editor.commands.setContent(content);
 			return;
 		}
 
-		const doc = prosemirrorJSONToYDoc(this.editor.schema, this.initialContent);
+		const doc = prosemirrorJSONToYDoc(this.editor.schema, content);
 		Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(doc));
 	}
 
@@ -181,10 +182,17 @@ export class SocketIOCollaborationProvider {
 								this.doc.getXmlFragment('prosemirror').length === 0
 							) {
 								if (
-									this.initialContent &&
+									(data.content || this.initialContent) &&
 									[...(data.sessions ?? [])].sort()[0] === this.socket.id
 								) {
-									this.applyInitialContent();
+									// The HTTP snapshot may predate the last socket save.
+									this.applyInitialContent(
+										data.content
+											? data.content.json ||
+													data.content.html ||
+													marked.parse(data.content.md ?? '', { async: false })
+											: this.initialContent
+									);
 								}
 							} else {
 								// If the editor already has content, we don't need to send an empty state
