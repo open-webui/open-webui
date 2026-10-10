@@ -49,7 +49,6 @@ from open_webui.utils.access_control import filter_allowed_access_grants, has_ac
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
-from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import get_all_models
 from open_webui.utils.validate import BACKGROUND_IMAGE_MAX_BYTES, validate_background_image
 from open_webui.utils.voice_avatar import (
@@ -66,13 +65,8 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def model_response(model, user):
-    if model is None:
-        return None
-    data = model.model_dump()
-    if user.role != 'admin':
-        data.get('params', {}).pop('model_controls', None)
-    return data
+def model_response(model):
+    return model.model_dump() if model is not None else None
 
 
 async def _check_model_controls(form, previous, user, request):
@@ -82,8 +76,6 @@ async def _check_model_controls(form, previous, user, request):
             form.params.model_controls = previous.params.model_controls
         return
     controls = form.params.model_dump().get('model_controls', {})
-    if user.role != 'admin' and JSONCodec.dumps(controls) != JSONCodec.dumps(old):
-        raise HTTPException(403, 'Only admins can change model controls.')
     if controls:
         if not request.app.state.MODELS:
             await get_all_models(request, user=user)
@@ -285,7 +277,7 @@ async def get_models(
     # Strip profile_image_url from meta — images are served via /model/profile/image.
     items = []
     for model in result.items:
-        data = add_chat_variables_schema(model_response(model, user))
+        data = add_chat_variables_schema(model_response(model))
         if data.get('meta'):
             data['meta'].pop('profile_image_url', None)
         write_access = (
@@ -436,7 +428,7 @@ async def create_new_model(
         subject_id=model.id,
         data={'name': model.name},
     )
-    return model_response(model, user)
+    return model_response(model)
 
 
 ############################
@@ -476,7 +468,7 @@ async def export_models(
             raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     exported = []
     for model in models:
-        data = model_response(model, user)
+        data = model_response(model)
         url = model.meta.background_image_url
         if url:
             try:
@@ -827,7 +819,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
             permission='read',
             db=db,
         ):
-            model_dict = model_response(model, user)
+            model_dict = model_response(model)
             model_dict = add_chat_variables_schema(model_dict)
             # Strip params (system prompt and other admin-curated config)
             # for read-only callers — matches the params strip already
@@ -895,9 +887,6 @@ async def get_model_history_entry(
     entry = await ModelHistories.get_history_by_id(id, history_id, db=db)
     if not entry:
         raise HTTPException(404, 'Model version not found')
-    if user.role != 'admin':
-        entry.snapshot = deepcopy(entry.snapshot)
-        entry.snapshot.get('params', {}).pop('model_controls', None)
     return entry
 
 
@@ -995,7 +984,7 @@ async def set_model_version(
         subject_id=id,
         data={'name': result.name, 'version_id': result.version_id},
     )
-    return model_response(result, user)
+    return model_response(result)
 
 
 @router.get('/model/profile/image')
@@ -1135,7 +1124,7 @@ async def toggle_model_by_id(
                     subject_type='model',
                     data={'name': model.name},
                 )
-                return model_response(model, user)
+                return model_response(model)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -1251,7 +1240,7 @@ async def update_model_by_id(
             subject_id=model.id,
             data={'name': model.name},
         )
-    return model_response(model, user)
+    return model_response(model)
 
 
 ############################
@@ -1333,7 +1322,7 @@ async def update_model_access_by_id(
         actor=user,
         subject_id=form_data.id,
     )
-    return model_response(model, user)
+    return model_response(model)
 
 
 ############################
