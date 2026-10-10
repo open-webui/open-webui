@@ -57,7 +57,7 @@ def search_perplexity_search(
         json_response = response.json()
 
         # Extract citations from the response
-        results = json_response.get('results', [])
+        results = get_filtered_results(json_response.get('results', []), filter_list)
 
         return [
             SearchResult(link=result['url'], title=result['title'], snippet=result['snippet']) for result in results
