@@ -859,7 +859,7 @@
 									</div>
 									<button
 										type="button"
-										class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800"
 										disabled={refreshing}
 										on:click={refreshHandler}
 									>
@@ -1070,7 +1070,7 @@
 							</div>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 								type="submit"
 								disabled={loading || loadingPolicy || !!policyLoadError}
 							>
@@ -1078,7 +1078,7 @@
 
 								{#if loading}
 									<span class="shrink-0">
-										<Spinner />
+										<Spinner className="size-3" />
 									</span>
 								{/if}
 							</button>
