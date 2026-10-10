@@ -156,6 +156,21 @@ def truncate_content(content: str, max_chars: int, mode: str = 'middletruncate')
         return f'{content[:half]}...{content[-(max_chars - half) :]}'
 
 
+def apply_role_filter(messages: list[dict], roles_str: str) -> list[dict]:
+    """Keep only the messages whose role is listed in roles_str.
+
+    roles_str is a comma separated list of roles, like 'user,assistant'.
+    Roles are matched case-insensitively and may also be separated by spaces.
+    An empty list leaves the messages untouched, so a typo degrades to the
+    previous behaviour instead of silently emptying the chat history.
+    """
+    roles = {role.lower() for role in re.split(r'[,\s]+', roles_str) if role}
+    if not roles:
+        return messages
+
+    return [message for message in messages if (message.get('role') or '').lower() in roles]
+
+
 def apply_content_filter(messages: list[dict], filter_str: str) -> list[dict]:
     """Apply a content filter to each message's content.
 
@@ -197,59 +212,75 @@ def apply_content_filter(messages: list[dict], filter_str: str) -> list[dict]:
 def replace_messages_variable(
     template: str, messages: Optional[list[dict]] = None, variable_name: str = 'MESSAGES'
 ) -> str:
+    """Expand a {{MESSAGES}} variable into a rendered chat history.
+
+    Supported forms, where each may carry zero or more `|filter` suffixes:
+
+        {{MESSAGES}}                    every message
+        {{MESSAGES:START:4}}            the first 4 messages
+        {{MESSAGES:END:6}}              the last 6 messages
+        {{MESSAGES:MIDDLETRUNCATE:6}}   the first and last 3 messages
+
+    Two kinds of filter may be chained in any order:
+
+        |ROLES:user,assistant           keep only these roles
+        |middletruncate:500             truncate each message's content
+        |start:200  |end:200
+
+    Role filters select *which* messages are rendered and are applied before
+    the positional selector, so `{{MESSAGES:END:6|ROLES:user}}` renders the
+    last 6 user messages rather than whatever user messages happen to sit in
+    the last 6 of the whole history.  Content filters shorten each surviving
+    message and are applied last.
+    """
+
     def replacement_function(match):
-        # Groups: (1) filter for bare MESSAGES
-        #         (2) START count, (3) filter for START
-        #         (4) END count,   (5) filter for END
-        #         (6) MIDDLE count,(7) filter for MIDDLE
-        bare_filter = match.group(1)
-        start_length = match.group(2)
-        start_filter = match.group(3)
-        end_length = match.group(4)
-        end_filter = match.group(5)
-        middle_length = match.group(6)
-        middle_filter = match.group(7)
+        selector = match.group('selector')
+        length = match.group('length')
+        filters_str = match.group('filters') or ''
 
         # If messages is None, handle it as an empty list
         if messages is None:
             return ''
 
-        # Select messages based on the variant
-        if start_length is not None:
-            selected = messages[: int(start_length)]
-            content_filter = start_filter
-        elif end_length is not None:
-            selected = messages[-int(end_length) :]
-            content_filter = end_filter
-        elif middle_length is not None:
-            mid = int(middle_length)
-            if len(messages) <= mid:
-                selected = messages
-            else:
-                half = mid // 2
-                start_msgs = messages[:half]
-                end_msgs = messages[-half:] if mid % 2 == 0 else messages[-(half + 1) :]
-                selected = start_msgs + end_msgs
-            content_filter = middle_filter
-        else:
-            # Bare {{MESSAGES}} or {{MESSAGES|filter}}
-            selected = messages
-            content_filter = bare_filter
+        filters = [f for f in filters_str.split('|') if f]
+        role_filters = [f for f in filters if f.split(':', 1)[0].lower() == 'roles']
+        content_filters = [f for f in filters if f not in role_filters]
 
-        # Apply content filter if present
-        if content_filter:
+        # Role filtering runs first so the positional selector below counts
+        # only the messages that are actually rendered.
+        selected = messages
+        for role_filter in role_filters:
+            _, _, roles_str = role_filter.partition(':')
+            selected = apply_role_filter(selected, roles_str)
+
+        selector = (selector or '').upper()
+        if selector == 'START':
+            selected = selected[: int(length)]
+        elif selector == 'END':
+            selected = selected[-int(length) :]
+        elif selector == 'MIDDLETRUNCATE':
+            mid = int(length)
+            if len(selected) > mid:
+                half = mid // 2
+                start_msgs = selected[:half]
+                end_msgs = selected[-half:] if mid % 2 == 0 else selected[-(half + 1) :]
+                selected = start_msgs + end_msgs
+
+        for content_filter in content_filters:
             selected = apply_content_filter(selected, content_filter)
 
         return get_messages_content(selected)
 
     variable_pattern = re.escape(variable_name)
+    # A filter is either ROLES:<comma separated roles> or <mode>:<int>;
+    # any number of them may be chained with '|'.
+    filter_pattern = r'(?:(?i:ROLES):[\w,\s]+|\w+:\d+)'
     template = re.sub(
-        r'(?:'
-        rf'\{{\{{{variable_pattern}(?:\|(\w+:\d+))?\}}\}}'
-        rf'|\{{\{{{variable_pattern}:START:(\d+)(?:\|(\w+:\d+))?\}}\}}'
-        rf'|\{{\{{{variable_pattern}:END:(\d+)(?:\|(\w+:\d+))?\}}\}}'
-        rf'|\{{\{{{variable_pattern}:MIDDLETRUNCATE:(\d+)(?:\|(\w+:\d+))?\}}\}}'
-        r')',
+        rf'\{{\{{{variable_pattern}'
+        rf'(?::(?P<selector>START|END|MIDDLETRUNCATE):(?P<length>\d+))?'
+        rf'(?P<filters>(?:\|{filter_pattern})*)'
+        r'\}\}',
         replacement_function,
         template,
     )
