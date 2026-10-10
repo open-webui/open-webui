@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ModelSettingsLabel from '$lib/components/workspace/Models/ModelSettingsLabel.svelte';
 	import { getContext, tick } from 'svelte';
 	// @ts-expect-error The existing SortableJS dependency does not ship declarations.
 	import Sortable from 'sortablejs';
@@ -137,7 +138,10 @@
 		class="grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 px-1 py-1.5 text-xs sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
 	>
 		<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
-			>{$i18n.t('Model controls')}</span
+			><ModelSettingsLabel
+				label={$i18n.t('Model controls')}
+				description={$i18n.t('Let people choose approved parameter presets in chat.')}
+			/></span
 		>
 		<p
 			class="truncate text-gray-500 dark:text-gray-400"

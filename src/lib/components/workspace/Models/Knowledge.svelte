@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { getContext, onMount } from 'svelte';
 	import { config, settings, user } from '$lib/stores';
 
@@ -196,7 +197,14 @@
 			class="grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal disabled:cursor-default sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
 		>
 			<span class="text-gray-600 dark:text-gray-400"
-				><slot name="label">{$i18n.t('Knowledge')}</slot></span
+				><slot name="label"
+					><ModelSettingsLabel
+						label={$i18n.t('Knowledge')}
+						description={$i18n.t(
+							'Attach knowledge bases, notes, or files for this model to reference in chats.'
+						)}
+					/></slot
+				></span
 			>
 			<span
 				bind:this={valueElement}

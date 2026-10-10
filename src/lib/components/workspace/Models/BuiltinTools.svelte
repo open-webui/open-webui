@@ -95,7 +95,12 @@
 	};
 </script>
 
-<ModelSettingsSection label={$i18n.t('settings.admin.models.builtinTools.title')}>
+<ModelSettingsSection
+	label={$i18n.t('settings.admin.models.builtinTools.title')}
+	description={$i18n.t(
+		'Choose which built-in tools this model can use when Builtin Tools is enabled.'
+	)}
+>
 	<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
 		<span class="min-w-0 [overflow-wrap:anywhere]"
 			>{enabledTools

@@ -19,6 +19,7 @@
 <TypeaheadSelector
 	id="model-actionsselector"
 	label={$i18n.t('Actions')}
+	description={$i18n.t('Add custom action buttons to model responses.')}
 	items={actions}
 	selectedIds={selectedActionIds}
 	{disabled}

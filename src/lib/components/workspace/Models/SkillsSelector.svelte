@@ -17,6 +17,7 @@
 <TypeaheadSelector
 	id="model-skillsselector"
 	label={$i18n.t('Skills')}
+	description={$i18n.t('Attach reusable instructions and resources for specific tasks.')}
 	items={skills.filter((skill) => skill.is_active !== false)}
 	selectedIds={selectedSkillIds}
 	{disabled}

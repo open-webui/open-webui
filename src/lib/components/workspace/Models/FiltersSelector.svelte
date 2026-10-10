@@ -21,6 +21,7 @@
 <TypeaheadSelector
 	id="model-filtersselector"
 	label={$i18n.t('Filters')}
+	description={$i18n.t('Apply functions that process messages before or after the model responds.')}
 	items={filters}
 	selectedIds={selectedFilterIds}
 	bind:defaultIds={defaultFilterIds}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import { beforeNavigate, goto } from '$app/navigation';
@@ -1220,7 +1221,12 @@
 											class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>
 											<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
-												{$i18n.t('Base Model (From)')}
+												<ModelSettingsLabel
+													label={$i18n.t('Base Model (From)')}
+													description={$i18n.t(
+														'Choose the underlying model that generates responses for this custom model.'
+													)}
+												/>
 											</div>
 
 											<div class="min-w-0">
@@ -1242,7 +1248,12 @@
 										class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 									>
 										<div class="pt-1 text-xs font-normal text-gray-600 dark:text-gray-400">
-											{$i18n.t('Tags')}
+											<ModelSettingsLabel
+												label={$i18n.t('Tags')}
+												description={$i18n.t(
+													'Add tags to organize models and make them easier to find.'
+												)}
+											/>
 										</div>
 										<div class="min-w-0">
 											<Tags
@@ -1271,7 +1282,12 @@
 							<section class="mt-4">
 								<div class="space-y-2 px-1">
 									<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
-										{$i18n.t('System Prompt')}
+										<ModelSettingsLabel
+											label={$i18n.t('System Prompt')}
+											description={$i18n.t(
+												'Set instructions that guide how this model behaves throughout a chat.'
+											)}
+										/>
 									</div>
 
 									{#if showSystemPrompt || !system.trim()}
@@ -1385,7 +1401,12 @@
 										on:click={() => (showAdvanced = !showAdvanced)}
 									>
 										<span class="font-normal text-gray-600 dark:text-gray-400"
-											>{$i18n.t('Advanced Params')}</span
+											><ModelSettingsLabel
+												label={$i18n.t('Advanced Params')}
+												description={$i18n.t(
+													'Override generation settings such as temperature, token limits, and sampling. Unmodified settings use the provider defaults.'
+												)}
+											/></span
 										>
 										<span class="text-gray-900 dark:text-gray-100">
 											{modifiedParamCount
@@ -1414,6 +1435,9 @@
 								<section class="mt-0.5">
 									<ModelSettingsSection
 										label={$i18n.t('Prompts')}
+										description={$i18n.t(
+											'Set the starter suggestions people see when opening a new chat with this model.'
+										)}
 										summary={editingLocale
 											? Array.isArray(info.meta.i18n?.[editingLocale]?.suggestion_prompts)
 												? $i18n.t('Custom')
@@ -1504,6 +1528,9 @@
 									/>
 									<ModelSettingsSection
 										label={$i18n.t('Voice')}
+										description={$i18n.t(
+											'Configure the realtime voice, voice avatar, and text-to-speech voice for this model.'
+										)}
 										summary={[
 											$config?.audio?.realtime?.enabled
 												? voice.voice || $i18n.t('Admin default')
@@ -1571,24 +1598,19 @@
 							</fieldset>
 
 							<div class="my-2 text-xs text-gray-400 dark:text-gray-500">
-								<div class="flex w-full items-center gap-2">
+								<div class="flex w-full items-center gap-2 opacity-30 transition-opacity hover:opacity-60 focus-within:opacity-60">
 									<button
 										type="button"
-										class="group flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+										class="flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
 										aria-expanded={showPreview}
 										on:click={() => (showPreview = !showPreview)}
 									>
-										<span class="font-normal text-gray-600 dark:text-gray-400"
-											>{$i18n.t('JSON Preview')}</span
-										>
-										<span
-											aria-hidden="true"
-											class="text-gray-500 transition group-hover:text-gray-700 dark:group-hover:text-gray-300"
-											>{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}</span
+										<span class="font-normal">{$i18n.t('JSON Preview')}</span>
+										<span aria-hidden="true">{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}</span
 										>
 									</button>
 									<button
-										class="px-1.5 py-0.5 text-xs flex rounded-sm transition"
+										class="px-1.5 py-0.5 text-xs flex rounded-sm"
 										type="button"
 										on:click={async () => {
 											const copied = await copyToClipboard(

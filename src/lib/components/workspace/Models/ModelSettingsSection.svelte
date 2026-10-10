@@ -1,7 +1,9 @@
 <script lang="ts">
+	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
 	export let label = '';
+	export let description = '';
 	export let summary = '';
 	export let open = false;
 </script>
@@ -10,7 +12,9 @@
 	<summary
 		class="grid cursor-pointer list-none grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-xs font-normal focus-visible:outline focus-visible:outline-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto] [&::-webkit-details-marker]:hidden"
 	>
-		<span class="text-gray-600 dark:text-gray-400">{label}</span>
+		<span class="text-gray-600 dark:text-gray-400"
+			><ModelSettingsLabel {label} {description} /></span
+		>
 		<slot name="summary">
 			<span class="truncate text-gray-900 dark:text-gray-100" title={summary}>{summary}</span>
 		</slot>

@@ -82,7 +82,12 @@
 </script>
 
 <div class="space-y-0.5">
-	<ModelSettingsSection label={$i18n.t('settings.admin.models.capabilities.title')}>
+	<ModelSettingsSection
+		label={$i18n.t('settings.admin.models.capabilities.title')}
+		description={$i18n.t(
+			'Choose which features are available for this model. The connected model and provider must support them.'
+		)}
+	>
 		<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
 			<span class="min-w-0 [overflow-wrap:anywhere]"
 				>{enabledCapabilityIds
@@ -107,7 +112,10 @@
 	</ModelSettingsSection>
 
 	{#if availableFeatures.length}
-		<ModelSettingsSection label={$i18n.t('settings.admin.models.defaultFeatures.title')}>
+		<ModelSettingsSection
+			label={$i18n.t('settings.admin.models.defaultFeatures.title')}
+			description={$i18n.t('Choose which available features start enabled in new chats.')}
+		>
 			<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
 				<span class="min-w-0 [overflow-wrap:anywhere]"
 					>{enabledDefaultIds

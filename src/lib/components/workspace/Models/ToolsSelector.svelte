@@ -18,6 +18,9 @@
 <TypeaheadSelector
 	id="model-toolsselector"
 	label={$i18n.t('Tools')}
+	description={$i18n.t(
+		'Connect tools this model can call to retrieve information or perform actions.'
+	)}
 	items={tools}
 	selectedIds={selectedToolIds}
 	{disabled}

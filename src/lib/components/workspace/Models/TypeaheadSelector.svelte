@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { createEventDispatcher, getContext, tick } from 'svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -23,6 +24,7 @@
 	export let triggerLabel = '';
 	export let emptyLabel = '';
 	export let label = '';
+	export let description = '';
 	export let emptyHint = '';
 	export let workspaceHref = '';
 	export let disabled = false;
@@ -124,7 +126,9 @@
 				: 'flex min-w-0 items-center bg-transparent text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}
 		>
 			{#if label}
-				<span class="text-gray-600 dark:text-gray-400">{label}</span>
+				<span class="text-gray-600 dark:text-gray-400"
+					><ModelSettingsLabel {label} {description} /></span
+				>
 				<span
 					bind:this={valueElement}
 					class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100"
