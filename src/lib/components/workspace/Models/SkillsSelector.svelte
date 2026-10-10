@@ -1,102 +1,39 @@
 <script lang="ts">
-	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
-	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import TypeaheadSelector from './TypeaheadSelector.svelte';
 	import { getContext } from 'svelte';
-
+	import { user } from '$lib/stores';
+	import TypeaheadSelector from './TypeaheadSelector.svelte';
 	type Skill = {
 		id: string;
 		name?: string;
 		description?: string;
 		is_active?: boolean;
 	};
-
+	const i18n = getContext<any>('i18n');
 	export let skills: Skill[] = [];
 	export let selectedSkillIds: string[] = [];
-
-	const i18n = getContext('i18n') as any;
-
-	$: activeSkills = skills.filter((skill) => skill.is_active !== false);
-	$: selectedSkills = activeSkills.filter((skill) => selectedSkillIds.includes(skill.id));
-
-	const toggleSkill = (skill: Skill) => {
-		selectedSkillIds = selectedSkillIds.includes(skill.id)
-			? selectedSkillIds.filter((id) => id !== skill.id)
-			: [...selectedSkillIds, skill.id];
-	};
+	export let disabled = false;
 </script>
 
-<div>
-	<div class="flex w-full items-center gap-2 mb-1">
-		<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
-			{$i18n.t('Skills')}
-		</div>
-
-		{#if activeSkills.length > 0}
-			<TypeaheadSelector
-				id="model-skills-selector"
-				items={activeSkills}
-				selectedIds={selectedSkillIds}
-				placeholder={$i18n.t('Search skills')}
-				triggerLabel={$i18n.t('Select Skill')}
-				emptyLabel={$i18n.t('No skills found')}
-				variant="dropdown"
-				on:select={(e) => {
-					toggleSkill(e.detail);
-				}}
-				on:enableall={(e) => {
-					selectedSkillIds = [
-						...new Set([...selectedSkillIds, ...e.detail.map((skill) => skill.id)])
-					];
-				}}
-			/>
-		{/if}
-	</div>
-
-	<div class="flex flex-col mb-1">
-		{#if activeSkills.length > 0}
-			<div class=" flex items-center flex-wrap mt-1">
-				{#each selectedSkills as skill, skillIdx (skill.id)}
-					<div class=" flex items-center gap-2 mr-3">
-						<div class="self-center flex items-center">
-							<Checkbox
-								ariaLabel={resolveLocalizedResource(skill, $i18n.language)}
-								state="checked"
-								on:change={(e) => {
-									if (e.detail === 'unchecked') {
-										selectedSkillIds = selectedSkillIds.filter((id) => id !== skill.id);
-									}
-								}}
-							/>
-						</div>
-
-						<Tooltip
-							content={resolveLocalizedResource(skill, $i18n.language, 'description') || skill.id}
-						>
-							<div class="py-0.5 text-xs capitalize font-normal text-gray-900 dark:text-gray-100">
-								{resolveLocalizedResource(skill, $i18n.language)}
-							</div>
-						</Tooltip>
-					</div>
-				{/each}
-
-				{#if selectedSkills.length > 0}
-					<button
-						type="button"
-						class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-						on:click={() => {
-							selectedSkillIds = [];
-						}}
-					>
-						{$i18n.t('Disable all')}
-					</button>
-				{/if}
-			</div>
-		{/if}
-	</div>
-
-	<div class=" text-xs dark:text-gray-700">
-		{$i18n.t('To select skills here, add them to the "Skills" workspace first.')}
-	</div>
-</div>
+<TypeaheadSelector
+	id="model-skillsselector"
+	label={$i18n.t('Skills')}
+	items={skills.filter((skill) => skill.is_active !== false)}
+	selectedIds={selectedSkillIds}
+	{disabled}
+	placeholder={$i18n.t('Search skills')}
+	emptyLabel={$i18n.t('No skills found')}
+	emptyHint={$i18n.t('Add skills in the Skills workspace.')}
+	workspaceHref={$user?.role === 'admin' || $user?.permissions?.workspace?.skills
+		? '/workspace/skills'
+		: ''}
+	variant="dropdown"
+	on:select={(e) => {
+		selectedSkillIds = selectedSkillIds.includes(e.detail.id)
+			? selectedSkillIds.filter((id) => id !== e.detail.id)
+			: [...selectedSkillIds, e.detail.id];
+	}}
+	on:enableall={(e) => {
+		selectedSkillIds = [...new Set([...selectedSkillIds, ...e.detail.map((item) => item.id)])];
+	}}
+	on:clear={() => (selectedSkillIds = [])}
+/>

@@ -31,24 +31,18 @@
 	};
 </script>
 
-<div class="my-3 flex items-center justify-between gap-3">
-	<div>
-		<div class="mb-1 text-xs font-normal text-gray-600 dark:text-gray-400">
-			{$i18n.t('Voice avatar')}
-		</div>
-		<div class="text-xs leading-5 font-normal text-gray-900 dark:text-gray-100">
-			{value ? $i18n.t('Custom avatar') : $i18n.t('Default orb')}
-		</div>
-	</div>
-	<button
-		type="button"
-		{disabled}
-		class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
-		on:click={open}
+<button
+	type="button"
+	{disabled}
+	on:click={open}
+	class="grid min-h-8 w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1 text-left text-xs font-normal disabled:opacity-50 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
+>
+	<span class="text-gray-600 dark:text-gray-400">{$i18n.t('Voice avatar')}</span>
+	<span class="truncate text-gray-900 dark:text-gray-100"
+		>{value ? $i18n.t('Custom avatar') : $i18n.t('Default orb')}</span
 	>
-		{$i18n.t('Configure')}
-	</button>
-</div>
+	<span class="text-gray-500 dark:text-gray-400">{$i18n.t('Configure')}</span>
+</button>
 
 <Modal bind:show size="sm">
 	<div class="p-5 text-gray-900 dark:text-gray-100">

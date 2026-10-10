@@ -1,10 +1,7 @@
 <script lang="ts">
-	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext } from 'svelte';
-	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { user } from '$lib/stores';
 	import TypeaheadSelector from './TypeaheadSelector.svelte';
-
 	type Action = {
 		id: string;
 		name?: string;
@@ -13,99 +10,30 @@
 			description?: string;
 		};
 	};
-
-	const i18n = getContext('i18n') as any;
-
+	const i18n = getContext<any>('i18n');
 	export let actions: Action[] = [];
 	export let selectedActionIds: string[] = [];
-
-	$: selectableActions = actions.filter((action) => !action.is_global);
-	$: selectedActions = actions.filter(
-		(action) => action.is_global || selectedActionIds.includes(action.id)
-	);
-
-	const toggleAction = (action: Action) => {
-		selectedActionIds = selectedActionIds.includes(action.id)
-			? selectedActionIds.filter((id) => id !== action.id)
-			: [...selectedActionIds, action.id];
-	};
+	export let disabled = false;
 </script>
 
-{#if actions.length > 0}
-	<div>
-		<div class="flex w-full items-center gap-2 mb-1">
-			<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
-				{$i18n.t('Actions')}
-			</div>
-
-			{#if selectableActions.length > 0}
-				<TypeaheadSelector
-					id="model-actions-selector"
-					items={selectableActions.map((action) => ({
-						...action,
-						description: action.meta?.description
-					}))}
-					selectedIds={selectedActionIds}
-					placeholder={$i18n.t('Search actions')}
-					triggerLabel={$i18n.t('Select Action')}
-					emptyLabel={$i18n.t('No actions found')}
-					variant="dropdown"
-					on:select={(e) => {
-						toggleAction(e.detail);
-					}}
-					on:enableall={(e) => {
-						selectedActionIds = [
-							...new Set([...selectedActionIds, ...e.detail.map((action) => action.id)])
-						];
-					}}
-				/>
-			{/if}
-		</div>
-
-		<div class="flex flex-col">
-			<div class=" flex items-center flex-wrap mt-1">
-				{#each selectedActions as action, actionIdx (action.id)}
-					<div class=" flex items-center gap-2 mr-3">
-						<div class="self-center flex items-center">
-							<Checkbox
-								ariaLabel={resolveLocalizedResource(action, $i18n.language)}
-								state="checked"
-								disabled={action.is_global}
-								on:change={(e) => {
-									if (!action.is_global && e.detail === 'unchecked') {
-										selectedActionIds = selectedActionIds.filter((id) => id !== action.id);
-									}
-								}}
-							/>
-						</div>
-
-						<div class="py-0.5 text-xs capitalize font-normal text-gray-900 dark:text-gray-100">
-							<Tooltip
-								content={resolveLocalizedResource(action, $i18n.language, 'description') ||
-									action.id}
-							>
-								{resolveLocalizedResource(action, $i18n.language)}
-							</Tooltip>
-						</div>
-					</div>
-				{/each}
-
-				{#if selectedActionIds.length > 0}
-					<button
-						type="button"
-						class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-						on:click={() => {
-							selectedActionIds = [];
-						}}
-					>
-						{$i18n.t('Disable all')}
-					</button>
-				{/if}
-			</div>
-		</div>
-
-		<div class=" text-xs dark:text-gray-700">
-			{$i18n.t('To select actions here, add them to the "Functions" workspace first.')}
-		</div>
-	</div>
-{/if}
+<TypeaheadSelector
+	id="model-actionsselector"
+	label={$i18n.t('Actions')}
+	items={actions}
+	selectedIds={selectedActionIds}
+	{disabled}
+	placeholder={$i18n.t('Search actions')}
+	emptyLabel={$i18n.t('No actions found')}
+	emptyHint={$i18n.t('Add actions in the Functions workspace.')}
+	workspaceHref={$user?.role === 'admin' ? '/workspace/functions' : ''}
+	variant="dropdown"
+	on:select={(e) => {
+		selectedActionIds = selectedActionIds.includes(e.detail.id)
+			? selectedActionIds.filter((id) => id !== e.detail.id)
+			: [...selectedActionIds, e.detail.id];
+	}}
+	on:enableall={(e) => {
+		selectedActionIds = [...new Set([...selectedActionIds, ...e.detail.map((item) => item.id)])];
+	}}
+	on:clear={() => (selectedActionIds = [])}
+/>

@@ -13,8 +13,6 @@
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
-	import DefaultFeatures from '$lib/components/workspace/Models/DefaultFeatures.svelte';
-	import BuiltinTools from '$lib/components/workspace/Models/BuiltinTools.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
 
@@ -43,9 +41,6 @@
 		([_, value]) => value !== null && value !== '' && value !== undefined
 	);
 	$: enabledCapabilities = Object.entries(defaultCapabilities ?? {}).filter(([_, value]) => value);
-	$: availableFeatures = enabledCapabilities
-		.filter(([key]) => ['web_search', 'code_interpreter', 'image_generation'].includes(key))
-		.map(([key]) => key);
 	$: translatedPromptLocales = Object.entries(promptSuggestionsI18n ?? {})
 		.filter(([_, value]) => Array.isArray(value?.suggestion_prompts))
 		.map(([locale]) => locale);
@@ -204,19 +199,11 @@
 							on:click={updateDirty}
 							on:change={updateDirty}
 						>
-							<Capabilities bind:capabilities={defaultCapabilities} />
-
-							{#if availableFeatures.length > 0}
-								<div class="mt-4">
-									<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
-								</div>
-							{/if}
-
-							{#if defaultCapabilities.builtin_tools}
-								<div class="mt-4">
-									<BuiltinTools bind:builtinTools />
-								</div>
-							{/if}
+							<Capabilities
+								bind:capabilities={defaultCapabilities}
+								bind:defaultFeatureIds
+								bind:builtinTools
+							/>
 						</div>
 					{/if}
 				</div>

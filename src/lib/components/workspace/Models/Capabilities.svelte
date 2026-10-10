@@ -2,9 +2,9 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { marked } from 'marked';
+	import ModelSettingsSection from './ModelSettingsSection.svelte';
+	import ModelSettingToggle from './ModelSettingToggle.svelte';
+	import BuiltinTools from './BuiltinTools.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -64,48 +64,78 @@
 
 	export let capabilities: Partial<Record<Capability, boolean>> = {};
 
-	const setCapability = (capability: Capability, checked: boolean) => {
-		capabilities[capability] = checked;
-		capabilities = capabilities;
+	export let defaultFeatureIds: string[] = [];
+	export let builtinTools: Record<string, boolean> = {};
+	export let disabled = false;
+	const featureKeys: Capability[] = ['web_search', 'image_generation', 'code_interpreter'];
+	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
+		(key) => key !== 'file_context' || capabilities.file_upload
+	);
+	$: enabledCapabilityIds = visibleCapabilities.filter((key) => capabilities[key]);
+	$: availableFeatures = featureKeys.filter((key) => capabilities[key]);
+	$: enabledDefaultIds = availableFeatures.filter((key) => defaultFeatureIds.includes(key));
+	const setDefault = (key: string, enabled: boolean) => {
+		defaultFeatureIds = enabled
+			? [...new Set([...defaultFeatureIds, key])]
+			: defaultFeatureIds.filter((id) => id !== key);
 	};
-
-	// Hide file_context when file_upload is disabled
-	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter((cap) => {
-		if (cap === 'file_context' && !capabilities.file_upload) {
-			return false;
-		}
-		return true;
-	});
 </script>
 
-<div>
-	<div class="mb-1.5 text-xs font-normal text-gray-600 dark:text-gray-400">
-		{$i18n.t('settings.admin.models.capabilities.title')}
-	</div>
-	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-		{#each visibleCapabilities as capability}
-			<div class="flex min-h-6 items-center gap-2.5">
-				<Checkbox
-					ariaLabel={$i18n.t(capabilityLabels[capability].label)}
-					state={capabilities[capability] ? 'checked' : 'unchecked'}
-					on:change={(e) => {
-						setCapability(capability, e.detail === 'checked');
-					}}
+<div class="space-y-0.5">
+	<ModelSettingsSection label={$i18n.t('settings.admin.models.capabilities.title')}>
+		<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
+			<span class="min-w-0 [overflow-wrap:anywhere]"
+				>{enabledCapabilityIds
+					.slice(0, 3)
+					.map((key) => capabilityLabels[key].label)
+					.join(', ') || $i18n.t('None')}</span
+			>
+			{#if enabledCapabilityIds.length > 3}<span class="shrink-0 text-gray-500"
+					>+{enabledCapabilityIds.length - 3}</span
+				>{/if}
+		</span>
+		<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
+			{#each visibleCapabilities as key}
+				<ModelSettingToggle
+					label={capabilityLabels[key].label}
+					description={capabilityLabels[key].description}
+					bind:checked={capabilities[key]}
+					{disabled}
 				/>
-				<button
-					type="button"
-					class="min-w-0 cursor-pointer text-left text-xs font-normal text-gray-900 dark:text-gray-100"
-					on:click={() => setCapability(capability, !capabilities[capability])}
+			{/each}
+		</div>
+	</ModelSettingsSection>
+
+	{#if availableFeatures.length}
+		<ModelSettingsSection label={$i18n.t('settings.admin.models.defaultFeatures.title')}>
+			<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
+				<span class="min-w-0 [overflow-wrap:anywhere]"
+					>{enabledDefaultIds
+						.slice(0, 3)
+						.map((key) => capabilityLabels[key].label)
+						.join(', ') || $i18n.t('None')}</span
 				>
-					<Tooltip
-						as="span"
-						className="block min-w-0"
-						content={marked.parse(capabilityLabels[capability].description)}
-					>
-						<span class="block truncate">{$i18n.t(capabilityLabels[capability].label)}</span>
-					</Tooltip>
-				</button>
+				{#if enabledDefaultIds.length > 3}<span class="shrink-0 text-gray-500"
+						>+{enabledDefaultIds.length - 3}</span
+					>{/if}
+			</span>
+			<p class="mb-1 px-1 text-xs text-gray-500 dark:text-gray-400">
+				{$i18n.t('Start enabled in new chats')}
+			</p>
+			<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
+				{#each availableFeatures as key}
+					<ModelSettingToggle
+						label={capabilityLabels[key].label}
+						checked={defaultFeatureIds.includes(key)}
+						{disabled}
+						on:change={(e) => setDefault(key, e.detail)}
+					/>
+				{/each}
 			</div>
-		{/each}
-	</div>
+		</ModelSettingsSection>
+	{/if}
+
+	{#if capabilities.builtin_tools}
+		<BuiltinTools bind:builtinTools {disabled} />
+	{/if}
 </div>

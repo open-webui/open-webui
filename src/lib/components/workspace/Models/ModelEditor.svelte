@@ -37,9 +37,7 @@
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
-	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
-	import DefaultFeatures from './DefaultFeatures.svelte';
-	import BuiltinTools from './BuiltinTools.svelte';
+	import ModelSettingsSection from './ModelSettingsSection.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from './LocalizedPromptSuggestions.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
@@ -964,7 +962,7 @@
 
 								<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
 									<div
-										class="relative flex min-w-0 flex-1 items-center gap-3 px-4 pb-2 {backgroundPreview ||
+										class="relative flex min-w-0 flex-1 items-center gap-3.5 px-4 pb-2 {backgroundPreview ||
 										info.meta.background_image_url
 											? '-mt-14 sm:-mt-16'
 											: '-mt-9'}"
@@ -1395,8 +1393,6 @@
 							</section>
 
 							<fieldset disabled={readOnly} class="min-w-0">
-								<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
-
 								<section class="my-3">
 									<div class="flex w-full items-center justify-between">
 										{#if editingLocale}
@@ -1440,130 +1436,155 @@
 									{/if}
 								</section>
 
-								<div class="my-3">
-									<Knowledge bind:selectedItems={knowledge} />
+								<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
+
+								<div class="my-3 space-y-0.5">
+									<Knowledge bind:selectedItems={knowledge} disabled={readOnly} />
+									<ToolsSelector
+										bind:selectedToolIds={toolIds}
+										tools={$tools ?? []}
+										disabled={readOnly}
+									/>
+									<SkillsSelector
+										bind:selectedSkillIds={skillIds}
+										skills={skillsList}
+										disabled={readOnly}
+									/>
+									{#if ($functions ?? []).some((func) => func.type === 'filter')}
+										<FiltersSelector
+											bind:selectedFilterIds={filterIds}
+											bind:defaultFilterIds
+											filters={($functions ?? []).filter((func) => func.type === 'filter')}
+											disabled={readOnly}
+										/>
+									{/if}
+									{#if ($functions ?? []).some((func) => func.type === 'action')}
+										<ActionsSelector
+											bind:selectedActionIds={actionIds}
+											actions={($functions ?? []).filter((func) => func.type === 'action')}
+											disabled={readOnly}
+										/>
+									{/if}
 								</div>
-
-								<div class="my-3">
-									<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
-								</div>
-
-								<div class="my-3">
-									<SkillsSelector bind:selectedSkillIds={skillIds} skills={skillsList} />
-								</div>
-
-								{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-									<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
-
-									{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
-										<div class="my-3">
-											<FiltersSelector
-												bind:selectedFilterIds={filterIds}
-												filters={($functions ?? []).filter((func) => func.type === 'filter')}
-											/>
-										</div>
-
-										{@const toggleableFilters = $functions.filter(
-											(func) =>
-												func.type === 'filter' &&
-												(filterIds.includes(func.id) || func?.is_global) &&
-												func?.meta?.toggle
-										)}
-
-										{#if toggleableFilters.length > 0}
-											<div class="my-3">
-												<DefaultFiltersSelector
-													bind:selectedFilterIds={defaultFilterIds}
-													filters={toggleableFilters}
+								<div class="space-y-0.5">
+									<Capabilities
+										bind:capabilities
+										bind:defaultFeatureIds
+										bind:builtinTools
+										disabled={readOnly}
+									/>
+									<ModelSettingsSection
+										label={$i18n.t('Voice')}
+										summary={[
+											$config?.audio?.realtime?.enabled
+												? voice.voice || $i18n.t('Admin default')
+												: null,
+											$config?.audio?.realtime?.enabled || voiceAvatar
+												? voiceAvatar
+													? $i18n.t('Custom avatar')
+													: $i18n.t('Default orb')
+												: null,
+											tts.voice
+										]
+											.filter(Boolean)
+											.join(' · ') || $i18n.t('Default')}
+									>
+										{#if $config?.audio?.realtime?.enabled}
+											<div
+												class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
+											>
+												<div class="flex min-w-0 items-center">
+													<label
+														for="realtime-voice-input"
+														class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
+													>
+														{$i18n.t('Realtime Voice')}
+													</label>
+												</div>
+												<TTSVoiceInput
+													className="w-full font-normal text-gray-900 dark:text-gray-100"
+													id="realtime-voice"
+													bind:value={voice.voice}
+													placeholder={$i18n.t('Admin default')}
 												/>
 											</div>
 										{/if}
-									{/if}
-
-									{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-										<div class="my-3">
-											<ActionsSelector
-												bind:selectedActionIds={actionIds}
-												actions={($functions ?? []).filter((func) => func.type === 'action')}
+										{#if $config?.audio?.realtime?.enabled || voiceAvatar}
+											<VoiceAvatarSettings
+												bind:value={voiceAvatar}
+												bind:file={avatarFile}
+												bind:animationFiles
+												disabled={loading || readOnly}
+											/>
+										{/if}
+										<div
+											class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
+										>
+											<div class="flex min-w-0 items-center">
+												<div
+													class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
+												>
+													{$i18n.t('TTS Voice')}
+												</div>
+											</div>
+											<TTSVoiceInput
+												className="w-full font-normal text-gray-900 dark:text-gray-100"
+												bind:value={tts.voice}
+												{voices}
+												placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
 											/>
 										</div>
-									{/if}
-								{/if}
-
-								<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
-
-								<div class="my-3">
-									<Capabilities bind:capabilities />
-								</div>
-
-								{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
-									{@const availableFeatures = Object.entries(capabilities)
-										.filter(
-											([key, value]) =>
-												value &&
-												['web_search', 'code_interpreter', 'image_generation'].includes(key)
-										)
-										.map(([key, value]) => key)}
-
-									{#if availableFeatures.length > 0}
-										<div class="my-3">
-											<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
-										</div>
-									{/if}
-								{/if}
-
-								{#if capabilities.builtin_tools}
-									<div class="my-3">
-										<BuiltinTools bind:builtinTools />
-									</div>
-								{/if}
-
-								{#if capabilities.terminal}
-									<div class="my-3">
+									</ModelSettingsSection>
+									{#if capabilities.terminal}
 										<TerminalSelector bind:terminalId />
-									</div>
-								{/if}
+									{/if}
+								</div>
+							</fieldset>
 
-								{#if $config?.audio?.realtime?.enabled}
-									<div class="my-3">
-										<div class="flex w-full justify-between mb-1">
-											<label
-												for="realtime-voice-input"
-												class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
-											>
-												{$i18n.t('Realtime Voice')}
-											</label>
-										</div>
-										<TTSVoiceInput
-											className="font-normal text-gray-900 dark:text-gray-100"
-											id="realtime-voice"
-											bind:value={voice.voice}
-											placeholder={$i18n.t('Admin default')}
+							<div class="my-2 text-xs text-gray-400 dark:text-gray-500">
+								<div class="flex w-full items-center gap-2">
+									<button
+										type="button"
+										class="group flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+										aria-expanded={showPreview}
+										on:click={() => (showPreview = !showPreview)}
+									>
+										<span class="font-normal text-gray-600 dark:text-gray-400"
+											>{$i18n.t('JSON Preview')}</span
+										>
+										<span
+											aria-hidden="true"
+											class="text-gray-500 transition group-hover:text-gray-700 dark:group-hover:text-gray-300"
+											>{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}</span
+										>
+									</button>
+									<button
+										class="px-1.5 py-0.5 text-xs flex rounded-sm transition"
+										type="button"
+										on:click={async () => {
+											const copied = await copyToClipboard(
+												JSON.stringify(readOnly ? model : modelInfo, null, 2)
+											);
+											if (copied) {
+												toast.success($i18n.t('Copied to clipboard'));
+											}
+										}}
+									>
+										{$i18n.t('Copy')}
+									</button>
+								</div>
+								{#if showPreview}
+									<div class="pt-2">
+										<textarea
+											class="w-full bg-transparent text-xs leading-5 outline-hidden resize-none font-normal text-gray-900 dark:text-gray-100"
+											rows="8"
+											value={JSON.stringify(readOnly ? model : modelInfo, null, 2)}
+											disabled
+											readonly
 										/>
 									</div>
 								{/if}
-								{#if $config?.audio?.realtime?.enabled || voiceAvatar}
-									<VoiceAvatarSettings
-										bind:value={voiceAvatar}
-										bind:file={avatarFile}
-										bind:animationFiles
-										disabled={loading}
-									/>
-								{/if}
-								<div class="my-3">
-									<div class="flex w-full justify-between mb-1">
-										<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
-											{$i18n.t('TTS Voice')}
-										</div>
-									</div>
-									<TTSVoiceInput
-										className="font-normal text-gray-900 dark:text-gray-100"
-										bind:value={tts.voice}
-										{voices}
-										placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
-									/>
-								</div>
-							</fieldset>
+							</div>
 
 							<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
 
@@ -1599,51 +1620,6 @@
 									</button>
 								</div>
 							{/if}
-
-							<div class="my-2 pb-2 text-xs text-gray-400 dark:text-gray-500">
-								<div class="mb-2 flex w-full items-center gap-2">
-									<button
-										type="button"
-										class="group flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-										aria-expanded={showPreview}
-										on:click={() => (showPreview = !showPreview)}
-									>
-										<span class="font-normal text-gray-600 dark:text-gray-400"
-											>{$i18n.t('JSON Preview')}</span
-										>
-										<span
-											aria-hidden="true"
-											class="text-gray-500 transition group-hover:text-gray-700 dark:group-hover:text-gray-300"
-											>{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}</span
-										>
-									</button>
-									<button
-										class="px-1.5 py-0.5 text-xs flex rounded-sm transition"
-										type="button"
-										on:click={async () => {
-											const copied = await copyToClipboard(
-												JSON.stringify(readOnly ? model : modelInfo, null, 2)
-											);
-											if (copied) {
-												toast.success($i18n.t('Copied to clipboard'));
-											}
-										}}
-									>
-										{$i18n.t('Copy')}
-									</button>
-								</div>
-								{#if showPreview}
-									<div>
-										<textarea
-											class="w-full bg-transparent text-xs leading-5 outline-hidden resize-none font-normal text-gray-900 dark:text-gray-100"
-											rows="8"
-											value={JSON.stringify(readOnly ? model : modelInfo, null, 2)}
-											disabled
-											readonly
-										/>
-									</div>
-								{/if}
-							</div>
 						</div>
 					</div>
 				</form>

@@ -416,6 +416,13 @@ export const importSkillBundles = async (token: string, files: File[], decisions
 		await skillRequest(token, decisions ? '/import' : '/import/preview', { method: 'POST', body })
 	).json();
 };
+export const loadSkillByUrl = async (token: string, url: string) =>
+	(
+		await skillRequest(token, '/load/url', {
+			method: 'POST',
+			body: JSON.stringify({ url })
+		})
+	).json();
 export const skillError = (error: unknown): string =>
 	error instanceof Error
 		? error.message

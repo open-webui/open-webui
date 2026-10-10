@@ -44,8 +44,10 @@
 	import Switch from '../common/Switch.svelte';
 	import SkillMenu from './Skills/SkillMenu.svelte';
 	import SkillImport from './Skills/SkillImport.svelte';
-	import { cloneSkill, exportSkillBundle, skillError } from '$lib/apis/skills';
+	import ImportModal from '$lib/components/ImportModal.svelte';
+	import { cloneSkill, exportSkillBundle, loadSkillByUrl, skillError } from '$lib/apis/skills';
 	let showImport = false;
+	let showImportFromLink = false;
 	let bundleFiles: File[] = [];
 	let folderImportInput: HTMLInputElement;
 	import Pagination from '../common/Pagination.svelte';
@@ -87,6 +89,14 @@
 				id: 'skills-import',
 				label: $i18n.t('Import'),
 				onClick: () => importInputElement?.click(),
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import
+			},
+			{
+				id: 'skills-import-url',
+				label: $i18n.t('Import From Link'),
+				onClick: () => {
+					showImportFromLink = true;
+				},
 				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import
 			},
 			{
@@ -296,16 +306,30 @@
 </svelte:head>
 
 {#if loaded}
-	<SkillImport
-		bind:show={showImport}
-		files={bundleFiles}
-		onImported={async () => {
-			toast.success($i18n.t('Skill imported successfully'));
-			page = 1;
-			await loadSkillItems();
-			_skills.set(await getSkills(localStorage.token));
+	<ImportModal
+		bind:show={showImportFromLink}
+		loadUrlHandler={(url) => loadSkillByUrl(localStorage.token, url)}
+		transformResult={(packages) => packages}
+		successMessage={$i18n.t('Skills loaded for preview')}
+		onImport={(packages) => {
+			bundleFiles = [
+				new File([JSON.stringify(packages)], 'skills.json', { type: 'application/json' })
+			];
+			showImport = true;
 		}}
 	/>
+	{#key bundleFiles}
+		<SkillImport
+			bind:show={showImport}
+			files={bundleFiles}
+			onImported={async () => {
+				toast.success($i18n.t('Skill imported successfully'));
+				page = 1;
+				await loadSkillItems();
+				_skills.set(await getSkills(localStorage.token));
+			}}
+		/>
+	{/key}
 	<input
 		bind:this={importInputElement}
 		type="file"

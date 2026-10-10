@@ -3804,5 +3804,21 @@
 	"YouTube": "",
 	"YouTube video player": "",
 	"Zoom in": "",
-	"Zoom out": ""
+	"Zoom out": "",
+	"Add actions in the Functions workspace.": "Add actions in the Functions workspace.",
+	"Work": "Work",
+	"Assistance": "Assistance",
+	"Search built-in tools": "Search built-in tools",
+	"{{COUNT}} of {{TOTAL}} enabled": "{{COUNT}} of {{TOTAL}} enabled",
+	"Start enabled in new chats": "Start enabled in new chats",
+	"{{COUNT}} disabled": "{{COUNT}} disabled",
+	"All allowed": "All allowed",
+	"Add filters in the Functions workspace.": "Add filters in the Functions workspace.",
+	"Search knowledge": "Search knowledge",
+	"Upload files or add sources in the Knowledge workspace.": "Upload files or add sources in the Knowledge workspace.",
+	"Add skills in the Skills workspace.": "Add skills in the Skills workspace.",
+	"Default terminal": "Default terminal",
+	"No terminal servers available": "No terminal servers available",
+	"Add tools in the Tools workspace or connect a tool server.": "Add tools in the Tools workspace or connect a tool server.",
+	"Used in native function calling mode. Workspace settings and user permissions still apply.": "Used in native function calling mode. Workspace settings and user permissions still apply."
 }

@@ -34,10 +34,11 @@ from open_webui.utils.skill_files import (
     MAX_IMPORT_BYTES,
     file_bytes,
     file_summaries,
+    load_skill_from_url,
     parse_import,
     zip_export,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -792,6 +793,23 @@ async def require_import(user, db):
         user.id, 'workspace.skills_import', await Config.get('user.permissions'), db=db
     ):
         raise HTTPException(403, 'Import permission required')
+
+
+class LoadUrlForm(BaseModel):
+    url: HttpUrl
+
+
+@router.post('/load/url')
+async def load_skill_by_url(
+    form_data: LoadUrlForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await require_import(user, db)
+    try:
+        return await load_skill_from_url(str(form_data.url))
+    except (ValueError, UnicodeError, zipfile.BadZipFile) as error:
+        raise HTTPException(400, str(error))
 
 
 @router.post('/import/preview')

@@ -2,9 +2,8 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { marked } from 'marked';
+	import ModelSettingToggle from './ModelSettingToggle.svelte';
+	import ModelSettingsSection from './ModelSettingsSection.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -83,6 +82,8 @@
 	$: allTools = Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>;
 
 	export let builtinTools: Record<string, boolean> = {};
+	export let disabled = false;
+	$: enabledTools = allTools.filter((key) => builtinTools[key] !== false);
 
 	const setBuiltinTool = (tool: keyof typeof toolLabels, checked: boolean) => {
 		if (checked) {
@@ -94,34 +95,27 @@
 	};
 </script>
 
-<div>
-	<div class="mb-1.5 text-xs font-normal text-gray-600 dark:text-gray-400">
-		{$i18n.t('settings.admin.models.builtinTools.title')}
-	</div>
-	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-		{#each allTools as tool}
-			<div class="flex min-h-6 items-center gap-2.5">
-				<Checkbox
-					ariaLabel={$i18n.t(toolLabels[tool].label)}
-					state={builtinTools[tool] !== false ? 'checked' : 'unchecked'}
-					on:change={(e) => {
-						setBuiltinTool(tool, e.detail === 'checked');
-					}}
-				/>
-				<button
-					type="button"
-					class="min-w-0 cursor-pointer text-left text-xs font-normal text-gray-900 dark:text-gray-100"
-					on:click={() => setBuiltinTool(tool, builtinTools[tool] === false)}
-				>
-					<Tooltip
-						as="span"
-						className="block min-w-0"
-						content={marked.parse(toolLabels[tool].description)}
-					>
-						<span class="block truncate">{$i18n.t(toolLabels[tool].label)}</span>
-					</Tooltip>
-				</button>
-			</div>
+<ModelSettingsSection label={$i18n.t('settings.admin.models.builtinTools.title')}>
+	<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
+		<span class="min-w-0 [overflow-wrap:anywhere]"
+			>{enabledTools
+				.slice(0, 3)
+				.map((key) => toolLabels[key].label)
+				.join(', ') || $i18n.t('None')}</span
+		>
+		{#if enabledTools.length > 3}<span class="shrink-0 text-gray-500"
+				>+{enabledTools.length - 3}</span
+			>{/if}
+	</span>
+	<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
+		{#each allTools as key}
+			<ModelSettingToggle
+				label={toolLabels[key].label}
+				description={toolLabels[key].description}
+				checked={builtinTools[key] !== false}
+				{disabled}
+				on:change={(e) => setBuiltinTool(key, e.detail)}
+			/>
 		{/each}
 	</div>
-</div>
+</ModelSettingsSection>
