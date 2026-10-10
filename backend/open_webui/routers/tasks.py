@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from open_webui.config import (
+    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
@@ -118,7 +119,7 @@ class TaskConfigForm(BaseModel):
     TITLE_GENERATION_PROMPT_TEMPLATE: str
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_AUTOCOMPLETE_GENERATION: bool
-    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: int
+    AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: int | None = None
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE: str
     TAGS_GENERATION_PROMPT_TEMPLATE: str
     FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: str
@@ -134,7 +135,10 @@ class TaskConfigForm(BaseModel):
 
 @router.post('/config/update')
 async def update_task_config(request: Request, form_data: TaskConfigForm, user=Depends(get_admin_user)):
-    await Config.upsert(config_updates(form_data.model_dump(), TASK_CONFIG_KEYS))
+    data = form_data.model_dump()
+    if data['AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH'] is None:
+        data['AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH'] = AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
+    await Config.upsert(config_updates(data, TASK_CONFIG_KEYS))
     return await get_config_values(TASK_CONFIG_KEYS)
 
 

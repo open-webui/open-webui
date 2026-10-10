@@ -879,7 +879,7 @@
 				<AdminCodeExecution saveHandler={adminConfigSaveHandler} />
 			{:else if selectedTab === 'admin:interface'}
 				<AdminInterface
-					on:save={() => {
+					saveHandler={() => {
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}
 				/>
