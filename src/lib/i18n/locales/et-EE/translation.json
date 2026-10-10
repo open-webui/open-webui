@@ -2145,7 +2145,7 @@
 	"Select": "Vali",
 	"Select {{modelName}} model": "Vali {{modelName}} mudel",
 	"Select {{name}}": "Vali {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Valige baas mudel (nt llama3, gpt-4o)",
+	"Select a base model": "Valige baas mudel",
 	"Select a conversation to preview": "Valige vestlus eelvaateks",
 	"Select a engine": "Valige mootor",
 	"Select a file to preview": "",

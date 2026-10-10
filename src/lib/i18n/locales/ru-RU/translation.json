@@ -2179,7 +2179,7 @@
 	"Select": "Выбрать",
 	"Select {{modelName}} model": "Выбрать модель {{modelName}}",
 	"Select {{name}}": "Выбрать {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Выберите базовую модель (напр. llama3, gpt-4o)",
+	"Select a base model": "Выберите базовую модель",
 	"Select a conversation to preview": "Выберите разговор для предварительного просмотра",
 	"Select a engine": "Выберите движок",
 	"Select a file to preview": "",

@@ -2130,7 +2130,7 @@
 	"Select": "선택",
 	"Select {{modelName}} model": "{{modelName}} 모델 선택",
 	"Select {{name}}": "{{name}} 선택",
-	"Select a base model (e.g. llama3, gpt-4o)": "기본 모델 선택 (예: llama3, gpt-4o)",
+	"Select a base model": "기본 모델 선택",
 	"Select a conversation to preview": "대화를 선택하여 미리 보기",
 	"Select a engine": "엔진 선택",
 	"Select a file to preview": "",

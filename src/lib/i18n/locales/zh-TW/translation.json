@@ -2128,7 +2128,7 @@
 	"Select": "選擇",
 	"Select {{modelName}} model": "選擇模型「{{modelName}}」",
 	"Select {{name}}": "選擇 {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "選擇基礎模型（例如：llama3, gpt-4o）",
+	"Select a base model": "選擇基礎模型",
 	"Select a conversation to preview": "選擇對話進行預覽",
 	"Select a engine": "選擇引擎",
 	"Select a file to preview": "",

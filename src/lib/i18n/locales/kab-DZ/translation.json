@@ -2145,7 +2145,7 @@
 	"Select": "Fren",
 	"Select {{modelName}} model": "",
 	"Select {{name}}": "",
-	"Select a base model (e.g. llama3, gpt-4o)": "Fren tamudemt n taffa (amedya, llama3, gpt-4o)",
+	"Select a base model": "Fren tamudemt n taffa",
 	"Select a conversation to preview": "Fren adiwenni i teskant",
 	"Select a engine": "Fren amsedday",
 	"Select a file to preview": "",

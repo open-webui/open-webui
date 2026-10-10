@@ -2145,7 +2145,7 @@
 	"Select": "Vel",
 	"Select {{modelName}} model": "Vel modellið {{modelName}}",
 	"Select {{name}}": "",
-	"Select a base model (e.g. llama3, gpt-4o)": "Vel eitt grundmodell (t.d. llama3, gpt-4o)",
+	"Select a base model": "Vel eitt grundmodell",
 	"Select a conversation to preview": "Vel eina samrøðu at forsýna",
 	"Select a engine": "Vel ein motor",
 	"Select a file to preview": "",

@@ -2141,7 +2141,7 @@
 	"Select": "选择",
 	"Select {{modelName}} model": "选择模型 “{{modelName}}”",
 	"Select {{name}}": "选择 {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "选择一个基础模型（例如：llama3, gpt-4o）",
+	"Select a base model": "选择一个基础模型",
 	"Select a conversation to preview": "选择对话进行预览",
 	"Select a engine": "选择搜索引擎",
 	"Select a file to preview": "",

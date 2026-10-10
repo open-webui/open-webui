@@ -2213,7 +2213,7 @@
 	"Select": "اختيار",
 	"Select {{modelName}} model": "اختيار النموذج {{modelName}}",
 	"Select {{name}}": "",
-	"Select a base model (e.g. llama3, gpt-4o)": "اختر نموذجًا أساسيًا (مثل llama3, gpt-4o)",
+	"Select a base model": "اختر نموذجًا أساسيًا",
 	"Select a conversation to preview": "اختر محادثة لمعاينتها",
 	"Select a engine": "اختر محركًا",
 	"Select a file to preview": "",

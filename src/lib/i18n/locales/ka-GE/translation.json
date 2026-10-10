@@ -2145,7 +2145,7 @@
 	"Select": "არჩევა",
 	"Select {{modelName}} model": "{{modelName}} მოდელის არჩევა",
 	"Select {{name}}": "{{name}}-ის არჩევა",
-	"Select a base model (e.g. llama3, gpt-4o)": "აირჩიეთ საბაზისო მოდელი (მაგ: llama3, gpt-4o)",
+	"Select a base model": "აირჩიეთ საბაზისო მოდელი",
 	"Select a conversation to preview": "აირჩიეთ საუბარი გადასახედად",
 	"Select a engine": "აირჩიეთ ძრავა",
 	"Select a file to preview": "",

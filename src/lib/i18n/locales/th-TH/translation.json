@@ -2128,7 +2128,7 @@
 	"Select": "เลือก",
 	"Select {{modelName}} model": "เลือกโมเดล {{modelName}}",
 	"Select {{name}}": "เลือก {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "เลือกโมเดลพื้นฐาน (เช่น llama3, gpt-4o)",
+	"Select a base model": "เลือกโมเดลพื้นฐาน",
 	"Select a conversation to preview": "เลือกการสนทนาเพื่อดูตัวอย่าง",
 	"Select a engine": "เลือกเอนจิน",
 	"Select a file to preview": "",

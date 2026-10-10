@@ -2145,7 +2145,7 @@
 	"Select": "Valitse",
 	"Select {{modelName}} model": "Valitse {{modelName}} malli",
 	"Select {{name}}": "Valitse {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Valitse perusmalli (esim. llama3, gtp-4o)",
+	"Select a base model": "Valitse perusmalli",
 	"Select a conversation to preview": "Valitse keskustelun esikatselu",
 	"Select a engine": "Valitse moottori",
 	"Select a file to preview": "",

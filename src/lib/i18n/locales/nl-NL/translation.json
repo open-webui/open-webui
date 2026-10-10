@@ -2145,7 +2145,7 @@
 	"Select": "Selecteren",
 	"Select {{modelName}} model": "Selecteer {{modelName}}-model",
 	"Select {{name}}": "{{name}} selecteren",
-	"Select a base model (e.g. llama3, gpt-4o)": "Selecteer een basismodel (bijv. llama3, gpt-4o)",
+	"Select a base model": "Selecteer een basismodel",
 	"Select a conversation to preview": "Selecteer een gesprek om te bekijken",
 	"Select a engine": "Selecteer een engine",
 	"Select a file to preview": "",

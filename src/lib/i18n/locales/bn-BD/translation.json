@@ -2145,7 +2145,7 @@
 	"Select": "নির্বাচন করুন",
 	"Select {{modelName}} model": "{{modelName}} মডেল নির্বাচন করুন",
 	"Select {{name}}": "{{name}} নির্বাচন করুন",
-	"Select a base model (e.g. llama3, gpt-4o)": "একটি বেস মডেল নির্বাচন করুন (যেমন llama3, gpt-4o)",
+	"Select a base model": "একটি বেস মডেল নির্বাচন করুন",
 	"Select a conversation to preview": "প্রিভিউ দেখতে একটি কথোপকথন নির্বাচন করুন",
 	"Select a engine": "একটি ইঞ্জিন নির্বাচন করুন",
 	"Select a file to preview": "",

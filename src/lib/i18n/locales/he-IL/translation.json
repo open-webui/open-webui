@@ -2162,7 +2162,7 @@
 	"Select": "בחר",
 	"Select {{modelName}} model": "בחר את המודל {{modelName}}",
 	"Select {{name}}": "בחר את {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "בחר מודל בסיס (למשל llama3, gpt-4o)",
+	"Select a base model": "בחר מודל בסיס",
 	"Select a conversation to preview": "בחר שיחה לתצוגה מקדימה",
 	"Select a engine": "בחר מנוע",
 	"Select a file to preview": "",

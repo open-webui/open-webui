@@ -2162,7 +2162,7 @@
 	"Select": "Selectează",
 	"Select {{modelName}} model": "Selectează modelul {{modelName}}",
 	"Select {{name}}": "Selectează {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Selectează un model de bază (de ex. llama3, gpt-4o)",
+	"Select a base model": "Selectează un model de bază",
 	"Select a conversation to preview": "Selectați o conversație pentru previzualizare",
 	"Select a engine": "Selectează un motor",
 	"Select a file to preview": "",

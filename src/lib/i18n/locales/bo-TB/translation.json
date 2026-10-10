@@ -2128,7 +2128,7 @@
 	"Select": "གདམ་པ།",
 	"Select {{modelName}} model": "{{modelName}} དཔེ་དབྱིབས་གདམ་པ།",
 	"Select {{name}}": "",
-	"Select a base model (e.g. llama3, gpt-4o)": "གཞི་རྩའི་དཔེ་དབྱིབས་ཤིག་གདམ་པ། (དཔེར་ན། llama3, gpt-4o)",
+	"Select a base model": "གཞི་རྩའི་དཔེ་དབྱིབས་ཤིག་གདམ་པ།",
 	"Select a conversation to preview": "སྔོན་ལྟ་བྱེད་རྒྱུའི་ཁ་བརྡ་ཞིག་གདམ་པ།",
 	"Select a engine": "འཕྲུལ་འཁོར་ཞིག་གདམ་པ།",
 	"Select a file to preview": "",

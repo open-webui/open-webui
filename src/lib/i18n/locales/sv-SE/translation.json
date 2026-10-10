@@ -2145,7 +2145,7 @@
 	"Select": "Välj",
 	"Select {{modelName}} model": "Välj modell {{modelName}}",
 	"Select {{name}}": "Välj {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Välj en basmodell",
+	"Select a base model": "Välj en basmodell",
 	"Select a conversation to preview": "Välj en konversation för förhandsgranskning",
 	"Select a engine": "Välj en motor",
 	"Select a file to preview": "",

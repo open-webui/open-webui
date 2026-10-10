@@ -2128,7 +2128,7 @@
 	"Select": "Chọn",
 	"Select {{modelName}} model": "Chọn mô hình {{modelName}}",
 	"Select {{name}}": "Chọn {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Chọn mô hình cơ sở (vd: llama3, gpt-4o)",
+	"Select a base model": "Chọn mô hình cơ sở",
 	"Select a conversation to preview": "Chọn cuộc trò chuyện để xem trước",
 	"Select a engine": "Chọn dịch vụ",
 	"Select a file to preview": "",

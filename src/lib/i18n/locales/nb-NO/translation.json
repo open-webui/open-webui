@@ -2145,7 +2145,7 @@
 	"Select": "Velg",
 	"Select {{modelName}} model": "Velg modellen {{modelName}}",
 	"Select {{name}}": "Velg {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Velg en grunnmodell (f.eks. llama3, gpt-4o)",
+	"Select a base model": "Velg en grunnmodell",
 	"Select a conversation to preview": "Velg en samtale for å forhåndsvise den",
 	"Select a engine": "Velg en motor",
 	"Select a file to preview": "",

@@ -2145,7 +2145,7 @@
 	"Select": "Roghnaigh",
 	"Select {{modelName}} model": "Roghnaigh samhail {{modelName}}",
 	"Select {{name}}": "Roghnaigh {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Roghnaigh bunsamhail (m.sh. lama3, gpt-4o)",
+	"Select a base model": "Roghnaigh bunsamhail",
 	"Select a conversation to preview": "Roghnaigh comhrá le réamhamharc a fháil air",
 	"Select a engine": "Roghnaigh inneall",
 	"Select a file to preview": "",

@@ -2179,7 +2179,7 @@
 	"Select": "Pasirinkite",
 	"Select {{modelName}} model": "Pasirinkti modelį {{modelName}}",
 	"Select {{name}}": "Pasirinkti elementą {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Pasirinkite bazinį modelį (pvz., llama3, gpt-4o)",
+	"Select a base model": "Pasirinkite bazinį modelį",
 	"Select a conversation to preview": "Pasirinkite pokalbį, kurį norite peržiūrėti",
 	"Select a engine": "Pasirinkite variklį",
 	"Select a file to preview": "",

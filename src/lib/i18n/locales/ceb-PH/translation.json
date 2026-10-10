@@ -2145,7 +2145,7 @@
 	"Select": "Pilia",
 	"Select {{modelName}} model": "Pilia ang modelo nga {{modelName}}",
 	"Select {{name}}": "",
-	"Select a base model (e.g. llama3, gpt-4o)": "Pagpili og base nga modelo (pananglitan llama3, gpt-4o)",
+	"Select a base model": "Pagpili og base nga modelo",
 	"Select a conversation to preview": "Pagpili og panaghisgot nga tan-awon daan",
 	"Select a engine": "Pagpili og makina",
 	"Select a file to preview": "",

@@ -2162,7 +2162,7 @@
 	"Select": "Izvēlēties",
 	"Select {{modelName}} model": "Izvēlēties {{modelName}} modeli",
 	"Select {{name}}": "Izvēlēties {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Izvēlieties bāzes modeli (piem., llama3, gpt-4o)",
+	"Select a base model": "Izvēlieties bāzes modeli",
 	"Select a conversation to preview": "Izvēlieties sarunu priekšskatījumam",
 	"Select a engine": "Izvēlieties dzinēju",
 	"Select a file to preview": "",

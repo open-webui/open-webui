@@ -2145,7 +2145,7 @@
 	"Select": "Hautatu",
 	"Select {{modelName}} model": "Hautatu {{modelName}} modeloa",
 	"Select {{name}}": "Hautatu {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Hautatu oinarrizko modelo bat (adibidez, llama3, gpt-4o)",
+	"Select a base model": "Hautatu oinarrizko modelo bat",
 	"Select a conversation to preview": "Hautatu elkarrizketa bat aurrebista ikusteko",
 	"Select a engine": "Hautatu motor bat",
 	"Select a file to preview": "",

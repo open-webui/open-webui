@@ -2144,7 +2144,7 @@
 	"Select": "選択",
 	"Select {{modelName}} model": "{{modelName}} モデルを選択",
 	"Select {{name}}": "{{name}} を選択",
-	"Select a base model (e.g. llama3, gpt-4o)": "基本モデルを選択 (例: llama3, gpt-4o)",
+	"Select a base model": "基本モデルを選択",
 	"Select a conversation to preview": "プレビューする会話を選択してください",
 	"Select a engine": "エンジンの選択",
 	"Select a file to preview": "",

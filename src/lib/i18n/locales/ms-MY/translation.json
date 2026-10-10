@@ -2144,7 +2144,7 @@
 	"Select": "Pilih",
 	"Select {{modelName}} model": "Pilih model {{modelName}}",
 	"Select {{name}}": "Pilih {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Pilih model asas (cth. llama3, gpt-4o)",
+	"Select a base model": "Pilih model asas",
 	"Select a conversation to preview": "Pilih perbualan untuk pratonton",
 	"Select a engine": "Pilih enjin",
 	"Select a file to preview": "",

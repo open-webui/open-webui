@@ -2145,7 +2145,7 @@
 	"Select": "Επιλογή",
 	"Select {{modelName}} model": "Επιλογή μοντέλου {{modelName}}",
 	"Select {{name}}": "Επιλογή «{{name}}»",
-	"Select a base model (e.g. llama3, gpt-4o)": "Επιλέξτε ένα βασικό μοντέλο (π.χ. llama3, gpt-4o)",
+	"Select a base model": "Επιλέξτε ένα βασικό μοντέλο",
 	"Select a conversation to preview": "Επιλέξτε μια συνομιλία για προεπισκόπηση",
 	"Select a engine": "Επιλέξτε μια μηχανή",
 	"Select a file to preview": "",

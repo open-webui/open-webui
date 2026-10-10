@@ -2162,7 +2162,7 @@
 	"Select": "Odaberi",
 	"Select {{modelName}} model": "Odaberi model {{modelName}}",
 	"Select {{name}}": "Odaberi {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Odaberi osnovni model (npr. llama3, gpt-4o)",
+	"Select a base model": "Odaberi osnovni model",
 	"Select a conversation to preview": "Odaberi razgovor za pregled",
 	"Select a engine": "Odaberite pogon",
 	"Select a file to preview": "",

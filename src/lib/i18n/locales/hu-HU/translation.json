@@ -2145,7 +2145,7 @@
 	"Select": "Kiválasztás",
 	"Select {{modelName}} model": "A(z) {{modelName}} modell kiválasztása",
 	"Select {{name}}": "Kijelölés: {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Válasszon alapmodellt (pl. llama3, gpt-4o)",
+	"Select a base model": "Válasszon alapmodellt",
 	"Select a conversation to preview": "Válasszon beszélgetést az előnézethez",
 	"Select a engine": "Válasszon egy motort",
 	"Select a file to preview": "",

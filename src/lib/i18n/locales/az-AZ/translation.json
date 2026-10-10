@@ -2145,7 +2145,7 @@
 	"Select": "Seç",
 	"Select {{modelName}} model": "{{modelName}} modelini seç",
 	"Select {{name}}": "{{name}} seç",
-	"Select a base model (e.g. llama3, gpt-4o)": "Əsas model seçin (məs. llama3, gpt-4o)",
+	"Select a base model": "Əsas model seçin",
 	"Select a conversation to preview": "Önizləmə üçün bir söhbət seçin",
 	"Select a engine": "Mühərrik seçin",
 	"Select a file to preview": "",

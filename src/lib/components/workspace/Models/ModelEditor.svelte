@@ -1232,7 +1232,7 @@
 											<div class="min-w-0">
 												<ModelSelector
 													id="workspace-base-model"
-													placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
+													placeholder={$i18n.t('Select a base model')}
 													searchPlaceholder={$i18n.t('Search a model')}
 													items={getBaseModelItems($models)}
 													triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"

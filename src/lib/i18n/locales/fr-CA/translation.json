@@ -2162,7 +2162,7 @@
 	"Select": "Sélectionnez",
 	"Select {{modelName}} model": "Sélectionner le modèle {{modelName}}",
 	"Select {{name}}": "Sélectionner {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Sélectionnez un modèle de base (p. ex. llama3, gpt-4o)",
+	"Select a base model": "Sélectionnez un modèle de base",
 	"Select a conversation to preview": "Sélectionnez une conversation à prévisualiser",
 	"Select a engine": "Sélectionnez un moteur",
 	"Select a file to preview": "",

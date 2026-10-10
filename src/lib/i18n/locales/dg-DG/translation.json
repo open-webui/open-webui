@@ -2145,7 +2145,7 @@
 	"Select": "Such Select",
 	"Select {{modelName}} model": "Select such {{modelName}} model",
 	"Select {{name}}": "Select such {{name}}",
-	"Select a base model (e.g. llama3, gpt-4o)": "Select such base model (e.g. llama3, gpt-4o)",
+	"Select a base model": "Select such base model",
 	"Select a conversation to preview": "Select such conversation to preview",
 	"Select a engine": "Select such engine",
 	"Select a file to preview": "Select such file to preview",

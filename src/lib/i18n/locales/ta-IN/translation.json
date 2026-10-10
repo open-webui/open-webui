@@ -2145,7 +2145,7 @@
 	"Select": "தேர்ந்தெடு",
 	"Select {{modelName}} model": "{{modelName}} மாதிரியைத் தேர்ந்தெடுக்கவும்",
 	"Select {{name}}": "",
-	"Select a base model (e.g. llama3, gpt-4o)": "அடிப்படை மாதிரியைத் தேர்ந்தெடுக்கவும் (எ.கா. llama3, gpt-4o)",
+	"Select a base model": "அடிப்படை மாதிரியைத் தேர்ந்தெடுக்கவும்",
 	"Select a conversation to preview": "முன்னோட்டத்திற்கு உரையாடலைத் தேர்ந்தெடுக்கவும்",
 	"Select a engine": "ஒரு இயந்திரத்தைத் தேர்ந்தெடுக்கவும்",
 	"Select a file to preview": "",
