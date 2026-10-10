@@ -281,6 +281,7 @@ class DoclingLoader:
                 data={
                     'image_export_mode': 'placeholder',
                     'md_page_break_placeholder': page_break_marker,
+                    'to_formats': ['md', 'json'],
                     # Keep Docling params as user-provided form values. Encoding nested
                     # values here would make Open WebUI responsible for Docling's API
                     # quirks and could break when Docling changes its form contract.
@@ -306,9 +307,22 @@ class DoclingLoader:
 
             metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
             if page_break_marker in md_content:
+                pages = md_content.split(page_break_marker)
+                json_content = document_data.get('json_content') or {}
+                # Docling only marks page changes, so blank pages leave no break; take page numbers from its JSON
+                page_indices = sorted(
+                    {
+                        item['prov'][0]['page_no'] - 1
+                        for key in ('texts', 'tables', 'pictures', 'key_value_items', 'form_items')
+                        for item in json_content.get(key, [])
+                        if item.get('content_layer') == 'body' and item.get('prov')
+                    }
+                )
+                if len(page_indices) != len(pages):
+                    page_indices = range(len(pages))
                 documents = [
                     Document(page_content=page.strip(), metadata={**metadata, 'page': page_idx})
-                    for page_idx, page in enumerate(md_content.split(page_break_marker))
+                    for page_idx, page in zip(page_indices, pages)
                     if page.strip()
                 ]
                 if documents:
