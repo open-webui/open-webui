@@ -592,6 +592,7 @@
 		editingLocale = '';
 		clearBackgroundPreview();
 		if (model) {
+			model.meta ??= {};
 			name = model.name;
 			voiceAvatar = model.meta?.voice_avatar ? structuredClone(model.meta.voice_avatar) : null;
 			await tick();
