@@ -1,3 +1,5 @@
+import type { ModelControl } from '$lib/apis';
+
 type LocaleEntry = Record<string, any>;
 type LocalizedMap = Record<string, LocaleEntry>;
 
@@ -115,6 +117,43 @@ export const valveTranslationSource = (schema: any, prefix: string): Record<stri
 		}
 	}
 	return strings;
+};
+
+export const modelControlTranslationSource = (
+	controls: Record<string, ModelControl> = {}
+): Record<string, string> => {
+	const strings: Record<string, string> = {};
+	for (const [key, control] of Object.entries(controls)) {
+		strings[`model_controls.${key}.label`] = control.label;
+		if (control.description) strings[`model_controls.${key}.description`] = control.description;
+		for (const [value, option] of Object.entries(control.options)) {
+			strings[`model_controls.${key}.options.${value}.label`] = option.label;
+		}
+	}
+	return strings;
+};
+
+export const localizeModelControls = (model: any, locale: string): Record<string, ModelControl> => {
+	const translate = (value: string | undefined, key: string) =>
+		resolveLocalizedString(value, model?.info?.meta?.i18n, locale, `model_controls.${key}`);
+	return Object.fromEntries(
+		Object.entries<ModelControl>(model?.info?.params?.model_controls ?? {}).map(
+			([key, control]) => [
+				key,
+				{
+					...control,
+					label: translate(control.label, `${key}.label`),
+					description: translate(control.description, `${key}.description`),
+					options: Object.fromEntries(
+						Object.entries(control.options).map(([value, option]) => [
+							value,
+							{ ...option, label: translate(option.label, `${key}.options.${value}.label`) }
+						])
+					)
+				}
+			]
+		)
+	);
 };
 
 export const resolveLocalizedModelName = (model: any, locale?: string | null) => {

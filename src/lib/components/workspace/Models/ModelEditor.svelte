@@ -56,7 +56,10 @@
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import { copyToClipboard, extractInputVariables } from '$lib/utils';
-	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
+	import {
+		modelControlTranslationSource,
+		pruneEmptyLocaleEntries
+	} from '$lib/utils/localizedContent';
 
 	const i18n: any = getContext('i18n');
 	const formId = `model-editor-${uuidv4()}`;
@@ -163,7 +166,7 @@
 			voice: undefined as { voice?: string } | undefined,
 			voice_avatar: null as VoiceAvatarConfig | null,
 			description: '',
-			i18n: {},
+			i18n: {} as Record<string, Record<string, any>>,
 			suggestion_prompts: null,
 			tags: []
 		},
@@ -1426,7 +1429,54 @@
 										</fieldset>
 									{/if}
 									<fieldset disabled={readOnly} class="min-w-0">
-										<ModelControls bind:controls={params.model_controls} />
+										{#if !editingLocale}
+											<ModelControls bind:controls={params.model_controls} />
+										{:else if Object.keys(params.model_controls ?? {}).length}
+											{@const fields = modelControlTranslationSource(params.model_controls ?? {})}
+											{@const customized = Object.keys(fields).some((key) =>
+												info.meta.i18n?.[editingLocale]?.[key]?.trim()
+											)}
+											<ModelSettingsSection
+												label={$i18n.t('Model controls')}
+												description={$i18n.t(
+													'Let people choose approved parameter presets in chat.'
+												)}
+												summary={customized ? $i18n.t('Custom') : $i18n.t('Default')}
+											>
+												{#each Object.entries(fields) as [key, original] (key)}
+													<div
+														class="rounded-xl px-2 py-1.5 focus-within:bg-gray-50 dark:focus-within:bg-gray-850 {info.meta.i18n?.[
+															editingLocale
+														]?.[key]?.trim()
+															? ''
+															: 'opacity-60 focus-within:opacity-100'}"
+													>
+														<Textarea
+															className="min-h-5 w-full min-w-0 resize-none overflow-hidden bg-transparent text-[0.8125rem] font-normal leading-5 text-gray-900 outline-hidden placeholder:text-gray-500 dark:text-gray-100 dark:placeholder:text-gray-400"
+															placeholder={original}
+															value={info.meta.i18n?.[editingLocale]?.[key] ?? ''}
+															onInput={(event) =>
+																setLocalizedField(
+																	key,
+																	(event.currentTarget as HTMLTextAreaElement).value
+																)}
+														/>
+													</div>
+												{/each}
+												{#if customized}
+													<div
+														class="flex justify-end px-2 py-1 text-xs text-gray-500 dark:text-gray-400"
+													>
+														<button
+															type="button"
+															class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+															on:click={() => Object.keys(fields).forEach(clearLocalizedField)}
+															>{$i18n.t('Use default')}</button
+														>
+													</div>
+												{/if}
+											</ModelSettingsSection>
+										{/if}
 									</fieldset>
 								</div>
 							</section>
