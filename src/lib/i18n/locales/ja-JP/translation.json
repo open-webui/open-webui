@@ -1298,7 +1298,7 @@
 	"Images": "画像",
 	"Import": "インポート",
 	"Import CSV": "CSVをインポート",
-	"Import From Link": "リンクからインポート",
+	"Import from URL": "リンクからインポート",
 	"Import JSON": "JSONをインポート",
 	"Import Models": "モデルをインポート",
 	"Import Prompts": "プロンプトをインポート",

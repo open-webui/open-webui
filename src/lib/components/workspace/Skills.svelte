@@ -93,11 +93,11 @@
 			},
 			{
 				id: 'skills-import-url',
-				label: $i18n.t('Import From Link'),
+				label: $i18n.t('Import from URL'),
 				onClick: () => {
 					showImportFromLink = true;
 				},
-				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import
+				visible: $user?.role === 'admin'
 			},
 			{
 				id: 'skills-import-folder',

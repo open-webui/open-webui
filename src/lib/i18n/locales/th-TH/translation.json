@@ -1286,7 +1286,7 @@
 	"Images": "รูปภาพ",
 	"Import": "นำเข้า",
 	"Import CSV": "นำเข้า CSV",
-	"Import From Link": "นำเข้าโดยใช้ลิงก์",
+	"Import from URL": "นำเข้าโดยใช้ลิงก์",
 	"Import JSON": "นำเข้า JSON",
 	"Import Models": "นำเข้าโมเดล",
 	"Import Prompts": "นำเข้าพรอมต์",

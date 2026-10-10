@@ -367,7 +367,7 @@
 								},
 								{
 									id: 'functions-import-link',
-									label: $i18n.t('Import From Link'),
+									label: $i18n.t('Import from URL'),
 									onClick: () => {
 										showImportModal = true;
 									}

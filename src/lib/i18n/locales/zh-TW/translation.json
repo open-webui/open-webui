@@ -1286,7 +1286,7 @@
 	"Images": "圖片",
 	"Import": "匯入",
 	"Import CSV": "匯入 CSV",
-	"Import From Link": "從連結匯入",
+	"Import from URL": "從連結匯入",
 	"Import JSON": "匯入 JSON",
 	"Import Models": "匯入模型",
 	"Import Prompts": "匯入提示詞",

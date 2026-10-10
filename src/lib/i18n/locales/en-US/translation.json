@@ -1,4 +1,5 @@
 {
+	"{{count}} modified": "",
 	"-1 for no limit, or a positive integer for a specific limit": "",
 	"(latest)": "",
 	"(leave blank for to use commercial endpoint)": "",
@@ -1298,7 +1299,7 @@
 	"Images": "",
 	"Import": "",
 	"Import CSV": "",
-	"Import From Link": "",
+	"Import from URL": "",
 	"Import JSON": "",
 	"Import Models": "",
 	"Import Prompts": "",

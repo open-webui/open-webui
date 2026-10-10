@@ -37,6 +37,7 @@
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from './LocalizedPromptSuggestions.svelte';
@@ -171,6 +172,14 @@
 	let params: Record<string, any> = {
 		system: ''
 	};
+
+	$: modifiedParamCount = Object.entries(params).reduce((count, [key, value]) => {
+		if (key === 'system' || key === 'model_controls') return count;
+		if (key === 'custom_params') {
+			return count + Object.keys(value ?? {}).filter((name) => name.trim()).length;
+		}
+		return count + (value != null && value !== '' ? 1 : 0);
+	}, 0);
 
 	let knowledge = [];
 	let toolIds = [];
@@ -964,7 +973,7 @@
 
 								<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
 									<div
-										class="relative flex min-w-0 flex-1 items-center gap-3.5 px-4 pb-2 {backgroundPreview ||
+										class="relative flex min-w-0 flex-1 items-center gap-3.5 px-5 pb-1 {backgroundPreview ||
 										info.meta.background_image_url
 											? '-mt-14 sm:-mt-16'
 											: '-mt-9'}"
@@ -1132,7 +1141,7 @@
 									</div>
 								</div>
 							</div>
-							<div class="flex min-w-0 flex-col gap-3 px-4">
+							<div class="flex min-w-0 flex-col gap-3 px-5">
 								<div>
 									<div class="mb-1 flex w-full items-center justify-between">
 										{#if editingLocale}
@@ -1157,7 +1166,7 @@
 											</div>
 										{:else}
 											<button
-												class="flex w-full items-center justify-between gap-3 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+												class="grid w-full grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 												type="button"
 												aria-pressed={enableDescription ? 'true' : 'false'}
 												aria-label={enableDescription
@@ -1167,13 +1176,13 @@
 													enableDescription = !enableDescription;
 												}}
 											>
-												<span class="font-normal text-gray-600 dark:text-gray-400"
-													>{$i18n.t('Description')}</span
-												>
+												<span class="font-normal text-gray-600 dark:text-gray-400">
+													{$i18n.t('Description')}
+												</span>
 												{#if !enableDescription}
-													<span>{$i18n.t('Default')}</span>
+													<span class="justify-self-end">{$i18n.t('Default')}</span>
 												{:else}
-													<span>{$i18n.t('Custom')}</span>
+													<span class="justify-self-end">{$i18n.t('Custom')}</span>
 												{/if}
 											</button>
 										{/if}
@@ -1205,7 +1214,7 @@
 								<div class="flex min-w-0 flex-col gap-2">
 									{#if preset}
 										<div
-											class="grid min-w-0 gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center sm:gap-4"
+											class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>
 											<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
 												{$i18n.t('Base Model (From)')}
@@ -1227,7 +1236,7 @@
 									{/if}
 
 									<div
-										class="grid min-w-0 gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start sm:gap-4"
+										class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 									>
 										<div class="pt-1 text-xs font-normal text-gray-600 dark:text-gray-400">
 											{$i18n.t('Tags')}
@@ -1257,7 +1266,7 @@
 
 						<div class="px-4">
 							<section class="mt-4">
-								<div class="space-y-2">
+								<div class="space-y-2 px-1">
 									<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
 										{$i18n.t('System Prompt')}
 									</div>
@@ -1364,21 +1373,25 @@
 											{showSystemPrompt ? $i18n.t('Show less') : $i18n.t('Show more')}
 										</button>
 									{/if}
-
+								</div>
+								<div class="mt-2 space-y-0.5">
 									<button
 										type="button"
-										class="group flex h-7 w-full items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+										class="grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-start text-xs font-normal focus-visible:outline focus-visible:outline-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
 										aria-expanded={showAdvanced}
 										on:click={() => (showAdvanced = !showAdvanced)}
 									>
 										<span class="font-normal text-gray-600 dark:text-gray-400"
 											>{$i18n.t('Advanced Params')}</span
 										>
-										<span
-											aria-hidden="true"
-											class="text-gray-500 transition group-hover:text-gray-700 dark:group-hover:text-gray-300"
-											>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</span
-										>
+										<span class="text-gray-900 dark:text-gray-100">
+											{modifiedParamCount
+												? $i18n.t('{{count}} modified', { count: modifiedParamCount })
+												: $i18n.t('Default')}
+										</span>
+										<ChevronRight
+											className={`size-3 text-gray-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+										/>
 									</button>
 
 									{#if showAdvanced}
@@ -1395,7 +1408,7 @@
 							</section>
 
 							<fieldset disabled={readOnly} class="min-w-0">
-								<section class="my-3">
+								<section class="mt-0.5">
 									<ModelSettingsSection
 										label={$i18n.t('Prompts')}
 										summary={editingLocale

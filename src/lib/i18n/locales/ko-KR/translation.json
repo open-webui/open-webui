@@ -1287,7 +1287,7 @@
 	"Images": "이미지들",
 	"Import": "가져오기",
 	"Import CSV": "CSV 가져오기",
-	"Import From Link": "링크에서 가져오기",
+	"Import from URL": "링크에서 가져오기",
 	"Import JSON": "JSON 가져오기",
 	"Import Models": "모델 가져오기",
 	"Import Prompts": "프롬프트 가져오기",
