@@ -127,12 +127,15 @@ def attach_guard(app: 'FastAPI') -> None:
     if not _env_bool('WEBUI_GUARD_ENABLED'):
         return
     try:
-        from guard import SecurityDecorator, SecurityMiddleware
+        # Pure-ASGI variant (fastapi-guard >= 8.1.0): avoids the
+        # BaseHTTPMiddleware anyio task-group cancellation problem that
+        # this repo bans in main.py.
+        from guard import PureASGISecurityMiddleware, SecurityDecorator
     except ImportError as exc:
         raise RuntimeError(
-            'WEBUI_GUARD_ENABLED=true requires the fastapi-guard package. Install it with: pip install fastapi-guard'
+            'WEBUI_GUARD_ENABLED=true requires fastapi-guard >= 8.1.0. Install it with: pip install --upgrade fastapi-guard'
         ) from exc
 
     config = build_guard_config()
-    app.add_middleware(SecurityMiddleware, config=config)
+    app.add_middleware(PureASGISecurityMiddleware, config=config)
     app.state.guard_decorator = SecurityDecorator(config)
