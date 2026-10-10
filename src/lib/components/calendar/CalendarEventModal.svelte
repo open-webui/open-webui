@@ -29,6 +29,7 @@
 	let startTime = '';
 	let endDate = '';
 	let endDayOffset = 0;
+	let overnight = false;
 	let endTime = '';
 	let allDay = false;
 	let location = '';
@@ -76,6 +77,10 @@
 		return new Date(`${dateStr}T${timeStr || '00:00'}`).getTime() * NS;
 	}
 
+	function endsPastMidnight(): boolean {
+		return !allDay && endTime < startTime;
+	}
+
 	function reset() {
 		if (event) {
 			title = event.title;
@@ -118,6 +123,7 @@
 						(24 * 60 * 60 * 1000 * NS)
 				)
 			: 0;
+		overnight = endDayOffset === 1 && endsPastMidnight();
 	}
 
 	$: if (show) reset();
@@ -136,8 +142,9 @@
 		loading = true;
 		try {
 			const startNs = dateTimeToNs(startDate, allDay ? '00:00' : startTime);
+			const endDays = overnight && !endsPastMidnight() ? 0 : endDayOffset;
 			const shiftedEndDate = endDate
-				? nsToDateStr(dateTimeToNs(startDate, '12:00') + endDayOffset * 24 * 60 * 60 * 1000 * NS)
+				? nsToDateStr(dateTimeToNs(startDate, '12:00') + endDays * 24 * 60 * 60 * 1000 * NS)
 				: '';
 			let endNs = shiftedEndDate
 				? dateTimeToNs(shiftedEndDate, allDay ? '23:59' : endTime)
