@@ -1,4 +1,8 @@
 {
+	"Set default capabilities, enabled features, and built-in tools for models. Individual models can override these settings.": "",
+	"Set default generation parameters for models, such as temperature and token limits. Individual models can override these settings.": "",
+	"Set the starter prompts shown in new chats when a model uses default prompt suggestions.": "",
+	"Set default capabilities, parameters, and prompt suggestions for models. Individual model settings can override these defaults.": "",
 	"Choose the terminal server selected by default for chats with this model.": "",
 	"Add tags to organize models and make them easier to find.": "",
 	"Connect tools this model can call to retrieve information or perform actions.": "",
