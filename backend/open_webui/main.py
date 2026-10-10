@@ -319,6 +319,15 @@ class SPAStaticFiles(StaticFiles):
             else:
                 raise ex
 
+    def file_response(
+        self, full_path: str, stat_result: os.stat_result, scope: dict, status_code: int = 200
+    ) -> Response:
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        if full_path.endswith('.html'):
+            # Stale cached HTML references chunks from an older build
+            response.headers['Cache-Control'] = 'no-cache'
+        return response
+
 
 class CORSStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
