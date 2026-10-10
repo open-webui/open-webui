@@ -941,192 +941,197 @@
 				>
 					<div class="w-full px-1">
 						<fieldset disabled={readOnly} class="flex min-w-0 w-full flex-col gap-3">
-							<div
-								class="group/header relative mt-2 w-full transition-[height] duration-200 motion-reduce:transition-none {backgroundPreview ||
-								info.meta.background_image_url
-									? 'h-36 sm:h-48'
-									: 'h-20'}"
-							>
-								{#if backgroundPreview || info.meta.background_image_url}
-									<img
-										src={backgroundPreview ?? info.meta.background_image_url}
-										alt={$i18n.t('Background image preview')}
-										class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl object-cover"
-									/>
-								{:else}
-									<div
-										aria-hidden="true"
-										class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl bg-gray-100 dark:bg-gray-850"
-									></div>
-								{/if}
-								{#if !readOnly}
-									<div
-										class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 absolute end-3 flex items-center gap-1 text-xs {backgroundPreview ||
-										info.meta.background_image_url
-											? 'bottom-9'
-											: 'bottom-5 sm:bottom-3'}"
-									>
-										{#if loading}<Spinner />{/if}
-										{#if backgroundPreview || info.meta.background_image_url}
-											<button
-												type="button"
-												class="rounded-md px-2 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-white"
-												disabled={loading}
-												title={$i18n.t('PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.')}
-												on:click={() => backgroundInput.click()}
-												>{$i18n.t('Change background')}</button
-											>
-											<button
-												type="button"
-												class="rounded-md px-2 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-white"
-												disabled={loading}
-												on:click={() => {
-													clearBackgroundPreview();
-													backgroundFile = null;
-													info.meta.background_image_url = null;
-												}}>{$i18n.t('Remove')}</button
-											>
-										{:else}
-											<button
-												type="button"
-												class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-gray-500 transition hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
-												disabled={loading}
-												title={$i18n.t('PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.')}
-												on:click={() => backgroundInput.click()}
-											>
-												<Photo />
-												{$i18n.t('Add background')}
-											</button>
-										{/if}
-									</div>
-								{/if}
-							</div>
-
-							<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
+							<div class="group/header flex min-w-0 flex-col gap-3">
 								<div
-									class="relative flex min-w-0 flex-1 items-center gap-3 px-4 pb-2 {backgroundPreview ||
+									class="relative mt-2 w-full transition-[height] duration-200 motion-reduce:transition-none {backgroundPreview ||
 									info.meta.background_image_url
-										? '-mt-14 sm:-mt-16'
-										: '-mt-9'}"
+										? 'h-36 sm:h-48'
+										: 'h-20'}"
 								>
-									<!-- LICENSE covers this Open WebUI fallback logo.
+									{#if backgroundPreview || info.meta.background_image_url}
+										<img
+											src={backgroundPreview ?? info.meta.background_image_url}
+											alt={$i18n.t('Background image preview')}
+											class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl object-cover"
+										/>
+									{:else}
+										<div
+											aria-hidden="true"
+											class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl bg-gray-100 dark:bg-gray-850"
+										></div>
+									{/if}
+								</div>
+
+								<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
+									<div
+										class="relative flex min-w-0 flex-1 items-center gap-3 px-4 pb-2 {backgroundPreview ||
+										info.meta.background_image_url
+											? '-mt-14 sm:-mt-16'
+											: '-mt-9'}"
+									>
+										<!-- LICENSE covers this Open WebUI fallback logo.
 									Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									https://docs.openwebui.com/license. -->
-									<div class="group relative size-11 shrink-0">
-										<button
-											class="group relative flex size-full items-center overflow-hidden rounded-xl {info
-												.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
-												? 'bg-transparent'
-												: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
-											type="button"
-											aria-label={$i18n.t('Upload profile image')}
-											on:click={() => {
-												filesInputElement.click();
-											}}
-										>
-											{#if info.meta.profile_image_url}
-												<img
-													src={info.meta.profile_image_url}
-													alt={$i18n.t('model profile')}
-													class="size-full object-cover"
-												/>
-											{:else}
-												<img
-													src="{WEBUI_BASE_URL}/static/favicon.png"
-													alt={$i18n.t('model profile')}
-													class="size-full object-cover"
-												/>
-											{/if}
-
-											<div
-												class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+										<div class="group relative size-11 shrink-0">
+											<button
+												class="group relative flex size-full items-center overflow-hidden rounded-xl {info
+													.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
+													? 'bg-transparent'
+													: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
+												type="button"
+												aria-label={$i18n.t('Upload profile image')}
+												on:click={() => {
+													filesInputElement.click();
+												}}
 											>
-												<div class="m-1">
-													<div
-														class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
-													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 16 16"
-															fill="currentColor"
-															class="size-3"
+												{#if info.meta.profile_image_url}
+													<img
+														src={info.meta.profile_image_url}
+														alt={$i18n.t('model profile')}
+														class="size-full object-cover"
+													/>
+												{:else}
+													<img
+														src="{WEBUI_BASE_URL}/static/favicon.png"
+														alt={$i18n.t('model profile')}
+														class="size-full object-cover"
+													/>
+												{/if}
+
+												<div
+													class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+												>
+													<div class="m-1">
+														<div
+															class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
 														>
-															<path
-																fill-rule="evenodd"
-																d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-																clip-rule="evenodd"
-															/>
-														</svg>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 16 16"
+																fill="currentColor"
+																class="size-3"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														</div>
 													</div>
 												</div>
-											</div>
 
-											<div
-												class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
-											></div>
-										</button>
+												<div
+													class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
+												></div>
+											</button>
 
-										{#if info.meta.profile_image_url && info.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`}
-											<button
-												class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-gray-400 opacity-0 transition group-hover:opacity-60 hover:text-gray-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-gray-600 dark:hover:text-gray-400"
-												on:click={() => {
-													info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
-												}}
-												type="button"
-											>
-												{$i18n.t('Reset')}</button
-											>
-										{/if}
-									</div>
-
-									<div class="min-w-0 w-full flex-1">
-										<div class="flex min-w-0 items-center gap-2">
-											{#if editingLocale}
-												<input
-													class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
-													placeholder={name || $i18n.t('Model Name')}
-													value={localizedField('name')}
-													on:input={(e) =>
-														setLocalizedField('name', (e.currentTarget as HTMLInputElement).value)}
-												/>
-											{:else}
-												<input
-													class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
-													placeholder={$i18n.t('Model Name')}
-													bind:value={name}
-													required
-												/>
+											{#if info.meta.profile_image_url && info.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`}
+												<button
+													class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-gray-400 opacity-0 transition group-hover:opacity-60 hover:text-gray-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-gray-600 dark:hover:text-gray-400"
+													on:click={() => {
+														info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
+													}}
+													type="button"
+												>
+													{$i18n.t('Reset')}</button
+												>
 											{/if}
 										</div>
 
-										{#if editingLocale}
-											<div class="mt-1 flex items-center justify-end gap-3 text-[0.6875rem]">
-												<div
-													class="flex shrink-0 items-center gap-2 text-gray-500 dark:text-gray-400"
-												>
-													<button type="button" on:click={() => setLocalizedField('name', name)}>
-														{$i18n.t('Copy default')}
-													</button>
-													{#if localizedField('name')}
-														<button type="button" on:click={() => clearLocalizedField('name')}>
-															{$i18n.t('Use default')}
-														</button>
-													{/if}
-												</div>
+										<div class="min-w-0 w-full flex-1">
+											<div class="flex min-w-0 items-center gap-2">
+												{#if editingLocale}
+													<input
+														class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+														placeholder={name || $i18n.t('Model Name')}
+														value={localizedField('name')}
+														on:input={(e) =>
+															setLocalizedField(
+																'name',
+																(e.currentTarget as HTMLInputElement).value
+															)}
+													/>
+												{:else}
+													<input
+														class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+														placeholder={$i18n.t('Model Name')}
+														bind:value={name}
+														required
+													/>
+												{/if}
+												{#if !readOnly}
+													<div
+														class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 flex shrink-0 items-center gap-1 text-xs"
+													>
+														{#if loading}<Spinner />{/if}
+														{#if backgroundPreview || info.meta.background_image_url}
+															<button
+																type="button"
+																class="rounded-md px-2 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																disabled={loading}
+																title={$i18n.t(
+																	'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
+																)}
+																on:click={() => backgroundInput.click()}
+																>{$i18n.t('Change background')}</button
+															>
+															<button
+																type="button"
+																class="rounded-md px-2 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																disabled={loading}
+																on:click={() => {
+																	clearBackgroundPreview();
+																	backgroundFile = null;
+																	info.meta.background_image_url = null;
+																}}>{$i18n.t('Remove')}</button
+															>
+														{:else}
+															<button
+																type="button"
+																class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-gray-500 transition hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																disabled={loading}
+																title={$i18n.t(
+																	'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
+																)}
+																on:click={() => backgroundInput.click()}
+															>
+																<Photo />
+																{$i18n.t('Add background')}
+															</button>
+														{/if}
+													</div>
+												{/if}
 											</div>
-										{/if}
 
-										<input
-											class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
-											placeholder={$i18n.t('Model ID')}
-											bind:value={id}
-											disabled={edit}
-											required
-										/>
+											{#if editingLocale}
+												<div class="mt-1 flex items-center justify-end gap-3 text-[0.6875rem]">
+													<div
+														class="flex shrink-0 items-center gap-2 text-gray-500 dark:text-gray-400"
+													>
+														<button type="button" on:click={() => setLocalizedField('name', name)}>
+															{$i18n.t('Copy default')}
+														</button>
+														{#if localizedField('name')}
+															<button type="button" on:click={() => clearLocalizedField('name')}>
+																{$i18n.t('Use default')}
+															</button>
+														{/if}
+													</div>
+												</div>
+											{/if}
+
+											<input
+												class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+												placeholder={$i18n.t('Model ID')}
+												bind:value={id}
+												disabled={edit}
+												required
+											/>
+										</div>
 									</div>
 								</div>
 							</div>
-
 							<div class="flex min-w-0 flex-col gap-3 px-4">
 								<div>
 									<div class="mb-1 flex w-full items-center justify-between">
