@@ -1478,6 +1478,7 @@
 						for (const messageId of history.messages[message.parentId].childrenIds) {
 							history.messages[messageId].done = true;
 						}
+						message.done = true;
 						await processNextInQueue($chatId);
 					} else {
 						message.done = true;
@@ -4224,10 +4225,6 @@
 				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
 					history.messages[messageId].done = true;
 				}
-			}
-
-			if (responseMessage) {
-				history.messages[responseMessage.id] = responseMessage;
 			}
 
 			if (shouldAutoScrollResponse()) {
