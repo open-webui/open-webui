@@ -12,7 +12,7 @@
 	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 
 	const i18n: any = getContext('i18n');
-	export let controls: Record<string, ModelControl> = {};
+	export let controls: Record<string, ModelControl> | undefined = undefined;
 	let show = false;
 	let editingKey = '';
 	let label = '';
@@ -188,7 +188,7 @@
 					class="ml-2 flex shrink-0 items-center justify-center rounded text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					aria-label={`${$i18n.t('Remove')} ${control.label}`}
 					on:click={() => {
-						delete controls[key];
+						delete controls?.[key];
 						controls = { ...controls };
 					}}><XMark className="size-3" /></button
 				>
