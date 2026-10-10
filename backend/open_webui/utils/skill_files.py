@@ -237,7 +237,7 @@ def parse_import(
                 'name': str(name),
                 'description': package.get('description', fm.get('description', '')),
                 'meta': package.get('meta') or {},
-                'is_active': package.get('is_active', True),
+                **({'is_active': package['is_active']} if 'is_active' in package else {}),
                 'files': files,
             }
         )

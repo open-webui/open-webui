@@ -8,13 +8,14 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
-	import { user } from '$lib/stores';
+	import { user, config } from '$lib/stores';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let editHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
+	export let shareHandler: (() => void) | null = null;
 	export let deleteHandler: Function;
 	export let accessHandler: (() => void) | null = null;
 	export let onClose: Function;
@@ -90,6 +91,16 @@
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</button>
 
+			{#if shareHandler && $config?.features?.enable_community_sharing && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills_export)}
+				<button
+					type="button"
+					class="flex h-7 w-full items-center gap-2 px-2 text-[0.8125rem]"
+					on:click={() => {
+						shareHandler?.();
+						closeMenu();
+					}}>{$i18n.t('Share to Community')}</button
+				>
+			{/if}
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills_export}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"

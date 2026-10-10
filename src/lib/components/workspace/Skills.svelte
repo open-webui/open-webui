@@ -43,6 +43,40 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Switch from '../common/Switch.svelte';
 	import SkillMenu from './Skills/SkillMenu.svelte';
+	import CommunityDiscover from './common/CommunityDiscover.svelte';
+	import { config } from '$lib/stores';
+	let stopSkillShare = () => {};
+	const shareHandler = (skill: { id: string }) => {
+		stopSkillShare();
+		const tab = window.open('https://openwebui.com/post?type=skill', '_blank');
+		if (!tab) {
+			toast.error($i18n.t('Please allow popups to share your skill.'));
+			return;
+		}
+		const receiveLoaded = async (event: MessageEvent) => {
+			if (
+				event.origin !== 'https://openwebui.com' ||
+				event.source !== tab ||
+				event.data !== 'loaded'
+			)
+				return;
+			stopSkillShare();
+			try {
+				const exported = JSON.parse(
+					await (await exportSkillBundle(localStorage.token, 'json', [skill.id])).text()
+				);
+				const { id, name, description, files } = Array.isArray(exported) ? exported[0] : exported;
+				const data = JSON.stringify({ id, name, description, files });
+				if (new Blob([data]).size > 15 * 1024 * 1024)
+					throw new Error('Community skill JSON exceeds 15 MiB');
+				tab.postMessage(data, 'https://openwebui.com');
+			} catch (error) {
+				toast.error(skillError(error));
+			}
+		};
+		window.addEventListener('message', receiveLoaded);
+		stopSkillShare = () => window.removeEventListener('message', receiveLoaded);
+	};
 	import SkillImport from './Skills/SkillImport.svelte';
 	import ImportModal from '$lib/components/ImportModal.svelte';
 	import { cloneSkill, exportSkillBundle, loadSkillByUrl, skillError } from '$lib/apis/skills';
@@ -289,6 +323,7 @@
 	});
 
 	onDestroy(() => {
+		stopSkillShare();
 		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 	});
@@ -564,6 +599,7 @@
 									{:else}
 										<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 											<SkillMenu
+												shareHandler={() => shareHandler(skill)}
 												accessHandler={() => accessModal.open(skill.id)}
 												show={openSkillMenuId === skill.id}
 												editHandler={() => {
@@ -655,6 +691,13 @@
 			<span class="  font-normal">{resolveLocalizedResource(selectedSkill, $i18n.language)}</span>.
 		</div>
 	</DeleteConfirmDialog>
+	{#if $config?.features?.enable_community_sharing}
+		<CommunityDiscover
+			href="https://openwebui.com/search?type=skill"
+			title={$i18n.t('Discover a skill')}
+			description={$i18n.t('Discover, download, and explore community skills')}
+		/>
+	{/if}
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
 		<Spinner className="size-5" />
