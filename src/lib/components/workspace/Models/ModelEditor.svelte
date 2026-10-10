@@ -1,5 +1,7 @@
 <script lang="ts">
+	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { getModels } from '$lib/apis';
 	import ModelHistory from './ModelHistory.svelte';
@@ -37,9 +39,8 @@
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
-	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
-	import DefaultFeatures from './DefaultFeatures.svelte';
-	import BuiltinTools from './BuiltinTools.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ModelSettingsSection from './ModelSettingsSection.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from './LocalizedPromptSuggestions.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
@@ -62,6 +63,7 @@
 	import TranslationTable from '$lib/components/common/TranslationTable.svelte';
 
 	const i18n: any = getContext('i18n');
+	const formId = `model-editor-${uuidv4()}`;
 
 	export let onSubmit: Function = () => {};
 	export let readOnly = false;
@@ -126,6 +128,7 @@
 	let showSystemPrompt = true;
 	let showAdvanced = false;
 	let showPreview = false;
+	let customPromptDraft: any[] | null = null;
 	let showAccessControlModal = false;
 
 	let loaded = false;
@@ -176,6 +179,14 @@
 	let params: Record<string, any> = {
 		system: ''
 	};
+
+	$: modifiedParamCount = Object.entries(params).reduce((count, [key, value]) => {
+		if (key === 'system' || key === 'model_controls') return count;
+		if (key === 'custom_params') {
+			return count + Object.keys(value ?? {}).filter((name) => name.trim()).length;
+		}
+		return count + (value != null && value !== '' ? 1 : 0);
+	}, 0);
 
 	let knowledge = [];
 	let toolIds = [];
@@ -607,6 +618,7 @@
 	};
 
 	const loadModel = async (value: any) => {
+		customPromptDraft = null;
 		model = value ? structuredClone(value) : null;
 		backgroundFile = null;
 		avatarFile = null;
@@ -803,7 +815,7 @@
 	/>
 
 	<div class="flex h-full min-h-0 w-full flex-col">
-		<div class="flex shrink-0 items-center gap-3">
+		<div class="flex shrink-0 items-center gap-3" class:px-3={!admin}>
 			{#if onBack}
 				<button
 					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
@@ -857,7 +869,7 @@
 					/>
 				{/key}
 			</section>
-			<div class="flex shrink-0 justify-end px-1 py-2">
+			<div class="flex shrink-0 justify-end py-2" class:px-1={admin} class:px-3={!admin}>
 				<button
 					type="button"
 					class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
@@ -870,7 +882,7 @@
 		{/if}
 		<div
 			class:hidden={historical}
-			class="min-h-0 w-full flex-1 overflow-y-auto pr-1 scrollbar-hover"
+			class="min-h-0 w-full flex-1 overflow-y-auto px-1 scrollbar-hover"
 		>
 			<input
 				bind:this={filesInputElement}
@@ -952,6 +964,7 @@
 			{#if !edit || (edit && model)}
 				<!-- svelte-ignore a11y_no_noninteractive_element_interactions (Capture listeners block changes from custom controls in read-only fieldsets.) -->
 				<form
+					id={formId}
 					class="flex w-full flex-col gap-2.5 md:flex-row"
 					on:click|capture={preventReadOnlyEdit}
 					on:keydown|capture={preventReadOnlyEdit}
@@ -985,7 +998,7 @@
 
 								<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
 									<div
-										class="relative flex min-w-0 flex-1 items-center gap-3 px-4 pb-2 {backgroundPreview ||
+										class="relative flex min-w-0 flex-1 items-center gap-3.5 px-3 md:px-5 pb-1 {backgroundPreview ||
 										info.meta.background_image_url
 											? '-mt-14 sm:-mt-16'
 											: '-mt-9'}"
@@ -993,7 +1006,7 @@
 										<!-- LICENSE covers this Open WebUI fallback logo.
 									Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									https://docs.openwebui.com/license. -->
-										<div class="group relative size-11 shrink-0">
+										<div class="group relative size-12 shrink-0">
 											<button
 												class="group relative flex size-full items-center overflow-hidden rounded-xl {info
 													.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
@@ -1083,23 +1096,23 @@
 												{/if}
 												{#if !readOnly}
 													<div
-														class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 flex shrink-0 items-center gap-1 text-xs"
+														class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 absolute bottom-full right-3 mb-1 md:static md:mb-0 flex shrink-0 items-center gap-1 text-xs"
 													>
 														{#if loading}<Spinner />{/if}
+														<!-- Previous labels retained for i18n extraction: {$i18n.t('Background Image')} -->
 														{#if backgroundPreview || info.meta.background_image_url}
 															<button
 																type="button"
-																class="rounded-md px-2 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
 																disabled={loading}
 																title={$i18n.t(
 																	'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
 																)}
-																on:click={() => backgroundInput.click()}
-																>{$i18n.t('Change background')}</button
+																on:click={() => backgroundInput.click()}>{$i18n.t('Change')}</button
 															>
 															<button
 																type="button"
-																class="rounded-md px-2 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
 																disabled={loading}
 																on:click={() => {
 																	clearBackgroundPreview();
@@ -1153,7 +1166,7 @@
 									</div>
 								</div>
 							</div>
-							<div class="flex min-w-0 flex-col gap-3 px-4">
+							<div class="flex min-w-0 flex-col gap-3 px-3 md:px-5">
 								<div>
 									<div class="mb-1 flex w-full items-center justify-between">
 										{#if editingLocale}
@@ -1178,7 +1191,7 @@
 											</div>
 										{:else}
 											<button
-												class="flex w-full items-center justify-between gap-3 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+												class="grid w-full grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 												type="button"
 												aria-pressed={enableDescription ? 'true' : 'false'}
 												aria-label={enableDescription
@@ -1188,13 +1201,13 @@
 													enableDescription = !enableDescription;
 												}}
 											>
-												<span class="font-normal text-gray-600 dark:text-gray-400"
-													>{$i18n.t('Description')}</span
-												>
+												<span class="font-normal text-gray-600 dark:text-gray-400">
+													{$i18n.t('Description')}
+												</span>
 												{#if !enableDescription}
-													<span>{$i18n.t('Default')}</span>
+													<span class="justify-self-end">{$i18n.t('Default')}</span>
 												{:else}
-													<span>{$i18n.t('Custom')}</span>
+													<span class="justify-self-end">{$i18n.t('Custom')}</span>
 												{/if}
 											</button>
 										{/if}
@@ -1226,16 +1239,21 @@
 								<div class="flex min-w-0 flex-col gap-2">
 									{#if preset}
 										<div
-											class="grid min-w-0 gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center sm:gap-4"
+											class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>
 											<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
-												{$i18n.t('Base Model (From)')}
+												<ModelSettingsLabel
+													label={$i18n.t('Base Model (From)')}
+													description={$i18n.t(
+														'Choose the underlying model that generates responses for this custom model.'
+													)}
+												/>
 											</div>
 
 											<div class="min-w-0">
 												<ModelSelector
 													id="workspace-base-model"
-													placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
+													placeholder={$i18n.t('Select a base model')}
 													searchPlaceholder={$i18n.t('Search a model')}
 													items={getBaseModelItems($models)}
 													triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
@@ -1248,10 +1266,15 @@
 									{/if}
 
 									<div
-										class="grid min-w-0 gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start sm:gap-4"
+										class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 									>
 										<div class="pt-1 text-xs font-normal text-gray-600 dark:text-gray-400">
-											{$i18n.t('Tags')}
+											<ModelSettingsLabel
+												label={$i18n.t('Tags')}
+												description={$i18n.t(
+													'Add tags to organize models and make them easier to find.'
+												)}
+											/>
 										</div>
 										<div class="min-w-0">
 											<Tags
@@ -1276,11 +1299,16 @@
 							</div>
 						</fieldset>
 
-						<div class="px-4">
+						<div class="px-2.5 md:px-4">
 							<section class="mt-4">
-								<div class="space-y-2">
+								<div class="space-y-2 px-1">
 									<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
-										{$i18n.t('System Prompt')}
+										<ModelSettingsLabel
+											label={$i18n.t('System Prompt')}
+											description={$i18n.t(
+												'Set instructions that guide how this model behaves throughout a chat.'
+											)}
+										/>
 									</div>
 
 									{#if showSystemPrompt || !system.trim()}
@@ -1385,273 +1413,239 @@
 											{showSystemPrompt ? $i18n.t('Show less') : $i18n.t('Show more')}
 										</button>
 									{/if}
-
+								</div>
+								<!-- Previous labels retained for i18n extraction: {$i18n.t('Model Params')} -->
+								<div class="mt-2 space-y-0.5">
 									<button
 										type="button"
-										class="group flex h-7 w-full items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+										class="grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-start text-xs font-normal focus-visible:outline focus-visible:outline-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
 										aria-expanded={showAdvanced}
 										on:click={() => (showAdvanced = !showAdvanced)}
 									>
 										<span class="font-normal text-gray-600 dark:text-gray-400"
-											>{$i18n.t('Advanced Params')}</span
+											><ModelSettingsLabel
+												label={$i18n.t('Advanced Params')}
+												description={$i18n.t(
+													'Override generation settings such as temperature, token limits, and sampling. Unmodified settings use the provider defaults.'
+												)}
+											/></span
 										>
-										<span
-											aria-hidden="true"
-											class="text-gray-500 transition group-hover:text-gray-700 dark:group-hover:text-gray-300"
-											>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</span
-										>
+										<span class="text-gray-900 dark:text-gray-100">
+											<!-- Previous non-plural key retained for i18n extraction: {$i18n.t('{{count}} modified')} -->
+											{modifiedParamCount
+												? $i18n.t('{{count}} modified', { count: modifiedParamCount })
+												: $i18n.t('Default')}
+										</span>
+										<ChevronRight
+											className={`size-3 text-gray-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+										/>
 									</button>
 
 									{#if showAdvanced}
-										<fieldset disabled={readOnly} class="min-w-0 my-2">
+										<fieldset disabled={readOnly} class="min-w-0 my-2 pl-3">
 											<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
 										</fieldset>
 									{/if}
-									{#if admin}
-										<fieldset disabled={readOnly} class="min-w-0">
-											{#if !editingLocale}
-												<ModelControls bind:controls={params.model_controls} />
-											{:else if Object.keys(params.model_controls ?? {}).length}
-												<div class="flex h-7 items-center text-xs text-gray-600 dark:text-gray-400">
-													{$i18n.t('Model controls')}
-												</div>
-												<TranslationTable
-													value={controlTranslations}
-													source={modelControlTranslationSource(params.model_controls)}
-													filename={`model-${id}-${editingLocale}.json`}
-													onChange={setControlTranslations}
-												/>
-											{/if}
-										</fieldset>
-									{/if}
+									<fieldset disabled={readOnly} class="min-w-0">
+										{#if !editingLocale}
+											<ModelControls bind:controls={params.model_controls} />
+										{:else if Object.keys(params.model_controls ?? {}).length}
+											<div class="flex h-7 items-center text-xs text-gray-600 dark:text-gray-400">
+												{$i18n.t('Model controls')}
+											</div>
+											<TranslationTable
+												value={controlTranslations}
+												source={modelControlTranslationSource(params.model_controls)}
+												filename={`model-${id}-${editingLocale}.json`}
+												onChange={setControlTranslations}
+											/>
+										{/if}
+									</fieldset>
 								</div>
 							</section>
 
 							<fieldset disabled={readOnly} class="min-w-0">
-								<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
-
-								<section class="my-3">
-									<div class="flex w-full items-center justify-between">
+								<section class="mt-0.5">
+									<ModelSettingsSection
+										label={$i18n.t('Prompts')}
+										description={$i18n.t(
+											'Set the starter suggestions people see when opening a new chat with this model.'
+										)}
+										summary={editingLocale
+											? Array.isArray(info.meta.i18n?.[editingLocale]?.suggestion_prompts)
+												? $i18n.t('Custom')
+												: $i18n.t('Default')
+											: info.meta.suggestion_prompts == null
+												? $i18n.t('Default')
+												: `${$i18n.t('Custom')} · ${info.meta.suggestion_prompts.length}`}
+									>
 										{#if editingLocale}
-											<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
-												{$i18n.t('Prompts')}
-											</div>
-										{:else}
-											<button
-												class="flex w-full items-center justify-between gap-3 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-												type="button"
-												aria-pressed={(info?.meta?.suggestion_prompts ?? null) !== null}
-												on:click={() => {
-													if ((info?.meta?.suggestion_prompts ?? null) === null) {
-														info.meta.suggestion_prompts = [{ content: '', title: ['', ''] }];
-													} else {
-														info.meta.suggestion_prompts = null;
-													}
-												}}
+											<LocalizedPromptSuggestions
+												promptSuggestions={info.meta.suggestion_prompts ?? []}
+												bind:localizedPromptSuggestions={info.meta.i18n}
+												locale={editingLocale}
+												localeLabel={editingLocaleLabel}
+												disabled={readOnly}
+											/>
+										{:else if info.meta.suggestion_prompts != null}
+											<PromptSuggestions
+												bind:promptSuggestions={info.meta.suggestion_prompts}
+												disabled={readOnly}
 											>
-												<span class="font-normal text-gray-600 dark:text-gray-400"
-													>{$i18n.t('Prompts')}</span
+												<button
+													slot="label"
+													disabled={readOnly}
+													type="button"
+													class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+													on:click={() => {
+														customPromptDraft = structuredClone(info.meta.suggestion_prompts);
+														info.meta.suggestion_prompts = null;
+													}}>{$i18n.t('Use default')}</button
 												>
-												{#if (info?.meta?.suggestion_prompts ?? null) === null}
-													<span>{$i18n.t('Default')}</span>
-												{:else}
-													<span>{$i18n.t('Custom')}</span>
-												{/if}
-											</button>
+											</PromptSuggestions>
+										{:else}
+											<div
+												class="flex items-center justify-between gap-3 px-1 py-1 text-xs text-gray-500 dark:text-gray-400"
+											>
+												<span>{$i18n.t('Using default prompt suggestions')}</span>
+												<button
+													type="button"
+													class="shrink-0 hover:text-gray-900 dark:hover:text-gray-100"
+													on:click={() => {
+														info.meta.suggestion_prompts = customPromptDraft ?? [
+															{ content: '', title: ['', ''] }
+														];
+													}}>{$i18n.t('Customize')}</button
+												>
+											</div>
 										{/if}
-									</div>
-
-									{#if editingLocale}
-										<LocalizedPromptSuggestions
-											promptSuggestions={info.meta.suggestion_prompts ?? []}
-											bind:localizedPromptSuggestions={info.meta.i18n}
-											locale={editingLocale}
-											localeLabel={editingLocaleLabel}
-										/>
-									{:else if info?.meta?.suggestion_prompts}
-										<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
-									{/if}
+									</ModelSettingsSection>
 								</section>
 
-								<div class="my-3">
-									<Knowledge bind:selectedItems={knowledge} />
+								<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
+
+								<div class="my-3 space-y-0.5">
+									<Knowledge bind:selectedItems={knowledge} disabled={readOnly} />
+									<ToolsSelector
+										bind:selectedToolIds={toolIds}
+										tools={$tools ?? []}
+										disabled={readOnly}
+									/>
+									<SkillsSelector
+										bind:selectedSkillIds={skillIds}
+										skills={skillsList}
+										disabled={readOnly}
+									/>
+									{#if ($functions ?? []).some((func) => func.type === 'filter')}
+										<FiltersSelector
+											bind:selectedFilterIds={filterIds}
+											bind:defaultFilterIds
+											filters={($functions ?? []).filter((func) => func.type === 'filter')}
+											disabled={readOnly}
+										/>
+									{/if}
+									{#if ($functions ?? []).some((func) => func.type === 'action')}
+										<ActionsSelector
+											bind:selectedActionIds={actionIds}
+											actions={($functions ?? []).filter((func) => func.type === 'action')}
+											disabled={readOnly}
+										/>
+									{/if}
 								</div>
-
-								<div class="my-3">
-									<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
-								</div>
-
-								<div class="my-3">
-									<SkillsSelector bind:selectedSkillIds={skillIds} skills={skillsList} />
-								</div>
-
-								{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-									<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
-
-									{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
-										<div class="my-3">
-											<FiltersSelector
-												bind:selectedFilterIds={filterIds}
-												filters={($functions ?? []).filter((func) => func.type === 'filter')}
-											/>
-										</div>
-
-										{@const toggleableFilters = $functions.filter(
-											(func) =>
-												func.type === 'filter' &&
-												(filterIds.includes(func.id) || func?.is_global) &&
-												func?.meta?.toggle
+								<div class="space-y-0.5">
+									<Capabilities
+										bind:capabilities
+										bind:defaultFeatureIds
+										bind:builtinTools
+										disabled={readOnly}
+									/>
+									<ModelSettingsSection
+										label={$i18n.t('Voice')}
+										description={$i18n.t(
+											'Configure the realtime voice, voice avatar, and text-to-speech voice for this model.'
 										)}
-
-										{#if toggleableFilters.length > 0}
-											<div class="my-3">
-												<DefaultFiltersSelector
-													bind:selectedFilterIds={defaultFilterIds}
-													filters={toggleableFilters}
+										summary={[
+											$config?.audio?.realtime?.enabled
+												? voice.voice || $i18n.t('Admin default')
+												: null,
+											$config?.audio?.realtime?.enabled || voiceAvatar
+												? voiceAvatar
+													? $i18n.t('Custom avatar')
+													: $i18n.t('Default orb')
+												: null,
+											tts.voice
+										]
+											.filter(Boolean)
+											.join(' · ') || $i18n.t('Default')}
+									>
+										{#if $config?.audio?.realtime?.enabled}
+											<div
+												class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
+											>
+												<div class="flex min-w-0 items-center">
+													<label
+														for="realtime-voice-input"
+														class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
+													>
+														{$i18n.t('Realtime Voice')}
+													</label>
+												</div>
+												<TTSVoiceInput
+													className="w-full font-normal text-gray-900 dark:text-gray-100"
+													id="realtime-voice"
+													bind:value={voice.voice}
+													placeholder={$i18n.t('Admin default')}
 												/>
 											</div>
 										{/if}
-									{/if}
-
-									{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-										<div class="my-3">
-											<ActionsSelector
-												bind:selectedActionIds={actionIds}
-												actions={($functions ?? []).filter((func) => func.type === 'action')}
+										{#if $config?.audio?.realtime?.enabled || voiceAvatar}
+											<VoiceAvatarSettings
+												bind:value={voiceAvatar}
+												bind:file={avatarFile}
+												bind:animationFiles
+												disabled={loading || readOnly}
+											/>
+										{/if}
+										<div
+											class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
+										>
+											<div class="flex min-w-0 items-center">
+												<div
+													class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
+												>
+													{$i18n.t('TTS Voice')}
+												</div>
+											</div>
+											<TTSVoiceInput
+												className="w-full font-normal text-gray-900 dark:text-gray-100"
+												bind:value={tts.voice}
+												{voices}
+												placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
 											/>
 										</div>
-									{/if}
-								{/if}
-
-								<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
-
-								<div class="my-3">
-									<Capabilities bind:capabilities />
-								</div>
-
-								{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
-									{@const availableFeatures = Object.entries(capabilities)
-										.filter(
-											([key, value]) =>
-												value &&
-												['web_search', 'code_interpreter', 'image_generation'].includes(key)
-										)
-										.map(([key, value]) => key)}
-
-									{#if availableFeatures.length > 0}
-										<div class="my-3">
-											<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
-										</div>
-									{/if}
-								{/if}
-
-								{#if capabilities.builtin_tools}
-									<div class="my-3">
-										<BuiltinTools bind:builtinTools />
-									</div>
-								{/if}
-
-								{#if capabilities.terminal}
-									<div class="my-3">
+									</ModelSettingsSection>
+									{#if capabilities.terminal}
 										<TerminalSelector bind:terminalId />
-									</div>
-								{/if}
-
-								{#if $config?.audio?.realtime?.enabled}
-									<div class="my-3">
-										<div class="flex w-full justify-between mb-1">
-											<label
-												for="realtime-voice-input"
-												class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
-											>
-												{$i18n.t('Realtime Voice')}
-											</label>
-										</div>
-										<TTSVoiceInput
-											className="font-normal text-gray-900 dark:text-gray-100"
-											id="realtime-voice"
-											bind:value={voice.voice}
-											placeholder={$i18n.t('Admin default')}
-										/>
-									</div>
-								{/if}
-								{#if $config?.audio?.realtime?.enabled || voiceAvatar}
-									<VoiceAvatarSettings
-										bind:value={voiceAvatar}
-										bind:file={avatarFile}
-										bind:animationFiles
-										disabled={loading}
-									/>
-								{/if}
-								<div class="my-3">
-									<div class="flex w-full justify-between mb-1">
-										<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
-											{$i18n.t('TTS Voice')}
-										</div>
-									</div>
-									<TTSVoiceInput
-										className="font-normal text-gray-900 dark:text-gray-100"
-										bind:value={tts.voice}
-										{voices}
-										placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
-									/>
+									{/if}
 								</div>
 							</fieldset>
 
-							<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
-
-							{#if !readOnly}
-								<div class="my-2 flex items-center justify-end gap-2">
-									{#if edit}
-										<input
-											type="text"
-											aria-label={$i18n.t('Commit message')}
-											placeholder={$i18n.t('Describe this change')}
-											class="min-w-0 flex-1 border-0 bg-transparent px-1 text-xs outline-hidden focus:ring-0"
-											bind:value={commitMessage}
-										/>
-									{/if}
-									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-										type="submit"
-										disabled={loading || (edit && !configurationChanged)}
-									>
-										<div class=" self-center font-normal">
-											{#if edit}
-												{$i18n.t('Save & Update')}
-											{:else}
-												{$i18n.t('Save & Create')}
-											{/if}
-										</div>
-
-										{#if loading}
-											<div class="ml-1.5 self-center">
-												<Spinner />
-											</div>
-										{/if}
-									</button>
-								</div>
-							{/if}
-
-							<div class="my-2 pb-2 text-xs text-gray-400 dark:text-gray-500">
-								<div class="mb-2 flex w-full items-center gap-2">
+							<div class="my-2 text-xs text-gray-400 dark:text-gray-500">
+								<div
+									class="flex w-full items-center gap-2 opacity-30 transition-opacity hover:opacity-60 focus-within:opacity-60"
+								>
 									<button
 										type="button"
-										class="group flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+										class="flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
 										aria-expanded={showPreview}
 										on:click={() => (showPreview = !showPreview)}
 									>
-										<span class="font-normal text-gray-600 dark:text-gray-400"
-											>{$i18n.t('JSON Preview')}</span
-										>
-										<span
-											aria-hidden="true"
-											class="text-gray-500 transition group-hover:text-gray-700 dark:group-hover:text-gray-300"
-											>{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}</span
+										<span class="font-normal">{$i18n.t('JSON Preview')}</span>
+										<span aria-hidden="true">{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}</span
 										>
 									</button>
 									<button
-										class="px-1.5 py-0.5 text-xs flex rounded-sm transition"
+										class="px-1.5 py-0.5 text-xs flex rounded-sm"
 										type="button"
 										on:click={async () => {
 											const copied = await copyToClipboard(
@@ -1666,7 +1660,7 @@
 									</button>
 								</div>
 								{#if showPreview}
-									<div>
+									<div class="pt-2">
 										<textarea
 											class="w-full bg-transparent text-xs leading-5 outline-hidden resize-none font-normal text-gray-900 dark:text-gray-100"
 											rows="8"
@@ -1682,6 +1676,33 @@
 				</form>
 			{/if}
 		</div>
+		{#if !readOnly && !historical && (!edit || model)}
+			<div
+				class="flex shrink-0 items-center justify-end gap-2 py-2"
+				class:px-1={admin}
+				class:px-3={!admin}
+			>
+				{#if edit}
+					<input
+						form={formId}
+						type="text"
+						aria-label={$i18n.t('Commit message')}
+						placeholder={$i18n.t('Describe this change')}
+						class="min-w-0 flex-1 border-0 bg-transparent px-1 text-xs outline-hidden focus:ring-0"
+						bind:value={commitMessage}
+					/>
+				{/if}
+				<button
+					form={formId}
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					type="submit"
+					disabled={loading || (edit && !configurationChanged)}
+				>
+					{edit ? $i18n.t('Save & Update') : $i18n.t('Save & Create')}
+					{#if loading}<Spinner className="size-3" />{/if}
+				</button>
+			</div>
+		{/if}
 	</div>
 {:else}
 	<div class="flex h-full w-full items-center justify-center" role="status">

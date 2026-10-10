@@ -43,9 +43,45 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Switch from '../common/Switch.svelte';
 	import SkillMenu from './Skills/SkillMenu.svelte';
+	import CommunityDiscover from './common/CommunityDiscover.svelte';
+	import { config } from '$lib/stores';
+	let stopSkillShare = () => {};
+	const shareHandler = (skill: { id: string }) => {
+		stopSkillShare();
+		const tab = window.open('https://openwebui.com/post?type=skill', '_blank');
+		if (!tab) {
+			toast.error($i18n.t('Please allow popups to share your skill.'));
+			return;
+		}
+		const receiveLoaded = async (event: MessageEvent) => {
+			if (
+				event.origin !== 'https://openwebui.com' ||
+				event.source !== tab ||
+				event.data !== 'loaded'
+			)
+				return;
+			stopSkillShare();
+			try {
+				const exported = JSON.parse(
+					await (await exportSkillBundle(localStorage.token, 'json', [skill.id])).text()
+				);
+				const { id, name, description, files } = Array.isArray(exported) ? exported[0] : exported;
+				const data = JSON.stringify({ id, name, description, files });
+				if (new Blob([data]).size > 15 * 1024 * 1024)
+					throw new Error('Community skill JSON exceeds 15 MiB');
+				tab.postMessage(data, 'https://openwebui.com');
+			} catch (error) {
+				toast.error(skillError(error));
+			}
+		};
+		window.addEventListener('message', receiveLoaded);
+		stopSkillShare = () => window.removeEventListener('message', receiveLoaded);
+	};
 	import SkillImport from './Skills/SkillImport.svelte';
-	import { cloneSkill, exportSkillBundle, skillError } from '$lib/apis/skills';
+	import ImportModal from '$lib/components/ImportModal.svelte';
+	import { cloneSkill, exportSkillBundle, loadSkillByUrl, skillError } from '$lib/apis/skills';
 	let showImport = false;
+	let showImportFromLink = false;
 	let bundleFiles: File[] = [];
 	let folderImportInput: HTMLInputElement;
 	import Pagination from '../common/Pagination.svelte';
@@ -88,6 +124,14 @@
 				label: $i18n.t('Import'),
 				onClick: () => importInputElement?.click(),
 				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import
+			},
+			{
+				id: 'skills-import-url',
+				label: $i18n.t('Import from URL'),
+				onClick: () => {
+					showImportFromLink = true;
+				},
+				visible: $user?.role === 'admin'
 			},
 			{
 				id: 'skills-import-folder',
@@ -279,6 +323,7 @@
 	});
 
 	onDestroy(() => {
+		stopSkillShare();
 		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 	});
@@ -296,16 +341,30 @@
 </svelte:head>
 
 {#if loaded}
-	<SkillImport
-		bind:show={showImport}
-		files={bundleFiles}
-		onImported={async () => {
-			toast.success($i18n.t('Skill imported successfully'));
-			page = 1;
-			await loadSkillItems();
-			_skills.set(await getSkills(localStorage.token));
+	<ImportModal
+		bind:show={showImportFromLink}
+		loadUrlHandler={(url) => loadSkillByUrl(localStorage.token, url)}
+		transformResult={(packages) => packages}
+		successMessage={$i18n.t('Skills loaded for preview')}
+		onImport={(packages) => {
+			bundleFiles = [
+				new File([JSON.stringify(packages)], 'skills.json', { type: 'application/json' })
+			];
+			showImport = true;
 		}}
 	/>
+	{#key bundleFiles}
+		<SkillImport
+			bind:show={showImport}
+			files={bundleFiles}
+			onImported={async () => {
+				toast.success($i18n.t('Skill imported successfully'));
+				page = 1;
+				await loadSkillItems();
+				_skills.set(await getSkills(localStorage.token));
+			}}
+		/>
+	{/key}
 	<input
 		bind:this={importInputElement}
 		type="file"
@@ -540,6 +599,7 @@
 									{:else}
 										<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 											<SkillMenu
+												shareHandler={() => shareHandler(skill)}
 												accessHandler={() => accessModal.open(skill.id)}
 												show={openSkillMenuId === skill.id}
 												editHandler={() => {
@@ -631,6 +691,13 @@
 			<span class="  font-normal">{resolveLocalizedResource(selectedSkill, $i18n.language)}</span>.
 		</div>
 	</DeleteConfirmDialog>
+	{#if $config?.features?.enable_community_sharing}
+		<CommunityDiscover
+			href="https://openwebui.com/search?type=skill"
+			title={$i18n.t('Discover a skill')}
+			description={$i18n.t('Discover, download, and explore community skills')}
+		/>
+	{/if}
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
 		<Spinner className="size-5" />

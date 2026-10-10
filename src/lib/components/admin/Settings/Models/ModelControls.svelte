@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ModelSettingsLabel from '$lib/components/workspace/Models/ModelSettingsLabel.svelte';
 	import { getContext, tick } from 'svelte';
 	// @ts-expect-error The existing SortableJS dependency does not ship declarations.
 	import Sortable from 'sortablejs';
@@ -133,21 +134,29 @@
 </script>
 
 <div>
-	<div class="flex h-7 w-full items-center justify-between">
+	<div
+		class="grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 px-1 py-1.5 text-xs sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
+	>
 		<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
-			>{$i18n.t('Model controls')}</span
+			><ModelSettingsLabel
+				label={$i18n.t('Model controls')}
+				description={$i18n.t('Let people choose approved parameter presets in chat.')}
+			/></span
 		>
+		<p
+			class="truncate text-gray-500 dark:text-gray-400"
+			title={$i18n.t('Let people choose approved parameter presets in chat.')}
+		>
+			{$i18n.t('Let people choose approved parameter presets in chat.')}
+		</p>
 		<button
 			type="button"
-			class="rounded p-1 text-gray-500 transition hover:bg-black/5 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
+			class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 			aria-label={$i18n.t('Add control')}
 			title={$i18n.t('Add control')}
 			on:click={() => edit()}><Plus className="size-3" /></button
 		>
 	</div>
-	<p class="mb-1 text-xs leading-4 text-gray-400 dark:text-gray-600">
-		{$i18n.t('Let people choose approved parameter presets in chat.')}
-	</p>
 	<div use:sortable={moveControl}>
 		{#each Object.entries(controls ?? {}) as [key, control], index (key)}
 			<div class="flex items-center gap-1 py-0.5">

@@ -125,6 +125,7 @@
 	const i18n: any = getContext('i18n');
 
 	type AskUserPrompt = {
+		id?: string;
 		show: boolean;
 		questions: any[];
 		allowOther: boolean;
@@ -1813,18 +1814,21 @@
 
 						{#if askUser?.show}
 							<div class="mx-1">
-								<AskUserCard
-									show={askUser.show}
-									questions={askUser.questions}
-									allowOther={askUser.allowOther}
-									timeoutMs={askUser.timeoutMs}
-									on:confirm={(e) => {
-										askUser.onConfirm(e.detail);
-									}}
-									on:cancel={() => {
-										askUser.onCancel();
-									}}
-								/>
+								{#key askUser.id}
+									{@const activeAskUser = askUser}
+									<AskUserCard
+										show={askUser.show}
+										questions={askUser.questions}
+										allowOther={askUser.allowOther}
+										timeoutMs={askUser.timeoutMs}
+										on:confirm={(e) => {
+											activeAskUser.onConfirm(e.detail);
+										}}
+										on:cancel={() => {
+											activeAskUser.onCancel();
+										}}
+									/>
+								{/key}
 							</div>
 						{/if}
 

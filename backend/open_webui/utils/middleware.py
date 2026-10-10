@@ -135,6 +135,7 @@ from open_webui.utils.skills import (
     apply_skills_create_prompt,
     extract_skill_ids_from_messages,
     has_prior_user_message,
+    replace_skill_mentions_with_labels,
     strip_skill_mentions,
 )
 from open_webui.utils.task import (
@@ -234,6 +235,30 @@ async def publish_chat_finished_event(
     if event_emitter:
         folder_id = metadata.get('folder_id') or await Chats.get_chat_folder_id(chat_id, metadata.get('user_id'))
         await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id, 'folder_id': folder_id}})
+
+
+async def publish_chat_failed_event(request: Request, user: UserModel, metadata: dict, error: str):
+    chat_id = metadata.get('chat_id')
+    if getattr(request.state, 'internal', False) is True or not is_saved_chat_id(chat_id):
+        return
+
+    webui_url = await Config.get('webui.url')
+    await publish_event(
+        request,
+        EVENTS.CHAT_FAILED,
+        actor=user,
+        subject_id=chat_id,
+        subject_type='chat',
+        data={
+            'user_id': user.id,
+            'chat_id': chat_id,
+            'message_id': metadata.get('message_id'),
+            'model_id': metadata.get('model_id'),
+            'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
+            'message': error,
+        },
+        message='Chat failed',
+    )
 
 
 # We believe in one maker of all models, seen and unseen,
@@ -2238,6 +2263,12 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
+    for msg in db_messages:
+        skills_create = (msg.get('meta') or {}).get('skills_create')
+        # Replay the saved expansion unless the user edited the message.
+        if skills_create and skills_create.get('original_text') == get_content_from_message(msg):
+            set_last_user_message_content(skills_create['expanded_text'], [msg])
+
     return [
         {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS}
         for msg in db_messages
@@ -2772,11 +2803,26 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     skill_authoring_allowed = can_author_skills and has_prior_user_message(form_data.get('messages', []))
     skill_create_denial_reason = 'empty_chat' if can_author_skills else 'disabled'
-    apply_skills_create_prompt(
+    if apply_skills_create_prompt(
         form_data.get('messages', []),
         allowed=skill_authoring_allowed,
         denial_reason=skill_create_denial_reason,
-    )
+    ) and is_saved_chat_id(chat_id) and user_message_id:
+        stored_message = await Chats.get_message_by_id_and_message_id(chat_id, user_message_id) or {}
+        await Chats.upsert_message_to_chat_by_id_and_message_id(
+            chat_id,
+            user_message_id,
+            {
+                'meta': {
+                    **(stored_message.get('meta') or {}),
+                    'skills_create': {
+                        'original_text': get_content_from_message(stored_message),
+                        'expanded_text': get_last_user_message(form_data['messages']),
+                    },
+                }
+            },
+            touch=False,
+        )
 
     # If the original caller provided tools, use them as-is (skip resolution).
     # Otherwise, save any tools that filter inlets added for merging later.
@@ -3406,6 +3452,23 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     params = {key: value for key, value in params.items() if key in allowed_params}
 
     try:
+        if (
+            not is_saved_chat_id(metadata.get('chat_id'))
+            and metadata.get('params', {}).get('tool_approval_mode') == 'ask'
+            and not (name == 'ask_user' and tool_type == 'builtin')
+            and (
+                not event_caller
+                or await event_caller(
+                    {
+                        'type': 'confirmation',
+                        'data': {'tool_call': {'id': tool_call.get('id'), 'name': name, 'arguments': params}},
+                    }
+                )
+                is not True  # Disconnection and timeout replies are error objects, not approval.
+            )
+        ):
+            return params, 'Error: tool call was not approved.', tool, tool_type, direct_tool
+
         if direct_tool:
             if not event_caller:
                 result = 'Error: Browser session is not connected for this direct tool.'
@@ -3943,7 +4006,7 @@ async def background_tasks_handler(ctx):
                                 title = ''
 
                             if not title:
-                                title = messages[0].get('content', user_message)
+                                title = replace_skill_mentions_with_labels(messages[0].get('content', user_message))
 
                             await Chats.update_chat_title_by_id(metadata['chat_id'], title)
 
@@ -3955,7 +4018,7 @@ async def background_tasks_handler(ctx):
                             )
 
                     if title == None and len(messages) == 2 and (not messages_map or len(messages_map) <= 2):
-                        title = messages[0].get('content', user_message)
+                        title = replace_skill_mentions_with_labels(messages[0].get('content', user_message))
 
                         await Chats.update_chat_title_by_id(metadata['chat_id'], title)
 
@@ -4360,25 +4423,7 @@ async def non_streaming_chat_response_handler(response, ctx):
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
             log.debug('Error occurred while processing request: %s', e)
-            chat_id = metadata.get('chat_id')
-            if getattr(request.state, 'internal', False) is not True and chat_id and is_saved_chat_id(chat_id):
-                webui_url = await Config.get('webui.url')
-                await publish_event(
-                    request,
-                    EVENTS.CHAT_FAILED,
-                    actor=user,
-                    subject_id=chat_id,
-                    subject_type='chat',
-                    data={
-                        'user_id': user.id,
-                        'chat_id': chat_id,
-                        'message_id': metadata.get('message_id'),
-                        'model_id': metadata.get('model_id'),
-                        'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
-                        'message': str(e),
-                    },
-                    message='Chat failed',
-                )
+            await publish_chat_failed_event(request, user, metadata, str(e))
             pass
 
         return response
@@ -5920,7 +5965,7 @@ async def streaming_chat_response_handler(response, ctx):
                             for tool_call in response_tool_calls
                             if tool_call.get('function', {}).get('name') != 'ask_user'
                         ]
-                    elif ask_user_staged:
+                    elif ask_user_staged and save_to_chat:
                         if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
                             await pause_for_tool_approval(
                                 metadata['chat_id'],
@@ -5931,6 +5976,11 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                         await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
                         return
+                    elif ask_user_staged:
+                        # Live questions await the socket callback, not the saved-chat resolver.
+                        for item in output:
+                            if item.get('name') == 'ask_user' and item.get('status') == 'pending':
+                                item['status'] = 'in_progress'
 
                     # Append function_call items for each tool call
                     # (Responses API already has them from streaming, so skip duplicates)

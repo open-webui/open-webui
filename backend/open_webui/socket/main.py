@@ -9,6 +9,7 @@ import time
 import weakref
 from contextlib import suppress
 from typing import Any
+from uuid import uuid4
 
 import pycrdt as Y
 import socketio
@@ -778,10 +779,9 @@ async def chat_events(sid, data):
 def normalize_document_id(document_id: str) -> str:
     """Canonicalize document IDs to prevent auth bypass via prefix variants.
 
-    YdocManager normalizes storage keys by replacing ":" with "_", so
-    "note_abc" and "note:abc" resolve to the same underlying document.
-    We must rewrite underscore-prefixed IDs back to the colon form so
-    that authorization checks (which key on "note:") always fire.
+    An underscore-prefixed ID like "note_abc" would skip the authorization
+    checks, which key on "note:". Rewrite it back to the colon form so
+    those checks always fire and both forms reach the same document.
     """
     if document_id.startswith('note_'):
         document_id = 'note:' + document_id[5:]
@@ -826,6 +826,13 @@ async def ydoc_document_join(sid, data):
         user_id = data.get('user_id', sid)
         user_name = data.get('user_name', 'Anonymous')
         user_color = data.get('user_color', '#000000')
+
+        if (
+            sid not in await YDOC_MANAGER.get_users(document_id)
+            and await YDOC_MANAGER.count_documents_for_user(sid) >= YDOC_MANAGER.MAX_DOCUMENTS_PER_SESSION
+        ):
+            log.warning(f'Session {sid} is at the open-document limit. Rejecting join.')
+            return
 
         log.info('User %s joining document %s', user_id, document_id)
         await YDOC_MANAGER.add_user(document_id=document_id, user_id=sid)
@@ -985,23 +992,25 @@ async def yjs_document_update(sid, data):
         if update:
             user_id = data.get('user_id', sid)
 
-            await YDOC_MANAGER.append_to_updates(
+            stored = await YDOC_MANAGER.append_to_updates(
                 document_id=document_id,
                 update=update,  # Convert list of bytes to bytes
             )
-
-            # Broadcast update to all other users in the document
-            await sio.emit(
-                'ydoc:document:update',
-                {
-                    'document_id': document_id,
-                    'user_id': user_id,
-                    'update': update,
-                    'socket_id': sid,  # Add socket_id to match frontend filtering
-                },
-                room=f'doc_{document_id}',
-                skip_sid=sid,
-            )
+            if stored:
+                # Broadcast update to all other users in the document
+                await sio.emit(
+                    'ydoc:document:update',
+                    {
+                        'document_id': document_id,
+                        'user_id': user_id,
+                        'update': update,
+                        'socket_id': sid,  # Add socket_id to match frontend filtering
+                    },
+                    room=f'doc_{document_id}',
+                    skip_sid=sid,
+                )
+            else:
+                log.warning(f'Update for document {document_id} is invalid or over the size limit. Rejecting update.')
 
         async def debounced_save():
             await asyncio.sleep(0.5)
@@ -1462,6 +1471,21 @@ async def get_event_call(request_info):
             log.warning(f'Event caller: session {session_id} not owned by requesting user or disconnected')
             return {'error': 'Client session disconnected.'}
 
+        interaction_id = None
+        timeout = WEBSOCKET_EVENT_CALLER_TIMEOUT
+        if event_data.get('type') == 'request:user_input' or (
+            event_data.get('type') == 'confirmation' and (event_data.get('data') or {}).get('tool_call')
+        ):
+            interaction_id = str(uuid4())
+            data = dict(event_data.get('data') or {})
+            timeout_ms = data.get('timeout_ms', 120_000)
+            if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int):
+                timeout_ms = 120_000
+            timeout = min(max(timeout_ms / 1000, 60), 240)
+            if WEBSOCKET_EVENT_CALLER_TIMEOUT is not None and WEBSOCKET_EVENT_CALLER_TIMEOUT > 0:
+                timeout = min(timeout, WEBSOCKET_EVENT_CALLER_TIMEOUT)
+            event_data = {**event_data, 'data': {**data, 'interaction_id': interaction_id}}
+
         try:
             return await sio.call(
                 'events',
@@ -1471,11 +1495,22 @@ async def get_event_call(request_info):
                     'data': event_data,
                 },
                 to=session_id,
-                timeout=WEBSOCKET_EVENT_CALLER_TIMEOUT,
+                timeout=timeout,
             )
         except (TimeoutError, socketio.exceptions.TimeoutError):
             log.warning(f'Event caller timed out for session {session_id}')
             return {'error': 'Event call timed out. The browser tab may be inactive or closed.'}
+        finally:
+            if interaction_id:
+                await sio.emit(
+                    'events',
+                    {
+                        'chat_id': request_info.get('chat_id'),
+                        'message_id': request_info.get('message_id'),
+                        'data': {'type': 'request:interaction:done', 'data': {'interaction_id': interaction_id}},
+                    },
+                    to=session_id,
+                )
 
     if 'session_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:
         return __event_caller__

@@ -244,7 +244,10 @@
 		</nav>
 
 		<div
-			class="  pb-1 px-3 flex-1 min-w-0 max-h-full overflow-y-auto overflow-x-hidden"
+			class="pb-1 flex-1 min-w-0 max-h-full overflow-y-auto overflow-x-hidden"
+			class:px-3={!['/workspace/models/create', '/workspace/models/edit'].includes(
+				$page.url.pathname
+			)}
 			id="workspace-container"
 		>
 			<slot />

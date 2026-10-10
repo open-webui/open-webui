@@ -32,6 +32,11 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
 SKILL_MENTION_STRIP_RE = re.compile(rf'<(?:\$({SKILL_ID_RE})(?:\|([^>]*))?|/({SKILL_ID_RE})\|([^>]*))>')
 
 
+def replace_skill_mentions_with_labels(text: str) -> str:
+    """Show labelled skill mentions as their label, for plain text such as chat titles."""
+    return SKILL_MENTION_STRIP_RE.sub(lambda match: match.group(2) or match.group(4) or match.group(0), text)
+
+
 SKILLS_CREATE_RE = re.compile(r'^/skills:create(?:\s+(.*))?$', re.IGNORECASE | re.DOTALL)
 
 OPEN_WEBUI_SKILL_AUTHORING_STANDARDS = """\

@@ -22,7 +22,8 @@ def apply_model_controls(params: dict, controls: dict, model_options: dict) -> d
     if not isinstance(model_options, dict):
         raise HTTPException(400, 'Model control options must be an object.')
     for key, choice in model_options.items():
-        if key not in controls or not isinstance(choice, str) or choice not in controls[key]['options']:
+        # Picks for removed controls are skipped: the user has no menu left to clear them.
+        if key in controls and (not isinstance(choice, str) or choice not in controls[key]['options']):
             raise HTTPException(400, f'Model control {key}: the selected option is no longer available.')
     for key, control in controls.items():
         choice = model_options.get(key, control.get('default'))

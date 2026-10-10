@@ -15,6 +15,16 @@
 
 	export let loadUrlHandler: Function = () => {};
 	export let successMessage: string = '';
+	export let transformResult = (res) => {
+		const func = { ...res, id: res.id || nameToId(res.name) };
+		const frontmatter = extractFrontmatter(res.content);
+		if (frontmatter?.title) func.name = frontmatter.title;
+		func.meta = {
+			...(func.meta ?? {}),
+			description: frontmatter?.description ?? func.name
+		};
+		return func;
+	};
 
 	let loading = false;
 	let url = '';
@@ -41,23 +51,10 @@
 
 			toast.success(successMessage);
 
-			let func = res;
-			func.id = func.id || nameToId(func.name);
-
-			const frontmatter = extractFrontmatter(res.content); // Ensure frontmatter is extracted
-
-			if (frontmatter?.title) {
-				func.name = frontmatter.title;
-			}
-
-			func.meta = {
-				...(func.meta ?? {}),
-				description: frontmatter?.description ?? func.name
-			};
-
-			onImport(func);
+			onImport(transformResult(res));
 			show = false;
 		}
+		loading = false;
 	};
 </script>
 

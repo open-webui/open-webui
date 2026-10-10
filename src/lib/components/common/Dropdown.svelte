@@ -12,6 +12,9 @@
 	/** Alignment: 'start' | 'end' */
 	export let align = 'start';
 
+	/** Optional positioning anchor within a larger clickable trigger. */
+	export let anchorElement: HTMLElement | null = null;
+
 	/** Close when clicking outside */
 	export let closeOnOutsideClick = true;
 
@@ -114,7 +117,7 @@
 
 	function positionContentDefault() {
 		if (!triggerEl || !contentEl) return;
-		const rect = triggerEl.getBoundingClientRect();
+		const rect = (anchorElement ?? triggerEl).getBoundingClientRect();
 		resolvedMaxHeight = maxHeight;
 
 		contentEl.style.position = 'fixed';
@@ -163,7 +166,7 @@
 
 	function positionContentVisualViewport() {
 		if (!triggerEl || !contentEl) return;
-		const rect = triggerEl.getBoundingClientRect();
+		const rect = (anchorElement ?? triggerEl).getBoundingClientRect();
 		const viewport = visualViewportRect();
 		const viewportRight = viewport.left + viewport.width;
 		const viewportBottom = viewport.top + viewport.height;
@@ -272,6 +275,13 @@
 		previouslyFocused = null;
 	}
 
+	function restoreFocusAfterClose() {
+		if (contentEl?.contains(document.activeElement) && previouslyFocused?.isConnected) {
+			previouslyFocused.focus();
+		}
+		previouslyFocused = null;
+	}
+
 	function toggleOpen() {
 		if (show) {
 			closeDropdown();
@@ -283,6 +293,8 @@
 	// React to external show changes (e.g. bind:show toggled by parent component)
 	$: if (show) {
 		afterOpen();
+	} else {
+		restoreFocusAfterClose();
 	}
 
 	function handleWindowClick(event: MouseEvent) {

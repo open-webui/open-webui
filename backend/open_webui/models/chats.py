@@ -554,6 +554,24 @@ class ChatTable:
         history['currentId'] = latest_leaf_id
         return True
 
+    async def require_chat_creation_permission(self, user_id: str, db: AsyncSession | None = None) -> None:
+        from fastapi import HTTPException
+        from open_webui.constants import ERROR_MESSAGES
+        from open_webui.models.config import Config
+        from open_webui.models.users import Users
+        from open_webui.utils.access_control import get_permissions
+
+        user = await Users.get_user_by_id(user_id, db=db)
+        if user and user.role == 'admin':
+            return
+        if not user:
+            raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+        permissions = await get_permissions(user_id, await Config.get('user.permissions'), db=db)
+        chat_permissions = permissions.get('chat', {})
+        if chat_permissions.get('temporary') and chat_permissions.get('temporary_enforced'):
+            raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
     async def insert_new_chat(
         self,
         id: str,
@@ -564,6 +582,7 @@ class ChatTable:
         internal_meta: dict | None = None,
         timer_at: int | None = None,
     ) -> ChatModel | None:
+        await self.require_chat_creation_permission(user_id, db=db)
         async with get_async_db_context(db) as session:
             chat = ChatModel(
                 **{
@@ -692,6 +711,7 @@ class ChatTable:
         chat_import_forms: list[ChatImportForm],
         db: AsyncSession | None = None,
     ) -> list[ChatModel]:
+        await self.require_chat_creation_permission(user_id, db=db)
         async with get_async_db_context(db) as session:
             from open_webui.utils.access_control.folders import has_folder_write_access
 
@@ -1196,35 +1216,52 @@ class ChatTable:
                 raise HTTPException(404, 'Chat not found.')
             history = (chat.chat or {}).get('history') or {'messages': {}, 'currentId': None}
             messages = history.get('messages') or {}
-            ids = [user_message.get('id'), *[entry.get('message_id') for entry in message_ids]]
-            if (
-                not all(isinstance(mid, str) and mid for mid in ids)
-                or len(set(ids)) != len(ids)
-                or any(mid in messages for mid in ids[1:])
-            ):
+            user_message_id = user_message.get('id')
+            assistant_ids = [entry.get('message_id') for entry in message_ids]
+            ids = [user_message_id, *assistant_ids] if user_message else assistant_ids
+            if not all(isinstance(mid, str) and mid for mid in ids) or len(set(ids)) != len(ids):
                 raise HTTPException(409, 'Message already exists or has an invalid ID.')
-            existing = messages.get(ids[0])
-            if existing and (existing.get('role') != 'user' or (existing.get('user_id') or chat.user_id) != user.id):
-                raise HTTPException(403, 'You can only regenerate your own messages.')
-            parent_id = existing.get('parentId') if existing else user_message.get('parentId')
-            if parent_id is not None and parent_id not in messages:
-                raise HTTPException(409, 'Parent message no longer exists.')
-            message = existing or (
-                dict(user_message)
-                if chat.user_id == user.id
-                else {key: user_message[key] for key in ('content', 'files', 'models') if key in user_message}
-            )
-            if not existing:
-                message.update(
-                    id=ids[0],
-                    parentId=parent_id,
-                    role='user',
-                    childrenIds=[],
-                    timestamp=int(time.time()),
-                    user_id=user.id,
-                    user={'id': user.id, 'name': user.name},
+            # An empty reply may be prepared before the request.
+            for mid in assistant_ids:
+                existing_reply = messages.get(mid)
+                if existing_reply and (
+                    existing_reply.get('role') != 'assistant'
+                    or existing_reply.get('done')
+                    or existing_reply.get('content')
+                    or existing_reply.get('output')
+                    or (existing_reply.get('user_id') or chat.user_id) != user.id
+                    or (user_message and existing_reply.get('parentId') != user_message_id)
+                ):
+                    raise HTTPException(409, 'Message already exists or has an invalid ID.')
+            turn = {}
+            parent_id = None
+            if user_message:
+                existing = messages.get(user_message_id)
+                if existing and (
+                    existing.get('role') != 'user' or (existing.get('user_id') or chat.user_id) != user.id
+                ):
+                    raise HTTPException(403, 'You can only regenerate your own messages.')
+                parent_id = existing.get('parentId') if existing else user_message.get('parentId')
+                if parent_id is not None and parent_id not in messages:
+                    raise HTTPException(409, 'Parent message no longer exists.')
+                message = existing or (
+                    dict(user_message)
+                    if chat.user_id == user.id
+                    else {key: user_message[key] for key in ('content', 'files', 'models') if key in user_message}
                 )
-            turn = {ids[0]: self.upsert_message_to_history(history, ids[0], self._clean_null_bytes(message))}
+                if not existing:
+                    message.update(
+                        id=user_message_id,
+                        parentId=parent_id,
+                        role='user',
+                        childrenIds=[],
+                        timestamp=int(time.time()),
+                        user_id=user.id,
+                        user={'id': user.id, 'name': user.name},
+                    )
+                turn[user_message_id] = self.upsert_message_to_history(
+                    history, user_message_id, self._clean_null_bytes(message)
+                )
             for entry in message_ids:
                 mid = entry['message_id']
                 turn[mid] = self.upsert_message_to_history(
@@ -1232,7 +1269,7 @@ class ChatTable:
                     mid,
                     {
                         'id': mid,
-                        'parentId': ids[0],
+                        'parentId': user_message_id,
                         'childrenIds': [],
                         'role': 'assistant',
                         'content': '',
@@ -2485,7 +2522,7 @@ class ChatTable:
             columns = []
             for index, tag_id in enumerate(tag_ids):
                 tag_id = tag_id.replace(' ', '_').lower()
-                stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
+                stmt = select(func.count(Chat.id)).filter_by(user_id=user_id)
                 stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
                 param = f'tag_id_{index}'
                 if dialect_name == 'sqlite':
@@ -2513,7 +2550,7 @@ class ChatTable:
         db: AsyncSession | None = None,
     ) -> None:
         """Delete tag rows from *tag_ids* that appear in at most *threshold*
-        non-archived chats for *user_id*.  One query to find orphans, one to
+        chats for *user_id*.  One query to find orphans, one to
         delete them.
 
         Use threshold=0 after a tag is already removed from a chat's meta.

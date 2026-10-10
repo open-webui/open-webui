@@ -454,6 +454,13 @@
 			return null;
 		});
 
+		if (res && !res.ok) {
+			createModelLoading = false;
+			const error = await res.json();
+			toast.error(error.detail);
+			return;
+		}
+
 		if (res && res.ok) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
@@ -854,7 +861,7 @@
 
 					{#if createModelDigest !== ''}
 						<div class="flex flex-col mt-1">
-							<div class="font-normal mb-1">{createModelTag}</div>
+							<div class="font-normal mb-1">{createModelName}</div>
 							<div class="">
 								<div class="flex flex-row justify-between space-x-4 pr-2">
 									<div class=" flex-1">

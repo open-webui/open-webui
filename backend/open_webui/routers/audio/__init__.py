@@ -941,6 +941,8 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
             if r.status == 200:
                 break
 
+        # raise_for_status releases the response, so read the error body first
+        await r.read()
         r.raise_for_status()
         data = await r.json()
 
@@ -955,6 +957,8 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
                 res = await r.json()
                 if 'error' in res:
                     detail = f'External: {res["error"].get("message", "")}'
+                else:
+                    detail = f'External: {e}'
             except Exception:
                 detail = f'External: {e}'
         # LICENSE covers this Open WebUI error identifier.
@@ -993,6 +997,7 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
             if r.status == 200:
                 break
 
+        await r.read()
         r.raise_for_status()
         body = await r.json()
 
@@ -1021,9 +1026,11 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
                     res.get('error', {}).get('message', '')
                     if isinstance(res.get('error'), dict)
                     else str(res.get('error', ''))
-                )
+                ) or res.get('err_msg', '')
                 if msg:
                     detail = f'External: {msg}'
+                else:
+                    detail = f'External: {e}'
             except Exception:
                 detail = f'External: {e}'
         raise Exception(detail)

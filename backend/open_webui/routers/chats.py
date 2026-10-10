@@ -6,7 +6,12 @@ from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
-from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
+from open_webui.config import (
+    CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
+    CONTEXT_COMPACTION_TOKEN_THRESHOLD,
+    ENABLE_ADMIN_CHAT_ACCESS,
+    ENABLE_ADMIN_EXPORT,
+)
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
@@ -192,9 +197,9 @@ async def get_folder_unread_counts(user_id: str, db: AsyncSession | None = None)
 class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_MODEL: str | None = ''
     ENABLE_CONTEXT_COMPACTION: bool
-    CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
+    CONTEXT_COMPACTION_TOKEN_THRESHOLD: int | None = None
     CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
-    CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int = 40
+    CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int | None = None
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
     ENABLE_TOOL_PERMISSIONS: bool = False
 
@@ -828,6 +833,8 @@ async def create_new_chat(
             data={'title': chat.title, 'folder_id': chat.folder_id},
         )
         return ChatResponse.model_validate(chat, from_attributes=True)
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -857,6 +864,8 @@ async def import_chats(
             data={'count': len(chats), 'chat_ids': [chat.id for chat in chats]},
         )
         return chats
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -874,9 +883,15 @@ async def get_chat_config(user=Depends(get_admin_user)):
 
 @router.post('/config', response_model=ChatConfigForm)
 async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user)):
-    threshold = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD))
+    threshold = form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD
+    if threshold is None:
+        threshold = CONTEXT_COMPACTION_TOKEN_THRESHOLD
+    threshold = max(1, int(threshold))
     token_cap = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_CAP or threshold))
-    retention_percentage = min(50, max(10, int(form_data.CONTEXT_COMPACTION_RETENTION_PERCENTAGE)))
+    retention_percentage = form_data.CONTEXT_COMPACTION_RETENTION_PERCENTAGE
+    if retention_percentage is None:
+        retention_percentage = CONTEXT_COMPACTION_RETENTION_PERCENTAGE
+    retention_percentage = min(50, max(10, int(retention_percentage)))
     await Config.upsert(
         chat_config_updates(
             {
@@ -1999,8 +2014,6 @@ async def archive_chat_by_id(
         if chat.archived:
             # Cancel any in-flight LLM tasks before archiving
             await stop_item_tasks(request.app.state.redis, id)
-            # Archived chats are excluded from count — clean up orphans
-            await Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
         else:
             # Unarchived — ensure tag rows exist
             await Tags.ensure_tags_exist(tag_ids, user.id, db=db)

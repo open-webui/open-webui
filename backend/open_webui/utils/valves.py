@@ -50,6 +50,9 @@ def validate_valves(module, valves):
             # Validate without replacing the stored values (including unused keys/secrets).
             module.Valves(**{key: value for key, value in values.items() if value is not None})
         except Exception as error:
+            # Required fields with no stored value yet get filled in after saving.
+            if isinstance(error, ValidationError) and all(item['type'] == 'missing' for item in error.errors()):
+                return
             detail = (
                 '; '.join(
                     f'{".".join(map(str, item["loc"]))}: {item["msg"]}' for item in error.errors(include_input=False)

@@ -8,9 +8,10 @@ from open_webui.models.access_grants import AccessGrant, AccessGrantModel, Acces
 from open_webui.models.groups import Groups
 from open_webui.models.skill_history import SkillHistories, SkillHistory
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.misc import json_text_variants
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, apply_operations, validate_files
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, delete, func, or_, select, update
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -301,6 +302,10 @@ class SkillsTable:
                                 Skill.id.ilike(f'%{query_key}%'),
                                 User.name.ilike(f'%{query_key}%'),
                                 User.email.ilike(f'%{query_key}%'),
+                                *(
+                                    cast(Skill.meta, String).icontains(variant, autoescape=True)
+                                    for variant in json_text_variants(query_key)
+                                ),
                             )
                         )
 
@@ -412,6 +417,11 @@ class SkillsTable:
                     entry = SkillHistories.new_entry(
                         id, snapshot, user_id or skill.user_id, skill.version_id, updated.get('commit_message')
                     )
+                    # History is listed by whole-second save time, so keep same-second saves in order.
+                    latest_created_at = (
+                        await session.execute(select(func.max(SkillHistory.created_at)).filter_by(skill_id=id))
+                    ).scalar()
+                    entry.created_at = max(entry.created_at, latest_created_at + 1)
                     session.add(entry)
                     values.update(snapshot, version_id=entry.id)
                 values['updated_at'] = int(time.time())

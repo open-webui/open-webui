@@ -151,7 +151,7 @@
 			value = { ...value, '': '' };
 		}}
 	>
-		<Plus className={compact ? 'size-3' : 'size-4'} /><span
+		<Plus className="size-3" strokeWidth="1.5" /><span
 			>{compact ? $i18n.t('Add parameter') : $i18n.t('Add Custom Parameter')}</span
 		>
 	</button>

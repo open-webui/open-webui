@@ -1704,6 +1704,24 @@ async def get_sources_from_items(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
+
+    file_ids = {
+        metadata['file_id']
+        for source in sources
+        for metadata in source['metadata']
+        if isinstance(metadata, dict) and metadata.get('file_id')
+    }
+    if file_ids:
+        file_names = {
+            file.id: (file.meta or {}).get('name') for file in await Files.get_file_metadatas_by_ids(list(file_ids))
+        }
+        for source in sources:
+            for metadata in source['metadata']:
+                file_name = file_names.get(metadata.get('file_id')) if isinstance(metadata, dict) else None
+                if file_name:
+                    if metadata.get('source') == metadata.get('name'):
+                        metadata['source'] = file_name
+                    metadata['name'] = file_name
     return sources
 
 

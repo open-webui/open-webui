@@ -720,6 +720,7 @@
 
 		{#if models !== null}
 			{#if (models ?? []).length !== 0}
+				<!-- Previous labels retained for i18n extraction: {$i18n.t('Sort by')} -->
 				<div class="my-1" id="model-list">
 					<div
 						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
