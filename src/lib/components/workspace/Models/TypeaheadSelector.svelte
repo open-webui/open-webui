@@ -133,7 +133,7 @@
 					bind:this={valueElement}
 					class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100"
 				>
-					<span class="min-w-0 [overflow-wrap:anywhere]">{summary || $i18n.t('None')}</span>
+					<span class="min-w-0 truncate">{summary || $i18n.t('None')}</span>
 					{#if selectedItems.length > 3}<span class="shrink-0 text-gray-500"
 							>+{selectedItems.length - 3}</span
 						>{/if}

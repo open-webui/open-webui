@@ -794,7 +794,7 @@
 	/>
 
 	<div class="flex h-full min-h-0 w-full flex-col">
-		<div class="flex shrink-0 items-center gap-3">
+		<div class="flex shrink-0 items-center gap-3" class:px-3={!admin}>
 			{#if onBack}
 				<button
 					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
@@ -848,7 +848,7 @@
 					/>
 				{/key}
 			</section>
-			<div class="flex shrink-0 justify-end px-1 py-2">
+			<div class="flex shrink-0 justify-end py-2" class:px-1={admin} class:px-3={!admin}>
 				<button
 					type="button"
 					class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
@@ -861,7 +861,7 @@
 		{/if}
 		<div
 			class:hidden={historical}
-			class="min-h-0 w-full flex-1 overflow-y-auto pr-1 scrollbar-hover"
+			class="min-h-0 w-full flex-1 overflow-y-auto px-1 scrollbar-hover"
 		>
 			<input
 				bind:this={filesInputElement}
@@ -977,7 +977,7 @@
 
 								<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
 									<div
-										class="relative flex min-w-0 flex-1 items-center gap-3.5 px-5 pb-1 {backgroundPreview ||
+										class="relative flex min-w-0 flex-1 items-center gap-3.5 px-3 md:px-5 pb-1 {backgroundPreview ||
 										info.meta.background_image_url
 											? '-mt-14 sm:-mt-16'
 											: '-mt-9'}"
@@ -1075,23 +1075,22 @@
 												{/if}
 												{#if !readOnly}
 													<div
-														class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 flex shrink-0 items-center gap-1 text-xs"
+														class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 absolute bottom-full right-3 mb-1 md:static md:mb-0 flex shrink-0 items-center gap-1 text-xs"
 													>
 														{#if loading}<Spinner />{/if}
 														{#if backgroundPreview || info.meta.background_image_url}
 															<button
 																type="button"
-																class="rounded-md px-2 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
 																disabled={loading}
 																title={$i18n.t(
 																	'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
 																)}
-																on:click={() => backgroundInput.click()}
-																>{$i18n.t('Change background')}</button
+																on:click={() => backgroundInput.click()}>{$i18n.t('Change')}</button
 															>
 															<button
 																type="button"
-																class="rounded-md px-2 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
 																disabled={loading}
 																on:click={() => {
 																	clearBackgroundPreview();
@@ -1145,7 +1144,7 @@
 									</div>
 								</div>
 							</div>
-							<div class="flex min-w-0 flex-col gap-3 px-5">
+							<div class="flex min-w-0 flex-col gap-3 px-3 md:px-5">
 								<div>
 									<div class="mb-1 flex w-full items-center justify-between">
 										{#if editingLocale}
@@ -1278,7 +1277,7 @@
 							</div>
 						</fieldset>
 
-						<div class="px-4">
+						<div class="px-2.5 md:px-4">
 							<section class="mt-4">
 								<div class="space-y-2 px-1">
 									<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
@@ -1598,7 +1597,9 @@
 							</fieldset>
 
 							<div class="my-2 text-xs text-gray-400 dark:text-gray-500">
-								<div class="flex w-full items-center gap-2 opacity-30 transition-opacity hover:opacity-60 focus-within:opacity-60">
+								<div
+									class="flex w-full items-center gap-2 opacity-30 transition-opacity hover:opacity-60 focus-within:opacity-60"
+								>
 									<button
 										type="button"
 										class="flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
@@ -1642,7 +1643,11 @@
 			{/if}
 		</div>
 		{#if !readOnly && !historical && (!edit || model)}
-			<div class="flex shrink-0 items-center justify-end gap-2 px-1 py-2">
+			<div
+				class="flex shrink-0 items-center justify-end gap-2 py-2"
+				class:px-1={admin}
+				class:px-3={!admin}
+			>
 				{#if edit}
 					<input
 						form={formId}

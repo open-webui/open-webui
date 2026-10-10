@@ -102,7 +102,7 @@
 	)}
 >
 	<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
-		<span class="min-w-0 [overflow-wrap:anywhere]"
+		<span class="min-w-0 truncate"
 			>{enabledTools
 				.slice(0, 3)
 				.map((key) => toolLabels[key].label)

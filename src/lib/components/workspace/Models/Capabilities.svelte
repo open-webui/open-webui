@@ -89,7 +89,7 @@
 		)}
 	>
 		<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
-			<span class="min-w-0 [overflow-wrap:anywhere]"
+			<span class="min-w-0 truncate"
 				>{enabledCapabilityIds
 					.slice(0, 3)
 					.map((key) => capabilityLabels[key].label)
@@ -117,7 +117,7 @@
 			description={$i18n.t('Choose which available features start enabled in new chats.')}
 		>
 			<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
-				<span class="min-w-0 [overflow-wrap:anywhere]"
+				<span class="min-w-0 truncate"
 					>{enabledDefaultIds
 						.slice(0, 3)
 						.map((key) => capabilityLabels[key].label)
