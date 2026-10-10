@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { getModels } from '$lib/apis';
 	import ModelHistory from './ModelHistory.svelte';
@@ -57,6 +58,7 @@
 	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
 
 	const i18n: any = getContext('i18n');
+	const formId = `model-editor-${uuidv4()}`;
 
 	export let onSubmit: Function = () => {};
 	export let readOnly = false;
@@ -940,6 +942,7 @@
 			{#if !edit || (edit && model)}
 				<!-- svelte-ignore a11y_no_noninteractive_element_interactions (Capture listeners block changes from custom controls in read-only fieldsets.) -->
 				<form
+					id={formId}
 					class="flex w-full flex-col gap-2.5 md:flex-row"
 					on:click|capture={preventReadOnlyEdit}
 					on:keydown|capture={preventReadOnlyEdit}
@@ -1611,46 +1614,34 @@
 									</div>
 								{/if}
 							</div>
-
-							<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
-
-							{#if !readOnly}
-								<div class="my-2 flex items-center justify-end gap-2">
-									{#if edit}
-										<input
-											type="text"
-											aria-label={$i18n.t('Commit message')}
-											placeholder={$i18n.t('Describe this change')}
-											class="min-w-0 flex-1 border-0 bg-transparent px-1 text-xs outline-hidden focus:ring-0"
-											bind:value={commitMessage}
-										/>
-									{/if}
-									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-										type="submit"
-										disabled={loading || (edit && !configurationChanged)}
-									>
-										<div class=" self-center font-normal">
-											{#if edit}
-												{$i18n.t('Save & Update')}
-											{:else}
-												{$i18n.t('Save & Create')}
-											{/if}
-										</div>
-
-										{#if loading}
-											<div class="ml-1.5 self-center">
-												<Spinner />
-											</div>
-										{/if}
-									</button>
-								</div>
-							{/if}
 						</div>
 					</div>
 				</form>
 			{/if}
 		</div>
+		{#if !readOnly && !historical && (!edit || model)}
+			<div class="flex shrink-0 items-center justify-end gap-2 px-1 py-2">
+				{#if edit}
+					<input
+						form={formId}
+						type="text"
+						aria-label={$i18n.t('Commit message')}
+						placeholder={$i18n.t('Describe this change')}
+						class="min-w-0 flex-1 border-0 bg-transparent px-1 text-xs outline-hidden focus:ring-0"
+						bind:value={commitMessage}
+					/>
+				{/if}
+				<button
+					form={formId}
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					type="submit"
+					disabled={loading || (edit && !configurationChanged)}
+				>
+					{edit ? $i18n.t('Save & Update') : $i18n.t('Save & Create')}
+					{#if loading}<Spinner className="size-3" />{/if}
+				</button>
+			</div>
+		{/if}
 	</div>
 {:else}
 	<div class="flex h-full w-full items-center justify-center" role="status">
