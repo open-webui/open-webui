@@ -800,7 +800,7 @@
 				description={$i18n.t('settings.admin.audio.responseSplitting.description')}
 			>
 				<SettingsSelect
-					aria-label={$i18n.t('Select how to split message text for TTS requests')}
+					ariaLabel={$i18n.t('Select how to split message text for TTS requests')}
 					bind:value={TTS_SPLIT_ON}
 				>
 					{#each [{ value: TTS_RESPONSE_SPLIT.PUNCTUATION, label: $i18n.t('Punctuation') }, { value: TTS_RESPONSE_SPLIT.PARAGRAPHS, label: $i18n.t('Paragraphs') }, { value: TTS_RESPONSE_SPLIT.NONE, label: $i18n.t('None') }] as split}
