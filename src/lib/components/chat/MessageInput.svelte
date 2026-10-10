@@ -2608,22 +2608,6 @@
 											</Tooltip>
 										{/if}
 
-										{#each pendingOAuthTools as pendingTool (pendingTool.id)}
-											<Tooltip content={$i18n.t('Click to connect')} placement="top">
-												<button
-													aria-label={`${$i18n.t('Click to connect')}: ${pendingTool.name}`}
-													on:click|preventDefault={() => {
-														oauthRedirectHandler(pendingTool, chatInputDraft);
-													}}
-													type="button"
-													class="flex min-w-0 max-w-full items-center gap-1.5 bg-transparent px-1.5 py-1.5 text-xs text-gray-500 transition-colors duration-150 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 dark:text-gray-400 dark:hover:text-gray-100 dark:focus-visible:outline-gray-500"
-												>
-													<span class="truncate">{pendingTool.name}</span>
-													<ArrowUpLeft className="size-3 shrink-0 rotate-90" strokeWidth="1.5" />
-												</button>
-											</Tooltip>
-										{/each}
-
 										<!-- Terminal Server Selector -->
 										{#if showTerminalSelector}
 											<TerminalMenu
@@ -2633,6 +2617,22 @@
 														history.messages[history.currentId]?.done != true)}
 											/>
 										{/if}
+
+										{#each pendingOAuthTools as pendingTool (pendingTool.id)}
+											<Tooltip content={$i18n.t('Click to connect')} placement="top">
+												<button
+													aria-label={`${$i18n.t('Click to connect')}: ${pendingTool.name}`}
+													on:click|preventDefault={() => {
+														oauthRedirectHandler(pendingTool, chatInputDraft);
+													}}
+													type="button"
+													class="flex h-[1.875rem] min-w-0 max-w-full translate-y-px items-center self-center gap-1 bg-transparent px-1 text-[0.8125rem] leading-none text-gray-600 transition-colors duration-150 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 dark:text-gray-300 dark:hover:text-gray-100 dark:focus-visible:outline-gray-500"
+												>
+													<span class="truncate">{pendingTool.name}</span>
+													<ArrowUpLeft className="size-3 shrink-0 rotate-90" strokeWidth="1.5" />
+												</button>
+											</Tooltip>
+										{/each}
 									</div>
 								</div>
 
