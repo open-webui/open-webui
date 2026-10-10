@@ -1039,6 +1039,7 @@ async def yjs_document_update(sid, data):
                 if await document_save_handler(document_id, data.get('data', {}), user):
                     if not await YDOC_MANAGER.get_users(document_id):
                         await YDOC_MANAGER.clear_document(document_id)
+                # A waiting disconnect must see that this save has finished.
                 await cleanup_task(REDIS, task_id, document_id)
 
         if document_id.startswith('note:') and data.get('data'):
