@@ -276,7 +276,6 @@
 				</div>
 			</AdminSettingSection>
 
-
 			<AdminSettingSection title={$i18n.t('settings.admin.general.sections.features.title')}>
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.communitySharing.label')}

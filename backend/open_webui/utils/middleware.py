@@ -2800,11 +2800,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     skill_authoring_allowed = can_author_skills and has_prior_user_message(form_data.get('messages', []))
     skill_create_denial_reason = 'empty_chat' if can_author_skills else 'disabled'
-    if apply_skills_create_prompt(
-        form_data.get('messages', []),
-        allowed=skill_authoring_allowed,
-        denial_reason=skill_create_denial_reason,
-    ) and is_saved_chat_id(chat_id) and user_message_id:
+    if (
+        apply_skills_create_prompt(
+            form_data.get('messages', []),
+            allowed=skill_authoring_allowed,
+            denial_reason=skill_create_denial_reason,
+        )
+        and is_saved_chat_id(chat_id)
+        and user_message_id
+    ):
         stored_message = await Chats.get_message_by_id_and_message_id(chat_id, user_message_id) or {}
         await Chats.upsert_message_to_chat_by_id_and_message_id(
             chat_id,

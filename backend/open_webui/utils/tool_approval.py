@@ -244,9 +244,7 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
         'tool_servers': message_meta.get('tool_servers') or None,
         'features': message_meta.get('features') or {},
         'variables': message_meta.get('variables') or {},
-        'chat_variables': chat.variables
-        if (assistant_message.get('user_id') or chat.user_id) == chat.user_id
-        else {},
+        'chat_variables': chat.variables if (assistant_message.get('user_id') or chat.user_id) == chat.user_id else {},
         'session_id': message_meta.get('session_id'),
         'chat_id': chat_id,
         'id': message_id,

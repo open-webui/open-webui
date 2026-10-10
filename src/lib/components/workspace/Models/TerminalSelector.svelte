@@ -20,7 +20,9 @@
 	>
 		<ModelSettingsLabel
 			label={$i18n.t('Default terminal')}
-			description={$i18n.t('Choose the terminal server selected by default for chats with this model.')}
+			description={$i18n.t(
+				'Choose the terminal server selected by default for chats with this model.'
+			)}
 		/>
 		<select
 			class="min-w-0 max-w-[60%] cursor-pointer bg-transparent py-0 text-xs font-normal text-gray-900 outline-hidden dark:text-gray-100"

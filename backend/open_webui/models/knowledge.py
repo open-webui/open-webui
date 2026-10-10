@@ -606,7 +606,9 @@ class KnowledgeTable:
                 result = await db.execute(stmt)
                 items = result.all()
 
-                directories = {directory.id: directory for directory in await self.get_all_directories(knowledge_id, db=db)}
+                directories = {
+                    directory.id: directory for directory in await self.get_all_directories(knowledge_id, db=db)
+                }
                 paths = {}
 
                 def directory_path(directory_id):

@@ -44,7 +44,9 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
                         'Redis denied publishing: %s. Check PUBLISH permission and channel ACLs '
                         '(&%s and &%s#*). To disable room channels, set '
                         'WEBSOCKET_REDIS_ROOM_CHANNELS=False on every instance and fully restart the fleet.',
-                        exc, self.channel, self.channel,
+                        exc,
+                        self.channel,
+                        self.channel,
                     )
                 if retries_left > 0:
                     self._get_logger().error('Cannot publish to redis... retrying', extra={'redis_exception': str(exc)})
@@ -74,7 +76,9 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
                         'Redis denied subscribing: %s. Check SUBSCRIBE/PSUBSCRIBE permissions and channel ACLs '
                         '(&%s and &%s#*). To disable room channels, set '
                         'WEBSOCKET_REDIS_ROOM_CHANNELS=False on every instance and fully restart the fleet.',
-                        exc, self.channel, self.channel,
+                        exc,
+                        self.channel,
+                        self.channel,
                     )
                 self._get_logger().error(
                     f'Cannot receive from redis... retrying in {retry_sleep} secs',

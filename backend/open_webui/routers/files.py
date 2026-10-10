@@ -749,7 +749,9 @@ async def update_file_data_content_by_id(
         except Exception as e:
             log.exception(e)
             log.error(f'Error processing file: {id}')
-            raise HTTPException(status_code=500, detail='Failed to process indexed text. Your changes were not fully indexed.') from e
+            raise HTTPException(
+                status_code=500, detail='Failed to process indexed text. Your changes were not fully indexed.'
+            ) from e
 
         # Propagate content change to all knowledge collections referencing
         # this file.  Without this the old embeddings remain in the knowledge

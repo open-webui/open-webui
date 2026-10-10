@@ -38,7 +38,11 @@ def public_model_params(params):
         {
             'model_controls': {
                 key: {
-                    **{field: control[field] for field in ('label', 'description', 'default', 'display') if field in control},
+                    **{
+                        field: control[field]
+                        for field in ('label', 'description', 'default', 'display')
+                        if field in control
+                    },
                     'options': {key: {'label': option['label']} for key, option in control['options'].items()},
                 }
                 for key, control in controls.items()

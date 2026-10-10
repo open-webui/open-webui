@@ -203,9 +203,7 @@ def validate_voice_animation(data: bytes) -> None:
             interpolation = sampler.get('interpolation', 'LINEAR')
             if interpolation not in ('LINEAR', 'STEP'):
                 raise ValueError('Export baked animation with linear or stepped keyframes.')
-            if len(outputs) != len(times) or len(outputs[0]) != (
-                4 if target['path'] == 'rotation' else 3
-            ):
+            if len(outputs) != len(times) or len(outputs[0]) != (4 if target['path'] == 'rotation' else 3):
                 raise ValueError('Invalid animation output.')
             duration = max(duration, times[-1][0])
         if not body or not 0 < duration <= 60:

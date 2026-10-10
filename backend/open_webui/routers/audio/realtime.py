@@ -214,21 +214,23 @@ class CallProtocol:
                 'item': {
                     'type': 'function_call_output',
                     'call_id': event['call_id'],
-                    'output': JSONCodec.dumps({
-                        'status': status,
-                        'effect': {
-                            'started': 'The requested gesture has started and is visible to the user.',
-                            'busy': (
-                                'An earlier gesture is still being performed. This additional request was skipped '
-                                'to avoid overlap. This is not a playback failure and does not cancel the earlier gesture.'
-                            ),
-                            'unavailable': (
-                                'This request could not start. This result does not change the outcome '
-                                'of any earlier gesture that already started.'
-                            ),
-                            'cancelled': 'This request was skipped because its response was interrupted.',
-                        }[status],
-                    }),
+                    'output': JSONCodec.dumps(
+                        {
+                            'status': status,
+                            'effect': {
+                                'started': 'The requested gesture has started and is visible to the user.',
+                                'busy': (
+                                    'An earlier gesture is still being performed. This additional request was skipped '
+                                    'to avoid overlap. This is not a playback failure and does not cancel the earlier gesture.'
+                                ),
+                                'unavailable': (
+                                    'This request could not start. This result does not change the outcome '
+                                    'of any earlier gesture that already started.'
+                                ),
+                                'cancelled': 'This request was skipped because its response was interrupted.',
+                            }[status],
+                        }
+                    ),
                 },
             }
         if kind == 'bridge.animation.respond' and set(event) == {'type', 'response_id'}:
@@ -291,11 +293,17 @@ class CallProtocol:
                     'response': {
                         'tools': [] if failed else self.animation_tools,
                         'tool_choice': 'auto' if self.animation_tools and not failed else 'none',
-                        **({'instructions': (
-                            'Briefly tell the user the request failed, in their language. No retry is running. '
-                            'Tell them they can ask you to retry, then stop. Do not claim work is continuing '
-                            'or invent a cause.'
-                        )} if failed else {}),
+                        **(
+                            {
+                                'instructions': (
+                                    'Briefly tell the user the request failed, in their language. No retry is running. '
+                                    'Tell them they can ask you to retry, then stop. Do not claim work is continuing '
+                                    'or invent a cause.'
+                                )
+                            }
+                            if failed
+                            else {}
+                        ),
                         'metadata': {'call_id': call_id},
                     },
                 }
