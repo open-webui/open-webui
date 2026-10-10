@@ -1709,7 +1709,7 @@ async def get_sources_from_items(
         metadata['file_id']
         for source in sources
         for metadata in source['metadata']
-        if isinstance(metadata, dict) and metadata.get('file_id')
+        if isinstance(metadata, dict) and metadata.get('file_id') and not metadata.get('external')
     }
     if file_ids:
         file_names = {
@@ -1717,6 +1717,8 @@ async def get_sources_from_items(
         }
         for source in sources:
             for metadata in source['metadata']:
+                if isinstance(metadata, dict) and metadata.get('external'):
+                    continue
                 file_name = file_names.get(metadata.get('file_id')) if isinstance(metadata, dict) else None
                 if file_name:
                     if metadata.get('source') == metadata.get('name'):
