@@ -721,10 +721,11 @@
 		{#if models !== null}
 			{#if (models ?? []).length !== 0}
 				<div class="my-1" id="model-list">
-					<div class="flex items-center gap-3 px-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
-						<span>{$i18n.t('Sort by')}</span>
+					<div
+						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+					>
 						<button
-							class="flex items-center gap-1 py-0.5"
+							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
 							type="button"
 							on:click={() => setSortKey('name')}
 						>
@@ -738,8 +739,10 @@
 							{/if}
 						</button>
 
+						<div class="hidden w-44 shrink-0 md:block"></div>
+
 						<button
-							class="flex items-center gap-1 py-0.5"
+							class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
 							type="button"
 							on:click={() => setSortKey('updated_at')}
 						>
