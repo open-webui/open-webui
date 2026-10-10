@@ -429,7 +429,7 @@
 				{$i18n.t('Cancel')}
 			</button>
 			<button
-				class="text-[0.8125rem] text-gray-700 transition-colors duration-100 hover:text-gray-900 disabled:opacity-30 dark:text-gray-300 dark:hover:text-white"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 				type="button"
 				on:click={saveTarget}
 				disabled={savingTarget || (!editingId && !form.url.trim())}
