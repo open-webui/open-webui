@@ -1810,7 +1810,13 @@
 		syncChatRoom($socket, $chatId, $temporaryChatEnabled);
 		const id = $chatId;
 		const tasks = await getTaskIdsByChatId(localStorage.token, id).catch(() => null);
-		if ($chatId === id && tasks) taskIds = tasks.task_ids?.length ? tasks.task_ids : null;
+		if ($chatId !== id || !tasks) return;
+		taskIds = tasks.task_ids?.length ? tasks.task_ids : null;
+		if (!taskIds && hasPendingAssistantLeaf()) {
+			// A server restart can leave unfinished messages without a completion event.
+			const loaded = await loadChat();
+			if (loaded && $chatId === id) await processNextInQueue(id);
+		}
 	};
 
 	onMount(() => {
