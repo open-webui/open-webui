@@ -3373,7 +3373,6 @@ async def query_knowledge_files(
                     **filter_source_metadata(metadata),
                     'content': doc,
                     'source': metadata.get('source', metadata.get('name', knowledge.name)),
-                    'file_id': metadata.get('file_id', f'external-{knowledge.id}'),
                     'type': 'external',
                     'knowledge_id': knowledge.id,
                 }
