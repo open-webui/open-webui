@@ -151,7 +151,7 @@
 	});
 </script>
 
-<div class="shrink-0">
+<div class="shrink-0 -mx-1">
 	<button
 		class="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal text-gray-600 focus-visible:outline focus-visible:outline-2 dark:text-gray-400"
 		type="button"

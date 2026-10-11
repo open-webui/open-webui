@@ -766,7 +766,7 @@
 {#if models !== null}
 	{#if selectedModelId === null}
 		<div class="flex h-full min-h-0 flex-col text-sm">
-			<div class="mb-2 flex items-center justify-between">
+			<div class="mb-0.5 flex items-center justify-between">
 				<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 					{$i18n.t('settings.admin.models.title')}
 					<span class="ml-2 font-normal text-gray-500 dark:text-gray-500">
