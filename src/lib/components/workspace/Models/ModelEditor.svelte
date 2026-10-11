@@ -1585,11 +1585,11 @@
 											$config?.audio?.realtime?.enabled
 												? voice.voice || $i18n.t('Admin default')
 												: null,
-											$config?.audio?.realtime?.enabled || voiceAvatar
-												? voiceAvatar
-													? $i18n.t('Custom avatar')
-													: $i18n.t('Default orb')
-												: null,
+											voiceAvatar
+												? $i18n.t('Custom avatar')
+												: $config?.audio?.realtime?.enabled
+													? $i18n.t('Default orb')
+													: null,
 											tts.voice
 										]
 											.filter(Boolean)
@@ -1615,14 +1615,12 @@
 												/>
 											</div>
 										{/if}
-										{#if $config?.audio?.realtime?.enabled || voiceAvatar}
-											<VoiceAvatarSettings
-												bind:value={voiceAvatar}
-												bind:file={avatarFile}
-												bind:animationFiles
-												disabled={loading || readOnly}
-											/>
-										{/if}
+										<VoiceAvatarSettings
+											bind:value={voiceAvatar}
+											bind:file={avatarFile}
+											bind:animationFiles
+											disabled={loading || readOnly}
+										/>
 										<div
 											class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>

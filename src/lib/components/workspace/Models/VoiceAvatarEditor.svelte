@@ -132,7 +132,7 @@
 <fieldset {disabled} class="avatar-editor my-4 min-w-0 w-full">
 	<legend class="text-xs text-gray-500">{$i18n.t('Voice avatar')}</legend>
 	<p class="text-xs text-gray-500 mt-1 mb-3">
-		{$i18n.t('A character for bridge voice calls. The orb is used by default.')}
+		{$i18n.t('A character for voice calls. The default visualization is used without an avatar.')}
 	</p>
 	<input
 		bind:this={input}

@@ -20,6 +20,52 @@ export type VoiceAvatarConfig = {
 	gestures?: AvatarGesture[];
 };
 
+export type AvatarAnimationResult = { status: 'started' | 'cancelled' | 'unavailable' };
+export type AvatarAnimationCommand = {
+	name: string;
+	messageId: string;
+	result: AvatarAnimationResult;
+};
+
+// Reply synchronously even when the call panel has closed and has no listener.
+export function routeAvatarAnimation(
+	target: EventTarget,
+	event: {
+		chat_id?: string;
+		message_id?: string;
+		data?: { data?: { name?: string; model_id?: string } };
+	},
+	context: {
+		active: boolean;
+		chatId: string;
+		modelId: string;
+		messageId: string | null;
+		message?: { model?: string; done?: boolean; error?: unknown };
+	}
+): AvatarAnimationResult {
+	const data = event.data?.data;
+	if (!context.active) return { status: 'unavailable' };
+	if (
+		!context.messageId ||
+		event.chat_id !== context.chatId ||
+		event.message_id !== context.messageId ||
+		!context.message ||
+		context.message.done ||
+		context.message.error ||
+		context.message.model !== context.modelId ||
+		data?.model_id !== context.modelId
+	)
+		return { status: 'cancelled' };
+	if (typeof data?.name !== 'string') return { status: 'unavailable' };
+	const detail: AvatarAnimationCommand = {
+		name: data.name,
+		messageId: context.messageId,
+		result: { status: 'unavailable' }
+	};
+	target.dispatchEvent(new CustomEvent('voice:play_animation', { detail }));
+	return detail.result;
+}
+
 // Validate before GLTFLoader can fetch resources or allocate GPU buffers.
 export function readAvatar(data: ArrayBuffer) {
 	if (data.byteLength > AVATAR_MAX_BYTES) throw new Error('Avatar must be at most 25 MiB.');
