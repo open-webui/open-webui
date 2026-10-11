@@ -50,6 +50,7 @@
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChatHoverPreview from './ChatHoverPreview.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import ChatIcon from './icons/Chat.svelte';
 	import MoreHorizontalIcon from './icons/MoreHorizontal.svelte';
 	import SparklesIcon from './icons/Sparkles.svelte';
@@ -107,6 +108,9 @@
 	let focusWithin = false;
 	let menuOpen = false;
 	let openPreview = false;
+	let openProfilePreview = false;
+
+	$: if (openProfilePreview) openPreview = false;
 
 	const closeHoverPreview = () => {
 		if (openPreview) {
@@ -514,21 +518,6 @@
 </script>
 
 {#snippet chatItemContent()}
-	{#if ownerUserId}
-		<Tooltip content={ownerName || 'Unknown'} className="flex items-center self-center shrink-0">
-			<img
-				src="{WEBUI_API_BASE_URL}/users/{ownerUserId}/profile/image"
-				alt=""
-				class="size-3.5 rounded-full shrink-0 object-cover mr-2"
-				on:error={(e) => {
-					if (!e.currentTarget.src.endsWith('/static/favicon.png')) {
-						e.currentTarget.src = `${WEBUI_BASE_URL}/static/favicon.png`;
-					}
-				}}
-			/>
-		</Tooltip>
-	{/if}
-
 	<!-- Loading spinner for active chat (left side) -->
 	{#if active}
 		<div class="shrink-0 self-center pr-2">
@@ -645,44 +634,68 @@
 				}}
 			/>
 		</div>
-	{:else if $mobile}
-		<a
-			id="sidebar-chat-item"
-			class={chatItemClass}
-			href="/c/{id}"
-			aria-current={id === $chatId ? 'page' : undefined}
-			on:click={selectChatHandler}
-			draggable="false"
-		>
-			{@render chatItemContent()}
-		</a>
 	{:else}
-		<LinkPreview.Root
-			openDelay={300}
-			closeDelay={0}
-			disabled={confirmEdit || dragged || !($settings?.chatHoverPreview ?? true)}
-			bind:open={openPreview}
-		>
-			<LinkPreview.Trigger
-				id="sidebar-chat-item"
-				class={chatItemClass}
-				href="/c/{id}"
-				aria-current={id === $chatId ? 'page' : undefined}
-				onclick={selectChatHandler}
-				ondblclick={renameChatFromDoubleClick}
-				draggable="false"
-			>
-				{@render chatItemContent()}
-			</LinkPreview.Trigger>
+		<div id="sidebar-chat-item" class={chatItemClass}>
+			{#if ownerUserId}
+				<div class="flex items-center self-center shrink-0 mr-2">
+					<ProfilePreview
+						user={{ id: ownerUserId, name: ownerName }}
+						bind:openPreview={openProfilePreview}
+					>
+						<img
+							src="{WEBUI_API_BASE_URL}/users/{ownerUserId}/profile/image"
+							alt=""
+							class="size-3.5 rounded-full shrink-0 object-cover"
+							on:error={(e) => {
+								if (!e.currentTarget.src.endsWith('/static/favicon.png')) {
+									e.currentTarget.src = `${WEBUI_BASE_URL}/static/favicon.png`;
+								}
+							}}
+						/>
+					</ProfilePreview>
+				</div>
+			{/if}
+			{#if $mobile}
+				<a
+					class="flex min-w-0 flex-1 items-center"
+					href="/c/{id}"
+					aria-current={id === $chatId ? 'page' : undefined}
+					on:click={selectChatHandler}
+					draggable="false"
+				>
+					{@render chatItemContent()}
+				</a>
+			{:else}
+				<LinkPreview.Root
+					openDelay={300}
+					closeDelay={0}
+					disabled={confirmEdit || dragged || !($settings?.chatHoverPreview ?? true)}
+					bind:open={openPreview}
+					onOpenChange={(open) => {
+						if (open) openProfilePreview = false;
+					}}
+				>
+					<LinkPreview.Trigger
+						class="flex min-w-0 flex-1 items-center"
+						href="/c/{id}"
+						aria-current={id === $chatId ? 'page' : undefined}
+						onclick={selectChatHandler}
+						ondblclick={renameChatFromDoubleClick}
+						draggable="false"
+					>
+						{@render chatItemContent()}
+					</LinkPreview.Trigger>
 
-			<ChatHoverPreview
-				chatId={id}
-				title={chatTitle || title}
-				{openPreview}
-				side="right"
-				align="center"
-			/>
-		</LinkPreview.Root>
+					<ChatHoverPreview
+						chatId={id}
+						title={chatTitle || title}
+						{openPreview}
+						side="right"
+						align="center"
+					/>
+				</LinkPreview.Root>
+			{/if}
+		</div>
 	{/if}
 
 	{#if !readonly}

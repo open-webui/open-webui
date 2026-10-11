@@ -15,6 +15,7 @@
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Markdown from './Markdown.svelte';
@@ -158,12 +159,14 @@
 			<!-- LICENSE covers this Open WebUI fallback logo.
 			Do not alter, remove, obscure, or replace it except as LICENSE permits:
 			https://docs.openwebui.com/license. -->
-			<ProfileImage
-				src={authorId
-					? `${WEBUI_API_BASE_URL}/users/${authorId}/profile/image`
-					: `${WEBUI_BASE_URL}/static/favicon.png`}
-				className={'size-7 user-message-profile-image'}
-			/>
+			<ProfilePreview user={{ id: authorId, name: authorName }}>
+				<ProfileImage
+					src={authorId
+						? `${WEBUI_API_BASE_URL}/users/${authorId}/profile/image`
+						: `${WEBUI_BASE_URL}/static/favicon.png`}
+					className={'size-7 user-message-profile-image'}
+				/>
+			</ProfilePreview>
 		</div>
 	{/if}
 	<div

@@ -12,18 +12,18 @@
 <script lang="ts">
 	import { LinkPreview } from 'bits-ui';
 	import { getContext, onDestroy } from 'svelte';
+	import { user as sessionUser } from '$lib/stores';
 
-	const i18n = getContext('i18n');
-	import UserStatus from './UserStatus.svelte';
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	import UserStatusLinkPreview from './UserStatusLinkPreview.svelte';
 
-	export let user = null;
+	export let user: { id?: string | null; name?: string | null } | null = null;
 
 	export let align = 'center';
 	export let side = 'right';
 	export let sideOffset = 8;
 
-	let openPreview = false;
+	export let openPreview = false;
 
 	const closeProfilePreview = () => {
 		if (openPreview) {
@@ -43,18 +43,25 @@
 	});
 </script>
 
-<LinkPreview.Root openDelay={0} closeDelay={200} bind:open={openPreview}>
-	<LinkPreview.Trigger class="flex shrink-0 items-center">
-		<button
-			type="button"
-			class=" cursor-pointer no-underline! font-normal!"
-			on:click={() => {
-				openPreview = !openPreview;
-			}}
+{#if user?.id && $sessionUser}
+	<LinkPreview.Root openDelay={0} closeDelay={200} bind:open={openPreview}>
+		<LinkPreview.Trigger
+			class="flex shrink-0 items-center cursor-pointer no-underline! font-normal!"
 		>
-			<slot />
-		</button>
-	</LinkPreview.Trigger>
+			{#snippet child({ props })}
+				<button
+					{...props}
+					type="button"
+					aria-label={user.name || $i18n.t('User')}
+					onclick={() => (openPreview = !openPreview)}
+				>
+					<slot />
+				</button>
+			{/snippet}
+		</LinkPreview.Trigger>
 
-	<UserStatusLinkPreview id={user?.id} {openPreview} {side} {align} {sideOffset} />
-</LinkPreview.Root>
+		<UserStatusLinkPreview id={user.id} {openPreview} {side} {align} {sideOffset} />
+	</LinkPreview.Root>
+{:else}
+	<slot />
+{/if}

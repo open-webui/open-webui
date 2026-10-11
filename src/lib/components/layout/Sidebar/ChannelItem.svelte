@@ -10,6 +10,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import ChannelModal from './ChannelModal.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
 	import LockIcon from '$lib/components/icons/Lock.svelte';
@@ -87,6 +88,41 @@
 		? 'font-normal dark:text-white text-black'
 		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
+	{#if channel?.type === 'dm' && channel?.users}
+		{@const channelMembers = channel.users.filter((u) => u.id !== $user?.id)}
+		<div class="self-center mr-1">
+			<div class="flex ml-[0.0625rem] mr-0.5 relative">
+				{#each channelMembers.slice(0, 2) as u, index}
+					<div class={index === 1 ? '-ml-2.5' : ''}>
+						<ProfilePreview user={u}>
+							<img
+								src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
+								alt={u.name}
+								class="size-5.5 rounded-full border-2 border-white dark:border-gray-900"
+							/>
+						</ProfilePreview>
+					</div>
+				{/each}
+
+				{#if channelMembers.length === 1}
+					<div class="absolute bottom-0 right-0 pointer-events-none">
+						<span class="relative flex size-2">
+							{#if channelMembers[0]?.is_active}
+								<span
+									class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+								></span>
+							{/if}
+							<span
+								class="relative inline-flex size-2 rounded-full {channelMembers[0]?.is_active
+									? 'bg-green-500'
+									: 'bg-gray-300 dark:bg-gray-700'} border-[1.5px] border-white dark:border-gray-900"
+							></span>
+						</span>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 	<a
 		class="min-w-0 flex flex-1"
 		href="/channels/{channel.id}"
@@ -111,52 +147,19 @@
 		draggable="false"
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-1">
-			<div>
-				{#if channel?.type === 'dm'}
-					{#if channel?.users}
-						{@const channelMembers = channel.users.filter((u) => u.id !== $user?.id)}
-						<div class="flex ml-[0.0625rem] mr-0.5 relative">
-							{#each channelMembers.slice(0, 2) as u, index}
-								<img
-									src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
-									alt={u.name}
-									class=" size-5.5 rounded-full border-2 border-white dark:border-gray-900 {index ===
-									1
-										? '-ml-2.5'
-										: ''}"
-								/>
-							{/each}
-
-							{#if channelMembers.length === 1}
-								<div class="absolute bottom-0 right-0">
-									<span class="relative flex size-2">
-										{#if channelMembers[0]?.is_active}
-											<span
-												class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-											></span>
-										{/if}
-										<span
-											class="relative inline-flex size-2 rounded-full {channelMembers[0]?.is_active
-												? 'bg-green-500'
-												: 'bg-gray-300 dark:bg-gray-700'} border-[1.5px] border-white dark:border-gray-900"
-										></span>
-									</span>
-								</div>
-							{/if}
-						</div>
-					{:else}
-						<UserIcon className="size-4 ml-1 mr-0.5" strokeWidth="1.5" />
-					{/if}
-				{:else}
-					<div class=" size-4 justify-center flex items-center ml-1">
-						{#if isPublicChannel(channel)}
-							<HashtagIcon className="size-3" strokeWidth="1.8" />
-						{:else}
-							<LockIcon className="size-3.5" strokeWidth="1.7" />
-						{/if}
-					</div>
+			{#if channel?.type === 'dm'}
+				{#if !channel?.users}
+					<UserIcon className="size-4 ml-1 mr-0.5" strokeWidth="1.5" />
 				{/if}
-			</div>
+			{:else}
+				<div class="size-4 shrink-0 justify-center flex items-center ml-1">
+					{#if isPublicChannel(channel)}
+						<HashtagIcon className="size-3" strokeWidth="1.8" />
+					{:else}
+						<LockIcon className="size-3.5" strokeWidth="1.7" />
+					{/if}
+				</div>
+			{/if}
 
 			<div class="text-left self-center min-w-0 flex-1 pr-1 flex items-center gap-1.5">
 				{#if channel?.name}
