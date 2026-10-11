@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2026-10-11
+
+### Added
+
+- 🎭 **Avatars in Standard voice calls.** A model's avatar now also appears in voice calls that use the Standard call mode, moves with the spoken reply and can play the model's gestures when the model uses native function calling, where avatars and gestures only worked in Realtime calls; the Voice avatar setting in the model editor is now shown even when Realtime is off. [Commit](https://github.com/open-webui/open-webui/commit/78613d86f7564d1927ebf5f11292419fdeadb18c)
+- 🪪 **Profile cards from profile pictures.** Clicking the picture of the person who wrote a message in a shared chat, of a shared chat's owner in the sidebar or of a direct message partner in the sidebar now opens their profile card. [Commit](https://github.com/open-webui/open-webui/commit/a165c8385843c4f87e3eeb5797527004765e5708)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Portuguese (Brazil) were enhanced and expanded.
+
+### Fixed
+
+- 🈯 **Model editor language switching.** Switching the Editing language in the model editor from one translated language to another now shows that language's name and description, where the fields kept the text of the language shown before. [#32224](https://github.com/open-webui/open-webui/pull/32224), [#32223](https://github.com/open-webui/open-webui/issues/32223)
+- 🗣️ **Kokoro voice in calls.** Voice calls now speak replies with the Kokoro.js (Browser) voice chosen in your settings when the administrator has no server speech engine set, where the browser's own voice was used instead. [Commit](https://github.com/open-webui/open-webui/commit/78613d86f7564d1927ebf5f11292419fdeadb18c)
+- 🧩 **Rich UI embed console errors.** Rich UI tool embeds no longer log a security error in the browser console on every load when iframe Sandbox Allow Same Origin is off or the embed comes from another site; the embed works as before. [#32226](https://github.com/open-webui/open-webui/pull/32226), [#32222](https://github.com/open-webui/open-webui/issues/32222)
+- 🔎 **Clearer Top K descriptions.** The Top K and Top K Reranker descriptions in Admin Settings > Documents now say that Top K Reranker is the number of chunks the reranker passes to the model and that with hybrid search Top K is the number of candidates sent to the reranker, where the old text led admins to give the model far fewer chunks than intended. [#32225](https://github.com/open-webui/open-webui/pull/32225), [#32221](https://github.com/open-webui/open-webui/issues/32221)
+
 ## [0.12.0] - 2026-10-10
 
 ### Added
