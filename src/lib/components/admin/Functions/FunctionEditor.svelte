@@ -512,6 +512,7 @@ class Pipe:
 					{:else}
 						<LocalizedField
 							placeholder={$i18n.t('Function Name')}
+							showControls={false}
 							bind:value={name}
 							bind:translations={meta.i18n}
 							{locale}
@@ -562,6 +563,7 @@ class Pipe:
 						{:else}
 							<LocalizedField
 								placeholder={$i18n.t('Function Description')}
+								showControls={false}
 								bind:value={meta.description}
 								bind:translations={meta.i18n}
 								{locale}
