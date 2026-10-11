@@ -45,7 +45,8 @@ def parse_redis_url(url: str) -> dict[str, Any]:
     if parts.scheme not in _ACCEPTED_SCHEMES:
         raise ValueError(f"Invalid Redis URL scheme '{parts.scheme}'; expected 'redis' or 'rediss'.")
     return {
-        'service': parts.hostname or 'mymaster',
+        # hostname lowercases, but Sentinel service names are case-sensitive
+        'service': parts.netloc.rpartition('@')[2].split(':')[0] or 'mymaster',
         'port': parts.port or 6379,
         'db': int(parts.path.lstrip('/') or '0'),
         'username': parts.username or None,
