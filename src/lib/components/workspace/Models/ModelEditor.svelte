@@ -212,7 +212,7 @@
 		.map(([locale]) => locale);
 	$: editingLocaleLabel = languages.find((language) => language.code === editingLocale)?.title;
 
-	const localizedField = (field: string) => info?.meta?.i18n?.[editingLocale]?.[field] ?? '';
+	$: localizedField = (field: string) => info?.meta?.i18n?.[editingLocale]?.[field] ?? '';
 	const setLocalizedField = (field: string, value: string) => {
 		if (!editingLocale) return;
 
