@@ -49,7 +49,7 @@
 		</div>
 	</div>
 	<div bind:this={list} class="flex flex-col gap-1.5">
-		{#each entries as entry, index (entry)}
+		{#each entries as entry (entry)}
 			<div
 				class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1.5rem] items-center gap-2 rounded-lg border border-gray-100/40 px-2 py-1 transition focus-within:border-blue-400 dark:border-gray-850/50 dark:focus-within:border-blue-500"
 			>
@@ -70,11 +70,19 @@
 						entry.i18n = { ...entry.i18n, [locale]: { content: event.currentTarget.value } };
 					}}
 				></textarea>
-				<Tooltip content={$i18n.t('Delete')}>
+				<Tooltip
+					content={`${$i18n.t('Delete')} · ${languages.find((language) => language.code === locale)?.title ?? locale}`}
+				>
 					<button
 						type="button"
-						aria-label={$i18n.t('Delete')}
-						on:click={() => (entries = entries.filter((_, i) => i !== index))}
+						aria-label={`${$i18n.t('Delete')} · ${languages.find((language) => language.code === locale)?.title ?? locale}`}
+						on:click={() => {
+							delete entry.i18n[locale];
+							entries = entries.filter(
+								(item) =>
+									item !== entry || Object.values(item.i18n).some((text) => text.content.trim())
+							);
+						}}
 						class="flex size-6 shrink-0 items-center justify-center text-gray-400 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 					>
 						<XMark className="size-3.5" />

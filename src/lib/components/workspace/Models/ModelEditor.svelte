@@ -58,7 +58,8 @@
 	import { copyToClipboard, extractInputVariables } from '$lib/utils';
 	import {
 		modelControlTranslationSource,
-		pruneEmptyLocaleEntries
+		pruneEmptyLocaleEntries,
+		resolveLocalizedPromptSuggestions
 	} from '$lib/utils/localizedContent';
 
 	const i18n: any = getContext('i18n');
@@ -1498,7 +1499,13 @@
 									>
 										{#if editingLocale}
 											<LocalizedPromptSuggestions
-												promptSuggestions={info.meta.suggestion_prompts ?? []}
+												promptSuggestions={info.meta.suggestion_prompts ??
+													resolveLocalizedPromptSuggestions(
+														$config?.default_prompt_suggestions,
+														$config?.default_prompt_suggestions_i18n ?? {},
+														editingLocale,
+														(key) => $i18n.t(key)
+													)}
 												bind:localizedPromptSuggestions={info.meta.i18n}
 												locale={editingLocale}
 												localeLabel={editingLocaleLabel}
