@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
 	import {
 		AVATAR_MAX_BYTES,
 		type AnimationFiles,
@@ -39,7 +40,7 @@
 			error = $i18n.t('Choose a VRMA file, up to 10 MiB.');
 			return;
 		}
-		const id = crypto.randomUUID();
+		const id = uuidv4();
 		animationFiles = { ...animationFiles, [id]: selected };
 		if (typeof animationTarget === 'number') {
 			value = {

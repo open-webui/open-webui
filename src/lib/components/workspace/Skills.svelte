@@ -2,6 +2,7 @@
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
+	import { v4 as uuidv4 } from 'uuid';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
@@ -251,7 +252,7 @@
 
 	const cloneHandler = async (skill) => {
 		try {
-			const suffix = crypto.randomUUID().slice(0, 7);
+			const suffix = uuidv4().slice(0, 7);
 			const result = await cloneSkill(
 				localStorage.token,
 				skill.id,

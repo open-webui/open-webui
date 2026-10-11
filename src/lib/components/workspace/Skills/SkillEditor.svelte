@@ -2,6 +2,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
@@ -204,7 +205,7 @@
 	};
 	const saveCopy = async () => {
 		try {
-			const suffix = crypto.randomUUID().slice(0, 7);
+			const suffix = uuidv4().slice(0, 7);
 			const result = await createNewSkill(localStorage.token, {
 				id: `${id}-${suffix}`,
 				name: `${name} (${suffix})`,
