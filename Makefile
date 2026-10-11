@@ -9,8 +9,7 @@ install:
 	$(DOCKER_COMPOSE) up -d
 
 remove:
-	@chmod +x confirm_remove.sh
-	@./confirm_remove.sh
+	@./docker-cleanup.sh
 
 start:
 	$(DOCKER_COMPOSE) start
@@ -22,8 +21,7 @@ stop:
 
 update:
 	# Calls the LLM update script
-	chmod +x update_ollama_models.sh
-	@./update_ollama_models.sh
+	@./docker-update-models.sh
 	@git pull
 	$(DOCKER_COMPOSE) down
 	# Make sure the ollama-webui container is stopped before rebuilding
