@@ -86,6 +86,13 @@ def build_sentinel_url(
     return f'redis+sentinel://{auth}{nodes}/{cfg["db"]}/{cfg["service"]}'
 
 
+def build_sentinel_kwargs(base_url: str, redis_options: dict[str, Any]) -> dict[str, Any]:
+    """Kwargs for the Sentinel connections: ``base_url`` credentials plus the ``socket_*`` options."""
+    cfg = parse_redis_url(base_url)
+    socket_options = {key: value for key, value in redis_options.items() if key.startswith('socket_')}
+    return {'username': cfg['username'], 'password': cfg['password'], **socket_options}
+
+
 def get_redis_client(async_mode: bool = False) -> Any | None:
     """Create a Redis connection using settings from environment variables.
 
@@ -283,6 +290,9 @@ def _build_sentinel(
         db=cfg['db'],
         username=cfg['username'],
         password=cfg['password'],
+        sentinel_kwargs=build_sentinel_kwargs(
+            url, {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT, **_socket_options()}
+        ),
         decode_responses=decode_responses,
         socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
         **{k: v for k, v in _socket_options().items() if k != 'socket_connect_timeout'},
