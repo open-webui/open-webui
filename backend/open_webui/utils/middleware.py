@@ -3085,8 +3085,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 'client': client,
                                 'direct': False,
                             }
-                    except Exception as e:
-                        log.debug(e)
+                    except Exception:
+                        log.exception("Failed to connect to MCP server '%s'", server_id)
                         if event_emitter:
                             await event_emitter(
                                 {
