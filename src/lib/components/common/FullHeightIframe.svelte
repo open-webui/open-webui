@@ -193,7 +193,11 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 
 		// if arguments are provided, inject them into the iframe window
 		if (args && iframe?.contentWindow) {
-			(iframe.contentWindow as any).args = args;
+			try {
+				(iframe.contentWindow as any).args = args;
+			} catch {
+				// Cross-origin → args cannot be injected
+			}
 		}
 	};
 
