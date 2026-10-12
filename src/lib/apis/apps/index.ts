@@ -1,6 +1,7 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export type App = {
+	connection_status: 'connecting' | 'connected' | 'disconnected';
 	id: string;
 	slug: string;
 	name: string;

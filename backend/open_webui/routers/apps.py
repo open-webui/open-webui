@@ -2,51 +2,37 @@
 
 import time
 import uuid
-from urllib.parse import urlsplit
 
-import jwt
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrant, AccessGrants
 from open_webui.models.apps import (
     App,
     AppAccessResponse,
-    AppChannelMessage,
     AppConnectionForm,
     AppForm,
     AppInteractionForm,
     AppManifestForm,
     AppResponse,
     Apps,
-    AppTokenForm,
     AppUpdateForm,
     Manifest,
 )
-from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.config import Config
 from open_webui.models.messages import Message
-from open_webui.models.users import Users
 from open_webui.utils.apps import (
-    check_app_channel_membership,
     check_app_invocation_access,
-    create_app_message,
     decode_app_context_token,
     generate_app_channel_reply,
     get_app_by_id,
     get_app_encryption_cipher,
-    get_app_message_data,
     get_app_response,
-    get_verified_app,
     has_app_access,
-    require_scope,
-    send_app_event,
     send_app_request,
-    update_app_message,
     validate_app_url,
-    verify_app_token,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,8 +49,10 @@ async def get_apps(user=Depends(get_verified_user), db: AsyncSession = Depends(g
     if not await Config.get('apps.enable'):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Apps are disabled')
     apps = (await db.scalars(select(App).order_by(App.name))).all()
+    from open_webui.socket.apps import connections
+
     return [
-        get_app_response(app)
+        {**get_app_response(app), 'connection_status': await connections.status(app)}
         for app in apps
         if user.role == 'admin' or (app.is_active and await has_app_access(app, user, db=db))
     ]
@@ -91,9 +79,7 @@ async def preview_app_manifest(
     if not api_key:
         raise HTTPException(400, 'An app API key is required')
     try:
-        status_code, raw = await send_app_request(
-            form_data.url, headers={'Authorization': f'Bearer {api_key}'}
-        )
+        status_code, raw = await send_app_request(form_data.url, headers={'Authorization': f'Bearer {api_key}'})
         if status_code in (401, 403):
             raise HTTPException(400, 'App rejected the API key. Check the API key configured on the app server.')
         if status_code != 200:
@@ -155,161 +141,6 @@ async def create_new_app(
     return get_app_response(app)
 
 
-# Fixed runtime routes must precede /{app_id}.
-############################
-# GetCurrentApp
-############################
-
-
-@router.get('/runtime/me', response_model=AppResponse)
-async def get_current_app(app=Depends(get_verified_app)):
-    return get_app_response(app)
-
-
-############################
-# GetAppChannels
-############################
-
-
-@router.get('/runtime/channels')
-async def get_app_channels(app=Depends(get_verified_app), db: AsyncSession = Depends(get_async_session)):
-    if not await Config.get('channels.enable'):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Channels are disabled')
-    await get_app_by_id(app.id, require_active=True, db=db)
-    require_scope(app, 'channels:read')
-    channels = (
-        await db.scalars(
-            select(Channel)
-            .join(ChannelMember, Channel.id == ChannelMember.channel_id)
-            .where(
-                ChannelMember.app_id == app.id,
-                ChannelMember.is_active.is_(True),
-                Channel.deleted_at.is_(None),
-                Channel.archived_at.is_(None),
-            )
-        )
-    ).all()
-    result = []
-    for channel in channels:
-        channel_data = await Channels.get_channel_by_id(channel.id, db=db)
-        is_private = (
-            channel_data.is_private is True
-            if channel_data.type == 'group'
-            else not any(grant.principal_id == '*' for grant in channel_data.access_grants)
-        )
-        result.append({'id': channel.id, 'name': channel.name, 'type': channel.type, 'is_private': is_private})
-    return result
-
-
-############################
-# AuthorizeAppExecution
-############################
-
-
-@router.post('/runtime/authorize')
-async def authorize_app_execution(
-    form_data: AppTokenForm, app=Depends(get_verified_app), db: AsyncSession = Depends(get_async_session)
-):
-    value = decode_app_context_token(app, 'execution', form_data.token)
-    user = await Users.get_user_by_id(value['actor_id'], db=db)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Actor is unavailable')
-    await check_app_invocation_access(app, value['channel_id'], user, db=db)
-    require_scope(app, value['scope'])
-    return {
-        'authorized': True,
-        'operation_id': value['operation_id'],
-        'actor': {'id': user.id, 'is_admin': user.role == 'admin'},
-        'channel_id': value['channel_id'],
-        'type': value.get('type'),
-        'data': value.get('data'),
-    }
-
-
-############################
-# VerifyAppEvent
-############################
-
-
-@router.post('/runtime/events/verify')
-async def verify_app_event(
-    form_data: AppTokenForm, app=Depends(get_verified_app), db: AsyncSession = Depends(get_async_session)
-):
-    value = decode_app_context_token(app, 'event', form_data.token)
-    await check_app_channel_membership(app, value['channel']['id'], db=db)
-    require_scope(app, 'channels:messages:read')
-    return {k: v for k, v in value.items() if k not in ('purpose', 'exp', 'nonce')}
-
-
-############################
-# GetAppChannelMessages
-############################
-
-
-@router.get('/runtime/channels/{channel_id}/messages')
-async def get_app_channel_messages(
-    channel_id: str,
-    before: str | None = None,
-    parent_id: str | None = None,
-    limit: int = Query(default=50, ge=1, le=100),
-    app=Depends(get_verified_app),
-    db: AsyncSession = Depends(get_async_session),
-):
-    await check_app_channel_membership(app, channel_id, db=db)
-    require_scope(app, 'channels:messages:read')
-    query = select(Message).where(Message.channel_id == channel_id, Message.parent_id == parent_id)
-    if parent_id:
-        parent = await db.get(Message, parent_id)
-        if not parent or parent.channel_id != channel_id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Thread not found')
-    if before:
-        cursor = await db.get(Message, before)
-        if not cursor or cursor.channel_id != channel_id or cursor.parent_id != parent_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid message cursor')
-        query = query.where(
-            or_(
-                Message.created_at < cursor.created_at,
-                and_(Message.created_at == cursor.created_at, Message.id < cursor.id),
-            )
-        )
-    rows = (await db.scalars(query.order_by(Message.created_at.desc(), Message.id.desc()).limit(limit + 1))).all()
-    return {
-        'messages': [get_app_message_data(row) for row in rows[:limit]],
-        'next_cursor': rows[limit - 1].id if len(rows) > limit else None,
-    }
-
-
-############################
-# PostAppMessage
-############################
-
-
-@router.post('/runtime/channels/{channel_id}/messages', status_code=status.HTTP_201_CREATED)
-async def post_app_message(
-    channel_id: str,
-    form_data: AppChannelMessage,
-    app=Depends(get_verified_app),
-    db: AsyncSession = Depends(get_async_session),
-):
-    return await create_app_message(db, app, channel_id, form_data)
-
-
-############################
-# UpdateAppMessageById
-############################
-
-
-@router.patch('/runtime/messages/{message_id}')
-async def update_app_message_by_id(
-    message_id: str,
-    form_data: AppChannelMessage,
-    if_match: str | None = Header(default=None),
-    app=Depends(get_verified_app),
-    db: AsyncSession = Depends(get_async_session),
-):
-    return await update_app_message(db, app, message_id, form_data, if_match)
-
-
 ############################
 # GetAppDetailsById
 ############################
@@ -319,7 +150,10 @@ async def update_app_message_by_id(
 async def get_app_details_by_id(
     app_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
 ):
-    result = get_app_response(await get_app_by_id(app_id, db=db))
+    from open_webui.socket.apps import connections
+
+    app = await get_app_by_id(app_id, db=db)
+    result = {**get_app_response(app), 'connection_status': await connections.status(app)}
     result['access_grants'] = [
         {'principal_type': g.principal_type, 'principal_id': g.principal_id, 'permission': g.permission}
         for g in (
@@ -362,6 +196,9 @@ async def update_app_by_id(
             'manifest': form_data.manifest.model_dump(),
             'granted_scopes': form_data.granted_scopes,
         }
+        if form_data.manifest.public_key != app.data['manifest']['public_key']:
+            data['data'].pop('connection_token', None)
+            data['data'].pop('installation_id', None)
         data['is_active'] = False
     elif form_data.granted_scopes is not None:
         if not set(form_data.granted_scopes) <= set(app.data['manifest']['requested_scopes']):
@@ -380,90 +217,33 @@ async def update_app_by_id(
 async def connect_app_by_id(
     app_id: str,
     form_data: AppConnectionForm,
-    request: Request,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     app = await get_app_by_id(app_id, db=db)
-    webui_url = str(await Config.get('webui.url') or request.base_url).strip().rstrip('/')
-    try:
-        origin = urlsplit(webui_url)
-        if (
-            origin.scheme not in ('http', 'https')
-            or not origin.hostname
-            or origin.username is not None
-            or origin.password is not None
-            or origin.path
-            or origin.query
-            or origin.fragment
-            or '\\' in webui_url
-            or len(webui_url) > 2048
-            or any(c.isspace() for c in webui_url)
-        ):
-            raise ValueError('Invalid WebUI origin')
-        host = f'[{origin.hostname}]' if ':' in origin.hostname else origin.hostname.lower()
-        port = origin.port or (443 if origin.scheme == 'https' else 80)
-        suffix = f':{port}' if port != (443 if origin.scheme == 'https' else 80) else ''
-        webui_url = f'{origin.scheme}://{host}{suffix}'
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Invalid WebUI URL. Set WebUI URL in Settings > Admin > General to an HTTP(S) origin '
-            'without a path, query, fragment or credentials.',
-        ) from None
+    from open_webui.socket.apps import connections
+
     if form_data.api_key is not None:
-        app.api_key = get_app_encryption_cipher().encrypt(form_data.api_key.get_secret_value().encode()).decode()
+        cipher = get_app_encryption_cipher()
+        value = form_data.api_key.get_secret_value()
+        old = cipher.decrypt(app.api_key.encode()).decode() if app.api_key else None
+        if value != old:
+            app.data = {k: v for k, v in app.data.items() if k not in ('connection_token', 'installation_id')}
+            app.api_key = cipher.encrypt(value.encode()).decode()
     if not app.api_key:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='An app API key is required')
-    app.data = {**app.data, 'webui_url': webui_url}
-    app.is_active = False
-    app.updated_at = max(time.time_ns(), app.updated_at + 1)
-    checked_at, api_key = app.updated_at, app.api_key
+        raise HTTPException(400, 'An app API key is required')
     app = await Apps.update_app_by_id(
-        app_id, {'api_key': api_key, 'data': app.data, 'is_active': False, 'updated_at': checked_at}, db=db
+        app_id,
+        {
+            'api_key': app.api_key,
+            'data': app.data,
+            'is_active': False,
+            'updated_at': max(time.time_ns(), app.updated_at + 1),
+        },
+        db=db,
     )
-    await db.commit()
-    challenge = str(uuid.uuid4())
-    status_code, value = await send_app_event(
-        app,
-        {'id': str(uuid.uuid4()), 'type': 'connect', 'data': {'challenge': challenge}},
-        timeout=20,
-    )
-    if status_code != 200:
-        detail = {
-            401: 'App rejected the API key. Enter the API key configured on the app server.',
-            403: 'App refused the connection. Check the app server access rules and logs.',
-            400: 'App rejected the connection request. Check the WebUI origin and app server configuration.',
-            404: 'App event endpoint was not found. Check the URL in app settings.',
-            405: 'App endpoint does not accept POST requests. Use its event endpoint URL.',
-            503: 'App is busy or shutting down. Connect again when it is ready.',
-            504: 'App connection request timed out. Check the app server logs.',
-        }.get(status_code, f'App returned HTTP {status_code}. Check the app server logs.')
-        raise HTTPException(504 if status_code == 504 else 502, detail)
-    if not isinstance(value, dict) or not isinstance(value.get('proof'), str):
-        raise HTTPException(502, 'App did not return an identity proof. Check its event endpoint and SDK version.')
-    try:
-        claims = verify_app_token(app, value['proof'], 'webui-app-connect+jwt')
-        if claims.get('challenge') != challenge:
-            raise ValueError()
-    except jwt.InvalidSignatureError:
-        raise HTTPException(
-            502, 'App public key does not match the installed key. Review the app public key in settings.'
-        ) from None
-    except (jwt.InvalidTokenError, ValueError, TypeError, KeyError):
-        raise HTTPException(
-            502, 'App identity proof is invalid or expired. Check the installed public key and server clocks.'
-        ) from None
-    result = await db.execute(
-        update(App)
-        .where(App.id == app_id, App.updated_at == checked_at, App.api_key == api_key)
-        .values(is_active=True, updated_at=max(time.time_ns(), checked_at + 1))
-    )
-    if result.rowcount != 1:
-        await db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='App changed while connecting; connect again')
-    await db.commit()
-    return get_app_response(await get_app_by_id(app_id, db=db))
+    app = await connections.connect(app)
+    return {**get_app_response(app), 'connection_status': 'connected'}
 
 
 ############################

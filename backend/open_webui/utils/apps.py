@@ -14,20 +14,20 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import aiohttp
-import jwt
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import HTTPException, status
 from open_webui.env import WEBUI_SECRET_KEY
-from open_webui.internal.db import get_async_db, get_async_session
+from open_webui.internal.db import get_async_db
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.apps import AppChannelMessage, AppChannelReply, AppModel, Apps
-from open_webui.models.channels import ChannelModel, Channels
+from open_webui.models.apps import AppChannelMessage, AppChannelReply, AppModel, Apps, AppTokenForm
+from open_webui.models.channels import Channel, ChannelMember, ChannelModel, Channels
 from open_webui.models.config import Config
-from open_webui.models.messages import MessageForm, Messages
+from open_webui.models.messages import Message, MessageForm, Messages
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -50,6 +50,8 @@ def get_app_url_origin(url: str) -> str:
 def validate_app_url(url: str) -> bool:
     """Validate the endpoint and return whether its private origin is explicitly allowed."""
     origin = get_app_url_origin(url)
+    if urlsplit(url).query:
+        raise ValueError('App URL must not contain a query')
     private_origins = {
         get_app_url_origin(x.strip()) for x in os.getenv('APP_ALLOWED_PRIVATE_ORIGINS', '').split(',') if x.strip()
     }
@@ -133,8 +135,13 @@ async def send_app_request(
         # Only local, fixed diagnostics may be shown; never echo arbitrary app responses.
         details = {
             'Invalid service URL': 'Invalid app URL. Use an HTTP(S) URL without credentials or a fragment.',
-            'App endpoints require HTTPS': 'App endpoints require HTTPS. For local HTTP, configure APP_ALLOWED_PRIVATE_ORIGINS.',
-            'App endpoint resolves to a prohibited address': 'App resolves to a private or reserved address. For local development, configure APP_ALLOWED_PRIVATE_ORIGINS.',
+            'App endpoints require HTTPS': (
+                'App endpoints require HTTPS. For local HTTP, configure APP_ALLOWED_PRIVATE_ORIGINS.'
+            ),
+            'App endpoint resolves to a prohibited address': (
+                'App resolves to a private or reserved address. '
+                'For local development, configure APP_ALLOWED_PRIVATE_ORIGINS.'
+            ),
             'App response is too large': 'App response exceeds the allowed size.',
         }
         raise HTTPException(502, details.get(str(exc), 'App returned an invalid response. Expected JSON.')) from None
@@ -203,39 +210,14 @@ def decode_app_context_token(app: AppModel, purpose: str, token: str) -> dict:
         raise HTTPException(403, 'Invalid or expired app context') from None
 
 
-def verify_app_token(app: AppModel, token: str, token_type: str = 'webui-app+jwt') -> dict:
-    header = jwt.get_unverified_header(token)
-    if header.get('typ') != token_type or any(k in header for k in ('jku', 'jwk', 'x5u', 'crit')):
-        raise ValueError('Invalid app token type or key source')
-    claims = jwt.decode(
-        token,
-        app.data['manifest']['public_key'],
-        algorithms=['EdDSA'],
-        audience=app.data['webui_url'] + '/api/v1/apps/runtime',
-        options={'require': ['sub', 'aud', 'iat', 'exp'], 'strict_aud': True},
-    )
-    if (
-        claims['sub'] != app.id
-        or type(claims['iat']) is not int
-        or type(claims['exp']) is not int
-        or not 0 < claims['exp'] - claims['iat'] <= 60
-    ):
-        raise ValueError('Invalid app identity or lifetime')
-    return claims
-
-
 async def send_app_event(app: AppModel, event_data: dict, *, timeout: float = 3) -> tuple[int, Any]:
-    body = _serialize_json({**event_data, 'app_id': app.id, 'webui_url': app.data['webui_url']})
-    if len(body) > 1048576:
+    from open_webui.socket.apps import connections
+
+    payload = {**event_data, 'app_id': app.id, 'installation_id': app.data.get('installation_id')}
+    if len(_serialize_json(payload)) > 1048576 - 128:
         log.warning('App %s event exceeds the 1 MiB delivery limit', app.id)
         raise ValueError('App event exceeds 1 MiB')
-    api_key = get_app_encryption_cipher().decrypt(app.api_key.encode()).decode()
-    return await send_app_request(
-        app.data['url'],
-        body=body,
-        timeout=timeout,
-        headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {api_key}'},
-    )
+    return await connections.send(app, payload, timeout)
 
 
 def get_app_response(app: AppModel) -> dict:
@@ -245,7 +227,7 @@ def get_app_response(app: AppModel) -> dict:
         'name': app.name,
         'is_active': app.is_active,
         'configured': bool(app.api_key),
-        'data': app.data,
+        'data': {k: v for k, v in app.data.items() if k not in ('connection_token', 'webui_url')},
         'created_at': app.created_at,
         'updated_at': app.updated_at,
     }
@@ -260,28 +242,6 @@ async def get_app_by_id(app_id: str, db: AsyncSession, require_active: bool = Fa
     if require_active and (not app.is_active or not app.data['manifest'].get('public_key') or not app.api_key):
         raise HTTPException(403, 'App is inactive')
     return app
-
-
-async def get_verified_app(
-    authorization: str = Header(default=''), db: AsyncSession = Depends(get_async_session)
-) -> AppModel:
-    if not await Config.get('apps.enable'):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Apps are disabled')
-    try:
-        if not authorization.startswith('Bearer '):
-            raise ValueError()
-        token = authorization.removeprefix('Bearer ')
-        if len(token) > 4096:
-            raise ValueError()
-        claims = jwt.decode(token, options={'verify_signature': False})
-        app_id = claims.get('sub')
-        if not isinstance(app_id, str) or len(app_id) > 100:
-            raise ValueError()
-        app = await get_app_by_id(app_id, db=db, require_active=True)
-        verify_app_token(app, token)
-        return app
-    except (ValueError, KeyError, jwt.PyJWTError, HTTPException):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid app credential') from None
 
 
 async def has_app_access(app: AppModel, user: UserModel, db: AsyncSession) -> bool:
@@ -370,7 +330,11 @@ def get_app_message_data(message):
 
 async def publish_app_message_event(message, kind):
     # Model output is streamed into this row; only publish its completed update.
-    if kind == 'channel.message.updated' and (message.meta or {}).get('model_id') and not (message.meta or {}).get('done'):
+    if (
+        kind == 'channel.message.updated'
+        and (message.meta or {}).get('model_id')
+        and not (message.meta or {}).get('done')
+    ):
         return
     value = deepcopy(get_app_message_data(message))
     if kind == 'channel.message.deleted':
@@ -391,7 +355,7 @@ async def send_app_message_event(message, kind, created_at):
                     app = await Apps.get_app_by_id(app_id, db=db)
                     if not app or 'channels:messages:read' not in app.data.get('granted_scopes', []):
                         continue
-                    if not app.data.get('webui_url'):
+                    if not app.data.get('installation_id'):
                         continue
                     try:
                         await check_app_channel_membership(app, message['channel_id'], db=db)
@@ -402,7 +366,7 @@ async def send_app_message_event(message, kind, created_at):
                         'type': kind,
                         'message': message,
                         'app_id': app.id,
-                        'webui_url': app.data['webui_url'],
+                        'installation_id': app.data['installation_id'],
                         'channel': {'id': message['channel_id']},
                     }
                     envelope['event_token'] = create_app_context_token(app, 'event', envelope, expires_in=300)
@@ -565,3 +529,88 @@ async def generate_app_channel_reply(
         message = AppChannelMessage(**{k: getattr(reply, k) for k in AppChannelMessage.model_fields})
         value['message'] = await update_app_message(db, app, source['id'], message, f'"{source["updated_at"]}"')
     return value
+
+
+async def get_app_channels(app: AppModel, db: AsyncSession):
+    if not await Config.get('channels.enable'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Channels are disabled')
+    await get_app_by_id(app.id, require_active=True, db=db)
+    require_scope(app, 'channels:read')
+    channels = (
+        await db.scalars(
+            select(Channel)
+            .join(ChannelMember, Channel.id == ChannelMember.channel_id)
+            .where(
+                ChannelMember.app_id == app.id,
+                ChannelMember.is_active.is_(True),
+                Channel.deleted_at.is_(None),
+                Channel.archived_at.is_(None),
+            )
+        )
+    ).all()
+    result = []
+    for channel in channels:
+        channel_data = await Channels.get_channel_by_id(channel.id, db=db)
+        is_private = (
+            channel_data.is_private is True
+            if channel_data.type == 'group'
+            else not any(grant.principal_id == '*' for grant in channel_data.access_grants)
+        )
+        result.append({'id': channel.id, 'name': channel.name, 'type': channel.type, 'is_private': is_private})
+    return result
+
+
+async def authorize_app_execution(form_data: AppTokenForm, app: AppModel, db: AsyncSession):
+    value = decode_app_context_token(app, 'execution', form_data.token)
+    user = await Users.get_user_by_id(value['actor_id'], db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Actor is unavailable')
+    await check_app_invocation_access(app, value['channel_id'], user, db=db)
+    require_scope(app, value['scope'])
+    return {
+        'authorized': True,
+        'operation_id': value['operation_id'],
+        'actor': {'id': user.id, 'is_admin': user.role == 'admin'},
+        'channel_id': value['channel_id'],
+        'type': value.get('type'),
+        'data': value.get('data'),
+    }
+
+
+async def verify_app_event(form_data: AppTokenForm, app: AppModel, db: AsyncSession):
+    value = decode_app_context_token(app, 'event', form_data.token)
+    await check_app_channel_membership(app, value['channel']['id'], db=db)
+    require_scope(app, 'channels:messages:read')
+    return {k: v for k, v in value.items() if k not in ('purpose', 'exp', 'nonce')}
+
+
+async def get_app_channel_messages(
+    app: AppModel,
+    db: AsyncSession,
+    channel_id: str,
+    before: str | None = None,
+    parent_id: str | None = None,
+    limit: int = 50,
+):
+    await check_app_channel_membership(app, channel_id, db=db)
+    require_scope(app, 'channels:messages:read')
+    query = select(Message).where(Message.channel_id == channel_id, Message.parent_id == parent_id)
+    if parent_id:
+        parent = await db.get(Message, parent_id)
+        if not parent or parent.channel_id != channel_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Thread not found')
+    if before:
+        cursor = await db.get(Message, before)
+        if not cursor or cursor.channel_id != channel_id or cursor.parent_id != parent_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid message cursor')
+        query = query.where(
+            or_(
+                Message.created_at < cursor.created_at,
+                and_(Message.created_at == cursor.created_at, Message.id < cursor.id),
+            )
+        )
+    rows = (await db.scalars(query.order_by(Message.created_at.desc(), Message.id.desc()).limit(limit + 1))).all()
+    return {
+        'messages': [get_app_message_data(row) for row in rows[:limit]],
+        'next_cursor': rows[limit - 1].id if len(rows) > limit else None,
+    }

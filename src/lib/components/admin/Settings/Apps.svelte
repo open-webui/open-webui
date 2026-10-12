@@ -16,12 +16,14 @@
 	let selected: App | null = null;
 	let show = false;
 	let busy = '';
-	async function load() {
+	async function load(silent = false) {
 		try {
 			apps = await getApps(localStorage.token);
 		} catch (error) {
-			toast.error(String(error));
-			apps = [];
+			if (!silent) {
+				toast.error(String(error));
+				apps = [];
+			}
 		}
 	}
 	function configure(app: App | null) {
@@ -43,7 +45,11 @@
 			busy = '';
 		}
 	}
-	onMount(load);
+	onMount(() => {
+		load();
+		const interval = setInterval(() => load(true), 5000);
+		return () => clearInterval(interval);
+	});
 </script>
 
 <AppModal bind:show app={selected} onChange={load} />
@@ -86,6 +92,15 @@
 										<span class="text-gray-400 dark:text-gray-600">{app.slug}</span></span
 									>
 								</div>
+								{#if app.is_active}
+									<span class="text-gray-400 dark:text-gray-500"
+										>{app.connection_status === 'connected'
+											? $i18n.t('Connected')
+											: app.connection_status === 'connecting'
+												? $i18n.t('Connecting')
+												: $i18n.t('Disconnected')}</span
+									>
+								{/if}
 								<div class="flex shrink-0 items-center gap-1">
 									<Tooltip content={$i18n.t('Configure')}
 										><button

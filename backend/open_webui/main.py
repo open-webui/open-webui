@@ -411,6 +411,9 @@ async def lifespan(app: FastAPI):
     await install_tool_and_function_dependencies()
 
     app.state.redis = get_redis_client(async_mode=True)
+    from open_webui.socket.apps import connections as app_connections
+
+    await app_connections.start(app.state.redis)
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
@@ -503,6 +506,7 @@ async def lifespan(app: FastAPI):
     yield
 
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_STARTED, source='system')
+    await app_connections.close()
 
     # Shutdown: clean up shared resources
     from open_webui.utils.session_pool import close_session

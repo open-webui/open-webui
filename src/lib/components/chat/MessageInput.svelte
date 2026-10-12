@@ -2138,7 +2138,8 @@
 															text,
 															history?.currentId
 																? createMessagesList(history, history.currentId)
-																: null
+																	: null,
+																'general'
 														).catch((error) => {
 															console.log(error);
 
