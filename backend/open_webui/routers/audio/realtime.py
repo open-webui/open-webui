@@ -462,6 +462,17 @@ async def realtime_call(ws: WebSocket):
                 if kind.startswith(('response.', 'conversation.item.', 'input_audio_buffer.')):
                     async with asyncio.timeout(5):
                         await ws.send_json(event)
+                if (
+                    kind
+                    in {
+                        'conversation.item.input_audio_transcription.completed',
+                        'conversation.item.input_audio_transcription.failed',
+                    }
+                    and event['item_id'] not in protocol.transcripts
+                ):
+                    # Keep noise that produced no words out of the voice model's context.
+                    async with asyncio.timeout(5):
+                        await upstream.send_json({'type': 'conversation.item.delete', 'item_id': event['item_id']})
             raise ValueError('Voice provider connection closed')
 
         async def check_auth():
