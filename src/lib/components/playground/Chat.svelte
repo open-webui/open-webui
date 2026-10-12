@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -224,7 +225,7 @@
 
 		// Add system message if present
 		if (system) {
-			const systemId = crypto.randomUUID();
+			const systemId = uuidv4();
 			messagesMap[systemId] = {
 				id: systemId,
 				parentId: null,
@@ -238,7 +239,7 @@
 
 		// Add conversation messages
 		for (const msg of messages) {
-			const msgId = crypto.randomUUID();
+			const msgId = uuidv4();
 
 			// Link parent to child
 			if (parentId && messagesMap[parentId]) {

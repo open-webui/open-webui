@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -204,7 +205,7 @@
 	};
 	const saveCopy = async () => {
 		try {
-			const suffix = crypto.randomUUID().slice(0, 7);
+			const suffix = uuidv4().slice(0, 7);
 			const result = await createNewSkill(localStorage.token, {
 				id: `${id}-${suffix}`,
 				name: `${name} (${suffix})`,

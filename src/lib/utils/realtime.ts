@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import { AUDIO_API_BASE_URL } from '$lib/constants';
 
 export type BridgeSubmission = {
@@ -122,7 +123,7 @@ export class RealtimeCall {
 		this.connecting = true;
 		this.options.change();
 		const session = ++this.session;
-		this.callId = crypto.randomUUID();
+		this.callId = uuidv4();
 		try {
 			const context = this.options.context();
 			this.token = token;

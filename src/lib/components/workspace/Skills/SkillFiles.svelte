@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import { onDestroy, getContext, tick, type Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { createFocusTrap } from 'focus-trap';
@@ -78,7 +79,7 @@
 	let newName = '';
 	let newNameInput: HTMLInputElement;
 	let dialog = { show: false, title: '', input: false, value: '', action: (_: string) => {} };
-	const dragType = `application/x-skill-file-${crypto.randomUUID()}`;
+	const dragType = `application/x-skill-file-${uuidv4()}`;
 
 	const ask = (title: string, input: boolean, action: (value: string) => void, value = '') => {
 		dialog = { show: true, title, input, value, action };

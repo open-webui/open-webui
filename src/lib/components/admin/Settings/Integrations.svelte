@@ -119,7 +119,7 @@
 	const addTerminalConnection = (server: TerminalConnection) => {
 		terminalConnections = [
 			...terminalConnections,
-			{ ...server, id: server.id ?? crypto.randomUUID?.() ?? uuidv4() }
+			{ ...server, id: server.id ?? uuidv4() }
 		];
 		saveTerminalServers();
 	};
