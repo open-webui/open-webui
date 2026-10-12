@@ -3,6 +3,7 @@
 ## Your Current Setup (Local)
 
 You have:
+
 - `docs-site/ai/docker-compose.yml` — running Open WebUI with RAG
 - `open-webui-data` Docker volume — holds all data (chats, embeddings, users)
 - Product docs mounted for RAG
@@ -10,14 +11,14 @@ You have:
 
 ## What Happens to Your Data
 
-| Data Type | Where It Is | Migrates to Server? | Action |
-|-----------|-------------|---------------------|--------|
-| **RAG Config** (top-k, threshold, etc.) | docker-compose env vars | ✅ Yes — just copy the file | No change needed |
-| **Document Embeddings** | `open-webui-data` volume (ChromaDB) | ❌ No — local files | Re-embed on server |
-| **Chat History** | `open-webui-data` volume (SQLite) | ❌ No | Create fresh on server |
-| **User Accounts** | `open-webui-data` volume (SQLite) | ❌ No | Create new admin on server |
-| **Uploaded Files** | `open-webui-data` volume | ❌ No | Re-upload if needed |
-| **Knowledge Base Config** | `open-webui-data` volume | ❌ No | Recreate on server |
+| Data Type                               | Where It Is                         | Migrates to Server?         | Action                     |
+| --------------------------------------- | ----------------------------------- | --------------------------- | -------------------------- |
+| **RAG Config** (top-k, threshold, etc.) | docker-compose env vars             | ✅ Yes — just copy the file | No change needed           |
+| **Document Embeddings**                 | `open-webui-data` volume (ChromaDB) | ❌ No — local files         | Re-embed on server         |
+| **Chat History**                        | `open-webui-data` volume (SQLite)   | ❌ No                       | Create fresh on server     |
+| **User Accounts**                       | `open-webui-data` volume (SQLite)   | ❌ No                       | Create new admin on server |
+| **Uploaded Files**                      | `open-webui-data` volume            | ❌ No                       | Re-upload if needed        |
+| **Knowledge Base Config**               | `open-webui-data` volume            | ❌ No                       | Recreate on server         |
 
 ## Why Re-embedding Is Better Than Migration
 
@@ -79,7 +80,7 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ```yaml
 # Add to docker-compose.prod.yml environment:
-- ENABLE_SIGNUP=true   # temporarily to create admin
+- ENABLE_SIGNUP=true # temporarily to create admin
 ```
 
 Create admin, then set `ENABLE_SIGNUP=false` and restart.
@@ -130,12 +131,12 @@ TracexGPT now has **per-user monthly spending limits** with automatic cost track
 
 ### Admin APIs
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/v1/spending/` | GET | View all users' spending |
-| `/api/v1/spending/me` | GET | Current user's spending |
-| `/api/v1/spending/{user_id}` | PUT | Set a user's monthly limit |
-| `/api/v1/spending/models` | GET | Curated model list with pricing |
+| Endpoint                     | Method | Purpose                         |
+| ---------------------------- | ------ | ------------------------------- |
+| `/api/v1/spending/`          | GET    | View all users' spending        |
+| `/api/v1/spending/me`        | GET    | Current user's spending         |
+| `/api/v1/spending/{user_id}` | PUT    | Set a user's monthly limit      |
+| `/api/v1/spending/models`    | GET    | Curated model list with pricing |
 
 ### Adjust a User's Limit
 
@@ -151,7 +152,7 @@ curl -X PUT http://localhost:3000/api/v1/spending/user-uuid-here \
 
 ```yaml
 # In docker-compose.prod.yml
-- DEFAULT_MONTHLY_LIMIT_USD=5.0   # Default for new users
+- DEFAULT_MONTHLY_LIMIT_USD=5.0 # Default for new users
 ```
 
 ## Curated Model List (All Model Types)
@@ -160,15 +161,15 @@ TracexGPT includes pricing for ALL model types Open WebUI supports. Legacy/dupli
 
 ### Categories
 
-| Tier | Models | Price Range | Use For |
-|------|--------|-------------|---------|
-| **Nano** | gpt-4o-mini, gemini-2.0-flash, llama-3.3-70b-groq | $0.10-$0.79/M | Quick answers, high volume |
-| **Medium** | gpt-5.4-mini, claude-haiku-3.5, gemini-1.5-flash | $0.25-$4.50/M | Daily tasks, coding |
-| **Standard** | gpt-4o, claude-sonnet-3.5, gemini-1.5-pro | $2.50-$15/M | Complex queries, RAG |
-| **Reasoning** | o3, o4-mini | $1.10-$8/M | Math, logic, planning |
-| **Flagship** | gpt-5.5, claude-opus-4-5, gemini-3.1-pro | $5-$75/M | Deep research, coding |
-| **Vision** | gpt-4o-vision, gemini-1.5-pro-vision | $2.50-$10.50/M | Image description |
-| **Image** | dall-e-3, dall-e-2 | $0.02-$0.04/img | Image generation |
+| Tier          | Models                                            | Price Range     | Use For                    |
+| ------------- | ------------------------------------------------- | --------------- | -------------------------- |
+| **Nano**      | gpt-4o-mini, gemini-2.0-flash, llama-3.3-70b-groq | $0.10-$0.79/M   | Quick answers, high volume |
+| **Medium**    | gpt-5.4-mini, claude-haiku-3.5, gemini-1.5-flash  | $0.25-$4.50/M   | Daily tasks, coding        |
+| **Standard**  | gpt-4o, claude-sonnet-3.5, gemini-1.5-pro         | $2.50-$15/M     | Complex queries, RAG       |
+| **Reasoning** | o3, o4-mini                                       | $1.10-$8/M      | Math, logic, planning      |
+| **Flagship**  | gpt-5.5, claude-opus-4-5, gemini-3.1-pro          | $5-$75/M        | Deep research, coding      |
+| **Vision**    | gpt-4o-vision, gemini-1.5-pro-vision              | $2.50-$10.50/M  | Image description          |
+| **Image**     | dall-e-3, dall-e-2                                | $0.02-$0.04/img | Image generation           |
 
 ### Hidden (Useless) Models
 
@@ -211,12 +212,13 @@ curl -X POST http://your-server/api/v1/spending/clients \
 ```
 
 Response:
+
 ```json
 {
-  "user_id": "...",
-  "email": "client@company.com",
-  "temp_password": "abc123...",
-  "message": "Client user created. Share the temporary password securely..."
+	"user_id": "...",
+	"email": "client@company.com",
+	"temp_password": "abc123...",
+	"message": "Client user created. Share the temporary password securely..."
 }
 ```
 
@@ -224,15 +226,15 @@ Response:
 
 ### How It Works
 
-| Feature | Team (Admin/CS) | Client |
-|---------|----------------|--------|
-| Create accounts | Self + Admin API | **Admin only** |
-| Model picker | Yes | **No (locked)** |
-| Folders | Yes | **No** |
-| Settings | Yes | **No** |
-| System prompt | Configurable | **Fixed by admin** |
-| Knowledge bases | Any they own | **Assigned only** |
-| Cost limit | Configurable | **Set at creation** |
+| Feature         | Team (Admin/CS)  | Client              |
+| --------------- | ---------------- | ------------------- |
+| Create accounts | Self + Admin API | **Admin only**      |
+| Model picker    | Yes              | **No (locked)**     |
+| Folders         | Yes              | **No**              |
+| Settings        | Yes              | **No**              |
+| System prompt   | Configurable     | **Fixed by admin**  |
+| Knowledge bases | Any they own     | **Assigned only**   |
+| Cost limit      | Configurable     | **Set at creation** |
 
 ### Public Signup is Blocked
 

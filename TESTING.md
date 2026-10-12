@@ -2,13 +2,13 @@
 
 ## Prerequisites
 
-| Service | Status Check |
-|---------|-------------|
-| Backend | `curl http://localhost:8080/health` → `{"status":true}` |
-| Frontend | `curl http://localhost:5173` → HTML response |
-| Presenton | `curl http://localhost:5000` → 200 OK |
-| Python 3.11 | `python --version` → `Python 3.11.x` |
-| Node 20 | `node --version` → `v20.x.x` |
+| Service     | Status Check                                            |
+| ----------- | ------------------------------------------------------- |
+| Backend     | `curl http://localhost:8080/health` → `{"status":true}` |
+| Frontend    | `curl http://localhost:5173` → HTML response            |
+| Presenton   | `curl http://localhost:5000` → 200 OK                   |
+| Python 3.11 | `python --version` → `Python 3.11.x`                    |
+| Node 20     | `node --version` → `v20.x.x`                            |
 
 ---
 
@@ -25,32 +25,38 @@
 ## 2. Presenton PPT Generation Tool
 
 ### Basic Generation
+
 - [ ] Ask "Generate a PPT about artificial intelligence"
 - [ ] File appears as attachment in chat message
 - [ ] Click to download the `.pptx` file
 - [ ] File opens correctly in PowerPoint/Keynote
 
 ### Extended Parameters
+
 - [ ] Test `slide_count`: "Generate a 12-slide PPT"
 - [ ] Test `tone`: "Generate a casual/funny PPT about cats"
 - [ ] Test `verbosity`: "Generate a detailed/verbose PPT"
 - [ ] Test `template`: "Generate a PPT using the business template"
 
 ### Export Formats
+
 - [ ] Test PDF export: "Generate a PDF presentation about blockchain"
 - [ ] Downloaded file has `.pdf` extension
 - [ ] PDF opens correctly in browser/PDF viewer
 
 ### Web Search Integration
+
 - [ ] Test `web_search: true`: "Generate a PPT about latest AI news with web search"
 - [ ] Verify content includes recent information
 
 ### File Upload Integration
+
 - [ ] Upload a `.txt` or `.pdf` file to chat
 - [ ] Ask "Generate a PPT from the uploaded file"
 - [ ] PPT content reflects uploaded file material
 
 ### Edit URL
+
 - [ ] After generation, click "Edit Presentation" link
 - [ ] Opens Presenton editor at http://localhost:5000
 - [ ] Can edit slides and re-export
@@ -69,14 +75,17 @@
 ## 4. File TTL & Cleanup
 
 ### Configuration
+
 - [ ] Check `FILE_TTL_DAYS=120` is loaded in environment
 - [ ] Verify config appears in admin settings
 
 ### Metadata
+
 - [ ] Generated PPT files have `expires_at` metadata
 - [ ] SQLite database shows `meta` JSON with TTL
 
 ### Cleanup Task
+
 - [ ] Check backend logs show `periodic_file_cleanup` running
 - [ ] Verify task executes every 24 hours
 - [ ] Create test: manually set `expires_at` to past date
@@ -116,13 +125,13 @@
 
 ## 8. Environment Variables
 
-| Variable | Value | Verified |
-|----------|-------|----------|
-| `PRESENTON_URL` | http://localhost:5000 | [ ] |
-| `PRESENTON_USER` | admin | [ ] |
-| `PRESENTON_PASS` | changeme | [ ] |
-| `FILE_TTL_DAYS` | 120 | [ ] |
-| `OPENAI_API_KEY` | sk-proj-... | [ ] |
+| Variable         | Value                 | Verified |
+| ---------------- | --------------------- | -------- |
+| `PRESENTON_URL`  | http://localhost:5000 | [ ]      |
+| `PRESENTON_USER` | admin                 | [ ]      |
+| `PRESENTON_PASS` | changeme              | [ ]      |
+| `FILE_TTL_DAYS`  | 120                   | [ ]      |
+| `OPENAI_API_KEY` | sk-proj-...           | [ ]      |
 
 ---
 
@@ -197,7 +206,6 @@ sqlite3 backend/data/webui.db "SELECT * FROM files LIMIT 5;"
 
 ## Sign-off
 
-| Tester | Date | Result |
-|--------|------|--------|
-| | | Pass / Fail |
-
+| Tester | Date | Result      |
+| ------ | ---- | ----------- |
+|        |      | Pass / Fail |

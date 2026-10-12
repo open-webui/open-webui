@@ -78,14 +78,27 @@
 
 	{#if loading}
 		<div class="flex items-center justify-center h-40">
-			<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+			<div
+				class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"
+			></div>
 		</div>
 	{:else if error}
 		<!-- Error State -->
 		<div class="flex flex-col items-center justify-center h-64 text-center">
 			<div class="text-red-500 mb-2">
-				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-10 mx-auto">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="1.5"
+					stroke="currentColor"
+					class="size-10 mx-auto"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+					/>
 				</svg>
 			</div>
 			<p class="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
@@ -100,15 +113,25 @@
 		{@const pct = safePercent(mySpending.usage_percent)}
 		<!-- Summary Cards -->
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+			>
 				<div class="text-sm text-gray-500 dark:text-gray-400">Spent This Month</div>
-				<div class="text-2xl font-bold text-gray-900 dark:text-white">${mySpending.spent?.toFixed(2) ?? '0.00'}</div>
+				<div class="text-2xl font-bold text-gray-900 dark:text-white">
+					${mySpending.spent?.toFixed(2) ?? '0.00'}
+				</div>
 			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+			>
 				<div class="text-sm text-gray-500 dark:text-gray-400">Monthly Limit</div>
-				<div class="text-2xl font-bold text-gray-900 dark:text-white">${mySpending.limit?.toFixed(2) ?? '0.00'}</div>
+				<div class="text-2xl font-bold text-gray-900 dark:text-white">
+					${mySpending.limit?.toFixed(2) ?? '0.00'}
+				</div>
 			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+			>
 				<div class="text-sm text-gray-500 dark:text-gray-400">Remaining</div>
 				<div class="text-2xl font-bold {getUsagePercentColor(pct)}">
 					${mySpending.remaining?.toFixed(2) ?? '0.00'}
@@ -117,7 +140,9 @@
 		</div>
 
 		<!-- Progress Bar -->
-		<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-6">
+		<div
+			class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 mb-6"
+		>
 			<div class="flex justify-between text-sm mb-2">
 				<span class="text-gray-600 dark:text-gray-400">Usage</span>
 				<span class="{getUsagePercentColor(pct)} font-medium">{pct.toFixed(1)}%</span>
@@ -158,8 +183,12 @@
 
 	<!-- Model Pricing -->
 	{#if modelCosts && modelCosts.models && modelCosts.models.length > 0}
-		<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-			<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-medium dark:text-white">
+		<div
+			class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+		>
+			<div
+				class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-medium dark:text-white"
+			>
 				Model Pricing
 			</div>
 			<div class="overflow-x-auto">
@@ -176,7 +205,11 @@
 							<tr class="border-t border-gray-100 dark:border-gray-700/50">
 								<td class="px-4 py-2 dark:text-gray-200 font-medium">{m.model_id ?? '—'}</td>
 								<td class="px-4 py-2">
-									<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: {m.color ?? '#6b7280'}20; color: {m.color ?? '#6b7280'}">
+									<span
+										class="px-2 py-0.5 rounded-full text-xs font-medium"
+										style="background-color: {m.color ?? '#6b7280'}20; color: {m.color ??
+											'#6b7280'}"
+									>
 										{m.tier ?? 'Unknown'}
 									</span>
 								</td>

@@ -116,7 +116,7 @@
 			spent: t.total_spent || 0,
 			limit: t.total_limit || 0,
 			height: Math.max((t.total_spent / maxVal) * 100, 4),
-			color: (t.total_spent / (t.total_limit || 1)) >= 0.8 ? '#ef4444' : '#3b82f6'
+			color: t.total_spent / (t.total_limit || 1) >= 0.8 ? '#ef4444' : '#3b82f6'
 		}));
 	}
 </script>
@@ -137,13 +137,26 @@
 
 	{#if loading}
 		<div class="flex items-center justify-center h-40">
-			<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+			<div
+				class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"
+			></div>
 		</div>
 	{:else if error}
 		<div class="flex flex-col items-center justify-center h-64 text-center">
 			<div class="text-red-500 mb-2">
-				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-10 mx-auto">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="1.5"
+					stroke="currentColor"
+					class="size-10 mx-auto"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+					/>
 				</svg>
 			</div>
 			<p class="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
@@ -157,15 +170,25 @@
 	{:else if spendingData}
 		<!-- Summary Cards -->
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+			>
 				<div class="text-sm text-gray-500 dark:text-gray-400">Total Spent</div>
-				<div class="text-2xl font-bold text-gray-900 dark:text-white">${spendingData.total_spent?.toFixed(2) || '0.00'}</div>
+				<div class="text-2xl font-bold text-gray-900 dark:text-white">
+					${spendingData.total_spent?.toFixed(2) || '0.00'}
+				</div>
 			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+			>
 				<div class="text-sm text-gray-500 dark:text-gray-400">Active Users</div>
-				<div class="text-2xl font-bold text-gray-900 dark:text-white">{spendingData.users?.length || 0}</div>
+				<div class="text-2xl font-bold text-gray-900 dark:text-white">
+					{spendingData.users?.length || 0}
+				</div>
 			</div>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+			>
 				<div class="text-sm text-gray-500 dark:text-gray-400">Period</div>
 				<div class="text-2xl font-bold text-gray-900 dark:text-white">{spendingData.month}</div>
 			</div>
@@ -173,7 +196,9 @@
 
 		<!-- Spending Trends Chart -->
 		{#if trendData}
-			<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6"
+			>
 				<div class="flex items-center justify-between mb-4">
 					<h2 class="font-medium dark:text-white">Spending Trends (Last {trendMonths} Months)</h2>
 					<select
@@ -203,8 +228,12 @@
 		{/if}
 
 		<!-- Users Table -->
-		<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-			<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-medium dark:text-white">
+		<div
+			class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+		>
+			<div
+				class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-medium dark:text-white"
+			>
 				User Spending Details
 			</div>
 			<div class="overflow-x-auto">
@@ -221,20 +250,30 @@
 					</thead>
 					<tbody>
 						{#each spendingData.users || [] as u}
-							<tr class="border-t border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+							<tr
+								class="border-t border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30"
+							>
 								<td class="px-4 py-2 dark:text-gray-200">
 									<div class="font-medium">{u.name || 'Unknown'}</div>
 									<div class="text-xs text-gray-500">{u.email || u.user_id}</div>
 								</td>
 								<td class="px-4 py-2">
-									<span class="px-2 py-0.5 rounded-full text-xs font-medium {u.role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}">
+									<span
+										class="px-2 py-0.5 rounded-full text-xs font-medium {u.role === 'admin'
+											? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+											: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}"
+									>
 										{u.role || 'user'}
 									</span>
 								</td>
 								<td class="px-4 py-2 dark:text-gray-200">${u.spent?.toFixed(2) ?? '0.00'}</td>
 								<td class="px-4 py-2 dark:text-gray-200">${u.limit?.toFixed(2) ?? '0.00'}</td>
 								<td class="px-4 py-2">
-									<span class="{(u.remaining ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}">
+									<span
+										class={(u.remaining ?? 0) < 0
+											? 'text-red-600 dark:text-red-400'
+											: 'text-green-600 dark:text-green-400'}
+									>
 										${u.remaining?.toFixed(2) ?? '0.00'}
 									</span>
 								</td>
@@ -254,7 +293,9 @@
 												Save
 											</button>
 											<button
-												on:click={() => { editUserId = null; }}
+												on:click={() => {
+													editUserId = null;
+												}}
 												class="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs rounded"
 											>
 												Cancel
@@ -262,7 +303,10 @@
 										</div>
 									{:else}
 										<button
-											on:click={() => { editUserId = u.user_id; newLimit = u.limit; }}
+											on:click={() => {
+												editUserId = u.user_id;
+												newLimit = u.limit;
+											}}
 											class="text-blue-600 dark:text-blue-400 text-xs hover:underline"
 										>
 											Edit Limit
@@ -279,8 +323,12 @@
 
 	<!-- Model Pricing -->
 	{#if modelCosts && modelCosts.models}
-		<div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-			<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-medium dark:text-white">
+		<div
+			class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+		>
+			<div
+				class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-medium dark:text-white"
+			>
 				Model Pricing Catalogue
 			</div>
 			<div class="overflow-x-auto">
@@ -298,7 +346,11 @@
 							<tr class="border-t border-gray-100 dark:border-gray-700/50">
 								<td class="px-4 py-2 dark:text-gray-200 font-medium">{m.model_id ?? '—'}</td>
 								<td class="px-4 py-2">
-									<span class="px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: {m.color ?? '#6b7280'}20; color: {m.color ?? '#6b7280'}">
+									<span
+										class="px-2 py-0.5 rounded-full text-xs font-medium"
+										style="background-color: {m.color ?? '#6b7280'}20; color: {m.color ??
+											'#6b7280'}"
+									>
 										{m.tier ?? 'Unknown'}
 									</span>
 								</td>

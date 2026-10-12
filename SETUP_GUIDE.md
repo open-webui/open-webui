@@ -20,6 +20,7 @@ This guide covers setting up the entire development environment from scratch inc
 ### 1.1 Install Conda (Python Environment Manager)
 
 **macOS (using Homebrew):**
+
 ```bash
 # Install Homebrew if not installed
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -32,6 +33,7 @@ conda init zsh  # or 'conda init bash' if using bash
 ```
 
 **Manual install (any OS):**
+
 ```bash
 # Download Miniconda
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -O ~/miniconda.sh
@@ -49,6 +51,7 @@ conda init zsh
 ```
 
 **Verify installation:**
+
 ```bash
 conda --version  # Should show 23.x or higher
 ```
@@ -84,6 +87,7 @@ npm --version   # 10.x.x
 ### 1.4 Install Docker Desktop
 
 **macOS:**
+
 ```bash
 # Via Homebrew
 brew install --cask docker
@@ -92,6 +96,7 @@ brew install --cask docker
 ```
 
 **Start Docker:**
+
 ```bash
 # Open Docker Desktop app (first time only)
 open -a Docker
@@ -166,10 +171,10 @@ npm list vite  # Should show vite@5.x.x
 
 You need these API keys for full functionality:
 
-| Service | Key Name | How to Get | Cost |
-|---------|----------|------------|------|
-| OpenAI | `OPENAI_API_KEY` | https://platform.openai.com/api-keys | Pay per use |
-| HuggingFace | `HF_TOKEN` | https://huggingface.co/settings/tokens | Free tier available |
+| Service     | Key Name         | How to Get                             | Cost                |
+| ----------- | ---------------- | -------------------------------------- | ------------------- |
+| OpenAI      | `OPENAI_API_KEY` | https://platform.openai.com/api-keys   | Pay per use         |
+| HuggingFace | `HF_TOKEN`       | https://huggingface.co/settings/tokens | Free tier available |
 
 ### 3.2 Create Environment File
 
@@ -281,6 +286,7 @@ docker-compose -f docker-compose.dev.yml down -v
 Best for: Frontend development with hot reload
 
 **Terminal 1 - Backend + Presenton:**
+
 ```bash
 # Export keys
 export OPENAI_API_KEY=sk-your-key
@@ -291,6 +297,7 @@ docker-compose -f docker-compose.dev.yml up tracexgpt presenton
 ```
 
 **Terminal 2 - Frontend (with hot reload):**
+
 ```bash
 # Navigate to project
 cd /Users/apple/Documents/foodsign/trace-open-webui
@@ -313,6 +320,7 @@ npm run dev
 Best for: Backend debugging, running with IDE breakpoints
 
 **Terminal 1 - Presenton (Docker):**
+
 ```bash
 # Presenton must run in Docker (it's a separate microservice)
 # Make sure keys are exported
@@ -339,6 +347,7 @@ docker stop presenton && docker rm presenton
 ```
 
 **Terminal 2 - Backend (Local Python):**
+
 ```bash
 # Navigate to project
 cd /Users/apple/Documents/foodsign/trace-open-webui
@@ -373,6 +382,7 @@ uvicorn open_webui.main:app \
 ```
 
 **Terminal 3 - Frontend (Local with hot reload):**
+
 ```bash
 cd /Users/apple/Documents/foodsign/trace-open-webui
 nvm use 20
@@ -453,6 +463,7 @@ cp backend/data/webui.db backup-$(date +%Y%m%d).db
 ### 5.4 Testing Presenton Integration
 
 **Test Presenton is running:**
+
 ```bash
 # Check container
 docker ps | grep presenton
@@ -464,12 +475,14 @@ curl -u admin:changeme http://localhost:5000/health
 ```
 
 **Test PPT generation via chat:**
+
 1. Open chat
 2. Type: "Create a presentation about AI in healthcare"
 3. Tool should auto-trigger and generate PPT
 4. File appears in chat with download link
 
 **Test Presenton Studio (full editor):**
+
 1. Set `PRESENTON_PUBLIC_URL=http://localhost:5000` in .env
 2. Go to Workspace → PPT Generator
 3. Should show embedded Presenton Studio UI
