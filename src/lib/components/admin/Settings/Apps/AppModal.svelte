@@ -285,7 +285,7 @@
 							required
 							bind:value={url}
 							class={inputClass}
-							placeholder="https://app.example.com/open-webui"
+							placeholder="https://app.example.com/events"
 						/>
 					</AdminSettingField>
 				{:else}
