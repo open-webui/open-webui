@@ -4243,6 +4243,8 @@
 					});
 					await chatId.set(res.chat_id);
 					if (!$temporaryChatEnabled && !embedded) {
+						// Carry the picks made on the new-chat page over to this chat
+						saveDraft(getChatInputDraft(), res.chat_id, false);
 						window.history.replaceState(window.history.state, '', `/c/${res.chat_id}`);
 						await refreshChatList(localStorage.token);
 
@@ -4505,6 +4507,7 @@
 			await chatId.set(_chatId);
 
 			if (!embedded) {
+				saveDraft(getChatInputDraft(), _chatId, false);
 				window.history.replaceState(window.history.state, '', `/c/${_chatId}`);
 			}
 
