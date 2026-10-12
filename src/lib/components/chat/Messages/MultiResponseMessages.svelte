@@ -1,5 +1,4 @@
 <script lang="ts">
-	import dayjs from 'dayjs';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -10,18 +9,22 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 
 	import ResponseMessage from './ResponseMessage.svelte';
+	import { getOutputText } from './structuredOutput';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Merge from '$lib/components/icons/Merge.svelte';
 
 	import Markdown from './Markdown.svelte';
 	import Name from './Name.svelte';
 	import Skeleton from './Skeleton.svelte';
-	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import ProfileImage from './ProfileImage.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
-	const i18n = getContext('i18n');
-	dayjs.extend(localizedFormat);
+	import {
+		formatMessageTimestamp,
+		formatMessageTimestampFull,
+		getDeepestChildId
+	} from '$lib/utils';
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let chatId;
 	export let history;
@@ -30,6 +33,9 @@
 
 	export let isLastMessage;
 	export let readOnly = false;
+	export let shareMode: 'continue' | null = null;
+	export let allowDelete = true;
+	export let compactPreview = false;
 	export let editCodeBlock = true;
 
 	export let setInputText: Function = () => {};
@@ -47,10 +53,13 @@
 	export let mergeResponses: Function;
 
 	export let addMessages: Function;
+	export let onToolCallResolved: Function = () => {};
+	export let forkHandler: Function | null = null;
 
 	export let triggerScroll: Function;
 
 	export let topPadding = false;
+	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	const dispatch = createEventDispatcher();
 
@@ -84,15 +93,8 @@
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
 		console.log(messageId);
 
-		// Traverse the branch to find the deepest child message
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
-		}
-
 		// Update the current message ID in history
-		history.currentId = messageId;
+		history.currentId = getDeepestChildId(history, messageId);
 
 		// Await UI updates
 		await tick();
@@ -108,14 +110,7 @@
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
 		console.log(messageId);
 
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
-		}
-
-		history.currentId = messageId;
+		history.currentId = getDeepestChildId(history, messageId);
 
 		await tick();
 		await updateChat();
@@ -131,14 +126,7 @@
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
 		console.log(messageId);
 
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
-		}
-
-		history.currentId = messageId;
+		history.currentId = getDeepestChildId(history, messageId);
 
 		await tick();
 		await updateChat();
@@ -205,13 +193,7 @@
 
 	const onGroupClick = async (_messageId, modelIdx) => {
 		if (messageId != _messageId) {
-			let currentMessageId = _messageId;
-			let messageChildrenIds = history.messages[currentMessageId].childrenIds;
-			while (messageChildrenIds.length !== 0) {
-				currentMessageId = messageChildrenIds.at(-1);
-				messageChildrenIds = history.messages[currentMessageId].childrenIds;
-			}
-			history.currentId = currentMessageId;
+			history.currentId = getDeepestChildId(history, _messageId);
 			selectedModelIdx = modelIdx;
 
 			// await tick();
@@ -225,7 +207,8 @@
 			const { messageIds } = groupedMessageIds[modelIdx];
 			const messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
 
-			return history.messages[messageId].content;
+			const message = history.messages[messageId];
+			return getOutputText(message?.output) || message?.content || '';
 		});
 		mergeResponses(messageId, responses, chatId);
 	};
@@ -251,9 +234,13 @@
 		>
 			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
 				<div class="w-full">
-					<div class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850">
+					<div
+						class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850 {compactPreview
+							? 'hidden'
+							: ''}"
+					>
 						<div
-							class="flex gap-2 scrollbar-none overflow-x-auto w-fit text-center font-medium bg-transparent pt-1 text-sm"
+							class="flex gap-2 scrollbar-none overflow-x-auto w-fit text-center font-normal bg-transparent pt-1 text-sm"
 							on:wheel|preventDefault={(e) => {
 								e.currentTarget.scrollLeft += e.deltaY;
 							}}
@@ -320,8 +307,13 @@
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
 									{addMessages}
+									{onToolCallResolved}
+									{forkHandler}
 									{readOnly}
+									{compactPreview}
 									{topPadding}
+									{onInsertToNote}
+									{shareMode}
 								/>
 							{/if}
 						{/key}
@@ -336,14 +328,17 @@
 							groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
 						<div
-							class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
-								?.modelIdx == modelIdx
-								? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
-										$mobile ? 'min-w-full' : 'min-w-80'
-									}`
-								: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
-										$mobile ? 'min-w-full' : 'min-w-80'
-									}`} transition-all p-5 rounded-2xl"
+							class="snap-center w-full max-w-full transition-all {compactPreview
+								? ''
+								: `m-1 border p-5 rounded-2xl ${
+										history.messages[messageId]?.modelIdx == modelIdx
+											? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
+													$mobile ? 'min-w-full' : 'min-w-80'
+												}`
+											: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
+													$mobile ? 'min-w-full' : 'min-w-80'
+												}`
+									}`}"
 							on:click={async () => {
 								onGroupClick(_messageId, modelIdx);
 							}}
@@ -366,6 +361,7 @@
 										{saveMessage}
 										{rateMessage}
 										{deleteMessage}
+										{allowDelete}
 										{actionMessage}
 										{submitMessage}
 										{continueResponse}
@@ -376,9 +372,14 @@
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
 										{addMessages}
+										{onToolCallResolved}
+										{forkHandler}
 										{readOnly}
+										{compactPreview}
 										{editCodeBlock}
 										{topPadding}
+										{onInsertToNote}
+										{shareMode}
 									/>
 								{/if}
 							{/key}
@@ -388,7 +389,7 @@
 			{/if}
 		</div>
 
-		{#if !readOnly}
+		{#if !compactPreview && !readOnly}
 			{#if !Object.keys(groupedMessageIds).find((modelIdx) => {
 				const { messageIds } = groupedMessageIds[modelIdx];
 				const _messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -402,23 +403,36 @@
 							<div class="w-full rounded-xl pl-5 pr-2 py-2 mt-2">
 								<Name>
 									{$i18n.t('Merged Response')}
-
-									{#if message.timestamp}
-										<span
-											class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
-										>
-											{dayjs(message.timestamp * 1000).format('LT')}
-										</span>
-									{/if}
 								</Name>
 
-								<div class="mt-1 markdown-prose w-full min-w-full">
+								<div class="mt-1 w-full min-w-full">
 									{#if (message?.content ?? '') === ''}
 										<Skeleton />
 									{:else}
-										<Markdown id={`merged`} content={message.content ?? ''} />
+										<div class="markdown-prose">
+											<Markdown id={`merged`} content={message.content ?? ''} />
+										</div>
 									{/if}
 								</div>
+
+								{#if message.timestamp}
+									<div
+										class="mt-0.5 flex justify-start whitespace-nowrap text-gray-600 dark:text-gray-500"
+									>
+										<Tooltip
+											className="flex self-center"
+											content={formatMessageTimestampFull(message.timestamp * 1000, $i18n.language)}
+											placement="bottom"
+										>
+											<time
+												datetime={new Date(message.timestamp * 1000).toISOString()}
+												class="hover-reveal ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+											>
+												{formatMessageTimestamp(message.timestamp * 1000, $i18n.language)}
+											</time>
+										</Tooltip>
+									</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -431,7 +445,7 @@
 									id="merge-response-button"
 									class="{true
 										? 'visible'
-										: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+										: 'hover-reveal'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										mergeResponsesHandler();
 									}}

@@ -1,45 +1,65 @@
-import json
+import asyncio
 import logging
 
-import aiohttp
 from open_webui.config import WEBUI_FAVICON_URL
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
-    AIOHTTP_CLIENT_TIMEOUT,
     VERSION,
 )
-from open_webui.retrieval.web.utils import validate_url
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
 
 # Let this message reach those for whom it was written, and
 # may no network partition deny the word its destination.
-async def post_webhook(name: str, url: str, message: str, event_data: dict) -> bool:
+def _event_text(message: str, description: str | None = None, event_data: dict | None = None) -> str:
+    lines = [message]
+    if description and description != message:
+        lines.append(description)
+
+    event_name = (event_data or {}).get('event')
+    if event_name:
+        lines.append(f'Event: {event_name}')
+
+    return '\n'.join(lines)
+
+
+async def post_webhook(name: str, url: str, message: str, event_data: dict, description: str | None = None) -> bool:
     try:
-        log.debug(f'post_webhook: {url}, {message}, {event_data}')
+        log.debug('post_webhook: %s, %s, %s', url, message, event_data)
         # Block private-IP / loopback / cloud-metadata targets — the URL is
         # caller-controlled (user notification settings under
         # ENABLE_USER_WEBHOOKS, automation notification triggers).
-        validate_url(url)
-        payload = {}
+        await asyncio.to_thread(validate_url, url)
+    except Exception as e:
+        log.warning('Webhook skipped, URL invalid or not publicly resolvable: %s', e)
+        return False
 
+    try:
+        payload = {}
         # Slack and Google Chat Webhooks
         if 'https://hooks.slack.com' in url or 'https://chat.googleapis.com' in url:
-            payload['text'] = message
+            payload['text'] = _event_text(message, description, event_data)
         # Discord Webhooks
         elif 'https://discord.com/api/webhooks' in url:
-            payload['content'] = message if len(message) < 2000 else f'{message[: 2000 - 20]}... (truncated)'
+            content = _event_text(message, description, event_data)
+            payload['content'] = content if len(content) < 2000 else f'{content[: 2000 - 20]}... (truncated)'
         # Microsoft Teams Webhooks
         elif 'webhook.office.com' in url:
             action = event_data.get('action', 'undefined')
-            user_data = event_data.get('user', '{}')
+            user_data = event_data.get('user') or event_data.get('actor') or {}
             if isinstance(user_data, dict):
                 user_dict = user_data
             else:
-                user_dict = json.loads(user_data)
-            facts = [{'name': name, 'value': value} for name, value in user_dict.items()]
+                user_dict = JSONCodec.loads(user_data)
+            facts = [{'name': key, 'value': value} for key, value in user_dict.items()]
+            if event_data.get('event'):
+                facts.insert(0, {'name': 'event', 'value': event_data.get('event')})
+            if description:
+                facts.insert(0, {'name': 'description', 'value': description})
             payload = {
                 '@type': 'MessageCard',
                 '@context': 'http://schema.org/extensions',
@@ -49,7 +69,11 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
                     {
                         'activityTitle': message,
                         'activitySubtitle': f'{name} ({VERSION}) - {action}',
+                        # LICENSE covers this Open WebUI webhook logo.
+                        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                        # https://docs.openwebui.com/license.
                         'activityImage': WEBUI_FAVICON_URL,
+                        'text': description,
                         'facts': facts,
                         'markdown': True,
                     }
@@ -57,12 +81,10 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
             }
         # Default Payload
         else:
-            payload = {**event_data}
+            payload = event_data
 
-        log.debug(f'payload: {payload}')
-        async with aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-        ) as session:
+        log.debug('payload: %s', payload)
+        async with get_ssrf_safe_session() as session:
             async with session.post(
                 url,
                 json=payload,
@@ -71,7 +93,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
             ) as r:
                 r_text = await r.text()
                 r.raise_for_status()
-                log.debug(f'r.text: {r_text}')
+                log.debug('r.text: %s', r_text)
 
         return True
     except Exception as e:

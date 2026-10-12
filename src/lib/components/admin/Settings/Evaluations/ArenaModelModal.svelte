@@ -14,13 +14,19 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
+	import LocalizedField from '$lib/components/common/LocalizedField.svelte';
 
 	export let show = false;
 	export let edit = false;
 
 	export let model = null;
+	export let onSubmit = async (_model) => true;
 
 	let name = '';
+	let locale = '';
+	let translations = {};
+	let originalMeta = {};
 	let id = '';
 
 	$: if (name) {
@@ -37,6 +43,9 @@
 		}
 	};
 
+	// LICENSE covers this Open WebUI fallback logo.
+	// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	// https://docs.openwebui.com/license.
 	let profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 	let description = '';
 
@@ -51,13 +60,13 @@
 	let showDeleteConfirmDialog = false;
 
 	const addModelHandler = () => {
-		if (selectedModelId) {
+		if (selectedModelId && !modelIds.includes(selectedModelId)) {
 			modelIds = [...modelIds, selectedModelId];
-			selectedModelId = '';
 		}
+		selectedModelId = '';
 	};
 
-	const submitHandler = () => {
+	const submitHandler = async () => {
 		loading = true;
 
 		if (!name || !id) {
@@ -69,7 +78,6 @@
 		if (!edit) {
 			if ($models.find((model) => model.name === name)) {
 				loading = false;
-				name = '';
 				toast.error($i18n.t('Model name already exists, please choose a different one'));
 				return;
 			}
@@ -79,6 +87,8 @@
 			id: id,
 			name: name,
 			meta: {
+				...originalMeta,
+				i18n: translations,
 				profile_image_url: profileImageUrl,
 				description: description || null,
 				model_ids: modelIds.length > 0 ? modelIds : null,
@@ -87,12 +97,21 @@
 			}
 		};
 
-		dispatch('submit', model);
-		loading = false;
+		try {
+			if ((await onSubmit(model)) === false) return;
+		} catch (error) {
+			toast.error(String(error));
+			return;
+		} finally {
+			loading = false;
+		}
 		show = false;
 
 		name = '';
 		id = '';
+		// LICENSE covers this Open WebUI fallback logo.
+		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		// https://docs.openwebui.com/license.
 		profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 		description = '';
 		modelIds = [];
@@ -100,12 +119,22 @@
 	};
 
 	const initModel = () => {
+		locale = '';
+		originalMeta = structuredClone(model?.meta ?? {});
+		translations = structuredClone(model?.meta?.i18n ?? {});
+		if (!model) {
+			name = '';
+			id = '';
+			description = '';
+			modelIds = [];
+			accessGrants = [];
+		}
 		if (model) {
 			name = model.name;
 			id = model.id;
 			profileImageUrl = model.meta.profile_image_url;
 			description = model.meta.description;
-			modelIds = model.meta.model_ids || [];
+			modelIds = [...new Set(model.meta.model_ids || [])];
 			filterMode = model.meta?.filter_mode ?? 'include';
 			accessGrants = model.meta.access_grants ?? [];
 		}
@@ -157,6 +186,12 @@
 					}}
 				>
 					<div class="px-1">
+						<div class="flex justify-end mb-3">
+							<LanguageModeSelect
+								bind:value={locale}
+								translatedLocales={Object.keys(translations)}
+							/>
+						</div>
 						<div class="flex justify-center pb-3">
 							<input
 								bind:this={imageInputElement}
@@ -248,12 +283,12 @@
 								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</div>
 
 								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										type="text"
+									<LocalizedField
 										bind:value={name}
+										bind:translations
+										{locale}
+										field="name"
 										placeholder={$i18n.t('Model Name')}
-										autocomplete="off"
 										required
 									/>
 								</div>
@@ -280,12 +315,12 @@
 							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
 
 							<div class="flex-1">
-								<input
-									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-									type="text"
+								<LocalizedField
 									bind:value={description}
+									bind:translations
+									{locale}
+									field="description"
 									placeholder={$i18n.t('Enter description')}
-									autocomplete="off"
 								/>
 							</div>
 						</div>
@@ -356,7 +391,7 @@
 								bind:value={selectedModelId}
 							>
 								<option value="">{$i18n.t('Select a model')}</option>
-								{#each $models.filter((m) => m?.owned_by !== 'arena') as model}
+								{#each $models.filter((m) => m?.owned_by !== 'arena' && !modelIds.includes(m?.id)) as model}
 									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 								{/each}
 							</select>
@@ -377,7 +412,7 @@
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 flex-row"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;
@@ -388,17 +423,15 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-								? ' cursor-not-allowed'
-								: ''}"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>
 							{$i18n.t('Save')}
 
 							{#if loading}
-								<div class="ml-2 self-center">
-									<Spinner />
+								<div class="shrink-0">
+									<Spinner className="size-3" />
 								</div>
 							{/if}
 						</button>

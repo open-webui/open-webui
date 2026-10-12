@@ -4,7 +4,7 @@
 </script>
 
 <svg
-	class={className}
+	class="overflow-visible {className}"
 	aria-hidden="true"
 	xmlns="http://www.w3.org/2000/svg"
 	stroke-width={strokeWidth}

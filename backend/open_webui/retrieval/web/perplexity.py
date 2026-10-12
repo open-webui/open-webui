@@ -38,9 +38,7 @@ def search_perplexity(
 
     """
 
-    # Handle ConfigVar object
-    if hasattr(api_key, '__str__'):
-        api_key = str(api_key)
+    api_key = str(api_key)
 
     try:
         url = 'https://api.perplexity.ai/chat/completions'

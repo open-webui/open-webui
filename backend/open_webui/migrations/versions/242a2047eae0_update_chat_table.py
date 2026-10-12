@@ -49,7 +49,7 @@ def upgrade():
 
     # Step 3: Migrate data from 'old_chat' to 'chat' (only if old_chat exists)
     # Re-check columns after potential rename above
-    current_cols = {c['name'] for c in inspector.get_columns('chat')}
+    current_cols = {c['name'] for c in sa.inspect(conn).get_columns('chat')}
     if 'old_chat' in current_cols:
         chat_table = table(
             'chat',
@@ -76,8 +76,12 @@ def upgrade():
 
 
 def downgrade():
+    conn = op.get_bind()
+    columns = {col['name'] for col in sa.inspect(conn).get_columns('chat')}
+
     # Step 1: Add 'old_chat' column back as Text
-    op.add_column('chat', sa.Column('old_chat', sa.Text(), nullable=True))
+    if 'old_chat' not in columns:
+        op.add_column('chat', sa.Column('old_chat', sa.Text(), nullable=True))
 
     # Step 2: Convert 'chat' JSON data back to text and store in 'old_chat'
     chat_table = table(
@@ -87,14 +91,14 @@ def downgrade():
         sa.Column('old_chat', sa.Text()),
     )
 
-    connection = op.get_bind()
-    results = connection.execute(select(chat_table.c.id, chat_table.c.chat))
-    for row in results:
-        text_data = json.dumps(row.chat) if row.chat is not None else None
-        connection.execute(sa.update(chat_table).where(chat_table.c.id == row.id).values(old_chat=text_data))
+    if 'chat' in columns:
+        results = conn.execute(select(chat_table.c.id, chat_table.c.chat))
+        for row in results:
+            text_data = json.dumps(row.chat) if row.chat is not None else None
+            conn.execute(sa.update(chat_table).where(chat_table.c.id == row.id).values(old_chat=text_data))
 
-    # Step 3: Remove the new 'chat' JSON column
-    op.drop_column('chat', 'chat')
+        # Step 3: Remove the new 'chat' JSON column
+        op.drop_column('chat', 'chat')
 
     # Step 4: Rename 'old_chat' back to 'chat'
     op.alter_column('chat', 'old_chat', new_column_name='chat', existing_type=sa.Text())

@@ -72,7 +72,6 @@ def _convert_column_to_json(table: str, column: str):
     dialect = conn.dialect.name
 
     t = sa.table(table, sa.column('id', sa.Text), sa.column(column, sa.Text))
-    t_json = sa.column(f'{column}_json', sa.JSON)
 
     # SQLite cannot ALTER COLUMN → must recreate column
     if dialect == 'sqlite':
@@ -90,9 +89,9 @@ def _convert_column_to_json(table: str, column: str):
                     parsed = None
 
             conn.execute(
-                sa.update(sa.table(table, sa.column('id'), t_json))
+                sa.update(sa.table(table, sa.column('id'), sa.column(f'{column}_json', sa.JSON)))
                 .where(sa.column('id') == uid)
-                .values({f'{column}_json': json.dumps(parsed) if parsed else None})
+                .values({f'{column}_json': parsed})
             )
 
         op.drop_column(table, column)
@@ -112,8 +111,7 @@ def _convert_column_to_text(table: str, column: str):
     conn = op.get_bind()
     dialect = conn.dialect.name
 
-    t = sa.table(table, sa.column('id', sa.Text), sa.column(column))
-    t_text = sa.column(f'{column}_text', sa.Text)
+    t = sa.table(table, sa.column('id', sa.Text), sa.column(column, sa.JSON))
 
     if dialect == 'sqlite':
         op.add_column(table, sa.Column(f'{column}_text', sa.Text(), nullable=True))
@@ -122,9 +120,9 @@ def _convert_column_to_text(table: str, column: str):
 
         for uid, raw in rows:
             conn.execute(
-                sa.update(sa.table(table, sa.column('id'), t_text))
+                sa.update(sa.table(table, sa.column('id'), sa.column(f'{column}_text', sa.Text)))
                 .where(sa.column('id') == uid)
-                .values({f'{column}_text': json.dumps(raw) if raw else None})
+                .values({f'{column}_text': json.dumps(raw) if raw is not None else None})
             )
 
         op.drop_column(table, column)
@@ -187,9 +185,7 @@ def upgrade() -> None:
         for uid, oauth_sub in rows:
             if oauth_sub:
                 provider, sub = oauth_sub.split('@', 1) if '@' in oauth_sub else ('oidc', oauth_sub)
-                conn.execute(
-                    sa.update(_user).where(_user.c.id == uid).values(oauth=json.dumps({provider: {'sub': sub}}))
-                )
+                conn.execute(sa.update(_user).where(_user.c.id == uid).values(oauth={provider: {'sub': sub}}))
 
     # ── Migrate api_key column → api_key table (only if old column still exists)
     if 'api_key' in user_columns:
@@ -228,7 +224,7 @@ def downgrade() -> None:
 
     for uid, oauth in rows:
         try:
-            data = json.loads(oauth)
+            data = oauth if isinstance(oauth, dict) else json.loads(oauth)
             provider = list(data.keys())[0]
             sub = data[provider].get('sub')
             oauth_sub = f'{provider}@{sub}'

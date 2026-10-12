@@ -1,13 +1,66 @@
-import copy
-import json
+import logging
+from copy import deepcopy
 from typing import Callable, Optional
 
+from fastapi import HTTPException
+
+from open_webui.utils.chat_variables import render_chat_variables, render_user_variables
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import (
     add_or_update_system_message,
+    convert_logit_bias_input_to_json,
     deep_update,
     replace_system_message_content,
 )
 from open_webui.utils.task import prompt_template, prompt_variables_template
+
+log = logging.getLogger(__name__)
+
+
+def apply_model_controls(params: dict, controls: dict, model_options: dict) -> dict:
+    """Expand approved choices into ordinary Custom Params before normal request processing."""
+    if not isinstance(model_options, dict):
+        raise HTTPException(400, 'Model control options must be an object.')
+    for key, choice in model_options.items():
+        # Picks for removed controls are skipped: the user has no menu left to clear them.
+        if key in controls and (not isinstance(choice, str) or choice not in controls[key]['options']):
+            raise HTTPException(400, f'Model control {key}: the selected option is no longer available.')
+    for key, control in controls.items():
+        choice = model_options.get(key, control.get('default'))
+        if choice is not None:
+            params['custom_params'] = deep_update(
+                deepcopy(params.get('custom_params') or {}), deepcopy(control['options'][choice]['params'])
+            )
+    return params
+
+
+async def resolve_system_prompt(
+    system: Optional[str],
+    metadata: Optional[dict] = None,
+    user=None,
+) -> str:
+    if not system:
+        return ''
+
+    if metadata:
+        system = render_chat_variables(
+            system,
+            metadata.get('chat_variables', {}),
+            required=False,
+        )
+
+    system = render_user_variables(system, getattr(user, 'variables', {}) if user else {})
+
+    # Metadata (WebUI Usage)
+    if metadata:
+        variables = metadata.get('variables', {})
+        if variables:
+            system = prompt_variables_template(system, variables)
+
+    # Legacy (API Usage)
+    system = await prompt_template(system, user)
+
+    return system
 
 
 # What goes out cannot be taken back. Let it be shaped
@@ -20,17 +73,9 @@ async def apply_system_prompt_to_body(
     user=None,
     replace: bool = False,
 ) -> dict:
+    system = await resolve_system_prompt(system, metadata, user)
     if not system:
         return form_data
-
-    # Metadata (WebUI Usage)
-    if metadata:
-        variables = metadata.get('variables', {})
-        if variables:
-            system = prompt_variables_template(system, variables)
-
-    # Legacy (API Usage)
-    system = await prompt_template(system, user)
 
     if replace:
         form_data['messages'] = replace_system_message_content(system, form_data.get('messages', []))
@@ -46,13 +91,64 @@ def apply_model_params_to_body(params: dict, form_data: dict, mappings: dict[str
         return form_data
 
     for key, value in params.items():
-        if value is not None:
+        if value is not None and key not in form_data:
             if key in mappings:
                 cast_func = mappings[key]
                 if isinstance(cast_func, Callable):
                     form_data[key] = cast_func(value)
             else:
                 form_data[key] = value
+
+    return form_data
+
+
+def apply_params_to_form_data(form_data: dict, model: dict, params: dict | None = None) -> dict:
+    payload_params = form_data.pop('params', {}) or {}
+    params = payload_params if params is None else dict(params)
+    custom_params = params.pop('custom_params', {})
+
+    open_webui_params = {
+        'stream_response': bool,
+        'stream_delta_chunk_size': int,
+        'function_calling': str,
+        'reasoning_tags': list,
+        'compact_token_threshold': int,
+        'system': str,
+        'note_id': str,
+        'tool_approval_mode': str,
+        'model_controls': dict,
+    }
+
+    for key in list(params.keys()):
+        if key in open_webui_params:
+            del params[key]
+
+    if custom_params:
+        for key, value in custom_params.items():
+            if isinstance(value, str):
+                try:
+                    custom_params[key] = JSONCodec.loads(value)
+                except JSONCodec.JSONDecodeError:
+                    pass
+
+        params = deep_update(params, custom_params)
+
+    if model.get('owned_by') == 'ollama':
+        form_data['options'] = {**params, **(form_data.get('options') or {})}
+    else:
+        if isinstance(params, dict):
+            for key, value in params.items():
+                if value is not None and key not in form_data:
+                    form_data[key] = value
+
+        if 'logit_bias' in params and params['logit_bias'] is not None and 'logit_bias' not in form_data:
+            try:
+                logit_bias = convert_logit_bias_input_to_json(params['logit_bias'])
+
+                if logit_bias:
+                    form_data['logit_bias'] = JSONCodec.loads(logit_bias)
+            except Exception as e:
+                log.exception(f'Error parsing logit_bias: {e}')
 
     return form_data
 
@@ -72,7 +168,11 @@ def remove_open_webui_params(params: dict) -> dict:
         'stream_delta_chunk_size': int,
         'function_calling': str,
         'reasoning_tags': list,
+        'compact_token_threshold': int,
         'system': str,
+        'note_id': str,
+        'tool_approval_mode': str,
+        'model_controls': dict,
     }
 
     for key in list(params.keys()):
@@ -93,8 +193,8 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
             if isinstance(value, str):
                 try:
                     # Attempt to parse the string as JSON
-                    custom_params[key] = json.loads(value)
-                except json.JSONDecodeError:
+                    custom_params[key] = JSONCodec.loads(value)
+                except JSONCodec.JSONDecodeError:
                     # If it fails, keep the original string
                     pass
 
@@ -127,8 +227,8 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
             if isinstance(value, str):
                 try:
                     # Attempt to parse the string as JSON
-                    custom_params[key] = json.loads(value)
-                except json.JSONDecodeError:
+                    custom_params[key] = JSONCodec.loads(value)
+                except JSONCodec.JSONDecodeError:
                     # If it fails, keep the original string
                     pass
 
@@ -176,7 +276,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         Parses a JSON string into a dictionary, handling potential JSONDecodeError.
         """
         try:
-            return json.loads(value)
+            return JSONCodec.loads(value)
         except Exception as e:
             return value
 
@@ -208,6 +308,8 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
         # may be injected by filter inlet functions).
         if 'thinking' in message:
             new_message['thinking'] = message['thinking']
+        elif reasoning_content := (message.get('reasoning_content') or message.get('reasoning')):
+            new_message['thinking'] = reasoning_content
 
         content = message.get('content', [])
         tool_calls = message.get('tool_calls', None)
@@ -231,7 +333,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
                     'id': tool_call.get('id', None),
                     'function': {
                         'name': tool_call.get('function', {}).get('name', ''),
-                        'arguments': json.loads(tool_call.get('function', {}).get('arguments', {})),
+                        'arguments': JSONCodec.loads(tool_call.get('function', {}).get('arguments', {})),
                     },
                 }
                 ollama_tool_calls.append(ollama_tool_call)
@@ -284,9 +386,10 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A modified payload compatible with the Ollama API.
     """
-    # Shallow copy metadata separately (may contain non-picklable objects)
+    # Only the top-level dict and the nested options dict are mutated below, so
+    # shallow copies suffice; deepcopy walked the entire message tree per call.
     metadata = openai_payload.get('metadata')
-    openai_payload = copy.deepcopy({k: v for k, v in openai_payload.items() if k != 'metadata'})
+    openai_payload = {k: v for k, v in openai_payload.items() if k != 'metadata'}
     if metadata is not None:
         openai_payload['metadata'] = dict(metadata)
     ollama_payload = {}
@@ -298,21 +401,18 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if 'tools' in openai_payload:
         ollama_payload['tools'] = openai_payload['tools']
 
-    if 'max_tokens' in openai_payload:
-        ollama_payload['num_predict'] = openai_payload['max_tokens']
-        del openai_payload['max_tokens']
-
     # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get('options'):
-        ollama_payload['options'] = openai_payload['options']
-        ollama_options = openai_payload['options']
+        # Copied before key deletions below so the caller's options stay intact
+        ollama_options = dict(openai_payload['options'])
+        ollama_payload['options'] = ollama_options
 
         def parse_json(value: str) -> dict:
             """
             Parses a JSON string into a dictionary, handling potential JSONDecodeError.
             """
             try:
-                return json.loads(value)
+                return JSONCodec.loads(value)
             except Exception as e:
                 return value
 
@@ -346,6 +446,11 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if 'stop' in openai_payload:
         ollama_options = ollama_payload.get('options', {})
         ollama_options['stop'] = openai_payload.get('stop')
+        ollama_payload['options'] = ollama_options
+
+    if 'max_tokens' in openai_payload:
+        ollama_options = ollama_payload.get('options', {})
+        ollama_options['num_predict'] = openai_payload['max_tokens']
         ollama_payload['options'] = ollama_options
 
     if 'metadata' in openai_payload:

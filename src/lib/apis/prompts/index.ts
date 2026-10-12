@@ -41,6 +41,7 @@ type PromptDiff = {
 	from_snapshot: object;
 	to_snapshot: object;
 	content_diff: string[];
+	line_endings_only?: boolean;
 	name_changed: boolean;
 	access_grants_changed: boolean;
 };
@@ -143,7 +144,8 @@ export const getPromptItems = async (
 	selectedTag: string | null,
 	orderBy: string | null,
 	direction: string | null,
-	page: number
+	page: number,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 
@@ -169,6 +171,7 @@ export const getPromptItems = async (
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list?${searchParams.toString()}`, {
 		method: 'GET',
+		signal,
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -183,6 +186,7 @@ export const getPromptItems = async (
 			return json;
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			error = err;
 			console.error(err);
 			return null;

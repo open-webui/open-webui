@@ -4,10 +4,12 @@
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as FocusTrap from 'focus-trap';
+	import { settings } from '$lib/stores';
+	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 	export let show = true;
 	export let size = 'md';
 	export let containerClassName = 'p-3';
-	export let className = 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-4xl';
+	export let className = 'bg-white dark:bg-gray-900 rounded-4xl';
 
 	let modalElement = null;
 	let mounted = false;
@@ -40,7 +42,12 @@
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape' && isTopModal()) {
+		if (
+			(event.key === 'Escape' ||
+				($settings?.keyboardShortcuts !== false &&
+					matchKeybinding(event) === Shortcut.CLOSE_MODAL)) &&
+			isTopModal()
+		) {
 			console.log('Escape');
 			show = false;
 		}
@@ -107,7 +114,7 @@
 		if (focusTrap) {
 			focusTrap.deactivate();
 		}
-		if (modalElement) {
+		if (modalElement && modalElement.parentNode === document.body) {
 			document.body.removeChild(modalElement);
 		}
 	});
@@ -121,7 +128,7 @@
 		bind:this={modalElement}
 		aria-modal="true"
 		role="dialog"
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/30 dark:bg-black/60 w-full h-screen max-h-[100dvh] {containerClassName}  flex justify-center z-9999 overflow-y-auto overscroll-contain"
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/45 dark:bg-black/60 w-full h-screen max-h-[100dvh] {containerClassName}  flex justify-center z-9999 overflow-y-auto overscroll-contain"
 		style="scrollbar-gutter: stable;"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {

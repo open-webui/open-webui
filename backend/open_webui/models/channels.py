@@ -1,4 +1,3 @@
-import json
 import secrets
 import time
 import uuid
@@ -10,7 +9,8 @@ from open_webui.models.access_grants import (
     AccessGrants,
 )
 from open_webui.models.groups import Groups
-from open_webui.utils.validate import validate_profile_image_url
+from open_webui.models.users import User
+from open_webui.utils.validate import validate_image_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import (
     JSON,
@@ -253,7 +253,7 @@ class ChannelWebhookForm(BaseModel):
     def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        return validate_profile_image_url(v)
+        return validate_image_url(v)
 
 
 class ChannelTable:
@@ -266,11 +266,11 @@ class ChannelTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[AsyncSession] = None,
     ) -> ChannelModel:
-        channel_data = ChannelModel.model_validate(channel).model_dump(exclude={'access_grants'})
-        channel_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(channel_data['id'], db=db)
+        channel_model = ChannelModel.model_validate(channel)
+        channel_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(channel_model.id, db=db)
         )
-        return ChannelModel.model_validate(channel_data)
+        return channel_model
 
     async def _collect_unique_user_ids(
         self,
@@ -289,7 +289,7 @@ class ChannelTable:
         users.add(invited_by)
 
         for group_id in group_ids or []:
-            group_user_ids = await Groups.get_group_user_ids_by_id(group_id)
+            group_user_ids = await Groups.get_group_user_ids_by_id(group_id, include_inherited=True)
             users.update(group_user_ids)
 
         return users
@@ -393,7 +393,9 @@ class ChannelTable:
 
     async def get_channels_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[ChannelModel]:
         async with get_async_db_context(db) as db:
-            user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                group.id for group in await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+            ]
 
             result = await db.execute(
                 select(Channel)
@@ -438,17 +440,17 @@ class ChannelTable:
 
             match_count = func.sum(
                 case(
-                    (ChannelMember.user_id.in_(unique_user_ids), 1),
+                    (User.id.in_(unique_user_ids), 1),
                     else_=0,
                 )
             )
 
             subquery = (
                 select(ChannelMember.channel_id)
+                .join(User, User.id == ChannelMember.user_id)
                 .group_by(ChannelMember.channel_id)
-                # 1. Channel must have exactly len(user_ids) members
-                .having(func.count(ChannelMember.user_id) == len(unique_user_ids))
-                # 2. All those members must be in unique_user_ids
+                # Match the exact set of accounts that still exist.
+                .having(func.count(User.id) == len(unique_user_ids))
                 .having(match_count == len(unique_user_ids))
                 .subquery()
             )
@@ -737,7 +739,9 @@ class ChannelTable:
                 return []
 
             # Preload user's group membership
-            user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                g.id for g in await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+            ]
 
             allowed_channels = []
 
@@ -813,7 +817,9 @@ class ChannelTable:
             stmt = select(Channel).filter(Channel.id == id)
 
             # Determine user groups
-            user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                group.id for group in await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
+            ]
 
             # Apply ACL rules
             stmt = self._has_permission(
@@ -869,7 +875,6 @@ class ChannelTable:
                 result = ChannelFile(**channel_file.model_dump())
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 if result:
                     return ChannelFileModel.model_validate(result)
                 else:

@@ -24,6 +24,7 @@
 
 			if (!model) {
 				goto('/workspace/models');
+				return;
 			}
 
 			if (!model?.write_access) {
@@ -39,18 +40,33 @@
 		const res = await updateModelById(localStorage.token, modelInfo.id, modelInfo);
 
 		if (res) {
-			await models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-				)
-			);
-			toast.success($i18n.t('Model updated successfully'));
-			await goto('/workspace/models');
+			try {
+				await models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
+					)
+				);
+				toast.success($i18n.t('Model updated successfully'));
+				await goto('/workspace/models');
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+			return res;
 		}
+		return false;
 	};
 </script>
 
 {#if model}
-	<ModelEditor edit={true} {model} {onSubmit} />
+	<ModelEditor
+		edit={true}
+		{model}
+		{onSubmit}
+		onBack={async () => {
+			await goto('/workspace/models');
+		}}
+	/>
 {/if}

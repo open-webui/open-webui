@@ -4,7 +4,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import MPS_INFERENCE_LOCK
+from open_webui.events import EVENTS, publish_event
+from open_webui.env import USE_SLIM
+from open_webui.retrieval.utils import cosine_similarity
 from open_webui.internal.db import get_async_session
+from open_webui.models.config import Config
 from open_webui.models.feedbacks import (
     FeedbackForm,
     FeedbackIdResponse,
@@ -24,6 +29,16 @@ log = logging.getLogger(__name__)
 
 
 router = APIRouter()
+
+EVALUATION_CONFIG_KEYS = {
+    'ENABLE_EVALUATION_ARENA_MODELS': 'evaluation.arena.enable',
+    'EVALUATION_ARENA_MODELS': 'evaluation.arena.models',
+}
+
+
+async def get_config_values(key_map: dict[str, str]) -> dict:
+    values = await Config.get_many(*key_map.values())
+    return {field: values[storage_key] for field, storage_key in key_map.items() if storage_key in values}
 
 
 # Leaderboard Elo Rating Computation
@@ -56,6 +71,8 @@ _embedding_model = None
 
 def _get_embedding_model():
     global _embedding_model
+    if USE_SLIM:
+        return None
     if _embedding_model is None:
         try:
             from sentence_transformers import SentenceTransformer
@@ -167,8 +184,9 @@ def _compute_similarities(feedbacks: list[LeaderboardFeedbackData], query: str) 
         return {}
 
     try:
-        tag_embeddings = embedding_model.encode(all_tags)
-        query_embedding = embedding_model.encode([query])[0]
+        with MPS_INFERENCE_LOCK:
+            tag_embeddings = embedding_model.encode(all_tags)
+            query_embedding = embedding_model.encode([query])[0]
     except Exception as e:
         log.error(f'Embedding error: {e}')
         return {}
@@ -203,6 +221,7 @@ class LeaderboardResponse(BaseModel):
 
 @router.get('/leaderboard', response_model=LeaderboardResponse)
 async def get_leaderboard(
+    request: Request,
     query: Optional[str] = None,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -212,7 +231,17 @@ async def get_leaderboard(
 
     similarities = None
     if query and query.strip():
-        similarities = await run_in_threadpool(_compute_similarities, feedbacks, query.strip())
+        if USE_SLIM:
+            tags = list({tag for feedback in feedbacks for tag in (feedback.data or {}).get('tags', [])})
+            embeddings = await request.app.state.EMBEDDING_FUNCTION([query.strip(), *tags], user=user)
+            scores = cosine_similarity(embeddings[0], embeddings[1:])
+            tag_scores = dict(zip(tags, scores.tolist()))
+            similarities = {
+                feedback.id: max((tag_scores.get(tag, 0) for tag in (feedback.data or {}).get('tags', [])), default=0)
+                for feedback in feedbacks
+            }
+        else:
+            similarities = await run_in_threadpool(_compute_similarities, feedbacks, query.strip())
 
     elo_stats = _calculate_elo(feedbacks, similarities)
     tags_by_model = _get_top_tags(feedbacks)
@@ -236,7 +265,7 @@ async def get_leaderboard(
     return LeaderboardResponse(entries=entries)
 
 
-@router.get('/leaderboard/{model_id}/history', response_model=ModelHistoryResponse)
+@router.get('/leaderboard/{model_id:path}/history', response_model=ModelHistoryResponse)
 async def get_model_history(
     model_id: str,
     days: int = 30,
@@ -255,10 +284,7 @@ async def get_model_history(
 
 @router.get('/config')
 async def get_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        'ENABLE_EVALUATION_ARENA_MODELS': request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS,
-        'EVALUATION_ARENA_MODELS': request.app.state.config.EVALUATION_ARENA_MODELS,
-    }
+    return await get_config_values(EVALUATION_CONFIG_KEYS)
 
 
 ############################
@@ -277,15 +303,25 @@ async def update_config(
     form_data: UpdateConfigForm,
     user=Depends(get_admin_user),
 ):
-    config = request.app.state.config
+    updates = {}
     if form_data.ENABLE_EVALUATION_ARENA_MODELS is not None:
-        config.ENABLE_EVALUATION_ARENA_MODELS = form_data.ENABLE_EVALUATION_ARENA_MODELS
+        updates['evaluation.arena.enable'] = form_data.ENABLE_EVALUATION_ARENA_MODELS
     if form_data.EVALUATION_ARENA_MODELS is not None:
-        config.EVALUATION_ARENA_MODELS = form_data.EVALUATION_ARENA_MODELS
-    return {
-        'ENABLE_EVALUATION_ARENA_MODELS': config.ENABLE_EVALUATION_ARENA_MODELS,
-        'EVALUATION_ARENA_MODELS': config.EVALUATION_ARENA_MODELS,
-    }
+        updates['evaluation.arena.models'] = form_data.EVALUATION_ARENA_MODELS
+    await Config.upsert(updates)
+    values = await get_config_values(EVALUATION_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_UPDATED,
+        actor=user,
+        subject_id='evaluation',
+        data={
+            'keys': list(updates.keys()),
+            'arena_enabled': values.get('ENABLE_EVALUATION_ARENA_MODELS'),
+            'arena_model_count': len(values.get('EVALUATION_ARENA_MODELS') or []),
+        },
+    )
+    return values
 
 
 @router.get('/feedbacks/models', response_model=list[str])
@@ -299,8 +335,19 @@ async def get_all_feedback_ids(user=Depends(get_admin_user), db: AsyncSession = 
 
 
 @router.delete('/feedbacks/all')
-async def delete_all_feedbacks(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_all_feedbacks(
+    request: Request,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     success = await Feedbacks.delete_all_feedbacks(db=db)
+    if success:
+        await publish_event(
+            request,
+            EVENTS.FEEDBACK_DELETED_ALL,
+            actor=user,
+            subject_id='all',
+        )
     return success
 
 
@@ -332,8 +379,20 @@ async def get_user_feedbacks(
 
 
 @router.delete('/feedbacks', response_model=bool)
-async def delete_feedbacks(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_feedbacks(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     success = await Feedbacks.delete_feedbacks_by_user_id(user.id, db=db)
+    if success:
+        await publish_event(
+            request,
+            EVENTS.FEEDBACK_DELETED_ALL,
+            actor=user,
+            subject_id=user.id,
+            subject_type='user',
+        )
     return success
 
 
@@ -377,6 +436,13 @@ async def create_feedback(
             detail=ERROR_MESSAGES.DEFAULT(),
         )
 
+    await publish_event(
+        request,
+        EVENTS.FEEDBACK_CREATED,
+        actor=user,
+        subject_id=feedback.id,
+        data={'rating': (feedback.data or {}).get('rating')},
+    )
     return feedback
 
 
@@ -395,6 +461,7 @@ async def get_feedback_by_id(id: str, user=Depends(get_verified_user), db: Async
 
 @router.post('/feedback/{id}', response_model=FeedbackModel)
 async def update_feedback_by_id(
+    request: Request,
     id: str,
     form_data: FeedbackForm,
     user=Depends(get_verified_user),
@@ -408,12 +475,22 @@ async def update_feedback_by_id(
     if not feedback:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
+    await publish_event(
+        request,
+        EVENTS.FEEDBACK_UPDATED,
+        actor=user,
+        subject_id=feedback.id,
+        data={'rating': (feedback.data or {}).get('rating')},
+    )
     return feedback
 
 
 @router.delete('/feedback/{id}')
 async def delete_feedback_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin':
         success = await Feedbacks.delete_feedback_by_id(id=id, db=db)
@@ -423,4 +500,10 @@ async def delete_feedback_by_id(
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
+    await publish_event(
+        request,
+        EVENTS.FEEDBACK_DELETED,
+        actor=user,
+        subject_id=id,
+    )
     return success

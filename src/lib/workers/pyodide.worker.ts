@@ -191,7 +191,7 @@ async function executeCode(
 
 	try {
 		// check if matplotlib is imported in the code
-		if (code.includes('matplotlib')) {
+		if (code.includes('matplotlib') && 'matplotlib' in self.pyodide.loadedPackages) {
 			// Override plt.show() to return base64 image
 			await self.pyodide.runPythonAsync(`import base64
 import os

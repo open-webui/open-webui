@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import { settings } from '$lib/stores';
 	import { tick } from 'svelte';
 
 	/** CSS classes for the sub-content container */
@@ -13,8 +15,34 @@
 	export let sideOffset = 8;
 
 	let open = false;
-	let triggerEl;
-	let contentEl;
+	let triggerEl: HTMLElement | null = null;
+	let contentEl: HTMLElement | null = null;
+
+	function trigger(node: HTMLElement) {
+		triggerEl = (node.firstElementChild as HTMLElement | null) || node;
+
+		async function handleClick(event: MouseEvent) {
+			event.preventDefault();
+			await openSub(true);
+		}
+
+		async function handleKeydown(event: KeyboardEvent) {
+			if (!['Enter', ' ', 'ArrowRight'].includes(event.key)) return;
+
+			event.preventDefault();
+			await openSub(true);
+		}
+
+		node.addEventListener('click', handleClick);
+		node.addEventListener('keydown', handleKeydown);
+
+		return {
+			destroy() {
+				node.removeEventListener('click', handleClick);
+				node.removeEventListener('keydown', handleKeydown);
+			}
+		};
+	}
 
 	function positionContent() {
 		if (!triggerEl || !contentEl) return;
@@ -28,7 +56,7 @@
 		contentEl.style.paddingRight = '0';
 
 		// Inherit min-width from parent dropdown container (apply to inner content)
-		const innerContent = contentEl.firstElementChild;
+		const innerContent = contentEl.firstElementChild as HTMLElement | null;
 		const parentContainer = triggerEl.closest('[class*="rounded"]')?.parentElement;
 		if (parentContainer && innerContent) {
 			const parentWidth = parentContainer.offsetWidth;
@@ -48,7 +76,12 @@
 			contentEl.style.paddingLeft = `${sideOffset}px`;
 		} else {
 			// Open to the left: position flush with trigger, bridge gap with right padding
-			contentEl.style.right = `${window.innerWidth - rect.left}px`;
+			// Neither side fits on narrow screens: overlap the menu to stay on screen
+			const right = Math.min(
+				window.innerWidth - rect.left,
+				window.innerWidth - contentWidth - sideOffset - 16
+			);
+			contentEl.style.right = `${right}px`;
 			contentEl.style.left = 'auto';
 			contentEl.style.paddingRight = `${sideOffset}px`;
 		}
@@ -70,28 +103,48 @@
 		contentEl.style.top = `${top}px`;
 	}
 
-	async function handleMouseEnter() {
+	async function openSub(focus = false) {
 		open = true;
 		await tick();
 		positionContent();
 		// Re-position after transition starts rendering real dimensions
 		setTimeout(positionContent, 50);
+
+		if (focus) {
+			contentEl?.focus();
+		}
 	}
 
-	function handleMouseLeave(event) {
+	async function handleMouseEnter() {
+		await openSub();
+	}
+
+	function handleContentKeydown(event: KeyboardEvent) {
+		if (event.key !== 'Escape') return;
+
+		event.stopPropagation();
+		open = false;
+		triggerEl?.focus();
+	}
+
+	function handleMouseLeave(event: MouseEvent) {
+		const relatedTarget = event.relatedTarget as Node | null;
+
 		// Don't close if moving to the sub-content (including its bridge padding)
-		if (contentEl?.contains(event.relatedTarget)) return;
-		if (triggerEl?.contains(event.relatedTarget)) return;
+		if (relatedTarget && contentEl?.contains(relatedTarget)) return;
+		if (relatedTarget && triggerEl?.contains(relatedTarget)) return;
 		open = false;
 	}
 
-	function handleContentMouseLeave(event) {
-		if (triggerEl?.contains(event.relatedTarget)) return;
-		if (contentEl?.contains(event.relatedTarget)) return;
+	function handleContentMouseLeave(event: MouseEvent) {
+		const relatedTarget = event.relatedTarget as Node | null;
+
+		if (relatedTarget && triggerEl?.contains(relatedTarget)) return;
+		if (relatedTarget && contentEl?.contains(relatedTarget)) return;
 		open = false;
 	}
 
-	function portal(node) {
+	function portal(node: HTMLElement) {
 		document.body.appendChild(node);
 		return {
 			destroy() {
@@ -107,8 +160,10 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-	bind:this={triggerEl}
-	class="w-full"
+	use:trigger
+	class="w-full {($settings?.highContrastMode ?? false)
+		? '[&>button:hover]:bg-gray-200! dark:[&>button:hover]:bg-gray-800!'
+		: '[&>button:hover]:bg-gray-50/60 dark:[&>button:hover]:bg-gray-800/60'}"
 	on:mouseenter={handleMouseEnter}
 	on:mouseleave={handleMouseLeave}
 >
@@ -118,10 +173,19 @@
 {#if open}
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<!-- Outer wrapper: positioned flush with trigger, invisible padding bridges the gap -->
-	<div use:portal bind:this={contentEl} on:mouseleave={handleContentMouseLeave}>
+	<div
+		use:portal
+		bind:this={contentEl}
+		role="menu"
+		tabindex="-1"
+		on:mouseleave={handleContentMouseLeave}
+		on:keydown={handleContentKeydown}
+	>
 		<!-- Inner content: visual styles and transition -->
-		<div class={contentClass} style="max-width: {maxWidth}px;" transition:flyAndScale>
-			<slot />
+		<div transition:flyAndScale>
+			<DropdownMenu className={contentClass} style="max-width: {maxWidth}px;">
+				<slot />
+			</DropdownMenu>
 		</div>
 	</div>
 {/if}

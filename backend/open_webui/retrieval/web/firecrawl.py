@@ -28,10 +28,10 @@ def build_firecrawl_url(base_url: str | None, path: str) -> str:
 
 
 def build_firecrawl_headers(api_key: str | None) -> dict[str, str]:
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {api_key or ""}',
-    }
+    headers = {'Content-Type': 'application/json'}
+    if api_key:
+        headers['Authorization'] = f'Bearer {api_key}'
+    return headers
 
 
 def get_firecrawl_timeout_seconds(timeout: Any) -> float | None:
@@ -225,7 +225,7 @@ def search_firecrawl(
                 )
             )
 
-        log.info(f'FireCrawl search results: {search_results}')
+        log.info('FireCrawl search results: %s', search_results)
         return search_results
     except Exception as e:
         log.error(f'Error in FireCrawl search: {e}')

@@ -1,20 +1,20 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 	import type { Token } from 'marked';
+	import { getContext } from 'svelte';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
+
+	const i18n: any = getContext('i18n');
 
 	export let id: string;
 	export let token: Token;
 
 	let html: string | null = null;
 
-	$: if (token.type === 'html' && token?.text) {
-		html = DOMPurify.sanitize(token.text);
-	} else {
-		html = null;
-	}
+	$: text = token.type === 'html' ? token?.text : null;
+	$: html = text ? DOMPurify.sanitize(text) : null;
 </script>
 
 {#if token.type === 'html'}
@@ -26,7 +26,7 @@
 			<video
 				class="w-full my-2"
 				src={videoSrc.replaceAll('&amp;', '&')}
-				title="Video player"
+				title={$i18n.t('Video player')}
 				frameborder="0"
 				referrerpolicy="strict-origin-when-cross-origin"
 				controls
@@ -43,7 +43,7 @@
 			<audio
 				class="w-full my-2"
 				src={audioSrc.replaceAll('&amp;', '&')}
-				title="Audio player"
+				title={$i18n.t('Audio player')}
 				controls
 			></audio>
 		{:else}
@@ -58,7 +58,7 @@
 			<iframe
 				class="w-full aspect-video my-2"
 				src={`https://www.youtube.com/embed/${ytId}`}
-				title="YouTube video player"
+				title={$i18n.t('YouTube video player')}
 				frameborder="0"
 				allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 				referrerpolicy="strict-origin-when-cross-origin"
@@ -73,7 +73,7 @@
 			<iframe
 				class="w-full my-2"
 				src={iframeSrc}
-				title="Embedded content"
+				title={$i18n.t('Embedded content')}
 				frameborder="0"
 				sandbox
 				on:load={(e) => {
@@ -110,9 +110,13 @@
 			<iframe
 				class="w-full my-2"
 				src={`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`}
-				title="Content"
+				title={$i18n.t('Content')}
 				frameborder="0"
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				referrerpolicy="strict-origin-when-cross-origin"

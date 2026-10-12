@@ -5,12 +5,13 @@
 	import { getUserInfoById } from '$lib/apis/users';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let noteId: string;
 	export let href: string;
 
 	let title = '';
+	let titleFallback = 'Untitled';
 	let author = '';
 	let loading = true;
 
@@ -18,7 +19,7 @@
 		try {
 			const note = await getNoteById(localStorage.token, noteId);
 			if (note) {
-				title = note.title || $i18n.t('Untitled');
+				title = note.title || '';
 
 				if (note.user_id) {
 					try {
@@ -32,7 +33,7 @@
 				}
 			}
 		} catch {
-			title = $i18n.t('Note');
+			titleFallback = 'Note';
 		} finally {
 			loading = false;
 		}
@@ -55,11 +56,11 @@
 >
 	<div class="flex flex-col justify-center w-full min-w-0">
 		<div class="dark:text-gray-100 text-sm flex justify-between items-center gap-2">
-			<div class="font-medium line-clamp-1 flex-1 min-w-0">
+			<div class="font-normal line-clamp-1 flex-1 min-w-0">
 				{#if loading}
 					<span class="text-gray-400">...</span>
 				{:else}
-					{title}
+					{title || (titleFallback === 'Note' ? $i18n.t('Note') : $i18n.t('Untitled'))}
 				{/if}
 			</div>
 			<div class="text-gray-500 text-xs shrink-0">{$i18n.t('Note')}</div>

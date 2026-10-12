@@ -123,7 +123,7 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
-		<div class=" flex flex-col h-full px-4">
+		<div class=" flex flex-col h-full px-2.5">
 			<!-- Results Area -->
 			<div
 				class=" pt-0.5 pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
@@ -144,7 +144,7 @@
 											class="w-full aspect-square object-cover rounded-lg border border-gray-100/30 dark:border-gray-850/30"
 										/>
 										<div
-											class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center"
+											class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition rounded-lg flex items-center justify-center"
 										>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -188,8 +188,9 @@
 									</div>
 									<div class=" absolute -top-1 -right-1">
 										<button
-											class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+											class=" bg-white text-black border border-white rounded-full hover-reveal transition"
 											type="button"
+											aria-label={$i18n.t('Remove image')}
 											on:click={() => removeImage(index)}
 										>
 											<svg
@@ -244,7 +245,7 @@
 							/>
 							<button
 								type="button"
-								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+								class="px-3.5 py-1.5 text-sm font-normal bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
 								on:click={() => fileInputElement?.click()}
 								on:dragover|preventDefault
 								on:drop={handleDrop}
@@ -257,14 +258,14 @@
 							{#if !loading}
 								<button
 									disabled={prompt.trim() === ''}
-									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+									class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
 									on:click={submitHandler}
 								>
 									{$i18n.t('Run')}
 								</button>
 							{:else}
 								<button
-									class="px-3.5 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg flex items-center gap-2"
+									class="px-3.5 py-1.5 text-sm font-normal bg-gray-300 text-black transition rounded-lg flex items-center gap-2"
 									disabled
 								>
 									<Spinner className="size-4" />

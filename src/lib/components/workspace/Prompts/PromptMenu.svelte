@@ -1,23 +1,34 @@
 <script lang="ts">
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { getContext } from 'svelte';
 	import { config, user } from '$lib/stores';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
+	export let writeAccess = true;
+
+	export let editHandler: Function;
 	export let shareHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
 	export let deleteHandler: Function;
+	export let accessHandler: (() => void) | null = null;
 	export let onClose: Function;
 
-	let show = false;
+	export let show = false;
+
+	const closeMenu = () => {
+		show = false;
+		onClose();
+	};
 </script>
 
 <Dropdown
@@ -33,54 +44,102 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="min-w-[170px] rounded-2xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-		>
-			{#if $config.features.enable_community_sharing}
+		<DropdownMenu className="min-w-[10.625rem]">
+			<button
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+				draggable="false"
+				disabled={!writeAccess}
+				on:click={() => {
+					editHandler();
+					closeMenu();
+				}}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="1.5"
+					stroke="currentColor"
+					class="size-3.5"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+					/>
+				</svg>
+
+				<div class="flex items-center">{$i18n.t('Edit')}</div>
+			</button>
+			{#if accessHandler && writeAccess}
 				<button
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => {
-						shareHandler();
+						accessHandler?.();
+						closeMenu();
 					}}
 				>
-					<Share />
+					<LockClosed className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Access')}</div>
+				</button>
+			{/if}
+
+			{#if $config.features.enable_community_sharing}
+				<button
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+					draggable="false"
+					disabled={!writeAccess}
+					on:click={() => {
+						shareHandler();
+						closeMenu();
+					}}
+				>
+					<Share className="size-3.5" />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</button>
 			{/if}
 
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				draggable="false"
 				on:click={() => {
 					cloneHandler();
+					closeMenu();
 				}}
 			>
-				<DocumentDuplicate />
+				<DocumentDuplicate className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</button>
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts_export}
 				<button
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					draggable="false"
 					on:click={() => {
 						exportHandler();
+						closeMenu();
 					}}
 				>
-					<Download />
+					<Download className="size-3.5" />
 					<div class="flex items-center">{$i18n.t('Export')}</div>
 				</button>
 			{/if}
 
-			<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+			<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />
 
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+				draggable="false"
+				disabled={!writeAccess}
 				on:click={() => {
 					deleteHandler();
+					closeMenu();
 				}}
 			>
-				<GarbageBin />
+				<GarbageBin className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

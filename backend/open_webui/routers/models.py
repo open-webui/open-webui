@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
-import json
 import logging
 import posixpath
+from copy import deepcopy
 from typing import Optional
 from urllib.parse import unquote
 
@@ -13,6 +13,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Query,
     Request,
     Response,
     status,
@@ -20,10 +21,18 @@ from fastapi import (
 from fastapi.responses import RedirectResponse, StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES
+from open_webui.env import (
+    BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_PROFILE_IMAGE_URL_FORWARDING,
+    PROFILE_IMAGE_ALLOWED_MIME_TYPES,
+)
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrants, normalize_access_grants
+from open_webui.models.config import Config
+from open_webui.models.files import Files
 from open_webui.models.groups import Groups
+from open_webui.models.model_history import ModelHistories, ModelHistoryModel, ModelHistoryResponse
 from open_webui.models.models import (
     ModelAccessListResponse,
     ModelAccessResponse,
@@ -35,15 +44,54 @@ from open_webui.models.models import (
     ModelResponse,
     Models,
 )
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.storage.provider import Storage
+from open_webui.utils.access_control import filter_allowed_access_grants, has_access, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from pydantic import BaseModel
+from open_webui.utils.chat_variables import get_chat_variables_schema
+from open_webui.utils.models import get_all_models
+from open_webui.utils.validate import BACKGROUND_IMAGE_MAX_BYTES, validate_background_image
+from open_webui.utils.voice_avatar import (
+    AVATAR_MAX_BYTES,
+    ANIMATION_MAX_BYTES,
+    validate_voice_avatar,
+    validate_voice_animation,
+)
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def model_response(model):
+    return model.model_dump() if model is not None else None
+
+
+async def _check_model_controls(form, previous, user, request):
+    old = previous.params.model_dump().get('model_controls', {}) if previous else {}
+    if 'model_controls' not in form.params.model_fields_set:
+        if old:
+            form.params.model_controls = previous.params.model_controls
+        return
+    controls = form.params.model_dump().get('model_controls', {})
+    if controls:
+        if not request.app.state.MODELS:
+            await get_all_models(request, user=user)
+        base = request.app.state.MODELS.get(form.base_model_id or form.id, {})
+        if 'pipe' in base or base.get('direct') or base.get('owned_by') == 'arena':
+            raise HTTPException(400, 'Model controls require a server-managed provider model.')
+
+
+def add_chat_variables_schema(model_dict: dict) -> dict:
+    system = (model_dict.get('params') or {}).get('system') if isinstance(model_dict.get('params'), dict) else None
+    schema = get_chat_variables_schema(system)
+    if schema:
+        model_dict.setdefault('meta', {})['chat_variables_schema'] = schema
+    elif isinstance(model_dict.get('meta'), dict):
+        model_dict['meta'].pop('chat_variables_schema', None)
+    return model_dict
 
 
 def _safe_static_redirect_path(url: str) -> str | None:
@@ -60,6 +108,9 @@ def _safe_static_redirect_path(url: str) -> str | None:
         if decoded == path:
             break
         path = decoded
+    # Fail closed: a value still encoded after the cap would be decoded further downstream.
+    if unquote(path) != path:
+        return None
     if '\x00' in path or '\\' in path:
         return None
     if not path.startswith('/'):
@@ -75,7 +126,61 @@ def _safe_static_redirect_path(url: str) -> str | None:
 
 
 def is_valid_model_id(model_id: str) -> bool:
-    return model_id and len(model_id) <= 256
+    return model_id and len(model_id) <= 256 and not any(char.isspace() for char in model_id)
+
+
+async def _verify_background_image(url: str | None, user, db, previous_url: str | None = None) -> None:
+    if not url or url == previous_url:
+        return
+    file_id = url.split('/')[-2]
+    file = await Files.get_file_by_id(file_id, db=db)
+    if not file or not (
+        user.role == 'admin' or file.user_id == user.id or await has_access_to_file(file_id, 'read', user, db=db)
+    ):
+        raise HTTPException(status_code=403, detail='Background image is not accessible.')
+    try:
+        path = await asyncio.to_thread(Storage.get_file, file.path)
+        with open(path, 'rb') as image:
+            data = await asyncio.to_thread(image.read, BACKGROUND_IMAGE_MAX_BYTES + 1)
+        content_type = await asyncio.to_thread(validate_background_image, data)
+    except (ValueError, OSError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if (file.meta or {}).get('content_type') != content_type:
+        if not await Files.update_file_metadata_by_id(file_id, {'content_type': content_type}, db=db):
+            raise HTTPException(status_code=500, detail='Could not validate background image.')
+
+
+async def _verify_voice_avatar(avatar, user, db, previous=None) -> None:
+    if not avatar:
+        return
+    assets = {avatar.file_id: (AVATAR_MAX_BYTES, validate_voice_avatar)}
+    for asset in [*avatar.states.values(), *avatar.gestures]:
+        if asset.file_id == avatar.file_id:
+            raise HTTPException(status_code=400, detail='An animation must be a VRMA file, not the avatar.')
+        assets[asset.file_id] = (ANIMATION_MAX_BYTES, validate_voice_animation)
+    previous_assets = (
+        (
+            {previous.file_id: validate_voice_avatar}
+            | {asset.file_id: validate_voice_animation for asset in [*previous.states.values(), *previous.gestures]}
+        )
+        if previous
+        else {}
+    )
+    for file_id, (limit, validate) in assets.items():
+        if previous_assets.get(file_id) is validate:
+            continue
+        file = await Files.get_file_by_id(file_id, db=db)
+        if not file or not (
+            user.role == 'admin' or file.user_id == user.id or await has_access_to_file(file_id, 'read', user, db=db)
+        ):
+            raise HTTPException(status_code=403, detail='Avatar or animation file is not accessible. Upload it again.')
+        try:
+            path = await asyncio.to_thread(Storage.get_file, file.path)
+            with open(path, 'rb') as source:
+                data = await asyncio.to_thread(source.read, limit + 1)
+            await asyncio.to_thread(validate, data)
+        except (ValueError, OSError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 async def _verify_knowledge_file_access(
@@ -114,7 +219,11 @@ async def _verify_knowledge_file_access(
 PAGE_ITEM_COUNT = 30
 
 
-@router.get('/list', response_model=ModelAccessListResponse)  # do NOT use "/" as path, conflicts with main.py
+@router.get(
+    '/list',
+    response_model=ModelAccessListResponse,
+    response_model_exclude={'items': {'__all__': {'meta': {'profile_image_url'}}}},
+)  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
     query: str | None = None,
     view_option: str | None = None,
@@ -143,7 +252,7 @@ async def get_models(
         filter['direction'] = direction
 
     # Pre-fetch user group IDs once - used for both filter and write_access check
-    groups = await Groups.get_groups_by_member_id(user.id, db=db)
+    groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
     user_group_ids = {group.id for group in groups}
 
     if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
@@ -168,19 +277,19 @@ async def get_models(
     # Strip profile_image_url from meta — images are served via /model/profile/image.
     items = []
     for model in result.items:
-        data = model.model_dump()
+        data = add_chat_variables_schema(model_response(model))
         if data.get('meta'):
             data['meta'].pop('profile_image_url', None)
-        items.append(
-            ModelAccessResponse(
-                **data,
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model.user_id
-                    or model.id in writable_model_ids
-                ),
-            )
+        write_access = (
+            (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+            or user.id == model.user_id
+            or model.id in writable_model_ids
         )
+        # Strip params (system prompt and other curated config) for read-only
+        # callers, mirroring the per-id endpoint.
+        if not write_access:
+            data['params'] = {}
+        items.append(ModelAccessResponse(**data, write_access=write_access))
 
     return ModelAccessListResponse(
         items=items,
@@ -193,9 +302,24 @@ async def get_models(
 ###########################
 
 
+@router.get('/all', response_model=list[ModelResponse])
+async def get_all_model_records(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+    return await Models.get_all_models(db=db)
+
+
+@router.get('/base/tags', response_model=list[str])
+async def get_base_model_tags(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+    tags = await Models.get_all_tags(user_id=user.id, is_admin=True, is_base_model=True, db=db)
+    return sorted(tags)
+
+
 @router.get('/base', response_model=list[ModelResponse])
-async def get_base_models(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
-    return await Models.get_base_models(db=db)
+async def get_base_models(
+    tag: str | None = None,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await Models.get_base_models(tag=tag, db=db)
 
 
 ###########################
@@ -227,12 +351,21 @@ async def create_new_model(
 ):
     """Create a new workspace model entry."""
     if user.role != 'admin' and not await has_permission(
-        user.id, 'workspace.models', request.app.state.config.USER_PERMISSIONS, db=db
+        user.id, 'workspace.models', await Config.get('user.permissions'), db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+    if not is_valid_model_id(form_data.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
+        )
+    if form_data.base_model_id == form_data.id:
+        # Should never be stored: a model cannot be based on itself.
+        form_data.base_model_id = None
 
     model = await Models.get_model_by_id(form_data.id, db=db)
     if model:
@@ -241,35 +374,61 @@ async def create_new_model(
             detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
         )
 
-    if not is_valid_model_id(form_data.id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
-        )
-
-    else:
-        await _verify_knowledge_file_access(
-            getattr(form_data.meta, 'knowledge', None) if form_data.meta else None,
-            user,
-            db,
-        )
-
-        form_data.access_grants = await filter_allowed_access_grants(
-            request.app.state.config.USER_PERMISSIONS,
-            user.id,
-            user.role,
-            form_data.access_grants,
-            'sharing.public_models',
-        )
-
-        model = await Models.insert_new_model(form_data, user.id, db=db)
-        if model:
-            return model
-        else:
+    if user.role != 'admin':
+        if not form_data.base_model_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.DEFAULT(),
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
             )
+
+        if not request.app.state.MODELS:
+            await get_all_models(request, user=user)
+        for base_model in request.app.state.MODELS.values():
+            base_model_id = base_model.get('id')
+            if base_model.get('preset') or not base_model_id:
+                continue
+
+            if form_data.id == base_model_id or (
+                base_model.get('owned_by') == 'ollama' and form_data.id == base_model_id.split(':', 1)[0]
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
+                )
+
+    await _verify_knowledge_file_access(
+        getattr(form_data.meta, 'knowledge', None) if form_data.meta else None,
+        user,
+        db,
+    )
+
+    await _verify_background_image(form_data.meta.background_image_url, user, db)
+    await _verify_voice_avatar(form_data.meta.voice_avatar, user, db)
+
+    form_data.access_grants = await filter_allowed_access_grants(
+        await Config.get('user.permissions'),
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_models',
+    )
+
+    await _check_model_controls(form_data, None, user, request)
+    model = await Models.insert_new_model(form_data, user.id, db=db)
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+    await publish_event(
+        request,
+        EVENTS.MODEL_CREATED,
+        actor=user,
+        subject_id=model.id,
+        data={'name': model.name},
+    )
+    return model_response(model)
 
 
 ############################
@@ -277,16 +436,21 @@ async def create_new_model(
 ############################
 
 
-@router.get('/export', response_model=list[ModelModel])
+class ModelExportResponse(ModelModel):
+    background_image_data: str | None = None
+
+
+@router.get('/export', response_model=list[ModelExportResponse])
 async def export_models(
     request: Request,
+    ids: list[str] | None = Query(None),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not await has_permission(
         user.id,
         'workspace.models_export',
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         db=db,
     ):
         raise HTTPException(
@@ -295,9 +459,36 @@ async def export_models(
         )
 
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
-        return await Models.get_models(db=db)
+        models = await Models.get_models(db=db, ids=ids)
     else:
-        return await Models.get_models_by_user_id(user.id, db=db)
+        models = await Models.get_models(writable_by_user_id=user.id, db=db, ids=ids)
+    if ids is not None:
+        requested = set(ids)
+        if requested != {model.id for model in models}:
+            raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    exported = []
+    for model in models:
+        data = model_response(model)
+        url = model.meta.background_image_url
+        if url:
+            try:
+                file = await Files.get_file_by_id(url.split('/')[-2], db=db)
+                if not file:
+                    raise ValueError('Image file is missing')
+                path = await asyncio.to_thread(Storage.get_file, file.path)
+                with open(path, 'rb') as image:
+                    image_data = await asyncio.to_thread(image.read, BACKGROUND_IMAGE_MAX_BYTES + 1)
+                content_type = await asyncio.to_thread(validate_background_image, image_data)
+                data['background_image_data'] = f'data:{content_type};base64,' + base64.b64encode(image_data).decode(
+                    'ascii'
+                )
+                data['meta']['background_image_url'] = None
+            except Exception as error:
+                raise HTTPException(
+                    status_code=400, detail=f'Could not export background for model {model.id}.'
+                ) from error
+        exported.append(data)
+    return exported
 
 
 ############################
@@ -319,7 +510,7 @@ async def import_models(
     if user.role != 'admin' and not await has_permission(
         user.id,
         'workspace.models_import',
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         db=db,
     ):
         raise HTTPException(
@@ -343,7 +534,7 @@ async def import_models(
             # per-model has_access calls (N+1 avoidance).
             existing_model_ids = list(existing_models.keys())
             if user.role != 'admin' and existing_model_ids:
-                groups = await Groups.get_groups_by_member_id(user.id, db=db)
+                groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in groups}
                 writable_model_ids = await AccessGrants.get_accessible_resource_ids(
                     user_id=user.id,
@@ -356,10 +547,16 @@ async def import_models(
             else:
                 writable_model_ids = set(existing_model_ids)
 
+            base_model_ids = None
+            imported_ids = []
             for model_data in data:
                 model_id = model_data.get('id')
 
                 if model_id and is_valid_model_id(model_id):
+                    if model_data.get('base_model_id') == model_id:
+                        # Should never be stored: heal bad exports/API payloads.
+                        model_data['base_model_id'] = None
+
                     # Defense-in-depth: skip models referencing inaccessible files
                     try:
                         await _verify_knowledge_file_access(
@@ -390,8 +587,23 @@ async def import_models(
                             )
                             continue
 
+                        if (
+                            user.role != 'admin'
+                            and existing_model.base_model_id
+                            and not model_data.get('base_model_id', existing_model.base_model_id)
+                        ):
+                            log.warning(
+                                'import_models: user %s skipped model %s (cannot clear base model)',
+                                user.id,
+                                model_id,
+                            )
+                            continue
+
                         # Update existing model
-                        model_data['meta'] = model_data.get('meta', {})
+                        model_data['meta'] = {
+                            **existing_model.meta.model_dump(),
+                            **(model_data.get('meta') or {}),
+                        }
                         model_data['params'] = model_data.get('params', {})
 
                         updated_model = ModelForm(**{**existing_model.model_dump(), **model_data})
@@ -400,29 +612,136 @@ async def import_models(
                         # metadata-only imports.
                         if 'access_grants' in model_data:
                             updated_model.access_grants = await filter_allowed_access_grants(
-                                request.app.state.config.USER_PERMISSIONS,
+                                await Config.get('user.permissions'),
                                 user.id,
                                 user.role,
                                 updated_model.access_grants,
                                 'sharing.public_models',
                             )
-                        await Models.update_model_by_id(model_id, updated_model, db=db)
+                        imported_model = updated_model
                     else:
                         # Insert new model
                         model_data['meta'] = model_data.get('meta', {})
                         model_data['params'] = model_data.get('params', {})
                         new_model = ModelForm(**model_data)
+
+                        if user.role != 'admin':
+                            if not new_model.base_model_id:
+                                log.warning(
+                                    'import_models: user %s skipped model %s (no base model set)',
+                                    user.id,
+                                    model_id,
+                                )
+                                continue
+
+                            if base_model_ids is None:
+                                base_model_ids = set()
+                                if not request.app.state.MODELS:
+                                    await get_all_models(request, user=user)
+                                for base_model in request.app.state.MODELS.values():
+                                    base_model_id = base_model.get('id')
+                                    if base_model.get('preset') or not base_model_id:
+                                        continue
+
+                                    base_model_ids.add(base_model_id)
+                                    if base_model.get('owned_by') == 'ollama':
+                                        base_model_ids.add(base_model_id.split(':', 1)[0])
+
+                            if model_id in base_model_ids:
+                                log.warning(
+                                    'import_models: user %s skipped model %s (id belongs to a base model)',
+                                    user.id,
+                                    model_id,
+                                )
+                                continue
+
                         new_model.access_grants = await filter_allowed_access_grants(
-                            request.app.state.config.USER_PERMISSIONS,
+                            await Config.get('user.permissions'),
                             user.id,
                             user.role,
                             new_model.access_grants,
                             'sharing.public_models',
                         )
-                        await Models.insert_new_model(user_id=user.id, form_data=new_model, db=db)
+                        imported_model = new_model
+
+                    await _check_model_controls(imported_model, existing_model, user, request)
+                    uploaded = None
+                    save_attempted = False
+                    try:
+                        encoded = model_data.pop('background_image_data', None)
+                        if encoded is not None:
+                            if (
+                                not isinstance(encoded, str)
+                                or len(encoded) > 4 * ((BACKGROUND_IMAGE_MAX_BYTES + 2) // 3) + 64
+                            ):
+                                raise ValueError('Background image must be at most 5 MiB.')
+                            header, payload = encoded.split(',', 1)
+                            image_data = base64.b64decode(payload, validate=True)
+                            content_type = await asyncio.to_thread(validate_background_image, image_data)
+                            if header != f'data:{content_type};base64':
+                                raise ValueError('Invalid background image data URI.')
+                            from fastapi import UploadFile
+                            from open_webui.routers.files import upload_file_handler
+
+                            uploaded = await upload_file_handler(
+                                request,
+                                file=UploadFile(
+                                    file=io.BytesIO(image_data),
+                                    filename='background.' + content_type.split('/')[1],
+                                ),
+                                metadata=None,
+                                process=False,
+                                user=user,
+                                db=db,
+                            )
+                            imported_model.meta.background_image_url = f'/api/v1/files/{uploaded.id}/content'
+                        await _verify_background_image(
+                            imported_model.meta.background_image_url,
+                            user,
+                            db,
+                            existing_model.meta.background_image_url if existing_model else None,
+                        )
+                        if existing_model and 'voice_avatar' not in imported_model.meta.model_fields_set:
+                            imported_model.meta.voice_avatar = existing_model.meta.voice_avatar
+                        await _verify_voice_avatar(
+                            imported_model.meta.voice_avatar,
+                            user,
+                            db,
+                            existing_model.meta.voice_avatar if existing_model else None,
+                        )
+                        save_attempted = True
+                        saved = (
+                            await Models.update_model_by_id(model_id, imported_model, db=db, user_id=user.id)
+                            if existing_model
+                            else await Models.insert_new_model(user_id=user.id, form_data=imported_model, db=db)
+                        )
+                        if not saved:
+                            raise HTTPException(status_code=500, detail=f'Could not import model {model_id}.')
+                    except Exception:
+                        # A failed response can follow a commit; history may retain this upload.
+                        if uploaded and not save_attempted:
+                            try:
+                                await Files.delete_file_by_id(uploaded.id, db=db)
+                                await asyncio.to_thread(Storage.delete_file, uploaded.path)
+                            except Exception:
+                                log.exception('Could not clean up failed model background upload')
+                        raise
+
+                    imported_ids.append(model_id)
+            await publish_event(
+                request,
+                EVENTS.MODEL_IMPORTED,
+                actor=user,
+                subject_type='model',
+                data={'count': len(imported_ids), 'model_ids': imported_ids},
+            )
             return True
         else:
             raise HTTPException(status_code=400, detail='Invalid JSON format')
+    except HTTPException:
+        raise
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
@@ -444,7 +763,27 @@ async def sync_models(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    return await Models.sync_models(user.id, form_data.models, db=db)
+    existing = {model.id: model for model in await Models.get_models_by_ids([m.id for m in form_data.models], db=db)}
+    for model in form_data.models:
+        previous = existing.get(model.id)
+        await _check_model_controls(model, previous, user, request)
+        if previous and 'voice_avatar' not in model.meta.model_fields_set:
+            model.meta.voice_avatar = previous.meta.voice_avatar
+        await _verify_voice_avatar(model.meta.voice_avatar, user, db, previous.meta.voice_avatar if previous else None)
+        if previous and 'background_image_url' not in model.meta.model_fields_set:
+            model.meta.background_image_url = previous.meta.background_image_url
+        await _verify_background_image(
+            model.meta.background_image_url, user, db, previous.meta.background_image_url if previous else None
+        )
+    models = await Models.sync_models(user.id, form_data.models, db=db)
+    await publish_event(
+        request,
+        EVENTS.MODEL_SYNCED,
+        actor=user,
+        subject_type='model',
+        data={'count': len(models), 'model_ids': [model.id for model in models]},
+    )
+    return models
 
 
 ###########################
@@ -480,7 +819,8 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
             permission='read',
             db=db,
         ):
-            model_dict = model.model_dump()
+            model_dict = model_response(model)
+            model_dict = add_chat_variables_schema(model_dict)
             # Strip params (system prompt and other admin-curated config)
             # for read-only callers — matches the params strip already
             # enforced on /api/models in utils/models.py.  Owners, admins
@@ -510,6 +850,143 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
 ###########################
 
 
+async def authorized_model_history(id, user, db):
+    model = await Models.get_model_by_id(id, db=db)
+    if not model:
+        raise HTTPException(404, ERROR_MESSAGES.NOT_FOUND)
+    if not (
+        user.id == model.user_id
+        or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='model', resource_id=id, permission='write', db=db
+        )
+    ):
+        raise HTTPException(403, ERROR_MESSAGES.ACCESS_PROHIBITED)
+    return model
+
+
+@router.get('/model/history', response_model=list[ModelHistoryResponse])
+async def get_model_history(
+    id: str,
+    page: int = 1,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await authorized_model_history(id, user, db)
+    return await ModelHistories.get_history_by_model_id(id, page, db=db)
+
+
+@router.get('/model/history/{history_id}', response_model=ModelHistoryModel)
+async def get_model_history_entry(
+    id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await authorized_model_history(id, user, db)
+    entry = await ModelHistories.get_history_by_id(id, history_id, db=db)
+    if not entry:
+        raise HTTPException(404, 'Model version not found')
+    return entry
+
+
+@router.delete('/model/history/{history_id}', response_model=bool)
+async def delete_model_history_entry(
+    id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await authorized_model_history(id, user, db)
+    if not await ModelHistories.delete_history_entry(id, history_id, db):
+        raise HTTPException(404, 'Model version not found')
+    return True
+
+
+async def _verify_version_dependencies(request, form, user, db):
+    from open_webui.models.functions import Functions
+    from open_webui.models.knowledge import Knowledges
+    from open_webui.models.skills import Skills
+    from open_webui.routers.terminals import list_terminal_servers
+    from open_webui.routers.tools import get_tools
+
+    async def require_resource(resource_type, resource_id, resource):
+        if not resource or getattr(resource, 'is_active', True) is False:
+            raise HTTPException(400, f'Referenced {resource_type} is unavailable: {resource_id}')
+        if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) and resource.user_id != user.id:
+            if not await AccessGrants.has_access(
+                user_id=user.id, resource_type=resource_type, resource_id=resource_id, permission='read', db=db
+            ):
+                raise HTTPException(403, f'Referenced {resource_type} is not accessible: {resource_id}')
+
+    if form.base_model_id:
+        available = await get_all_models(request, user=user)
+        if not any(model['id'] == form.base_model_id for model in available):
+            raise HTTPException(400, 'The base model is unavailable.')
+    for item in form.meta.knowledge or []:
+        if not isinstance(item, dict) or not item.get('id') or item.get('legacy'):
+            continue
+        if item.get('type') == 'file':
+            file = await Files.get_file_by_id(item['id'], db=db)
+            if not file or not (user.role == 'admin' or await has_access_to_file(file.id, 'read', user, db=db)):
+                raise HTTPException(400, 'A referenced knowledge file is missing or inaccessible.')
+        else:
+            await require_resource('knowledge', item['id'], await Knowledges.get_knowledge_by_id(item['id'], db=db))
+    for skill_id in getattr(form.meta, 'skillIds', None) or []:
+        await require_resource('skill', skill_id, await Skills.get_skill_by_id(skill_id, db=db))
+    tool_ids = set(getattr(form.meta, 'toolIds', None) or [])
+    if tool_ids:
+        available_tools = {tool.id for tool in await get_tools(request, user=user, db=db)}
+        if not tool_ids.issubset(available_tools):
+            raise HTTPException(400, 'A referenced tool is missing or inaccessible.')
+    for key in ('filterIds', 'defaultFilterIds', 'actionIds'):
+        for function_id in getattr(form.meta, key, None) or []:
+            function = await Functions.get_function_by_id(function_id, db=db)
+            if not function or not function.is_active:
+                raise HTTPException(400, f'A referenced function is unavailable: {function_id}')
+    terminal_id = getattr(form.meta, 'terminalId', None)
+    if terminal_id and terminal_id not in {t['id'] for t in await list_terminal_servers(request, user=user)}:
+        raise HTTPException(400, 'The referenced terminal is missing or inaccessible.')
+
+
+class ModelVersionForm(BaseModel):
+    version_id: str
+
+
+@router.post('/model/update/version', response_model=ModelModel)
+async def set_model_version(
+    request: Request,
+    id: str,
+    form_data: ModelVersionForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await authorized_model_history(id, user, db)
+    entry = await ModelHistories.get_history_by_id(id, form_data.version_id, db=db)
+    if not entry:
+        raise HTTPException(404, 'Model version not found')
+    form = ModelForm(id=id, **deepcopy(entry.snapshot))
+    # A missing historical controls key means an empty configuration, not "preserve current".
+    form.params.model_fields_set.add('model_controls')
+    if user.role != 'admin' and model.base_model_id and not form.base_model_id:
+        raise HTTPException(403, ERROR_MESSAGES.ACCESS_PROHIBITED)
+    await _check_model_controls(form, model, user, request)
+    await _verify_version_dependencies(request, form, user, db)
+    await _verify_background_image(form.meta.background_image_url, user, db)
+    await _verify_voice_avatar(form.meta.voice_avatar, user, db)
+    result = await Models.update_model_by_id(id, form, db=db, user_id=user.id, production_version_id=entry.id)
+    if result is None:
+        raise HTTPException(404, ERROR_MESSAGES.NOT_FOUND)
+    await publish_event(
+        request,
+        EVENTS.MODEL_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'name': result.name, 'version_id': result.version_id},
+    )
+    return model_response(result)
+
+
 @router.get('/model/profile/image')
 async def get_model_profile_image(
     request: Request,
@@ -520,22 +997,40 @@ async def get_model_profile_image(
     profile_image_url = None
     updated_at = None
 
+    bypass_access_control = BYPASS_MODEL_ACCESS_CONTROL or (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+
     # First, check the database for regular models
     model_meta = await Models.get_model_meta_by_id(id, db=db)
     if model_meta:
-        meta, updated_at = model_meta
-        profile_image_url = (meta or {}).get('profile_image_url')
+        meta, model_user_id, model_updated_at = model_meta
+        # Denied callers get the default image rather than an error, so model ids stay unprobeable.
+        if (
+            bypass_access_control
+            or user.id == model_user_id
+            or await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='model',
+                resource_id=id,
+                permission='read',
+                db=db,
+            )
+        ):
+            profile_image_url = (meta or {}).get('profile_image_url')
+            updated_at = model_updated_at
 
     # Fallback: check arena models stored in config (not in the DB)
     if not profile_image_url:
-        arena_models = getattr(
-            getattr(request.app.state, 'config', None),
-            'EVALUATION_ARENA_MODELS',
-            [],
-        )
+        arena_models = await Config.get('evaluation.arena.models', []) or []
         for arena_model in arena_models:
             if arena_model.get('id') == id:
-                profile_image_url = arena_model.get('meta', {}).get('profile_image_url')
+                arena_meta = arena_model.get('meta', {})
+                access_grants = arena_meta.get('access_grants', [])
+                if (
+                    bypass_access_control
+                    or (not access_grants and user.role == 'admin')
+                    or await has_access(user.id, permission='read', access_grants=access_grants, db=db)
+                ):
+                    profile_image_url = arena_meta.get('profile_image_url')
                 break
 
     if profile_image_url:
@@ -557,6 +1052,9 @@ async def get_model_profile_image(
 
                 # only serve known-safe raster types inline; reject SVG/unknown (can run script on our origin)
                 if media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+                    # LICENSE covers this Open WebUI fallback logo.
+                    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                    # https://docs.openwebui.com/license.
                     return RedirectResponse(
                         url='/static/favicon.png',
                         status_code=status.HTTP_302_FOUND,
@@ -584,6 +1082,9 @@ async def get_model_profile_image(
                     status_code=status.HTTP_302_FOUND,
                 )
 
+    # LICENSE covers this Open WebUI fallback logo.
+    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+    # https://docs.openwebui.com/license.
     return RedirectResponse(
         url='/static/favicon.png',
         status_code=status.HTTP_302_FOUND,
@@ -596,7 +1097,9 @@ async def get_model_profile_image(
 
 
 @router.post('/model/toggle', response_model=ModelResponse | None)
-async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def toggle_model_by_id(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     model = await Models.get_model_by_id(id, db=db)
     if model:
         if (
@@ -613,7 +1116,15 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: Async
             model = await Models.toggle_model_by_id(id, db=db)
 
             if model:
-                return model
+                await publish_event(
+                    request,
+                    EVENTS.MODEL_ENABLED if model.is_active else EVENTS.MODEL_DISABLED,
+                    actor=user,
+                    subject_id=model.id,
+                    subject_type='model',
+                    data={'name': model.name},
+                )
+                return model_response(model)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -673,16 +1184,63 @@ async def update_model_by_id(
         db,
     )
 
-    form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
-        user.id,
-        user.role,
-        form_data.access_grants,
-        'sharing.public_models',
-    )
+    if 'base_model_id' not in form_data.model_fields_set:
+        form_data.base_model_id = model.base_model_id
+    if form_data.base_model_id == form_data.id:
+        # Should never be stored: a model cannot be based on itself.
+        form_data.base_model_id = None
 
-    model = await Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()), db=db)
-    return model
+    if user.role != 'admin' and model.base_model_id and not form_data.base_model_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    if 'profile_image_url' not in form_data.meta.model_fields_set:
+        form_data.meta.profile_image_url = model.meta.profile_image_url
+
+    if 'voice_avatar' not in form_data.meta.model_fields_set:
+        form_data.meta.voice_avatar = model.meta.voice_avatar
+    await _verify_voice_avatar(form_data.meta.voice_avatar, user, db, model.meta.voice_avatar)
+    if 'background_image_url' not in form_data.meta.model_fields_set:
+        form_data.meta.background_image_url = model.meta.background_image_url
+    await _verify_background_image(form_data.meta.background_image_url, user, db, model.meta.background_image_url)
+
+    if form_data.access_grants is not None:
+        # The editor resends every stored grant, so re-checking them would strip sharing this user cannot re-create.
+        existing_access_grants = {
+            (grant.principal_type, grant.principal_id, grant.permission) for grant in model.access_grants
+        }
+        submitted_access_grants_map = {
+            (grant['principal_type'], grant['principal_id'], grant['permission']): grant
+            for grant in normalize_access_grants(form_data.access_grants)
+        }
+        preserved_access_grants = [
+            grant for key, grant in submitted_access_grants_map.items() if key in existing_access_grants
+        ]
+        new_access_grants = [
+            grant for key, grant in submitted_access_grants_map.items() if key not in existing_access_grants
+        ]
+
+        form_data.access_grants = preserved_access_grants + await filter_allowed_access_grants(
+            await Config.get('user.permissions'),
+            user.id,
+            user.role,
+            new_access_grants,
+            'sharing.public_models',
+        )
+
+    await _check_model_controls(form_data, model, user, request)
+    model = await Models.update_model_by_id(form_data.id, form_data, db=db, user_id=user.id)
+    if model:
+        await publish_event(
+            request,
+            EVENTS.MODEL_UPDATED,
+            actor=user,
+            subject_id=model.id,
+            data={'name': model.name},
+        )
+    return model_response(model)
 
 
 ############################
@@ -691,7 +1249,7 @@ async def update_model_by_id(
 
 
 class ModelAccessGrantsForm(BaseModel):
-    id: str
+    id: str = Field(pattern=r'^\S+$')
     name: str | None = None
     access_grants: list[dict]
 
@@ -746,7 +1304,7 @@ async def update_model_access_by_id(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -757,7 +1315,14 @@ async def update_model_access_by_id(
 
     await Models.update_model_updated_at_by_id(form_data.id, db=db)
 
-    return await Models.get_model_by_id(form_data.id, db=db)
+    model = await Models.get_model_by_id(form_data.id, db=db)
+    await publish_event(
+        request,
+        EVENTS.MODEL_ACCESS_UPDATED,
+        actor=user,
+        subject_id=form_data.id,
+    )
+    return model_response(model)
 
 
 ############################
@@ -767,6 +1332,7 @@ async def update_model_access_by_id(
 
 @router.post('/model/delete', response_model=bool)
 async def delete_model_by_id(
+    request: Request,
     form_data: ModelIdForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -795,10 +1361,22 @@ async def delete_model_by_id(
         )
 
     result = await Models.delete_model_by_id(form_data.id, db=db)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.MODEL_DELETED,
+            actor=user,
+            subject_id=form_data.id,
+            data={'name': model.name},
+        )
     return result
 
 
 @router.delete('/delete/all', response_model=bool)
-async def delete_all_models(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_all_models(
+    request: Request, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     result = await Models.delete_all_models(db=db)
+    if result:
+        await publish_event(request, EVENTS.MODEL_DELETED, actor=user, subject_type='model')
     return result

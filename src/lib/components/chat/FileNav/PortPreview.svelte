@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { getPortProxyUrl } from '$lib/apis/terminal';
+	import { settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -202,7 +203,7 @@
 			<input
 				type="text"
 				bind:value={urlInput}
-				class="w-full text-[11px] font-mono bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3 py-1 outline-none focus:border-blue-400 dark:focus:border-blue-500 focus:ring-1 focus:ring-blue-400/20 text-gray-600 dark:text-gray-300 transition"
+				class="w-full text-[0.6875rem] font-mono bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3 py-1 outline-none focus:border-blue-400 dark:focus:border-blue-500 focus:ring-1 focus:ring-blue-400/20 text-gray-600 dark:text-gray-300 transition"
 				placeholder="localhost:{port}"
 			/>
 		</form>
@@ -268,7 +269,9 @@
 				src={proxyUrl}
 				title="Port {port} preview"
 				class="w-full h-full border-0 bg-white"
-				sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+				sandbox="allow-scripts{($settings?.terminalPreviewAllowSameOrigin ?? false)
+					? ' allow-same-origin'
+					: ''} allow-forms allow-popups allow-modals allow-downloads"
 				on:load={onIframeLoad}
 			/>
 		{/key}

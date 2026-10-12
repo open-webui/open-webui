@@ -8,7 +8,7 @@
 	import FunctionEditor from '$lib/components/admin/Functions/FunctionEditor.svelte';
 	import { getModels } from '$lib/apis';
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { COMMUNITY_ORIGINS, WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -22,6 +22,9 @@
 		const manifest = extractFrontmatter(data.content);
 		if (compareVersion(manifest?.required_open_webui_version ?? '0.0.0', WEBUI_VERSION)) {
 			console.log('Version is lower than required');
+			// LICENSE covers this Open WebUI wordmark.
+			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+			// https://docs.openwebui.com/license.
 			toast.error(
 				$i18n.t(
 					'Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})',
@@ -38,7 +41,8 @@
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
-			content: data.content
+			content: data.content,
+			commit_message: data.commit_message
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -61,13 +65,13 @@
 	};
 
 	onMount(() => {
+		if (!$config?.features?.enable_functions) {
+			goto('/admin', { replaceState: true });
+			return;
+		}
+
 		window.addEventListener('message', async (event) => {
-			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
-					event.origin
-				)
-			)
-				return;
+			if (!COMMUNITY_ORIGINS.includes(event.origin)) return;
 
 			func = JSON.parse(event.data);
 			console.log(func);
@@ -91,16 +95,14 @@
 
 {#if mounted}
 	{#key func?.content}
-		<div class="px-[16px] h-full">
+		<div class="px-[1rem] h-full min-w-0 overflow-x-hidden">
 			<FunctionEditor
 				id={func?.id ?? ''}
 				name={func?.name ?? ''}
 				meta={func?.meta ?? { description: '' }}
 				content={func?.content ?? ''}
 				{clone}
-				onSave={(value) => {
-					saveHandler(value);
-				}}
+				onSave={saveHandler}
 			/>
 		</div>
 	{/key}

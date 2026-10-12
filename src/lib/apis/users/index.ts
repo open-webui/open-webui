@@ -85,6 +85,33 @@ export const updateUserDefaultPermissions = async (token: string, permissions: o
 	return res;
 };
 
+export const getUserDefaultPermissionsDefaults = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/default/permissions/defaults`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const updateUserRole = async (token: string, id: string, role: string) => {
 	let error = null;
 
@@ -171,7 +198,8 @@ export const searchUsers = async (
 	query?: string,
 	orderBy?: string,
 	direction?: string,
-	page = 1
+	page = 1,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 	let res = null;
@@ -194,6 +222,7 @@ export const searchUsers = async (
 
 	res = await fetch(`${WEBUI_API_BASE_URL}/users/search?${searchParams.toString()}`, {
 		method: 'GET',
+		signal,
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
@@ -204,6 +233,7 @@ export const searchUsers = async (
 			return res.json();
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			console.error(err);
 			error = err.detail;
 			return null;
@@ -244,9 +274,9 @@ export const getAllUsers = async (token: string) => {
 	return res;
 };
 
-export const getUserSettings = async (token: string) => {
+export const getUserSettings = async (token: string, raw = false) => {
 	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings${raw ? '?raw=true' : ''}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -259,7 +289,7 @@ export const getUserSettings = async (token: string) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err.detail;
+			error = err?.detail ?? err;
 			return null;
 		});
 
@@ -394,6 +424,62 @@ export const updateUserInfo = async (token: string, info: object) => {
 		},
 		body: JSON.stringify({
 			...info
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getUserVariables = async (token: string) => {
+	let error = null;
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/variables`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateUserVariables = async (token: string, variables: Record<string, string>) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/variables/update`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			variables
 		})
 	})
 		.then(async (res) => {
@@ -576,4 +662,98 @@ export const getUserPreview = async (token: string, userId: string) => {
 	}
 
 	return res;
+};
+
+export type UserUsageHeatmapEntry = {
+	date: string;
+	messages: number;
+	chats: number;
+	tokens: number;
+	models: Record<string, number>;
+};
+
+export type UserUsageResponse = {
+	totals: {
+		lifetime_tokens: number;
+		input_tokens: number;
+		output_tokens: number;
+		peak_daily_tokens: number;
+		longest_chat_seconds: number;
+		current_streak: number;
+		longest_streak: number;
+		total_chats: number;
+		active_days: number;
+		models_used: number;
+		messages: number;
+		user_messages: number;
+		assistant_messages: number;
+	};
+	heatmap: UserUsageHeatmapEntry[];
+	weekly_heatmap: UserUsageHeatmapEntry[];
+	cumulative_heatmap: UserUsageHeatmapEntry[];
+	insights: {
+		most_used_model: string | null;
+		average_tokens_per_chat: number;
+		average_messages_per_active_day: number;
+		user_message_share: number;
+		assistant_message_share: number;
+	};
+	top_models: Array<{
+		model_id: string;
+		messages: number;
+		input_tokens: number;
+		output_tokens: number;
+		total_tokens: number;
+	}>;
+	top_tools: Array<{ name: string; count: number }>;
+	period: {
+		start_date: number;
+		end_date: number;
+		days: number;
+	};
+};
+
+export const getUserUsage = async (
+	token: string,
+	options: { days?: number; startDate?: number | null; endDate?: number | null } = {}
+): Promise<UserUsageResponse | null> => {
+	let error = null;
+	const searchParams = new URLSearchParams();
+
+	if (options.days) searchParams.append('days', options.days.toString());
+	if (options.startDate) searchParams.append('start_date', options.startDate.toString());
+	if (options.endDate) searchParams.append('end_date', options.endDate.toString());
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/usage?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const revokeUserSessions = async (token: string, userId: string) => {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/sessions/revoke`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${token}` }
+	});
+	const result = await response.json();
+	if (!response.ok) throw new Error(result.detail || 'Failed to revoke sessions');
+	return result;
 };

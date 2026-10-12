@@ -3,14 +3,13 @@ from __future__ import annotations
 import logging
 
 import black
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.models.chats import ChatTitleMessagesForm
+from open_webui.models.config import Config
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.misc import get_gravatar_url
-from open_webui.utils.pdf_generator import PDFGenerator
 from pydantic import BaseModel
 from starlette.responses import FileResponse
 
@@ -41,27 +40,27 @@ async def format_code(form_data: CodeForm, user=Depends(get_admin_user)):
 
 @router.post('/code/execute')
 async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_verified_user)):
-    if not request.app.state.config.ENABLE_CODE_EXECUTION:
+    if not await Config.get('code_execution.enable'):
         raise HTTPException(
             status_code=403,
             detail=ERROR_MESSAGES.FEATURE_DISABLED('Code execution'),
         )
 
-    if request.app.state.config.CODE_EXECUTION_ENGINE == 'jupyter':
+    if await Config.get('code_execution.engine') == 'jupyter':
         output = await execute_code_jupyter(
-            request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
+            await Config.get('code_execution.jupyter.url'),
             form_data.code,
             (
-                request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN
-                if request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH == 'token'
+                await Config.get('code_execution.jupyter.auth_token')
+                if await Config.get('code_execution.jupyter.auth') == 'token'
                 else None
             ),
             (
-                request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
-                if request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH == 'password'
+                await Config.get('code_execution.jupyter.auth_password')
+                if await Config.get('code_execution.jupyter.auth') == 'password'
                 else None
             ),
-            request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
+            await Config.get('code_execution.jupyter.timeout'),
         )
 
         return output
@@ -70,26 +69,6 @@ async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_v
             status_code=400,
             detail=ERROR_MESSAGES.DEFAULT('Code execution engine not supported'),
         )
-
-
-class ChatForm(BaseModel):
-    title: str
-    messages: list[dict]
-
-
-@router.post('/pdf')
-async def download_chat_as_pdf(form_data: ChatTitleMessagesForm, user=Depends(get_verified_user)):
-    try:
-        pdf_bytes = PDFGenerator(form_data).generate_chat_pdf()
-
-        return Response(
-            content=pdf_bytes,
-            media_type='application/pdf',
-            headers={'Content-Disposition': 'attachment;filename=chat.pdf'},
-        )
-    except Exception as e:
-        log.exception(f'Error generating PDF: {e}')
-        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get('/db/download')

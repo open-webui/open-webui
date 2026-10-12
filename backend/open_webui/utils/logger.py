@@ -17,7 +17,9 @@ from open_webui.env import (
     ENABLE_OTEL_LOGS,
     GLOBAL_LOG_LEVEL,
     LOG_FORMAT,
+    LOGURU_DIAGNOSE,
 )
+from open_webui.utils.json_codec import JSONCodec
 
 if TYPE_CHECKING:
     from loguru import Message, Record
@@ -33,7 +35,7 @@ def stdout_format(record: 'Record') -> str:
     str: A formatted log string intended for stdout.
     """
     if record['extra']:
-        record['extra']['extra_json'] = json.dumps(record['extra'])
+        record['extra']['extra_json'] = JSONCodec.dumps(record['extra'])
         extra_format = ' - {extra[extra_json]}'
     else:
         extra_format = ''
@@ -110,10 +112,14 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).bind(**self._get_extras()).log(level, record.getMessage())
+        message = record.getMessage()
+        logger.opt(depth=depth, exception=record.exc_info).bind(**self._get_extras()).log(level, message)
         if ENABLE_OTEL and ENABLE_OTEL_LOGS:
             from open_webui.utils.telemetry.logs import otel_handler
 
+            # reuse the message we built so %-args format once; a non-str msg is left alone, otel exports it structured
+            if isinstance(record.msg, str):
+                record.msg, record.args = message, None
             otel_handler.emit(record)
 
     def _get_extras(self):
@@ -178,6 +184,7 @@ def start_logger():
             _json_sink,
             level=GLOBAL_LOG_LEVEL,
             filter=audit_filter,
+            diagnose=LOGURU_DIAGNOSE,
         )
     else:
         logger.add(
@@ -185,6 +192,7 @@ def start_logger():
             level=GLOBAL_LOG_LEVEL,
             format=stdout_format,
             filter=audit_filter,
+            diagnose=LOGURU_DIAGNOSE,
         )
     if AUDIT_LOG_LEVEL != 'NONE' and ENABLE_AUDIT_LOGS_FILE:
         try:
@@ -195,6 +203,7 @@ def start_logger():
                 compression='zip',
                 format=file_format,
                 filter=lambda record: record['extra'].get('auditable') is True,
+                diagnose=LOGURU_DIAGNOSE,
             )
         except Exception as e:
             logger.error(f'Failed to initialize audit log file handler: {str(e)}')

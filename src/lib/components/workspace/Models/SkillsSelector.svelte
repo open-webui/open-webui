@@ -1,78 +1,44 @@
 <script lang="ts">
-	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { getContext, onMount } from 'svelte';
-
-	export let skills = [];
-
-	let _skills = {};
-	let searchQuery = '';
-
+	import { getContext } from 'svelte';
+	import { user } from '$lib/stores';
+	import TypeaheadSelector from './TypeaheadSelector.svelte';
+	type Skill = {
+		id: string;
+		name?: string;
+		description?: string;
+		is_active?: boolean;
+	};
+	const i18n = getContext<any>('i18n');
+	export let skills: Skill[] = [];
 	export let selectedSkillIds: string[] = [];
-
-	const i18n = getContext('i18n');
-
-	$: filteredSkillKeys = Object.keys(_skills).filter((id) => {
-		if (!searchQuery.trim()) return true;
-		const q = searchQuery.toLowerCase();
-		return _skills[id].name?.toLowerCase().includes(q) || _skills[id].id?.toLowerCase().includes(q);
-	});
-
-	onMount(() => {
-		_skills = skills.reduce((acc, skill) => {
-			acc[skill.id] = {
-				...skill,
-				selected: selectedSkillIds.includes(skill.id)
-			};
-
-			return acc;
-		}, {});
-	});
+	export let disabled = false;
 </script>
 
-<div>
-	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Skills')}</div>
-	</div>
-
-	{#if Object.keys(_skills).length > 10}
-		<div class="mb-2">
-			<input
-				class="w-full text-sm bg-transparent outline-none border border-gray-100 dark:border-gray-800 rounded-lg px-3 py-1.5 placeholder-gray-400"
-				type="text"
-				placeholder={$i18n.t('Search skills...')}
-				bind:value={searchQuery}
-			/>
-		</div>
-	{/if}
-
-	<div class="flex flex-col mb-1">
-		{#if skills.length > 0}
-			<div class=" flex items-center flex-wrap">
-				{#each filteredSkillKeys as skill, skillIdx}
-					<div class=" flex items-center gap-2 mr-3">
-						<div class="self-center flex items-center">
-							<Checkbox
-								state={_skills[skill].selected ? 'checked' : 'unchecked'}
-								on:change={(e) => {
-									_skills[skill].selected = e.detail === 'checked';
-									selectedSkillIds = Object.keys(_skills).filter((s) => _skills[s].selected);
-								}}
-							/>
-						</div>
-
-						<Tooltip content={_skills[skill]?.description ?? _skills[skill].id}>
-							<div class=" py-0.5 text-sm w-full capitalize font-medium">
-								{_skills[skill].name}
-							</div>
-						</Tooltip>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</div>
-
-	<div class=" text-xs dark:text-gray-700">
-		{$i18n.t('To select skills here, add them to the "Skills" workspace first.')}
-	</div>
-</div>
+<!-- Previous labels retained for i18n extraction:
+{$i18n.t('Select Skill')}
+{$i18n.t('To select skills here, add them to the "Skills" workspace first.')}
+-->
+<TypeaheadSelector
+	id="model-skillsselector"
+	label={$i18n.t('Skills')}
+	description={$i18n.t('Attach reusable instructions and resources for specific tasks.')}
+	items={skills.filter((skill) => skill.is_active !== false)}
+	selectedIds={selectedSkillIds}
+	{disabled}
+	placeholder={$i18n.t('Search skills')}
+	emptyLabel={$i18n.t('No skills found')}
+	emptyHint={$i18n.t('Add skills in the Skills workspace.')}
+	workspaceHref={$user?.role === 'admin' || $user?.permissions?.workspace?.skills
+		? '/workspace/skills'
+		: ''}
+	variant="dropdown"
+	on:select={(e) => {
+		selectedSkillIds = selectedSkillIds.includes(e.detail.id)
+			? selectedSkillIds.filter((id) => id !== e.detail.id)
+			: [...selectedSkillIds, e.detail.id];
+	}}
+	on:enableall={(e) => {
+		selectedSkillIds = [...new Set([...selectedSkillIds, ...e.detail.map((item) => item.id)])];
+	}}
+	on:clear={() => (selectedSkillIds = [])}
+/>

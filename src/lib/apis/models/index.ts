@@ -1,5 +1,16 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+export const exportModels = async (token: string, ids?: string[]) => {
+	const query = new URLSearchParams();
+	(ids ?? []).forEach((id) => query.append('ids', id));
+	if (ids && !ids.length) return [];
+	const response = await fetch(`${WEBUI_API_BASE_URL}/models/export${ids ? `?${query}` : ''}`, {
+		headers: { authorization: `Bearer ${token}` }
+	});
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
 export const getModelItems = async (
 	token: string = '',
 	query,
@@ -7,7 +18,8 @@ export const getModelItems = async (
 	selectedTag,
 	orderBy,
 	direction,
-	page
+	page,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 
@@ -32,6 +44,39 @@ export const getModelItems = async (
 	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/list?${searchParams.toString()}`, {
+		method: 'GET',
+		signal,
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			if (signal?.aborted) return null;
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getModelTags = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/tags`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -59,10 +104,10 @@ export const getModelItems = async (
 	return res;
 };
 
-export const getModelTags = async (token: string = '') => {
+export const getBaseModelTags = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/tags`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/base/tags`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -118,10 +163,27 @@ export const importModels = async (token: string, models: object[]) => {
 	return res;
 };
 
-export const getBaseModels = async (token: string = '') => {
+export const getAllModels = async (token: string = '') => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/all`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const getBaseModels = async (token: string = '', tag: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/base`, {
+	const searchParams = new URLSearchParams();
+	if (tag) {
+		searchParams.append('tag', tag);
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/base?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -152,8 +214,18 @@ export const getBaseModels = async (token: string = '') => {
 export const createNewModel = async (token: string, model: object) => {
 	let error = null;
 
-	const { id, base_model_id, name, meta, params, access_grants, is_active } = model as any;
-	const payload = { id, base_model_id, name, meta, params, access_grants, is_active };
+	const { id, base_model_id, name, meta, params, access_grants, is_active, commit_message } =
+		model as any;
+	const payload = {
+		id,
+		base_model_id,
+		name,
+		meta,
+		params,
+		access_grants,
+		is_active,
+		commit_message
+	};
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/create`, {
 		method: 'POST',
@@ -254,8 +326,18 @@ export const toggleModelById = async (token: string, id: string) => {
 export const updateModelById = async (token: string, id: string, model: object) => {
 	let error = null;
 
-	const { base_model_id, name, meta, params, access_grants, is_active } = model as any;
-	const payload = { id, base_model_id, name, meta, params, access_grants, is_active };
+	const { base_model_id, name, meta, params, access_grants, is_active, commit_message } =
+		model as any;
+	const payload = {
+		id,
+		base_model_id,
+		name,
+		meta,
+		params,
+		access_grants,
+		is_active,
+		commit_message
+	};
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/update`, {
 		method: 'POST',
@@ -384,4 +466,76 @@ export const deleteAllModels = async (token: string) => {
 	}
 
 	return res;
+};
+
+export type ModelHistoryEntry = {
+	id: string;
+	model_id: string;
+	parent_id: string | null;
+	user_id: string;
+	commit_message: string | null;
+	created_at: number;
+	user?: { name: string } | null;
+};
+
+export type ModelSnapshot = {
+	name: string;
+	base_model_id: string | null;
+	params: Record<string, any>;
+	meta: Record<string, any>;
+};
+
+export const getModelHistory = async (
+	token: string,
+	id: string,
+	page = 1
+): Promise<ModelHistoryEntry[]> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/history?${new URLSearchParams({ id, page: String(page) })}`,
+		{
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const getModelHistoryEntry = async (
+	token: string,
+	id: string,
+	versionId: string
+): Promise<ModelHistoryEntry & { snapshot: ModelSnapshot }> => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/history/${encodeURIComponent(versionId)}?${new URLSearchParams({ id })}`,
+		{
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const deleteModelHistoryVersion = async (token: string, id: string, versionId: string) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/history/${encodeURIComponent(versionId)}?${new URLSearchParams({ id })}`,
+		{
+			method: 'DELETE',
+			headers: { authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
+};
+
+export const setProductionModelVersion = async (token: string, id: string, versionId: string) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/models/model/update/version?${new URLSearchParams({ id })}`,
+		{
+			method: 'POST',
+			headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ version_id: versionId })
+		}
+	);
+	if (!response.ok) throw await response.json();
+	return response.json();
 };
