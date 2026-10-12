@@ -2210,6 +2210,48 @@
 
 	let callMode = 'current';
 	let bridge: RealtimeCall;
+	let callWakeLock = null;
+	$: callInProgress =
+		($showCallOverlay && callMode === 'current') || !!(bridge?.connected || bridge?.connecting);
+	$: if (callInProgress) {
+		void requestCallWakeLock();
+	} else {
+		releaseCallWakeLock();
+	}
+
+	const requestCallWakeLock = async () => {
+		if (!('wakeLock' in navigator)) return;
+		try {
+			const lock = await navigator.wakeLock.request('screen');
+			// The call may have ended while the request was pending
+			if (callInProgress) {
+				void callWakeLock?.release();
+				callWakeLock = lock;
+			} else {
+				void lock.release();
+			}
+		} catch (err) {
+			console.log('Wake Lock request failed:', err);
+		}
+	};
+
+	const releaseCallWakeLock = () => {
+		void callWakeLock?.release();
+		callWakeLock = null;
+	};
+
+	const handleCallVisibilityChange = () => {
+		if (callInProgress && document.visibilityState === 'visible') void requestCallWakeLock();
+	};
+
+	onMount(() => {
+		document.addEventListener('visibilitychange', handleCallVisibilityChange);
+		return () => {
+			document.removeEventListener('visibilitychange', handleCallVisibilityChange);
+			releaseCallWakeLock();
+		};
+	});
+
 	const bridgeCancellations = new Map<string, () => void>();
 	const visibleMessageText = (message: any) =>
 		getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
