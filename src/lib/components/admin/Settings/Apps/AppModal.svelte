@@ -374,7 +374,6 @@
 								class={inputClass}
 								bind:value={apiKey}
 								required={!app?.configured}
-								minlength="32"
 								maxlength="4096"
 								placeholder={app?.configured ? '••••••••' : ''}
 							/>

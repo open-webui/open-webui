@@ -107,7 +107,7 @@ class AppManifestForm(StrictModel):
 class AppForm(StrictModel):
     manifest: Manifest
     url: str = Field(max_length=2048)
-    api_key: SecretStr = Field(min_length=32, max_length=4096)
+    api_key: SecretStr = Field(min_length=1, max_length=4096)
     slug: str = Field(pattern=r'^[a-z][a-z0-9-]{0,39}$')
     granted_scopes: list[Scope]
     access_grants: list[dict] = Field(
@@ -129,7 +129,7 @@ class AppTokenForm(StrictModel):
 
 
 class AppConnectionForm(StrictModel):
-    api_key: SecretStr | None = Field(default=None, min_length=32, max_length=4096)
+    api_key: SecretStr | None = Field(default=None, min_length=1, max_length=4096)
 
 
 ####################
