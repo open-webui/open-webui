@@ -413,7 +413,7 @@ async def realtime_call(ws: WebSocket):
                                 # every function call an unambiguous input_item_id, even during barge-in.
                                 'turn_detection': {
                                     'type': 'server_vad',
-                                    'interrupt_response': True,
+                                    'interrupt_response': False,
                                     'create_response': False,
                                 },
                             },

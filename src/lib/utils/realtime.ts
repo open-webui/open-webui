@@ -352,7 +352,6 @@ export class RealtimeCall {
 		} else if (type === 'input_audio_buffer.speech_started') {
 			this.receivingSpeech = event.item_id;
 			this.userSpeaking = !this.muted;
-			this.stopSpeaking();
 		} else if (type === 'input_audio_buffer.speech_stopped') {
 			if (this.receivingSpeech === event.item_id) this.userSpeaking = false;
 		} else if (
@@ -375,6 +374,7 @@ export class RealtimeCall {
 				this.flush();
 				return;
 			}
+			this.stopSpeaking();
 			const session = this.session;
 			const modelId = this.options.context().modelId;
 			this.savingHistory++;
@@ -453,8 +453,7 @@ export class RealtimeCall {
 				if (this.animationCalls.has(event.item.call_id)) return;
 				this.animationCalls.add(event.item.call_id);
 				let status = 'unavailable';
-				if (!response || this.interrupted.has(event.response_id) || this.receivingSpeech)
-					status = 'cancelled';
+				if (!response || this.interrupted.has(event.response_id)) status = 'cancelled';
 				else {
 					try {
 						const args = JSON.parse(event.item.arguments);
