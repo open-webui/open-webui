@@ -354,18 +354,16 @@
 			showImport = true;
 		}}
 	/>
-	{#key bundleFiles}
-		<SkillImport
-			bind:show={showImport}
-			files={bundleFiles}
-			onImported={async () => {
-				toast.success($i18n.t('Skill imported successfully'));
-				page = 1;
-				await loadSkillItems();
-				_skills.set(await getSkills(localStorage.token));
-			}}
-		/>
-	{/key}
+	<SkillImport
+		bind:show={showImport}
+		files={bundleFiles}
+		onImported={async () => {
+			toast.success($i18n.t('Skill imported successfully'));
+			page = 1;
+			await loadSkillItems();
+			_skills.set(await getSkills(localStorage.token));
+		}}
+	/>
 	<input
 		bind:this={importInputElement}
 		type="file"
