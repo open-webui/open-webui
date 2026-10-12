@@ -92,27 +92,47 @@ async def send_app_request(
     timeout: float = 10,
     max_response_size: int = 262144,
 ) -> tuple[int, Any]:
-    allow_private = validate_app_url(url)
-    async with aiohttp.ClientSession(
-        connector=AppTCPConnector(allow_private=allow_private),
-        timeout=aiohttp.ClientTimeout(total=timeout),
-        trust_env=False,
-    ) as session:
-        async with session.request(
-            'POST' if body is not None else 'GET',
-            url,
-            data=body,
-            headers=headers,
-            allow_redirects=False,
-        ) as response:
-            response_body = bytearray()
-            async for chunk in response.content.iter_chunked(16384):
-                response_body.extend(chunk)
-                if len(response_body) > max_response_size:
-                    raise ValueError('App response is too large')
-            if response.status != 200:
-                return response.status, None
-            return response.status, json.loads(response_body) if response_body else None
+    try:
+        allow_private = validate_app_url(url)
+        async with aiohttp.ClientSession(
+            connector=AppTCPConnector(allow_private=allow_private),
+            timeout=aiohttp.ClientTimeout(total=timeout),
+            trust_env=False,
+        ) as session:
+            async with session.request(
+                'POST' if body is not None else 'GET',
+                url,
+                data=body,
+                headers=headers,
+                allow_redirects=False,
+            ) as response:
+                response_body = bytearray()
+                async for chunk in response.content.iter_chunked(16384):
+                    response_body.extend(chunk)
+                    if len(response_body) > max_response_size:
+                        raise ValueError('App response is too large')
+                if response.status != 200:
+                    return response.status, None
+                return response.status, json.loads(response_body) if response_body else None
+    except TimeoutError:
+        raise HTTPException(504, 'App request timed out. Check that the app server is running and reachable.') from None
+    except aiohttp.ClientSSLError:
+        raise HTTPException(502, 'App TLS verification failed. Check its certificate and hostname.') from None
+    except aiohttp.ClientConnectorDNSError:
+        raise HTTPException(502, 'App hostname could not be resolved. Check DNS from the WebUI server.') from None
+    except aiohttp.ClientConnectorError:
+        raise HTTPException(502, 'Could not reach the app server. Check its address, port and network access.') from None
+    except aiohttp.ClientError:
+        raise HTTPException(502, 'The app connection failed before a complete response was received.') from None
+    except ValueError as exc:
+        # Only local, fixed diagnostics may be shown; never echo arbitrary app responses.
+        details = {
+            'Invalid service URL': 'Invalid app URL. Use an HTTP(S) URL without credentials or a fragment.',
+            'App endpoints require HTTPS': 'App endpoints require HTTPS. For local HTTP, configure APP_ALLOWED_PRIVATE_ORIGINS.',
+            'App endpoint resolves to a prohibited address': 'App resolves to a private or reserved address. For local development, configure APP_ALLOWED_PRIVATE_ORIGINS.',
+            'App response is too large': 'App response exceeds the allowed size.',
+        }
+        raise HTTPException(502, details.get(str(exc), 'App returned an invalid response. Expected JSON.')) from None
 
 
 def get_app_encryption_cipher() -> Fernet:
@@ -490,10 +510,23 @@ async def generate_app_channel_reply(
     await db.commit()
     try:
         status, raw = await send_app_event(app, envelope)
-    except Exception:
-        raise HTTPException(504, 'App response timed out; execution outcome may be unknown') from None
+    except HTTPException as exc:
+        if exc.status_code == 504:
+            raise HTTPException(504, 'App response timed out; execution outcome may be unknown') from None
+        raise
+    except ValueError:
+        raise HTTPException(502, 'App event could not be delivered. Check the WebUI server logs.') from None
     if status != 200:
-        raise HTTPException(502, 'App rejected the interaction')
+        detail = {
+            401: 'App rejected the API key. Update the key in app settings.',
+            403: 'App rejected event authorization. Check the app server logs for the verification failure.',
+            404: 'App event endpoint was not found. Check its URL in app settings.',
+            405: 'App endpoint does not accept POST requests. Check its event URL.',
+            413: 'App rejected the event because it is too large.',
+            503: 'App is busy or shutting down. The event was not accepted.',
+            504: 'App processing timed out; execution outcome may be unknown.',
+        }.get(status, f'App returned HTTP {status}. Check the app server logs.')
+        raise HTTPException(504 if status == 504 else 502, detail)
     app = await get_app_by_id(app.id, require_active=True, db=db)
     if (app.api_key, app.data['manifest']['public_key']) != checked_key:
         raise HTTPException(403, 'App credentials changed')

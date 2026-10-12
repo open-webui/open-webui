@@ -4,6 +4,7 @@ import time
 import uuid
 from urllib.parse import urlsplit
 
+import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrant, AccessGrants
@@ -81,12 +82,15 @@ async def preview_app_manifest(form_data: AppManifestForm, user=Depends(get_admi
     try:
         status_code, raw = await send_app_request(form_data.url)
         if status_code != 200:
-            raise ValueError()
+            raise HTTPException(502, f'App manifest endpoint returned HTTP {status_code}. Check the URL or enter details manually.')
         manifest = Manifest.model_validate(raw)
         return manifest.model_dump()
-    except Exception:
+    except HTTPException:
+        raise
+    except (ValueError, TypeError):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid or unreachable app manifest'
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='App returned an invalid manifest. Check its app details or enter them manually.',
         ) from None
 
 
@@ -391,22 +395,32 @@ async def connect_app_by_id(
     )
     await db.commit()
     challenge = str(uuid.uuid4())
+    status_code, value = await send_app_event(
+        app,
+        {'id': str(uuid.uuid4()), 'type': 'connect', 'data': {'challenge': challenge}},
+        timeout=20,
+    )
+    if status_code != 200:
+        detail = {
+            401: 'App rejected the API key. Enter the API key configured on the app server.',
+            403: 'App refused the connection. Check the app server access rules and logs.',
+            400: 'App rejected the connection request. Check the WebUI origin and app server configuration.',
+            404: 'App event endpoint was not found. Check the URL in app settings.',
+            405: 'App endpoint does not accept POST requests. Use its event endpoint URL.',
+            503: 'App is busy or shutting down. Connect again when it is ready.',
+            504: 'App connection request timed out. Check the app server logs.',
+        }.get(status_code, f'App returned HTTP {status_code}. Check the app server logs.')
+        raise HTTPException(504 if status_code == 504 else 502, detail)
+    if not isinstance(value, dict) or not isinstance(value.get('proof'), str):
+        raise HTTPException(502, 'App did not return an identity proof. Check its event endpoint and SDK version.')
     try:
-        status_code, value = await send_app_event(
-            app,
-            {'id': str(uuid.uuid4()), 'type': 'connect', 'data': {'challenge': challenge}},
-            timeout=20,
-        )
-        if status_code != 200 or not isinstance(value, dict):
-            raise ValueError()
         claims = verify_app_token(app, value['proof'], 'webui-app-connect+jwt')
         if claims.get('challenge') != challenge:
             raise ValueError()
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail='Could not connect. Check the app API key and installed public key.',
-        ) from None
+    except jwt.InvalidSignatureError:
+        raise HTTPException(502, 'App public key does not match the installed key. Review the app public key in settings.') from None
+    except (jwt.InvalidTokenError, ValueError, TypeError, KeyError):
+        raise HTTPException(502, 'App identity proof is invalid or expired. Check the installed public key and server clocks.') from None
     result = await db.execute(
         update(App)
         .where(App.id == app_id, App.updated_at == checked_at, App.api_key == api_key)
