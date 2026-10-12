@@ -17,6 +17,7 @@
 	import AppChannelReply from './AppChannelReply.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import Grid from '$lib/components/icons/Grid.svelte';
 	import {
 		addReaction,
 		deleteMessage,
@@ -285,8 +286,9 @@
 					dir={$settings.chatDirection}
 				>
 					<span
-						class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[0.625rem] text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-						aria-hidden="true">App</span
+						class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800"
+						role="img"
+						aria-label={$i18n.t('App')}><Grid className="size-4" /></span
 					>
 					<div class="min-w-0 flex-1">
 						<div class="mb-0.5 flex items-baseline gap-1.5 leading-5">
