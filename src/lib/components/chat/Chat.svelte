@@ -3144,10 +3144,32 @@
 		if (selectedModels.length === 0) {
 			toast.error($i18n.t('Model not selected'));
 		} else {
-			const modelId = selectedModels[0];
-			const model = $models.filter((m) => m.id === modelId).at(0);
+			const userMessageId = uuidv4();
 
-			if (!model) {
+			const responseMessages = [];
+			for (const [modelIdx, modelId] of selectedModels.entries()) {
+				const model = $models.filter((m) => m.id === modelId).at(0);
+
+				if (model) {
+					const responseMessageId = uuidv4();
+					responseMessages.push({
+						id: responseMessageId,
+						parentId: userMessageId,
+						childrenIds: [],
+						role: 'assistant',
+						user_id: $user?.id,
+						content: `[RESPONSE] ${responseMessageId}`,
+						done: true,
+
+						model: modelId,
+						modelName: model.name ?? model.id,
+						modelIdx: modelIdx,
+						timestamp: Math.floor(Date.now() / 1000)
+					});
+				}
+			}
+
+			if (responseMessages.length === 0) {
 				toast.error($i18n.t('Model not found'));
 				return;
 			}
@@ -3155,33 +3177,16 @@
 			const messages = createMessagesList(history, history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
 
-			const userMessageId = uuidv4();
-			const responseMessageId = uuidv4();
-
 			const userMessage = {
 				id: userMessageId,
 				parentId: parentMessage ? parentMessage.id : null,
-				childrenIds: [responseMessageId],
+				childrenIds: responseMessages.map((m) => m.id),
 				role: 'user',
 				user_id: $user?.id,
 				user: { id: $user?.id, name: $user?.name },
 				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
-				timestamp: Math.floor(Date.now() / 1000)
-			};
-
-			const responseMessage = {
-				id: responseMessageId,
-				parentId: userMessageId,
-				childrenIds: [],
-				role: 'assistant',
-				user_id: $user?.id,
-				content: `[RESPONSE] ${responseMessageId}`,
-				done: true,
-
-				model: modelId,
-				modelName: model.name ?? model.id,
-				modelIdx: 0,
-				timestamp: Math.floor(Date.now() / 1000)
+				timestamp: Math.floor(Date.now() / 1000),
+				models: selectedModels
 			};
 
 			if (parentMessage) {
@@ -3189,9 +3194,11 @@
 				history.messages[parentMessage.id] = parentMessage;
 			}
 			history.messages[userMessageId] = userMessage;
-			history.messages[responseMessageId] = responseMessage;
+			for (const responseMessage of responseMessages) {
+				history.messages[responseMessage.id] = responseMessage;
+			}
 
-			history.currentId = responseMessageId;
+			history.currentId = responseMessages.at(-1).id;
 
 			await tick();
 
