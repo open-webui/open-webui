@@ -140,6 +140,7 @@ from open_webui.utils.skills import (
 )
 from open_webui.utils.task import (
     get_task_model_id,
+    parse_follow_ups,
     rag_template,
     tools_function_calling_generation_template,
 )
@@ -3892,10 +3893,11 @@ async def background_tasks_handler(ctx):
         for message in message_list:
             content = message.get('content', '')
             if isinstance(content, list):
-                for item in content:
-                    if item.get('type') == 'text':
-                        content = item['text']
-                        break
+                content = '\n'.join(
+                    item['text']
+                    for item in content
+                    if isinstance(item, dict) and item.get('type') == 'text' and isinstance(item.get('text'), str)
+                )
 
             if isinstance(content, str):
                 content = re.sub(
@@ -3917,16 +3919,27 @@ async def background_tasks_handler(ctx):
         message = get_last_user_message_item(form_data.get('messages', []))
         messages = form_data.get('messages', [])
         if message:
-            message['model'] = form_data.get('model')
+            message = {**message, 'model': form_data.get('model')}
 
     if message and 'model' in message:
         if tasks and messages:
             if TASKS.FOLLOW_UP_GENERATION in tasks and tasks[TASKS.FOLLOW_UP_GENERATION]:
+                follow_up_messages = list(messages)
+                assistant_message = ctx.get('assistant_message')
+                if not is_saved_chat_id(metadata.get('chat_id')) and assistant_message:
+                    if follow_up_messages[-1].get('role') == 'assistant' and (
+                        follow_up_messages[-1].get('id') == metadata['message_id']
+                        or get_content_from_message(follow_up_messages[-1])
+                        == get_content_from_message(assistant_message)
+                    ):
+                        follow_up_messages.pop()
+                    follow_up_messages.append({**assistant_message, 'role': 'assistant', 'id': metadata['message_id']})
+
                 res = await generate_follow_ups(
                     request,
                     {
                         'model': message['model'],
-                        'messages': messages,
+                        'messages': follow_up_messages,
                         'message_id': metadata['message_id'],
                         'chat_id': metadata['chat_id'],
                     },
@@ -3943,12 +3956,8 @@ async def background_tasks_handler(ctx):
                     else:
                         follow_ups_string = ''
 
-                    follow_ups_string = follow_ups_string[
-                        follow_ups_string.find('{') : follow_ups_string.rfind('}') + 1
-                    ]
-
                     try:
-                        follow_ups = JSONCodec.loads(follow_ups_string).get('follow_ups', [])
+                        follow_ups = parse_follow_ups(follow_ups_string)
                         await event_emitter(
                             {
                                 'type': 'chat:message:follow_ups',

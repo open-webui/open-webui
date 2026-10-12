@@ -248,7 +248,9 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
     else:
         template = DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
 
-    content = await follow_up_generation_template(template, form_data['messages'], user)
+    content = await follow_up_generation_template(
+        template, form_data['messages'], user, use_default=follow_up_template == ''
+    )
 
     payload = {
         'model': task_model_id,
