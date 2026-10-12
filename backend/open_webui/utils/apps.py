@@ -157,7 +157,7 @@ def get_app_encryption_cipher() -> Fernet:
 
 
 def _sign_app_context(app: AppModel, payload: str) -> bytes:
-    # Key or service-credential replacement invalidates execution contexts and operation receipts.
+    # Key or service-credential replacement invalidates execution contexts.
     return hmac.digest(
         WEBUI_SECRET_KEY.encode(),
         b'open-webui-context-v1\n'
@@ -468,7 +468,7 @@ async def generate_app_channel_reply(
     envelope = {
         'id': operation_id,
         'type': event_type,
-        'actor': {'id': user.id, 'is_admin': user.role == 'admin'},
+        'actor': {'id': user.id, 'name': user.name, 'is_admin': user.role == 'admin'},
         'channel': {'id': channel_id},
         'data': data,
         'execution_token': token,
@@ -507,21 +507,12 @@ async def generate_app_channel_reply(
     except Exception:
         raise HTTPException(502, 'App returned an invalid response') from None
     await check_app_invocation_access(app, channel_id, user, db=db)
-    if event_type == 'channel.operation.status' and (reply.visibility != 'private' or reply.type == 'update'):
-        raise HTTPException(502, 'Deferred results must be private; apps publish separately through the message API')
+    if reply.type == 'ack':
+        return {'type': 'ack'}
     if reply.actions and (reply.visibility != 'channel' or reply.type not in ('message', 'update')):
         raise HTTPException(502, 'Buttons require a channel message')
     value = reply.model_dump()
-    if reply.type == 'deferred':
-        if reply.operation_id != operation_id:
-            raise HTTPException(502, 'App returned an invalid operation ID')
-        value['receipt'] = create_app_context_token(
-            app,
-            'operation',
-            {'actor_id': user.id, 'channel_id': channel_id, 'operation_id': operation_id},
-            expires_in=86400,
-        )
-    elif reply.type == 'message' and reply.visibility == 'channel':
+    if reply.type == 'message' and reply.visibility == 'channel':
         value['message'] = await create_app_message(db, app, channel_id, reply)
     elif reply.type == 'update':
         if not source:
@@ -570,7 +561,7 @@ async def authorize_app_execution(form_data: AppTokenForm, app: AppModel, db: As
     return {
         'authorized': True,
         'operation_id': value['operation_id'],
-        'actor': {'id': user.id, 'is_admin': user.role == 'admin'},
+        'actor': {'id': user.id, 'name': user.name, 'is_admin': user.role == 'admin'},
         'channel_id': value['channel_id'],
         'type': value.get('type'),
         'data': value.get('data'),

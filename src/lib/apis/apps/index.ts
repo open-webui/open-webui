@@ -258,39 +258,3 @@ export const createAppInteraction = async (
 	return res;
 };
 
-export const getAppOperationById = async (
-	token: string = '',
-	app_id: string,
-	operation_id: string,
-	receipt: string
-) => {
-	let error = null;
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/apps/${encodeURIComponent(app_id)}/operations/${encodeURIComponent(operation_id)}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`,
-				'X-OpenWebUI-Operation-Receipt': receipt
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err?.detail ?? err;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};

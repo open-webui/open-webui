@@ -50,6 +50,7 @@
 	}
 
 	const receiveAppChannelReply = (event) => {
+		if (event.reply?.type === 'ack') return;
 		if (event.channel_id !== channel?.id || (event.parent_id ?? null) !== (thread ? id : null))
 			return;
 		const key = `${event.message_id}:${event.app_id}`;

@@ -3,7 +3,7 @@
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrant, AccessGrants
 from open_webui.models.apps import (
@@ -22,7 +22,6 @@ from open_webui.models.config import Config
 from open_webui.models.messages import Message
 from open_webui.utils.apps import (
     check_app_invocation_access,
-    decode_app_context_token,
     generate_app_channel_reply,
     get_app_by_id,
     get_app_encryption_cipher,
@@ -286,6 +285,7 @@ async def create_app_interaction(
         'channel.action',
         {
             'message_id': message.id,
+            'etag': str(message.updated_at),
             'parent_id': message.parent_id,
             'action_id': form_data.action_id,
             'context': action['context'],
@@ -294,31 +294,3 @@ async def create_app_interaction(
         db=db,
     )
 
-
-############################
-# GetAppOperation
-############################
-
-
-@router.get('/{app_id}/operations/{operation_id}')
-async def get_app_operation(
-    app_id: str,
-    operation_id: str,
-    x_openwebui_operation_receipt: str = Header(),
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    app = await get_app_by_id(app_id, require_active=True, db=db)
-    value = decode_app_context_token(app, 'operation', x_openwebui_operation_receipt)
-    if value['actor_id'] != user.id or value['operation_id'] != operation_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Invalid operation receipt')
-    await check_app_invocation_access(app, value['channel_id'], user, db=db)
-    return await generate_app_channel_reply(
-        app,
-        user,
-        value['channel_id'],
-        'channel.operation.status',
-        {'operation_id': operation_id},
-        operation_id=operation_id,
-        db=db,
-    )

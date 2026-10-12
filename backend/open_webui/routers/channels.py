@@ -1128,7 +1128,7 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                 'type': 'error',
                 'content': 'App could not respond. Check access and connection status before retrying.',
             }
-        if value.get('visibility') != 'channel':
+        if value.get('type') != 'ack' and value.get('visibility') != 'channel':
             await emit_to_users(
                 'events:app',
                 {

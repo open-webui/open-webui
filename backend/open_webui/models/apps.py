@@ -8,7 +8,7 @@ from typing import Literal
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import ChannelMember
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator, model_validator
 from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -102,11 +102,16 @@ class AppChannelMessage(StrictModel):
 
 
 class AppChannelReply(AppChannelMessage):
-    type: Literal['message', 'update', 'deferred', 'download', 'error'] = 'message'
+    type: Literal['message', 'update', 'ack', 'download', 'error'] = 'message'
     visibility: Literal['private', 'channel'] = 'private'
     title: str = Field(default='', max_length=200)
     filename: str = Field(default='report.md', pattern=r'^[a-zA-Z0-9_.-]{1,100}\.md$')
-    operation_id: str | None = None
+
+    @model_validator(mode='after')
+    def check_ack(self):
+        if self.type == 'ack' and (self.content or self.actions or self.title or self.parent_id or self.reply_to_id):
+            raise ValueError('Acknowledgements cannot contain a message')
+        return self
 
 
 class AppInteractionForm(StrictModel):

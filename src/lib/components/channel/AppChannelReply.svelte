@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
-	import { getAppOperationById, createAppInteraction } from '$lib/apis/apps';
+	import { createEventDispatcher } from 'svelte';
+	import { createAppInteraction } from '$lib/apis/apps';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	export let appId: string;
 	export let channelId: string;
@@ -9,9 +9,6 @@
 	const dispatch = createEventDispatcher();
 	let busy = false,
 		error = '';
-	let timer: ReturnType<typeof setTimeout>;
-	let disposed = false;
-	let pollDelay = 1000;
 
 	async function action(actionId: string) {
 		busy = true;
@@ -21,7 +18,7 @@
 				message_id: source.id,
 				action_id: actionId
 			});
-			if (result.visibility !== 'channel' || result.type === 'error') {
+			if (result.type !== 'ack' && (result.visibility !== 'channel' || result.type === 'error')) {
 				dispatch('reply', {
 					app_id: appId,
 					app_name: source.user?.name,
@@ -36,26 +33,6 @@
 			busy = false;
 		}
 	}
-	async function poll() {
-		if (disposed || reply?.type !== 'deferred') return;
-		if (!document.hidden) {
-			try {
-				const result = await getAppOperationById(
-					localStorage.token,
-					appId,
-					reply.operation_id,
-					reply.receipt
-				);
-				if (disposed) return;
-				reply = result;
-			} catch (e) {
-				error = String(e);
-				return;
-			}
-		}
-		pollDelay = Math.min(pollDelay + 1000, 5000);
-		timer = setTimeout(poll, pollDelay);
-	}
 	function download() {
 		const url = URL.createObjectURL(
 			new Blob([reply.content], { type: 'text/markdown;charset=utf-8' })
@@ -66,13 +43,6 @@
 		link.click();
 		URL.revokeObjectURL(url);
 	}
-	onMount(() => {
-		if (reply?.type === 'deferred') timer = setTimeout(poll, 1000);
-	});
-	onDestroy(() => {
-		disposed = true;
-		clearTimeout(timer);
-	});
 </script>
 
 <div class="space-y-3 text-sm" aria-busy={busy}>
@@ -82,7 +52,6 @@
 			The app could not complete this operation.
 		</p>{/if}
 	{#if error}<p role="alert" class="text-red-600">{error}</p>{/if}
-	{#if reply?.type === 'deferred'}<p role="status" class="text-gray-500">Working…</p>{/if}
 	{#if reply?.type === 'download'}<button
 			class="focus-ring flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 			on:click={download}>Download {reply.filename}</button
