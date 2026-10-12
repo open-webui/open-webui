@@ -181,12 +181,14 @@ def parse_import(
         packages = value if isinstance(value, list) else [value]
     elif filename.lower().endswith('.zip'):
         entries = {}
+        links = []
         total = 0
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             for info in archive.infolist():
                 path = validate_path(info.filename.rstrip('/'))
                 mode = info.external_attr >> 16
-                if stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR):
+                special = stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR)
+                if special and not discover_skills:
                     raise ValueError('Archives cannot contain links or special files')
                 if info.is_dir():
                     continue
@@ -194,6 +196,9 @@ def parse_import(
                     path = path.partition('/')[2]
                     if not path.startswith(directory):
                         continue
+                if special:
+                    links.append(path)
+                    continue
                 if path in entries:
                     raise ValueError(f'Duplicate archive path: {path}')
                 total += info.file_size
@@ -206,6 +211,8 @@ def parse_import(
         if not roots:
             raise ValueError('Archive contains no SKILL.md')
         roots = [root for root in roots if not any(root != parent and root.startswith(parent) for parent in roots)]
+        if any(path.startswith(root) for path in links for root in roots):
+            raise ValueError('Archives cannot contain links or special files')
         if not discover_skills and any(not any(p.startswith(root) for root in roots) for p in entries):
             raise ValueError('Archive contains files outside skill directories')
         packages = [
