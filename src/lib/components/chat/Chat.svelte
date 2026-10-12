@@ -3980,6 +3980,13 @@
 	) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
+		// A voice call saves the chat before the chat model first answers.
+		const isVoiceOnlyChat = Object.values(_history.messages).every(
+			(message) =>
+				message.id === responseMessageId ||
+				(message.meta?.voice &&
+					(message.role === 'user' || message.model === message.meta.voice.model))
+		);
 
 		const chatMessageFiles = _messages
 			.filter((message) => message.files)
@@ -4183,7 +4190,8 @@
 					(!_chatId ||
 						(embedded &&
 							(userMessage?.parentId ?? null) === null &&
-							createMessagesList(_history, responseMessageId).length === 2))
+							createMessagesList(_history, responseMessageId).length === 2) ||
+						isVoiceOnlyChat)
 						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
