@@ -111,6 +111,7 @@ async def update_user_limit(
 async def get_model_costs(user=Depends(get_verified_user)):
     """Get curated model list with pricing (visible to all users)."""
     from open_webui.utils.cost_tracker import _load_model_prices
+
     prices = _load_model_prices()
     models = []
     for model_id, info in prices.items():
@@ -143,7 +144,15 @@ async def get_model_costs(user=Depends(get_verified_user)):
         else:
             continue
         models.append(entry)
-    return {'models': sorted(models, key=lambda x: x.get('input_price_per_1m', x.get('price_per_image', x.get('price_per_1m_chars', x.get('price_per_minute', 0)))))}
+    return {
+        'models': sorted(
+            models,
+            key=lambda x: x.get(
+                'input_price_per_1m',
+                x.get('price_per_image', x.get('price_per_1m_chars', x.get('price_per_minute', 0))),
+            ),
+        )
+    }
 
 
 def _get_tier_color(tier: str) -> str:
@@ -197,30 +206,38 @@ async def get_spending_trends(
         monthly_spending = []
         for m in month_labels:
             month_data = spending_by_month.get(m, {'spent': 0.0, 'limit': 0.0})
-            monthly_spending.append({
-                'month': m,
-                'spent': round(month_data.get('spent', 0.0), 4),
-                'limit': round(month_data.get('limit', info.get('monthly_limit_usd', DEFAULT_MONTHLY_LIMIT_USD)), 2),
-            })
+            monthly_spending.append(
+                {
+                    'month': m,
+                    'spent': round(month_data.get('spent', 0.0), 4),
+                    'limit': round(
+                        month_data.get('limit', info.get('monthly_limit_usd', DEFAULT_MONTHLY_LIMIT_USD)), 2
+                    ),
+                }
+            )
 
-        users_data.append({
-            'user_id': u.id,
-            'name': u.name,
-            'email': u.email,
-            'role': u.role,
-            'monthly_data': monthly_spending,
-        })
+        users_data.append(
+            {
+                'user_id': u.id,
+                'name': u.name,
+                'email': u.email,
+                'role': u.role,
+                'monthly_data': monthly_spending,
+            }
+        )
 
     # Calculate totals per month across all users
     totals = []
     for i, m in enumerate(month_labels):
         total_spent = sum(u['monthly_data'][i]['spent'] for u in users_data)
         total_limit = sum(u['monthly_data'][i]['limit'] for u in users_data)
-        totals.append({
-            'month': m,
-            'total_spent': round(total_spent, 2),
-            'total_limit': round(total_limit, 2),
-        })
+        totals.append(
+            {
+                'month': m,
+                'total_spent': round(total_spent, 2),
+                'total_limit': round(total_limit, 2),
+            }
+        )
 
     return {
         'months': month_labels,
@@ -232,6 +249,7 @@ async def get_spending_trends(
 # ---------------------------------------------------------------------------
 # Client Management — Admin-only client user creation (simplified UI)
 # ---------------------------------------------------------------------------
+
 
 class CreateClientRequest(BaseModel):
     email: str
@@ -286,6 +304,7 @@ async def create_client_user(
     temp_password = secrets.token_urlsafe(12)
 
     from open_webui.utils.auth import get_password_hash
+
     hashed = await get_password_hash(temp_password)
 
     user = await Auths.insert_new_auth(
@@ -324,7 +343,6 @@ async def create_client_user(
     )
 
 
-
 class ClientUserResponse(BaseModel):
     user_id: str
     email: str
@@ -341,6 +359,7 @@ class ClientUserResponse(BaseModel):
 async def list_client_users(admin=Depends(get_admin_user)):
     """List all client users with their configuration."""
     from open_webui.models.users import Users
+
     all_users = await Users.get_users()
     clients = []
     for u in all_users.get('users', []):
@@ -349,17 +368,19 @@ async def list_client_users(admin=Depends(get_admin_user)):
             spending = info.get('spending', {})
             current_month = get_current_ist_month()
             month_data = spending.get(current_month, {})
-            clients.append({
-                'user_id': u.id,
-                'email': u.email,
-                'name': u.name,
-                'fixed_model_id': info.get('fixed_model_id', ''),
-                'fixed_system_prompt': info.get('fixed_system_prompt', ''),
-                'assigned_kb_ids': info.get('assigned_kb_ids', []),
-                'kb_rag_query': info.get('kb_rag_query', ''),
-                'monthly_limit_usd': info.get('monthly_limit_usd', DEFAULT_MONTHLY_LIMIT_USD),
-                'created_at': getattr(u, 'created_at', None),
-            })
+            clients.append(
+                {
+                    'user_id': u.id,
+                    'email': u.email,
+                    'name': u.name,
+                    'fixed_model_id': info.get('fixed_model_id', ''),
+                    'fixed_system_prompt': info.get('fixed_system_prompt', ''),
+                    'assigned_kb_ids': info.get('assigned_kb_ids', []),
+                    'kb_rag_query': info.get('kb_rag_query', ''),
+                    'monthly_limit_usd': info.get('monthly_limit_usd', DEFAULT_MONTHLY_LIMIT_USD),
+                    'created_at': getattr(u, 'created_at', None),
+                }
+            )
     return clients
 
 
@@ -380,6 +401,7 @@ async def update_client_user(
 ):
     """Update a client user's configuration."""
     from open_webui.models.users import Users
+
     user = await Users.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
@@ -415,6 +437,7 @@ async def update_client_user(
 async def delete_client_user(user_id: str, admin=Depends(get_admin_user)):
     """Delete a client user permanently."""
     from open_webui.models.users import Users
+
     user = await Users.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
@@ -444,6 +467,7 @@ async def reset_client_password(user_id: str, admin=Depends(get_admin_user)):
 
     temp_password = secrets.token_urlsafe(12)
     from open_webui.utils.auth import get_password_hash
+
     hashed = await get_password_hash(temp_password)
 
     await Auths.update_user_password_by_id(user.id, hashed)

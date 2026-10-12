@@ -267,9 +267,11 @@ def get_month_start_end_ist(month_str: str) -> tuple[int, int]:
 # circular imports at module load time)
 # ---------------------------------------------------------------------------
 
+
 async def _get_user_info(user_id: str) -> Optional[dict]:
     """Fetch user info JSON from DB."""
     from open_webui.models.users import Users
+
     user = await Users.get_user_by_id(user_id)
     return (user.info or {}) if user else {}
 
@@ -277,6 +279,7 @@ async def _get_user_info(user_id: str) -> Optional[dict]:
 async def _set_user_info(user_id: str, info: dict):
     """Update user info JSON in DB."""
     from open_webui.models.users import Users
+
     await Users.update_user_by_id(user_id, {'info': info})
 
 
@@ -304,6 +307,7 @@ async def _save_spending_row(user_id: str, month: str, row: dict):
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def get_user_spending(user_id: str, month: Optional[str] = None) -> dict:
     """Get current spending for a user. Returns {"spent": float, "limit": float, "remaining": float}."""
@@ -339,6 +343,7 @@ async def check_budget_before_request(user_id: str, model_id: str) -> None:
     """
     # Allow unlimited for admins
     from open_webui.models.users import Users
+
     user = await Users.get_user_by_id(user_id)
     if user and user.role == 'admin':
         return
@@ -354,12 +359,12 @@ async def check_budget_before_request(user_id: str, model_id: str) -> None:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f'Monthly budget exceeded. Spent ${spent:.2f} of ${limit:.2f}. '
-                   f'Contact admin to increase your limit.',
+            f'Contact admin to increase your limit.',
         )
 
     # Warn when over 80%
     if spent >= limit * 0.8:
-        log.info(f'User {user_id} at {spent/limit*100:.0f}% of budget')
+        log.info(f'User {user_id} at {spent / limit * 100:.0f}% of budget')
 
 
 async def record_spend(user_id: str, model_id: str, input_tokens: int, output_tokens: int) -> dict:
@@ -412,20 +417,27 @@ async def record_non_token_spend(user_id: str, model_id: str, cost: float) -> di
 async def get_all_user_spending(month: Optional[str] = None) -> list[dict]:
     """Get spending summary for all users (admin)."""
     from open_webui.models.users import Users
+
     month = month or get_current_ist_month()
     all_users = await Users.get_users()
     results = []
     for u in all_users.get('users', []):
         info = u.info or {}
-        spending = info.get('spending', {}).get(month, {'spent': 0.0, 'limit': info.get('monthly_limit_usd', DEFAULT_MONTHLY_LIMIT_USD)})
-        results.append({
-            'user_id': u.id,
-            'name': u.name,
-            'email': u.email,
-            'role': u.role,
-            'month': month,
-            'spent': round(spending.get('spent', 0.0), 4),
-            'limit': round(spending.get('limit', DEFAULT_MONTHLY_LIMIT_USD), 2),
-            'remaining': round(max(0, spending.get('limit', DEFAULT_MONTHLY_LIMIT_USD) - spending.get('spent', 0.0)), 4),
-        })
+        spending = info.get('spending', {}).get(
+            month, {'spent': 0.0, 'limit': info.get('monthly_limit_usd', DEFAULT_MONTHLY_LIMIT_USD)}
+        )
+        results.append(
+            {
+                'user_id': u.id,
+                'name': u.name,
+                'email': u.email,
+                'role': u.role,
+                'month': month,
+                'spent': round(spending.get('spent', 0.0), 4),
+                'limit': round(spending.get('limit', DEFAULT_MONTHLY_LIMIT_USD), 2),
+                'remaining': round(
+                    max(0, spending.get('limit', DEFAULT_MONTHLY_LIMIT_USD) - spending.get('spent', 0.0)), 4
+                ),
+            }
+        )
     return results

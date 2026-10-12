@@ -80,15 +80,13 @@ SQLAlchemy models for database tables. Key ones:
 Used extensively to avoid schema migrations. Structure:
 ```python
 user.info = {
-    "user_type": "client",
-    "fixed_model_id": "gpt-4o-mini",
-    "fixed_system_prompt": "...",
-    "assigned_kb_ids": ["kb-1"],
-    "kb_rag_query": "company policies",
-    "monthly_limit_usd": 20.0,
-    "spending": {
-        "2025-06": {"spent": 1.23, "limit": 5.0}
-    }
+    'user_type': 'client',
+    'fixed_model_id': 'gpt-4o-mini',
+    'fixed_system_prompt': '...',
+    'assigned_kb_ids': ['kb-1'],
+    'kb_rag_query': 'company policies',
+    'monthly_limit_usd': 20.0,
+    'spending': {'2025-06': {'spent': 1.23, 'limit': 5.0}},
 }
 ```
 
