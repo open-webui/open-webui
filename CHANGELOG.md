@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
+- 💡 **Follow-ups as next messages.** The default follow-up prompt now suggests the messages you would most likely send next, in your own tone and latest language, as requests or questions, without repeating finished work, with the strongest suggestion first, where it asked for questions only; instances with a custom follow-up prompt are not affected. [Commit](https://github.com/open-webui/open-webui/commit/7ae09967459151433be79c2e98f096c171fc5b18)
 
 ## [0.12.0] - 2026-10-10
 
