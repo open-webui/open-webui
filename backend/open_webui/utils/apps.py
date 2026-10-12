@@ -349,7 +349,7 @@ async def publish_app_message_event(message, kind):
         return
     value = deepcopy(get_app_message_data(message))
     if kind == 'channel.message.deleted':
-        value = {k: value[k] for k in ('id', 'channel_id', 'parent_id', 'updated_at')}
+        value = {k: value[k] for k in ('id', 'channel_id', 'parent_id', 'author', 'updated_at')}
     # shortcut: events are lost on failure/restart; add durable delivery only if replay becomes required.
     await create_task(None, send_app_message_event(value, kind, time.time_ns()))
 
