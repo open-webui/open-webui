@@ -29,8 +29,6 @@
 	export let modelId;
 	export let bridge: RealtimeCall | undefined = undefined;
 
-	let wakeLock = null;
-
 	let model = null;
 
 	let loading = false;
@@ -830,34 +828,6 @@
 			document.addEventListener('keydown', handleKeydown);
 			return;
 		}
-		const setWakeLock = async () => {
-			try {
-				wakeLock = await navigator.wakeLock.request('screen');
-			} catch (err) {
-				// The Wake Lock request has failed - usually system related, such as battery.
-				console.log(err);
-			}
-
-			if (wakeLock) {
-				// Add a listener to release the wake lock when the page is unloaded
-				wakeLock.addEventListener('release', () => {
-					// the wake lock has been released
-					console.log('Wake Lock released');
-				});
-			}
-		};
-
-		if ('wakeLock' in navigator) {
-			await setWakeLock();
-
-			document.addEventListener('visibilitychange', async () => {
-				// Re-request the wake lock if the document becomes visible
-				if (wakeLock !== null && document.visibilityState === 'visible') {
-					await setWakeLock();
-				}
-			});
-		}
-
 		model = $models.find((m) => m.id === modelId);
 
 		if ($settings.audio?.tts?.engine === 'browser-kokoro' && !$TTSWorker) {
