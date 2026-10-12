@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import { getAbortSignal, getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -29,7 +30,7 @@
 	let _models = [];
 	let _users = [];
 	let _channels = [];
-	let _apps: { type: string; id: string; label: string }[] = [];
+	let _apps: { type: string; id: string; label: string; profile_image_url?: string | null }[] = [];
 
 	type UserSuggestion = { id: string; name: string };
 
@@ -141,7 +142,12 @@
 				.then(([apps, joined]) => {
 					_apps = apps
 						.filter((a) => a.is_active && joined.some((member) => member.id === a.id))
-						.map((a) => ({ type: 'app', id: a.id, label: a.name }));
+						.map((a) => ({
+							type: 'app',
+							id: a.id,
+							label: a.name,
+							profile_image_url: a.data.manifest.profile_image_url
+						}));
 				})
 				.catch(() => {});
 		}
@@ -240,7 +246,13 @@
 								{/if}
 							</div>
 						{:else if item.type === 'app'}
-							<Grid className="size-4 mr-2" />
+							{#if item.profile_image_url}
+								<ProfileImage
+									src={item.profile_image_url}
+									allowExternal
+									className="size-5 mr-2 rounded-lg!"
+								/>
+							{:else}<Grid className="size-4 mr-2" />{/if}
 						{:else if item.type === 'model'}
 							<img
 								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}

@@ -295,7 +295,12 @@ class MessageTable:
         if message.app_id:
             from open_webui.models.apps import App
             app = await db.get(App, message.app_id)
-            return {'id': message.app_id, 'name': app.name if app else 'Removed App', 'role': 'app'}
+            return {
+                'id': message.app_id,
+                'name': app.name if app else 'Removed App',
+                'role': 'app',
+                'profile_image_url': app.data.get('manifest', {}).get('profile_image_url') if app else None,
+            }
         webhook_info = message.meta.get('webhook') if message.meta else None
         if webhook_info and webhook_info.get('id'):
             webhook = await Channels.get_webhook_by_id(webhook_info.get('id'), db=db)

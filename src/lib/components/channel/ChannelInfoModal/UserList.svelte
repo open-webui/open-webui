@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user as _user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
@@ -229,7 +230,13 @@
 										<div
 											class="size-6 rounded-lg bg-gray-100 dark:bg-gray-850 flex items-center justify-center shrink-0"
 										>
-											<Grid className="size-3.5" />
+											{#if app.data.manifest.profile_image_url}
+												<ProfileImage
+													src={app.data.manifest.profile_image_url}
+													allowExternal
+													className="size-6 rounded-lg!"
+												/>
+											{:else}<Grid className="size-3.5" />{/if}
 										</div>
 										<span class="truncate">{app.name}</span>
 									</div>

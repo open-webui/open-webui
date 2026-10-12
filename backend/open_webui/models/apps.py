@@ -1,12 +1,14 @@
 """External apps. Credentials never leave the internal model."""
 
+import base64
+import re
 import time
 from typing import Literal
 
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import ChannelMember
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator
 from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,8 +56,25 @@ class Manifest(StrictModel):
     id: str = Field(min_length=1, max_length=100)
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default='', max_length=2000)
+    profile_image_url: str | None = Field(default=None, max_length=196608)
     public_key: str = Field(max_length=2000)
     requested_scopes: list[Scope]
+
+    @field_validator('profile_image_url')
+    @classmethod
+    def validate_profile_image_url(cls, value):
+        if value is not None:
+            if value.startswith('data:'):
+                header, encoded = value.split(',', 1)
+                if not re.fullmatch(r'data:image/(png|jpeg|gif|webp);base64', header):
+                    raise ValueError('Expected a base64 PNG, JPEG, GIF or WebP data URL')
+                if not base64.b64decode(encoded, validate=True):
+                    raise ValueError('Profile image data must not be empty')
+            else:
+                url = HttpUrl(value)
+                if len(value) > 2048 or url.username is not None or url.password is not None:
+                    raise ValueError('Profile image URL must not contain credentials or exceed 2048 characters')
+        return value
 
     @field_validator('public_key')
     @classmethod

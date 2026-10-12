@@ -400,7 +400,16 @@
 									e.currentTarget.src = '/favicon.png';
 								}}
 							/>
-						{:else if message.app_id}<span class="flex size-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-xs" aria-label="App">App</span>
+						{:else if message.app_id}
+							{#if message.user?.profile_image_url}
+								<ProfileImage
+									src={message.user.profile_image_url}
+									allowExternal
+									className="size-6 mt-0.5 rounded-lg!"
+								/>
+							{:else}
+								<span class="flex size-6 mt-0.5 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-xs" aria-label="App">App</span>
+							{/if}
 						{:else if message.user?.role === 'webhook'}
 							<ProfileImage
 								src={`${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image`}

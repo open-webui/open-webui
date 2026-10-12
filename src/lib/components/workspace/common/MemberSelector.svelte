@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy } from 'svelte';
 
@@ -357,7 +358,13 @@
 												<div
 													class="size-6 rounded-lg bg-gray-100 dark:bg-gray-850 flex items-center justify-center shrink-0"
 												>
-													<Grid className="size-3.5" />
+													{#if app.data.manifest.profile_image_url}
+														<ProfileImage
+															src={app.data.manifest.profile_image_url}
+															allowExternal
+															className="size-6 rounded-lg!"
+														/>
+													{:else}<Grid className="size-3.5" />{/if}
 												</div>
 												<span class="truncate">{app.name}</span>
 											</div>

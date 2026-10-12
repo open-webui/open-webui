@@ -10,6 +10,7 @@ export type App = {
 		url: string;
 		manifest: {
 			description: string;
+			profile_image_url?: string | null;
 		};
 		granted_scopes: string[];
 	};
