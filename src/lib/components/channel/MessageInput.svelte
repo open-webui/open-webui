@@ -693,6 +693,18 @@
 				})
 			},
 			{
+				char: '$',
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: () => {}
+				})
+			},
+			{
 				char: ':',
 				allowSpaces: false,
 				command: ({ editor, range, props }) => {
