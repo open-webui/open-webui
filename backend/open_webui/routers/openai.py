@@ -1432,6 +1432,15 @@ async def generate_chat_completion(
     metadata = payload.pop('metadata', None)
 
     model_id = form_data.get('model')
+
+    # TracexGPT: client-user restrictions (fixed model) - MUST happen before check_model_access
+    client_info = (user.info or {}) if user else {}
+    if client_info.get('user_type') == 'client':
+        fixed_model = client_info.get('fixed_model_id')
+        if fixed_model:
+            payload['model'] = fixed_model
+            model_id = fixed_model
+
     model_info = await Models.get_model_by_id(model_id)
 
     # Check model info and override the payload
@@ -1452,9 +1461,31 @@ async def generate_chat_completion(
             if not bypass_system_prompt:
                 payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
-        await check_model_access(user, model_info, bypass_filter)
+        await check_model_access(user, model_info, bypass_filter, model_id)
     else:
-        await check_model_access(user, None, bypass_filter)
+        await check_model_access(user, None, bypass_filter, model_id)
+
+    # TracexGPT: enforce per-user monthly spending limit
+    from open_webui.utils.cost_tracker import check_budget_before_request
+
+    await check_budget_before_request(user.id, payload.get('model', model_id))
+
+    # TracexGPT: client-user restrictions (fixed prompt, filtered KBs)
+    if client_info.get('user_type') == 'client':
+        fixed_prompt = (client_info.get('fixed_system_prompt') or '').strip()
+        if fixed_prompt:
+            messages = payload.get('messages', [])
+            if messages and messages[0].get('role') == 'system':
+                messages[0]['content'] = fixed_prompt
+            else:
+                messages.insert(0, {'role': 'system', 'content': fixed_prompt})
+            payload['messages'] = messages
+
+        assigned_kbs = set(client_info.get('assigned_kb_ids') or [])
+        if assigned_kbs and metadata and 'knowledge' in metadata:
+            metadata['knowledge'] = [kb for kb in metadata['knowledge'] if kb.get('id') in assigned_kbs]
+            if not metadata['knowledge']:
+                del metadata['knowledge']
 
     # Check if model is already in app state cache to avoid expensive get_all_models() call
     models = request.app.state.OPENAI_MODELS
@@ -1821,7 +1852,7 @@ async def responses(
     model_id = form_data.model
 
     # Enforce per-model access control
-    await check_model_access(user, await Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL)
+    await check_model_access(user, await Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL, model_id)
 
     if model_id:
         models = request.app.state.OPENAI_MODELS

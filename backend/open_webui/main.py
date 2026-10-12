@@ -177,6 +177,7 @@ from open_webui.routers import (
     retrieval,
     scim,
     skills,
+    spending,
     tasks,
     terminals,
     tools,
@@ -426,6 +427,11 @@ async def lifespan(app: FastAPI):
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
 
+    # Start file cleanup task (if FILE_TTL_DAYS is set)
+    from open_webui.tasks import periodic_file_cleanup
+
+    app.state.periodic_file_cleanup = asyncio.create_task(periodic_file_cleanup())
+
     from open_webui.utils.automations import scheduler_worker_loop
 
     app.state.scheduler_worker_loop = asyncio.create_task(scheduler_worker_loop(app))
@@ -520,6 +526,7 @@ async def lifespan(app: FastAPI):
     app.state.periodic_socket_authentication.cancel()
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
+    app.state.periodic_file_cleanup.cancel()
     app.state.scheduler_worker_loop.cancel()
 
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
@@ -905,6 +912,7 @@ app.include_router(functions.router, prefix='/api/v1/functions', tags=['function
 app.include_router(evaluations.router, prefix='/api/v1/evaluations', tags=['evaluations'])
 if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix='/api/v1/analytics', tags=['analytics'])
+app.include_router(spending.router, prefix='/api/v1/spending', tags=['spending'])
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
 app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
@@ -1145,6 +1153,13 @@ async def chat_completion(
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
+    # TracexGPT: client users must use their fixed model - override before validation
+    client_info = (user.info or {}) if user else {}
+    if client_info.get('user_type') == 'client':
+        fixed_model = client_info.get('fixed_model_id')
+        if fixed_model:
+            form_data['model'] = fixed_model
+
     model_id = form_data.get('model', None)
     model_item = form_data.pop('model_item', {})
     tasks = form_data.pop('background_tasks', None)
@@ -1295,6 +1310,26 @@ async def chat_completion(
             )
         ):
             tool_servers = None
+
+        # TracexGPT: inject assigned knowledge bases for client users
+        if client_info.get('user_type') == 'client':
+            assigned_kb_ids = client_info.get('assigned_kb_ids', [])
+            if assigned_kb_ids:
+                kb_files = form_data.get('files') or []
+                if not isinstance(kb_files, list):
+                    kb_files = []
+                existing_kb_ids = {f.get('id') for f in kb_files if f.get('type') == 'collection'}
+                for kb_id in assigned_kb_ids:
+                    if kb_id not in existing_kb_ids:
+                        kb_files.append(
+                            {
+                                'id': kb_id,
+                                'type': 'collection',
+                                'legacy': True,
+                                'collection_names': [kb_id],
+                            }
+                        )
+                form_data['files'] = kb_files
 
         automation_id = form_data.pop('automation_id', None)
         tool_approval_mode = (
@@ -1622,6 +1657,12 @@ async def chat_completion(
                             [file.get('id') for file in user_message_files if file.get('type') == 'file'],
                             user.id,
                         )
+
+        # TracexGPT: client users can have a fixed RAG query prefix (read by the files handler)
+        if client_info.get('user_type') == 'client':
+            kb_rag_query = (client_info.get('kb_rag_query') or '').strip()
+            if kb_rag_query:
+                metadata['kb_rag_query'] = kb_rag_query
 
         request.state.metadata = metadata
         form_data['metadata'] = metadata

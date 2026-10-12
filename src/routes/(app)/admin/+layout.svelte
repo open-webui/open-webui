@@ -96,6 +96,22 @@
 
 						<a
 							draggable="false"
+							class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/admin/spending')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+							href="/admin/spending">{$i18n.t('Spending')}</a
+						>
+
+						<a
+							draggable="false"
+							class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/admin/clients')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+							href="/admin/clients">{$i18n.t('Clients')}</a
+						>
+
+						<a
+							draggable="false"
 							class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/admin/settings')
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"

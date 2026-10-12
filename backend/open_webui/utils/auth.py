@@ -757,6 +757,7 @@ async def create_session_response(
         'role': user.role,
         'profile_image_url': f'/api/v1/users/{user.id}/profile/image',
         'permissions': await get_permissions(user.id, await Config.get('user.permissions'), db=db),
+        'info': user.info or {},
     }
 
 

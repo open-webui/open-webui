@@ -491,6 +491,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
 
 async def check_model_access(user, model, model_info=None, db=None):
+    # TracexGPT: client users always have access to their fixed model
+    client_info = (user.info or {}) if user else {}
+    if client_info.get('user_type') == 'client' and model:
+        fixed_model = client_info.get('fixed_model_id')
+        if fixed_model and model.get('id') == fixed_model:
+            return
+
     if model.get('arena'):
         meta = model.get('info', {}).get('meta', {})
         access_grants = meta.get('access_grants', [])
@@ -607,6 +614,18 @@ async def get_filtered_models(models, user, db=None):
                 # No DB entry means no access control configured yet;
                 # only admins can see unconfigured models.
                 filtered_models.append(model)
+
+        # TracexGPT: ensure client users can always see their fixed model
+        client_info = (user.info or {}) if user else {}
+        if client_info.get('user_type') == 'client':
+            fixed_model = client_info.get('fixed_model_id')
+            if fixed_model:
+                existing_ids = {m['id'] for m in filtered_models}
+                if fixed_model not in existing_ids:
+                    for model in models:
+                        if model['id'] == fixed_model:
+                            filtered_models.append(model)
+                            break
 
         return filtered_models
     else:

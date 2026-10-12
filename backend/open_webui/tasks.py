@@ -313,3 +313,73 @@ async def has_active_tasks(redis, chat_id: str) -> bool:
     """Check if a chat has any active tasks."""
     task_ids = await list_task_ids_by_item_id(redis, chat_id)
     return len(task_ids) > 0
+
+
+async def periodic_file_cleanup():
+    """
+    Periodically delete files that have exceeded their TTL.
+    Runs once daily (86400 seconds) if FILE_TTL_DAYS > 0.
+    Targets files with meta.ttl_days set (PPTs, generated images).
+    """
+    import time
+
+    from open_webui.config import FILE_TTL_DAYS
+
+    if FILE_TTL_DAYS <= 0:
+        log.info('File TTL cleanup disabled (FILE_TTL_DAYS=0)')
+        return
+
+    log.info(f'Starting file cleanup task (TTL: {FILE_TTL_DAYS} days)')
+
+    while True:
+        try:
+            from open_webui.models.files import Files
+            from open_webui.storage.provider import Storage
+
+            now = int(time.time())
+            ttl_seconds = FILE_TTL_DAYS * 86400
+            cutoff_time = now - ttl_seconds
+
+            # Get all files and check for expired ones
+            all_files = await Files.get_files()
+            expired_count = 0
+
+            for file in all_files:
+                # Check if file has TTL metadata
+                ttl_meta = file.meta.get('ttl_days') if file.meta else None
+                expires_at = file.meta.get('expires_at') if file.meta else None
+
+                # Skip if no TTL set (regular uploads without expiry)
+                if not ttl_meta and not expires_at:
+                    continue
+
+                # Check if expired
+                is_expired = False
+                if expires_at and isinstance(expires_at, (int, float)):
+                    is_expired = now > expires_at
+                elif file.created_at and ttl_meta:
+                    file_expires_at = file.created_at + (ttl_meta * 86400)
+                    is_expired = now > file_expires_at
+
+                if is_expired:
+                    try:
+                        # Delete from storage
+                        if file.path:
+                            await asyncio.to_thread(Storage.delete_file, file.path)
+
+                        # Delete from database
+                        await Files.delete_file_by_id(file.id)
+
+                        expired_count += 1
+                        log.debug(f'Deleted expired file: {file.filename} (id: {file.id})')
+                    except Exception as e:
+                        log.warning(f'Failed to delete expired file {file.id}: {e}')
+
+            if expired_count > 0:
+                log.info(f'File cleanup complete: deleted {expired_count} expired files')
+
+        except Exception as e:
+            log.exception(f'Error during file cleanup: {e}')
+
+        # Sleep for 24 hours before next cleanup
+        await asyncio.sleep(86400)

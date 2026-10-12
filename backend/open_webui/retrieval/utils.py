@@ -1555,8 +1555,17 @@ async def get_sources_from_items(
             # Manual Full Mode Toggle for Collection
             knowledge_base = await Knowledges.get_knowledge_by_id(item.get('id'))
 
+            # TracexGPT: client users always have access to assigned knowledge bases
+            client_info = (user.info or {}) if user else {}
+            is_client_kb = bool(
+                client_info.get('user_type') == 'client'
+                and knowledge_base
+                and knowledge_base.id in (client_info.get('assigned_kb_ids') or [])
+            )
+
             if knowledge_base and (
-                user.role == 'admin'
+                is_client_kb
+                or user.role == 'admin'
                 or knowledge_base.user_id == user.id
                 or await AccessGrants.has_access(
                     user_id=user.id,
@@ -1579,7 +1588,8 @@ async def get_sources_from_items(
                 else:
                     if item.get('context') == 'full' or bypass_embedding_and_retrieval:
                         if knowledge_base and (
-                            user.role == 'admin'
+                            is_client_kb
+                            or user.role == 'admin'
                             or knowledge_base.user_id == user.id
                             or await AccessGrants.has_access(
                                 user_id=user.id,

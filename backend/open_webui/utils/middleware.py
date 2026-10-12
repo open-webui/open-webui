@@ -2131,7 +2131,10 @@ async def chat_completion_files_handler(
             )
 
         if len(queries) == 0:
-            queries = [get_last_user_message(body['messages']) or '']
+            raw_query = get_last_user_message(body['messages']) or ''
+            # TracexGPT: client users can have a fixed RAG query prefix
+            kb_rag_query = (body.get('metadata') or {}).get('kb_rag_query', '')
+            queries = [f'{kb_rag_query}. {raw_query}' if kb_rag_query else raw_query]
 
         try:
             # One batched SELECT instead of six sequential round trips.

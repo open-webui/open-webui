@@ -363,6 +363,7 @@ async def check_model_access(
     user: UserModel,
     model_info,
     bypass_filter: bool = False,
+    model_id: str | None = None,
 ) -> None:
     """
     Enforce per-model read access for the given user.
@@ -376,11 +377,22 @@ async def check_model_access(
                     or None if the model is not registered.
         bypass_filter: If True, skip all access checks (used by
                        internal callers and BYPASS_MODEL_ACCESS_CONTROL).
+        model_id: Optional model ID string, used when model_info is None.
     """
     from fastapi import HTTPException
 
     if bypass_filter:
         return
+
+    # TracexGPT: client users always have access to their fixed model
+    client_info = (user.info or {}) if user else {}
+    if client_info.get('user_type') == 'client':
+        fixed_model = client_info.get('fixed_model_id')
+        if fixed_model:
+            if model_info and model_info.id == fixed_model:
+                return
+            if not model_info and model_id == fixed_model:
+                return
 
     if model_info:
         # Enforce for every non-admin role (including pending); never fail open.

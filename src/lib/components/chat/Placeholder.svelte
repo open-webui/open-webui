@@ -111,6 +111,9 @@
 		$selectedFolder != null &&
 		$selectedFolder.user_id !== $user?.id &&
 		!$selectedFolder.write_access;
+
+	// TracexGPT: client users get simplified UI
+	$: isClient = $user?.info?.user_type === 'client';
 </script>
 
 <div class="m-auto w-full max-w-[58rem] px-1 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -143,7 +146,7 @@
 				/>
 			{:else}
 				<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
-					<div class="flex shrink-0 justify-center">
+					<div class="flex shrink-0 justify-center" class:hidden={isClient}>
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 							{#each models as model, modelIdx}
 								<Tooltip
@@ -183,7 +186,7 @@
 						class=" text-2xl @sm:text-2xl line-clamp-1 flex items-center"
 						in:fade={{ duration: 100 }}
 					>
-						{#if selectedModelName}
+						{#if !isClient && selectedModelName}
 							<Tooltip content={selectedModelName} placement="top" className=" flex items-center ">
 								<span class="line-clamp-1">
 									{selectedModelName}
@@ -288,7 +291,7 @@
 		<div class="mx-auto px-4 md:max-w-3xl md:px-6 min-h-62" in:fade={{ duration: 200, delay: 200 }}>
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
-	{:else}
+	{:else if !isClient}
 		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions suggestionPrompts={selectedSuggestionPrompts} inputValue={prompt} {onSelect} />

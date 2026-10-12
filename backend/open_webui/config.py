@@ -180,6 +180,10 @@ AZURE_STORAGE_KEY = os.getenv('AZURE_STORAGE_KEY', None)
 UPLOAD_DIR = DATA_DIR / 'uploads'
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+# File TTL for generated content (PPT, images, etc.) - days until auto-deletion
+# 0 or empty = disable auto-cleanup
+FILE_TTL_DAYS = int(os.getenv('FILE_TTL_DAYS', '0'))
+
 
 ####################################
 # Cache DIR

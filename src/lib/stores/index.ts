@@ -416,4 +416,11 @@ export type SessionUser = {
 	name: string;
 	role: string;
 	profile_image_url: string;
+	info?: {
+		user_type?: string;
+		fixed_model_id?: string;
+		fixed_system_prompt?: string;
+		assigned_kb_ids?: string[];
+		[key: string]: any;
+	};
 };

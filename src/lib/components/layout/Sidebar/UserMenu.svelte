@@ -50,6 +50,9 @@
 	let showUserStatusModal = false;
 	let shiftKey = false;
 
+	// TracexGPT: client users get simplified UI
+	$: isClient = $user?.info?.user_type === 'client';
+
 	const dispatch = createEventDispatcher();
 
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
@@ -241,7 +244,7 @@
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 			{/if}
 
-			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools || $user?.permissions?.workspace?.skills}
+			{#if !isClient && ($user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools || $user?.permissions?.workspace?.skills)}
 				<div
 					class="user-menu-row flex items-center w-full rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 				>
@@ -534,6 +537,42 @@
 
 			<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 
+			{#if !isClient}
+				<a
+					href="/account/spending"
+					draggable="false"
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+					on:click={async (e) => {
+						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+						e.preventDefault();
+						show = false;
+						goto('/account/spending');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class="self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-3.5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center truncate">{$i18n.t('My Spending')}</div>
+				</a>
+			{/if}
+
 			{#if role === 'admin'}
 				<a
 					href="/admin"
@@ -559,25 +598,27 @@
 				</a>
 			{/if}
 
-			<button
-				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
-				type="button"
-				on:click={async () => {
-					show = false;
+			{#if !isClient}
+				<button
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+					type="button"
+					on:click={async () => {
+						show = false;
 
-					await showSettings.set(true);
+						await showSettings.set(true);
 
-					if ($mobile) {
-						await tick();
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class="self-center">
-					<Settings className="size-3.5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
-			</button>
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class="self-center">
+						<Settings className="size-3.5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Settings')}</div>
+				</button>
+			{/if}
 
 			<button
 				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"

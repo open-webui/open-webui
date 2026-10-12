@@ -582,7 +582,24 @@ async def generate_images(request: Request, form_data: CreateImageForm, user=Dep
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    # TracexGPT: budget enforcement
+    from open_webui.utils.cost_tracker import check_budget_before_request
+
+    model = form_data.model or await get_image_model(request)
+    await check_budget_before_request(user.id, model)
+
     result = await image_generations(request, form_data, user=user)
+
+    # TracexGPT: record image generation cost
+    try:
+        from open_webui.utils.cost_tracker import calculate_image_cost, record_non_token_spend
+
+        cost = calculate_image_cost(model, count=form_data.n or 1, size=form_data.size or '1024x1024')
+        if cost > 0:
+            await record_non_token_spend(user.id, model, cost)
+    except Exception as e:
+        log.warning(f'Image cost tracking failed: {e}')
+
     await publish_event(
         request,
         EVENTS.IMAGE_GENERATED,
@@ -918,6 +935,12 @@ async def image_edits(
 
     model = image_config.IMAGE_EDIT_MODEL if form_data.model is None else form_data.model
 
+    # TracexGPT: budget enforcement
+    from open_webui.utils.cost_tracker import check_budget_before_request
+
+    await check_budget_before_request(user.id, model)
+
+    _edit_success = False
     try:
 
         async def load_url_image(data):
@@ -1060,6 +1083,7 @@ async def image_edits(
 
                 _, image_file = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
                 images.append(image_file)
+            _edit_success = True
             return images
 
         elif image_config.IMAGE_EDIT_ENGINE == 'gemini':
@@ -1117,6 +1141,7 @@ async def image_edits(
                         )
                         images.append(image_file)
 
+            _edit_success = True
             return images
 
         elif image_config.IMAGE_EDIT_ENGINE == 'comfyui':
@@ -1201,6 +1226,7 @@ async def image_edits(
                 )
                 images.append(image_file)
 
+            _edit_success = True
             return images
     except Exception as e:
         error = e
@@ -1208,3 +1234,14 @@ async def image_edits(
             error = e.message
 
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))
+    finally:
+        # TracexGPT: record image edit cost only on success
+        if _edit_success:
+            try:
+                from open_webui.utils.cost_tracker import calculate_image_cost, record_non_token_spend
+
+                cost = calculate_image_cost(model, count=1, size=size or '1024x1024')
+                if cost > 0:
+                    await record_non_token_spend(user.id, model, cost)
+            except Exception as e:
+                log.warning(f'Image edit cost tracking failed: {e}')

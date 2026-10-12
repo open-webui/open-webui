@@ -483,6 +483,16 @@ class KnowledgeTable:
             return False
         if knowledge.user_id == user_id:
             return True
+
+        # TracexGPT: client users can always read their assigned knowledge bases
+        if permission == 'read':
+            from open_webui.models.users import Users
+
+            user = await Users.get_user_by_id(user_id, db=db)
+            client_info = (user.info or {}) if user else {}
+            if client_info.get('user_type') == 'client' and knowledge.id in (client_info.get('assigned_kb_ids') or []):
+                return True
+
         if user_group_ids is None:
             user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
             user_group_ids = {group.id for group in user_groups}

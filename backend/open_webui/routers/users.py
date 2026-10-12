@@ -1178,6 +1178,13 @@ async def get_user_preview(
     )
     accessible_tool_ids = owned_tool_ids | granted_tool_ids
 
+    # TracexGPT: inject client-specific resources into preview
+    client_info = target_user.info or {}
+    if client_info.get('user_type') == 'client':
+        if client_info.get('fixed_model_id'):
+            accessible_model_ids = accessible_model_ids | {client_info['fixed_model_id']}
+        accessible_knowledge_ids = accessible_knowledge_ids | set(client_info.get('assigned_kb_ids') or [])
+
     return {
         'user': {'id': target_user.id, 'name': target_user.name},
         'groups': [{'id': g.id, 'name': g.name} for g in user_groups],

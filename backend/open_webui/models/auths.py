@@ -105,6 +105,7 @@ class SigninResponse(Token, UserProfileImageResponse):
 class SessionUserResponse(Token, UserProfileImageResponse):
     expires_at: int | None = None
     permissions: dict | None = None
+    info: dict | None = None
 
 
 class SessionUserInfoResponse(SessionUserResponse, UserStatus):

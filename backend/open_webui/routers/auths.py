@@ -229,6 +229,7 @@ async def get_session_user(
         'status_message': user.status_message,
         'status_expires_at': user.status_expires_at,
         'permissions': user_permissions,
+        'info': user.info or {},
     }
 
     return response_data
@@ -849,15 +850,17 @@ async def signup(
 ):
     has_users = await Users.has_users(db=db)
 
+    # TracexGPT: hard block all public signup. Only the very first admin can self-register.
+    # All other accounts must be created by an admin via the admin API.
+    if has_users:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail='Self-registration is disabled. Contact your admin to create an account.',
+        )
+
     if WEBUI_AUTH:
-        if has_users:
-            if not await Config.get('ui.enable_signup') or not await Config.get('ui.enable_login_form'):
-                raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
         # Don't gate the first admin on ENABLE_SIGNUP: it auto-disables and can persist stale across a DB reset.
-        elif not await Config.get('ui.enable_login_form') and not ENABLE_INITIAL_ADMIN_SIGNUP:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    else:
-        if has_users:
+        if not await Config.get('ui.enable_login_form') and not ENABLE_INITIAL_ADMIN_SIGNUP:
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
     if not validate_email_format(form_data.email.lower()):

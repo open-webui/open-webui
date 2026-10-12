@@ -1,4 +1,5 @@
 from contextlib import nullcontext
+import logging
 import time
 import uuid
 from collections import Counter
@@ -61,6 +62,31 @@ def _timezone(tz: Optional[str]) -> ZoneInfo:
 
 def _date_key(timestamp: int, tz: ZoneInfo) -> str:
     return datetime.fromtimestamp(_normalize_timestamp(timestamp), tz=tz).strftime('%Y-%m-%d')
+
+
+log = logging.getLogger(__name__)
+
+
+def _record_spend_delta(user_id: str, model_id: Optional[str], previous: dict, current: dict) -> None:
+    """Fire-and-forget cost tracking for the tokens a save added.
+
+    A message is saved several times (streaming, background tasks), so charge
+    only the increase over the previously stored usage.
+    """
+    if not user_id or not model_id or not current:
+        return
+    input_tokens = max(0, (current.get('input_tokens') or 0) - (previous.get('input_tokens') or 0))
+    output_tokens = max(0, (current.get('output_tokens') or 0) - (previous.get('output_tokens') or 0))
+    if not (input_tokens or output_tokens):
+        return
+    try:
+        import asyncio
+
+        from open_webui.utils.cost_tracker import record_spend
+
+        asyncio.create_task(record_spend(user_id, model_id, input_tokens, output_tokens))
+    except Exception as e:
+        log.warning(f'Cost tracking failed: {e}')
 
 
 def get_usage(data: dict) -> Optional[dict]:
@@ -285,6 +311,7 @@ class ChatMessageTable:
             composite_id = f'{chat_id}-{message_id}'
 
             message = await session.get(ChatMessage, composite_id)
+            previous_usage = normalize_usage(message.usage) if message else {}
             if message:
                 self._apply_message_data(message, data, now)
             else:
@@ -295,6 +322,9 @@ class ChatMessageTable:
                 await session.commit()
             else:
                 await session.flush()
+
+            # TracexGPT: record spend for tokens added since the previous save
+            _record_spend_delta(user_id, message.model_id, previous_usage, normalize_usage(message.usage))
             return ChatMessageModel.model_validate(message)
 
     async def upsert_messages(

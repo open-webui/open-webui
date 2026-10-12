@@ -770,6 +770,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    # TracexGPT: budget enforcement
+    from open_webui.utils.cost_tracker import check_budget_before_request
+
+    tts_model = await Config.get('audio.tts.model')
+    await check_budget_before_request(user.id, tts_model)
+
     body = await request.body()
     payload = None
     if engine == 'openai-realtime':
@@ -844,6 +850,16 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         raise HTTPException(status_code=400, detail=f'Unsupported TTS engine: {engine}')
 
     response = await handler(request, payload, file_path, file_body_path, user)
+
+    # TracexGPT: record TTS cost
+    try:
+        from open_webui.utils.cost_tracker import calculate_tts_cost, record_non_token_spend
+
+        cost = calculate_tts_cost(tts_model, len(payload.get('input', '') or ''))
+        if cost > 0:
+            await record_non_token_spend(user.id, tts_model, cost)
+    except Exception as e:
+        log.warning(f'TTS cost tracking failed: {e}')
     await publish_event(
         request,
         EVENTS.AUDIO_SPEECH_REQUESTED,
@@ -1459,6 +1475,13 @@ async def transcription(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    # TracexGPT: budget enforcement
+    from open_webui.utils.cost_tracker import check_budget_before_request
+
+    stt_model = await Config.get('audio.stt.model') or await Config.get('audio.stt.whisper_model')
+    await check_budget_before_request(user.id, stt_model)
+
     log.info('file.content_type: %s', file.content_type)
     stt_supported_content_types = await Config.get('audio.stt.supported_content_types', [])
 
@@ -1502,6 +1525,17 @@ async def transcription(
                 metadata = {'language': language}
 
             result = await transcribe(request, file_path, metadata, user)
+
+            # TracexGPT: record STT cost (estimate duration from file size, ~1MB per minute)
+            try:
+                from open_webui.utils.cost_tracker import calculate_stt_cost, record_non_token_spend
+
+                minutes = max(0.1, os.path.getsize(file_path) / (1024 * 1024))
+                cost = calculate_stt_cost(stt_model, minutes)
+                if cost > 0:
+                    await record_non_token_spend(user.id, stt_model, cost)
+            except Exception as e:
+                log.warning(f'STT cost tracking failed: {e}')
 
             await publish_event(
                 request,

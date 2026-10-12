@@ -154,6 +154,9 @@
 		folderRegistry[folder.id]?.setFolderItems?.();
 	};
 
+	// TracexGPT: client users get simplified UI (no folders)
+	$: isClient = $user?.info?.user_type === 'client';
+
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
 	$: isMenuItemVisible = (id) => {
@@ -1369,7 +1372,7 @@
 						</SidebarSection>
 					{/if}
 
-					{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
+					{#if !isClient && $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
 						<SidebarSection
 							id="sidebar-folders"
 							bind:open={showFolders}

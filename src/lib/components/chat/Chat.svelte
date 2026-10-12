@@ -221,6 +221,19 @@
 	} else {
 		selectedModelIds = selectedModels;
 	}
+
+	// TracexGPT: reactive client model lock
+	$: if ($user?.info?.user_type === 'client' && $models.length > 0) {
+		const fixedModel = $user.info.fixed_model_id;
+		const availableModels = $models
+			.filter((m) => !(m?.info?.meta?.hidden ?? false))
+			.map((m) => m.id);
+		if (fixedModel && availableModels.includes(fixedModel)) {
+			if (!selectedModels.includes(fixedModel) || selectedModels.length !== 1) {
+				selectedModels = [fixedModel];
+			}
+		}
+	}
 	let serverContextUsage = null;
 	let contextUsage = null;
 
@@ -2593,6 +2606,15 @@
 			}
 		}
 
+		// TracexGPT: lock client users to their fixed model
+		const clientInfo = $user?.info || {};
+		if (clientInfo.user_type === 'client') {
+			const fixedModel = clientInfo.fixed_model_id;
+			if (fixedModel && availableModels.includes(fixedModel)) {
+				selectedModels = [fixedModel];
+			}
+		}
+
 		if ($mobile) {
 			await showControls.set(false);
 		}
@@ -3601,9 +3623,18 @@
 		if (bridgeRequest && (selectedModelIds.length !== 1 || !bridgeRequest.modelId))
 			return { status: 'rejected' };
 
-		const _selectedModels = selectedModels.map((modelId) =>
-			$models.map((m) => m.id).includes(modelId) ? modelId : ''
-		);
+		// TracexGPT: enforce client fixed model before validation
+		const clientInfo = $user?.info || {};
+		if (clientInfo.user_type === 'client' && clientInfo.fixed_model_id) {
+			selectedModels = [clientInfo.fixed_model_id];
+		}
+
+		const _selectedModels = selectedModels.map((modelId) => {
+			if (clientInfo.user_type === 'client' && modelId === clientInfo.fixed_model_id) {
+				return modelId;
+			}
+			return $models.map((m) => m.id).includes(modelId) ? modelId : '';
+		});
 
 		if (!equal(selectedModels, _selectedModels)) {
 			selectedModels = _selectedModels;
