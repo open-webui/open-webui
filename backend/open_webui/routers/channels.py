@@ -52,7 +52,7 @@ from open_webui.tasks import create_task
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.apps import (
     check_app_channel_access,
-    generate_app_response,
+    generate_app_channel_reply,
     get_app_by_id,
     get_app_response,
     has_app_access,
@@ -1090,7 +1090,7 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
     return True
 
 
-async def app_response_handler(channel_id, message_id, user_id):
+async def app_channel_reply_handler(channel_id, message_id, user_id):
     """Committed human messages only; errors never cause the human POST to retry."""
     if not await Config.get('apps.enable'):
         return
@@ -1110,7 +1110,7 @@ async def app_response_handler(channel_id, message_id, user_id):
                 user = await Users.get_user_by_id(user_id, db=db)
                 if not user:
                     continue
-                value = await generate_app_response(
+                value = await generate_app_channel_reply(
                     app,
                     user,
                     channel_id,
@@ -1135,7 +1135,7 @@ async def app_response_handler(channel_id, message_id, user_id):
                     'channel_id': channel_id,
                     'message_id': message_id,
                     'parent_id': parent_id,
-                    'response': value,
+                    'reply': value,
                 },
                 [user_id],
             )
@@ -1409,7 +1409,7 @@ async def post_new_message(
         # Background tasks should manage their own short-lived sessions to avoid
         # holding database connections during slow operations (e.g., LLM calls).
         async def background_handler():
-            await create_task(None, app_response_handler(channel.id, message.id, user.id))
+            await create_task(None, app_channel_reply_handler(channel.id, message.id, user.id))
             await model_response_handler(request, channel, message, user)
             await send_notification(
                 request,

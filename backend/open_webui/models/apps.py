@@ -124,8 +124,8 @@ class AppUpdateForm(StrictModel):
     access_grants: list[dict] | None = None
 
 
-class AppContextForm(StrictModel):
-    context: str = Field(max_length=100000)
+class AppTokenForm(StrictModel):
+    token: str = Field(max_length=100000)
 
 
 class AppConnectionForm(StrictModel):

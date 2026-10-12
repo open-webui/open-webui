@@ -14,7 +14,7 @@
 	import { settings, socket, user } from '$lib/stores';
 
 	import Message from './Messages/Message.svelte';
-	import AppResponse from './AppResponse.svelte';
+	import AppChannelReply from './AppChannelReply.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import {
@@ -41,24 +41,24 @@
 	export let onPin: Function = () => {};
 
 	let messagesLoading = false;
-	let appResponses: Record<string, any> = {};
-	let responseLocation = '';
-	$: if (responseLocation !== `${channel?.id}:${id}`) {
-		responseLocation = `${channel?.id}:${id}`;
-		appResponses = {};
+	let appReplies: Record<string, any> = {};
+	let replyLocation = '';
+	$: if (replyLocation !== `${channel?.id}:${id}`) {
+		replyLocation = `${channel?.id}:${id}`;
+		appReplies = {};
 	}
 
-	const receiveAppResponse = (event) => {
+	const receiveAppChannelReply = (event) => {
 		if (event.channel_id !== channel?.id || (event.parent_id ?? null) !== (thread ? id : null))
 			return;
 		const key = `${event.message_id}:${event.app_id}`;
-		appResponses = { ...appResponses, [key]: event };
+		appReplies = { ...appReplies, [key]: event };
 	};
 
 	onMount(() => {
 		const appSocket = $socket;
-		appSocket?.on('events:app', receiveAppResponse);
-		return () => appSocket?.off('events:app', receiveAppResponse);
+		appSocket?.on('events:app', receiveAppChannelReply);
+		return () => appSocket?.off('events:app', receiveAppChannelReply);
 	});
 
 	const loadMoreMessages = async () => {
@@ -148,8 +148,8 @@
 
 		{#each messageList as message, messageIdx (id ? `${id}-${message.id}` : message.id)}
 			<Message
-				on:response={(event) =>
-					receiveAppResponse({ ...event.detail, parent_id: thread ? id : null })}
+				on:reply={(event) =>
+					receiveAppChannelReply({ ...event.detail, parent_id: thread ? id : null })}
 				{message}
 				{channel}
 				{thread}
@@ -278,10 +278,10 @@
 					}
 				}}
 			/>
-			{#each Object.entries(appResponses).filter(([, event]) => event.message_id === message.id) as [key, event] (key)}
+			{#each Object.entries(appReplies).filter(([, event]) => event.message_id === message.id) as [key, event] (key)}
 				<div
 					class="flex gap-3 px-4 pt-3 pb-2"
-					data-app-response={event.app_id}
+					data-app-reply={event.app_id}
 					dir={$settings.chatDirection}
 				>
 					<span
@@ -296,11 +296,11 @@
 							<span class="text-[0.65rem] text-gray-500">{$i18n.t('App')}</span>
 						</div>
 						<div class="[&_.markdown-prose]:text-sm! [&_.markdown-prose]:leading-[1.375rem]!">
-							{#key event.response}
-								<AppResponse
+							{#key event.reply}
+								<AppChannelReply
 									appId={event.app_id}
 									channelId={channel.id}
-									response={event.response}
+									reply={event.reply}
 								/>
 							{/key}
 						</div>
@@ -311,8 +311,8 @@
 								type="button"
 								class="focus-ring rounded hover:text-gray-800 hover:underline dark:hover:text-gray-200"
 								on:click={() => {
-									delete appResponses[key];
-									appResponses = { ...appResponses };
+									delete appReplies[key];
+									appReplies = { ...appReplies };
 								}}>{$i18n.t('Dismiss')}</button
 							>
 						</div>

@@ -12,12 +12,12 @@ from open_webui.models.apps import (
     AppAccessResponse,
     AppChannelMessage,
     AppConnectionForm,
-    AppContextForm,
     AppForm,
     AppInteractionForm,
     AppManifestForm,
     AppResponse,
     Apps,
+    AppTokenForm,
     AppUpdateForm,
     Manifest,
 )
@@ -30,7 +30,7 @@ from open_webui.utils.apps import (
     check_app_invocation_access,
     create_app_message,
     decode_app_context_token,
-    generate_app_response,
+    generate_app_channel_reply,
     get_app_by_id,
     get_app_encryption_cipher,
     get_app_message_data,
@@ -187,9 +187,9 @@ async def get_app_channels(app=Depends(get_verified_app), db: AsyncSession = Dep
 
 @router.post('/runtime/authorize')
 async def authorize_app_execution(
-    form_data: AppContextForm, app=Depends(get_verified_app), db: AsyncSession = Depends(get_async_session)
+    form_data: AppTokenForm, app=Depends(get_verified_app), db: AsyncSession = Depends(get_async_session)
 ):
-    value = decode_app_context_token(app, 'execution', form_data.context)
+    value = decode_app_context_token(app, 'execution', form_data.token)
     user = await Users.get_user_by_id(value['actor_id'], db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Actor is unavailable')
@@ -212,9 +212,9 @@ async def authorize_app_execution(
 
 @router.post('/runtime/events/verify')
 async def verify_app_event(
-    form_data: AppContextForm, app=Depends(get_verified_app), db: AsyncSession = Depends(get_async_session)
+    form_data: AppTokenForm, app=Depends(get_verified_app), db: AsyncSession = Depends(get_async_session)
 ):
-    value = decode_app_context_token(app, 'event', form_data.context)
+    value = decode_app_context_token(app, 'event', form_data.token)
     await check_app_channel_membership(app, value['channel']['id'], db=db)
     require_scope(app, 'messages:read')
     return {k: v for k, v in value.items() if k not in ('purpose', 'exp', 'nonce')}
@@ -450,7 +450,7 @@ async def create_app_interaction(
     action = next((item for item in actions if item['action_id'] == form_data.action_id), None)
     if not action:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Unknown action')
-    return await generate_app_response(
+    return await generate_app_channel_reply(
         app,
         user,
         message.channel_id,
@@ -479,11 +479,11 @@ async def get_app_operation(
     if value['actor_id'] != user.id or value['operation_id'] != operation_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Invalid operation receipt')
     await check_app_invocation_access(app, value['channel_id'], user, db=db)
-    return await generate_app_response(
+    return await generate_app_channel_reply(
         app,
         user,
         value['channel_id'],
-        'operation_status',
+        'channel.operation.status',
         {'operation_id': operation_id},
         operation_id=operation_id,
         db=db,

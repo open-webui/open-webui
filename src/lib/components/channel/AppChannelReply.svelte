@@ -4,7 +4,7 @@
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	export let appId: string;
 	export let channelId: string;
-	export let response: any;
+	export let reply: any;
 	export let source: any = null;
 	const dispatch = createEventDispatcher();
 	let busy = false,
@@ -22,12 +22,12 @@
 				action_id: actionId
 			});
 			if (result.visibility !== 'channel' || result.type === 'error') {
-				dispatch('response', {
+				dispatch('reply', {
 					app_id: appId,
 					app_name: source.user?.name,
 					channel_id: channelId,
 					message_id: source.id,
-					response: result
+					reply: result
 				});
 			}
 		} catch (e) {
@@ -37,17 +37,17 @@
 		}
 	}
 	async function poll() {
-		if (disposed || response?.type !== 'deferred') return;
+		if (disposed || reply?.type !== 'deferred') return;
 		if (!document.hidden) {
 			try {
 				const result = await getAppOperationById(
 					localStorage.token,
 					appId,
-					response.operation_id,
-					response.receipt
+					reply.operation_id,
+					reply.receipt
 				);
 				if (disposed) return;
-				response = result;
+				reply = result;
 			} catch (e) {
 				error = String(e);
 				return;
@@ -58,16 +58,16 @@
 	}
 	function download() {
 		const url = URL.createObjectURL(
-			new Blob([response.content], { type: 'text/markdown;charset=utf-8' })
+			new Blob([reply.content], { type: 'text/markdown;charset=utf-8' })
 		);
 		const link = document.createElement('a');
 		link.href = url;
-		link.download = response.filename;
+		link.download = reply.filename;
 		link.click();
 		URL.revokeObjectURL(url);
 	}
 	onMount(() => {
-		if (response?.type === 'deferred') timer = setTimeout(poll, 1000);
+		if (reply?.type === 'deferred') timer = setTimeout(poll, 1000);
 	});
 	onDestroy(() => {
 		disposed = true;
@@ -76,20 +76,20 @@
 </script>
 
 <div class="space-y-3 text-sm" aria-busy={busy}>
-	{#if response?.title}<h3 class="font-medium">{response.title}</h3>{/if}
-	{#if response?.content}<Markdown content={response.content} allowEmbeds={false} />{/if}
-	{#if response?.type === 'error'}<p role="alert">
+	{#if reply?.title}<h3 class="font-medium">{reply.title}</h3>{/if}
+	{#if reply?.content}<Markdown content={reply.content} allowEmbeds={false} />{/if}
+	{#if reply?.type === 'error'}<p role="alert">
 			The app could not complete this operation.
 		</p>{/if}
 	{#if error}<p role="alert" class="text-red-600">{error}</p>{/if}
-	{#if response?.type === 'deferred'}<p role="status" class="text-gray-500">Working…</p>{/if}
-	{#if response?.type === 'download'}<button
+	{#if reply?.type === 'deferred'}<p role="status" class="text-gray-500">Working…</p>{/if}
+	{#if reply?.type === 'download'}<button
 			class="focus-ring flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-			on:click={download}>Download {response.filename}</button
+			on:click={download}>Download {reply.filename}</button
 		>{/if}
-	{#if response?.actions?.length}
+	{#if reply?.actions?.length}
 		<div class="flex flex-wrap items-center gap-1.5">
-			{#each response.actions as item, index}
+			{#each reply.actions as item, index}
 				<button
 					type="button"
 					disabled={busy}

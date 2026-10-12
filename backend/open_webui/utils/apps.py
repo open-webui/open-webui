@@ -375,7 +375,7 @@ async def send_app_message_event(message, kind, created_at):
                         'webui_url': app.data['webui_url'],
                         'channel': {'id': message['channel_id']},
                     }
-                    envelope['event_context'] = create_app_context_token(app, 'event', envelope, expires_in=300)
+                    envelope['event_token'] = create_app_context_token(app, 'event', envelope, expires_in=300)
                 status, _ = await send_app_event(app, envelope, timeout=10)
                 if not 200 <= status < 300:
                     log.warning('App %s did not acknowledge %s: HTTP %s', app_id, kind, status)
@@ -452,13 +452,13 @@ async def update_app_message(db, app, message_id, form, if_match):
     return value
 
 
-async def generate_app_response(
+async def generate_app_channel_reply(
     app, user, channel_id, event_type, data, *, db: AsyncSession, source=None, operation_id=None, scope=None
 ):
     await check_app_invocation_access(app, channel_id, user, db=db)
     require_scope(app, scope)
     operation_id = operation_id or str(uuid.uuid4())
-    context = create_app_context_token(
+    token = create_app_context_token(
         app,
         'execution',
         {
@@ -477,7 +477,7 @@ async def generate_app_response(
         'actor': {'id': user.id, 'is_admin': user.role == 'admin'},
         'channel': {'id': channel_id},
         'data': data,
-        'execution_context': context,
+        'execution_token': token,
         'source': source,
     }
     checked_key = (app.api_key, app.data['manifest']['public_key'])
@@ -500,7 +500,7 @@ async def generate_app_response(
     except Exception:
         raise HTTPException(502, 'App returned an invalid response') from None
     await check_app_invocation_access(app, channel_id, user, db=db)
-    if event_type == 'operation_status' and (reply.visibility != 'private' or reply.type == 'update'):
+    if event_type == 'channel.operation.status' and (reply.visibility != 'private' or reply.type == 'update'):
         raise HTTPException(502, 'Deferred results must be private; apps publish separately through the message API')
     if reply.actions and (reply.visibility != 'channel' or reply.type not in ('message', 'update')):
         raise HTTPException(502, 'Buttons require a channel message')

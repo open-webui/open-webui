@@ -23,7 +23,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { getMessageData } from '$lib/apis/channels';
 
-	import AppResponse from '../AppResponse.svelte';
+	import AppChannelReply from '../AppChannelReply.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import StructuredOutputRenderer from '$lib/components/chat/Messages/StructuredOutputRenderer.svelte';
 	import { buildOutputDisplayItems } from '$lib/components/chat/Messages/structuredOutput';
@@ -589,7 +589,7 @@
 
 						{#if message.app_id && message?.data?.app}
 							<div class="mt-2">
-								<AppResponse on:response appId={message.app_id} channelId={channel.id} source={message} response={{ actions: message.data.app.actions }} />
+								<AppChannelReply on:reply appId={message.app_id} channelId={channel.id} source={message} reply={{ actions: message.data.app.actions }} />
 							</div>
 						{/if}
 
