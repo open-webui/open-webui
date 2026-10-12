@@ -596,10 +596,6 @@
 		setFolderItems();
 	}
 
-	const shouldIgnoreRowClick = (target) => {
-		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
-	};
-
 	const openFolderHandler = async () => {
 		const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
 			toast.error(`${error}`);
@@ -744,42 +740,14 @@
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="w-full group">
+			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 			<div
 				id="folder-{folderId}-button"
 				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
 				folderId
 					? 'bg-gray-100/80 dark:bg-gray-850/50 selected'
 					: ''}"
-				on:dblclick={(e) => {
-					if (!isWritable) return;
-					if (clickTimer) {
-						clearTimeout(clickTimer); // cancel the single-click action
-						clickTimer = null;
-					}
-					renameHandler();
-				}}
-				role="button"
-				tabindex="0"
-				on:click={async (e) => {
-					e.stopPropagation();
-					if (shouldIgnoreRowClick(e.target)) return;
-					if (clickTimer) {
-						clearTimeout(clickTimer);
-						clickTimer = null;
-					}
-
-					clickTimer = setTimeout(async () => {
-						await openFolderHandler();
-						clickTimer = null;
-					}, 100); // 100ms delay (typical double-click threshold)
-				}}
-				on:keydown={(e) => {
-					if (e.currentTarget !== e.target) return;
-					if (e.key === 'Enter' || e.key === ' ') {
-						e.preventDefault();
-						openFolderHandler();
-					}
-				}}
+				on:click|stopPropagation
 			>
 				<button
 					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg"
@@ -844,18 +812,53 @@
 							class="w-full h-full bg-transparent outline-hidden"
 						/>
 					{:else}
-						<div class="min-w-0 truncate">
-							{folders[folderId].name}
-						</div>
+						<a
+							href={`/folders/${folderId}`}
+							draggable="false"
+							class="flex min-w-0 flex-1 items-center gap-1.5"
+							on:dblclick={(e) => {
+								if (!isWritable || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+								if (clickTimer) {
+									clearTimeout(clickTimer); // cancel the single-click action
+									clickTimer = null;
+								}
+								renameHandler();
+							}}
+							on:click={(e) => {
+								e.stopPropagation();
+								if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+								e.preventDefault();
+								if (clickTimer) {
+									clearTimeout(clickTimer);
+									clickTimer = null;
+								}
 
-						{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
-							<div
-								class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
-								title={$i18n.t('Unread')}
-							>
-								{formatUnreadCount(folders[folderId].unread_count)}
+								clickTimer = setTimeout(async () => {
+									await openFolderHandler();
+									clickTimer = null;
+								}, 100); // 100ms delay (typical double-click threshold)
+							}}
+							on:keydown={(e) => {
+								if (e.currentTarget !== e.target) return;
+								if (e.key === ' ' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+									e.preventDefault();
+									openFolderHandler();
+								}
+							}}
+						>
+							<div class="min-w-0 truncate">
+								{folders[folderId].name}
 							</div>
-						{/if}
+
+							{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
+								<div
+									class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
+									title={$i18n.t('Unread')}
+								>
+									{formatUnreadCount(folders[folderId].unread_count)}
+								</div>
+							{/if}
+						</a>
 					{/if}
 				</div>
 
