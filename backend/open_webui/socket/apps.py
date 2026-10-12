@@ -31,7 +31,7 @@ from sqlalchemy import select, update
 
 log = logging.getLogger(__name__)
 NAMESPACE = '/apps'
-MAX_PACKET = 1048576
+MAX_PACKET = 16 * 1024 * 1024
 
 
 class JSON:
@@ -45,7 +45,7 @@ class JSON:
 class JSONPacket(Packet):
     def decode(self, encoded_packet):
         if not isinstance(encoded_packet, str) or len(encoded_packet.encode()) > MAX_PACKET:
-            raise ValueError('Socket packet exceeds 1 MiB or is not JSON')
+            raise ValueError('Socket packet exceeds 16 MiB or is not JSON')
         if encoded_packet[:1] in ('5', '6'):
             raise ValueError('Binary app packets are not supported')
         return super().decode(encoded_packet)
@@ -202,7 +202,7 @@ class AppConnection:
         self.requests.add(task)
         try:
             if not isinstance(packet, dict) or len(JSON.dumps(packet).encode()) > MAX_PACKET - 128:
-                raise HTTPException(413, 'App request exceeds 1 MiB')
+                raise HTTPException(413, 'App request exceeds 16 MiB')
             operation = packet.get('operation')
             arguments = packet.get('arguments', {})
             if not self.verified or (not self.ready and operation != 'ping'):
@@ -217,7 +217,7 @@ class AppConnection:
                     value = await execute_request(app, operation, arguments, db)
             result = {'status': 200, 'data': value}
             if len(JSON.dumps(result).encode()) > MAX_PACKET - 128:
-                raise HTTPException(413, 'App response exceeds 1 MiB')
+                raise HTTPException(413, 'App response exceeds 16 MiB')
             return result
         except HTTPException as exc:
             return {'status': exc.status_code, 'error': exc.detail}
