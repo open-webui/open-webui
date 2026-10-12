@@ -5917,6 +5917,7 @@ async def streaming_chat_response_handler(response, ctx):
                 )
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
+                attached_usage = None
                 user_message = get_last_user_message(form_data['messages'])
                 messages = list(form_data['messages'])
 
@@ -6279,6 +6280,11 @@ async def streaming_chat_response_handler(response, ctx):
                                         elif part.get('type') == 'input_image':
                                             image_urls.append(part.get('image_url', ''))
                                     message['content'] = ''.join(text_parts)
+
+                            # A count reported for the last request covers everything before these results.
+                            if usage is not attached_usage and tool_messages:
+                                tool_messages[0]['usage'] = usage
+                                attached_usage = usage
 
                             # Refresh citation context without restoring compacted history.
                             user_prompt = get_last_user_message_item(form_data['messages'])

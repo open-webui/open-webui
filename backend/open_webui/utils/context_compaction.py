@@ -321,12 +321,10 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
     if threshold <= 0:
         return False
 
-    # Expanded tool histories include fresh results and rebuilt prompts absent from prior usage.
-    if not any(message.get('role') == 'tool' for message in messages):
-        for idx in range(len(messages) - 1, -1, -1):
-            usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-            if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
-                return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
+    for idx in range(len(messages) - 1, -1, -1):
+        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
+        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
+            return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
     return estimated > threshold
