@@ -13,6 +13,8 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
@@ -93,9 +95,16 @@
 				showScopes = true;
 			} else {
 				if (manual) {
-					manifest = { ...manifest, id: manifest.id || slug, name, requested_scopes: scopes };
+					manifest = {
+						...manifest,
+						id: manifest.id || slug,
+						name: app ? manifest.name : name,
+						requested_scopes: [...new Set([...manifest.requested_scopes, ...scopes])]
+					};
+					manifestUpdated = !!app && JSON.stringify(manifest) !== JSON.stringify(app.data.manifest);
 				}
 				if (!app) {
+					manifest = { ...manifest, name };
 					app = await createNewApp(localStorage.token, {
 						manifest,
 						url,
@@ -141,7 +150,7 @@
 	let opened = false;
 	async function initialize() {
 		manifestUpdated = false;
-		manual = false;
+		manual = !!app;
 		showScopes = false;
 		scopeQuery = '';
 		url = app?.data.url ?? '';
@@ -174,7 +183,7 @@
 	bind:accessGrants={grants}
 	accessRoles={['read']}
 	labels={{
-		title: $i18n.t('Who can use this app?'),
+		title: $i18n.t('Access'),
 		public: $i18n.t('Everyone'),
 		private: $i18n.t('Restricted'),
 		read: $i18n.t('Use'),
@@ -305,7 +314,7 @@
 							bind:value={apiKey}
 							required={!app?.configured}
 							maxlength="4096"
-							placeholder={app?.configured ? '••••••••' : ''}
+							placeholder={app?.configured ? '••••••••' : $i18n.t('API Key')}
 						/>
 					</AdminSettingField>
 				{:else}
@@ -315,7 +324,6 @@
 								id="app-name"
 								class={inputClass}
 								bind:value={name}
-								disabled={!app && !manual}
 								required
 								maxlength="100"
 							/></AdminSettingField
@@ -354,30 +362,35 @@
 						</AdminSettingField>
 					{/if}
 					<AdminSettingSection title={$i18n.t('Connection')}>
-						<p class="break-all text-xs text-gray-600 dark:text-gray-400">{url}</p>
-						{#if app && !manual}
-							<button
-								type="button"
-								disabled={busy}
-								class="mt-2 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
-								on:click={() =>
-									run(async () => {
-										manifest = await previewAppManifest(localStorage.token, url, {
-											...(apiKey ? { api_key: apiKey } : {}),
-											...(app ? { app_id: app.id } : {})
-										});
-										scopes = scopes.filter((scope) => manifest.requested_scopes.includes(scope));
-										manifestUpdated = true;
-										showScopes = true;
-									})}>{$i18n.t('Update app')}</button
-							>
-							<button
-								type="button"
-								disabled={busy}
-								class="ml-3 mt-2 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
-								on:click={editDetailsManually}>{$i18n.t('Edit details manually')}</button
-							>
-						{/if}
+						<div class="flex items-center gap-2">
+							<p class="min-w-0 flex-1 break-all text-xs text-gray-600 dark:text-gray-400">{url}</p>
+							{#if app}
+								<Tooltip content={$i18n.t('Update app')}>
+									<button
+										type="button"
+										aria-label={$i18n.t('Update app')}
+										disabled={busy}
+										class="self-center flex size-6 shrink-0 items-center justify-center bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition disabled:opacity-50"
+										on:click={() =>
+											run(async () => {
+												manifest = await previewAppManifest(localStorage.token, url, {
+													...(apiKey ? { api_key: apiKey } : {}),
+													app_id: app!.id
+												});
+												scopes = scopes.filter((scope) =>
+													manifest.requested_scopes.includes(scope)
+												);
+												manifestUpdated = true;
+												showScopes = true;
+											})}
+									>
+										{#if busy}<Spinner className="size-3.5" />{:else}<Refresh
+												className="size-3.5"
+											/>{/if}
+									</button>
+								</Tooltip>
+							{/if}
+						</div>
 						{#if manifestUpdated}
 							<p class="mt-2 text-xs text-gray-500">
 								{$i18n.t('Saving approves the updated app identity and selected scopes.')}
@@ -399,7 +412,7 @@
 								bind:value={apiKey}
 								required={!app?.configured}
 								maxlength="4096"
-								placeholder={app?.configured ? '••••••••' : ''}
+								placeholder={app?.configured ? '••••••••' : $i18n.t('API Key')}
 							/>
 						</AdminSettingField>
 					</AdminSettingSection>
@@ -425,7 +438,7 @@
 						</AdminSettingRow>
 					</AdminSettingSection>
 					<AccessButton
-						label={$i18n.t('Who can use this app?')}
+						label={$i18n.t('Access')}
 						className="mt-5"
 						on:click={() => {
 							showGrants = true;

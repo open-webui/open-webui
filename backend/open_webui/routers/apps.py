@@ -385,19 +385,31 @@ async def connect_app_by_id(
     db: AsyncSession = Depends(get_async_session),
 ):
     app = await get_app_by_id(app_id, db=db)
-    webui_url = str(request.base_url).rstrip('/')
+    webui_url = str(await Config.get('webui.url') or request.base_url).strip().rstrip('/')
     try:
-        validate_app_url(webui_url)
         origin = urlsplit(webui_url)
-        if origin.path or origin.query or origin.fragment:
-            raise ValueError()
+        if (
+            origin.scheme not in ('http', 'https')
+            or not origin.hostname
+            or origin.username is not None
+            or origin.password is not None
+            or origin.path
+            or origin.query
+            or origin.fragment
+            or '\\' in webui_url
+            or len(webui_url) > 2048
+            or any(c.isspace() for c in webui_url)
+        ):
+            raise ValueError('Invalid WebUI origin')
         host = f'[{origin.hostname}]' if ':' in origin.hostname else origin.hostname.lower()
         port = origin.port or (443 if origin.scheme == 'https' else 80)
         suffix = f':{port}' if port != (443 if origin.scheme == 'https' else 80) else ''
         webui_url = f'{origin.scheme}://{host}{suffix}'
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail='Connect through your public HTTPS WebUI URL'
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Invalid WebUI URL. Set WebUI URL in Settings > Admin > General to an HTTP(S) origin '
+            'without a path, query, fragment or credentials.',
         ) from None
     if form_data.api_key is not None:
         app.api_key = get_app_encryption_cipher().encrypt(form_data.api_key.get_secret_value().encode()).decode()
