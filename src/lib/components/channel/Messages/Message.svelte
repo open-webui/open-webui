@@ -30,6 +30,7 @@
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import Grid from '$lib/components/icons/Grid.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -408,7 +409,13 @@
 									className="size-6 mt-0.5 rounded-lg!"
 								/>
 							{:else}
-								<span class="flex size-6 mt-0.5 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-xs" aria-label="App">App</span>
+								<span
+									class="flex size-6 mt-0.5 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800"
+									role="img"
+									aria-label={$i18n.t('App')}
+								>
+									<Grid className="size-4" />
+								</span>
 							{/if}
 						{:else if message.user?.role === 'webhook'}
 							<ProfileImage
