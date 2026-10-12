@@ -1118,7 +1118,9 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                     {'text': text, 'message_id': message_id},
                     operation_id=message_id,
                     db=db,
-                    scope='messages:read' if 'messages:read' in app.data['granted_scopes'] else 'mentions:read',
+                    scope='channels:messages:read'
+                    if 'channels:messages:read' in app.data['granted_scopes']
+                    else 'channels:mentions:read',
                 )
         except Exception as exc:
             log.warning('App mention delivery failed: %s', type(exc).__name__)

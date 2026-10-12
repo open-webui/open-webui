@@ -216,7 +216,7 @@ async def verify_app_event(
 ):
     value = decode_app_context_token(app, 'event', form_data.token)
     await check_app_channel_membership(app, value['channel']['id'], db=db)
-    require_scope(app, 'messages:read')
+    require_scope(app, 'channels:messages:read')
     return {k: v for k, v in value.items() if k not in ('purpose', 'exp', 'nonce')}
 
 
@@ -235,7 +235,7 @@ async def get_app_channel_messages(
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_app_channel_membership(app, channel_id, db=db)
-    require_scope(app, 'messages:read')
+    require_scope(app, 'channels:messages:read')
     query = select(Message).where(Message.channel_id == channel_id, Message.parent_id == parent_id)
     if parent_id:
         parent = await db.get(Message, parent_id)
@@ -343,7 +343,9 @@ async def update_app_by_id(
         }
         data['is_active'] = False
     elif form_data.granted_scopes is not None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='An updated manifest is required')
+        if not set(form_data.granted_scopes) <= set(app.data['manifest']['requested_scopes']):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Unrequested scope')
+        data['data'] = {**data.get('data', app.data), 'granted_scopes': form_data.granted_scopes}
     app = await Apps.update_app_by_id(app_id, data, access_grants=form_data.access_grants, db=db)
     return get_app_response(app)
 

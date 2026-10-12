@@ -53,10 +53,10 @@
 	const buttonClass =
 		'flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white';
 	const scopeLabels: Record<string, string> = {
-		'mentions:read': 'Read app mentions',
-		'messages:read': 'Read messages and history in joined channels',
-		'messages:write': 'Send and update messages',
-		'channels:read': 'Read joined channels'
+		'channels:mentions:read': 'Read app mentions in joined channels',
+		'channels:messages:read': 'Read messages and history in joined channels',
+		'channels:messages:write': 'Send messages and edit own messages in joined channels',
+		'channels:read': 'Read joined channel details'
 	};
 	async function run(task: () => Promise<void>) {
 		busy = true;
@@ -107,7 +107,8 @@
 					app = await updateAppById(localStorage.token, app.id, {
 						name,
 						access_grants: grants,
-						...(manifestUpdated ? { manifest, granted_scopes: scopes } : {})
+						granted_scopes: scopes,
+						...(manifestUpdated ? { manifest } : {})
 					});
 					manifestUpdated = false;
 				}
@@ -242,19 +243,13 @@
 										{scope}
 									</div>{/if}
 							</div>
-							{#if app && !manifestUpdated}
-								<span class="whitespace-nowrap text-[0.6875rem] text-gray-400 dark:text-gray-600"
-									>{scopes.includes(scope) ? $i18n.t('Granted') : $i18n.t('Not granted')}</span
-								>
-							{:else}
-								<Switch
-									state={scopes.includes(scope)}
-									ariaLabelledbyId={labelId}
-									on:change={(event) => {
-										scopes = event.detail ? [...scopes, scope] : scopes.filter((s) => s !== scope);
-									}}
-								/>
-							{/if}
+							<Switch
+								state={scopes.includes(scope)}
+								ariaLabelledbyId={labelId}
+								on:change={(event) => {
+									scopes = event.detail ? [...scopes, scope] : scopes.filter((s) => s !== scope);
+								}}
+							/>
 						</AdminSettingRow>
 					{:else}
 						<p class="py-3 text-xs text-gray-400 dark:text-gray-600">
@@ -389,7 +384,7 @@
 						<AdminSettingRow label={$i18n.t('Scopes')}>
 							<div class="flex items-center gap-3 text-xs">
 								<span class="text-gray-400 dark:text-gray-600"
-									>{$i18n.t(app ? '{{COUNT}} granted' : '{{COUNT}} selected', {
+									>{$i18n.t('{{COUNT}} selected', {
 										COUNT: scopes.length
 									})}</span
 								>
@@ -401,7 +396,7 @@
 										showScopes = true;
 									}}
 								>
-									{app && !manifestUpdated ? $i18n.t('View') : $i18n.t('Review')}
+									{app ? $i18n.t('Edit') : $i18n.t('Review')}
 								</button>
 							</div>
 						</AdminSettingRow>

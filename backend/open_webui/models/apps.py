@@ -47,7 +47,7 @@ class AppInvitation(StrictModel):
     app_id: str
 
 
-Scope = Literal['mentions:read', 'messages:read', 'messages:write', 'channels:read']
+Scope = Literal['channels:mentions:read', 'channels:messages:read', 'channels:messages:write', 'channels:read']
 
 
 class Manifest(StrictModel):
@@ -55,7 +55,7 @@ class Manifest(StrictModel):
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default='', max_length=2000)
     public_key: str = Field(max_length=2000)
-    requested_scopes: list[Scope] = Field(max_length=4)
+    requested_scopes: list[Scope]
 
     @field_validator('public_key')
     @classmethod
@@ -109,7 +109,7 @@ class AppForm(StrictModel):
     url: str = Field(max_length=2048)
     api_key: SecretStr = Field(min_length=32, max_length=4096)
     slug: str = Field(pattern=r'^[a-z][a-z0-9-]{0,39}$')
-    granted_scopes: list[str]
+    granted_scopes: list[Scope]
     access_grants: list[dict] = Field(
         default_factory=lambda: [{'principal_type': 'user', 'principal_id': '*', 'permission': 'read'}]
     )
@@ -120,7 +120,7 @@ class AppUpdateForm(StrictModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     settings: dict | None = None
     manifest: Manifest | None = None
-    granted_scopes: list[str] | None = None
+    granted_scopes: list[Scope] | None = None
     access_grants: list[dict] | None = None
 
 

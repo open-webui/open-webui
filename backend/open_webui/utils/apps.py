@@ -359,7 +359,7 @@ async def send_app_message_event(message, kind, created_at):
             try:
                 async with get_async_db() as db:
                     app = await Apps.get_app_by_id(app_id, db=db)
-                    if not app or 'messages:read' not in app.data.get('granted_scopes', []):
+                    if not app or 'channels:messages:read' not in app.data.get('granted_scopes', []):
                         continue
                     if not app.data.get('webui_url'):
                         continue
@@ -406,7 +406,7 @@ async def emit_app_message(message, channel, kind='message'):
 
 async def create_app_message(db, app, channel_id, form):
     channel = await check_app_channel_membership(app, channel_id, db=db)
-    require_scope(app, 'messages:write')
+    require_scope(app, 'channels:messages:write')
     for target in (form.parent_id, form.reply_to_id):
         if target:
             reference = await Messages.get_message_by_id(target, include_thread_replies=False, db=db)
@@ -435,7 +435,7 @@ async def update_app_message(db, app, message_id, form, if_match):
     if not message or message.app_id != app.id:
         raise HTTPException(404, 'App message not found')
     channel = await check_app_channel_membership(app, message.channel_id, db=db)
-    require_scope(app, 'messages:write')
+    require_scope(app, 'channels:messages:write')
     if if_match != f'"{message.updated_at}"':
         raise HTTPException(412, 'Message changed')
     updated = await Messages.update_app_message_by_id(
