@@ -29,12 +29,8 @@ def search_perplexity_search(
 
     """
 
-    # Handle ConfigVar object
-    if hasattr(api_key, '__str__'):
-        api_key = str(api_key)
-
-    if hasattr(api_url, '__str__'):
-        api_url = str(api_url)
+    api_key = str(api_key)
+    api_url = str(api_url)
 
     try:
         url = api_url
@@ -61,7 +57,7 @@ def search_perplexity_search(
         json_response = response.json()
 
         # Extract citations from the response
-        results = json_response.get('results', [])
+        results = get_filtered_results(json_response.get('results', []), filter_list)
 
         return [
             SearchResult(link=result['url'], title=result['title'], snippet=result['snippet']) for result in results

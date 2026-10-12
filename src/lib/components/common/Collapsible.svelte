@@ -3,7 +3,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -11,23 +11,6 @@
 
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
-
-	async function loadLocale(locales) {
-		if (!locales || !Array.isArray(locales)) {
-			return;
-		}
-		for (const locale of locales) {
-			try {
-				dayjs.locale(locale);
-				break; // Stop after successfully loading the first available locale
-			} catch (error) {
-				console.error(`Could not load locale '${locale}':`, error);
-			}
-		}
-	}
-
-	// Assuming $i18n.languages is an array of language codes
-	$: loadLocale($i18n.languages);
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -40,11 +23,13 @@
 
 	export let className = '';
 	export let buttonClassName =
-		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'w-fit py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	export let id = '';
 	export let title = null;
 	export let attributes = null;
+	export let chevronClassName = 'size-3';
+	export let chevronStrokeWidth = '2.75';
 
 	export let chevron = false;
 	export let grow = false;
@@ -55,22 +40,26 @@
 
 	export let onChange: Function = () => {};
 
-	$: onChange(open);
+	const toggleOpen = () => {
+		if (disabled) {
+			return;
+		}
+
+		open = !open;
+		onChange(open);
+	};
 
 	const collapsibleId = uuidv4();
 </script>
 
 <div {id} class={className}>
 	{#if title !== null}
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<div
-			class="{buttonClassName} {disabled ? '' : 'cursor-pointer'}"
-			on:pointerup={() => {
-				if (!disabled) {
-					open = !open;
-				}
-			}}
+		<button
+			type="button"
+			class="{buttonClassName} block text-start disabled:cursor-default"
+			aria-expanded={open}
+			{disabled}
+			on:click={toggleOpen}
 		>
 			<div
 				class=" w-full flex items-center justify-between gap-2 {attributes?.done &&
@@ -97,7 +86,10 @@
 								})}
 							{:else}
 								{$i18n.t('Thought for {{DURATION}}', {
-									DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
+									DURATION: dayjs
+										.duration(attributes.duration, 'seconds')
+										.locale($i18n.language)
+										.humanize()
 								})}
 							{/if}
 						{:else if attributes?.done === 'true' || messageDone}
@@ -119,14 +111,14 @@
 				{#if !disabled}
 					<div class="flex self-center translate-y-[1px]">
 						{#if open}
-							<ChevronUp strokeWidth="3.5" className="size-3.5" />
+							<ChevronUp strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 						{:else}
-							<ChevronDown strokeWidth="3.5" className="size-3.5" />
+							<ChevronDown strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 						{/if}
 					</div>
 				{/if}
 			</div>
-		</div>
+		</button>
 	{:else}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -134,11 +126,7 @@
 			class="{buttonClassName} cursor-pointer"
 			on:click={(e) => {
 				e.stopPropagation();
-			}}
-			on:pointerup={(e) => {
-				if (!disabled) {
-					open = !open;
-				}
+				toggleOpen();
 			}}
 		>
 			<div>
@@ -148,9 +136,9 @@
 					{#if chevron}
 						<div class="flex self-start translate-y-1">
 							{#if open}
-								<ChevronUp strokeWidth="3.5" className="size-3.5" />
+								<ChevronUp strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 							{:else}
-								<ChevronDown strokeWidth="3.5" className="size-3.5" />
+								<ChevronDown strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 							{/if}
 						</div>
 					{/if}
@@ -160,7 +148,7 @@
 					{#if open && !hide}
 						<div
 							transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
-							on:pointerup={(e) => {
+							on:click={(e) => {
 								e.stopPropagation();
 							}}
 						>

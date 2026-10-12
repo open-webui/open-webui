@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { createNewTool, getTools } from '$lib/apis/tools';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { COMMUNITY_ORIGINS, WEBUI_VERSION } from '$lib/constants';
 	import { tools } from '$lib/stores';
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
@@ -20,6 +20,9 @@
 		const manifest = extractFrontmatter(data.content);
 		if (compareVersion(manifest?.required_open_webui_version ?? '0.0.0', WEBUI_VERSION)) {
 			console.log('Version is lower than required');
+			// LICENSE covers this Open WebUI wordmark.
+			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+			// https://docs.openwebui.com/license.
 			toast.error(
 				$i18n.t(
 					'Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})',
@@ -37,6 +40,7 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
+			commit_message: data.commit_message,
 			access_grants: data.access_grants
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -53,12 +57,7 @@
 
 	onMount(() => {
 		window.addEventListener('message', async (event) => {
-			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
-					event.origin
-				)
-			)
-				return;
+			if (!COMMUNITY_ORIGINS.includes(event.origin)) return;
 
 			tool = JSON.parse(event.data);
 			console.log(tool);
@@ -82,16 +81,16 @@
 
 {#if mounted}
 	{#key tool?.content}
-		<ToolkitEditor
-			id={tool?.id ?? ''}
-			name={tool?.name ?? ''}
-			meta={tool?.meta ?? { description: '' }}
-			content={tool?.content ?? ''}
-			accessGrants={tool?.access_grants !== undefined ? tool.access_grants : []}
-			{clone}
-			onSave={(value) => {
-				saveHandler(value);
-			}}
-		/>
+		<div class="h-full min-w-0 overflow-x-hidden">
+			<ToolkitEditor
+				id={tool?.id ?? ''}
+				name={tool?.name ?? ''}
+				meta={tool?.meta ?? { description: '' }}
+				content={tool?.content ?? ''}
+				accessGrants={tool?.access_grants !== undefined ? tool.access_grants : []}
+				{clone}
+				onSave={saveHandler}
+			/>
+		</div>
 	{/key}
 {/if}

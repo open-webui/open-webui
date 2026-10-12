@@ -67,7 +67,7 @@
 
 					<div class=" flex-1 w-full h-full">
 						<textarea
-							class="w-full h-full min-h-[200px] bg-transparent outline-none resize-none text-base leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-600"
+							class="w-full h-full min-h-[12.5rem] bg-transparent outline-none resize-none text-base leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-600"
 							bind:value={content}
 							placeholder={$i18n.t('Write something...')}
 						/>
@@ -131,7 +131,7 @@
 				<div class=" shrink-0">
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class=" px-3.5 py-2 bg-black text-white dark:bg-white dark:text-black transition rounded-full"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 							type="submit"
 						>
 							{$i18n.t('Save')}

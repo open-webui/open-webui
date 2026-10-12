@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Banner } from '$lib/types';
+	import { resolveLocalizedString } from '$lib/utils/localizedContent';
 	import { onMount, createEventDispatcher, getContext } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import DOMPurify from 'dompurify';
@@ -52,7 +53,7 @@
 			<div class=" flex flex-col md:flex-row md:items-center flex-1 text-sm w-fit gap-1.5">
 				<div class="flex justify-between self-start">
 					<div
-						class=" text-xs font-semibold {classNames[banner.type] ??
+						class=" text-xs font-normal {classNames[banner.type] ??
 							classNames['info']}  w-fit px-2 rounded-sm uppercase line-clamp-1 mr-0.5"
 					>
 						{#if banner.type.toLowerCase() === 'info'}
@@ -71,7 +72,7 @@
 					{#if banner.url}
 						<div class="flex md:hidden group w-fit md:items-center">
 							<a
-								class="text-gray-700 dark:text-white text-xs font-semibold underline"
+								class="text-gray-700 dark:text-white text-xs font-normal underline"
 								href="{WEBUI_BASE_URL}/assets/files/whitepaper.pdf"
 								target="_blank"
 							>
@@ -100,14 +101,23 @@
 					{/if}
 				</div>
 				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-60 overflow-y-auto">
-					{@html DOMPurify.sanitize(marked.parse((banner?.content ?? '').replace(/\n/g, '<br>')))}
+					{@html DOMPurify.sanitize(
+						marked.parse(
+							resolveLocalizedString(
+								banner?.content,
+								banner?.i18n,
+								$i18n.language,
+								'content'
+							).replace(/\n/g, '<br>')
+						)
+					)}
 				</div>
 			</div>
 
 			{#if banner.url}
 				<div class="hidden md:flex group w-fit md:items-center">
 					<a
-						class="text-gray-700 dark:text-white text-xs font-semibold underline"
+						class="text-gray-700 dark:text-white text-xs font-normal underline"
 						href="/"
 						target="_blank"
 					>

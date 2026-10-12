@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
+	import { tools, functions } from '$lib/stores';
 	import { addUser } from '$lib/apis/auths';
 
 	import Modal from '../../common/Modal.svelte';
@@ -38,6 +39,9 @@
 	export let type = 'tool';
 	export let id = null;
 	export let userValves = false;
+	export let meta = null;
+	$: resourceMeta =
+		meta ?? (type === 'tool' ? $tools : $functions)?.find((item) => item.id === id)?.meta ?? {};
 
 	let saving = false;
 	let loading = false;
@@ -129,6 +133,9 @@
 			if (valvesSpec) {
 				for (const property in valvesSpec.properties) {
 					if (valvesSpec.properties[property]?.type === 'array') {
+						if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
+							continue;
+						}
 						if (valves[property] != null) {
 							valves[property] = (Array.isArray(valves[property]) ? valves[property] : []).join(
 								','
@@ -154,19 +161,19 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Valves')}</div>
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+			<div class="self-center text-sm font-medium">{$i18n.t('Valves')}</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-3 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -174,19 +181,17 @@
 						submitHandler();
 					}}
 				>
-					<div class="px-1">
+					<div>
 						{#if !loading}
-							<Valves {valvesSpec} bind:valves />
+							<Valves {valvesSpec} bind:valves meta={resourceMeta} {userValves} />
 						{:else}
 							<Spinner className="size-5" />
 						{/if}
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium">
+					<div class="flex justify-end pt-2.5 text-sm font-normal">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {saving
-								? ' cursor-not-allowed'
-								: ''}"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={saving}
 						>
@@ -194,7 +199,7 @@
 
 							{#if saving}
 								<span class="shrink-0">
-									<Spinner />
+									<Spinner className="size-3" />
 								</span>
 							{/if}
 						</button>

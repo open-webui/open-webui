@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config, settings } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
@@ -23,6 +23,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ModelDeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 
 	let modelUploadInputElement: HTMLInputElement;
 	let showModelDeleteConfirm = false;
@@ -52,19 +54,22 @@
 	let createModelDigest = '';
 	let createModelPullProgress = null;
 
-	let digest = '';
-	let pullProgress = null;
-
 	let modelUploadMode = 'file';
 	let modelInputFile: File[] | null = null;
 	let modelFileUrl = '';
-	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
 	let modelFileDigest = '';
 
 	let uploadProgress = null;
 	let uploadMessage = '';
 
 	let deleteModelTag = '';
+
+	const inputClass =
+		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 text-left text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+	const textareaClass =
+		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 py-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+	const iconButtonClass =
+		'inline-flex h-7 items-center justify-center rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]';
 
 	const updateModelsHandler = async () => {
 		updateCancelled = false;
@@ -291,7 +296,6 @@
 
 		let uploaded = false;
 		let fileResponse = null;
-		let name = '';
 
 		if (modelUploadMode === 'file') {
 			const file = modelInputFile ? modelInputFile[0] : null;
@@ -344,13 +348,13 @@
 
 							if (data.done) {
 								modelFileDigest = data.blob;
-								name = data.name;
 								uploaded = true;
 							}
 						}
 					}
 				} catch (err) {
 					console.error(err);
+					toast.error(`${err}`);
 				}
 			}
 		} else {
@@ -359,65 +363,7 @@
 		}
 
 		if (uploaded) {
-			const res = await createModel(
-				localStorage.token,
-				`${name}:latest`,
-				`FROM @${modelFileDigest}\n${modelFileContent}`
-			);
-
-			if (res && res.ok) {
-				const reader = res.body
-					.pipeThrough(new TextDecoderStream())
-					.pipeThrough(splitStream('\n'))
-					.getReader();
-
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done) break;
-
-					try {
-						let lines = value.split('\n');
-
-						for (const line of lines) {
-							if (line !== '') {
-								console.log(line);
-								let data = JSON.parse(line);
-								console.log(data);
-
-								if (data.error) {
-									throw data.error;
-								}
-								if (data.detail) {
-									throw data.detail;
-								}
-
-								if (data.status) {
-									if (
-										!data.digest &&
-										!data.status.includes('writing') &&
-										!data.status.includes('sha256')
-									) {
-										toast.success(data.status);
-									} else {
-										if (data.digest) {
-											digest = data.digest;
-
-											if (data.completed) {
-												pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
-											} else {
-												pullProgress = 100;
-											}
-										}
-									}
-								}
-							}
-						}
-					} catch (err) {
-						console.error(err);
-						toast.error(`${err}`);
-					}
-				}
-			}
+			toast.success($i18n.t('Model created successfully!'));
 		}
 
 		modelFileUrl = '';
@@ -479,7 +425,6 @@
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL
 			});
-			await deleteModel(localStorage.token, model);
 			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
 		}
 	};
@@ -508,6 +453,13 @@
 			toast.error(`${error}`);
 			return null;
 		});
+
+		if (res && !res.ok) {
+			createModelLoading = false;
+			const error = await res.json();
+			toast.error(error.detail);
+			return;
+		}
 
 		if (res && res.ok) {
 			const reader = res.body
@@ -608,15 +560,16 @@
 		<div>
 			<div class="space-y-2">
 				<div>
-					<div class=" mb-2 text-sm font-medium flex items-center gap-1.5">
+					<div class=" mb-2 text-sm font-normal flex items-center gap-1.5">
 						<div>
 							{$i18n.t('Pull a model from Ollama.com')}
 						</div>
 
 						<div>
-							<Tooltip content="Update All Models" placement="top">
+							<Tooltip content={$i18n.t('Update All Models')} placement="top">
 								<button
 									class="flex gap-2 items-center bg-transparent rounded-lg transition"
+									aria-label={$i18n.t('Update All Models')}
 									on:click={() => {
 										updateModelsHandler();
 									}}
@@ -641,7 +594,7 @@
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								class={inputClass}
 								placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
 									modelTag: 'mistral:7b'
 								})}
@@ -650,7 +603,7 @@
 						</div>
 						<Tooltip content={$i18n.t('Pull Model')} placement="top">
 							<button
-								class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								class={iconButtonClass}
 								on:click={() => {
 									pullModelHandler();
 								}}
@@ -708,7 +661,7 @@
 					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
 						{$i18n.t('To access the available model names for downloading,')}
 						<a
-							class=" text-gray-500 dark:text-gray-300 font-medium underline"
+							class=" text-gray-500 dark:text-gray-300 font-normal underline"
 							href="https://ollama.com/library"
 							target="_blank">{$i18n.t('click here.')}</a
 						>
@@ -716,11 +669,15 @@
 
 					{#if updateModelId}
 						<div class="text-xs flex justify-between items-center">
-							<div>Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}</div>
+							<div>
+								{$i18n.t('Updating "{{modelId}}"', { modelId: updateModelId })}
+								{updateProgress ? `(${updateProgress}%)` : ''}
+							</div>
 
 							<Tooltip content={$i18n.t('Cancel')}>
 								<button
 									class="text-gray-800 dark:text-gray-100"
+									aria-label={$i18n.t('Cancel')}
 									on:click={() => {
 										cancelUpdateModelHandler(updateModelId);
 									}}
@@ -751,12 +708,12 @@
 						{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
 							{#if 'pullProgress' in $MODEL_DOWNLOAD_POOL[model]}
 								<div class="flex flex-col">
-									<div class="font-medium mb-1">{model}</div>
+									<div class="font-normal mb-1">{model}</div>
 									<div class="">
 										<div class="flex flex-row justify-between space-x-4 pr-2">
 											<div class=" flex-1">
 												<div
-													class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+													class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
 													style="width: {Math.max(
 														15,
 														$MODEL_DOWNLOAD_POOL[model].pullProgress ?? 0
@@ -769,6 +726,7 @@
 											<Tooltip content={$i18n.t('Cancel')}>
 												<button
 													class="text-gray-800 dark:text-gray-100"
+													aria-label={$i18n.t('Cancel')}
 													on:click={() => {
 														cancelModelPullHandler(model);
 													}}
@@ -806,14 +764,12 @@
 				</div>
 
 				<div>
-					<div class=" mb-2 text-sm font-medium">{$i18n.t('Delete a model')}</div>
+					<div class=" mb-2 text-sm font-normal">{$i18n.t('Delete a model')}</div>
 					<div class="flex w-full">
-						<div
-							class="flex-1 mr-2 pr-1.5 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
-						>
-							<select
-								class="w-full py-2 px-4 text-sm outline-hidden bg-transparent"
+						<div class="flex-1 mr-2">
+							<SettingsSelect
 								bind:value={deleteModelTag}
+								className="w-full"
 								placeholder={$i18n.t('Select a model')}
 							>
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
@@ -823,11 +779,12 @@
 										>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
 									>
 								{/each}
-							</select>
+							</SettingsSelect>
 						</div>
 						<Tooltip content={$i18n.t('Delete Model')} placement="top">
 							<button
-								class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								class={iconButtonClass}
+								aria-label={$i18n.t('Delete Model')}
 								on:click={() => {
 									showModelDeleteConfirm = true;
 								}}
@@ -851,11 +808,11 @@
 				</div>
 
 				<div>
-					<div class=" mb-2 text-sm font-medium">{$i18n.t('Create a model')}</div>
+					<div class=" mb-2 text-sm font-normal">{$i18n.t('Create a model')}</div>
 					<div class="flex w-full">
 						<div class="flex-1 mr-2 flex flex-col gap-2">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								class={inputClass}
 								placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
 									modelTag: 'my-modelfile'
 								})}
@@ -865,7 +822,7 @@
 
 							<textarea
 								bind:value={createModelObject}
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-hidden resize-none scrollbar-hidden"
+								class="{textareaClass} resize-none scrollbar-hidden"
 								rows="6"
 								placeholder={`e.g. {"model": "my-modelfile", "from": "ollama:7b"})`}
 								disabled={createModelLoading}
@@ -875,7 +832,8 @@
 						<div class="flex self-start">
 							<Tooltip content={$i18n.t('Create Model')} placement="top">
 								<button
-									class="px-2.5 py-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition disabled:cursor-not-allowed"
+									class={iconButtonClass}
+									aria-label={$i18n.t('Create Model')}
 									on:click={() => {
 										createModelHandler();
 									}}
@@ -903,12 +861,12 @@
 
 					{#if createModelDigest !== ''}
 						<div class="flex flex-col mt-1">
-							<div class="font-medium mb-1">{createModelTag}</div>
+							<div class="font-normal mb-1">{createModelName}</div>
 							<div class="">
 								<div class="flex flex-row justify-between space-x-4 pr-2">
 									<div class=" flex-1">
 										<div
-											class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+											class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
 											style="width: {Math.max(15, createModelPullProgress ?? 0)}%"
 										>
 											{createModelPullProgress ?? 0}%
@@ -927,9 +885,9 @@
 
 				<div class="pt-1">
 					<div class="flex justify-between items-center text-xs">
-						<div class=" text-sm font-medium">{$i18n.t('Experimental')}</div>
+						<div class="text-sm font-normal"><ExperimentalBadge /></div>
 						<button
-							class=" text-xs font-medium text-gray-500"
+							class=" text-xs font-normal text-gray-500"
 							type="button"
 							on:click={() => {
 								showExperimentalOllama = !showExperimentalOllama;
@@ -945,7 +903,7 @@
 						}}
 					>
 						<div class=" mb-2 flex w-full justify-between">
-							<div class="  text-sm font-medium">{$i18n.t('Upload a GGUF model')}</div>
+							<div class="  text-sm font-normal">{$i18n.t('Upload a GGUF model')}</div>
 
 							<button
 								class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -985,7 +943,7 @@
 
 										<button
 											type="button"
-											class="w-full rounded-lg text-left py-2 px-4 bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
+											class={inputClass}
 											on:click={() => {
 												modelUploadInputElement.click();
 											}}
@@ -1000,10 +958,7 @@
 								{:else}
 									<div class="flex-1 {modelFileUrl !== '' ? 'mr-2' : ''}">
 										<input
-											class="w-full rounded-lg text-left py-2 px-4 bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden {modelFileUrl !==
-											''
-												? 'mr-2'
-												: ''}"
+											class={inputClass}
 											type="url"
 											required
 											bind:value={modelFileUrl}
@@ -1015,11 +970,7 @@
 
 							{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 								<Tooltip content={$i18n.t('Upload Model')} placement="top">
-									<button
-										class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg disabled:cursor-not-allowed transition"
-										type="submit"
-										disabled={modelLoading}
-									>
+									<button class={iconButtonClass} type="submit" disabled={modelLoading}>
 										{#if modelLoading}
 											<div class="self-center">
 												<svg
@@ -1070,24 +1021,10 @@
 							{/if}
 						</div>
 
-						{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
-							<div>
-								<div>
-									<div class=" my-2.5 text-sm font-medium">
-										{$i18n.t('Modelfile Content')}
-									</div>
-									<textarea
-										bind:value={modelFileContent}
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-hidden resize-none"
-										rows="6"
-									/>
-								</div>
-							</div>
-						{/if}
 						<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t('To access the GGUF models available for downloading,')}
 							<a
-								class=" text-gray-500 dark:text-gray-300 font-medium underline"
+								class=" text-gray-500 dark:text-gray-300 font-normal underline"
 								href="https://huggingface.co/models?search=gguf"
 								target="_blank">{$i18n.t('click here.')}</a
 							>
@@ -1099,7 +1036,7 @@
 
 								<div class="w-full rounded-full dark:bg-gray-800">
 									<div
-										class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+										class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
 										style="width: 100%"
 									>
 										{uploadMessage}
@@ -1115,7 +1052,7 @@
 
 								<div class="w-full rounded-full dark:bg-gray-800">
 									<div
-										class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+										class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
 										style="width: {Math.max(15, uploadProgress ?? 0)}%"
 									>
 										{uploadProgress ?? 0}%

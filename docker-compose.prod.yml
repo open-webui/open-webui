@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  tracexgpt:
+    # Build locally and tag, or use pre-built image
+    build: .
+    image: tracexgpt:latest
+    container_name: tracexgpt
+    ports:
+      - "3000:8080"
+    environment:
+      # === OpenAI Configuration ===
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE_URL=https://api.openai.com/v1
+
+      # === RAG / Document Processing (SAME as your current setup) ===
+      - ENABLE_RAG_WEB_SEARCH=true
+      - RAG_WEB_SEARCH_ENGINE=duckduckgo
+      - RAG_EMBEDDING_ENGINE=openai
+      # text-embedding-3-small: $0.02/1M tokens, widely supported, "good enough for 90% of RAG"
+      # text-embedding-3-large: $0.13/1M, only +2 MTEB points (marginal gain, 6.5x cost)
+      # jina-embeddings-v3: $0.02/1M, MTEB 65.5 (better than small at same price, less battle-tested)
+      - RAG_EMBEDDING_MODEL=text-embedding-3-small
+      - RAG_RERANKING_MODEL=jinaai/jina-reranker-v2-base-multilingual
+      - ENABLE_RAG_HYBRID_SEARCH=true
+      - RAG_TOP_K=50
+      - RAG_RELEVANCE_THRESHOLD=0.2
+
+      # === Query Rewriting ===
+      - ENABLE_RAG_QUERY_REWRITING=true
+      - RAG_QUERY_REWRITING_MODEL=gpt-4o-mini
+
+      # === General Settings ===
+      - ENV=prod
+      - WEBUI_NAME=TracexGPT
+      - ENABLE_SIGNUP=false
+      - DEFAULT_LOCALE=en
+      # === Default Chat Models (June 2026 pricing) ===
+      # Current: gpt-4o-mini ($0.15/$0.60 per 1M) - fine for most tasks
+      # Upgrade path:
+      #   gpt-4.1-nano ($0.10/$0.40) - CHEAPER than 4o-mini, good for simple tasks
+      #   gpt-4.1-mini ($0.40/$1.60) - production sweet spot, 1M context, replaces 4o-mini
+      #   gpt-4.1 ($2/$8) - new production standard, replaces gpt-4o, better + cheaper
+      #   gpt-4o ($2.50/$10) - legacy, don't use
+      - DEFAULT_MODELS=gpt-4o-mini
+
+      # === Web Search ===
+      - ENABLE_WEB_SEARCH=true
+      - WEB_SEARCH_ENGINE=duckduckgo
+
+      # === Auth (ENABLED for server deployment) ===
+      - WEBUI_AUTH=true
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-change-me-in-production}
+      - HF_TOKEN=${HF_TOKEN}
+
+      # === Cost Tracking ===
+      - DEFAULT_MONTHLY_LIMIT_USD=${DEFAULT_MONTHLY_LIMIT_USD:-5.0}
+
+      # === Generated Files TTL (PPT, images) ===
+      # Auto-delete generated files after N days. 0 = keep forever.
+      - FILE_TTL_DAYS=${FILE_TTL_DAYS:-120}
+
+    volumes:
+      # Persistent data (chats, embeddings, uploads, settings)
+      - tracexgpt-data:/app/backend/data
+
+      # Documentation for RAG (mount your docs folder)
+      # On server, copy your docs folder and update this path:
+      - /home/deploy/tracexgpt-docs:/app/docs:ro
+
+      # Branding files (copy these to server first)
+      # - /home/deploy/tracexgpt-branding/tracexgpt-brand.css:/app/backend/static/tracexgpt-brand.css:ro
+      # - /home/deploy/tracexgpt-branding/tracexgpt-inject.js:/app/backend/static/tracexgpt-inject.js:ro
+
+      # Model pricing configuration
+      - ./model-prices.json:/app/backend/static/model-prices.json:ro
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  tracexgpt-data:
+    # Named volume persists across container restarts and image rebuilds

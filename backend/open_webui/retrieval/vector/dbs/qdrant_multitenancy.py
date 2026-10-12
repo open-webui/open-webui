@@ -23,12 +23,13 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
+from open_webui.retrieval.vector.utils import iter_filter_conditions, process_metadata
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
 
-NO_LIMIT = 999999999
+SCROLL_PAGE_SIZE = 1000
 TENANT_ID_FIELD = 'tenant_id'
 DEFAULT_DIMENSION = 384
 
@@ -39,8 +40,9 @@ def _tenant_filter(tenant_id: str) -> models.FieldCondition:
     return models.FieldCondition(key=TENANT_ID_FIELD, match=models.MatchValue(value=tenant_id))
 
 
-def _metadata_filter(key: str, value: Any) -> models.FieldCondition:
-    return models.FieldCondition(key=f'metadata.{key}', match=models.MatchValue(value=value))
+def _metadata_filter(key: str, op: str, value: Any) -> models.FieldCondition:
+    match = models.MatchAny(any=value) if op == '$in' else models.MatchValue(value=value)
+    return models.FieldCondition(key=f'metadata.{key}', match=match)
 
 
 class QdrantClient(VectorDBBase):
@@ -95,6 +97,21 @@ class QdrantClient(VectorDBBase):
             metadatas.append(payload['metadata'])
         return GetResult(ids=[ids], documents=[documents], metadatas=[metadatas])
 
+    def _scroll_points(self, collection_name: str, scroll_filter: models.Filter, limit: Optional[int] = None) -> List:
+        # Paged so a strict-mode max_query_limit does not reject the read
+        points, offset = [], None
+        while True:
+            page_size = SCROLL_PAGE_SIZE if limit is None else min(SCROLL_PAGE_SIZE, limit - len(points))
+            page, offset = self.client.scroll(
+                collection_name=collection_name,
+                scroll_filter=scroll_filter,
+                limit=page_size,
+                offset=offset,
+            )
+            points.extend(page)
+            if offset is None or len(points) == limit:
+                return points
+
     def _get_collection_and_tenant_id(self, collection_name: str) -> Tuple[str, str]:
         """
         Maps the traditional collection name to multi-tenant collection and tenant ID.
@@ -148,7 +165,7 @@ class QdrantClient(VectorDBBase):
                 m=0,
             ),
         )
-        log.info(f'Multi-tenant collection {mt_collection_name} created with dimension {dimension}!')
+        log.info('Multi-tenant collection %s created with dimension %s!', mt_collection_name, dimension)
 
         self.client.create_payload_index(
             collection_name=mt_collection_name,
@@ -180,7 +197,7 @@ class QdrantClient(VectorDBBase):
                 vector=item['vector'],
                 payload={
                     'text': item['text'],
-                    'metadata': item['metadata'],
+                    'metadata': process_metadata(item['metadata']),
                     TENANT_ID_FIELD: tenant_id,
                 },
             )
@@ -224,7 +241,7 @@ class QdrantClient(VectorDBBase):
 
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, nothing to delete")
+            log.debug("Collection %s doesn't exist, nothing to delete", mt_collection)
             return None
 
         must_conditions = [_tenant_filter(tenant_id)]
@@ -234,7 +251,7 @@ class QdrantClient(VectorDBBase):
             # whose payload omits an id (e.g. memories), leaving orphaned vectors.
             must_conditions.append(models.HasIdCondition(has_id=ids))
         elif filter:
-            must_conditions += [_metadata_filter(k, v) for k, v in filter.items()]
+            must_conditions += [_metadata_filter(k, '$eq', v) for k, v in filter.items()]
 
         return self.client.delete(
             collection_name=mt_collection,
@@ -255,15 +272,17 @@ class QdrantClient(VectorDBBase):
             return None
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, search returns None")
+            log.debug("Collection %s doesn't exist, search returns None", mt_collection)
             return None
 
-        tenant_filter = _tenant_filter(tenant_id)
+        conditions = [_tenant_filter(tenant_id)]
+        if filter:
+            conditions.extend(_metadata_filter(key, op, value) for key, op, value in iter_filter_conditions(filter))
         query_response = self.client.query_points(
             collection_name=mt_collection,
             query=vectors[0],
             limit=limit,
-            query_filter=models.Filter(must=[tenant_filter]),
+            query_filter=models.Filter(must=conditions),
         )
         get_result = self._result_to_get_result(query_response.points)
         return SearchResult(
@@ -281,19 +300,13 @@ class QdrantClient(VectorDBBase):
             return None
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, query returns None")
+            log.debug("Collection %s doesn't exist, query returns None", mt_collection)
             return None
-        if limit is None:
-            limit = NO_LIMIT
         tenant_filter = _tenant_filter(tenant_id)
-        field_conditions = [_metadata_filter(k, v) for k, v in filter.items()]
+        field_conditions = [_metadata_filter(k, '$eq', v) for k, v in filter.items()]
         combined_filter = models.Filter(must=[tenant_filter, *field_conditions])
-        points = self.client.scroll(
-            collection_name=mt_collection,
-            scroll_filter=combined_filter,
-            limit=limit,
-        )
-        return self._result_to_get_result(points[0])
+        points = self._scroll_points(mt_collection, combined_filter, limit)
+        return self._result_to_get_result(points)
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         """
@@ -303,15 +316,11 @@ class QdrantClient(VectorDBBase):
             return None
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, get returns None")
+            log.debug("Collection %s doesn't exist, get returns None", mt_collection)
             return None
         tenant_filter = _tenant_filter(tenant_id)
-        points = self.client.scroll(
-            collection_name=mt_collection,
-            scroll_filter=models.Filter(must=[tenant_filter]),
-            limit=NO_LIMIT,
-        )
-        return self._result_to_get_result(points[0])
+        points = self._scroll_points(mt_collection, models.Filter(must=[tenant_filter]))
+        return self._result_to_get_result(points)
 
     def upsert(self, collection_name: str, items: List[VectorItem]):
         """
@@ -323,7 +332,7 @@ class QdrantClient(VectorDBBase):
         dimension = len(items[0]['vector'])
         self._ensure_collection(mt_collection, dimension)
         points = self._create_points(items, tenant_id)
-        self.client.upload_points(mt_collection, points)
+        self.client.upload_points(mt_collection, points, wait=True)
         return None
 
     def insert(self, collection_name: str, items: List[VectorItem]):
@@ -350,7 +359,7 @@ class QdrantClient(VectorDBBase):
             return None
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, nothing to delete")
+            log.debug("Collection %s doesn't exist, nothing to delete", mt_collection)
             return None
         self.client.delete(
             collection_name=mt_collection,

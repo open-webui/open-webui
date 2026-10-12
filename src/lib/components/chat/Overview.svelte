@@ -1,17 +1,13 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onDestroy } from 'svelte';
-	import { useSvelteFlow, useNodesInitialized, useStore, SvelteFlowProvider } from '@xyflow/svelte';
-
-	const dispatch = createEventDispatcher();
+	import { SvelteFlowProvider } from '@xyflow/svelte';
 
 	import View from './Overview/View.svelte';
 
 	export let history;
-
-	export let onClose;
 	export let onNodeClick;
+	export let chatUser = null;
 </script>
 
 <SvelteFlowProvider>
-	<View {history} {onClose} {onNodeClick} />
+	<View {history} {onNodeClick} {chatUser} />
 </SvelteFlowProvider>

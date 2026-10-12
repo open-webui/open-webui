@@ -1,37 +1,44 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onDestroy } from 'svelte';
-	import { useSvelteFlow, useNodesInitialized, useStore } from '@xyflow/svelte';
-
-	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
-
 	import { onMount, tick } from 'svelte';
+	import {
+		useSvelteFlow,
+		useNodesInitialized,
+		useStore,
+		type Edge,
+		type Node
+	} from '@xyflow/svelte';
 
 	import { writable } from 'svelte/store';
-	import { models, theme, user } from '$lib/stores';
+	import { models, user } from '$lib/stores';
 
 	import '@xyflow/svelte/dist/style.css';
 
 	import CustomNode from './Node.svelte';
 	import Flow from './Flow.svelte';
-	import XMark from '../../icons/XMark.svelte';
-	import ArrowLeft from '../../icons/ArrowLeft.svelte';
 
 	const { width, height } = useStore();
 
-	const { fitView, getViewport } = useSvelteFlow();
+	const { fitView } = useSvelteFlow();
 	const nodesInitialized = useNodesInitialized();
 
 	export let history;
-	export let onClose;
 	export let onNodeClick;
+	export let chatUser = null;
 
-	let selectedMessageId = null;
+	type LayoutDirection = 'vertical' | 'horizontal';
+	type PositionMapEntry = {
+		id: string;
+		level: number;
+		position: number;
+	};
 
-	const nodes = writable([]);
-	const edges = writable([]);
+	let selectedMessageId: string | null = null;
+	let pinned = false;
 
-	let layoutDirection = 'vertical';
+	const nodes = writable<Node[]>([]);
+	const edges = writable<Edge[]>([]);
+
+	let layoutDirection: LayoutDirection = 'vertical';
 
 	const nodeTypes = {
 		custom: CustomNode
@@ -41,7 +48,7 @@
 		drawFlow(layoutDirection);
 	}
 
-	$: if (history && history.currentId) {
+	$: if (history && history.currentId && !pinned) {
 		focusNode();
 	}
 
@@ -55,23 +62,20 @@
 		selectedMessageId = null;
 	};
 
-	const drawFlow = async (direction) => {
-		const nodeList = [];
-		const edgeList = [];
-		const levelOffset = direction === 'vertical' ? 150 : 300;
-		const siblingOffset = direction === 'vertical' ? 250 : 150;
+	const drawFlow = async (direction: LayoutDirection) => {
+		const nodeList: Node[] = [];
+		const edgeList: Edge[] = [];
+		const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+		const nodeWidth = 15 * rootFontSize;
+		const nodeHeight = 5 * rootFontSize;
+		const levelOffset = direction === 'vertical' ? nodeHeight + 70 : nodeWidth + 60;
+		const siblingOffset = direction === 'vertical' ? nodeWidth + 60 : nodeHeight + 70;
 
 		// Map to keep track of node positions at each level
-		let positionMap = new Map();
-
-		// Helper function to truncate labels
-		function createLabel(content) {
-			const maxLength = 100;
-			return content.length > maxLength ? content.substr(0, maxLength) + '...' : content;
-		}
+		let positionMap = new Map<string, PositionMapEntry>();
 
 		// Create nodes and map children to ensure alignment in width
-		let layerWidths = {}; // Track widths of each layer
+		let layerWidths: Record<number, number> = {}; // Track widths of each layer
 
 		Object.keys(history.messages).forEach((id) => {
 			const message = history.messages[id];
@@ -99,9 +103,10 @@
 				id: pos.id,
 				type: 'custom',
 				data: {
-					user: $user,
+					user: chatUser ?? $user,
 					message: history.messages[id],
-					model: $models.find((model) => model.id === history.messages[id].model)
+					model: $models.find((model) => model.id === history.messages[id].model),
+					direction
 				},
 				position: { x, y }
 			});
@@ -125,15 +130,15 @@
 		await nodes.set([...nodeList]);
 	};
 
-	const recurseCheckChild = (nodeId, currentId) => {
+	const recurseCheckChild = (nodeId: string, currentId: string): boolean => {
 		const node = history.messages[nodeId];
 		return (
 			node.childrenIds &&
-			node.childrenIds.some((id) => id === currentId || recurseCheckChild(id, currentId))
+			node.childrenIds.some((id: string) => id === currentId || recurseCheckChild(id, currentId))
 		);
 	};
 
-	const setLayoutDirection = (direction) => {
+	const setLayoutDirection = (direction: LayoutDirection) => {
 		layoutDirection = direction;
 		drawFlow(layoutDirection);
 	};
@@ -141,33 +146,31 @@
 	onMount(() => {
 		drawFlow(layoutDirection);
 
-		nodesInitialized.subscribe(async (initialized) => {
-			if (initialized) {
+		const stopNodesInitialized = nodesInitialized.subscribe(async (initialized) => {
+			if (initialized && !pinned) {
 				await tick();
-				const res = await fitView({ nodes: [{ id: history.currentId }] });
+				await fitView({ nodes: [{ id: history.currentId }] });
 			}
 		});
-
-		width.subscribe((value) => {
-			if (value) {
-				// fitView();
+		const stopWidth = width.subscribe((value) => {
+			if (value && !pinned) {
+				fitView({ nodes: [{ id: history.currentId }] });
+			}
+		});
+		const stopHeight = height.subscribe((value) => {
+			if (value && !pinned) {
 				fitView({ nodes: [{ id: history.currentId }] });
 			}
 		});
 
-		height.subscribe((value) => {
-			if (value) {
-				// fitView();
-				fitView({ nodes: [{ id: history.currentId }] });
-			}
-		});
-	});
-
-	onDestroy(() => {
-		console.log('Overview destroyed');
-
-		nodes.set([]);
-		edges.set([]);
+		return () => {
+			console.log('Overview destroyed');
+			stopNodesInitialized();
+			stopWidth();
+			stopHeight();
+			nodes.set([]);
+			edges.set([]);
+		};
 	});
 </script>
 
@@ -178,10 +181,14 @@
 			{nodeTypes}
 			{edges}
 			{setLayoutDirection}
+			bind:pinned
 			on:nodeclick={(e) => {
 				onNodeClick(e.detail);
-				selectedMessageId = e.detail.node.data.message.id;
-				fitView({ nodes: [{ id: selectedMessageId }] });
+				const clickedMessageId = e.detail.node.data.message.id as string;
+				selectedMessageId = clickedMessageId;
+				if (!pinned) {
+					fitView({ nodes: [{ id: clickedMessageId }] });
+				}
 			}}
 		/>
 	{/if}

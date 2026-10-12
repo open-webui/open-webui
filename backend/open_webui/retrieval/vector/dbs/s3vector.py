@@ -13,7 +13,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.retrieval.vector.utils import metadata_matches_filter, normalize_filter, process_metadata
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class S3VectorClient(VectorDBBase):
         if self.bucket_name and self.region:
             try:
                 self.client = boto3.client('s3vectors', region_name=self.region)
-                log.info(f"S3Vector client initialized for bucket '{self.bucket_name}' in region '{self.region}'")
+                log.info("S3Vector client initialized for bucket '%s' in region '%s'", self.bucket_name, self.region)
             except Exception as e:
                 log.error(f'Failed to initialize S3Vector client: {e}')
                 self.client = None
@@ -54,7 +54,7 @@ class S3VectorClient(VectorDBBase):
         Create a new index in the S3 vector bucket for the given collection if it does not exist.
         """
         if self.has_collection(index_name):
-            log.debug(f"Index '{index_name}' already exists, skipping creation")
+            log.debug("Index '%s' already exists, skipping creation", index_name)
             return
 
         try:
@@ -70,7 +70,9 @@ class S3VectorClient(VectorDBBase):
                     ]
                 },
             )
-            log.info(f'Created S3 index: {index_name} (dim={dimension}, type={data_type}, metric={distance_metric})')
+            log.info(
+                'Created S3 index: %s (dim=%s, type=%s, metric=%s)', index_name, dimension, data_type, distance_metric
+            )
         except Exception as e:
             log.error(f"Error creating S3 index '{index_name}': {e}")
             raise
@@ -137,9 +139,9 @@ class S3VectorClient(VectorDBBase):
             return
 
         try:
-            log.info(f"Deleting collection '{collection_name}'")
+            log.info("Deleting collection '%s'", collection_name)
             self.client.delete_index(vectorBucketName=self.bucket_name, indexName=collection_name)
-            log.info(f"Successfully deleted collection '{collection_name}'")
+            log.info("Successfully deleted collection '%s'", collection_name)
         except Exception as e:
             log.error(f"Error deleting collection '{collection_name}': {e}")
             raise
@@ -156,7 +158,7 @@ class S3VectorClient(VectorDBBase):
 
         try:
             if not self.has_collection(collection_name):
-                log.info(f"Index '{collection_name}' does not exist. Creating index.")
+                log.info("Index '%s' does not exist. Creating index.", collection_name)
                 self._create_index(
                     index_name=collection_name,
                     dimension=dimension,
@@ -202,9 +204,11 @@ class S3VectorClient(VectorDBBase):
                     indexName=collection_name,
                     vectors=batch,
                 )
-                log.info(f"Inserted batch {i // batch_size + 1}: {len(batch)} vectors into index '{collection_name}'.")
+                log.info(
+                    "Inserted batch %s: %s vectors into index '%s'.", i // batch_size + 1, len(batch), collection_name
+                )
 
-            log.info(f"Completed insertion of {len(vectors)} vectors into index '{collection_name}'.")
+            log.info("Completed insertion of %s vectors into index '%s'.", len(vectors), collection_name)
         except Exception as e:
             log.error(f'Error inserting vectors: {e}')
             raise
@@ -218,11 +222,11 @@ class S3VectorClient(VectorDBBase):
             return
 
         dimension = len(items[0]['vector'])
-        log.info(f'Upsert dimension: {dimension}')
+        log.info('Upsert dimension: %s', dimension)
 
         try:
             if not self.has_collection(collection_name):
-                log.info(f"Index '{collection_name}' does not exist. Creating index for upsert.")
+                log.info("Index '%s' does not exist. Creating index for upsert.", collection_name)
                 self._create_index(
                     index_name=collection_name,
                     dimension=dimension,
@@ -264,10 +268,14 @@ class S3VectorClient(VectorDBBase):
                 batch = vectors[i : i + batch_size]
                 if i == 0:  # Log sample info for first batch only
                     log.info(
-                        f'Upserting batch 1: {len(batch)} vectors. First vector sample: key={batch[0]["key"]}, data_type={type(batch[0]["data"]["float32"])}, data_len={len(batch[0]["data"]["float32"])}'
+                        'Upserting batch 1: %s vectors. First vector sample: key=%s, data_type=%s, data_len=%s',
+                        len(batch),
+                        batch[0]['key'],
+                        type(batch[0]['data']['float32']),
+                        len(batch[0]['data']['float32']),
                     )
                 else:
-                    log.info(f'Upserting batch {i // batch_size + 1}: {len(batch)} vectors.')
+                    log.info('Upserting batch %s: %s vectors.', i // batch_size + 1, len(batch))
 
                 self.client.put_vectors(
                     vectorBucketName=self.bucket_name,
@@ -275,7 +283,7 @@ class S3VectorClient(VectorDBBase):
                     vectors=batch,
                 )
 
-            log.info(f"Completed upsert of {len(vectors)} vectors into index '{collection_name}'.")
+            log.info("Completed upsert of %s vectors into index '%s'.", len(vectors), collection_name)
         except Exception as e:
             log.error(f'Error upserting vectors: {e}')
             raise
@@ -300,7 +308,8 @@ class S3VectorClient(VectorDBBase):
             return None
 
         try:
-            log.info(f"Searching collection '{collection_name}' with {len(vectors)} query vectors, limit={limit}")
+            log.info("Searching collection '%s' with %s query vectors, limit=%s", collection_name, len(vectors), limit)
+            vector_filter = normalize_filter(filter)
 
             # Initialize result lists
             all_ids = []
@@ -310,20 +319,23 @@ class S3VectorClient(VectorDBBase):
 
             # Process each query vector
             for i, query_vector in enumerate(vectors):
-                log.debug(f'Processing query vector {i + 1}/{len(vectors)}')
+                log.debug('Processing query vector %s/%s', i + 1, len(vectors))
 
                 # Prepare the query vector in S3 Vector format
                 query_vector_dict = {'float32': [float(x) for x in query_vector]}
 
-                # Call S3 Vector query API
-                response = self.client.query_vectors(
-                    vectorBucketName=self.bucket_name,
-                    indexName=collection_name,
-                    topK=limit,
-                    queryVector=query_vector_dict,
-                    returnMetadata=True,
-                    returnDistance=True,
-                )
+                request_params = {
+                    'vectorBucketName': self.bucket_name,
+                    'indexName': collection_name,
+                    'topK': limit,
+                    'queryVector': query_vector_dict,
+                    'returnMetadata': True,
+                    'returnDistance': True,
+                }
+                if vector_filter:
+                    request_params['filter'] = vector_filter
+
+                response = self.client.query_vectors(**request_params)
 
                 # Process results for this query
                 query_ids = []
@@ -337,6 +349,9 @@ class S3VectorClient(VectorDBBase):
                     vector_id = vector.get('key')
                     vector_metadata = vector.get('metadata', {})
                     vector_distance = vector.get('distance', 0.0)
+
+                    if vector_filter and not metadata_matches_filter(vector_metadata, vector_filter):
+                        continue
 
                     # Extract document text from metadata
                     document_text = ''
@@ -362,7 +377,7 @@ class S3VectorClient(VectorDBBase):
                 all_metadatas.append(query_metadatas)
                 all_distances.append(query_distances)
 
-            log.info(f'Search completed. Found results for {len(all_ids)} queries')
+            log.info('Search completed. Found results for %s queries', len(all_ids))
 
             # Return SearchResult format
             return SearchResult(
@@ -402,7 +417,7 @@ class S3VectorClient(VectorDBBase):
             return self.get(collection_name)
 
         try:
-            log.info(f"Querying collection '{collection_name}' with filter: {filter}")
+            log.info("Querying collection '%s' with filter: %s", collection_name, filter)
 
             # For S3 Vector, we need to use list_vectors and then filter results
             # Since S3 Vector may not support complex server-side filtering,
@@ -437,7 +452,7 @@ class S3VectorClient(VectorDBBase):
                     if limit and len(filtered_ids) >= limit:
                         break
 
-            log.info(f'Filter applied: {len(filtered_ids)} vectors match out of {len(all_ids)} total')
+            log.info('Filter applied: %s vectors match out of %s total', len(filtered_ids), len(all_ids))
 
             # Return GetResult format
             if filtered_ids:
@@ -472,7 +487,7 @@ class S3VectorClient(VectorDBBase):
             return GetResult(ids=[[]], documents=[[]], metadatas=[[]])
 
         try:
-            log.info(f"Retrieving all vectors from collection '{collection_name}'")
+            log.info("Retrieving all vectors from collection '%s'", collection_name)
 
             # Initialize result lists
             all_ids = []
@@ -521,7 +536,7 @@ class S3VectorClient(VectorDBBase):
                             )
 
                         # Log the actual content for debugging
-                        log.debug(f'Document text preview (first 200 chars): {str(document_text)[:200]}')
+                        log.debug('Document text preview (first 200 chars): %s', str(document_text)[:200])
                     else:
                         document_text = vector_id
 
@@ -534,7 +549,7 @@ class S3VectorClient(VectorDBBase):
                 if not next_token:
                     break
 
-            log.info(f"Retrieved {len(all_ids)} vectors from collection '{collection_name}'")
+            log.info("Retrieved %s vectors from collection '%s'", len(all_ids), collection_name)
 
             # Return in GetResult format
             # The Open WebUI GetResult expects lists of lists, so we wrap each list
@@ -576,17 +591,17 @@ class S3VectorClient(VectorDBBase):
         try:
             if ids:
                 # Delete by specific vector IDs/keys
-                log.info(f"Deleting {len(ids)} vectors by IDs from collection '{collection_name}'")
+                log.info("Deleting %s vectors by IDs from collection '%s'", len(ids), collection_name)
                 self.client.delete_vectors(
                     vectorBucketName=self.bucket_name,
                     indexName=collection_name,
                     keys=ids,
                 )
-                log.info(f"Deleted {len(ids)} vectors from index '{collection_name}'")
+                log.info("Deleted %s vectors from index '%s'", len(ids), collection_name)
 
             elif filter:
                 # Handle filter-based deletion
-                log.info(f"Deleting vectors by filter from collection '{collection_name}': {filter}")
+                log.info("Deleting vectors by filter from collection '%s': %s", collection_name, filter)
 
                 # If this is a knowledge collection and we have a file_id filter,
                 # also clean up the corresponding file-specific collection
@@ -595,7 +610,8 @@ class S3VectorClient(VectorDBBase):
                     file_collection_name = f'file-{file_id}'
                     if self.has_collection(file_collection_name):
                         log.info(
-                            f"Found related file-specific collection '{file_collection_name}', deleting it to prevent duplicates"
+                            "Found related file-specific collection '%s', deleting it to prevent duplicates",
+                            file_collection_name,
                         )
                         self.delete_collection(file_collection_name)
 
@@ -604,7 +620,7 @@ class S3VectorClient(VectorDBBase):
                 query_result = self.query(collection_name, filter)
                 if query_result and query_result.ids and query_result.ids[0]:
                     matching_ids = query_result.ids[0]
-                    log.info(f'Found {len(matching_ids)} vectors matching filter, deleting them')
+                    log.info('Found %s vectors matching filter, deleting them', len(matching_ids))
 
                     # Delete the matching vectors by ID
                     self.client.delete_vectors(
@@ -612,7 +628,7 @@ class S3VectorClient(VectorDBBase):
                         indexName=collection_name,
                         keys=matching_ids,
                     )
-                    log.info(f"Deleted {len(matching_ids)} vectors from index '{collection_name}' using filter")
+                    log.info("Deleted %s vectors from index '%s' using filter", len(matching_ids), collection_name)
                 else:
                     log.warning('No vectors found matching the filter criteria')
             else:
@@ -645,11 +661,11 @@ class S3VectorClient(VectorDBBase):
                     try:
                         self.client.delete_index(vectorBucketName=self.bucket_name, indexName=index_name)
                         deleted_count += 1
-                        log.info(f'Deleted index: {index_name}')
+                        log.info('Deleted index: %s', index_name)
                     except Exception as e:
                         log.error(f"Error deleting index '{index_name}': {e}")
 
-            log.info(f'Reset completed: deleted {deleted_count} indexes')
+            log.info('Reset completed: deleted %s indexes', deleted_count)
 
         except Exception as e:
             log.error(f'Error during reset: {e}')

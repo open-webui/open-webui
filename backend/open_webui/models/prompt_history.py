@@ -1,7 +1,6 @@
 """Prompt history model for version tracking."""
 
 import difflib
-import json
 import time
 import uuid
 from typing import Optional
@@ -70,7 +69,6 @@ class PromptHistoryTable:
             )
             db.add(history)
             await db.commit()
-            await db.refresh(history)
             return PromptHistoryModel.model_validate(history)
 
     async def get_history_by_prompt_id(
@@ -178,8 +176,8 @@ class PromptHistoryTable:
 
             diff_lines = list(
                 difflib.unified_diff(
-                    from_content.splitlines(keepends=True),
-                    to_content.splitlines(keepends=True),
+                    from_content.splitlines(),
+                    to_content.splitlines(),
                     fromfile=f'v{from_id[:8]}',
                     tofile=f'v{to_id[:8]}',
                     lineterm='',
@@ -192,6 +190,7 @@ class PromptHistoryTable:
                 'from_snapshot': from_snapshot,
                 'to_snapshot': to_snapshot,
                 'content_diff': diff_lines,
+                'line_endings_only': not diff_lines and from_content != to_content,
                 'name_changed': from_snapshot.get('name') != to_snapshot.get('name'),
             }
 

@@ -41,7 +41,7 @@
 		if (elementId) {
 			tooltipContent = document.getElementById(elementId);
 		} else {
-			tooltipContent = DOMPurify.sanitize(content);
+			tooltipContent = allowHTML ? DOMPurify.sanitize(content) : content;
 		}
 
 		// After the element changes, the old instance must be destroyed, otherwise the detached tippy floating DOM will be left behind

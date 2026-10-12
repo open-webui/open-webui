@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 import uuid
@@ -15,6 +14,7 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import PromptHistories
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.misc import json_text_variants
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +47,7 @@ class PromptModel(BaseModel):
     content: str
     data: dict | None = None
     meta: dict | None = None
-    tags: list[str | None] = None
+    tags: list[str] | None = None
     is_active: bool | None = True
     version_id: str | None = None
     created_at: int | None = None
@@ -86,8 +86,8 @@ class PromptForm(BaseModel):
     content: str
     data: dict | None = None
     meta: dict | None = None
-    tags: list[str | None] = None
-    access_grants: list[dict | None] = None
+    tags: list[str] | None = None
+    access_grants: list[dict] | None = None
     version_id: str | None = None  # Active version
     commit_message: str | None = None  # For history tracking
     is_production: bool | None = True  # Whether to set new version as production
@@ -100,14 +100,14 @@ class PromptsTable:
     async def _to_prompt_model(
         self,
         prompt: Prompt,
-        access_grants: list[AccessGrantModel | None] = None,
+        access_grants: list[AccessGrantModel] | None = None,
         db: AsyncSession | None = None,
     ) -> PromptModel:
-        prompt_data = PromptModel.model_validate(prompt).model_dump(exclude={'access_grants'})
-        prompt_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(prompt_data['id'], db=db)
+        prompt_model = PromptModel.model_validate(prompt)
+        prompt_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(prompt_model.id, db=db)
         )
-        return PromptModel.model_validate(prompt_data)
+        return prompt_model
 
     async def insert_new_prompt(
         self, user_id: str, form_data: PromptForm, db: AsyncSession | None = None
@@ -132,7 +132,6 @@ class PromptsTable:
                 )
                 session.add(record)
                 await session.commit()
-                await session.refresh(record)  # populate generated defaults
 
                 await AccessGrants.set_access_grants(
                     'prompt',
@@ -169,7 +168,6 @@ class PromptsTable:
                 if history_entry:
                     record.version_id = history_entry.id
                     await session.commit()
-                    await session.refresh(record)  # re-read version_id
 
                 return await self._to_prompt_model(record, db=session)
             except Exception as e:
@@ -243,7 +241,7 @@ class PromptsTable:
         self, user_id: str, permission: str = 'write', db: AsyncSession | None = None
     ) -> list[PromptUserResponse]:
         async with get_async_db_context(db) as session:
-            user_groups = await Groups.get_groups_by_member_id(user_id, db=session)
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=session, include_inherited=True)
             user_group_ids = [group.id for group in user_groups]
 
             query = select(Prompt).filter(Prompt.is_active == True).order_by(Prompt.updated_at.desc())
@@ -336,17 +334,22 @@ class PromptsTable:
                     tag_lower = tag.lower()
 
                     if dialect_name == 'sqlite':
+                        tag_lower = tag.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
                         tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE LOWER(t.value) = :tag_val)'
+                            "EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE t.value LIKE :tag_val ESCAPE '\\')"
                         )
                     elif dialect_name == 'postgresql':
                         tag_clause = text(
                             'EXISTS (SELECT 1 FROM json_array_elements_text(prompt.tags) t WHERE LOWER(t) = :tag_val)'
                         )
                     else:
-                        # Fallback: LIKE on serialised JSON text (ASCII-safe only)
-                        tag_clause = func.lower(cast(Prompt.tags, String)).like(
-                            f'%{json.dumps(tag_lower, ensure_ascii=False)}%'
+                        # Fallback for dialects with no JSON array function: LIKE on the text.
+                        tags_text = func.lower(cast(Prompt.tags, String))
+                        tag_clause = or_(
+                            *(
+                                tags_text.contains(f'"{variant}"', autoescape=True)
+                                for variant in json_text_variants(tag_lower)
+                            )
                         )
                         tag_lower = None
 
@@ -506,14 +509,16 @@ class PromptsTable:
                 )
 
                 # Update prompt fields
-                prompt.name = form_data.name
                 prompt.command = form_data.command
-                prompt.content = form_data.content
-                prompt.data = form_data.data or prompt.data
-                prompt.meta = form_data.meta or prompt.meta
 
-                if form_data.tags is not None:
-                    prompt.tags = form_data.tags
+                if form_data.is_production:
+                    prompt.name = form_data.name
+                    prompt.content = form_data.content
+                    prompt.data = form_data.data or prompt.data
+                    prompt.meta = form_data.meta or prompt.meta
+
+                    if form_data.tags is not None:
+                        prompt.tags = form_data.tags
 
                 if form_data.access_grants is not None:
                     await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
@@ -531,7 +536,7 @@ class PromptsTable:
                         'command': prompt.command,
                         'data': form_data.data or {},
                         'meta': form_data.meta or {},
-                        'tags': prompt.tags or [],
+                        'tags': form_data.tags if form_data.tags is not None else (prompt.tags or []),
                         'access_grants': [grant.model_dump() for grant in current_access_grants],
                     }
 
@@ -558,7 +563,7 @@ class PromptsTable:
         prompt_id: str,
         name: str,
         command: str,
-        tags: list[str | None] = None,
+        tags: list[str] | None = None,
         db: AsyncSession | None = None,
     ) -> PromptModel | None:
         """Update only name, command, and tags (no history created)."""
@@ -637,7 +642,6 @@ class PromptsTable:
                     prompt.is_active = not prompt.is_active
                     prompt.updated_at = int(time.time())
                     await session.commit()
-                    await session.refresh(prompt)
                     return await self._to_prompt_model(prompt, db=session)
                 return None
         except Exception:
@@ -695,7 +699,7 @@ class PromptsTable:
     async def get_tags_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> list[str]:
         try:
             async with get_async_db_context(db) as session:
-                user_groups = await Groups.get_groups_by_member_id(user_id, db=session)
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=session, include_inherited=True)
                 user_group_ids = [group.id for group in user_groups]
 
                 query = select(Prompt.tags).filter(Prompt.is_active == True)

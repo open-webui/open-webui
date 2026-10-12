@@ -52,11 +52,15 @@ type YoutubeConfigForm = {
 
 type RAGConfigForm = {
 	PDF_EXTRACT_IMAGES?: boolean;
+	CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES?: string[];
 	ENABLE_GOOGLE_DRIVE_INTEGRATION?: boolean;
 	ENABLE_ONEDRIVE_INTEGRATION?: boolean;
+	EXTERNAL_DOCUMENT_LOADER_HEADERS?: Record<string, string>;
+	TIKA_SERVER_VERSION?: string | null;
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
+	web?: Record<string, unknown>;
 	youtube?: YoutubeConfigForm;
 };
 
@@ -185,6 +189,8 @@ type OpenAIConfigForm = {
 	url: string;
 };
 
+type OllamaConfigForm = OpenAIConfigForm;
+
 type AzureOpenAIConfigForm = {
 	key: string;
 	url: string;
@@ -193,10 +199,13 @@ type AzureOpenAIConfigForm = {
 
 type EmbeddingModelUpdateForm = {
 	openai_config?: OpenAIConfigForm;
+	ollama_config?: OllamaConfigForm;
 	azure_openai_config?: AzureOpenAIConfigForm;
-	embedding_engine: string;
-	embedding_model: string;
-	embedding_batch_size?: number;
+	RAG_EMBEDDING_ENGINE: string;
+	RAG_EMBEDDING_MODEL: string;
+	RAG_EMBEDDING_BATCH_SIZE?: number;
+	ENABLE_ASYNC_EMBEDDING?: boolean;
+	RAG_EMBEDDING_CONCURRENT_REQUESTS?: number;
 };
 
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
@@ -308,6 +317,48 @@ export const processYoutubeVideo = async (token: string, url: string) => {
 		},
 		body: JSON.stringify({
 			url: url
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const processUrl = async (
+	token: string,
+	url: string,
+	collection_name: string | null = null,
+	process: boolean = true
+) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (!process) {
+		searchParams.append('process', 'false');
+	}
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/url?${searchParams.toString()}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url,
+			collection_name
 		})
 	})
 		.then(async (res) => {

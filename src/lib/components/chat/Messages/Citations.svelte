@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { embed, showControls, showEmbeds } from '$lib/stores';
+	import { isValidHttpUrl } from '$lib/utils';
 
 	import CitationModal from './Citations/CitationModal.svelte';
 
@@ -43,7 +44,11 @@
 
 			if (citations[index]?.source?.embed_url) {
 				const embedUrl = citations[index].source.embed_url;
-				if (embedUrl) {
+				// The embed panel renders anything it cannot read as a URL as raw HTML
+				if (
+					typeof embedUrl === 'string' &&
+					(isValidHttpUrl(embedUrl) || embedUrl.startsWith('//'))
+				) {
 					if (readOnly) {
 						// Open in new tab if readOnly
 						window.open(embedUrl, '_blank');
@@ -78,6 +83,11 @@
 
 		if (distances.length === 0) {
 			return false;
+		}
+
+		// A single distance cannot be an outlier
+		if (distances.length === 1) {
+			return true;
 		}
 
 		if (
@@ -162,7 +172,7 @@
 	{@const urlCitations = citations.filter((c) => c?.source?.name?.startsWith('http'))}
 	<div class=" py-1 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
 		<button
-			class="text-xs font-medium text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850/30"
+			class="text-xs font-normal text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850/30"
 			aria-label={citations.length === 1
 				? $i18n.t('Toggle 1 source')
 				: $i18n.t('Toggle {{COUNT}} sources', { COUNT: citations.length })}
@@ -179,13 +189,16 @@
 							alt="favicon"
 							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-white dark:bg-gray-900"
 							on:error={(e) => {
+								// LICENSE covers this Open WebUI fallback logo.
+								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+								// https://docs.openwebui.com/license.
 								e.target.src = '/favicon.png';
 							}}
 						/>
 					{/each}
 					{#if citations.length > 3}
 						<div
-							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[8px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap tracking-tighter"
+							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[0.5rem] font-normal text-gray-500 dark:text-gray-400 whitespace-nowrap tracking-tighter"
 							aria-hidden="true"
 						>
 							+{citations.length - Math.min(urlCitations.length, 3)}
@@ -221,7 +234,7 @@
 						selectedCitation = citation;
 					}}
 				>
-					<div class=" font-medium bg-gray-50 dark:bg-gray-850 rounded-md px-1">
+					<div class=" font-normal bg-gray-50 dark:bg-gray-850 rounded-md px-1">
 						{idx + 1}
 					</div>
 					<div

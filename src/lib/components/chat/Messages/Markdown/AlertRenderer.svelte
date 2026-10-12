@@ -75,6 +75,7 @@
 	export let alert: AlertData;
 	export let id = '';
 	export let tokenIdx = 0;
+	export let allowEmbeds = false;
 	export let onTaskClick: ((event: MouseEvent) => void) | undefined = undefined;
 	export let onSourceClick: ((event: MouseEvent) => void) | undefined = undefined;
 </script>
@@ -102,9 +103,15 @@ Renders the following Markdown as alerts:
 <div class={`border-l-4 pl-2.5 ${alertStyles[alert.type].border} my-0.5`}>
 	<div class="{alertStyles[alert.type].text} items-center flex gap-1 py-1.5">
 		<svelte:component this={alertStyles[alert.type].icon} className="inline-block size-4" />
-		<span class=" font-medium">{alert.type}</span>
+		<span class=" font-normal">{alert.type}</span>
 	</div>
 	<div class="pb-2">
-		<MarkdownTokens id={`${id}-${tokenIdx}`} tokens={alert.tokens} {onTaskClick} {onSourceClick} />
+		<MarkdownTokens
+			id={`${id}-${tokenIdx}`}
+			tokens={alert.tokens}
+			{allowEmbeds}
+			{onTaskClick}
+			{onSourceClick}
+		/>
 	</div>
 </div>

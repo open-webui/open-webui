@@ -53,7 +53,7 @@ export type CalendarEventForm = {
 	start_at: number;
 	end_at?: number;
 	all_day?: boolean;
-	rrule?: string;
+	rrule?: string | null;
 	color?: string;
 	location?: string | null;
 	data?: Record<string, any>;

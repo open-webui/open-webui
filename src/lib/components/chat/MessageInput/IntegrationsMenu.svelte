@@ -1,32 +1,42 @@
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { resolveLocalizedResource, resolveLocalizedFunction } from '$lib/utils/localizedContent';
+	import { functions as localizedFunctions } from '$lib/stores';
+	import { getContext, onDestroy, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 
 	import {
+		chatId,
 		config,
+		selectedTerminalId,
+		settings,
+		terminalServers,
+		terminalSkills,
 		user,
 		tools as _tools,
 		skills as _skills,
-		mobile,
-		settings,
-		toolServers,
-		terminalServers
+		toolServers
 	} from '$lib/stores';
 
-	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 	import { deleteOAuthSession } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
+	import {
+		listTerminalSkills,
+		resolveTerminalConnection,
+		type TerminalSkill
+	} from '$lib/apis/terminal';
 
 	import { toast } from 'svelte-sonner';
 
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SearchInput from './InputMenu/SearchInput.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
-	import Keyframes from '$lib/components/icons/Keyframes.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
@@ -35,16 +45,33 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext('i18n') as any;
+
+	type IntegrationItem = {
+		id: string;
+		name: string;
+		description?: string;
+		meta?: { description?: string };
+		is_active?: boolean;
+		authenticated?: boolean;
+		has_user_valves?: boolean;
+		[key: string]: any;
+	};
 
 	export let selectedToolIds: string[] = [];
 	export let selectedSkillIds: string[] = [];
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
+	export let oauthRedirectHandler: Function = () => {};
 
-	export let toggleFilters: { id: string; name: string; description?: string; icon?: string }[] =
-		[];
+	export let toggleFilters: {
+		id: string;
+		name: string;
+		description?: string;
+		icon?: string;
+		has_user_valves?: boolean;
+	}[] = [];
 	export let selectedFilterIds: string[] = [];
 
 	export let showWebSearchButton = false;
@@ -56,13 +83,33 @@
 
 	export let onShowValves: Function;
 	export let onClose: Function;
+	export let onWebSearchToggle: Function = () => {};
 	export let closeOnOutsideClick = true;
 
 	let show = false;
 	let tab = '';
 
-	let tools = null;
-	let skills = null;
+	let tools: Record<string, IntegrationItem> | null = null;
+	let skills: Record<string, IntegrationItem> | null = null;
+	let toolQuery = '';
+	let skillQuery = '';
+	let searchedToolQuery = '';
+	let searchedSkillQuery = '';
+	let toolSearchDebounceTimer: ReturnType<typeof setTimeout>;
+	let skillSearchDebounceTimer: ReturnType<typeof setTimeout>;
+	let toolRequestId = 0;
+	let skillRequestId = 0;
+
+	$: toolIds = Object.keys(tools ?? {});
+	$: skillIds = Object.keys(skills ?? {});
+
+	$: if (show && toolQuery !== searchedToolQuery) {
+		scheduleToolSearch();
+	}
+
+	$: if (show && skillQuery !== searchedSkillQuery) {
+		scheduleSkillSearch();
+	}
 
 	$: if (show) {
 		init();
@@ -74,63 +121,183 @@
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
 	const init = async () => {
-		if ($_tools === null) {
-			await _tools.set(await getTools(localStorage.token));
-		}
+		await Promise.all([loadTools(), loadSkills()]);
+	};
 
-		if ($_tools) {
-			tools = $_tools.reduce((a, tool, i, arr) => {
+	const setTools = (toolItems: IntegrationItem[] | null, query = '') => {
+		const q = query.trim().toLowerCase();
+		const items = (toolItems ?? [])
+			.filter(
+				(tool) =>
+					!q ||
+					`${tool.name} ${resolveLocalizedResource(tool, $i18n.language)} ${resolveLocalizedResource(tool, $i18n.language, 'description')}`
+						.toLowerCase()
+						.includes(q)
+			)
+			.reduce<Record<string, IntegrationItem>>((a, tool) => {
 				a[tool.id] = {
+					...tool,
 					name: tool.name,
-					description: tool.meta.description,
-					enabled: selectedToolIds.includes(tool.id),
-					...tool
+					description: tool.meta?.description
 				};
 				return a;
 			}, {});
-		}
 
-		if ($toolServers) {
-			for (const serverIdx in $toolServers) {
-				const server = $toolServers[serverIdx];
-				if (server.info) {
-					tools[`direct_server:${serverIdx}`] = {
-						name: server?.info?.title ?? server.url,
-						description: server.info.description ?? '',
-						enabled: selectedToolIds.includes(`direct_server:${serverIdx}`)
-					};
+		for (const serverIdx in ($toolServers ?? []) as any[]) {
+			const server = (($toolServers ?? []) as any[])[serverIdx];
+			if (server.info) {
+				const name = server?.info?.title ?? server.url;
+				if (q && !name.toLowerCase().includes(q)) {
+					continue;
 				}
+
+				items[`direct_server:${serverIdx}`] = {
+					id: `direct_server:${serverIdx}`,
+					name,
+					description: server.info.description ?? ''
+				};
 			}
 		}
 
-		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
+		tools = items;
+
+		if (!q) {
+			selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools ?? {}).includes(id));
+		}
+	};
+
+	const setSkills = (skillItems: IntegrationItem[] | null, query = '') => {
+		skills = (skillItems ?? [])
+			.filter(
+				(skill) =>
+					skill.is_active &&
+					(!query.trim() ||
+						`${skill.name} ${resolveLocalizedResource(skill, $i18n.language)} ${resolveLocalizedResource(skill, $i18n.language, 'description')}`
+							.toLowerCase()
+							.includes(query.trim().toLowerCase()))
+			)
+			.reduce<Record<string, IntegrationItem>>((a, skill) => {
+				a[skill.id] = {
+					...skill,
+					name: skill.name,
+					description: skill.description
+				};
+				return a;
+			}, {});
+
+		if (!query.trim()) {
+			selectedSkillIds = selectedSkillIds.filter((id) => Object.keys(skills ?? {}).includes(id));
+		}
+	};
+
+	const getTerminalSkillItems = async (): Promise<TerminalSkill[]> => {
+		const connection = resolveTerminalConnection(
+			$selectedTerminalId,
+			$terminalServers ?? [],
+			$settings?.terminalServers ?? [],
+			localStorage.token
+		);
+		const items = await listTerminalSkills(connection, $chatId || null).catch(() => []);
+		terminalSkills.set(items);
+		return items;
+	};
+
+	const loadTools = async (query = toolQuery) => {
+		const requestId = ++toolRequestId;
+		const q = query.trim();
+		searchedToolQuery = query;
+
+		if ($_tools === null) {
+			await _tools.set(await getTools(localStorage.token));
+		}
+		if (requestId !== toolRequestId) return;
+		setTools($_tools, q);
+	};
+
+	const loadSkills = async (query = skillQuery) => {
+		const requestId = ++skillRequestId;
+		const q = query.trim();
+		searchedSkillQuery = query;
 
 		if ($_skills === null) {
 			await _skills.set(await getSkills(localStorage.token));
 		}
+		if (requestId !== skillRequestId) return;
+		const terminalItems = await getTerminalSkillItems();
+		if (requestId !== skillRequestId) return;
+		setSkills([...($_skills ?? []), ...terminalItems], q);
+	};
 
-		if ($_skills) {
-			skills = $_skills
-				.filter((skill) => skill.is_active)
-				.reduce((a, skill) => {
-					a[skill.id] = {
-						name: skill.name,
-						description: skill.description,
-						enabled: selectedSkillIds.includes(skill.id),
-						...skill
-					};
-					return a;
-				}, {});
+	const scheduleToolSearch = () => {
+		clearTimeout(toolSearchDebounceTimer);
+		toolSearchDebounceTimer = setTimeout(() => {
+			loadTools();
+		}, 200);
+	};
+
+	const scheduleSkillSearch = () => {
+		clearTimeout(skillSearchDebounceTimer);
+		skillSearchDebounceTimer = setTimeout(() => {
+			loadSkills();
+		}, 200);
+	};
+
+	const toggleTool = async (toolId: string, e: MouseEvent) => {
+		const tool = tools?.[toolId];
+		if (!tool) return;
+
+		if (!(tool.authenticated ?? true)) {
+			e.preventDefault();
+
+			const parts = toolId.split(':');
+			oauthRedirectHandler({
+				id: toolId,
+				serverId: parts.at(-1) ?? toolId,
+				authType: parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null
+			});
+			return;
 		}
 
-		selectedSkillIds = selectedSkillIds.filter((id) => Object.keys(skills ?? {}).includes(id));
+		const state = !selectedToolIds.includes(toolId);
+		await tick();
+
+		if (state) {
+			selectedToolIds = [...selectedToolIds, toolId];
+		} else {
+			selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+		}
 	};
+
+	const toggleSkill = async (skillId: string) => {
+		const skill = skills?.[skillId];
+		if (!skill) return;
+
+		const state = !selectedSkillIds.includes(skillId);
+		await tick();
+
+		if (state) {
+			selectedSkillIds = [...selectedSkillIds, skillId];
+		} else {
+			selectedSkillIds = selectedSkillIds.filter((id) => id !== skillId);
+		}
+	};
+
+	const skillSourceLabel = (skill: IntegrationItem | undefined) =>
+		skill?.source === 'terminal' ? $i18n.t('Terminal') : '';
+
+	onDestroy(() => {
+		clearTimeout(toolSearchDebounceTimer);
+		clearTimeout(skillSearchDebounceTimer);
+	});
 </script>
 
 <Dropdown
 	bind:show
+	{closeOnOutsideClick}
 	onOpenChange={(state) => {
 		if (state === false) {
+			toolQuery = '';
+			skillQuery = '';
 			onClose();
 		}
 	}}
@@ -139,15 +306,16 @@
 		<slot />
 	</Tooltip>
 	<div slot="content">
-		<div
-			class="min-w-70 max-w-70 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
-		>
+		<DropdownMenu className="min-w-70 max-w-70 max-h-72 overflow-hidden">
 			{#if tab === ''}
-				<div in:fly={{ x: -20, duration: 150 }}>
+				<div
+					class="max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+					in:fly={{ x: -20, duration: 150 }}
+				>
 					{#if tools}
 						{#if Object.keys(tools).length > 0}
 							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								on:click={() => {
 									tab = 'tools';
 								}}
@@ -169,12 +337,12 @@
 
 						{#if skills && Object.keys(skills).length > 0}
 							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								on:click={() => {
 									tab = 'skills';
 								}}
 							>
-								<Keyframes className="size-4" strokeWidth="1.75" />
+								<Cube className="size-3.5" strokeWidth="1.75" />
 
 								<div class="flex items-center w-full justify-between">
 									<div class=" line-clamp-1">
@@ -196,9 +364,18 @@
 
 					{#if toggleFilters && toggleFilters.length > 0}
 						{#each toggleFilters.sort( (a, b) => a.name.localeCompare( b.name, undefined, { sensitivity: 'base' } ) ) as filter, filterIdx (filter.id)}
-							<Tooltip content={filter?.description} placement="top-start">
+							<Tooltip
+								content={resolveLocalizedFunction(
+									filter,
+									$localizedFunctions,
+									$i18n.language,
+									'description'
+								)}
+								placement="top-start"
+							>
 								<button
-									class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									aria-pressed={selectedFilterIds.includes(filter.id)}
 									on:click={() => {
 										if (selectedFilterIds.includes(filter.id)) {
 											selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
@@ -211,22 +388,28 @@
 										<div class="flex flex-1 gap-2 items-center">
 											<div class="shrink-0">
 												{#if filter?.icon}
-													<div class="size-4 items-center flex justify-center">
+													<div class="size-3.5 items-center flex justify-center">
 														<img
 															src={filter.icon}
 															class="size-3.5 {filter.icon.includes('data:image/svg')
 																? 'dark:invert-[80%]'
 																: ''}"
 															style="fill: currentColor;"
-															alt={filter.name}
+															alt={resolveLocalizedFunction(
+																filter,
+																$localizedFunctions,
+																$i18n.language
+															)}
 														/>
 													</div>
 												{:else}
-													<Sparkles className="size-4" strokeWidth="1.75" />
+													<Sparkles className="size-3.5" strokeWidth="1.75" />
 												{/if}
 											</div>
 
-											<div class=" truncate">{filter?.name}</div>
+											<div class=" truncate">
+												{resolveLocalizedFunction(filter, $localizedFunctions, $i18n.language)}
+											</div>
 										</div>
 									</div>
 
@@ -251,14 +434,8 @@
 										</div>
 									{/if}
 
-									<div class=" shrink-0">
-										<Switch
-											state={selectedFilterIds.includes(filter.id)}
-											on:change={async (e) => {
-												const state = e.detail;
-												await tick();
-											}}
-										/>
+									<div class=" shrink-0" inert>
+										<Switch state={selectedFilterIds.includes(filter.id)} />
 									</div>
 								</button>
 							</Tooltip>
@@ -268,9 +445,15 @@
 					{#if showWebSearchButton}
 						<Tooltip content={$i18n.t('Search the internet')} placement="top-start">
 							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								aria-pressed={webSearchEnabled}
 								on:click={() => {
 									webSearchEnabled = !webSearchEnabled;
+									// Left open, this menu would swallow the first click on the confirmation dialog
+									if (webSearchEnabled && $config?.features?.enable_web_search_confirmation) {
+										show = false;
+									}
+									onWebSearchToggle(webSearchEnabled);
 								}}
 							>
 								<div class="flex-1 truncate">
@@ -283,14 +466,8 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={webSearchEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={webSearchEnabled} />
 								</div>
 							</button>
 						</Tooltip>
@@ -299,7 +476,8 @@
 					{#if showImageGenerationButton}
 						<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
 							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								aria-pressed={imageGenerationEnabled}
 								on:click={() => {
 									imageGenerationEnabled = !imageGenerationEnabled;
 								}}
@@ -307,21 +485,15 @@
 								<div class="flex-1 truncate">
 									<div class="flex flex-1 gap-2 items-center">
 										<div class="shrink-0">
-											<Photo className="size-4" strokeWidth="1.5" />
+											<Photo className="size-3.5" strokeWidth="1.5" />
 										</div>
 
 										<div class=" truncate">{$i18n.t('Image')}</div>
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={imageGenerationEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={imageGenerationEnabled} />
 								</div>
 							</button>
 						</Tooltip>
@@ -330,11 +502,8 @@
 					{#if showCodeInterpreterButton}
 						<Tooltip content={$i18n.t('Execute code for analysis')} placement="top-start">
 							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								aria-pressed={codeInterpreterEnabled}
-								aria-label={codeInterpreterEnabled
-									? $i18n.t('Disable Code Interpreter')
-									: $i18n.t('Enable Code Interpreter')}
 								on:click={() => {
 									codeInterpreterEnabled = !codeInterpreterEnabled;
 								}}
@@ -349,24 +518,19 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={codeInterpreterEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={codeInterpreterEnabled} />
 								</div>
 							</button>
 						</Tooltip>
 					{/if}
 				</div>
 			{:else if tab === 'tools' && tools}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex max-h-72 min-h-0 flex-col gap-0.5" in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
+							toolQuery = '';
 							tab = '';
 						}}
 					>
@@ -375,122 +539,130 @@
 						<div class="flex items-center w-full justify-between">
 							<div>
 								{$i18n.t('Tools')}
-								<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+								<span class="ml-0.5 text-gray-500">{toolIds.length}</span>
 							</div>
 						</div>
 					</button>
 
-					{#each Object.keys(tools) as toolId}
-						<button
-							class="relative flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-							on:click={async (e) => {
-								if (!(tools[toolId]?.authenticated ?? true)) {
-									e.preventDefault();
+					<SearchInput bind:value={toolQuery} placeholder={$i18n.t('Search tools')} />
 
-									let parts = toolId.split(':');
-									let serverId = parts?.at(-1) ?? toolId;
-
-									// Persist the tool ID so we can re-enable it after OAuth redirect
-									sessionStorage.setItem('pendingOAuthToolId', toolId);
-
-									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
-									window.open(authUrl, '_self', 'noopener');
-								} else {
-									tools[toolId].enabled = !tools[toolId].enabled;
-
-									const state = tools[toolId].enabled;
-									await tick();
-
-									if (state) {
-										selectedToolIds = [...selectedToolIds, toolId];
-									} else {
-										selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
-									}
-								}
-							}}
-						>
-							{#if !(tools[toolId]?.authenticated ?? true)}
-								<!-- make it slighly darker and not clickable -->
-								<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10" />
-							{/if}
-							<div class="flex-1 truncate">
-								<div class="flex flex-1 gap-2 items-center">
-									<Tooltip content={tools[toolId]?.name ?? ''} placement="top">
-										<div class="shrink-0">
-											<Wrench />
+					<div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+						{#if toolIds.length === 0}
+							<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No tools found')}</div>
+						{:else}
+							<div class="flex flex-col gap-0.5">
+								{#each toolIds as toolId}
+									<button
+										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+										aria-pressed={(tools?.[toolId]?.authenticated ?? true)
+											? selectedToolIds.includes(toolId)
+											: undefined}
+										on:click={async (e) => {
+											await toggleTool(toolId, e);
+										}}
+									>
+										{#if !(tools?.[toolId]?.authenticated ?? true)}
+											<!-- make it slighly darker and not clickable -->
+											<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
+										{/if}
+										<div class="flex-1 truncate">
+											<div class="flex flex-1 gap-2 items-center">
+												<Tooltip
+													content={resolveLocalizedResource(
+														tools?.[toolId],
+														$i18n.language,
+														'name'
+													)}
+													placement="top"
+												>
+													<div class="shrink-0">
+														<Wrench />
+													</div>
+												</Tooltip>
+												<Tooltip
+													content={resolveLocalizedResource(
+														tools?.[toolId],
+														$i18n.language,
+														'description'
+													)}
+													placement="top-start"
+												>
+													<div class=" truncate">
+														{resolveLocalizedResource(tools?.[toolId], $i18n.language, 'name')}
+													</div>
+												</Tooltip>
+											</div>
 										</div>
-									</Tooltip>
-									<Tooltip content={tools[toolId]?.description ?? ''} placement="top-start">
-										<div class=" truncate">{tools[toolId].name}</div>
-									</Tooltip>
-								</div>
+
+										{#if tools?.[toolId]?.authenticated === true && toolId.startsWith('server:mcp:')}
+											<div class="shrink-0">
+												<Tooltip content={$i18n.t('Disconnect OAuth')}>
+													<button
+														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+														type="button"
+														on:click={async (e) => {
+															e.stopPropagation();
+															e.preventDefault();
+
+															const parts = toolId.split(':');
+															const serverId = parts.at(-1) ?? toolId;
+															const provider = `mcp:${serverId}`;
+
+															try {
+																await deleteOAuthSession(localStorage.token, provider);
+																toast.success($i18n.t('OAuth session disconnected'));
+
+																// Refresh tools to update authenticated state
+																_tools.set(await getTools(localStorage.token));
+																selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+																await init();
+															} catch (err) {
+																toast.error(err ?? $i18n.t('Failed to disconnect'));
+															}
+														}}
+													>
+														<LinkSlash className="size-3.5" />
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
+
+										{#if tools?.[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
+											<div class=" shrink-0">
+												<Tooltip content={$i18n.t('Valves')}>
+													<button
+														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+														type="button"
+														on:click={(e) => {
+															e.stopPropagation();
+															e.preventDefault();
+															onShowValves({
+																type: 'tool',
+																id: toolId
+															});
+														}}
+													>
+														<Knobs />
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
+
+										<div class=" shrink-0" inert>
+											<Switch state={selectedToolIds.includes(toolId)} />
+										</div>
+									</button>
+								{/each}
 							</div>
-
-							{#if (tools[toolId]?.authenticated ?? true) && toolId.startsWith('server:mcp:')}
-								<div class="shrink-0">
-									<Tooltip content={$i18n.t('Disconnect OAuth')}>
-										<button
-											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
-											type="button"
-											on:click={async (e) => {
-												e.stopPropagation();
-												e.preventDefault();
-
-												const parts = toolId.split(':');
-												const serverId = parts.at(-1) ?? toolId;
-												const provider = `mcp:${serverId}`;
-
-												try {
-													await deleteOAuthSession(localStorage.token, provider);
-													toast.success($i18n.t('OAuth session disconnected'));
-
-													// Refresh tools to update authenticated state
-													_tools.set(await getTools(localStorage.token));
-													selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
-													await init();
-												} catch (err) {
-													toast.error(err ?? $i18n.t('Failed to disconnect'));
-												}
-											}}
-										>
-											<LinkSlash className="size-3.5" />
-										</button>
-									</Tooltip>
-								</div>
-							{/if}
-
-							{#if tools[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
-								<div class=" shrink-0">
-									<Tooltip content={$i18n.t('Valves')}>
-										<button
-											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
-											type="button"
-											on:click={(e) => {
-												e.stopPropagation();
-												e.preventDefault();
-												onShowValves({
-													type: 'tool',
-													id: toolId
-												});
-											}}
-										>
-											<Knobs />
-										</button>
-									</Tooltip>
-								</div>
-							{/if}
-
-							<div class=" shrink-0">
-								<Switch state={tools[toolId].enabled} />
-							</div>
-						</button>
-					{/each}
+						{/if}
+					</div>
 				</div>
 			{:else if tab === 'skills' && skills}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex max-h-72 min-h-0 flex-col gap-0.5" in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
+							skillQuery = '';
 							tab = '';
 						}}
 					>
@@ -499,47 +671,70 @@
 						<div class="flex items-center w-full justify-between">
 							<div>
 								{$i18n.t('Skills')}
-								<span class="ml-0.5 text-gray-500">{Object.keys(skills).length}</span>
+								<span class="ml-0.5 text-gray-500">{skillIds.length}</span>
 							</div>
 						</div>
 					</button>
 
-					{#each Object.keys(skills) as skillId}
-						<button
-							class="relative flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-							on:click={async () => {
-								skills[skillId].enabled = !skills[skillId].enabled;
+					<SearchInput bind:value={skillQuery} placeholder={$i18n.t('Search skills')} />
 
-								const state = skills[skillId].enabled;
-								await tick();
-
-								if (state) {
-									selectedSkillIds = [...selectedSkillIds, skillId];
-								} else {
-									selectedSkillIds = selectedSkillIds.filter((id) => id !== skillId);
-								}
-							}}
-						>
-							<div class="flex-1 truncate">
-								<div class="flex flex-1 gap-2 items-center">
-									<Tooltip content={skills[skillId]?.name ?? ''} placement="top">
-										<div class="shrink-0">
-											<Keyframes className="size-4" strokeWidth="1.75" />
+					<div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+						{#if skillIds.length === 0}
+							<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No skills found')}</div>
+						{:else}
+							<div class="flex flex-col gap-0.5">
+								{#each skillIds as skillId}
+									<button
+										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+										aria-pressed={selectedSkillIds.includes(skillId)}
+										on:click={async () => {
+											await toggleSkill(skillId);
+										}}
+									>
+										<div class="flex-1 truncate">
+											<div class="flex flex-1 gap-2 items-center">
+												<Tooltip
+													content={resolveLocalizedResource(
+														skills?.[skillId],
+														$i18n.language,
+														'name'
+													)}
+													placement="top"
+												>
+													<div class="shrink-0">
+														<Cube className="size-3.5" strokeWidth="1.75" />
+													</div>
+												</Tooltip>
+												<Tooltip
+													content={resolveLocalizedResource(
+														skills?.[skillId],
+														$i18n.language,
+														'description'
+													)}
+													placement="top-start"
+												>
+													<div class=" truncate">
+														{resolveLocalizedResource(skills?.[skillId], $i18n.language, 'name')}
+													</div>
+												</Tooltip>
+												{#if skillSourceLabel(skills?.[skillId])}
+													<div class="shrink-0 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+														{skillSourceLabel(skills?.[skillId])}
+													</div>
+												{/if}
+											</div>
 										</div>
-									</Tooltip>
-									<Tooltip content={skills[skillId]?.description ?? ''} placement="top-start">
-										<div class=" truncate">{skills[skillId].name}</div>
-									</Tooltip>
-								</div>
-							</div>
 
-							<div class=" shrink-0">
-								<Switch state={skills[skillId].enabled} />
+										<div class=" shrink-0" inert>
+											<Switch state={selectedSkillIds.includes(skillId)} />
+										</div>
+									</button>
+								{/each}
 							</div>
-						</button>
-					{/each}
+						{/if}
+					</div>
 				</div>
 			{/if}
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

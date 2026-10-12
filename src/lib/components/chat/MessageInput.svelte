@@ -1,8 +1,12 @@
 <script lang="ts">
+	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
+	import { functions as localizedFunctions } from '$lib/stores';
 	import DOMPurify from 'dompurify';
 	import { toast } from 'svelte-sonner';
 
 	import { marked } from 'marked';
+	import { DOMParser } from 'prosemirror-model';
+	import { Selection, TextSelection } from 'prosemirror-state';
 	import { v4 as uuidv4 } from 'uuid';
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -28,11 +32,13 @@
 		showCallOverlay,
 		tools,
 		skills,
+		terminalSkills,
 		toolServers,
 		terminalServers,
 		user as _user,
 		showControls,
 		showSettings,
+		showFileNavDir,
 		selectedTerminalId,
 		TTSWorker,
 		temporaryChatEnabled
@@ -40,6 +46,7 @@
 
 	import {
 		convertHeicToJpeg,
+		isHeicImage,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -49,26 +56,32 @@
 		getCurrentDateTime,
 		getFormattedDate,
 		getFormattedTime,
+		getUsageTokenCount,
 		getUserPosition,
 		getUserTimezone,
-		getWeekday
+		getWeekday,
+		isRasterImageContentType
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
+	import { getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getChatById } from '$lib/apis/chats';
+	import { getFolderById } from '$lib/apis/folders';
+	import { getNoteById } from '$lib/apis/notes';
 	import { getSessionUser } from '$lib/apis/auths';
-	import { getTools } from '$lib/apis/tools';
-	import { getSkills } from '$lib/apis/skills';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
+	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
+	import ModelSelector from './ModelSelector.svelte';
+	import ModelControls from './MessageInput/ModelControls.svelte';
 
 	import ToolServersModal from './ToolServersModal.svelte';
 	import SkillsModal from './SkillsModal.svelte';
@@ -83,8 +96,10 @@
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
-	import Keyframes from '../icons/Keyframes.svelte';
+	import ArrowUpLeft from '../icons/ArrowUpLeft.svelte';
+	import Cube from '../icons/Cube.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
+	import Mic from '../icons/Mic.svelte';
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
@@ -97,21 +112,49 @@
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import CodeBrackets from '../icons/CodeBrackets.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
 	import Note from '../icons/Note.svelte';
+	import AskUserCard from './AskUserCard.svelte';
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
+	import Skeleton from './Messages/Skeleton.svelte';
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
+
+	type AskUserPrompt = {
+		id?: string;
+		show: boolean;
+		questions: any[];
+		allowOther: boolean;
+		timeoutMs: number | null;
+		onConfirm: (value: any) => void;
+		onCancel: () => void;
+	};
 
 	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
+	export let typingUsers: { id: string; name: string }[] = [];
+
+	const handleTypingInput = (event: Event) => {
+		const input = event.target as HTMLElement;
+		if (input.isContentEditable) dispatch('typing', Boolean(input.textContent?.trim()));
+	};
+	export let onWebSearchToggle: Function = () => {};
 
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
+	export let compactHandler: Function = () => {};
+	export let statusHandler: Function = () => {};
+	export let forkHandler: Function = () => {};
+	export let chatId = '';
+	export let contextUsage = null;
+	export let contextCompactionEnabled = false;
+	export let embedded = false;
+	export let callActive = false;
 
 	export let autoScroll = false;
 	export let generating = false;
@@ -122,27 +165,63 @@
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	$: hasChatVariables = selectedModelIds.some(
+		(modelId) =>
+			($models.find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema?.fields
+				?.length ?? 0) > 0
+	);
 
 	export let history;
 	export let taskIds = null;
+	export let askUser: AskUserPrompt = {
+		show: false,
+		questions: [],
+		allowOther: true,
+		timeoutMs: null,
+		onConfirm: (_value: any) => {},
+		onCancel: () => {}
+	};
 
 	$: isActive =
-		(taskIds && taskIds.length > 0) ||
-		(history.currentId && history.messages[history.currentId]?.done != true) ||
-		generating;
+		!askUser?.show &&
+		((taskIds && taskIds.length > 0) ||
+			(history.currentId && history.messages[history.currentId]?.done != true) ||
+			generating);
+	$: canCompact = !!history?.currentId;
+	$: hasChatContent = history?.currentId
+		? createMessagesList(history, history.currentId).some(
+				(message) =>
+					!!message?.content || !!message?.tool_calls || !!message?.files || !!message?.models
+			)
+		: false;
+	$: canToggleTemporary =
+		!embedded &&
+		!chatId &&
+		($_user?.role === 'admin' ||
+			($_user?.role === 'user' &&
+				($_user?.permissions?.chat?.temporary ?? true) &&
+				!($_user?.permissions?.chat?.temporary_enforced ?? false)));
 
 	export let prompt = '';
-	export let files = [];
+	export let files: any[] = [];
 
-	export let selectedToolIds = [];
-	export let selectedSkillIds = [];
-	export let selectedFilterIds = [];
+	export let selectedToolIds: string[] = [];
+	export let selectedSkillIds: string[] = [];
+	export let selectedFilterIds: string[] = [];
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	export let toolApprovalMode = 'full';
+	export let onToolApprovalModeChange: Function = () => {};
 
-	export let pendingOAuthTools = [];
+	export let pendingOAuthTools: {
+		id: string;
+		name?: string;
+		serverId: string;
+		authType?: string | null;
+	}[] = [];
+	export let oauthRedirectHandler: Function = () => {};
 
 	let showTerminalMenu = false;
 
@@ -150,7 +229,7 @@
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
-
+	export let onUpdate: (data?: { file?: any }) => void = () => {};
 	export let chatTasks = [];
 
 	let inputContent = null;
@@ -161,6 +240,8 @@
 	let inputVariableValues = {};
 
 	let showValvesModal = false;
+	let showStatusPanel = false;
+	let copiedStatusChatId = false;
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
 	let integrationsMenuCloseOnOutsideClick = true;
@@ -169,7 +250,9 @@
 		integrationsMenuCloseOnOutsideClick = true;
 	}
 
-	$: onChange({
+	let chatInputDraft: any;
+	// Approval mode is persisted in chat parameters and user settings, not input drafts.
+	$: chatInputDraft = {
 		prompt,
 		files: files
 			.filter((file) => file.type !== 'image')
@@ -186,7 +269,9 @@
 		imageGenerationEnabled,
 		webSearchEnabled,
 		codeInterpreterEnabled
-	});
+	};
+
+	$: onChange(chatInputDraft);
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
 		inputVariables = extractInputVariables(text);
@@ -233,7 +318,7 @@
 				}
 			}
 
-			text = text.replaceAll('{{CLIPBOARD}}', clipboardText.replaceAll('\r\n', '\n'));
+			text = text.replaceAll('{{CLIPBOARD}}', () => clipboardText.replaceAll('\r\n', '\n'));
 		}
 
 		if (text.includes('{{USER_LOCATION}}')) {
@@ -336,8 +421,12 @@
 
 		if (chatInput) {
 			chatInputElement.replaceVariables(variables);
-			chatInputElement.focus();
+			focus();
 		}
+	};
+
+	export const focus = (options: FocusOptions = {}) => {
+		chatInputElement?.focus(options);
 	};
 
 	export const setText = async (text?: string, cb?: (text: string) => void) => {
@@ -350,7 +439,7 @@
 
 			chatInputElement?.setText(text);
 			if (!$showCallOverlay) {
-				chatInputElement?.focus();
+				focus();
 			}
 
 			if (text !== '') {
@@ -361,6 +450,119 @@
 			if (cb) await cb(text);
 		}
 	};
+
+	export const showStatus = async () => {
+		showStatusPanel = true;
+		await tick();
+		focus({ preventScroll: true });
+	};
+
+	const formatTokenCount = (value: number) => {
+		if (value >= 1_000_000) return `${trimNumber(value / 1_000_000)}m`;
+		if (value >= 1_000) return `${trimNumber(value / 1_000)}k`;
+		return String(value ?? 0);
+	};
+
+	const trimNumber = (value: number) =>
+		value >= 10 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, '');
+
+	const estimateTokens = (value) => {
+		if (value === null || value === undefined || value === '') {
+			return 0;
+		}
+		if (typeof value !== 'string') {
+			try {
+				value = JSON.stringify(value);
+			} catch {
+				value = String(value);
+			}
+		}
+		return Math.max(1, Math.floor(value.length / 4));
+	};
+
+	const estimateMessagesTokens = (messages) =>
+		messages.reduce((total, message) => {
+			let next = total + 4 + estimateTokens(message.content);
+			next += estimateTokens(message.output);
+			next += estimateTokens(message.tool_calls);
+			if (message.files?.length) {
+				next += estimateTokens(
+					JSON.stringify(message.files).replace(/data:[\w/+.;=%-]*;base64,[A-Za-z0-9+/=]*/g, '')
+				);
+			}
+			return next;
+		}, 0);
+
+	const getLocalContextUsage = () => {
+		if (!history?.currentId) {
+			return null;
+		}
+
+		const messages = createMessagesList(history, history.currentId);
+		if (!messages.length) {
+			return null;
+		}
+
+		let summary = '';
+		let startIdx = 0;
+		for (let idx = 0; idx < messages.length; idx += 1) {
+			const value = messages[idx]?.contextSummary ?? messages[idx]?.context_summary;
+			if (typeof value === 'string' && value.trim()) {
+				summary = value;
+				startIdx = idx;
+			}
+		}
+
+		const activeMessages = messages.slice(startIdx);
+		let estimatedTokens = estimateTokens($settings?.system ?? '');
+		let hasUsageCheckpoint = false;
+
+		for (let idx = activeMessages.length - 1; idx >= 0; idx -= 1) {
+			const usage = activeMessages[idx]?.usage ?? activeMessages[idx]?.info?.usage;
+			const usageTokens = getUsageTokenCount(usage);
+			if (usageTokens) {
+				hasUsageCheckpoint = true;
+				estimatedTokens = usageTokens + estimateMessagesTokens(activeMessages.slice(idx + 1));
+				break;
+			}
+		}
+
+		if (!hasUsageCheckpoint) {
+			estimatedTokens += estimateTokens(summary) + estimateMessagesTokens(activeMessages);
+		}
+
+		return {
+			tokens: estimatedTokens,
+			estimated_tokens: estimatedTokens,
+			threshold: null,
+			percent: null,
+			source: 'estimated'
+		};
+	};
+
+	const copyStatusChatId = async () => {
+		if (!chatId) return;
+		await navigator.clipboard.writeText(chatId);
+		copiedStatusChatId = true;
+		setTimeout(() => {
+			copiedStatusChatId = false;
+		}, 1600);
+	};
+
+	$: statusContextUsage = contextUsage ?? getLocalContextUsage();
+	$: contextHasThreshold = Number(statusContextUsage?.threshold) > 0;
+	$: contextPercent = contextHasThreshold
+		? Math.max(0, Math.round(statusContextUsage?.percent ?? 0))
+		: null;
+	$: contextTokens = formatTokenCount(
+		statusContextUsage?.estimated_tokens || statusContextUsage?.tokens || 0
+	);
+	$: contextValue = statusContextUsage
+		? contextHasThreshold
+			? `${contextPercent}% ${contextTokens}/${formatTokenCount(statusContextUsage.threshold)}`
+			: `${contextTokens} ${$i18n.t('tokens')}`
+		: $i18n.t('unknown');
+	$: contextBarPercent = contextHasThreshold ? Math.min(contextPercent, 100) : 0;
 
 	const getCommand = () => {
 		const chatInput = document.getElementById('chat-input');
@@ -378,6 +580,32 @@
 		if (!chatInput) return;
 
 		chatInputElement?.replaceCommandWithText(text);
+	};
+
+	const temporaryHandler = async () => {
+		if (!canToggleTemporary) return;
+
+		if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
+			await temporaryChatEnabled.set(null);
+		} else {
+			await temporaryChatEnabled.set(!$temporaryChatEnabled);
+		}
+
+		if (location.pathname !== '/') {
+			await goto('/');
+		}
+
+		if ($temporaryChatEnabled) {
+			window.history.replaceState(window.history.state, '', '?temporary-chat=true');
+		} else {
+			window.history.replaceState(window.history.state, '', location.pathname);
+		}
+	};
+
+	const createSkillHandler = async () => {
+		prompt = '/skills:create';
+		await tick();
+		dispatch('submit', prompt);
 	};
 
 	const insertTextAtCursor = async (text: string) => {
@@ -403,7 +631,7 @@
 
 		await tick();
 		if (chatInput) {
-			chatInput.focus();
+			focus({ preventScroll: true });
 			chatInput.dispatchEvent(new Event('input'));
 
 			const words = extractCurlyBraceWords(prompt);
@@ -417,11 +645,69 @@
 		}
 	};
 
+	const replaceSlashRangeWithPrompt = async (editor, range, text: string) => {
+		text = await textVariableHandler(text);
+
+		const { state, view } = editor;
+		let tr = state.tr;
+
+		if ($settings?.insertPromptAsRichText ?? false) {
+			const htmlContent = DOMPurify.sanitize(
+				marked
+					.parse(text, {
+						breaks: true,
+						gfm: true
+					})
+					.trim()
+			);
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = htmlContent;
+			const fragment = DOMParser.fromSchema(state.schema).parse(tempDiv);
+			const nodesToInsert = [];
+
+			fragment.content.forEach((node) => {
+				if (node.type.name === 'paragraph') {
+					nodesToInsert.push(...node.content.content);
+				} else {
+					nodesToInsert.push(node);
+				}
+			});
+
+			tr = tr.replaceWith(range.from, range.to, nodesToInsert);
+			const newPos = range.from + nodesToInsert.reduce((sum, node) => sum + node.nodeSize, 0);
+			tr = tr.setSelection(Selection.near(tr.doc.resolve(newPos)));
+		} else if (text.includes('\n')) {
+			const nodes = text
+				.split('\n')
+				.map((line, index) =>
+					index === 0
+						? state.schema.text(line ? line : [])
+						: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined)
+				);
+			tr = tr.replaceWith(range.from, range.to, nodes);
+			const newPos = nodes.reduce((pos, node) => pos + node.nodeSize, range.from);
+			tr = tr.setSelection(TextSelection.near(tr.doc.resolve(newPos)));
+		} else {
+			tr = tr.replaceWith(range.from, range.to, text !== '' ? state.schema.text(text) : []);
+			tr = tr.setSelection(
+				state.selection.constructor.near(tr.doc.resolve(range.from + text.length + 1))
+			);
+		}
+
+		view.dispatch(tr);
+
+		await tick();
+		await inputVariableHandler(text);
+		await tick();
+		focus({ preventScroll: true });
+	};
+
 	let command = '';
 	export let showCommands = false;
 	$: showCommands =
 		['/', '#', '@', '$', ':'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 	let suggestions = null;
+	$: atSelectedModelName = resolveLocalizedModelName(atSelectedModel, $i18n.language);
 
 	let showTools = false;
 	let showSkills = false;
@@ -457,6 +743,10 @@
 
 	let chatInputContainerElement;
 	let chatInputElement;
+	let modelSelector;
+
+	// TracexGPT: client users are locked to one model, so hide the picker
+	$: isClient = $_user?.info?.user_type === 'client';
 
 	let filesInputElement;
 	let commandsElement;
@@ -466,46 +756,78 @@
 	let showInputModal = false;
 
 	export let dragged = false;
+	export let dropzoneId = 'chat-pane';
 	let shiftKey = false;
 
 	let user = null;
 	export let placeholder = '';
 
-	let visionCapableModels = [];
-	$: visionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+	type ModelCapability =
+		| 'vision'
+		| 'file_upload'
+		| 'web_search'
+		| 'image_generation'
+		| 'code_interpreter'
+		| 'terminal';
+	type ModelCapabilitiesById = Record<string, Partial<Record<ModelCapability, boolean>>>;
+
+	let modelCapabilitiesById: ModelCapabilitiesById = {};
+	$: modelCapabilitiesById = Object.fromEntries(
+		($models ?? []).map((model) => [model.id, model.info?.meta?.capabilities ?? {}])
 	);
 
+	const getCapableModelIds = (
+		modelIds: string[],
+		capability: ModelCapability,
+		capabilitiesById: ModelCapabilitiesById
+	) => modelIds.filter((id) => capabilitiesById[id]?.[capability] ?? true);
+
+	let visionCapableModels = [];
+	$: visionCapableModels = getCapableModelIds(selectedModelIds, 'vision', modelCapabilitiesById);
+
 	let fileUploadCapableModels = [];
-	$: fileUploadCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.file_upload ?? true
+	$: fileUploadCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'file_upload',
+		modelCapabilitiesById
 	);
 
 	let webSearchCapableModels = [];
-	$: webSearchCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
+	$: webSearchCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'web_search',
+		modelCapabilitiesById
 	);
 
 	let imageGenerationCapableModels = [];
-	$: imageGenerationCapableModels = (
-		atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
-	).filter(
-		(model) =>
-			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.image_generation ?? true
+	$: imageGenerationCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'image_generation',
+		modelCapabilitiesById
 	);
 
 	let codeInterpreterCapableModels = [];
-	$: codeInterpreterCapableModels = (
-		atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
-	).filter(
-		(model) =>
-			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter ?? true
+	$: codeInterpreterCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'code_interpreter',
+		modelCapabilitiesById
 	);
 
 	let terminalCapableModels = [];
-	$: terminalCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.terminal ?? true
+	$: terminalCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'terminal',
+		modelCapabilitiesById
 	);
+	$: hasDirectToolServerAccess =
+		$_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true);
+	$: showTerminalSelector =
+		$config?.features?.enable_tool_servers &&
+		terminalCapableModels.length > 0 &&
+		(($terminalServers ?? []).some((t) => t.id) ||
+			(hasDirectToolServerAccess &&
+				(($terminalServers ?? []).some((t) => !t.id) ||
+					($settings?.terminalServers ?? []).some((s) => s.url))));
 
 	let toggleFilters = [];
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
@@ -516,27 +838,26 @@
 	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
 
 	let showSkillsButton = false;
-	$: showSkillsButton = ($skills ?? []).some((skill) => skill.is_active);
+	$: showSkillsButton =
+		($skills ?? []).some((skill) => skill.is_active) ||
+		($terminalSkills ?? []).some((skill) => skill.is_active);
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-			webSearchCapableModels.length &&
+		selectedModelIds.length === webSearchCapableModels.length &&
 		$config?.features?.enable_web_search &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-			imageGenerationCapableModels.length &&
+		selectedModelIds.length === imageGenerationCapableModels.length &&
 		$config?.features?.enable_image_generation &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
 		!$selectedTerminalId &&
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-			codeInterpreterCapableModels.length &&
+		selectedModelIds.length === codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
@@ -546,7 +867,7 @@
 	}
 
 	// Clear selected terminal when model doesn't support terminal
-	$: if ($selectedTerminalId && terminalCapableModels.length === 0) {
+	$: if ($selectedTerminalId && selectedModelIds.length > 0 && terminalCapableModels.length === 0) {
 		selectedTerminalId.set(null);
 	}
 
@@ -596,19 +917,40 @@
 		}
 	};
 
+	const getFilesystemUploadTerminal = (
+		selectedId = $selectedTerminalId,
+		servers: any[] | null = $terminalServers,
+		settingsValue: any = $settings
+	) => {
+		if (!selectedId) return null;
+
+		const systemTerminal = (servers ?? []).find(
+			(t: any) => t.id && t.id === selectedId && t.config?.chat_uploads === 'filesystem'
+		);
+		if (systemTerminal) return systemTerminal;
+
+		return (
+			(settingsValue?.terminalServers ?? []).find(
+				(t: any) => t.url === selectedId && t.enabled && t.config?.chat_uploads === 'filesystem'
+			) ?? null
+		);
+	};
+
 	const uploadFileHandler = async (file, process = true, itemData = {}) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
 		}
 
-		if (fileUploadCapableModels.length !== selectedModels.length) {
+		const filesystemUploadTerminal = getFilesystemUploadTerminal();
+
+		if (!filesystemUploadTerminal && fileUploadCapableModels.length !== selectedModelIds.length) {
 			toast.error($i18n.t('Model(s) do not support file upload'));
 			return null;
 		}
 
 		const tempItemId = uuidv4();
-		const fileItem = {
+		const fileItem: any = {
 			type: 'file',
 			file: '',
 			id: null,
@@ -619,6 +961,9 @@
 			size: file.size,
 			error: '',
 			itemId: tempItemId,
+			// Stamp the user's default upload mode so the sent payload carries it;
+			// the per-file toggle in FileItemModal can still override it afterwards.
+			...($settings?.defaultUploadContext === 'full' ? { context: 'full' } : {}),
 			...itemData
 		};
 
@@ -628,6 +973,52 @@
 		}
 
 		files = [...files, fileItem];
+
+		if (filesystemUploadTerminal) {
+			try {
+				const cwd =
+					(
+						await getCwd(
+							filesystemUploadTerminal.url,
+							filesystemUploadTerminal.key,
+							chatId || undefined
+						)
+					)?.cwd || '/';
+				const uploadedFile = await uploadNewFileToTerminal(
+					filesystemUploadTerminal.url,
+					filesystemUploadTerminal.key,
+					cwd,
+					file,
+					chatId || undefined
+				);
+
+				if (uploadedFile) {
+					fileItem.type = 'filesystem';
+					fileItem.status = 'uploaded';
+					fileItem.name = uploadedFile.path.split('/').pop() || file.name;
+					fileItem.id = uploadedFile.path;
+					fileItem.path = uploadedFile.path;
+					fileItem.url = uploadedFile.path;
+					fileItem.size = uploadedFile.size ?? file.size;
+					fileItem.file = uploadedFile;
+					files = files;
+					showFileNavDir.set(uploadedFile.path);
+				} else {
+					fileItem.status = 'error';
+					fileItem.error = $i18n.t('Failed to upload file.');
+					toast.error(fileItem.error);
+					files = files.filter((item) => item?.itemId !== tempItemId);
+				}
+			} catch (e) {
+				fileItem.status = 'error';
+				fileItem.error = `${e}`;
+				toast.error(`${e}`);
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			} finally {
+				onUpdate({ file: fileItem });
+			}
+			return;
+		}
 
 		if (!$temporaryChatEnabled) {
 			try {
@@ -667,11 +1058,17 @@
 
 					files = files;
 				} else {
+					fileItem.status = 'error';
+					fileItem.error = $i18n.t('Failed to upload file.');
 					files = files.filter((item) => item?.itemId !== tempItemId);
 				}
 			} catch (e) {
+				fileItem.status = 'error';
+				fileItem.error = `${e}`;
 				toast.error(`${e}`);
 				files = files.filter((item) => item?.itemId !== tempItemId);
+			} finally {
+				onUpdate({ file: fileItem });
 			}
 		} else {
 			// If temporary chat is enabled, we just add the file to the list without uploading it.
@@ -684,8 +1081,11 @@
 			});
 
 			if (content === null) {
+				fileItem.status = 'error';
+				fileItem.error = $i18n.t('Failed to extract content from the file.');
 				toast.error($i18n.t('Failed to extract content from the file.'));
 				files = files.filter((item) => item?.itemId !== tempItemId);
+				onUpdate({ file: fileItem });
 				return null;
 			} else {
 				console.log('Extracted content from file:', {
@@ -700,6 +1100,7 @@
 				fileItem.id = uuidv4(); // Temporary ID for the file
 
 				files = files;
+				onUpdate({ file: fileItem });
 			}
 		}
 	};
@@ -743,7 +1144,7 @@
 				return;
 			}
 
-			if (file['type'].startsWith('image/')) {
+			if (isRasterImageContentType(file['type']) || isHeicImage(file)) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
@@ -785,6 +1186,7 @@
 					return imageUrl;
 				};
 
+				const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {
@@ -803,13 +1205,13 @@
 						];
 					} else {
 						const blob = await (await fetch(imageUrl)).blob();
-						const compressedFile = new File([blob], file.name, { type: file.type });
+						const compressedFile = new File([blob], imageFile.name, { type: imageFile.type });
 
 						uploadFileHandler(compressedFile, false);
 					}
 				};
 
-				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
+				reader.readAsDataURL(imageFile);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -823,7 +1225,7 @@
 		}
 
 		const res = await createNoteHandler(
-			dayjs().format('YYYY-MM-DD'),
+			dayjs().locale($i18n.language).format('YYYY-MM-DD'),
 			inputContent?.md,
 			inputContent?.html
 		);
@@ -838,8 +1240,13 @@
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
-		// Check if a file or a sidebar chat item is being dragged.
-		if (e.dataTransfer?.types?.includes('Files') || e.dataTransfer?.types?.includes('text/plain')) {
+		// Check if a file or a sidebar chat/folder item is being dragged.
+		// Use a custom MIME type to distinguish intentional drags from SortableJS reorder drags
+		// (e.g. Notes, Workspace, pinned Models), which also set 'text/plain'.
+		if (
+			e.dataTransfer?.types?.includes('Files') ||
+			e.dataTransfer?.types?.includes('application/x-open-webui-drag')
+		) {
 			dragged = true;
 		} else {
 			dragged = false;
@@ -857,7 +1264,7 @@
 		e.preventDefault();
 		console.log(e);
 
-		// Check if the dropped data is a sidebar chat item
+		// Check if the dropped data is a sidebar chat, folder, note, or model item
 		const textData = e.dataTransfer?.getData('text/plain');
 		if (textData) {
 			try {
@@ -876,6 +1283,49 @@
 						if (!files.find((f) => f.id === chatItem.id)) {
 							files = [...files, chatItem];
 						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				} else if (data.type === 'folder' && data.id) {
+					// Fetch the folder to get its name, then add as a reference folder
+					const folder = await getFolderById(localStorage.token, data.id);
+					if (folder) {
+						const folderItem = {
+							type: 'folder',
+							id: folder.id,
+							name: folder.name,
+							status: 'processed'
+						};
+						if (!files.find((f) => f.id === folderItem.id)) {
+							files = [...files, folderItem];
+						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				} else if (data.type === 'note' && data.id) {
+					// Fetch the note to get its title, then add as a reference note
+					const note = await getNoteById(localStorage.token, data.id);
+					if (note) {
+						const noteItem = {
+							type: 'note',
+							id: note.id,
+							name: note.title,
+							status: 'processed'
+						};
+						if (!files.find((f) => f.id === noteItem.id)) {
+							files = [...files, noteItem];
+						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				} else if (data.type === 'model' && data.id) {
+					// Find the model from the store and set as @-selected model
+					const model = $models.find((m) => m.id === data.id);
+					if (model) {
+						atSelectedModel = model;
 					}
 					dragged = false;
 					e.stopPropagation();
@@ -902,8 +1352,10 @@
 			shiftKey = true;
 		}
 
-		// Cmd/Ctrl+Shift+L to toggle dictation
-		if (e.key.toLowerCase() === 'l' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+		if (
+			$settings?.keyboardShortcuts !== false &&
+			matchKeybinding(e) === Shortcut.TOGGLE_DICTATION
+		) {
 			e.preventDefault();
 			if (recording) {
 				// Confirm and stop recording
@@ -946,7 +1398,7 @@
 							atSelectedModel = data;
 						}
 
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -964,6 +1416,26 @@
 									status: 'processed'
 								}
 							];
+						} else if (type === 'filesystem') {
+							const path = data.path ?? data.url ?? data.id;
+							if (
+								!path ||
+								files.find((f) => f.type === 'filesystem' && (f.path ?? f.url ?? f.id) === path)
+							) {
+								return;
+							}
+							files = [
+								...files,
+								{
+									type: 'filesystem',
+									id: path,
+									path,
+									url: path,
+									name: data.name,
+									size: data.size,
+									status: 'processed'
+								}
+							];
 						} else {
 							if (files.find((f) => f.url === data || f.name === data)) {
 								return;
@@ -975,8 +1447,59 @@
 			},
 			{
 				char: '/',
+				command: ({ editor, range, props }) => {
+					if (props?.type === 'prompt') {
+						void replaceSlashRangeWithPrompt(editor, range, props.content ?? '');
+						return;
+					}
+
+					if (
+						[
+							'compact',
+							'fork',
+							'status',
+							'model',
+							'settings',
+							'temporary',
+							'skills:create'
+						].includes(props?.id)
+					) {
+						editor.chain().focus().deleteRange(range).run();
+						return;
+					}
+
+					editor
+						.chain()
+						.focus()
+						.insertContentAt(range, [
+							{
+								type: 'mention',
+								attrs: { ...props, mentionSuggestionChar: '/' }
+							},
+							{ type: 'text', text: ' ' }
+						])
+						.run();
+				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
+					canCompact: () => !!history?.currentId && contextCompactionEnabled,
+					compactDisabled: () => isActive,
+					canStatus: () => !!history?.currentId,
+					canFork: () =>
+						!!history?.currentId &&
+						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
+					forkDisabled: () => isActive,
+					canTemporary: () => canToggleTemporary,
+					hasChatContent: hasChatContent,
+					temporaryEnabled: () => $temporaryChatEnabled === true,
+					contextUsage: () => statusContextUsage,
+					onCompact: compactHandler,
+					onStatus: statusHandler,
+					onFork: forkHandler,
+					onModel: () => modelSelector?.open(),
+					onSettings: () => showSettings.set(true),
+					onTemporary: temporaryHandler,
+					onCreateSkill: createSkillHandler,
 					onSelect: (e) => {
 						const { type, data } = e;
 
@@ -984,7 +1507,7 @@
 							atSelectedModel = data;
 						}
 
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1022,7 +1545,7 @@
 							atSelectedModel = data;
 						}
 
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1054,7 +1577,7 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
 					onSelect: (e) => {
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1067,13 +1590,16 @@
 				command: ({ editor, range, props }) => {
 					// Convert the Unicode hex codepoint (e.g. "1F44B") to the actual emoji character (👋)
 					const codepoint = props.id;
-					const emoji = String.fromCodePoint(parseInt(codepoint, 16));
+					const emoji = codepoint
+						.split('-')
+						.map((cp) => String.fromCodePoint(parseInt(cp, 16)))
+						.join('');
 					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
 					onSelect: (e) => {
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1084,8 +1610,10 @@
 		loaded = true;
 
 		window.setTimeout(() => {
-			const chatInput = document.getElementById('chat-input');
-			chatInput?.focus();
+			if (!$showCallOverlay) {
+				const chatInput = document.getElementById('chat-input');
+				chatInput?.focus();
+			}
 		}, 0);
 
 		window.addEventListener('keydown', onKeyDown);
@@ -1100,15 +1628,12 @@
 			await tick();
 			if (isDestroyed) return;
 
-			dropzoneElement = document.getElementById('chat-pane');
+			dropzoneElement = document.getElementById(dropzoneId);
 			if (dropzoneElement) {
 				dropzoneElement.addEventListener('dragover', onDragOver, true);
 				dropzoneElement.addEventListener('drop', onDrop, true);
 				dropzoneElement.addEventListener('dragleave', onDragLeave);
 			}
-
-			tools.set(await getTools(localStorage.token));
-			skills.set(await getSkills(localStorage.token));
 		};
 		initialize();
 
@@ -1130,7 +1655,12 @@
 	});
 </script>
 
-<ToolServersModal bind:show={showTools} {selectedToolIds} />
+<ToolServersModal
+	bind:show={showTools}
+	{selectedToolIds}
+	onConnect={(id) =>
+		oauthRedirectHandler({ id, serverId: id.split(':').at(-1), authType: 'mcp' }, chatInputDraft)}
+/>
 <SkillsModal bind:show={showSkills} {selectedSkillIds} />
 
 <InputVariablesModal
@@ -1154,6 +1684,7 @@
 
 <InputModal
 	bind:show={showInputModal}
+	oninput={handleTypingInput}
 	bind:value={prompt}
 	bind:inputContent
 	onChange={(content) => {
@@ -1162,24 +1693,40 @@
 	}}
 	onClose={async () => {
 		await tick();
-		chatInputElement?.focus();
+		focus();
 	}}
 />
 
 {#if loaded}
-	<div class="w-full font-primary">
+	<div class="w-full">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
 				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-6xl'} w-full"
+					: 'max-w-[58rem]'} w-full"
 			>
 				<div class="relative">
+					{#if typingUsers.length > 0}
+						<div
+							class="absolute -top-7 inset-x-0 pointer-events-none select-none bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-2.5"
+						>
+							<div class="text-xs px-1 mt-1.5 flex items-center gap-1.5">
+								<Skeleton size="xs" />
+								<div class="min-w-0 truncate">
+									<span class="font-normal text-black dark:text-white">
+										{typingUsers.map((user) => user.name).join(', ')}
+									</span>
+									{typingUsers.length === 1 ? $i18n.t('is typing...') : $i18n.t('are typing...')}
+								</div>
+							</div>
+						</div>
+					{/if}
 					{#if autoScroll === false && history?.currentId}
 						<div
 							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 						>
 							<button
+								aria-label={$i18n.t('Scroll to bottom')}
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
 								on:click={() => {
 									autoScroll = true;
@@ -1209,7 +1756,7 @@
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+					: 'max-w-[58rem]'} px-2 mx-auto inset-x-0"
 			>
 				<div class="">
 					<input
@@ -1237,7 +1784,7 @@
 								recording = false;
 
 								await tick();
-								document.getElementById('chat-input')?.focus();
+								focus({ preventScroll: true });
 							}}
 							onConfirm={async (data) => {
 								const { text, filename } = data;
@@ -1247,7 +1794,7 @@
 								await tick();
 								await insertTextAtCursor(`${text}`);
 								await tick();
-								document.getElementById('chat-input')?.focus();
+								focus({ preventScroll: true });
 
 								if ($settings?.speechAutoSend ?? false) {
 									dispatch('submit', prompt);
@@ -1258,15 +1805,36 @@
 					<form
 						class="w-full flex flex-col gap-1.5 {recording ? 'hidden' : ''}"
 						on:submit|preventDefault={() => {
-							// check if selectedModels support image input
 							dispatch('submit', prompt);
 						}}
 					>
 						<button
 							id="generate-message-pair-button"
+							type="button"
+							aria-label={$i18n.t('Generate message pair')}
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
 						/>
+
+						{#if askUser?.show}
+							<div class="mx-1">
+								{#key askUser.id}
+									{@const activeAskUser = askUser}
+									<AskUserCard
+										show={askUser.show}
+										questions={askUser.questions}
+										allowOther={askUser.allowOther}
+										timeoutMs={askUser.timeoutMs}
+										on:confirm={(e) => {
+											activeAskUser.onConfirm(e.detail);
+										}}
+										on:cancel={() => {
+											activeAskUser.onCancel();
+										}}
+									/>
+								{/key}
+							</div>
+						{/if}
 
 						<!-- Task list display -->
 						{#if isActive && chatTasks.length > 0}
@@ -1293,24 +1861,105 @@
 							</div>
 						{/if}
 
+						{#if showStatusPanel}
+							<div class="mx-1 rounded-2xl bg-white text-xs dark:bg-gray-900">
+								<div class="flex items-center justify-between px-3 py-1.5">
+									<div class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+										<span>{$i18n.t('Status')}</span>
+									</div>
+
+									<button
+										type="button"
+										class="text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+										on:click={() => {
+											showStatusPanel = false;
+										}}
+									>
+										{$i18n.t('Close')}
+									</button>
+								</div>
+
+								<div class="space-y-0.5 px-3 pb-2">
+									<div class="rounded-xl py-0.5 text-gray-600 dark:text-gray-400">
+										<div class="flex min-h-4 items-center gap-3">
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Context usage')}</span>
+											<span
+												class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+											>
+												{contextValue}
+											</span>
+										</div>
+										{#if contextHasThreshold}
+											<div
+												class="mt-1.5 h-0.5 overflow-hidden rounded-full bg-gray-100 dark:bg-white/8"
+											>
+												<div
+													class="h-full rounded-full bg-gray-300 dark:bg-white/20"
+													style={`width: ${contextBarPercent}%`}
+												></div>
+											</div>
+										{/if}
+									</div>
+
+									{#if messageQueue.length}
+										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Queued messages')}</span>
+											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+												{messageQueue.length}
+											</span>
+										</div>
+									{/if}
+
+									{#if chatTasks.length}
+										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Tasks')}</span>
+											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+												{chatTasks.length}
+											</span>
+										</div>
+									{/if}
+
+									<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+										<span class="min-w-0 flex-1 truncate">{$i18n.t('Chat ID')}</span>
+										{#if chatId}
+											<button
+												type="button"
+												class="min-w-0 max-w-[18rem] truncate font-mono text-[0.625rem] text-gray-400 underline-offset-2 transition-colors duration-75 hover:text-gray-700 hover:underline dark:text-gray-600 dark:hover:text-gray-200"
+												on:click={copyStatusChatId}
+											>
+												{copiedStatusChatId ? $i18n.t('Copied') : chatId}
+											</button>
+										{:else}
+											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+												none
+											</span>
+										{/if}
+									</div>
+								</div>
+							</div>
+						{/if}
+
 						<div
 							id="message-input-container"
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
 								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
-								: ' border-gray-100/30 dark:border-gray-850/30 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'}  transition px-1 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
+								: ' border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'} {($settings?.highContrastMode ??
+							false)
+								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
+								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}
-								<div class="px-3 pt-3 text-left w-full flex flex-col z-10">
+								<div class="px-2.5 pt-2.5 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">
-										<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
+										<div class="pl-[0.0625rem] flex items-center gap-2 text-sm dark:text-gray-500">
 											<img
-												alt="model profile"
-												class="size-3.5 max-w-[28px] object-cover rounded-full"
+												alt={$i18n.t('model profile')}
+												class="size-3.5 max-w-[1.75rem] object-cover rounded-full"
 												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${$models.find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
 											/>
 											<div class="translate-y-[0.5px]">
-												<span class="">{atSelectedModel.name}</span>
+												<span class="">{atSelectedModelName}</span>
 											</div>
 										</div>
 										<div>
@@ -1329,11 +1978,11 @@
 
 							{#if files.length > 0}
 								<div
-									class="mx-2 mt-2.5 pb-1.5 flex items-center flex-wrap gap-2"
+									class="mx-2 mt-2 pb-1 flex items-center flex-wrap gap-1.5"
 									dir={$settings?.chatDirection ?? 'auto'}
 								>
 									{#each files as file, fileIdx}
-										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+										{#if file.type === 'image' || isRasterImageContentType(file?.content_type)}
 											{@const fileUrl =
 												file.url.startsWith('data') || file.url.startsWith('http')
 													? file.url
@@ -1345,11 +1994,11 @@
 														alt=""
 														imageClassName=" size-10 rounded-xl object-cover"
 													/>
-													{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
+													{#if selectedModelIds.length !== visionCapableModels.length}
 														<Tooltip
 															className=" absolute top-1 left-1"
 															content={$i18n.t('{{ models }}', {
-																models: [...(atSelectedModel ? [atSelectedModel] : selectedModels)]
+																models: selectedModelIds
 																	.filter((id) => !visionCapableModels.includes(id))
 																	.join(', ')
 															})}
@@ -1375,7 +2024,7 @@
 														class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
 														false)
 															? ''
-															: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
+															: 'hover-reveal transition'}"
 														type="button"
 														aria-label={$i18n.t('Remove file')}
 														on:click={() => {
@@ -1422,33 +2071,30 @@
 								</div>
 							{/if}
 
-							<div class="px-2.5">
+							<div class="px-2 relative">
+								{#if prompt.split('\n').length > 2}
+									<button
+										type="button"
+										class="absolute top-2.5 right-3 z-20 p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+										aria-label={$i18n.t('Expand input')}
+										on:click={() => {
+											showInputModal = true;
+										}}
+									>
+										<Expand />
+									</button>
+								{/if}
+
 								<div
-									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
+									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
 									0
 										? atSelectedModel !== undefined
-											? 'pt-1.5'
-											: 'pt-2.5'
+											? 'pt-1'
+											: 'pt-2'
 										: ''}"
 									id="chat-input-container"
+									on:input={handleTypingInput}
 								>
-									{#if prompt.split('\n').length > 2}
-										<div class="fixed top-0 right-0 z-20">
-											<div class="mt-2.5 mr-3">
-												<button
-													type="button"
-													class="p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-													aria-label="Expand input"
-													on:click={async () => {
-														showInputModal = true;
-													}}
-												>
-													<Expand />
-												</button>
-											</div>
-										</div>
-									{/if}
-
 									{#if suggestions}
 										{#key $settings?.richTextInput ?? true}
 											{#key $settings?.showFormattingToolbar ?? false}
@@ -1464,6 +2110,11 @@
 													json={true}
 													richText={$settings?.richTextInput ?? true}
 													messageInput={true}
+													followUpSuggestion={!generating &&
+													history?.messages?.[history?.currentId]?.role === 'assistant' &&
+													history?.messages?.[history?.currentId]?.done
+														? (history.messages[history.currentId].followUps?.[0] ?? '')
+														: ''}
 													showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 													floatingMenuPlacement={'top-start'}
 													insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
@@ -1480,7 +2131,7 @@
 														($settings?.promptAutocomplete ?? false)}
 													generateAutoCompletion={async (text) => {
 														if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
-															toast.error($i18n.t('Please select a model first.'));
+															return null;
 														}
 
 														const res = await generateAutoCompletion(
@@ -1552,7 +2203,9 @@
 																// either when Enter is pressed or when Ctrl+Enter is pressed.
 																const enterPressed =
 																	($settings?.ctrlEnterToSend ?? false)
-																		? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+																		? (e.key === 'Enter' || e.keyCode === 13) &&
+																			isCtrlPressed &&
+																			!e.shiftKey
 																		: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
 																if (enterPressed) {
@@ -1618,12 +2271,20 @@
 								</div>
 							</div>
 
-							<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
-								<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
+							<div class=" flex justify-between mt-0.5 mb-2 mx-0.5 max-w-full" dir="ltr">
+								<div class="ml-1 self-end flex items-center">
 									<InputMenu
 										bind:files
-										selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
-										{fileUploadCapableModels}
+										selectedModels={selectedModelIds}
+										fileUploadCapableModels={getFilesystemUploadTerminal(
+											$selectedTerminalId,
+											$terminalServers,
+											$settings
+										)
+											? selectedModelIds
+											: fileUploadCapableModels}
+										{toolApprovalMode}
+										{onToolApprovalModeChange}
 										{screenCaptureHandler}
 										{inputFilesHandler}
 										uploadFilesHandler={() => {
@@ -1675,20 +2336,20 @@
 										<button
 											type="button"
 											id="input-menu-button"
-											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 											aria-label={$i18n.t('More')}
 										>
-											<PlusAlt className="size-5.5" />
+											<PlusAlt className="size-5" />
 										</button>
 									</InputMenu>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 										<div
-											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
+											class="flex self-center w-[0.0625rem] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50 shrink-0"
 										/>
 
 										<IntegrationsMenu
-											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+											selectedModels={selectedModelIds}
 											{toggleFilters}
 											{showWebSearchButton}
 											{showImageGenerationButton}
@@ -1699,6 +2360,12 @@
 											bind:webSearchEnabled
 											bind:imageGenerationEnabled
 											bind:codeInterpreterEnabled
+											oauthRedirectHandler={(tool: {
+												id: string;
+												serverId: string;
+												authType?: string | null;
+											}) => oauthRedirectHandler(tool, chatInputDraft)}
+											{onWebSearchToggle}
 											closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 											onShowValves={(e) => {
 												const { type, id } = e;
@@ -1710,14 +2377,16 @@
 											onClose={async () => {
 												await tick();
 
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
+												if (!$mobile) {
+													const chatInput = document.getElementById('chat-input');
+													chatInput?.focus();
+												}
 											}}
 										>
 											<button
 												type="button"
 												id="integration-menu-button"
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 												aria-label={$i18n.t('Integrations')}
 											>
 												<Component className="size-4.5" strokeWidth="1.5" />
@@ -1725,13 +2394,31 @@
 										</IntegrationsMenu>
 									{/if}
 
+									{#if hasChatVariables}
+										<Tooltip content={$i18n.t('Chat Variables')} placement="top">
+											<button
+												type="button"
+												id="chat-variables-button"
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+												aria-label={$i18n.t('Chat Variables')}
+												on:click={() => {
+													dispatch('chatVariables');
+												}}
+											>
+												<CodeBrackets className="size-4.5" strokeWidth="1.5" />
+											</button>
+										</Tooltip>
+									{/if}
+								</div>
+
+								<div class="flex flex-1 items-center min-w-0 overflow-x-auto scrollbar-none">
 									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}
-										<div class="ml-1 flex gap-1.5">
+										<div class="ml-1 flex gap-1.5 shrink-0">
 											<Tooltip content={$i18n.t('Valves')} placement="top">
 												<button
 													type="button"
 													id="model-valves-button"
-													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden"
 													on:click={() => {
 														selectedValvesType = 'function';
 														selectedValvesItemId = selectedModelIds[0]?.split('.')[0];
@@ -1744,7 +2431,7 @@
 										</div>
 									{/if}
 
-									<div class="ml-1 flex gap-1.5">
+									<div class="ml-1 flex gap-1.5 shrink-0">
 										{#if (selectedToolIds ?? []).length > 0}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
@@ -1753,7 +2440,7 @@
 											>
 												<button
 													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
-													aria-label="Available Tools"
+													aria-label={$i18n.t('Available Tools')}
 													type="button"
 													on:click={() => {
 														showTools = !showTools;
@@ -1776,13 +2463,13 @@
 											>
 												<button
 													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
-													aria-label="Available Skills"
+													aria-label={$i18n.t('Available Skills')}
 													type="button"
 													on:click={() => {
 														showSkills = !showSkills;
 													}}
 												>
-													<Keyframes className="size-4" strokeWidth="1.75" />
+													<Cube className="size-4" strokeWidth="1.75" />
 
 													<span class="text-sm">
 														{(selectedSkillIds ?? []).length}
@@ -1794,7 +2481,14 @@
 										{#each selectedFilterIds as filterId (filterId)}
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
 											{#if filter}
-												<Tooltip content={filter?.name} placement="top">
+												<Tooltip
+													content={resolveLocalizedFunction(
+														filter,
+														$localizedFunctions,
+														$i18n.language
+													)}
+													placement="top"
+												>
 													<button
 														on:click|preventDefault={() => {
 															if (
@@ -1812,7 +2506,7 @@
 															}
 														}}
 														type="button"
-														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {selectedFilterIds.includes(
+														class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {selectedFilterIds.includes(
 															filterId
 														)
 															? 'text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
@@ -1826,7 +2520,11 @@
 																		? 'dark:invert-[80%]'
 																		: ''}"
 																	style="fill: currentColor;"
-																	alt={filter.name}
+																	alt={resolveLocalizedFunction(
+																		filter,
+																		$localizedFunctions,
+																		$i18n.language
+																	)}
 																/>
 															</div>
 														{:else}
@@ -1851,12 +2549,12 @@
 											{/if}
 										{/each}
 
-										{#if webSearchEnabled}
+										{#if webSearchEnabled && showWebSearchButton}
 											<Tooltip content={$i18n.t('Web Search')} placement="top">
 												<button
 													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 													type="button"
-													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+													class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
 													($settings?.webSearch ?? false) === 'always'
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
@@ -1869,13 +2567,13 @@
 											</Tooltip>
 										{/if}
 
-										{#if imageGenerationEnabled}
+										{#if imageGenerationEnabled && showImageGenerationButton}
 											<Tooltip content={$i18n.t('Image')} placement="top">
 												<button
 													on:click|preventDefault={() =>
 														(imageGenerationEnabled = !imageGenerationEnabled)}
 													type="button"
-													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
+													class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 												>
@@ -1887,7 +2585,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if codeInterpreterEnabled}
+										{#if codeInterpreterEnabled && showCodeInterpreterButton}
 											<Tooltip content={$i18n.t('Code Interpreter')} placement="top">
 												<button
 													aria-label={codeInterpreterEnabled
@@ -1897,7 +2595,7 @@
 													on:click|preventDefault={() =>
 														(codeInterpreterEnabled = !codeInterpreterEnabled)}
 													type="button"
-													class=" group p-[7px] flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden {codeInterpreterEnabled
+													class=" group p-[0.375rem] flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden {codeInterpreterEnabled
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '} {($settings?.highContrastMode ??
 													false)
@@ -1913,35 +2611,55 @@
 											</Tooltip>
 										{/if}
 
+										<!-- Terminal Server Selector -->
+										{#if showTerminalSelector}
+											<TerminalMenu
+												bind:show={showTerminalMenu}
+												disabled={generating ||
+													(!!history?.currentId &&
+														history.messages[history.currentId]?.done != true)}
+											/>
+										{/if}
+
 										{#each pendingOAuthTools as pendingTool (pendingTool.id)}
 											<Tooltip content={$i18n.t('Click to connect')} placement="top">
 												<button
+													aria-label={`${$i18n.t('Click to connect')}: ${pendingTool.name}`}
 													on:click|preventDefault={() => {
-														sessionStorage.setItem('pendingOAuthToolId', pendingTool.id);
-														const authUrl = getOAuthClientAuthorizationUrl(
-															pendingTool.serverId,
-															pendingTool.authType ?? 'mcp'
-														);
-														window.open(authUrl, '_self', 'noopener');
+														oauthRedirectHandler(pendingTool, chatInputDraft);
 													}}
 													type="button"
-													class="group px-2 py-[5px] flex gap-1.5 items-center text-xs rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden
-														text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-400/10 dark:hover:bg-amber-600/10 border border-amber-200/40 dark:border-amber-500/20"
+													class="flex h-[1.875rem] min-w-0 max-w-full translate-y-[0.0625rem] items-center self-center gap-1 bg-transparent px-1 text-[0.8125rem] leading-none text-gray-600 transition-colors duration-150 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 dark:text-gray-300 dark:hover:text-gray-100 dark:focus-visible:outline-gray-500"
 												>
-													<Wrench className="size-3.5" strokeWidth="1.75" />
 													<span class="truncate">{pendingTool.name}</span>
+													<ArrowUpLeft className="size-3 shrink-0 rotate-90" strokeWidth="1.5" />
 												</button>
 											</Tooltip>
 										{/each}
 									</div>
 								</div>
 
-								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
+								<div class="self-end flex space-x-1 mr-1 min-w-0 gap-[0.03125rem]">
+									{#if !isClient}
+										<div class="flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
+											<ModelSelector
+												bind:this={modelSelector}
+												bind:selectedModels
+												showSetDefault={!history?.currentId}
+												placement="auto"
+												align="end"
+												triggerClassName="items-center gap-1.5 rounded-lg pl-2 pr-1.5 py-1 text-[0.8125rem] font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+											/>
+										</div>
+										<ModelControls selectedModels={selectedModelIds} />
+									{/if}
+
 									{#if isActive && prompt === '' && files.length === 0}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
-													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+													aria-label={$i18n.t('Stop')}
+													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-[0.3125rem]"
 													on:click={() => {
 														stopResponse();
 													}}
@@ -1962,32 +2680,7 @@
 											</Tooltip>
 										</div>
 									{:else}
-										{#if prompt !== '' && !history?.currentId && !$selectedTerminalId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
-											<!-- {$i18n.t('Create Note')}  -->
-											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
-												<button
-													id="create-note-button"
-													class=" text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 -mr-1 self-center"
-													type="button"
-													disabled={prompt === '' && files.length === 0}
-													on:click={() => {
-														createNote();
-													}}
-												>
-													<Note className="size-4.5 translate-y-[0.5px]" />
-												</button>
-											</Tooltip>
-										{/if}
-
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
-											<!-- Terminal Server Selector -->
-											{@const hasDirectToolServerAccess =
-												$_user?.role === 'admin' ||
-												($_user?.permissions?.features?.direct_tool_servers ?? true)}
-											{#if terminalCapableModels.length > 0 && (($terminalServers ?? []).some((t) => t.id) || (hasDirectToolServerAccess && (($terminalServers ?? []).some((t) => !t.id) || ($settings?.terminalServers ?? []).some((s) => s.url))))}
-												<TerminalMenu bind:show={showTerminalMenu} />
-											{/if}
-
 											{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true)}
 												<!-- {$i18n.t('Record voice')} -->
 												<Tooltip content={$i18n.t('Dictate')}>
@@ -2021,35 +2714,39 @@
 																toast.error($i18n.t('Permission denied when accessing microphone'));
 															}
 														}}
-														aria-label="Voice Input"
+														aria-label={$i18n.t('Voice Input')}
 													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 20 20"
-															fill="currentColor"
-															class="size-5 translate-y-[0.5px]"
-														>
-															<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-															<path
-																d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-															/>
-														</svg>
+														<Mic className="size-[1.125rem]" />
 													</button>
 												</Tooltip>
 											{/if}
 										{/if}
 
-										{#if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{#if !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
-												<Tooltip content={$i18n.t('Voice mode')}>
+												<Tooltip
+													content={callActive ? $i18n.t('Call in progress') : $i18n.t('Voice mode')}
+												>
 													<button
-														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
+														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-[0.3125rem] self-center"
+														class:call-active={callActive}
 														type="button"
 														on:click={async () => {
+															if (callActive) {
+																showCallOverlay.set(true);
+																showControls.set(true);
+																return;
+															}
 															if (selectedModels.length > 1) {
 																toast.error($i18n.t('Select only one model to call'));
 
+																return;
+															}
+
+															if ($config?.audio?.realtime?.enabled) {
+																showCallOverlay.set(true);
+																showControls.set(true);
 																return;
 															}
 
@@ -2096,7 +2793,9 @@
 																);
 															}
 														}}
-														aria-label={$i18n.t('Voice mode')}
+														aria-label={callActive
+															? $i18n.t('Return to call')
+															: $i18n.t('Voice mode')}
 													>
 														<Voice className="size-5" strokeWidth="2.5" />
 													</button>
@@ -2113,7 +2812,7 @@
 														id="send-message-button"
 														class="{!(prompt === '' && files.length === 0) || uploadPending
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
 														type="submit"
 														disabled={(prompt === '' && files.length === 0) || uploadPending}
 													>
@@ -2147,7 +2846,7 @@
 								{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
 							</div>
 						{:else}
-							<div class="mb-1" />
+							<div class="mb-0.5" />
 						{/if}
 					</form>
 				</div>
@@ -2155,3 +2854,17 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.call-active {
+		box-shadow:
+			0 0 8px 2px rgb(0 0 0 / 0.25),
+			0 0 20px 4px rgb(0 0 0 / 0.15);
+	}
+
+	:global(.dark) .call-active {
+		box-shadow:
+			0 0 8px 2px rgb(255 255 255 / 0.4),
+			0 0 20px 4px rgb(255 255 255 / 0.25);
+	}
+</style>

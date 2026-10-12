@@ -1,39 +1,53 @@
 <script>
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
+	import { localizeValvesSchema, resolveLocalizedString } from '$lib/utils/localizedContent';
+
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	import Switch from './Switch.svelte';
 	import SensitiveInput from './SensitiveInput.svelte';
+	import NativeSelect from './NativeSelect.svelte';
+	import MultiSelect from './MultiSelect.svelte';
 	import MapSelector from './Valves/MapSelector.svelte';
 
 	export let valvesSpec = null;
 	export let valves = {};
+	export let meta = {};
+	export let userValves = false;
+	$: prefix = userValves ? 'user_valves' : 'valves';
+	$: displaySpec = localizeValvesSchema(valvesSpec, $i18n.language, meta, prefix);
 </script>
 
-{#if valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length}
-	{#each Object.keys(valvesSpec.properties) as property, idx}
+{#if displaySpec && Object.keys(displaySpec?.properties ?? {}).length}
+	{#each Object.keys(displaySpec.properties) as property}
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{valvesSpec.properties[property].title}
+				<div class=" self-center text-xs font-normal">
+					{displaySpec.properties[property].title}
 
-					{#if (valvesSpec?.required ?? []).includes(property)}
-						<span class=" text-gray-500">*required</span>
+					{#if (displaySpec?.required ?? []).includes(property)}
+						<span class=" text-gray-500">{$i18n.t('*required')}</span>
 					{/if}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
+					class="px-2 py-1 text-xs flex rounded-lg transition hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
 					type="button"
 					on:click={() => {
-						const propertySpec = valvesSpec.properties[property] ?? {};
+						const propertySpec = displaySpec.properties[property] ?? {};
 
 						if ((valves[property] ?? null) === null) {
 							// Initialize to custom value
 							if ((propertySpec?.type ?? null) === 'array') {
 								const defaultArray = propertySpec?.default ?? [];
-								valves[property] = Array.isArray(defaultArray) ? defaultArray.join(', ') : '';
+								if (propertySpec?.input?.type === 'multiselect') {
+									valves[property] = Array.isArray(defaultArray) ? [...defaultArray] : [];
+								} else {
+									valves[property] = Array.isArray(defaultArray) ? defaultArray.join(', ') : '';
+								}
 							} else {
 								valves[property] = propertySpec?.default ?? '';
 							}
@@ -46,7 +60,7 @@
 				>
 					{#if (valves[property] ?? null) === null}
 						<span class="ml-2 self-center">
-							{#if (valvesSpec?.required ?? []).includes(property)}
+							{#if (displaySpec?.required ?? []).includes(property)}
 								{$i18n.t('None')}
 							{:else}
 								{$i18n.t('Default')}
@@ -61,8 +75,8 @@
 			{#if (valves[property] ?? null) !== null}
 				<!-- {valves[property]} -->
 				<div class="flex mt-0.5 mb-0.5 space-x-2">
-					<div class=" flex-1">
-						{#if valvesSpec.properties[property]?.enum ?? null}
+					<div class=" flex-1 min-w-0">
+						{#if displaySpec.properties[property]?.enum ?? null}
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								bind:value={valves[property]}
@@ -70,13 +84,18 @@
 									dispatch('change');
 								}}
 							>
-								{#each valvesSpec.properties[property].enum as option}
+								{#each displaySpec.properties[property].enum as option}
 									<option value={option} selected={option === valves[property]}>
-										{option}
+										{resolveLocalizedString(
+											String(option),
+											meta?.i18n,
+											$i18n.language,
+											`${prefix}.${property}.enum.${option}`
+										)}
 									</option>
 								{/each}
 							</select>
-						{:else if (valvesSpec.properties[property]?.type ?? null) === 'boolean'}
+						{:else if (displaySpec.properties[property]?.type ?? null) === 'boolean'}
 							<div class="flex justify-between items-center">
 								<div class="text-xs text-gray-500">
 									{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
@@ -91,11 +110,21 @@
 									/>
 								</div>
 							</div>
-						{:else if (valvesSpec.properties[property]?.type ?? null) !== 'string'}
+						{:else if displaySpec.properties[property]?.input?.type === 'multiselect' && displaySpec.properties[property]?.input?.options}
+							<MultiSelect
+								className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								bind:value={valves[property]}
+								options={displaySpec.properties[property].input.options}
+								placeholder={$i18n.t('Select options')}
+								on:change={() => {
+									dispatch('change');
+								}}
+							/>
+						{:else if (displaySpec.properties[property]?.type ?? null) !== 'string'}
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								type="text"
-								placeholder={valvesSpec.properties[property].title}
+								placeholder={displaySpec.properties[property].title}
 								bind:value={valves[property]}
 								autocomplete="off"
 								required
@@ -103,46 +132,33 @@
 									dispatch('change');
 								}}
 							/>
-						{:else if valvesSpec.properties[property]?.input ?? null}
-							{#if valvesSpec.properties[property]?.input?.type === 'password'}
+						{:else if displaySpec.properties[property]?.input ?? null}
+							{#if displaySpec.properties[property]?.input?.type === 'password'}
 								<div
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-100/30 dark:border-gray-850/30"
 								>
 									<SensitiveInput
 										id="valve-{property}"
-										placeholder={valvesSpec.properties[property]?.description ?? ''}
+										placeholder={displaySpec.properties[property]?.description ?? ''}
 										bind:value={valves[property]}
-										required={(valvesSpec?.required ?? []).includes(property)}
+										required={(displaySpec?.required ?? []).includes(property)}
 										on:change={() => {
 											dispatch('change');
 										}}
 									/>
 								</div>
-							{:else if valvesSpec.properties[property]?.input?.type === 'select' && valvesSpec.properties[property]?.input?.options}
-								<select
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+							{:else if displaySpec.properties[property]?.input?.type === 'select' && displaySpec.properties[property]?.input?.options}
+								<NativeSelect
+									className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 									bind:value={valves[property]}
+									options={displaySpec.properties[property].input.options}
+									placeholder={displaySpec.properties[property]?.description ??
+										$i18n.t('Select an option')}
 									on:change={() => {
 										dispatch('change');
 									}}
-								>
-									<option value="" disabled
-										>{valvesSpec.properties[property]?.description ??
-											$i18n.t('Select an option')}</option
-									>
-									{#each valvesSpec.properties[property].input.options as option}
-										{#if typeof option === 'object' && option !== null}
-											<option value={option.value} selected={option.value === valves[property]}>
-												{option.label ?? option.value}
-											</option>
-										{:else}
-											<option value={option} selected={option === valves[property]}>
-												{option}
-											</option>
-										{/if}
-									{/each}
-								</select>
-							{:else if valvesSpec.properties[property]?.input?.type === 'color'}
+								/>
+							{:else if displaySpec.properties[property]?.input?.type === 'color'}
 								<div class="flex items-center space-x-2">
 									<div class="relative size-6">
 										<input
@@ -169,7 +185,7 @@
 										}}
 									/>
 								</div>
-							{:else if valvesSpec.properties[property]?.input?.type === 'map'}
+							{:else if displaySpec.properties[property]?.input?.type === 'map'}
 								<!-- EXPERIMENTAL INPUT TYPE, DO NOT USE IN PRODUCTION -->
 								<div class="flex flex-col items-center gap-1">
 									<MapSelector
@@ -199,7 +215,7 @@
 						{:else}
 							<textarea
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
-								placeholder={valvesSpec.properties[property].title}
+								placeholder={displaySpec.properties[property].title}
 								bind:value={valves[property]}
 								autocomplete="off"
 								required
@@ -212,9 +228,12 @@
 				</div>
 			{/if}
 
-			{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-				<div class="text-xs text-gray-500">
-					{valvesSpec.properties[property].description}
+			{#if (displaySpec.properties[property]?.description ?? null) !== null}
+				<div class="markdown-prose-xs max-w-full text-gray-500 dark:text-gray-400">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html DOMPurify.sanitize(
+						marked.parse(displaySpec.properties[property].description ?? '', { async: false })
+					)}
 				</div>
 			{/if}
 		</div>

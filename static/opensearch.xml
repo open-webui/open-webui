@@ -1,4 +1,5 @@
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+<!-- LICENSE covers this Open WebUI search identifier. Do not alter, remove, obscure, or replace it except as LICENSE permits: https://docs.openwebui.com/license. -->
 <ShortName>Open WebUI</ShortName>
 <Description>Search Open WebUI</Description>
 <InputEncoding>UTF-8</InputEncoding>

@@ -1,20 +1,27 @@
 <script lang="ts">
-	import { onMount, tick, getContext } from 'svelte';
-
-	import Textarea from '$lib/components/common/Textarea.svelte';
+	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
 	import { slugify, formatDate, copyToClipboard } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import {
 		getPromptHistory,
+		getPromptDiff,
+		getPromptHistoryEntry,
 		setProductionPromptVersion,
 		deletePromptHistoryVersion,
 		updatePromptMetadata,
@@ -23,229 +30,295 @@
 	} from '$lib/apis/prompts';
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
-	import PromptHistoryMenu from './PromptHistoryMenu.svelte';
-	import Badge from '$lib/components/common/Badge.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
+	import VersionMenuItem from '../common/VersionMenuItem.svelte';
+	import VersionDiff from '../common/VersionDiff.svelte';
 
 	dayjs.extend(localizedFormat);
-
 	export let onSubmit: Function;
 	export let edit = false;
-	export let prompt = null;
+	export let prompt: any = null;
 	export let clone = false;
 	export let disabled = false;
-
-	const i18n = getContext('i18n');
+	export let modal = false;
+	export let onCancel: Function = () => {};
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	let loading = false;
-	let showEditModal = false;
-
+	let ready = false;
 	let name = '';
 	let command = '';
 	let content = '';
-	let tags = [];
+	let savedContent = '';
+	let tags: { name: string }[] = [];
 	let commitMessage = '';
 	let isProduction = true;
-
 	let accessGrants = [];
 	let showAccessControlModal = false;
 	let hasManualEdit = false;
-
 	let history: any[] = [];
+	let productionEntry: any = null;
 	let historyLoading = false;
+	let historyError = false;
 	let selectedHistoryEntry: any = null;
 	let historyPage = 0;
-	let historyHasMore = true;
+	let historyHasMore = false;
+	let showHistory = false;
+	let editingHistory = false;
+	let historyDiff: any = null;
+	let comparing = false;
 	let contentCopied = false;
-
-	// For debounced auto-save of name/command
+	let contentInput: HTMLTextAreaElement;
 	let originalName = '';
 	let originalCommand = '';
-	let originalTags = [];
+	let originalTags: { name: string }[] = [];
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let copyTimer: ReturnType<typeof setTimeout> | null = null;
+	let metadataSave: Promise<void> = Promise.resolve();
+	let suggestionTags: { name: string }[] = [];
+	let showDiscard = false;
+	let showDeleteVersion = false;
+	let deleteVersionId: string | null = null;
+	let discardAction: () => void = () => {};
 
-	let suggestionTags = [];
+	$: selectedVersionId = selectedHistoryEntry?.id ?? prompt?.version_id;
+	$: historical = edit && !!selectedHistoryEntry && selectedVersionId !== prompt?.version_id;
+	$: readOnly = disabled || (historical && !editingHistory);
+	$: metadataDirty =
+		name !== originalName ||
+		command !== originalCommand ||
+		JSON.stringify(tags) !== JSON.stringify(originalTags);
+	$: dirty = ready && !disabled && (content !== savedContent || !!commitMessage || metadataDirty);
+	$: if (!edit && !hasManualEdit) command = name !== '' ? slugify(name) : '';
 
-	$: if (!edit && !hasManualEdit) {
-		command = name !== '' ? slugify(name) : '';
-	}
+	const confirmDiscard = (action: () => void) => {
+		if (dirty) {
+			discardAction = action;
+			showDiscard = true;
+		} else action();
+	};
+	beforeNavigate(({ cancel }) => {
+		if (dirty && !loading && !window.confirm($i18n.t('Discard unsaved changes?'))) cancel();
+	});
 
-	function handleCommandInput(e: Event) {
-		hasManualEdit = true;
-	}
-
+	const validateCommandString = (value: string) => /^[a-zA-Z0-9_-]+$/.test(value);
+	const rememberMetadata = () => {
+		originalName = name;
+		originalCommand = command;
+		originalTags = tags;
+	};
+	const loadHistory = async (reset = false) => {
+		if (!prompt?.id || !edit || historyLoading) return;
+		historyLoading = true;
+		historyError = false;
+		const page = reset ? 0 : historyPage;
+		try {
+			const entries = await getPromptHistory(localStorage.token, prompt.id, page);
+			history = reset ? entries : [...history, ...entries];
+			historyHasMore = entries.length === 20;
+			historyPage = page + 1;
+			if (prompt.version_id) {
+				productionEntry =
+					history.find((entry) => entry.id === prompt.version_id) ||
+					(productionEntry?.id === prompt.version_id
+						? productionEntry
+						: await getPromptHistoryEntry(localStorage.token, prompt.id, prompt.version_id));
+			}
+		} catch (error) {
+			historyError = true;
+			toast.error(`${error}`);
+		} finally {
+			historyLoading = false;
+		}
+	};
+	const selectVersion = (entry: any = null) => {
+		historyDiff = null;
+		selectedHistoryEntry = entry?.id === prompt?.version_id ? null : entry;
+		content = selectedHistoryEntry
+			? (selectedHistoryEntry.snapshot.content ?? '')
+			: (prompt?.content ?? '');
+		savedContent = content;
+		commitMessage = '';
+		editingHistory = false;
+		isProduction = !selectedHistoryEntry;
+	};
+	const chooseVersion = (entry: any = null) => {
+		showHistory = false;
+		if ((entry?.id ?? prompt?.version_id) !== selectedVersionId)
+			confirmDiscard(() => selectVersion(entry));
+	};
+	const editVersion = async () => {
+		historyDiff = null;
+		editingHistory = true;
+		isProduction = false;
+		await tick();
+		contentInput?.focus();
+	};
+	const compareToCurrent = async () => {
+		if (comparing || historyDiff || !historical || editingHistory) return;
+		const fromId = selectedVersionId;
+		const toId = prompt.version_id;
+		comparing = true;
+		try {
+			const result = await getPromptDiff(localStorage.token, prompt.id, fromId, toId);
+			if (selectedVersionId !== fromId || prompt.version_id !== toId || editingHistory) return;
+			const before = result.from_snapshot as Record<string, unknown>;
+			const after = result.to_snapshot as Record<string, unknown>;
+			historyDiff = {
+				fromId,
+				toId,
+				metadata: Object.fromEntries(
+					['name', 'tags'].map((key) => [key, { before: before[key], after: after[key] }])
+				),
+				files:
+					result.content_diff.length || result.line_endings_only
+						? [{ path: $i18n.t('Prompt Content'), status: 'modified', binary: false }]
+						: [],
+				line_endings_only: result.line_endings_only,
+				content: result.content_diff.join('\n')
+			};
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			comparing = false;
+		}
+	};
 	const submitHandler = async () => {
 		if (disabled) {
 			toast.error($i18n.t('You do not have permission to edit this prompt.'));
 			return;
 		}
+		if (loading || readOnly || historyLoading) return;
+		if (!name.trim() || !content.trim() || !validateCommandString(command)) {
+			toast.error($i18n.t('Enter a name, content, and a valid command.'));
+			return;
+		}
+		if (debounceTimer) clearTimeout(debounceTimer);
 		loading = true;
-
-		if (validateCommandString(command)) {
-			try {
-				await onSubmit({
-					id: prompt?.id,
-					name,
-					command,
-					content,
-					tags: tags.map((tag) => tag.name),
-					access_grants: accessGrants,
-					commit_message: commitMessage || undefined,
-					is_production: isProduction
-				});
-				showEditModal = false;
-				commitMessage = '';
-				isProduction = true;
-				await loadHistory(true); // Reset and reload
-				// Select the newest version after saving
-				if (history.length > 0) {
-					selectedHistoryEntry = history[0];
-				}
-			} catch (error) {
-				toast.error(`${error}`);
-			}
-		} else {
-			toast.error(
-				$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
-			);
-		}
-
-		loading = false;
-	};
-
-	const validateCommandString = (inputString) => {
-		const regex = /^[a-zA-Z0-9-_]+$/;
-		return regex.test(inputString);
-	};
-
-	const loadHistory = async (reset = false) => {
-		if (!prompt?.id || !edit) return;
-		if (historyLoading) return;
-		if (!reset && !historyHasMore) return;
-
-		historyLoading = true;
-
-		if (reset) {
-			historyPage = 0;
-			historyHasMore = true;
-		}
-
 		try {
-			const newEntries = await getPromptHistory(localStorage.token, prompt.id, historyPage);
-
-			if (reset) {
-				history = newEntries;
-			} else {
-				history = [...history, ...newEntries];
+			await metadataSave;
+			const previousIds = new Set(history.map((entry) => entry.id));
+			const production = isProduction;
+			const result = await onSubmit({
+				id: prompt?.id,
+				name,
+				command,
+				content,
+				tags: tags.map((tag) => tag.name),
+				access_grants: accessGrants,
+				commit_message: commitMessage || undefined,
+				is_production: production
+			});
+			if (!result) throw new Error($i18n.t('Failed to save prompt'));
+			prompt = result;
+			savedContent = content;
+			commitMessage = '';
+			rememberMetadata();
+			if (edit) {
+				await loadHistory(true);
+				if (production) selectVersion();
+				else {
+					const saved = history.find(
+						(entry) => !previousIds.has(entry.id) && entry.snapshot.content === content
+					);
+					if (saved) selectVersion(saved);
+				}
 			}
-
-			historyHasMore = newEntries.length > 0;
-			historyPage = historyPage + 1;
 		} catch (error) {
-			console.error('Failed to load history:', error);
-			if (reset) {
-				history = [];
-			}
-		}
-		historyLoading = false;
-	};
-
-	const handleHistoryScroll = (e: Event) => {
-		const target = e.target as HTMLElement;
-		const nearBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
-		if (nearBottom && historyHasMore && !historyLoading) {
-			loadHistory(false);
+			toast.error(`${error}`);
+		} finally {
+			loading = false;
 		}
 	};
-
 	const copyContent = async () => {
-		const textToCopy = selectedHistoryEntry?.snapshot?.content || content;
-		const success = await copyToClipboard(textToCopy);
-		if (success) {
+		if (await copyToClipboard(content)) {
 			contentCopied = true;
-			setTimeout(() => {
-				contentCopied = false;
-			}, 2000);
+			if (copyTimer) clearTimeout(copyTimer);
+			copyTimer = setTimeout(() => (contentCopied = false), 2000);
 		}
 	};
-
-	const setAsProduction = async (historyEntry: any) => {
+	const setAsProduction = async () => {
 		if (disabled) {
 			toast.error($i18n.t('You do not have permission to edit this prompt.'));
 			return;
 		}
-
+		if (!selectedHistoryEntry || loading) return;
+		if (debounceTimer) clearTimeout(debounceTimer);
+		loading = true;
 		try {
-			await setProductionPromptVersion(localStorage.token, prompt.id, historyEntry.id);
-			// Update local prompt object to trigger reactivity
-			prompt = { ...prompt, version_id: historyEntry.id };
+			await metadataSave;
+			const result = await setProductionPromptVersion(
+				localStorage.token,
+				prompt.id,
+				selectedHistoryEntry.id
+			);
+			if (!result) throw new Error($i18n.t('Failed to save prompt'));
+			prompt = result;
+			name = result.name;
+			tags = (result.tags || []).map((tag: string) => ({ name: tag }));
+			rememberMetadata();
+			selectVersion();
 			toast.success($i18n.t('Production version updated'));
 		} catch (error) {
 			toast.error(`${error}`);
+		} finally {
+			loading = false;
 		}
 	};
-
 	const handleDeleteHistory = async (historyId: string) => {
-		if (disabled) return;
-
+		if (disabled || loading || historyId === prompt.version_id) return;
+		loading = true;
 		try {
 			await deletePromptHistoryVersion(localStorage.token, prompt.id, historyId);
-			toast.success($i18n.t('Version deleted'));
-			// Reload history from scratch
+			if (selectedHistoryEntry?.id === historyId) selectVersion();
 			await loadHistory(true);
-			// Reset selection if deleted entry was selected
-			if (selectedHistoryEntry?.id === historyId) {
-				selectedHistoryEntry = history.length > 0 ? history[0] : null;
-			}
+			toast.success($i18n.t('Version deleted'));
 		} catch (error) {
 			toast.error(`${error}`);
+		} finally {
+			loading = false;
 		}
 	};
-
-	const renderDate = (timestamp: number) => {
-		const dateVal = timestamp * 1000;
-		return $i18n.t(formatDate(dateVal), {
-			LOCALIZED_TIME: dayjs(dateVal).format('LT'),
-			LOCALIZED_DATE: dayjs(dateVal).format('L')
+	const renderDate = (timestamp: number) =>
+		$i18n.t(formatDate(timestamp * 1000), {
+			LOCALIZED_TIME: dayjs(timestamp * 1000)
+				.locale($i18n.language)
+				.format('LT'),
+			LOCALIZED_DATE: dayjs(timestamp * 1000)
+				.locale($i18n.language)
+				.format('L')
 		});
-	};
-
 	const debouncedSaveMetadata = () => {
 		if (disabled || !edit) return;
-
-		if (debounceTimer) {
-			clearTimeout(debounceTimer);
-		}
-
-		debounceTimer = setTimeout(async () => {
-			if (!validateCommandString(command)) {
-				toast.error(
-					$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
-				);
-				command = originalCommand;
-				return;
-			}
-
-			try {
-				await updatePromptMetadata(
-					localStorage.token,
-					prompt?.id,
-					name,
-					command,
-					tags.map((tag) => tag.name)
-				);
-				// Update originals on success
-				originalName = name;
-				originalCommand = command;
-				originalTags = tags;
-				toast.success($i18n.t('Saved'));
-			} catch (error) {
-				toast.error(`${error}`);
-				// Revert on error (collision)
-				name = originalName;
-				command = originalCommand;
-				tags = originalTags;
-			}
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			metadataSave = metadataSave.then(async () => {
+				if (!validateCommandString(command)) {
+					toast.error(
+						$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
+					);
+					command = originalCommand;
+					return;
+				}
+				const savedName = name,
+					savedCommand = command,
+					savedTags = tags;
+				try {
+					const result = await updatePromptMetadata(
+						localStorage.token,
+						prompt.id,
+						savedName,
+						savedCommand,
+						savedTags.map((tag) => tag.name)
+					);
+					prompt = { ...prompt, ...result };
+					originalName = savedName;
+					originalCommand = savedCommand;
+					originalTags = savedTags;
+				} catch (error) {
+					toast.error(`${error}`);
+				}
+			});
 		}, 500);
 	};
 
@@ -253,31 +326,26 @@
 		if (prompt) {
 			name = prompt.name || '';
 			await tick();
-			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
-			content = prompt.content;
-			tags = (prompt.tags || []).map((tag) => ({ name: tag }));
-			accessGrants = prompt?.access_grants === undefined ? [] : prompt?.access_grants;
-
-			// Store originals for revert on collision
-			originalName = name;
-			originalCommand = command;
-			originalTags = tags;
-
-			if (edit) {
-				await loadHistory();
-				// Auto-select production version
-				if (prompt.version_id && history.length > 0) {
-					selectedHistoryEntry = history.find((h) => h.id === prompt.version_id) || history[0];
-				} else if (history.length > 0) {
-					selectedHistoryEntry = history[0];
-				}
-			}
+			command = prompt.command.replace(/^\//, '');
+			hasManualEdit = true;
+			content = prompt.content ?? '';
+			tags = (prompt.tags || []).map((tag: string) => ({ name: tag }));
+			accessGrants = prompt.access_grants ?? [];
 		}
-
-		const res = await getPromptTags(localStorage.token);
-		if (res) {
-			suggestionTags = res.map((tag) => ({ name: tag }));
+		savedContent = content;
+		rememberMetadata();
+		ready = true;
+		if (edit) await loadHistory(true);
+		try {
+			const result = await getPromptTags(localStorage.token);
+			suggestionTags = (result || []).map((tag: string) => ({ name: tag }));
+		} catch (error) {
+			console.error('Failed to load prompt tags:', error);
 		}
+	});
+	onDestroy(() => {
+		if (debounceTimer) clearTimeout(debounceTimer);
+		if (copyTimer) clearTimeout(copyTimer);
 	});
 </script>
 
@@ -288,6 +356,7 @@
 	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
 	shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
+	allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) || $user?.role === 'admin'}
 	onChange={async () => {
 		if (edit && prompt?.id) {
 			try {
@@ -300,150 +369,116 @@
 	}}
 />
 
-<!-- Edit Modal -->
-<Modal size="lg" bind:show={showEditModal}>
-	<div class="px-5 pt-4 pb-5">
-		<div class="flex justify-between items-center mb-2">
-			<div class="text-lg font-medium">{$i18n.t('Edit Prompt')}</div>
-			<button
-				class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-				aria-label={$i18n.t('Close')}
-				on:click={() => (showEditModal = false)}
-			>
-				<XMark className="size-5" />
-			</button>
+<ConfirmDialog
+	bind:show={showDiscard}
+	title={$i18n.t('Discard unsaved changes?')}
+	confirmLabel={$i18n.t('Discard')}
+	onConfirm={discardAction}
+/>
+
+<ConfirmDialog
+	bind:show={showDeleteVersion}
+	title={$i18n.t('Delete Version')}
+	message={$i18n.t(
+		"Are you sure you want to delete this version? Child versions will be relinked to this version's parent."
+	) +
+		(deleteVersionId === selectedVersionId && dirty
+			? ' ' + $i18n.t('Unsaved changes to this version will be discarded.')
+			: '')}
+	confirmLabel={$i18n.t('Delete')}
+	onConfirm={() => {
+		if (deleteVersionId) return handleDeleteHistory(deleteVersionId);
+	}}
+/>
+
+<div
+	class="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden {modal
+		? 'px-5 pt-3 pb-1'
+		: ''}"
+>
+	<form
+		class="flex h-full min-h-0 min-w-0 flex-col"
+		aria-label={edit ? $i18n.t('Edit Prompt') : $i18n.t('Create Prompt')}
+		inert={loading}
+		on:submit|preventDefault={submitHandler}
+	>
+		<div class="flex min-h-7 shrink-0 items-center justify-between gap-2">
+			{#if modal}
+				<span class="text-xs text-gray-500"
+					>{clone ? $i18n.t('Clone Prompt') : $i18n.t('Create Prompt')}</span
+				>
+			{:else}
+				<button
+					type="button"
+					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+					on:click={() => goto('/workspace/prompts')}
+				>
+					<ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}
+				</button>
+			{/if}
+			<div class="flex shrink-0 items-center gap-1 pr-0.5">
+				{#if !disabled}<AccessButton on:click={() => (showAccessControlModal = true)} />
+				{:else}<span class="px-2 py-1 text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
+				{#if modal}<button
+						type="button"
+						aria-label={$i18n.t('Close')}
+						class="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+						on:click={() => confirmDiscard(() => onCancel())}><XMark className="size-4" /></button
+					>{/if}
+			</div>
 		</div>
 
-		<form on:submit|preventDefault={submitHandler}>
-			<div class="my-2">
-				<div class="flex w-full justify-between">
-					<div class="text-gray-500 text-xs">{$i18n.t('Prompt Content')}</div>
-				</div>
-
-				<div class="mt-1">
-					<Textarea
-						className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
-						placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
-						bind:value={content}
-						aria-label={$i18n.t('Prompt Content')}
-						rows={6}
-						required
-					/>
-				</div>
-			</div>
-
-			<div class="my-2">
-				<div class="text-gray-500 text-xs">{$i18n.t('Commit Message')} ({$i18n.t('optional')})</div>
-				<div class="mt-1">
-					<input
-						class="text-sm w-full bg-transparent outline-hidden"
-						placeholder={$i18n.t('Describe what changed...')}
-						aria-label={$i18n.t('Commit Message')}
-						bind:value={commitMessage}
-					/>
-				</div>
-			</div>
-
-			<div class="mt-4 flex items-center justify-between">
-				<label class="flex items-center gap-2 cursor-pointer">
-					<input
-						type="checkbox"
-						bind:checked={isProduction}
-						class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
-					/>
-					<span class="text-sm text-gray-700 dark:text-gray-300"
-						>{$i18n.t('Set as Production')}</span
-					>
-				</label>
-				<div>
-					<button
-						class="text-sm px-4 py-2 transition rounded-full {loading
-							? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-							: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex justify-center"
-						type="submit"
-						disabled={loading}
-					>
-						<div class="font-medium">{$i18n.t('Save')}</div>
-						{#if loading}
-							<div class="ml-1.5">
-								<Spinner />
-							</div>
-						{/if}
-					</button>
-				</div>
-			</div>
-		</form>
-	</div>
-</Modal>
-
-{#if edit}
-	<!-- Edit mode: Read-only view with history -->
-	<div class="flex flex-col w-full h-full max-h-[100dvh]">
-		<!-- Header -->
-		<div class="flex items-start justify-between gap-4 shrink-0">
-			<div class="min-w-0 flex-1">
-				<input
-					class="text-2xl w-full bg-transparent outline-hidden"
-					placeholder={$i18n.t('Prompt Name')}
-					bind:value={name}
-					on:input={debouncedSaveMetadata}
-					{disabled}
-				/>
-
-				<div class="flex items-center gap-0.5 text-sm text-gray-500 w-full flex-1">
-					<span>/</span>
-					<input
-						class="bg-transparent outline-hidden"
-						placeholder={$i18n.t('command')}
-						bind:value={command}
-						on:input={debouncedSaveMetadata}
-						{disabled}
-					/>
-				</div>
-			</div>
-
-			<div>
-				<div class="flex items-center gap-2 shrink-0 justify-end">
-					{#if !disabled}
-						<button
-							class="px-4 py-1 text-sm font-medium bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition shadow-xs"
-							on:click={() => (showEditModal = true)}
-						>
-							{$i18n.t('Edit')}
-						</button>
-
-						<button
-							class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2.5 py-1 rounded-full flex gap-1.5 items-center text-sm border border-gray-100 dark:border-gray-800"
-							on:click={() => (showAccessControlModal = true)}
-						>
-							<LockClosed strokeWidth="2.5" className="size-3.5" />
-							{$i18n.t('Access')}
-						</button>
-					{:else}
-						<span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
-							>{$i18n.t('Read Only')}</span
-						>
-					{/if}
-				</div>
-
-				<div class="mt-1.5">
-					<Tooltip content={$i18n.t('Click to copy ID')}>
-						<button
-							class="text-xs text-gray-500 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
-							on:click={() => {
-								copyToClipboard(prompt.id);
-								toast.success($i18n.t('ID copied to clipboard'));
+		<div class="shrink-0 px-1 pb-2">
+			<input
+				class="w-full bg-transparent text-sm outline-hidden"
+				placeholder={$i18n.t('Prompt Name')}
+				aria-label={$i18n.t('Prompt Name')}
+				bind:value={name}
+				on:input={debouncedSaveMetadata}
+				required
+				{disabled}
+			/>
+			<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
+				<Tooltip
+					className="min-w-0 flex-1"
+					content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
+						'Activate this command by typing "/{{COMMAND}}" to chat input.',
+						{
+							COMMAND: command
+						}
+					)}`}
+					placement="bottom-start"
+				>
+					<div class="flex min-w-0 items-center gap-0.5">
+						<span>/</span>
+						<input
+							class="min-w-0 flex-1 bg-transparent outline-hidden"
+							placeholder={$i18n.t('command')}
+							aria-label={$i18n.t('Command')}
+							bind:value={command}
+							on:input={() => {
+								hasManualEdit = true;
+								debouncedSaveMetadata();
 							}}
+							required
+							{disabled}
+						/>
+					</div>
+				</Tooltip>
+				{#if edit}
+					<Tooltip className="min-w-0 max-w-[45%]" content={$i18n.t('Click to copy ID')}>
+						<button
+							type="button"
+							class="w-full truncate font-mono text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+							on:click={async () => {
+								if (await copyToClipboard(prompt.id))
+									toast.success($i18n.t('ID copied to clipboard'));
+							}}>{prompt.id}</button
 						>
-							{prompt.id}
-						</button>
 					</Tooltip>
-				</div>
+				{/if}
 			</div>
-		</div>
-
-		<div class="mb-2 flex justify-between items-center gap-2">
-			<div class="flex-1 min-w-0">
+			<div class="mt-1">
 				<Tags
 					{tags}
 					{disabled}
@@ -460,226 +495,185 @@
 			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden pb-6">
-			<!-- Desktop History Sidebar -->
-			<div class="hidden md:flex md:flex-col w-72 shrink-0 overflow-hidden">
-				<div class="flex-1 overflow-y-auto">
-					{@render historySection()}
-				</div>
-			</div>
-
-			<!-- Prompt Content -->
-			<div class="flex-1 flex flex-col min-h-0 overflow-hidden">
-				<div class="flex items-center justify-between mb-1 shrink-0">
-					<div class="flex items-center gap-2">
-						<div class="text-gray-500 text-xs">
-							{$i18n.t('Prompt Content')}
-						</div>
-						{#if selectedHistoryEntry}
-							<span
-								class="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 rounded"
-							>
-								{selectedHistoryEntry.id.slice(0, 7)}
-							</span>
-						{/if}
-					</div>
-
-					{#if selectedHistoryEntry && !disabled}
-						<div class="flex items-center gap-2">
-							{#if selectedHistoryEntry.id === prompt?.version_id}
-								<Badge type="success" content={$i18n.t('Live')} />
-							{:else}
-								<button
-									class="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-300 hover:underline transition"
-									on:click={() => setAsProduction(selectedHistoryEntry)}
-								>
-									{$i18n.t('Set as Production')}
-								</button>
-							{/if}
-							<PromptHistoryMenu
-								isProduction={selectedHistoryEntry.id === prompt?.version_id}
-								onDelete={() => handleDeleteHistory(selectedHistoryEntry.id)}
-								onClose={() => {}}
-							/>
-						</div>
-					{/if}
-				</div>
-				<!-- Content container with copy button -->
-				<div class="relative flex-1 min-h-0">
-					<!-- Copy button - outside scroll area -->
-					<div class="absolute top-2 right-2 z-10">
-						<button
-							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-							aria-label={$i18n.t('Copy content')}
-							on:click={copyContent}
-						>
-							{#if contentCopied}
-								<Check className="size-4 text-green-500" />
-							{:else}
-								<Clipboard className="size-4 text-gray-500" />
-							{/if}
-						</button>
-					</div>
-					<!-- Scrollable content -->
-					<div
-						class="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-100/50 dark:border-gray-850/50 h-full overflow-y-auto"
-					>
-						<pre class="text-xs whitespace-pre-wrap font-mono pr-8">{selectedHistoryEntry?.snapshot
-								?.content || content}</pre>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-{:else}
-	<!-- Create mode: Form -->
-	<div class="w-full max-h-full flex justify-center">
-		<form class="flex flex-col w-full mb-10" on:submit|preventDefault={submitHandler}>
-			<div class="mb-2">
-				<Tooltip
-					content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t('Activate this command by typing "/{{COMMAND}}" to chat input.', { COMMAND: command })}`}
-					placement="bottom-start"
+		<div
+			class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-100/80 bg-white dark:border-white/[0.04] dark:bg-gray-900"
+		>
+			{#if historyDiff}
+				<VersionDiff
+					diff={historyDiff}
+					currentLabel="Production"
+					showFileHeaders={false}
+					loadFileDiff={async () => ({
+						diff: historyDiff.content,
+						line_endings_only: historyDiff.line_endings_only
+					})}
+					onClose={() => (historyDiff = null)}
+				/>
+			{:else}
+				<div
+					class="flex shrink-0 items-center gap-1 bg-gray-50/60 px-2.5 py-1.5 text-xs dark:bg-black"
 				>
-					<div class="flex flex-col w-full">
-						<div class="flex items-center">
-							<input
-								class="text-2xl w-full bg-transparent outline-hidden"
-								placeholder={$i18n.t('Name')}
-								bind:value={name}
-								required
-							/>
-							<div class="self-center shrink-0">
+					<div class="min-w-0 flex-1">
+						{#if edit}
+							<Dropdown bind:show={showHistory}>
 								<button
-									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
 									type="button"
-									on:click={() => (showAccessControlModal = true)}
+									aria-label={$i18n.t('History')}
+									class="flex max-w-full items-center gap-2 py-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+									disabled={loading}
 								>
-									<LockClosed strokeWidth="2.5" className="size-3.5" />
-									<div class="text-sm font-medium shrink-0">{$i18n.t('Access')}</div>
+									<span class="truncate"
+										>{historical
+											? selectedHistoryEntry.commit_message || selectedVersionId.slice(0, 7)
+											: $i18n.t('Live')}{editingHistory ? ` · ${$i18n.t('Editing')}` : ''}</span
+									><ChevronDown className="size-3 shrink-0" />
 								</button>
-							</div>
-						</div>
-						<div class="flex gap-0.5 items-center text-xs text-gray-500">
-							<div>/</div>
-							<input
-								class="w-full bg-transparent outline-hidden"
-								placeholder={$i18n.t('Command')}
-								bind:value={command}
-								on:input={handleCommandInput}
-								required
-							/>
-						</div>
-
-						<div class="mt-1">
-							<Tags
-								{tags}
-								{suggestionTags}
-								on:add={(e) => {
-									tags = [...tags, { name: e.detail }];
-								}}
-								on:delete={(e) => {
-									tags = tags.filter((tag) => tag.name !== e.detail);
-								}}
-							/>
-						</div>
+								<div slot="content">
+									<DropdownMenu className="w-56 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto">
+										<VersionMenuItem
+											entry={history.find((entry) => entry.id === prompt?.version_id) ||
+												(productionEntry?.id === prompt?.version_id ? productionEntry : null)}
+											status={$i18n.t('Live')}
+											deleteDisabledReason={disabled
+												? ''
+												: $i18n.t('Cannot delete the production version')}
+											selected={!historical}
+											onSelect={() => chooseVersion()}
+										/>
+										{#if history.some((entry) => entry.id !== prompt?.version_id)}<hr
+												class="border-gray-100 dark:border-gray-800"
+											/>{/if}
+										{#each history.filter((entry) => entry.id !== prompt?.version_id) as entry (entry.id)}
+											<VersionMenuItem
+												{entry}
+												selected={selectedVersionId === entry.id}
+												onSelect={() => chooseVersion(entry)}
+												onDelete={disabled
+													? undefined
+													: () => {
+															deleteVersionId = entry.id;
+															showHistory = false;
+															showDeleteVersion = true;
+														}}
+											/>
+										{/each}
+										{#if historyLoading}<div
+												class="flex items-center gap-2 px-2 py-1 text-xs text-gray-500"
+											>
+												<Spinner className="size-3" />{$i18n.t('Loading...')}
+											</div>
+										{:else if historyError}<button
+												type="button"
+												on:click={() => loadHistory(historyPage === 0)}>{$i18n.t('Retry')}</button
+											>
+										{:else if !history.length}<div class="px-2 py-2 text-xs text-gray-400">
+												{$i18n.t('No history available')}
+											</div>
+										{:else if historyHasMore}<hr class="border-gray-100 dark:border-gray-800" />
+											<button type="button" on:click={() => loadHistory()}
+												>{$i18n.t('Load more')}</button
+											>{/if}
+									</DropdownMenu>
+								</div>
+							</Dropdown>
+						{:else}<span class="text-gray-500">{$i18n.t('Prompt Content')}</span>{/if}
 					</div>
-				</Tooltip>
-			</div>
-
-			<div class="my-2">
-				<div class="text-gray-500 text-xs">{$i18n.t('Prompt Content')}</div>
-				<div class="mt-1">
-					<Textarea
-						className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
-						placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
-						bind:value={content}
-						rows={6}
-						required
-					/>
-					<div class="text-xs text-gray-400 dark:text-gray-500">
-						ⓘ {$i18n.t('Use')}
-						<span class="font-medium text-gray-600 dark:text-gray-300"
-							>{'{{'}{$i18n.t('variable')}{'}}'}</span
-						>
-						{$i18n.t('for placeholders')}
-					</div>
+					<Tooltip
+						content={`${$i18n.t('Use')} {{${$i18n.t('variable')}}} ${$i18n.t('for placeholders')}`}
+						><span class="px-1 text-gray-400">{'{{'}{$i18n.t('variable')}{'}}'}</span></Tooltip
+					>
+					<button
+						type="button"
+						aria-label={$i18n.t('Copy content')}
+						class="shrink-0 p-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+						on:click={copyContent}
+						>{#if contentCopied}<Check className="size-3.5 text-green-500" />{:else}<Clipboard
+								className="size-3.5"
+							/>{/if}</button
+					>
 				</div>
-			</div>
-
-			<div class="my-4 flex justify-end pb-20">
-				<button
-					class="text-sm w-full lg:w-fit px-4 py-2 transition rounded-xl bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black flex w-full justify-center"
-					type="submit"
-					disabled={loading}
-				>
-					<div class="font-medium">{$i18n.t('Save & Create')}</div>
-					{#if loading}
-						<div class="ml-1.5">
-							<Spinner />
-						</div>
-					{/if}
-				</button>
-			</div>
-		</form>
-	</div>
-{/if}
-
-{#snippet historySection()}
-	<div class="flex flex-col h-full">
-		<div class="flex items-center justify-between mb-2 shrink-0">
-			<div class="text-gray-500 text-xs">{$i18n.t('History')}</div>
+				<textarea
+					bind:this={contentInput}
+					bind:value={content}
+					aria-label={$i18n.t('Prompt Content')}
+					placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
+					readonly={readOnly}
+					required
+					spellcheck="false"
+					class="min-h-0 w-full flex-1 resize-none bg-transparent px-3 py-2 font-mono text-xs leading-relaxed outline-hidden"
+					on:keydown={(event) => {
+						if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+							event.preventDefault();
+							submitHandler();
+						}
+					}}
+				></textarea>
+			{/if}
 		</div>
 
-		{#if history.length > 0}
-			<div class="space-y-0 flex-1 overflow-y-auto" on:scroll={handleHistoryScroll}>
-				{#each history as entry, index}
-					<div class="flex">
-						<!-- Content -->
+		{#if historical}
+			<div
+				class="flex shrink-0 flex-wrap items-center justify-between gap-2 px-1 py-2 text-xs text-gray-500"
+			>
+				<span
+					>{selectedHistoryEntry.id.slice(0, 7)} · {renderDate(
+						selectedHistoryEntry.created_at
+					)}</span
+				>
+				{#if !editingHistory}<div class="ml-auto flex flex-wrap justify-end gap-2">
 						<button
-							class="flex-1 text-left px-3.5 py-2 mb-1 rounded-2xl transition group
-								{selectedHistoryEntry?.id === entry.id
-								? 'bg-gray-100/50 dark:bg-gray-850/50'
-								: 'hover:bg-gray-100/50 dark:hover:bg-gray-850/50'}"
-							on:click={() => (selectedHistoryEntry = entry)}
+							type="button"
+							class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 disabled:opacity-60 dark:bg-gray-850 dark:text-gray-200"
+							disabled={comparing || !!historyDiff}
+							on:click={compareToCurrent}
+							>{#if comparing}<Spinner className="mr-1.5 size-3" />{/if}{$i18n.t(
+								'Compare to current'
+							)}</button
 						>
-							<!-- Commit Message -->
-							<div class="flex items-center gap-2 mb-1">
-								<div class="text-xs text-gray-900 dark:text-white truncate">
-									{entry.commit_message || $i18n.t('Update')}
-								</div>
-								{#if entry.id === prompt?.version_id}
-									<Badge type="success" content={$i18n.t('Live')} />
-								{/if}
-							</div>
-
-							<!-- User + Time -->
-							<div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-								{#if entry.user}
-									<img
-										src={`/api/v1/users/${entry.user.id}/profile/image`}
-										alt={entry.user.name}
-										class="size-3 rounded-full mr-0.5"
-										on:error={(e) => (e.target.src = '/user.png')}
-									/>
-									<span class="truncate">{entry.user.name}</span>
-									<span>•</span>
-								{/if}
-								<span class="shrink-0">{renderDate(entry.created_at)}</span>
-							</div>
-						</button>
-					</div>
-				{/each}
-
-				{#if historyLoading}
-					<div class="flex justify-center py-2">
-						<Spinner className="size-3" />
-					</div>
-				{/if}
-			</div>
-		{:else if !historyLoading}
-			<div class="text-xs text-gray-400 text-center py-6 italic">
-				{$i18n.t('No history available')}
+						{#if !disabled}
+							<button
+								type="button"
+								class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 dark:bg-gray-850 dark:text-gray-200"
+								on:click={editVersion}>{$i18n.t('Edit as new version')}</button
+							><button
+								type="button"
+								class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+								on:click={() => confirmDiscard(setAsProduction)}
+								>{$i18n.t('Set as Production')}</button
+							>
+						{/if}
+					</div>{/if}
 			</div>
 		{/if}
-	</div>
-{/snippet}
+
+		{#if !readOnly}
+			<div class="flex shrink-0 flex-wrap items-center gap-2 py-2">
+				{#if edit}<input
+						class="min-w-0 flex-1 bg-transparent px-2 text-xs outline-hidden"
+						placeholder={$i18n.t('Describe what changed...')}
+						aria-label={$i18n.t('Commit Message')}
+						bind:value={commitMessage}
+					/>{:else}<div class="flex-1"></div>{/if}
+				<div class="ml-auto flex shrink-0 items-center gap-3">
+					{#if historical}<label
+							class="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs text-gray-500"
+							><input
+								type="checkbox"
+								bind:checked={isProduction}
+								class="size-3 rounded border-gray-300 dark:border-gray-600"
+							/><span>{$i18n.t('Set as Production')}</span></label
+						>{/if}
+					<button
+						type="submit"
+						class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						disabled={loading || !ready || historyLoading}
+					>
+						{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}{#if loading}<Spinner
+								className="size-3"
+							/>{/if}
+					</button>
+				</div>
+			</div>
+		{/if}
+	</form>
+</div>

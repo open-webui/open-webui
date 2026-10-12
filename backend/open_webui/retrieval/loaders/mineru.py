@@ -28,20 +28,22 @@ class MinerULoader:
         api_key: str = '',
         params: dict = None,
         timeout: Optional[int] = 300,
+        max_markdown_bytes: Optional[int] = None,
     ):
         self.file_path = file_path
         self.api_mode = api_mode.lower()
         self.api_url = api_url.rstrip('/')
         self.api_key = api_key
         self.timeout = timeout
+        self.max_markdown_bytes = max_markdown_bytes
 
         # Parse params dict with defaults
         self.params = params or {}
-        self.enable_ocr = params.get('enable_ocr', False)
-        self.enable_formula = params.get('enable_formula', True)
-        self.enable_table = params.get('enable_table', True)
-        self.language = params.get('language', 'en')
-        self.model_version = params.get('model_version', 'pipeline')
+        self.enable_ocr = self.params.get('enable_ocr', False)
+        self.enable_formula = self.params.get('enable_formula', True)
+        self.enable_table = self.params.get('enable_table', True)
+        self.language = self.params.get('language', 'en')
+        self.model_version = self.params.get('model_version', 'pipeline')
 
         self.page_ranges = self.params.pop('page_ranges', '')
 
@@ -72,7 +74,7 @@ class MinerULoader:
         Load document using Local API (synchronous).
         Posts file to /file_parse endpoint and gets immediate response.
         """
-        log.info(f'Using MinerU Local API at {self.api_url}')
+        log.info('Using MinerU Local API at %s', self.api_url)
 
         filename = os.path.basename(self.file_path)
 
@@ -95,8 +97,8 @@ class MinerULoader:
             with open(self.file_path, 'rb') as f:
                 files = {'files': (filename, f, 'application/octet-stream')}
 
-                log.info(f'Sending file to MinerU Local API: {filename}')
-                log.debug(f'Local API parameters: {form_data}')
+                log.info('Sending file to MinerU Local API: %s', filename)
+                log.debug('Local API parameters: %s', form_data)
 
                 response = requests.post(
                     f'{self.api_url}/file_parse',
@@ -161,7 +163,7 @@ class MinerULoader:
                 detail='MinerU returned empty markdown content',
             )
 
-        log.info(f'Successfully parsed document with MinerU Local API: {filename}')
+        log.info('Successfully parsed document with MinerU Local API: %s', filename)
 
         # Create metadata
         metadata = {
@@ -178,7 +180,7 @@ class MinerULoader:
         Load document using Cloud API (asynchronous).
         Uses batch upload endpoint to avoid need for public file URLs.
         """
-        log.info(f'Using MinerU Cloud API at {self.api_url}')
+        log.info('Using MinerU Cloud API at %s', self.api_url)
 
         filename = os.path.basename(self.file_path)
 
@@ -194,7 +196,7 @@ class MinerULoader:
         # Step 4: Download and extract markdown from ZIP
         markdown_content = self._download_and_extract_zip(result['full_zip_url'], filename)
 
-        log.info(f'Successfully parsed document with MinerU Cloud API: {filename}')
+        log.info('Successfully parsed document with MinerU Cloud API: %s', filename)
 
         # Create metadata
         metadata = {
@@ -230,8 +232,8 @@ class MinerULoader:
         if self.page_ranges:
             request_body['files'][0]['page_ranges'] = self.page_ranges
 
-        log.info(f'Requesting upload URL for: {filename}')
-        log.debug(f'Cloud API request body: {request_body}')
+        log.info('Requesting upload URL for: %s', filename)
+        log.debug('Cloud API request body: %s', request_body)
 
         try:
             response = requests.post(
@@ -282,7 +284,7 @@ class MinerULoader:
             )
 
         upload_url = file_urls[0]
-        log.info(f'Received upload URL for batch: {batch_id}')
+        log.info('Received upload URL for batch: %s', batch_id)
 
         return batch_id, upload_url
 
@@ -332,7 +334,7 @@ class MinerULoader:
         max_iterations = 300  # 10 minutes max (2 seconds per iteration)
         poll_interval = 2  # seconds
 
-        log.info(f'Polling batch status: {batch_id}')
+        log.info('Polling batch status: %s', batch_id)
 
         for iteration in range(max_iterations):
             try:
@@ -391,7 +393,7 @@ class MinerULoader:
             state = file_result.get('state')
 
             if state == 'done':
-                log.info(f'Processing complete for {filename}')
+                log.info('Processing complete for %s', filename)
                 return file_result
             elif state == 'failed':
                 error_msg = file_result.get('err_msg', 'Unknown error')
@@ -402,7 +404,7 @@ class MinerULoader:
             elif state in ['waiting-file', 'pending', 'running', 'converting']:
                 # Still processing
                 if iteration % 10 == 0:  # Log every 20 seconds
-                    log.info(f'Processing status: {state} (iteration {iteration + 1}/{max_iterations})')
+                    log.info('Processing status: %s (iteration %s/%s)', state, iteration + 1, max_iterations)
                 time.sleep(poll_interval)
             else:
                 log.warning(f'Unknown state: {state}')
@@ -419,7 +421,7 @@ class MinerULoader:
         Download ZIP file from CDN and extract markdown content.
         Returns the markdown content as a string.
         """
-        log.info(f'Downloading results from: {zip_url}')
+        log.info('Downloading results from: %s', zip_url)
 
         try:
             response = requests.get(zip_url, timeout=60)
@@ -435,67 +437,77 @@ class MinerULoader:
                 detail=f'Error downloading results: {str(e)}',
             )
 
-        # Save ZIP to temporary file and extract
+        # Save ZIP to temporary file before reading.
+        tmp_zip_path = None
+        markdown_content = None
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp_zip:
                 tmp_zip.write(response.content)
                 tmp_zip_path = tmp_zip.name
 
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                # Extract ZIP
-                with zipfile.ZipFile(tmp_zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(tmp_dir)
+            with zipfile.ZipFile(tmp_zip_path, 'r') as zip_ref:
+                members = zip_ref.infolist()
+                all_files = [member.filename for member in members]
+                md_members = [member for member in members if member.filename.endswith('.md')]
+                read_errors = []
 
-                # Find markdown file - search recursively for any .md file
-                markdown_content = None
-                found_md_path = None
-
-                # First, list all files in the ZIP for debugging
-                all_files = []
-                for root, dirs, files in os.walk(tmp_dir):
-                    for file in files:
-                        full_path = os.path.join(root, file)
-                        all_files.append(full_path)
-                        # Look for any .md file
-                        if file.endswith('.md'):
-                            found_md_path = full_path
-                            log.info(f'Found markdown file at: {full_path}')
-                            try:
-                                with open(full_path, 'r', encoding='utf-8') as f:
-                                    markdown_content = f.read()
-                                if markdown_content:  # Use the first non-empty markdown file
-                                    break
-                            except Exception as e:
-                                log.warning(f'Failed to read {full_path}: {e}')
+                for member in md_members:
+                    log.info('Found markdown file in ZIP: %s', member.filename)
+                    try:
+                        with zip_ref.open(member, 'r') as f:
+                            if self.max_markdown_bytes is None:
+                                content = f.read()
+                            else:
+                                content = f.read(self.max_markdown_bytes + 1)
+                                if len(content) > self.max_markdown_bytes:
+                                    raise HTTPException(
+                                        status.HTTP_502_BAD_GATEWAY,
+                                        detail=f'Markdown file in results ZIP is too large: {member.filename}',
+                                    )
+                            markdown_content = content.decode('utf-8')
+                    except UnicodeDecodeError as e:
+                        read_errors.append(f'{member.filename}: {e}')
+                        log.warning(f'Failed to decode {member.filename}: {e}')
+                        continue
+                    except HTTPException:
+                        raise
+                    except Exception as e:
+                        read_errors.append(f'{member.filename}: {e}')
+                        log.warning(f'Failed to read {member.filename}: {e}')
+                        continue
                     if markdown_content:
                         break
 
                 if markdown_content is None:
                     log.error(f'Available files in ZIP: {all_files}')
-                    # Try to provide more helpful error message
-                    md_files = [f for f in all_files if f.endswith('.md')]
-                    if md_files:
-                        error_msg = f"Found .md files but couldn't read them: {md_files}"
+                    if read_errors:
+                        error_msg = f"Found .md files but couldn't read them: {read_errors}"
                     else:
                         error_msg = f'No .md files found in ZIP. Available files: {all_files}'
                     raise HTTPException(
                         status.HTTP_502_BAD_GATEWAY,
                         detail=error_msg,
                     )
-
-            # Clean up temporary ZIP file
-            os.unlink(tmp_zip_path)
-
         except zipfile.BadZipFile as e:
             raise HTTPException(
                 status.HTTP_502_BAD_GATEWAY,
                 detail=f'Invalid ZIP file received: {e}',
             )
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f'Error extracting ZIP: {str(e)}',
             )
+        finally:
+            if tmp_zip_path:
+                try:
+                    os.unlink(tmp_zip_path)
+                except FileNotFoundError:
+                    pass
+                except Exception as e:
+                    log.warning(f'Failed to remove temporary ZIP file {tmp_zip_path}: {e}')
 
         if not markdown_content:
             raise HTTPException(
@@ -503,5 +515,5 @@ class MinerULoader:
                 detail='Extracted markdown content is empty',
             )
 
-        log.info(f'Successfully extracted markdown content ({len(markdown_content)} characters)')
+        log.info('Successfully extracted markdown content (%s characters)', len(markdown_content))
         return markdown_content

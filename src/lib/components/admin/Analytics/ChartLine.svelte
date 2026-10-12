@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+	const i18n = getContext<any>('i18n');
 	import dayjs from 'dayjs';
 
 	interface Props {
@@ -47,7 +49,7 @@
 <div class="relative w-full" style="height:{height}px">
 	<svg
 		viewBox="0 0 {w} {height - 20}"
-		class="h-[calc(100%-20px)] w-full"
+		class="absolute inset-x-0 top-0 h-[calc(100%-20px)] w-full"
 		preserveAspectRatio="none"
 		onmousemove={onMove}
 		onmouseleave={() => (hoveredIdx = null)}
@@ -88,12 +90,14 @@
 			: period === 'year' || period === 'all'
 				? 'M/D/YY'
 				: 'M/D'}
-		<div class="flex justify-between px-0.5 text-[10px] text-gray-400">
+		<div
+			class="absolute inset-x-0 bottom-0 flex justify-between px-0.5 text-[0.625rem] text-gray-400"
+		>
 			{#each Array(labelCount) as _, i}
 				{@const idx = i === labelCount - 1 ? data.length - 1 : Math.min(i * step, data.length - 1)}
 				{#if data[idx]}
 					<span class={i === 0 ? 'text-left' : i === labelCount - 1 ? 'text-right' : 'text-center'}
-						>{dayjs(data[idx].date).format(dateFormat)}</span
+						>{dayjs(data[idx].date).locale($i18n.language).format(dateFormat)}</span
 					>
 				{/if}
 			{/each}
@@ -102,17 +106,17 @@
 	{#if hovered}
 		{@const total = Object.values(hovered.models || {}).reduce((a, b) => a + b, 0)}
 		<div
-			class="pointer-events-none absolute top-1 text-[11px]"
+			class="pointer-events-none absolute top-1 text-[0.6875rem]"
 			style="left:{Math.min(Math.max((mouseX / w) * 100, 8), 92)}%"
 		>
 			<div
-				class="min-w-[140px] -translate-x-1/2 rounded border border-gray-100 bg-white px-2.5 py-1.5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+				class="min-w-[8.75rem] -translate-x-1/2 rounded border border-gray-100 bg-white px-2.5 py-1.5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
 			>
-				<div class="mb-1.5 text-[10px] text-gray-400">
+				<div class="mb-1.5 text-[0.625rem] text-gray-400">
 					{#if hovered.date?.includes(':')}
-						{dayjs(hovered.date).format('MMM D, h A')}
+						{dayjs(hovered.date).locale($i18n.language).format('MMM D, h A')}
 					{:else}
-						{dayjs(hovered.date).format('MMM D, YYYY')}
+						{dayjs(hovered.date).locale($i18n.language).format('MMM D, YYYY')}
 					{/if}
 				</div>
 				{#each Object.entries(hovered.models || {})

@@ -15,24 +15,26 @@
 
 	import { onMount, createEventDispatcher, getContext, tick, onDestroy } from 'svelte';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 
 	import { formatPythonCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
 	import { user } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let boilerplate = '';
 	export let value = '';
+	export let className = 'text-sm';
+	export let readOnly = false;
 
 	export let onSave = () => {};
-	export let onChange = () => {};
+	export let onChange: (value: string) => void = () => {};
 
 	let _value = '';
 
-	$: if (value) {
+	$: if (value !== undefined) {
 		updateValue();
 	}
 
@@ -78,6 +80,7 @@
 	export let lang = '';
 
 	let codeEditor: EditorView | null = null;
+	let codeEditorContainerElement: HTMLDivElement | undefined = undefined;
 
 	export const focus = () => {
 		codeEditor?.focus();
@@ -86,6 +89,23 @@
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
+	const editorPlaceholder = new Compartment();
+	const editorReadOnly = new Compartment();
+	$: if (codeEditor) {
+		codeEditor.dispatch({
+			effects: editorReadOnly.reconfigure([
+				EditorState.readOnly.of(readOnly),
+				EditorView.editable.of(!readOnly)
+			])
+		});
+	}
+	$: if (codeEditor) {
+		codeEditor.dispatch({
+			effects: editorPlaceholder.reconfigure(
+				readOnly ? [] : placeholder($i18n.t('Enter your code here...'))
+			)
+		});
+	}
 
 	const getLang = async () => {
 		const language = languages.find((l) => l.alias.includes(lang));
@@ -96,7 +116,7 @@
 
 	const getPyodideWorker = () => {
 		if (!pyodideWorkerInstance) {
-			pyodideWorkerInstance = new PyodideWorker(); // Your worker constructor
+			pyodideWorkerInstance = createPyodideWorker();
 		}
 		return pyodideWorkerInstance;
 	};
@@ -177,6 +197,7 @@ print("${endTag}")
 	};
 
 	export const formatPythonCodeHandler = async () => {
+		if (readOnly) return false;
 		if (codeEditor) {
 			const res = await (
 				$user?.role === 'admin'
@@ -186,14 +207,14 @@ print("${endTag}")
 				toast.error(`${error}`);
 				return null;
 			});
-			if (res && res.code) {
+			if (!readOnly && res && typeof res.code === 'string') {
 				const formattedCode = res.code;
 				codeEditor.dispatch({
 					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: formattedCode }]
 				});
 
 				_value = formattedCode;
-				onChange(_value);
+				if (!readOnly) onChange(_value);
 				await tick();
 
 				toast.success($i18n.t('Code formatted successfully'));
@@ -206,13 +227,15 @@ print("${endTag}")
 
 	let extensions = [
 		basicSetup,
+		EditorView.contentAttributes.of({ tabindex: '0' }),
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		indentUnit.of('    '),
-		placeholder($i18n.t('Enter your code here...')),
+		editorPlaceholder.of([]),
+		editorReadOnly.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
 				_value = e.state.doc.toString();
-				onChange(_value);
+				if (!readOnly) onChange(_value);
 			}
 		}),
 		editorTheme.of([]),
@@ -233,7 +256,7 @@ print("${endTag}")
 	};
 
 	onMount(() => {
-		if (value === '') {
+		if (value === '' && !readOnly) {
 			value = boilerplate;
 		}
 
@@ -248,7 +271,7 @@ print("${endTag}")
 				doc: _value,
 				extensions: extensions
 			}),
-			parent: document.getElementById(`code-textarea-${id}`)
+			parent: codeEditorContainerElement
 		});
 
 		if (isDarkMode) {
@@ -285,14 +308,15 @@ print("${endTag}")
 		});
 
 		const keydownHandler = async (e) => {
+			if (!codeEditor?.hasFocus) return;
 			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 				e.preventDefault();
 
-				onSave();
+				if (!readOnly) onSave();
 			}
 
 			// Format code when Ctrl + Shift + F is pressed
-			if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'f') {
+			if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
 				e.preventDefault();
 				await formatPythonCodeHandler();
 			}
@@ -318,4 +342,8 @@ print("${endTag}")
 	});
 </script>
 
-<div id="code-textarea-{id}" class="h-full w-full text-sm" />
+<div
+	bind:this={codeEditorContainerElement}
+	id="code-textarea-{id}"
+	class="{className} h-full w-full min-w-0 overflow-hidden"
+/>

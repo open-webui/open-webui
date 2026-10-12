@@ -5,7 +5,7 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { pyodideWorker } from '$lib/stores';
-	import PyodideWorkerConstructor from '$lib/workers/pyodide.worker?worker';
+	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 	import type { FileEntry } from '$lib/apis/terminal';
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
@@ -100,7 +100,7 @@
 	function ensureWorker(): Worker {
 		let worker = $pyodideWorker;
 		if (!worker) {
-			worker = new PyodideWorkerConstructor();
+			worker = createPyodideWorker();
 			pyodideWorker.set(worker);
 		}
 		return worker;

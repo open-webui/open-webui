@@ -7,7 +7,9 @@ import pkgutil
 import re
 import shutil
 import sys
+import threading
 import traceback
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
@@ -40,12 +42,13 @@ except ImportError:
     print('dotenv not installed, skipping...')
 
 DOCKER = os.getenv('DOCKER', 'False').lower() == 'true'
+USE_SLIM = os.getenv('USE_SLIM_DOCKER', 'False').lower() == 'true'
 
 USE_CUDA = os.getenv('USE_CUDA_DOCKER', 'false')
 DEVICE_TYPE = 'cpu'
 _cuda_error: Optional[str] = None
 
-if USE_CUDA.lower() == 'true':
+if not USE_SLIM and USE_CUDA.lower() == 'true':
     try:
         import torch  # noqa: E402
 
@@ -57,7 +60,7 @@ if USE_CUDA.lower() == 'true':
         os.environ['USE_CUDA_DOCKER'] = 'false'
         USE_CUDA = 'false'
 
-if sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
+if not USE_SLIM and sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
     try:
         import torch  # noqa: E402
 
@@ -65,6 +68,9 @@ if sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
             DEVICE_TYPE = 'mps'
     except Exception:
         pass
+
+# Torch MPS inference is not thread-safe and a concurrent call kills the whole process.
+MPS_INFERENCE_LOCK = threading.Lock() if DEVICE_TYPE == 'mps' else nullcontext()
 
 ####################################
 # LOGGING
@@ -102,6 +108,7 @@ class JSONFormatter(logging.Formatter):
 
 
 LOG_FORMAT = os.getenv('LOG_FORMAT', '').lower()
+LOGURU_DIAGNOSE = os.getenv('LOGURU_DIAGNOSE', 'False').lower() == 'true'
 
 GLOBAL_LOG_LEVEL = os.getenv('GLOBAL_LOG_LEVEL', '').upper()
 if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
@@ -148,6 +155,11 @@ DEPLOYMENT_ID = os.getenv('DEPLOYMENT_ID', '')
 INSTANCE_ID = os.getenv('INSTANCE_ID', str(uuid4()))
 
 ENABLE_DB_MIGRATIONS = os.getenv('ENABLE_DB_MIGRATIONS', 'True').lower() == 'true'
+
+# Swap the JSON encoder/decoder used across the app (HTTP request bodies, JSONResponse
+# bodies, upstream provider responses, socket.io payloads) from the stdlib `json` module
+# to orjson. Faster, but stricter: see open_webui/utils/json_codec.py for the differences.
+ENABLE_ORJSON = os.getenv('ENABLE_ORJSON', 'True').lower() == 'true'
 
 
 # Function to parse each section
@@ -221,7 +233,7 @@ if FROM_INIT_PY:
 
     # Check if the data directory exists in the package directory
     if DATA_DIR.exists() and DATA_DIR != NEW_DATA_DIR:
-        log.info(f'Moving {DATA_DIR} to {NEW_DATA_DIR}')
+        log.info('Moving %s to %s', DATA_DIR, NEW_DATA_DIR)
         for item in DATA_DIR.iterdir():
             dest = NEW_DATA_DIR / item.name
             if item.is_dir():
@@ -238,8 +250,6 @@ if FROM_INIT_PY:
     DATA_DIR = Path(os.getenv('DATA_DIR', OPEN_WEBUI_DIR / 'data'))
 
 STATIC_DIR = Path(os.getenv('STATIC_DIR', OPEN_WEBUI_DIR / 'static'))
-
-FONTS_DIR = Path(os.getenv('FONTS_DIR', OPEN_WEBUI_DIR / 'static' / 'fonts'))
 
 FRONTEND_BUILD_DIR = Path(os.getenv('FRONTEND_BUILD_DIR', BASE_DIR / 'build')).resolve()
 
@@ -291,6 +301,7 @@ if 'postgres://' in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
 
 DATABASE_SCHEMA = os.getenv('DATABASE_SCHEMA', None)
+DATABASE_ENABLE_IAM_TOKEN_AUTH = os.getenv('DATABASE_ENABLE_IAM_TOKEN_AUTH', 'False').lower() == 'true'
 
 _pool_size_raw = os.getenv('DATABASE_POOL_SIZE')
 try:
@@ -346,19 +357,22 @@ DATABASE_SQLITE_PRAGMA_MMAP_SIZE = os.getenv('DATABASE_SQLITE_PRAGMA_MMAP_SIZE',
 # truncated.  67108864 ≈ 64 MB.  Set to -1 for no limit (SQLite default).
 DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT = os.getenv('DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT', '67108864')
 
-DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.getenv('DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL', None)
-if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
-    try:
-        DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = float(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
-    except Exception:
-        DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 0.0
+# Seconds between presence writes per user per worker; keep under the 180s active-user window. 0 disables.
+try:
+    DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = float(os.getenv('DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL', '60'))
+except ValueError:
+    DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 60.0
 
 DATABASE_ENABLE_SESSION_SHARING = os.getenv('DATABASE_ENABLE_SESSION_SHARING', 'False').lower() == 'true'
 ENABLE_PUBLIC_ACTIVE_USERS_COUNT = os.getenv('ENABLE_PUBLIC_ACTIVE_USERS_COUNT', 'True').lower() == 'true'
 RESET_CONFIG_ON_START = os.getenv('RESET_CONFIG_ON_START', 'False').lower() == 'true'
 ENABLE_REALTIME_CHAT_SAVE = os.getenv('ENABLE_REALTIME_CHAT_SAVE', 'False').lower() == 'true'
 ENABLE_QUERIES_CACHE = os.getenv('ENABLE_QUERIES_CACHE', 'False').lower() == 'true'
+ENABLE_ADMIN_CHAT_ACCESS = os.getenv('ENABLE_ADMIN_CHAT_ACCESS', 'True').lower() == 'true'
 RAG_SYSTEM_CONTEXT = os.getenv('RAG_SYSTEM_CONTEXT', 'False').lower() == 'true'
+
+# Empty by default: chunk metadata also holds internal bookkeeping (file hashes, collection names, scores).
+RAG_SOURCE_METADATA_KEYS = [key.strip() for key in os.getenv('RAG_SOURCE_METADATA_KEYS', '').split(',') if key.strip()]
 
 ####################################
 # REDIS
@@ -368,6 +382,19 @@ REDIS_URL = os.getenv('REDIS_URL', '')
 REDIS_CLUSTER = os.getenv('REDIS_CLUSTER', 'False').lower() == 'true'
 
 REDIS_KEY_PREFIX = os.getenv('REDIS_KEY_PREFIX', 'open-webui')
+
+try:
+    REDIS_RESPONSE_STREAM_TTL = int(os.getenv('REDIS_RESPONSE_STREAM_TTL', '3600'))
+except ValueError:
+    REDIS_RESPONSE_STREAM_TTL = 3600
+
+# Seconds a task survives without a heartbeat. 0 disables expiry.
+try:
+    REDIS_TASK_TTL = int(os.getenv('REDIS_TASK_TTL', '300'))
+    if REDIS_TASK_TTL != 0 and REDIS_TASK_TTL < 60:
+        REDIS_TASK_TTL = 300
+except ValueError:
+    REDIS_TASK_TTL = 300
 
 REDIS_SENTINEL_HOSTS = os.getenv('REDIS_SENTINEL_HOSTS', '')
 REDIS_SENTINEL_PORT = os.getenv('REDIS_SENTINEL_PORT', '26379')
@@ -387,6 +414,12 @@ try:
     REDIS_SOCKET_CONNECT_TIMEOUT = float(REDIS_SOCKET_CONNECT_TIMEOUT)
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
+
+REDIS_SOCKET_TIMEOUT = os.getenv('REDIS_SOCKET_TIMEOUT', '')
+try:
+    REDIS_SOCKET_TIMEOUT = float(REDIS_SOCKET_TIMEOUT)
+except ValueError:
+    REDIS_SOCKET_TIMEOUT = None
 
 # Whether to enable TCP SO_KEEPALIVE on Redis client sockets. Opt-in:
 # defaults to off so behavior is unchanged for existing deployments. When
@@ -430,6 +463,9 @@ try:
 except (ValueError, TypeError):
     UVICORN_WORKERS = 1
 
+# tiny delta-stream frames make per-frame websocket compression CPU-bound, allow opting out (true/false)
+UVICORN_WS_PER_MESSAGE_DEFLATE = os.getenv('UVICORN_WS_PER_MESSAGE_DEFLATE', 'True').lower() == 'true'
+
 ####################################
 # WEBSOCKET SUPPORT
 ####################################
@@ -443,20 +479,25 @@ WEBSOCKET_REDIS_OPTIONS = os.getenv('WEBSOCKET_REDIS_OPTIONS', '')
 
 
 if WEBSOCKET_REDIS_OPTIONS == '':
+    WEBSOCKET_REDIS_OPTIONS = {'socket_timeout': None}
     if REDIS_SOCKET_CONNECT_TIMEOUT:
-        WEBSOCKET_REDIS_OPTIONS = {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT}
-    else:
-        log.debug('No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None')
-        WEBSOCKET_REDIS_OPTIONS = None
+        WEBSOCKET_REDIS_OPTIONS['socket_connect_timeout'] = REDIS_SOCKET_CONNECT_TIMEOUT
 else:
     try:
         WEBSOCKET_REDIS_OPTIONS = json.loads(WEBSOCKET_REDIS_OPTIONS)
+        WEBSOCKET_REDIS_OPTIONS.setdefault('socket_timeout', None)
     except Exception:
-        log.warning('Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to None')
-        WEBSOCKET_REDIS_OPTIONS = None
+        log.warning('Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to socket_timeout=None')
+        WEBSOCKET_REDIS_OPTIONS = {'socket_timeout': None}
 
 WEBSOCKET_REDIS_URL = os.getenv('WEBSOCKET_REDIS_URL', REDIS_URL)
 WEBSOCKET_REDIS_CLUSTER = os.getenv('WEBSOCKET_REDIS_CLUSTER', str(REDIS_CLUSTER)).lower() == 'true'
+
+# publishes room-targeted emits on per-room redis channels so instances skip
+# messages for rooms without local members; must be identical across the fleet
+# (toggle with a full restart, not a rolling one), set false for the previous
+# shared-channel-only delivery
+WEBSOCKET_REDIS_ROOM_CHANNELS = os.getenv('WEBSOCKET_REDIS_ROOM_CHANNELS', 'True').lower() == 'true'
 
 websocket_redis_lock_timeout = os.getenv('WEBSOCKET_REDIS_LOCK_TIMEOUT', '60')
 
@@ -487,6 +528,15 @@ try:
 except ValueError:
     WEBSOCKET_SERVER_PING_INTERVAL = 25
 
+WEBSOCKET_HEARTBEAT_INTERVAL = os.getenv('WEBSOCKET_HEARTBEAT_INTERVAL', '')
+if WEBSOCKET_HEARTBEAT_INTERVAL == '':
+    WEBSOCKET_HEARTBEAT_INTERVAL = None
+else:
+    try:
+        WEBSOCKET_HEARTBEAT_INTERVAL = min(max(int(WEBSOCKET_HEARTBEAT_INTERVAL), 5), 90)
+    except ValueError:
+        WEBSOCKET_HEARTBEAT_INTERVAL = 30
+
 WEBSOCKET_EVENT_CALLER_TIMEOUT = os.getenv('WEBSOCKET_EVENT_CALLER_TIMEOUT', '')
 
 if WEBSOCKET_EVENT_CALLER_TIMEOUT == '':
@@ -498,7 +548,68 @@ else:
         WEBSOCKET_EVENT_CALLER_TIMEOUT = 300
 
 
+import ssl as _ssl
+
+
+# Dedicated env var for a custom CA bundle file path.  When set, this is
+# used as the default CA bundle for all outbound HTTPS connections that
+# have SSL verification enabled (i.e. when their per-connection SSL env
+# var is ``"True"``).  Per-connection overrides (setting the SSL env var
+# to a path directly) take precedence over this global fallback.
+#
+# This follows the industry convention of ``SSL_CERT_FILE`` / ``REQUESTS_CA_BUNDLE``
+# but is scoped to Open WebUI to avoid interfering with system-level settings.
+AIOHTTP_CLIENT_SSL_CERT_FILE = os.getenv('AIOHTTP_CLIENT_SSL_CERT_FILE', '').strip()
+
+
+def _build_ssl_context_from_file(path: str) -> '_ssl.SSLContext | None':
+    """Create an SSLContext from a CA bundle file, or None if invalid."""
+    if not path:
+        return None
+    if not os.path.isfile(path):
+        log.warning(
+            'SSL CA bundle path does not exist: %r, ignoring',
+            path,
+        )
+        return None
+    ctx = _ssl.create_default_context(cafile=path)
+    log.info('Using custom SSL CA bundle: %s', path)
+    return ctx
+
+
+# Pre-built SSLContext from the dedicated env var (cached once at startup).
+_GLOBAL_SSL_CONTEXT = _build_ssl_context_from_file(AIOHTTP_CLIENT_SSL_CERT_FILE)
+
+
+def _parse_ssl_env(value: str) -> 'bool | _ssl.SSLContext':
+    """Parse an SSL env var into a bool or SSLContext.
+
+    - ``"true"``  → uses ``AIOHTTP_CLIENT_SSL_CERT_FILE`` context if set,
+      otherwise ``True``  (default SSL verification via certifi)
+    - ``"false"`` → ``False`` (no verification)
+    - ``"/path/to/ca-bundle.crt"`` → ``SSLContext`` loading that CA file
+      (takes precedence over ``AIOHTTP_CLIENT_SSL_CERT_FILE``)
+
+    This allows users with corporate or internal CAs to point Open WebUI
+    at a custom CA bundle without disabling verification entirely.
+    """
+    lower = value.strip().lower()
+    if lower == 'true':
+        # Use the global dedicated CA bundle if configured, otherwise default
+        return _GLOBAL_SSL_CONTEXT if _GLOBAL_SSL_CONTEXT is not None else True
+    if lower == 'false':
+        return False
+    # Treat as a file path to a CA bundle (per-connection override)
+    ctx = _build_ssl_context_from_file(value.strip())
+    if ctx is not None:
+        return ctx
+    # Path was invalid — fall back to default
+    return _GLOBAL_SSL_CONTEXT if _GLOBAL_SSL_CONTEXT is not None else True
+
+
 REQUESTS_VERIFY = os.getenv('REQUESTS_VERIFY', 'True').lower() == 'true'
+
+TAVILY_API_BASE_URL = os.getenv('TAVILY_API_BASE_URL', 'https://api.tavily.com').rstrip('/')
 
 _aiohttp_timeout_raw = os.getenv('AIOHTTP_CLIENT_TIMEOUT', '')
 try:
@@ -506,11 +617,42 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT = 300
 
+# Optional between-chunks idle cap for streaming aiohttp requests.
+AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = os.getenv('AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT', '')
+if AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT == '':
+    AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = None
+else:
+    try:
+        AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = int(AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT)
+    except (ValueError, TypeError):
+        AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = None
 
-AIOHTTP_CLIENT_SESSION_SSL = os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True').lower() == 'true'
+if AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT is not None and AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT <= 0:
+    AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = None
+
+
+# SSL verification for general outbound requests (OpenAI, OAuth, etc.).
+# Accepts "True", "False", or a path to a CA bundle file.
+# When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
+AIOHTTP_CLIENT_SESSION_SSL = _parse_ssl_env(os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True'))
+
+SEARXNG_CLIENT_CERT_FILE = os.getenv('SEARXNG_CLIENT_CERT_FILE', '').strip()
+SEARXNG_CLIENT_KEY_FILE = os.getenv('SEARXNG_CLIENT_KEY_FILE', '').strip()
 
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
+
+# Opt-in c-ares DNS resolution (aiodns). Off by default: c-ares breaks name
+# resolution in some environments (#28013, #28215). Must run before any
+# TCPConnector is constructed.
+AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER = os.getenv('AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER', 'False').lower() == 'true'
+
+if not AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER:
+    import aiohttp
+
+    aiohttp.DefaultResolver = aiohttp.resolver.ThreadedResolver  # for plugin code
+    aiohttp.resolver.DefaultResolver = aiohttp.resolver.ThreadedResolver
+    aiohttp.connector.DefaultResolver = aiohttp.resolver.ThreadedResolver
 
 # Optional User-Agent override for outbound web-loader fetches.  When set,
 # SafeWebBaseLoader sends this value instead of the default python-requests UA
@@ -532,8 +674,20 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
+AIOHTTP_FILE_STREAM_CHUNK_SIZE = os.getenv('AIOHTTP_FILE_STREAM_CHUNK_SIZE', str(1024 * 1024))
+try:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = int(AIOHTTP_FILE_STREAM_CHUNK_SIZE)
+except Exception:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = 1024 * 1024
 
-AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = os.getenv('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True').lower() == 'true'
+if AIOHTTP_FILE_STREAM_CHUNK_SIZE <= 0:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = 1024 * 1024
+
+
+# SSL verification for tool server connections specifically.
+# Accepts "True", "False", or a path to a CA bundle file.
+# When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
+AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = _parse_ssl_env(os.getenv('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True'))
 
 AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = os.getenv('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER', '')
 
@@ -616,6 +770,8 @@ WEBUI_SECRET_KEY = os.getenv(
     os.getenv('WEBUI_JWT_SECRET_KEY', ''),
 )
 
+ENABLE_VALVE_ENCRYPTION = os.getenv('ENABLE_VALVE_ENCRYPTION', 'False').lower() == 'true'
+
 WEBUI_SESSION_COOKIE_SAME_SITE = os.getenv('WEBUI_SESSION_COOKIE_SAME_SITE', 'lax')
 WEBUI_SESSION_COOKIE_SECURE = os.getenv('WEBUI_SESSION_COOKIE_SECURE', 'false').lower() == 'true'
 WEBUI_AUTH_COOKIE_SAME_SITE = os.getenv('WEBUI_AUTH_COOKIE_SAME_SITE', WEBUI_SESSION_COOKIE_SAME_SITE)
@@ -662,6 +818,7 @@ WEBUI_AUTH_TRUSTED_ROLE_HEADER = os.getenv('WEBUI_AUTH_TRUSTED_ROLE_HEADER', Non
 CUSTOM_API_KEY_HEADER = os.getenv('CUSTOM_API_KEY_HEADER', 'x-api-key')
 
 ENABLE_PASSWORD_VALIDATION = os.getenv('ENABLE_PASSWORD_VALIDATION', 'False').lower() == 'true'
+PASSWORD_HASH_ALGORITHM = os.getenv('PASSWORD_HASH_ALGORITHM', 'bcrypt').lower()
 PASSWORD_VALIDATION_REGEX_PATTERN = os.getenv(
     'PASSWORD_VALIDATION_REGEX_PATTERN',
     r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$',
@@ -687,10 +844,23 @@ BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', '
 # denied — closing the legacy unscoped namespace.
 ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
 
+# Falls back to the upload size limit, because a document cannot legitimately carry more metadata
+# than the file itself is allowed to be. Left unbounded, a small archive that expands enormously
+# during extraction can exhaust memory. RAG_FILE_MAX_SIZE is in MB.
+RAG_METADATA_MAX_VALUE_CHARS = (
+    int(os.getenv('RAG_METADATA_MAX_VALUE_CHARS'))
+    if os.getenv('RAG_METADATA_MAX_VALUE_CHARS')
+    else ((int(os.getenv('RAG_FILE_MAX_SIZE', '0')) or 0) * 1024 * 1024 or None)
+)
+
+MINERU_MAX_MARKDOWN_BYTES = (
+    int(os.getenv('MINERU_MAX_MARKDOWN_BYTES')) if os.getenv('MINERU_MAX_MARKDOWN_BYTES') else None
+)
+
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
 # the upstream provider handles these steps or when ffmpeg is unavailable.
-BYPASS_PYDUB_PREPROCESSING = os.getenv('BYPASS_PYDUB_PREPROCESSING', 'False').lower() == 'true'
+BYPASS_PYDUB_PREPROCESSING = USE_SLIM or os.getenv('BYPASS_PYDUB_PREPROCESSING', 'False').lower() == 'true'
 
 # When disabled (default), the OpenAI catch-all proxy endpoint (/{path:path})
 # is blocked. Enable only if you need direct passthrough to upstream OpenAI-
@@ -717,6 +887,18 @@ OAUTH_MAX_SESSIONS_PER_USER = int(os.getenv('OAUTH_MAX_SESSIONS_PER_USER', '10')
 # Token Exchange Configuration
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.getenv('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
+_oauth_token_exchange_rate_limit = (os.getenv('OAUTH_TOKEN_EXCHANGE_RATE_LIMIT') or '').strip()
+OAUTH_TOKEN_EXCHANGE_RATE_LIMIT = (
+    int(_oauth_token_exchange_rate_limit)
+    if _oauth_token_exchange_rate_limit and _oauth_token_exchange_rate_limit.lower() != 'none'
+    else None
+)
+OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW = int(os.getenv('OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW', str(60 * 3)))
+OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS = [
+    client_id.strip()
+    for client_id in os.getenv('OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS', '').split(',')
+    if client_id.strip()
+]
 
 # Back-Channel Logout Configuration
 # When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
@@ -768,10 +950,18 @@ if LICENSE_PUBLIC_KEY:
 # WEBUI Identity
 ####################################
 
+# LICENSE covers this Open WebUI branding surface, including name, logo,
+# visual, textual, symbolic identifiers, metadata, and surrounding UI.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 WEBUI_NAME = os.getenv('WEBUI_NAME', 'Open WebUI')
 if WEBUI_NAME != 'Open WebUI':
     WEBUI_NAME += ' (Open WebUI)'
 
+# LICENSE covers this Open WebUI branding surface, including this favicon
+# and any visual, textual, or symbolic identifiers it preserves.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
 TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
@@ -810,6 +1000,7 @@ FORWARD_USER_INFO_HEADER_USER_NAME = os.getenv('FORWARD_USER_INFO_HEADER_USER_NA
 FORWARD_USER_INFO_HEADER_USER_ID = os.getenv('FORWARD_USER_INFO_HEADER_USER_ID', 'X-OpenWebUI-User-Id')
 FORWARD_USER_INFO_HEADER_USER_EMAIL = os.getenv('FORWARD_USER_INFO_HEADER_USER_EMAIL', 'X-OpenWebUI-User-Email')
 FORWARD_USER_INFO_HEADER_USER_ROLE = os.getenv('FORWARD_USER_INFO_HEADER_USER_ROLE', 'X-OpenWebUI-User-Role')
+FORWARD_USER_INFO_HEADER_AUTH_TYPE = os.getenv('FORWARD_USER_INFO_HEADER_AUTH_TYPE', 'X-OpenWebUI-Auth-Type')
 FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_MESSAGE_ID', 'X-OpenWebUI-Message-Id')
 FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_CHAT_ID', 'X-OpenWebUI-Chat-Id')
 
@@ -828,6 +1019,10 @@ except ValueError:
 # Progressive Web App
 ####################################
 
+# LICENSE covers this install-time Open WebUI branding surface, including
+# names, logos, manifests, metadata, and surrounding UI.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 EXTERNAL_PWA_MANIFEST_URL = os.getenv('EXTERNAL_PWA_MANIFEST_URL', None)
 
 ####################################
@@ -861,6 +1056,14 @@ else:
 
 ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
     os.getenv('ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION', 'False').lower() == 'true'
+)
+ENABLE_API_OUTLET_FILTERS = os.getenv('ENABLE_API_OUTLET_FILTERS', 'True').lower() == 'true'
+
+# Opt in to CPython's in-place string append optimization for streamed responses.
+# Off by default for a staged rollout. Only a host already out of memory can lose
+# text here; the default path (a full copy per chunk) raises there too.
+ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND = (
+    os.getenv('ENABLE_CHAT_RESPONSE_STREAM_INPLACE_APPEND', 'False').lower() == 'true'
 )
 
 # When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
@@ -963,8 +1166,36 @@ SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION = (
 )
 
 ####################################
+# KNOWLEDGE TOOLS
+####################################
+
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return max(int(os.getenv(name) or default), 1)
+    except (ValueError, TypeError):
+        return default
+
+
+# Total output of a single kb_exec call, whatever the command.
+KB_EXEC_MAX_OUTPUT_CHARS = _int_env('KB_EXEC_MAX_OUTPUT_CHARS', 30_000)
+# Files a single kb_exec grep may scan before it asks for a narrower scope.
+KB_EXEC_MAX_GREP_FILES = _int_env('KB_EXEC_MAX_GREP_FILES', 200)
+# Matching lines returned by kb_exec grep and grep_knowledge_files.
+KNOWLEDGE_GREP_MAX_MATCHES = _int_env('KNOWLEDGE_GREP_MAX_MATCHES', 50)
+# Characters returned by view_file / view_knowledge_file.
+VIEW_FILE_MAX_CHARS = _int_env('VIEW_FILE_MAX_CHARS', 100_000)
+VIEW_FILE_DEFAULT_MAX_CHARS = _int_env('VIEW_FILE_DEFAULT_MAX_CHARS', 10_000)
+
+####################################
 # TOOLS/FUNCTIONS PIP OPTIONS
 ####################################
+
+ENABLE_PLUGINS = os.getenv('ENABLE_PLUGINS', 'True').lower() == 'true'
+# Deployment controls: the master switch always overrides all feature switches.
+ENABLE_TOOLS = ENABLE_PLUGINS and os.getenv('ENABLE_TOOLS', 'True').lower() == 'true'
+ENABLE_FUNCTIONS = ENABLE_PLUGINS and os.getenv('ENABLE_FUNCTIONS', 'True').lower() == 'true'
+ENABLE_TOOL_SERVERS = ENABLE_PLUGINS and os.getenv('ENABLE_TOOL_SERVERS', 'True').lower() == 'true'
 
 ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
     os.getenv('ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS', 'True').lower() == 'true'
@@ -984,6 +1215,12 @@ OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'false').lower() == 'true'
 if OFFLINE_MODE:
     os.environ['HF_HUB_OFFLINE'] = '1'
     ENABLE_VERSION_UPDATE_CHECK = False
+
+####################################
+# Pyodide file persistence
+####################################
+
+ENABLE_PYODIDE_FILE_PERSISTENCE = os.getenv('ENABLE_PYODIDE_FILE_PERSISTENCE', 'false').lower() == 'true'
 
 ####################################
 # Audit logging
@@ -1013,15 +1250,19 @@ except ValueError:
     MAX_BODY_LOG_SIZE = 2048
 
 # Comma separated list for urls to exclude from audit
-AUDIT_EXCLUDED_PATHS = os.getenv('AUDIT_EXCLUDED_PATHS', '/chats,/chat,/folders').split(',')
-AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
-AUDIT_EXCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_EXCLUDED_PATHS]
+AUDIT_EXCLUDED_PATHS = [
+    path
+    for path in (
+        path.strip().lstrip('/') for path in os.getenv('AUDIT_EXCLUDED_PATHS', '/chats,/chat,/folders').split(',')
+    )
+    if path
+]
 
 # Comma separated list of urls to include in audit (whitelist mode)
 # When set, only these paths are audited and AUDIT_EXCLUDED_PATHS is ignored
-AUDIT_INCLUDED_PATHS = os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')
-AUDIT_INCLUDED_PATHS = [path.strip() for path in AUDIT_INCLUDED_PATHS]
-AUDIT_INCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_INCLUDED_PATHS if path]
+AUDIT_INCLUDED_PATHS = [
+    path for path in (path.strip().lstrip('/') for path in os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')) if path
+]
 
 # When enabled, GET requests are also audited (disabled by default to avoid log noise)
 ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'

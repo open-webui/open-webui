@@ -1,5 +1,5 @@
 <script>
-	import CreateKnowledgeBase from '$lib/components/workspace/Knowledge/CreateKnowledgeBase.svelte';
+	import Knowledge from '$lib/components/workspace/Knowledge.svelte';
 </script>
 
-<CreateKnowledgeBase />
+<Knowledge showCreateOnMount={true} createModalCloseHref="/workspace/knowledge" />

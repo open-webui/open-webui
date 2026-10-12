@@ -6,18 +6,17 @@ import logging
 import os
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import Awaitable, Optional, Union
 from urllib.parse import quote
 
 import aiohttp
+import numpy as np
 import requests
-from huggingface_hub import snapshot_download
+from fastapi import HTTPException
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
     EnsembleRetriever,
 )
-from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from open_webui.config import (
     RAG_EMBEDDING_CONTENT_PREFIX,
@@ -25,29 +24,38 @@ from open_webui.config import (
     RAG_EMBEDDING_QUERY_PREFIX,
     VECTOR_DB,
 )
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     BYPASS_RETRIEVAL_ACCESS_CONTROL,
+    ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
+    MPS_INFERENCE_LOCK,
     OFFLINE_MODE,
+    RAG_SOURCE_METADATA_KEYS,
+    USE_SLIM,
 )
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
+from open_webui.models.folders import Folders
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.notes import Notes
+from open_webui.models.config import Config
 from open_webui.models.users import UserModel
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.main import GetResult
+from open_webui.retrieval.external import retrieve_external_knowledge
+from open_webui.retrieval.vector.factory import get_vector_db_client
+from open_webui.retrieval.vector.main import GetResult, SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
-from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.utils.headers import include_user_info_headers
-from open_webui.utils.misc import get_message_list
+from open_webui.utils.access_control.files import get_owner_accessible_folder_files, has_access_to_file
+from open_webui.utils.access_control.folders import has_folder_access
+from open_webui.utils.headers import get_json_bearer_headers, include_user_info_headers
+from open_webui.utils.misc import get_content_from_message, get_message_list
 
 log = logging.getLogger(__name__)
 
@@ -58,70 +66,40 @@ from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
 
 
+class BM25Retriever(BaseRetriever):
+    docs: list[Document]
+    vectorizer: Any
+    k: int
+
+    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun) -> list[Document]:
+        return self.vectorizer.get_top_n(query.split(), self.docs, n=self.k)
+
+
 def is_youtube_url(url: str) -> bool:
     youtube_regex = r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$'
     return re.match(youtube_regex, url) is not None
 
 
-def get_loader(request, url: str):
+def get_loader(request, url: str, config: dict):
     if is_youtube_url(url):
         return YoutubeLoader(
             url,
-            language=request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
+            language=config['rag.youtube_loader_language'],
+            proxy_url=config['rag.youtube_loader_proxy_url'],
         )
-    else:
-        return get_web_loader(
-            url,
-            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
-            trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
-        )
+    return get_web_loader(url, config)
 
 
-def build_loader_from_config(request):
-    """Build a Loader instance with the admin's configured extraction engine settings."""
+def build_loader_from_config(config: dict):
+    """Build a document loader with the shared retrieval settings."""
     from open_webui.retrieval.loaders.main import Loader
 
-    config = request.app.state.config
-    return Loader(
-        engine=config.CONTENT_EXTRACTION_ENGINE,
-        DATALAB_MARKER_API_KEY=config.DATALAB_MARKER_API_KEY,
-        DATALAB_MARKER_API_BASE_URL=config.DATALAB_MARKER_API_BASE_URL,
-        DATALAB_MARKER_ADDITIONAL_CONFIG=config.DATALAB_MARKER_ADDITIONAL_CONFIG,
-        DATALAB_MARKER_SKIP_CACHE=config.DATALAB_MARKER_SKIP_CACHE,
-        DATALAB_MARKER_FORCE_OCR=config.DATALAB_MARKER_FORCE_OCR,
-        DATALAB_MARKER_PAGINATE=config.DATALAB_MARKER_PAGINATE,
-        DATALAB_MARKER_STRIP_EXISTING_OCR=config.DATALAB_MARKER_STRIP_EXISTING_OCR,
-        DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
-        DATALAB_MARKER_FORMAT_LINES=config.DATALAB_MARKER_FORMAT_LINES,
-        DATALAB_MARKER_USE_LLM=config.DATALAB_MARKER_USE_LLM,
-        DATALAB_MARKER_OUTPUT_FORMAT=config.DATALAB_MARKER_OUTPUT_FORMAT,
-        EXTERNAL_DOCUMENT_LOADER_URL=config.EXTERNAL_DOCUMENT_LOADER_URL,
-        EXTERNAL_DOCUMENT_LOADER_API_KEY=config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
-        TIKA_SERVER_URL=config.TIKA_SERVER_URL,
-        DOCLING_SERVER_URL=config.DOCLING_SERVER_URL,
-        DOCLING_API_KEY=config.DOCLING_API_KEY,
-        DOCLING_PARAMS=config.DOCLING_PARAMS,
-        PDF_EXTRACT_IMAGES=config.PDF_EXTRACT_IMAGES,
-        PDF_LOADER_MODE=config.PDF_LOADER_MODE,
-        DOCUMENT_INTELLIGENCE_ENDPOINT=config.DOCUMENT_INTELLIGENCE_ENDPOINT,
-        DOCUMENT_INTELLIGENCE_KEY=config.DOCUMENT_INTELLIGENCE_KEY,
-        DOCUMENT_INTELLIGENCE_MODEL=config.DOCUMENT_INTELLIGENCE_MODEL,
-        MISTRAL_OCR_API_BASE_URL=config.MISTRAL_OCR_API_BASE_URL,
-        MISTRAL_OCR_API_KEY=config.MISTRAL_OCR_API_KEY,
-        PADDLEOCR_VL_BASE_URL=config.PADDLEOCR_VL_BASE_URL,
-        PADDLEOCR_VL_TOKEN=config.PADDLEOCR_VL_TOKEN,
-        MINERU_API_MODE=config.MINERU_API_MODE,
-        MINERU_API_URL=config.MINERU_API_URL,
-        MINERU_API_KEY=config.MINERU_API_KEY,
-        MINERU_API_TIMEOUT=config.MINERU_API_TIMEOUT,
-        MINERU_PARAMS=config.MINERU_PARAMS,
-        MINERU_FILE_EXTENSIONS=config.MINERU_FILE_EXTENSIONS,
-    )
+    return Loader(config)
 
 
-def _extract_text_from_binary_response(request, response: requests.Response, url: str) -> tuple[str, list]:
+def _extract_text_from_binary_response(
+    request, response: requests.Response, url: str, config: dict
+) -> tuple[str, list]:
     """Download response body to a temp file and extract text using the Loader pipeline."""
     import mimetypes
     import tempfile
@@ -145,12 +123,21 @@ def _extract_text_from_binary_response(request, response: requests.Response, url
 
     suffix = '.' + filename.split('.')[-1].lower() if '.' in filename else ''
 
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(response.content)
-        tmp_path = tmp.name
+    max_size = config['rag.file.max_size']
+    max_bytes = int(max_size) * 1024 * 1024 if max_size else 0
 
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix)
     try:
-        loader = build_loader_from_config(request)
+        downloaded = 0
+        # Stream to disk; response.content buffers the whole body in memory first.
+        with os.fdopen(tmp_fd, 'wb') as tmp:
+            for chunk in response.iter_content(64 * 1024):
+                downloaded += len(chunk)
+                if max_bytes and downloaded > max_bytes:
+                    raise ValueError(ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'))
+                tmp.write(chunk)
+
+        loader = build_loader_from_config(config)
         docs = loader.load(filename, content_type, tmp_path)
         for doc in docs:
             doc.metadata['source'] = url
@@ -160,18 +147,96 @@ def _extract_text_from_binary_response(request, response: requests.Response, url
         os.remove(tmp_path)
 
 
+TEXT_APPLICATION_CONTENT_TYPES = {
+    'application/javascript',
+    'application/json',
+    'application/xml',
+    'application/x-javascript',
+}
+
+
 def _is_text_content_type(content_type: str) -> bool:
     """Return True if the content type should be handled by the web loader."""
     ct = content_type.split(';')[0].strip().lower()
+    if not ct:
+        return True
     if ct.startswith('text/'):
         return True
-    if any(t in ct for t in ['xml', 'json', 'javascript']):
+    if ct in TEXT_APPLICATION_CONTENT_TYPES:
         return True
-    return not ct  # empty / missing → assume HTML
+    return ct.endswith(('+xml', '+json'))
 
 
-def get_content_from_url(request, url: str) -> str:
-    from open_webui.retrieval.web.utils import validate_url
+async def get_content_from_url(request, url: str, *, config: dict | None = None) -> tuple[str, list]:
+    if config is None:
+        config = await Config.get_many(
+            'rag.content_extraction_engine',
+            'rag.datalab_marker_additional_config',
+            'rag.datalab_marker_api_base_url',
+            'rag.datalab_marker_api_key',
+            'rag.datalab_marker_disable_image_extraction',
+            'rag.datalab_marker_force_ocr',
+            'rag.datalab_marker_format_lines',
+            'rag.datalab_marker_output_format',
+            'rag.datalab_marker_paginate',
+            'rag.datalab_marker_skip_cache',
+            'rag.datalab_marker_strip_existing_ocr',
+            'rag.datalab_marker_use_llm',
+            'rag.docling_api_key',
+            'rag.docling_params',
+            'rag.docling_server_url',
+            'rag.document_intelligence_endpoint',
+            'rag.document_intelligence_key',
+            'rag.document_intelligence_model',
+            'web.loader.ssl_verification',
+            'web.search.exa_api_key',
+            'rag.external_document_loader_api_key',
+            'rag.external_document_loader_headers',
+            'rag.external_document_loader_url',
+            'web.loader.external_web_loader_api_key',
+            'web.loader.external_web_loader_url',
+            'rag.file.max_size',
+            'web.loader.firecrawl_api_url',
+            'web.loader.firecrawl_api_key',
+            'web.loader.firecrawl_timeout',
+            'web.search.microsoft_web_iq_api_base_url',
+            'web.search.microsoft_web_iq_api_key',
+            'web.search.microsoft_web_iq_language',
+            'rag.mineru_api_key',
+            'rag.mineru_api_mode',
+            'rag.mineru_api_timeout',
+            'rag.mineru_api_url',
+            'rag.mineru_file_extensions',
+            'rag.mineru_params',
+            'rag.mistral_ocr_api_base_url',
+            'rag.mistral_ocr_api_key',
+            'rag.mistral_ocr_use_base64',
+            'rag.paddleocr_vl_base_url',
+            'rag.paddleocr_vl_token',
+            'rag.pdf_extract_images',
+            'rag.pdf_loader_mode',
+            'web.loader.playwright_timeout',
+            'web.loader.playwright_ws_url',
+            'web.search.tavily_api_key',
+            'web.search.tavily_extract_depth',
+            'rag.tika_server_url',
+            'rag.tika_server_version',
+            'web.loader.concurrent_requests',
+            'web.loader.engine',
+            'web.loader.timeout',
+            'web.search.trust_env',
+            'rag.youtube_loader_language',
+            'rag.youtube_loader_proxy_url',
+        )
+
+    # The rest of this function performs synchronous, blocking work: an SSRF-guarded
+    # `requests` probe and a synchronous document loader (`loader.load()`). Run it in a
+    # worker thread so the event loop stays free while waiting on network/parsing.
+    return await asyncio.to_thread(_get_content_from_url_sync, request, url, config)
+
+
+def _get_content_from_url_sync(request, url: str, config: dict):
+    from open_webui.retrieval.web.utils import validate_url, get_ssrf_safe_requests_session
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
@@ -183,7 +248,7 @@ def get_content_from_url(request, url: str) -> str:
     # when allow_redirects=False, causing the binary-content path to run
     # and produce empty docs → HTTP 400.
     if is_youtube_url(url):
-        loader = get_loader(request, url)
+        loader = get_loader(request, url, config)
         docs = loader.load()
         content = ' '.join([doc.page_content for doc in docs])
         return content, docs
@@ -194,7 +259,9 @@ def get_content_from_url(request, url: str) -> str:
     # re-validation would let an attacker reach private IPs (RFC1918, loopback,
     # cloud-metadata 169.254.169.254) via a public host that redirects internally.
     try:
-        response = requests.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
+        # Probe through the connect-time SSRF guard; bare requests.get re-resolves (DNS-rebinding gap).
+        session = get_ssrf_safe_requests_session()
+        response = session.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
         response.raise_for_status()
         content_type = response.headers.get('Content-Type', '')
     except Exception:
@@ -205,14 +272,14 @@ def get_content_from_url(request, url: str) -> str:
     if response is None or _is_text_content_type(content_type):
         if response is not None:
             response.close()
-        loader = get_loader(request, url)
+        loader = get_loader(request, url, config)
         docs = loader.load()
         content = ' '.join([doc.page_content for doc in docs])
         return content, docs
 
     # Binary content (PDF, DOCX, XLSX, PPTX, etc.) — download and extract
     try:
-        return _extract_text_from_binary_response(request, response, url)
+        return _extract_text_from_binary_response(request, response, url, config)
     finally:
         response.close()
 
@@ -255,48 +322,30 @@ class VectorSearchRetriever(BaseRetriever):
             limit=self.top_k,
         )
 
-        ids = result.ids[0]
-        metadatas = result.metadatas[0]
-        documents = result.documents[0]
-
-        results = []
-        for idx in range(len(ids)):
-            metadata = metadatas[idx]
-            metadata[CHUNK_HASH_KEY] = _content_hash(documents[idx])
-            results.append(
-                Document(
-                    metadata=metadata,
-                    page_content=documents[idx],
-                )
-            )
-        return results
+        return _search_result_to_documents(result)
 
 
 def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None):
-    try:
-        log.debug(f'query_doc:doc {collection_name}')
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=collection_name,
-            vectors=[query_embedding],
-            limit=k,
-        )
+    log.debug('query_doc:doc %s', collection_name)
+    result = get_vector_db_client().search(
+        collection_name=collection_name,
+        vectors=[query_embedding],
+        limit=k,
+    )
 
-        if result:
-            log.info(f'query_doc:result {result.ids} {result.metadatas}')
+    if result:
+        log.info('query_doc:result %s %s', result.ids, result.metadatas)
 
-        return result
-    except Exception as e:
-        log.exception(f'Error querying doc {collection_name} with limit {k}: {e}')
-        raise e
+    return result
 
 
 def get_doc(collection_name: str, user: UserModel = None):
     try:
-        log.debug(f'get_doc:doc {collection_name}')
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        log.debug('get_doc:doc %s', collection_name)
+        result = get_vector_db_client().get(collection_name=collection_name)
 
         if result:
-            log.info(f'query_doc:result {result.ids} {result.metadatas}')
+            log.info('query_doc:result %s %s', result.ids, result.metadatas)
 
         return result
     except Exception as e:
@@ -338,9 +387,32 @@ def get_enriched_texts(collection_result: GetResult) -> list[str]:
     return enriched_texts
 
 
-async def query_doc_with_hybrid_search(
+def _search_result_to_documents(result: SearchResult | None) -> list[Document]:
+    ids = result.ids[0] if result and result.ids else []
+    metadatas = result.metadatas[0] if result and result.metadatas else []
+    documents = result.documents[0] if result and result.documents else []
+    distances = result.distances[0] if result and result.distances else []
+
+    docs = []
+    for idx in range(len(ids)):
+        document = documents[idx]
+        metadata = dict(metadatas[idx] or {})
+        metadata[CHUNK_HASH_KEY] = _content_hash(document)
+        if idx < len(distances):
+            metadata.setdefault('score', distances[idx])
+        docs.append(Document(metadata=metadata, page_content=document))
+    return docs
+
+
+def _supports_native_hybrid_search() -> bool:
+    supports_hybrid_search = getattr(ASYNC_VECTOR_DB_CLIENT, 'supports_hybrid_search', None)
+    if supports_hybrid_search is not None:
+        return bool(supports_hybrid_search)
+    return callable(getattr(ASYNC_VECTOR_DB_CLIENT, 'hybrid_search', None))
+
+
+async def query_doc_with_native_hybrid_search(
     collection_name: str,
-    collection_result: GetResult,
     query: str,
     embedding_function,
     k: int,
@@ -348,68 +420,28 @@ async def query_doc_with_hybrid_search(
     k_reranker: int,
     r: float,
     hybrid_bm25_weight: float,
-    enable_enriched_texts: bool = False,
-) -> dict:
+) -> Optional[dict]:
     try:
-        # First check if collection_result has the required attributes
-        if (
-            not collection_result
-            or not hasattr(collection_result, 'documents')
-            or not hasattr(collection_result, 'metadatas')
-        ):
-            log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
-            return {'documents': [], 'metadatas': [], 'distances': []}
+        if not _supports_native_hybrid_search():
+            return None
 
-        # Now safely check the documents content after confirming attributes exist
-        if (
-            not collection_result.documents
-            or len(collection_result.documents) == 0
-            or not collection_result.documents[0]
-        ):
-            log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
-            return {'documents': [], 'metadatas': [], 'distances': []}
+        query_vectors = []
+        if hybrid_bm25_weight < 1:
+            query_vectors = [await embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)]
 
-        log.debug(f'query_doc_with_hybrid_search:doc {collection_name}')
-
-        original_texts = collection_result.documents[0]
-        bm25_metadatas = [
-            {**meta, CHUNK_HASH_KEY: _content_hash(original_texts[idx])}
-            for idx, meta in enumerate(collection_result.metadatas[0])
-        ]
-
-        bm25_texts = get_enriched_texts(collection_result) if enable_enriched_texts else original_texts
-
-        bm25_retriever = BM25Retriever.from_texts(
-            texts=bm25_texts,
-            metadatas=bm25_metadatas,
-        )
-        bm25_retriever.k = k
-
-        vector_search_retriever = VectorSearchRetriever(
+        result = await ASYNC_VECTOR_DB_CLIENT.hybrid_search(
             collection_name=collection_name,
-            embedding_function=embedding_function,
-            top_k=k,
+            query=query,
+            vectors=query_vectors,
+            limit=k,
+            hybrid_bm25_weight=hybrid_bm25_weight,
         )
+        if result is None:
+            return None
 
-        # Use CHUNK_HASH_KEY for dedup so enriched BM25 texts don't defeat RRF
-        if hybrid_bm25_weight <= 0:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[vector_search_retriever],
-                weights=[1.0],
-                id_key=CHUNK_HASH_KEY,
-            )
-        elif hybrid_bm25_weight >= 1:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever],
-                weights=[1.0],
-                id_key=CHUNK_HASH_KEY,
-            )
-        else:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever, vector_search_retriever],
-                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
-                id_key=CHUNK_HASH_KEY,
-            )
+        documents = _search_result_to_documents(result)
+        if not documents:
+            return {'distances': [[]], 'documents': [[]], 'metadatas': [[]]}
 
         compressor = RerankCompressor(
             embedding_function=embedding_function,
@@ -417,18 +449,12 @@ async def query_doc_with_hybrid_search(
             reranking_function=reranking_function,
             r_score=r,
         )
+        compressed = await compressor.acompress_documents(documents, query)
 
-        compression_retriever = ContextualCompressionRetriever(
-            base_compressor=compressor, base_retriever=ensemble_retriever
-        )
+        distances = [d.metadata.get('score') for d in compressed]
+        documents = [d.page_content for d in compressed]
+        metadatas = [d.metadata for d in compressed]
 
-        result = await compression_retriever.ainvoke(query)
-
-        distances = [d.metadata.get('score') for d in result]
-        documents = [d.page_content for d in result]
-        metadatas = [d.metadata for d in result]
-
-        # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
         if k < k_reranker:
             sorted_items = sorted(zip(distances, documents, metadatas), key=lambda x: x[0], reverse=True)
             sorted_items = sorted_items[:k]
@@ -438,17 +464,139 @@ async def query_doc_with_hybrid_search(
             else:
                 distances, documents, metadatas = [], [], []
 
-        result = {
+        return {
             'distances': [distances],
             'documents': [documents],
             'metadatas': [metadatas],
         }
-
-        log.info('query_doc_with_hybrid_search:result ' + f'{result["metadatas"]} {result["distances"]}')
-        return result
     except Exception as e:
-        log.exception(f'Error querying doc {collection_name} with hybrid search: {e}')
-        raise e
+        log.debug('Native hybrid search failed for %s, falling back to legacy hybrid search: %s', collection_name, e)
+        return None
+
+
+async def query_doc_with_hybrid_search(
+    collection_name: str,
+    collection_result: Optional[GetResult],
+    query: str,
+    embedding_function,
+    k: int,
+    reranking_function,
+    k_reranker: int,
+    r: float,
+    hybrid_bm25_weight: float,
+    enable_enriched_texts: bool = False,
+    native_hybrid_search: bool = True,
+) -> dict:
+    if native_hybrid_search and not enable_enriched_texts:
+        native_result = await query_doc_with_native_hybrid_search(
+            collection_name=collection_name,
+            query=query,
+            embedding_function=embedding_function,
+            k=k,
+            reranking_function=reranking_function,
+            k_reranker=k_reranker,
+            r=r,
+            hybrid_bm25_weight=hybrid_bm25_weight,
+        )
+        if native_result is not None:
+            return native_result
+
+    if collection_result is None:
+        collection_result = await ASYNC_VECTOR_DB_CLIENT.get(collection_name=collection_name)
+
+    # First check if collection_result has the required attributes
+    if (
+        not collection_result
+        or not hasattr(collection_result, 'documents')
+        or not hasattr(collection_result, 'metadatas')
+    ):
+        log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
+        return {'documents': [], 'metadatas': [], 'distances': []}
+
+    # Now safely check the documents content after confirming attributes exist
+    if not collection_result.documents or len(collection_result.documents) == 0 or not collection_result.documents[0]:
+        log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
+        return {'documents': [], 'metadatas': [], 'distances': []}
+
+    log.debug('query_doc_with_hybrid_search:doc %s', collection_name)
+
+    original_texts = collection_result.documents[0]
+    bm25_metadatas = [
+        {**meta, CHUNK_HASH_KEY: _content_hash(original_texts[idx])}
+        for idx, meta in enumerate(collection_result.metadatas[0])
+    ]
+
+    bm25_texts = get_enriched_texts(collection_result) if enable_enriched_texts else original_texts
+
+    from rank_bm25 import BM25Okapi
+
+    bm25_retriever = BM25Retriever(
+        docs=[Document(page_content=text, metadata=meta) for text, meta in zip(bm25_texts, bm25_metadatas)],
+        vectorizer=BM25Okapi([text.split() for text in bm25_texts]),
+        k=k,
+    )
+
+    vector_search_retriever = VectorSearchRetriever(
+        collection_name=collection_name,
+        embedding_function=embedding_function,
+        top_k=k,
+    )
+
+    # Use CHUNK_HASH_KEY for dedup so enriched BM25 texts don't defeat RRF
+    if hybrid_bm25_weight <= 0:
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[vector_search_retriever],
+            weights=[1.0],
+            id_key=CHUNK_HASH_KEY,
+        )
+    elif hybrid_bm25_weight >= 1:
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever],
+            weights=[1.0],
+            id_key=CHUNK_HASH_KEY,
+        )
+    else:
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever, vector_search_retriever],
+            weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
+            id_key=CHUNK_HASH_KEY,
+        )
+
+    compressor = RerankCompressor(
+        embedding_function=embedding_function,
+        top_n=k_reranker,
+        reranking_function=reranking_function,
+        r_score=r,
+    )
+
+    compression_retriever = ContextualCompressionRetriever(
+        base_compressor=compressor, base_retriever=ensemble_retriever
+    )
+
+    result = await compression_retriever.ainvoke(query)
+
+    distances = [d.metadata.get('score') for d in result]
+    documents = [d.page_content for d in result]
+    metadatas = [d.metadata for d in result]
+
+    # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
+    if k < k_reranker:
+        sorted_items = sorted(zip(distances, documents, metadatas), key=lambda x: x[0], reverse=True)
+        sorted_items = sorted_items[:k]
+
+        if sorted_items:
+            distances, documents, metadatas = map(list, zip(*sorted_items))
+        else:
+            distances, documents, metadatas = [], [], []
+
+    result = {
+        'distances': [distances],
+        'documents': [documents],
+        'metadatas': [metadatas],
+    }
+
+    log.info('query_doc_with_hybrid_search:result %s %s', result['metadatas'], result['distances'])
+    return result
 
 
 def merge_get_results(get_results: list[dict]) -> dict:
@@ -490,9 +638,9 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
 
         for distance, document, metadata in zip(distances, documents, metadatas):
             if isinstance(document, str):
-                doc_hash = hashlib.sha256(document.encode()).hexdigest()  # Compute a hash for uniqueness
+                doc_hash = (metadata or {}).get(CHUNK_HASH_KEY) or _content_hash(document)
 
-                if doc_hash not in combined.keys():
+                if doc_hash not in combined:
                     combined[doc_hash] = (distance, document, metadata)
                     continue  # if doc is new, no further comparison is needed
 
@@ -538,12 +686,20 @@ async def query_collection(
     queries: list[str],
     embedding_function,
     k: int,
+    user: UserModel | None = None,
 ) -> dict:
+    config = await Config.get_many(
+        'rag.enable_hybrid_search',
+        'rag.top_k_reranker',
+        'rag.relevance_threshold',
+        'rag.hybrid_bm25_weight',
+        'rag.enable_hybrid_search_enriched_texts',
+    )
     # When request is provided, try hybrid search + reranking if enabled
-    if request and request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+    if request and config.get('rag.enable_hybrid_search'):
         try:
             reranking_function = (
-                (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents))
+                (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
                 if request.app.state.RERANKING_FUNCTION
                 else None
             )
@@ -553,16 +709,17 @@ async def query_collection(
                 embedding_function=embedding_function,
                 k=k,
                 reranking_function=reranking_function,
-                k_reranker=request.app.state.config.TOP_K_RERANKER,
-                r=request.app.state.config.RELEVANCE_THRESHOLD,
-                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
+                k_reranker=config.get('rag.top_k_reranker'),
+                r=config.get('rag.relevance_threshold'),
+                hybrid_bm25_weight=config.get('rag.hybrid_bm25_weight'),
+                enable_enriched_texts=config.get('rag.enable_hybrid_search_enriched_texts'),
             )
         except Exception as e:
-            log.debug(f'Hybrid search failed, falling back to vector search: {e}')
+            log.debug('Hybrid search failed, falling back to vector search: %s', e)
 
     results = []
-    error = False
+    last_error = None
+    failed_collection_names = set()
 
     def process_query_collection(collection_name, query_embedding):
         try:
@@ -573,11 +730,10 @@ async def query_collection(
                     query_embedding=query_embedding,
                 )
                 if result is not None:
-                    return result.model_dump(), None
-            return None, None
+                    return result.model_dump(), None, collection_name
+            return None, None, collection_name
         except Exception as e:
-            log.exception(f'Error when querying the collection: {e}')
-            return None, e
+            return None, e, collection_name
 
     # Sanitize: filter out None/empty queries to prevent embedding crashes
     # (e.g. when get_last_user_message returns None)
@@ -588,24 +744,30 @@ async def query_collection(
 
     # Generate all query embeddings (in one call)
     query_embeddings = await embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
-    log.debug(f'query_collection: processing {len(queries)} queries across {len(collection_names)} collections')
+    log.debug('query_collection: processing %s queries across %s collections', len(queries), len(collection_names))
 
-    with ThreadPoolExecutor() as executor:
-        future_results = []
-        for query_embedding in query_embeddings:
-            for collection_name in collection_names:
-                result = executor.submit(process_query_collection, collection_name, query_embedding)
-                future_results.append(result)
-        task_results = [future.result() for future in future_results]
+    task_results = await asyncio.gather(
+        *[
+            asyncio.to_thread(process_query_collection, collection_name, query_embedding)
+            for query_embedding in query_embeddings
+            for collection_name in collection_names
+        ]
+    )
 
-    for result, err in task_results:
+    for result, err, collection_name in task_results:
         if err is not None:
-            error = True
+            last_error = err
+            failed_collection_names.add(collection_name)
         elif result is not None:
             results.append(result)
 
-    if error and not results:
-        log.warning('All collection queries failed. No results returned.')
+    if failed_collection_names:
+        log.error(
+            'query_collection: %s collection(s) had failing queries: %s',
+            len(failed_collection_names),
+            ', '.join(sorted(failed_collection_names)),
+            exc_info=last_error,
+        )
 
     return merge_and_sort_query_results(results, k=k)
 
@@ -622,7 +784,30 @@ async def query_collection_with_hybrid_search(
     enable_enriched_texts: bool = False,
 ) -> dict:
     results = []
-    error = False
+    last_error = None
+    failed_collection_names = set()
+
+    if not enable_enriched_texts:
+
+        async def process_native_query(collection_name, query):
+            result = await query_doc_with_native_hybrid_search(
+                collection_name=collection_name,
+                query=query,
+                embedding_function=embedding_function,
+                k=k,
+                reranking_function=reranking_function,
+                k_reranker=k_reranker,
+                r=r,
+                hybrid_bm25_weight=hybrid_bm25_weight,
+            )
+            return result
+
+        native_task_results = await asyncio.gather(
+            *[process_native_query(collection_name, query) for collection_name in collection_names for query in queries]
+        )
+        if native_task_results and all(result is not None for result in native_task_results):
+            return merge_and_sort_query_results(native_task_results, k=k)
+
     # Fetch every collection's contents once up front so the
     # per-query/per-document loop below can reuse them. Each fetch
     # offloads to a worker thread, so run them concurrently with
@@ -638,11 +823,12 @@ async def query_collection_with_hybrid_search(
             return name, await ASYNC_VECTOR_DB_CLIENT.get(collection_name=name)
         except Exception as e:
             log.exception(f'Failed to fetch collection {name}: {e}')
+            failed_collection_names.add(name)
             return name, None
 
     collection_results = dict(await asyncio.gather(*(_fetch_collection(name) for name in collection_names)))
 
-    log.info(f'Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections...')
+    log.info('Starting hybrid search for %s queries in %s collections...', len(queries), len(collection_names))
 
     async def process_query(collection_name, query):
         try:
@@ -657,11 +843,11 @@ async def query_collection_with_hybrid_search(
                 r=r,
                 hybrid_bm25_weight=hybrid_bm25_weight,
                 enable_enriched_texts=enable_enriched_texts,
+                native_hybrid_search=False,
             )
-            return result, None
+            return result, None, collection_name
         except Exception as e:
-            log.exception(f'Error when querying the collection with hybrid_search: {e}')
-            return None, e
+            return None, e, collection_name
 
     # Prepare tasks for all collections and queries
     # Avoid running any tasks for collections that failed to fetch data (have assigned None)
@@ -675,13 +861,22 @@ async def query_collection_with_hybrid_search(
     # Run all queries in parallel using asyncio.gather
     task_results = await asyncio.gather(*[process_query(collection_name, query) for collection_name, query in tasks])
 
-    for result, err in task_results:
+    for result, err, collection_name in task_results:
         if err is not None:
-            error = True
+            last_error = err
+            failed_collection_names.add(collection_name)
         elif result is not None:
             results.append(result)
 
-    if error and not results:
+    if failed_collection_names:
+        log.error(
+            'query_collection_with_hybrid_search: %s collection(s) had failing queries: %s',
+            len(failed_collection_names),
+            ', '.join(sorted(failed_collection_names)),
+            exc_info=last_error,
+        )
+
+    if failed_collection_names and not results:
         raise Exception('Hybrid search failed for all collections. Using Non-hybrid search as fallback.')
 
     return merge_and_sort_query_results(results, k=k)
@@ -695,15 +890,12 @@ def generate_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'generate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
+    log.debug('generate_openai_batch_embeddings:model %s batch size: %s', model, len(texts))
     json_data = {'input': texts, 'model': model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {key}',
-    }
+    headers = get_json_bearer_headers(key)
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
         headers = include_user_info_headers(headers, user)
 
@@ -728,15 +920,12 @@ async def agenerate_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'agenerate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
+    log.debug('agenerate_openai_batch_embeddings:model %s batch size: %s', model, len(texts))
     form_data = {'input': texts, 'model': model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {key}',
-    }
+    headers = get_json_bearer_headers(key)
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
         headers = include_user_info_headers(headers, user)
 
@@ -766,7 +955,7 @@ def generate_azure_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'generate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}')
+    log.debug('generate_azure_openai_batch_embeddings:deployment %s batch size: %s', model, len(texts))
     json_data = {'input': texts}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
@@ -808,7 +997,7 @@ async def agenerate_azure_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'agenerate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}')
+    log.debug('agenerate_azure_openai_batch_embeddings:deployment %s batch size: %s', model, len(texts))
     form_data = {'input': texts}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
@@ -847,15 +1036,12 @@ def generate_ollama_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'generate_ollama_batch_embeddings:model {model} batch size: {len(texts)}')
+    log.debug('generate_ollama_batch_embeddings:model %s batch size: %s', model, len(texts))
     json_data = {'input': texts, 'model': model, 'truncate': True}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {key}',
-    }
+    headers = get_json_bearer_headers(key)
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
         headers = include_user_info_headers(headers, user)
 
@@ -883,15 +1069,12 @@ async def agenerate_ollama_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'agenerate_ollama_batch_embeddings:model {model} batch size: {len(texts)}')
+    log.debug('agenerate_ollama_batch_embeddings:model %s batch size: %s', model, len(texts))
     form_data = {'input': texts, 'model': model, 'truncate': True}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {key}',
-    }
+    headers = get_json_bearer_headers(key)
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
         headers = include_user_info_headers(headers, user)
 
@@ -927,26 +1110,27 @@ def get_embedding_function(
     concurrent_requests=0,
 ) -> Awaitable:
     if embedding_engine == '':
-        if embedding_function is None:
-            raise ValueError(
-                'No embedding model is loaded. Set RAG_EMBEDDING_MODEL to a valid '
-                'SentenceTransformer model name, or configure an external '
-                'RAG_EMBEDDING_ENGINE (ollama, openai, azure_openai).'
-            )
-
         # Sentence transformers: CPU-bound sync operation
         async def async_embedding_function(query, prefix=None, user=None):
-            return await asyncio.to_thread(
-                (
-                    lambda query, prefix=None: embedding_function.encode(
+            if USE_SLIM:
+                raise HTTPException(503, 'Configure an external embedding engine (openai, ollama, azure_openai).')
+            # Deferred so a missing local model degrades RAG instead of crashing boot.
+            if embedding_function is None:
+                raise ValueError(
+                    'No embedding model is loaded. Set RAG_EMBEDDING_MODEL to a valid '
+                    'SentenceTransformer model name, or configure an external '
+                    'RAG_EMBEDDING_ENGINE (ollama, openai, azure_openai).'
+                )
+
+            def encode():
+                with MPS_INFERENCE_LOCK:
+                    return embedding_function.encode(
                         query,
                         batch_size=int(embedding_batch_size),
                         **({'prompt': prefix} if prefix else {}),
                     ).tolist()
-                ),
-                query,
-                prefix,
-            )
+
+            return await asyncio.to_thread(encode)
 
         return async_embedding_function
     elif embedding_engine in ['ollama', 'openai', 'azure_openai']:
@@ -967,7 +1151,7 @@ def get_embedding_function(
                 batches = [query[i : i + embedding_batch_size] for i in range(0, len(query), embedding_batch_size)]
 
                 if enable_async:
-                    log.debug(f'generate_multiple_async: Processing {len(batches)} batches in parallel')
+                    log.debug('generate_multiple_async: Processing %s batches in parallel', len(batches))
                     # Use semaphore to limit concurrent embedding API requests
                     # 0 = unlimited (no semaphore)
                     if concurrent_requests:
@@ -982,7 +1166,7 @@ def get_embedding_function(
                         tasks = [embedding_function(batch, prefix=prefix, user=user) for batch in batches]
                     batch_results = await asyncio.gather(*tasks)
                 else:
-                    log.debug(f'generate_multiple_async: Processing {len(batches)} batches sequentially')
+                    log.debug('generate_multiple_async: Processing %s batches sequentially', len(batches))
                     batch_results = []
                     for batch in batches:
                         batch_results.append(await embedding_function(batch, prefix=prefix, user=user))
@@ -995,7 +1179,9 @@ def get_embedding_function(
                     embeddings.extend(batch_embeddings)
 
                 log.debug(
-                    f'generate_multiple_async: Generated {len(embeddings)} embeddings from {len(batches)} parallel batches'
+                    'generate_multiple_async: Generated %s embeddings from %s parallel batches',
+                    len(embeddings),
+                    len(batches),
                 )
                 return embeddings
             else:
@@ -1061,6 +1247,14 @@ async def generate_embeddings(
 
 
 def get_reranking_function(reranking_engine, reranking_model, reranking_function, reranking_batch_size=32):
+    if USE_SLIM and reranking_model and reranking_engine != 'external':
+
+        def unavailable(query, documents, user=None):
+            raise HTTPException(
+                503, 'Configure an external reranker, or clear the reranking model to use cosine scoring.'
+            )
+
+        return unavailable
     if reranking_function is None:
         return None
     if reranking_engine == 'external':
@@ -1068,9 +1262,14 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
             [(query, doc.page_content) for doc in documents], user=user
         )
     else:
-        return lambda query, documents, user=None: reranking_function.predict(
-            [(query, doc.page_content) for doc in documents], batch_size=int(reranking_batch_size)
-        )
+
+        def predict(query, documents, user=None):
+            with MPS_INFERENCE_LOCK:
+                return reranking_function.predict(
+                    [(query, doc.page_content) for doc in documents], batch_size=int(reranking_batch_size)
+                )
+
+        return predict
 
 
 # UUIDs, SHA-256 digests, and prefixed variants thereof all fit [A-Za-z0-9_-].
@@ -1095,7 +1294,7 @@ async def filter_accessible_collections(
       - any name with characters outside [A-Za-z0-9_-] → rejected
       - file-*          → validated via has_access_to_file
       - user-memory-*   → must match user's own memory collection
-      - web-search-*    → ephemeral per-query collections, always allowed
+      - web-search-*    → ephemeral per-query collections, owner-bound to web-search-{user.id}-*
       - knowledge-bases → always denied (system meta-collection)
       - everything else → if the name matches a knowledge base, validated
                           via Knowledges.check_access_by_user_id; if no
@@ -1130,10 +1329,10 @@ async def filter_accessible_collections(
             if name == f'user-memory-{user.id}':
                 validated.add(name)
         elif name.startswith('web-search-'):
-            # Ephemeral collections created by process_web_search — safe
-            # to allow because they contain only transient web-search
-            # results scoped to the requesting user's session.
-            validated.add(name)
+            # Ephemeral per-query collections, owner-bound: process_web_search mints
+            # them as web-search-{user.id}-<hash>, so only the creator may read/write.
+            if name.startswith(f'web-search-{user.id}-'):
+                validated.add(name)
         else:
             # May be a knowledge-base ID or a legacy/ephemeral collection.
             # If it IS a KB, enforce access control.  If no such KB
@@ -1147,6 +1346,11 @@ async def filter_accessible_collections(
                 # Not a KB at all — legacy/ephemeral collection, allow
                 validated.add(name)
     return validated
+
+
+def filter_source_metadata(metadata: dict) -> dict:
+    """Keep only the chunk metadata keys the operator allowed the model to see."""
+    return {key: metadata[key] for key in RAG_SOURCE_METADATA_KEYS if metadata.get(key) is not None}
 
 
 async def get_sources_from_items(
@@ -1163,10 +1367,28 @@ async def get_sources_from_items(
     full_context=False,
     user: UserModel | None = None,
 ):
-    log.debug(f'items: {items} {queries} {embedding_function} {reranking_function} {full_context}')
+    log.debug('items: %s %s %s %s %s', items, queries, embedding_function, reranking_function, full_context)
 
+    bypass_embedding_and_retrieval = await Config.get('rag.bypass_embedding_and_retrieval')
     extracted_collections = []
     query_results = []
+    folder_items = set()
+    expanded_folders = set()
+
+    items = list(items)
+    for item in items:
+        if item.get('type') != 'folder' or not user:
+            continue
+        folder_id = item.get('id')
+        if not folder_id or folder_id in expanded_folders:
+            continue
+        expanded_folders.add(folder_id)
+
+        folder = await Folders.get_folder_by_id(folder_id)
+        if folder and (user.role == 'admin' or await has_folder_access(user.id, folder, 'read', db=None)):
+            files = await get_owner_accessible_folder_files(folder)
+            folder_items.update((entry.get('type'), entry.get('id')) for entry in files if isinstance(entry, dict))
+            items.extend(files)
 
     for item in items:
         query_result = None
@@ -1225,8 +1447,23 @@ async def get_sources_from_items(
         elif item.get('type') == 'chat':
             # Chat Attached
             chat = await Chats.get_chat_by_id(item.get('id'))
+            has_read_access = bool(
+                chat and ((user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS) or chat.user_id == user.id)
+            )
 
-            if chat and (user.role == 'admin' or chat.user_id == user.id):
+            if chat and not has_read_access:
+                has_read_access = await AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='shared_chat',
+                    resource_id=chat.id,
+                    permission='read',
+                )
+
+            if chat and not has_read_access and chat.folder_id:
+                folder = await Folders.get_folder_by_id(chat.folder_id)
+                has_read_access = folder and await has_folder_access(user.id, folder, 'read', db=None)
+
+            if has_read_access:
                 messages_map = chat.chat.get('history', {}).get('messages', {})
                 message_id = chat.chat.get('history', {}).get('currentId')
 
@@ -1234,7 +1471,10 @@ async def get_sources_from_items(
                     # Reconstruct the message list in order
                     message_list = get_message_list(messages_map, message_id)
                     message_history = '\n'.join(
-                        [f'#### {m.get("role", "user").capitalize()}\n{m.get("content")}\n' for m in message_list]
+                        [
+                            f'#### {m.get("role", "user").capitalize()}\n{get_content_from_message(m) or ""}\n'
+                            for m in message_list
+                        ]
                     )
 
                     # User has access to the chat
@@ -1244,14 +1484,14 @@ async def get_sources_from_items(
                     }
 
         elif item.get('type') == 'url':
-            content, docs = get_content_from_url(request, item.get('url'))
+            content, docs = await get_content_from_url(request, item.get('url'))
             if docs:
                 query_result = {
                     'documents': [[content]],
                     'metadatas': [[{'url': item.get('url'), 'name': item.get('url')}]],
                 }
         elif item.get('type') == 'file':
-            if item.get('context') == 'full' or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+            if item.get('context') == 'full' or bypass_embedding_and_retrieval:
                 if item.get('file', {}).get('data', {}).get('content', ''):
                     # Manual Full Mode Toggle
                     # Used from chat file modal, we can assume that the file content will be available from item.get("file").get("data", {}).get("content")
@@ -1273,6 +1513,7 @@ async def get_sources_from_items(
                         user.role == 'admin'
                         or file_object.user_id == user.id
                         or await has_access_to_file(item.get('id'), 'read', user)
+                        or ('file', item.get('id')) in folder_items
                     ):
                         query_result = {
                             'documents': [[file_object.data.get('content', '')]],
@@ -1303,6 +1544,7 @@ async def get_sources_from_items(
                             user.role == 'admin'
                             or file_object.user_id == user.id
                             or await has_access_to_file(file_id, 'read', user)
+                            or ('file', file_id) in folder_items
                         ):
                             if item.get('legacy'):
                                 collection_names.append(f'{file_id}')
@@ -1313,8 +1555,17 @@ async def get_sources_from_items(
             # Manual Full Mode Toggle for Collection
             knowledge_base = await Knowledges.get_knowledge_by_id(item.get('id'))
 
+            # TracexGPT: client users always have access to assigned knowledge bases
+            client_info = (user.info or {}) if user else {}
+            is_client_kb = bool(
+                client_info.get('user_type') == 'client'
+                and knowledge_base
+                and knowledge_base.id in (client_info.get('assigned_kb_ids') or [])
+            )
+
             if knowledge_base and (
-                user.role == 'admin'
+                is_client_kb
+                or user.role == 'admin'
                 or knowledge_base.user_id == user.id
                 or await AccessGrants.has_access(
                     user_id=user.id,
@@ -1322,51 +1573,65 @@ async def get_sources_from_items(
                     resource_id=knowledge_base.id,
                     permission='read',
                 )
+                or ('collection', item.get('id')) in folder_items
             ):
-                if item.get('context') == 'full' or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
-                    if knowledge_base and (
-                        user.role == 'admin'
-                        or knowledge_base.user_id == user.id
-                        or await AccessGrants.has_access(
-                            user_id=user.id,
-                            resource_type='knowledge',
-                            resource_id=knowledge_base.id,
-                            permission='read',
-                        )
-                    ):
-                        files = await Knowledges.get_files_by_id(knowledge_base.id)
+                if (knowledge_base.meta or {}).get('source') == 'external':
+                    query_result = await retrieve_external_knowledge(
+                        request,
+                        knowledge_base,
+                        queries=queries,
+                        count=k,
+                        user=user,
+                    )
+                    extracted_collections.append(knowledge_base.id)
 
-                        documents = []
-                        metadatas = []
-                        for file in files:
-                            documents.append(file.data.get('content', ''))
-                            metadatas.append(
-                                {
-                                    'file_id': file.id,
-                                    'name': file.filename,
-                                    'source': file.filename,
-                                }
-                            )
-
-                        query_result = {
-                            'documents': [documents],
-                            'metadatas': [metadatas],
-                        }
                 else:
-                    if item.get('legacy'):
-                        if BYPASS_RETRIEVAL_ACCESS_CONTROL:
-                            collection_names = item.get('collection_names', [])
-                        else:
-                            # Legacy KB: item.collection_names is client-supplied.
-                            # Validate against the KB's actual files to prevent
-                            # cross-tenant collection name substitution.
+                    if item.get('context') == 'full' or bypass_embedding_and_retrieval:
+                        if knowledge_base and (
+                            is_client_kb
+                            or user.role == 'admin'
+                            or knowledge_base.user_id == user.id
+                            or await AccessGrants.has_access(
+                                user_id=user.id,
+                                resource_type='knowledge',
+                                resource_id=knowledge_base.id,
+                                permission='read',
+                            )
+                            or ('collection', item.get('id')) in folder_items
+                        ):
                             files = await Knowledges.get_files_by_id(knowledge_base.id)
-                            owned_names = {f'file-{f.id}' for f in files}
-                            owned_names.add(knowledge_base.id)
-                            valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
-                            collection_names = valid_names if valid_names else [knowledge_base.id]
+
+                            documents = []
+                            metadatas = []
+                            for file in files:
+                                documents.append(file.data.get('content', ''))
+                                metadatas.append(
+                                    {
+                                        'file_id': file.id,
+                                        'name': file.filename,
+                                        'source': file.filename,
+                                    }
+                                )
+
+                            query_result = {
+                                'documents': [documents],
+                                'metadatas': [metadatas],
+                            }
                     else:
-                        collection_names.append(item['id'])
+                        if item.get('legacy'):
+                            if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                                collection_names = item.get('collection_names', [])
+                            else:
+                                # Legacy KB: item.collection_names is client-supplied.
+                                # Validate against the KB's actual files to prevent
+                                # cross-tenant collection name substitution.
+                                files = await Knowledges.get_files_by_id(knowledge_base.id)
+                                owned_names = {f'file-{f.id}' for f in files}
+                                owned_names.add(knowledge_base.id)
+                                valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
+                                collection_names = valid_names if valid_names else [knowledge_base.id]
+                        else:
+                            collection_names.append(item['id'])
 
         elif item.get('docs'):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
@@ -1374,6 +1639,10 @@ async def get_sources_from_items(
                 'documents': [[doc.get('content') for doc in item.get('docs')]],
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
+        elif item.get('type') == 'web_search' and item.get('collection_name'):
+            # Trusted server-generated collection; authorized by
+            # filter_accessible_collections below (allowlists web-search-*).
+            collection_names.append(item['collection_name'])
         elif item.get('collection_name'):
             if BYPASS_RETRIEVAL_ACCESS_CONTROL:
                 collection_names.append(item['collection_name'])
@@ -1395,14 +1664,14 @@ async def get_sources_from_items(
         if query_result is None and collection_names:
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:
-                log.debug(f'skipping {item} as it has already been extracted')
+                log.debug('skipping %s as it has already been extracted', item)
                 continue
 
             # Filter out collections the user cannot read
-            if user:
+            if user and (item.get('type'), item.get('id')) not in folder_items:
                 collection_names = await filter_accessible_collections(collection_names, user)
                 if not collection_names:
-                    log.debug(f'access denied for all collections in item {item}')
+                    log.debug('access denied for all collections in item %s', item)
                     continue
 
             try:
@@ -1417,6 +1686,7 @@ async def get_sources_from_items(
                         queries=queries,
                         embedding_function=embedding_function,
                         k=k,
+                        user=user,
                     )
             except Exception as e:
                 log.exception(e)
@@ -1444,10 +1714,32 @@ async def get_sources_from_items(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
+
+    file_ids = {
+        metadata['file_id']
+        for source in sources
+        for metadata in source['metadata']
+        if isinstance(metadata, dict) and metadata.get('file_id') and not metadata.get('external')
+    }
+    if file_ids:
+        file_names = {
+            file.id: (file.meta or {}).get('name') for file in await Files.get_file_metadatas_by_ids(list(file_ids))
+        }
+        for source in sources:
+            for metadata in source['metadata']:
+                if isinstance(metadata, dict) and metadata.get('external'):
+                    continue
+                file_name = file_names.get(metadata.get('file_id')) if isinstance(metadata, dict) else None
+                if file_name:
+                    if metadata.get('source') == metadata.get('name'):
+                        metadata['source'] = file_name
+                    metadata['name'] = file_name
     return sources
 
 
 def get_model_path(model: str, update_model: bool = False):
+    from huggingface_hub import snapshot_download
+
     # Construct huggingface_hub kwargs with local_files_only to return the snapshot path
     cache_dir = os.getenv('SENTENCE_TRANSFORMERS_HOME')
 
@@ -1461,8 +1753,8 @@ def get_model_path(model: str, update_model: bool = False):
         'local_files_only': local_files_only,
     }
 
-    log.debug(f'model: {model}')
-    log.debug(f'snapshot_kwargs: {snapshot_kwargs}')
+    log.debug('model: %s', model)
+    log.debug('snapshot_kwargs: %s', snapshot_kwargs)
 
     # Inspiration from upstream sentence_transformers
     if os.path.exists(model) or ('\\' in model or model.count('/') > 1) and local_files_only:
@@ -1477,7 +1769,7 @@ def get_model_path(model: str, update_model: bool = False):
     # Attempt to query the huggingface_hub library to determine the local path and/or to update
     try:
         model_repo_path = snapshot_download(**snapshot_kwargs)
-        log.debug(f'model_repo_path: {model_repo_path}')
+        log.debug('model_repo_path: %s', model_repo_path)
         return model_repo_path
     except Exception as e:
         log.exception(f'Cannot determine model snapshot path: {e}')
@@ -1491,6 +1783,17 @@ from typing import Optional, Sequence
 
 from langchain_core.callbacks import Callbacks
 from langchain_core.documents import BaseDocumentCompressor, Document
+
+
+def cosine_similarity(query, documents) -> np.ndarray:
+    """Score one query against documents without loading a model runtime."""
+    if len(documents) == 0:
+        return np.array([], dtype=float)
+    query = np.asarray(query, dtype=float).reshape(-1)
+    documents = np.asarray(documents, dtype=float)
+    query = query / max(np.linalg.norm(query), 1e-12)
+    documents = documents / np.maximum(np.linalg.norm(documents, axis=1, keepdims=True), 1e-12)
+    return documents @ query
 
 
 class RerankCompressor(BaseDocumentCompressor):
@@ -1528,18 +1831,18 @@ class RerankCompressor(BaseDocumentCompressor):
         query: str,
         callbacks: Callbacks | None = None,
     ) -> Sequence[Document]:
+        if not documents:
+            return []
         reranking = self.reranking_function is not None
 
         scores = None
         if reranking:
             scores = await asyncio.to_thread(self.reranking_function, query, documents)
         else:
-            from sentence_transformers import util as st_util
-
             query_embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
             doc_texts = [doc.page_content for doc in documents]
             document_embedding = await self.embedding_function(doc_texts, RAG_EMBEDDING_CONTENT_PREFIX)
-            scores = st_util.cos_sim(query_embedding, document_embedding)[0]
+            scores = cosine_similarity(query_embedding, document_embedding)
 
         if scores is not None:
             docs_with_scores = list(

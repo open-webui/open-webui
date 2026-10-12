@@ -5,13 +5,14 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import Select from '$lib/components/common/Select.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let value = '';
-	export let placeholder = $i18n.t('Select view');
+	export let placeholder: string | undefined = undefined;
+	export let align = 'start';
 	export let onChange: (value: string) => void = () => {};
 
-	const items = [
+	$: items = [
 		{ value: '', label: $i18n.t('All') },
 		{ value: 'created', label: $i18n.t('Created by you') },
 		{ value: 'shared', label: $i18n.t('Shared with you') }
@@ -21,14 +22,15 @@
 <Select
 	bind:value
 	{items}
-	{placeholder}
-	triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl "
-	labelClass="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate  placeholder-gray-400  focus:outline-hidden"
+	placeholder={placeholder ?? $i18n.t('Select view')}
+	{align}
+	triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+	labelClass="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
 	onChange={() => onChange(value)}
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
 		<span
-			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+			class="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
 		>
 			{selectedLabel}
 		</span>

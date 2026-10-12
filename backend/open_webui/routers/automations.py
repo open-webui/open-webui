@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.automations import (
     AutomationForm,
@@ -14,6 +15,10 @@ from open_webui.models.automations import (
     AutomationRuns,
     Automations,
 )
+from open_webui.models.access_grants import AccessGrants, has_public_write_access_grant
+from open_webui.models.channels import Channels
+from open_webui.models.config import Config
+from open_webui.models.folders import Folders
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.automations import (
@@ -38,13 +43,14 @@ PAGE_ITEM_COUNT = 30
 
 
 async def check_automations_permission(request, user):
-    if not request.app.state.config.ENABLE_AUTOMATIONS:
+    config = await Config.get_many('automations.enable', 'user.permissions')
+    if not config.get('automations.enable'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
     if user.role != 'admin' and not await has_permission(
-        user.id, 'features.automations', request.app.state.config.USER_PERMISSIONS
+        user.id, 'features.automations', config.get('user.permissions')
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -53,15 +59,10 @@ async def check_automations_permission(request, user):
 
 
 def check_automation_access(automation, user):
-    if not automation:
+    if not automation or user.id != automation.user_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-    if user.role != 'admin' and user.id != automation.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
 
@@ -72,7 +73,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
 
     # Max count (create only)
     if is_create:
-        max_count = request.app.state.config.AUTOMATION_MAX_COUNT
+        max_count = await Config.get('automations.max_count')
         if max_count:
             max_count = int(max_count)
             if max_count > 0 and await Automations.count_by_user(user.id, db=db) >= max_count:
@@ -82,16 +83,65 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
                 )
 
     # Min interval (create + update)
-    min_interval = request.app.state.config.AUTOMATION_MIN_INTERVAL
+    min_interval = await Config.get('automations.min_interval')
     if min_interval:
         min_interval = int(min_interval)
         if min_interval > 0:
-            interval = rrule_interval_seconds(rrule_str)
+            interval = await rrule_interval_seconds(rrule_str)
             if interval is not None and interval < min_interval:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.AUTOMATION_TOO_FREQUENT(min_interval),
                 )
+
+
+async def check_automation_folder_access(folder_id: Optional[str], user, db: AsyncSession):
+    if folder_id is None:
+        return
+    folder = await Folders.get_folder_by_id_and_user_id(folder_id, user.id, db=db)
+    if not folder:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+async def check_automation_channel_access(form_data: AutomationForm, user, db: AsyncSession):
+    target = form_data.data.target
+    if not target or target.type != 'channel':
+        return
+
+    if not target.channel_id or not await Config.get('channels.enable'):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    channel = await Channels.get_channel_by_id(target.channel_id, db=db)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if user.role == 'admin':
+        return
+    if not await has_permission(user.id, 'features.channels', await Config.get('user.permissions')):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+    if channel.type in ['group', 'dm']:
+        allowed = await Channels.is_user_channel_member(channel.id, user.id, db=db)
+    else:
+        allowed = has_public_write_access_grant(channel.access_grants) or await AccessGrants.has_access(
+            user_id=user.id, resource_type='channel', resource_id=channel.id, permission='write', db=db
+        )
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
 
 
 async def enrich_automation(automation: AutomationModel, db: AsyncSession, tz: str = None) -> AutomationResponse:
@@ -100,7 +150,7 @@ async def enrich_automation(automation: AutomationModel, db: AsyncSession, tz: s
     return AutomationResponse(
         **automation.model_dump(),
         last_run=last_run,
-        next_runs=next_n_runs_ns(automation.data['rrule'], tz=tz),
+        next_runs=await next_n_runs_ns(automation.data['rrule'], tz=tz),
     )
 
 
@@ -114,6 +164,7 @@ async def get_automation_items(
     request: Request,
     query: Optional[str] = None,
     status: Optional[str] = None,
+    folder_id: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -127,6 +178,7 @@ async def get_automation_items(
         user_id=user.id,
         query=query,
         status=status,
+        folder_id=folder_id,
         skip=skip,
         limit=limit,
         db=db,
@@ -161,8 +213,10 @@ async def create_new_automation(
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
+    await check_automation_folder_access(form_data.folder_id, user, db)
+    await check_automation_channel_access(form_data, user, db)
     try:
-        validate_rrule(form_data.data.rrule, tz=user.timezone)
+        await validate_rrule(form_data.data.rrule, tz=user.timezone)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -172,8 +226,16 @@ async def create_new_automation(
     await check_automation_limits(request, user, form_data.data.rrule, db, is_create=True)
 
     tz = user.timezone
-    automation = await Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
-    return await enrich_automation(automation, db, tz=tz)
+    automation = await Automations.insert(user.id, form_data, await next_run_ns(form_data.data.rrule, tz=tz), db=db)
+    response = await enrich_automation(automation, db, tz=tz)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_CREATED,
+        actor=user,
+        subject_id=automation.id,
+        data={'name': automation.name, 'is_active': automation.is_active, 'folder_id': automation.folder_id},
+    )
+    return response
 
 
 ############################
@@ -210,9 +272,11 @@ async def update_automation_by_id(
     await check_automations_permission(request, user)
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
+    await check_automation_folder_access(form_data.folder_id, user, db)
+    await check_automation_channel_access(form_data, user, db)
 
     try:
-        validate_rrule(form_data.data.rrule, tz=user.timezone)
+        await validate_rrule(form_data.data.rrule, tz=user.timezone)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -222,8 +286,16 @@ async def update_automation_by_id(
     await check_automation_limits(request, user, form_data.data.rrule, db, is_create=False)
 
     tz = user.timezone
-    updated = await Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
-    return await enrich_automation(updated, db, tz=tz)
+    updated = await Automations.update_by_id(id, form_data, await next_run_ns(form_data.data.rrule, tz=tz), db=db)
+    response = await enrich_automation(updated, db, tz=tz)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_UPDATED,
+        actor=user,
+        subject_id=updated.id,
+        data={'name': updated.name, 'is_active': updated.is_active, 'folder_id': updated.folder_id},
+    )
+    return response
 
 
 ############################
@@ -241,8 +313,17 @@ async def toggle_automation_by_id(
     await check_automations_permission(request, user)
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    toggled = await Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
-    return await enrich_automation(toggled, db, tz=user.timezone)
+    toggled = await Automations.toggle(id, await next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
+    response = await enrich_automation(toggled, db, tz=user.timezone)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_ENABLED if toggled.is_active else EVENTS.AUTOMATION_DISABLED,
+        actor=user,
+        subject_id=toggled.id,
+        subject_type='automation',
+        data={'name': toggled.name},
+    )
+    return response
 
 
 ############################
@@ -260,7 +341,15 @@ async def run_automation_by_id(
     await check_automations_permission(request, user)
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
+    automation = await Automations.update_last_run_at(automation.id, db=db)
     asyncio.create_task(execute_automation(request.app, automation))
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_RUN_STARTED,
+        actor=user,
+        subject_id=automation.id,
+        data={'name': automation.name},
+    )
     return await enrich_automation(automation, db, tz=user.timezone)
 
 
@@ -280,7 +369,16 @@ async def delete_automation_by_id(
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     await AutomationRuns.delete_by_automation(id, db=db)
-    return await Automations.delete(id, db=db)
+    result = await Automations.delete(id, db=db)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.AUTOMATION_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'name': automation.name},
+        )
+    return result
 
 
 ############################

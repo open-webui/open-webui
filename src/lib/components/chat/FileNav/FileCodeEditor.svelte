@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '$lib/utils/codemirror';
 	import { basicSetup, EditorView } from 'codemirror';
-	import { keymap } from '@codemirror/view';
+	import { keymap, placeholder as editorPlaceholder } from '@codemirror/view';
 	import { Compartment, EditorState } from '@codemirror/state';
 	import { indentWithTab } from '@codemirror/commands';
 	import { indentUnit, LanguageDescription } from '@codemirror/language';
@@ -10,14 +10,25 @@
 	import { onMount, onDestroy } from 'svelte';
 
 	export let value = '';
+	export let readOnly = false;
+	export let placeholder = '';
+	export let ariaLabel = '';
 	export let filePath: string | null = null;
 	export let onSave: ((content: string) => Promise<void>) | null = null;
+	export let searchTarget: {
+		line: number;
+		column: number;
+		length: number;
+		requestId: number;
+	} | null = null;
 
 	let container: HTMLDivElement;
 	let editor: EditorView | null = null;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
+	let editorReadOnly = new Compartment();
 	let internalValue = '';
+	let lastSearchTargetRequestId = 0;
 
 	/** Return the current editor content */
 	export const getValue = (): string => {
@@ -37,6 +48,20 @@
 		editor?.focus();
 	};
 
+	const revealSearchTarget = () => {
+		if (!editor || !searchTarget || searchTarget.requestId === lastSearchTargetRequestId) return;
+		lastSearchTargetRequestId = searchTarget.requestId;
+		const lineNumber = Math.min(Math.max(searchTarget.line, 1), editor.state.doc.lines);
+		const line = editor.state.doc.line(lineNumber);
+		const from = line.from + Math.min(Math.max(searchTarget.column - 1, 0), line.length);
+		const to = Math.min(from + Math.max(searchTarget.length, 1), line.to);
+		editor.dispatch({
+			selection: { anchor: from, head: to },
+			effects: EditorView.scrollIntoView(from, { y: 'center' })
+		});
+		editor.focus();
+	};
+
 	const detectLanguage = async (path: string | null) => {
 		if (!path) return;
 		const match = LanguageDescription.matchFilename(languages, path);
@@ -47,6 +72,16 @@
 			}
 		}
 	};
+
+	$: if (editor)
+		editor.dispatch({
+			effects: editorReadOnly.reconfigure([
+				EditorState.readOnly.of(readOnly),
+				EditorView.editable.of(!readOnly),
+				EditorView.contentAttributes.of(ariaLabel ? { 'aria-label': ariaLabel } : {}),
+				placeholder ? editorPlaceholder(placeholder) : []
+			])
+		});
 
 	// React to external value changes (e.g. switching files)
 	$: if (editor && value !== internalValue) {
@@ -61,6 +96,10 @@
 		detectLanguage(filePath);
 	}
 
+	$: if (editor && searchTarget) {
+		revealSearchTarget();
+	}
+
 	onMount(() => {
 		const isDark = document.documentElement.classList.contains('dark');
 		internalValue = value;
@@ -72,7 +111,7 @@
 				{
 					key: 'Mod-s',
 					run: () => {
-						if (onSave) {
+						if (onSave && !readOnly) {
 							onSave(editor?.state.doc.toString() ?? '');
 						}
 						return true;
@@ -88,6 +127,12 @@
 			}),
 			editorTheme.of(isDark ? oneDark : []),
 			editorLanguage.of([]),
+			editorReadOnly.of([
+				EditorState.readOnly.of(readOnly),
+				EditorView.editable.of(!readOnly),
+				EditorView.contentAttributes.of(ariaLabel ? { 'aria-label': ariaLabel } : {}),
+				placeholder ? editorPlaceholder(placeholder) : []
+			]),
 			EditorView.theme({
 				'&': { fontSize: '0.75rem', height: '100%' },
 				'.cm-content': {
@@ -105,6 +150,7 @@
 		});
 
 		detectLanguage(filePath);
+		revealSearchTarget();
 
 		// Watch dark mode
 		const observer = new MutationObserver(() => {

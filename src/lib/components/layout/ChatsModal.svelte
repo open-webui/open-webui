@@ -11,6 +11,7 @@
 
 	import { deleteChatById } from '$lib/apis/chats';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { formatNumber } from '$lib/utils';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -25,7 +26,7 @@
 	import LinkSlash from '../icons/LinkSlash.svelte';
 	import Clipboard from '../icons/Clipboard.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let show = false;
 
@@ -36,10 +37,16 @@
 	export let showSearch = true;
 	export let readOnly = false;
 
+	export let count: number | null = null;
+
 	export let query = '';
 
 	export let orderBy = 'updated_at';
 	export let direction = 'desc'; // 'asc' or 'desc'
+
+	$: if (!show) {
+		query = '';
+	}
 
 	export let chatList = null;
 	export let allChatsLoaded = false;
@@ -71,6 +78,7 @@
 		});
 
 		if (res) {
+			chatList = chatList?.filter((c) => c.id !== chatId) ?? null;
 			onDelete(chatId);
 		}
 		onUpdate();
@@ -89,10 +97,22 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">{title}</div>
+		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class="flex items-center gap-2 text-sm font-medium self-center">
+				<div>{title}</div>
+				{#if count !== null}
+					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
+						{formatNumber(count)}
+					</div>
+				{:else if chatList}
+					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
+						{formatNumber(chatList.length)}
+					</div>
+				{/if}
+			</div>
 			<button
-				class="self-center"
+				aria-label={$i18n.t('Close')}
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
@@ -101,7 +121,7 @@
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
-					class="w-5 h-5"
+					class="size-4"
 				>
 					<path
 						fill-rule="evenodd"
@@ -158,7 +178,7 @@
 				{#if chatList}
 					<div class="w-full">
 						{#if chatList.length > 0}
-							<div class="flex text-xs font-medium mb-1.5">
+							<div class="flex text-xs font-normal mb-1.5">
 								{#if showUserInfo}
 									<div class="px-1.5 py-1 w-32">
 										{$i18n.t('User')}
@@ -226,7 +246,7 @@
 							{#each chatList as chat, idx (chat.id)}
 								{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 									<div
-										class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+										class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
 											? ''
 											: 'pt-5'} pb-2 px-2"
 									>
@@ -253,7 +273,7 @@
 								{/if}
 
 								<div
-									class=" w-full flex items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850"
+									class=" w-full flex items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
 									draggable="false"
 								>
 									{#if showUserInfo && chat.user_id}
@@ -281,14 +301,16 @@
 									<div class="{showUserInfo ? 'w-28' : 'basis-2/5'} flex items-center justify-end">
 										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
 											{$i18n.t(
-												dayjs(chat?.updated_at * 1000).calendar(null, {
-													sameDay: '[Today]',
-													nextDay: '[Tomorrow]',
-													nextWeek: 'dddd',
-													lastDay: '[Yesterday]',
-													lastWeek: '[Last] dddd',
-													sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
-												})
+												dayjs(chat?.updated_at * 1000)
+													.locale($i18n.language)
+													.calendar(null, {
+														sameDay: '[Today]',
+														nextDay: '[Tomorrow]',
+														nextWeek: 'dddd',
+														lastDay: '[Yesterday]',
+														lastWeek: '[Last] dddd',
+														sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
+													})
 											)}
 										</div>
 
@@ -297,6 +319,7 @@
 												{#if unarchiveHandler}
 													<Tooltip content={$i18n.t('Unarchive Chat')}>
 														<button
+															aria-label={$i18n.t('Unarchive Chat')}
 															class="self-center w-fit px-1 text-sm rounded-xl"
 															on:click={async (e) => {
 																e.stopImmediatePropagation();

@@ -3,7 +3,7 @@
 	import { getContext } from 'svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let history: Array<{ date: string; won: number; lost: number }> = [];
 	export let loading = false;
@@ -57,9 +57,9 @@
 		const labels = chartData.map((h) => {
 			const date = new Date('startDate' in h ? h.startDate : h.date);
 			if (aggregateWeekly) {
-				return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+				return date.toLocaleDateString($i18n.language, { month: 'short', day: 'numeric' });
 			}
-			return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+			return date.toLocaleDateString($i18n.language, { month: 'short', day: 'numeric' });
 		});
 
 		// Diverging chart: wins go UP (positive), losses go DOWN (negative)
@@ -76,7 +76,7 @@
 				labels,
 				datasets: [
 					{
-						label: 'Won',
+						label: $i18n.t('Won'),
 						data: wonData,
 						backgroundColor: '#5ba3c8',
 						borderRadius: 2,
@@ -84,7 +84,7 @@
 						categoryPercentage
 					},
 					{
-						label: 'Lost',
+						label: $i18n.t('Lost'),
 						data: lostData,
 						backgroundColor: '#d97c5a',
 						borderRadius: 2,
@@ -166,7 +166,7 @@
 		});
 	};
 
-	$: if (chartCanvas && history.length && !loading && aggregateWeekly !== undefined) {
+	$: if (chartCanvas && history.length && !loading && aggregateWeekly !== undefined && $i18n) {
 		createChart();
 	}
 

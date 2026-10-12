@@ -2,6 +2,10 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
+		<!-- LICENSE covers this Open WebUI branding surface, including name, logo,
+		visual, textual, symbolic identifiers, metadata, and surrounding UI.
+		Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		https://docs.openwebui.com/license. -->
 		<link rel="icon" type="image/png" href="/static/favicon.png" crossorigin="use-credentials" />
 		<link
 			rel="icon"
@@ -71,6 +75,9 @@
 					metaThemeColorTag.setAttribute('content', '#171717');
 				}
 
+				// LICENSE covers these Open WebUI splash logo assets.
+				// Do not alter, remove, obscure, or replace them except as LICENSE permits:
+				// https://docs.openwebui.com/license.
 				const preloadHref = document.documentElement.classList.contains('dark')
 					? '/static/splash-dark.png'
 					: '/static/splash.png';
@@ -102,6 +109,9 @@
 					'position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
 				logo.loading = 'eager';
 				logo.fetchPriority = 'high';
+				// LICENSE covers this Open WebUI splash logo.
+				// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				// https://docs.openwebui.com/license.
 				logo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
 
 				document.addEventListener('DOMContentLoaded', function () {
@@ -147,6 +157,9 @@
 					align-items: center;
 				"
 			>
+				<!-- LICENSE covers this Open WebUI splash logo.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
 				<img
 					id="logo-her"
 					style="width: auto; height: 13rem"

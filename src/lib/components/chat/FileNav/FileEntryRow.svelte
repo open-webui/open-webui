@@ -1,36 +1,61 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, tick, onDestroy } from 'svelte';
-	import { formatFileSize } from '$lib/utils';
+	import { copyToClipboard, formatFileSize } from '$lib/utils';
 	import type { FileEntry } from '$lib/apis/terminal';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import Folder from '../../icons/Folder.svelte';
-	import EllipsisHorizontal from '../../icons/EllipsisHorizontal.svelte';
-	import GarbageBin from '../../icons/GarbageBin.svelte';
-	import Pencil from '../../icons/Pencil.svelte';
-	import Clipboard from '../../icons/Clipboard.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import FileTypeIcon from './FileTypeIcon.svelte';
+	import Icon from './Icon.svelte';
 
-	const i18n = getContext('i18n');
+	export let dragType = 'application/x-terminal-file-move';
+	export let variant: 'terminal' | 'workspace' = 'terminal';
+	const i18n: any = getContext('i18n');
 
 	export let entry: FileEntry;
 	export let currentPath: string;
+	export let fullPath: string | null = null;
+	export let depth = 0;
+	export let rowIndex = 0;
+	export let expanded = false;
+	export let loadingChildren = false;
 	export let terminalUrl: string = '';
 	export let terminalKey: string = '';
 
 	export let onOpen: (entry: FileEntry) => void = () => {};
 	export let onDownload: (path: string) => void = () => {};
 	export let onDelete: (path: string, name: string) => void = () => {};
-	export let onMove: (source: string, destFolder: string) => void = () => {};
+	export let onMove: (sources: string[], destFolder: string) => void | Promise<void> = () => {};
 	export let onRename: (oldPath: string, newName: string) => void = () => {};
 
 	// ── Selection ─────────────────────────────────────────────────────────
 	export let selected: boolean = false;
+	export let active = false;
 	export let selectionMode: boolean = false;
 	export let selectedPaths: Set<string> = new Set();
-	export let onSelect: (entry: FileEntry, event: MouseEvent) => void = () => {};
+	export let onSelect: (
+		entry: FileEntry,
+		event: MouseEvent,
+		path: string,
+		index: number
+	) => void = () => {};
 	export let onLongPress: () => void = () => {};
+	export let onToggleExpand: (path: string) => void = () => {};
 	export let showDate: boolean = false;
+	export let parentWritable = true;
+
+	$: entryPath =
+		fullPath ??
+		(entry.type === 'directory' ? `${currentPath}${entry.name}/` : `${currentPath}${entry.name}`);
+	$: directoryPath = entryPath.endsWith('/') ? entryPath : `${entryPath}/`;
+	$: writable = entry.writable !== false;
+	$: canMutate = parentWritable && writable;
+	$: menuItemClass =
+		variant === 'workspace'
+			? 'select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100'
+			: 'select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition';
+	$: rowIndent = `${8 + depth * 16}px`;
 
 	const formatRelativeTime = (epoch: number): string => {
 		const diff = Math.floor(Date.now() / 1000) - epoch;
@@ -43,6 +68,14 @@
 	};
 
 	let dragOverFolder = false;
+	let expandTimer: ReturnType<typeof setTimeout> | null = null;
+	let menuOpen = false;
+
+	const clearExpandTimer = () => {
+		if (!expandTimer) return;
+		clearTimeout(expandTimer);
+		expandTimer = null;
+	};
 
 	// ── Rename state ─────────────────────────────────────────────────────
 	let renaming = false;
@@ -50,6 +83,7 @@
 	let renameInput: HTMLInputElement;
 
 	const startRename = async () => {
+		if (!canMutate) return;
 		renameValue = entry.name;
 		renaming = true;
 		await tick();
@@ -66,7 +100,7 @@
 		const newName = renameValue.trim();
 		renaming = false;
 		if (!newName || newName === entry.name) return;
-		onRename(`${currentPath}${entry.name}`, newName);
+		onRename(entryPath.replace(/\/$/, ''), newName);
 	};
 
 	const cancelRename = () => {
@@ -84,7 +118,7 @@
 		longPressTimer = setTimeout(() => {
 			didLongPress = true;
 			onLongPress();
-			onSelect(entry, e as any);
+			onSelect(entry, e as any, entryPath, rowIndex);
 		}, 500);
 	};
 
@@ -104,6 +138,7 @@
 
 	onDestroy(() => {
 		if (longPressTimer) clearTimeout(longPressTimer);
+		clearExpandTimer();
 	});
 
 	// ── Click handler ────────────────────────────────────────────────────
@@ -117,13 +152,13 @@
 		// Modifier click → toggle/range select
 		if (e.metaKey || e.ctrlKey || e.shiftKey) {
 			e.preventDefault();
-			onSelect(entry, e);
+			onSelect(entry, e, entryPath, rowIndex);
 			return;
 		}
 
 		// In selection mode (touch) → toggle select
 		if (selectionMode) {
-			onSelect(entry, e);
+			onSelect(entry, e, entryPath, rowIndex);
 			return;
 		}
 
@@ -132,70 +167,125 @@
 	};
 </script>
 
-<li class="group">
+<li class="group" data-file-row>
 	<div
-		class="w-full flex items-center transition
-			{selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}
+		class="w-full flex items-center transition-colors duration-75 {variant === 'workspace'
+			? 'rounded-xl'
+			: ''}
+			{selected || active ? 'bg-gray-100 dark:bg-white/8' : 'hover:bg-gray-50/40 dark:hover:bg-white/4'}
 			{dragOverFolder
-			? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500 ring-inset'
+			? 'bg-gray-100 dark:bg-white/8 ring-1 ring-black/15 dark:ring-white/15 ring-inset'
 			: ''}"
-		role={entry.type === 'directory' ? 'button' : undefined}
+		role="presentation"
 		on:dragover={(e) => {
 			if (entry.type !== 'directory') return;
-			if (!e.dataTransfer?.types.includes('application/x-terminal-file-move')) return;
+			if (!writable) return;
+			if (!e.dataTransfer?.types.includes(dragType)) return;
 			e.preventDefault();
 			e.stopPropagation();
 			dragOverFolder = true;
+			if (!expanded && !expandTimer) {
+				expandTimer = setTimeout(() => {
+					onToggleExpand(directoryPath);
+					expandTimer = null;
+				}, 600);
+			}
 		}}
 		on:dragleave={(e) => {
 			if (entry.type !== 'directory') return;
 			e.stopPropagation();
 			dragOverFolder = false;
+			clearExpandTimer();
 		}}
-		on:drop={(e) => {
+		on:drop={async (e) => {
 			if (entry.type !== 'directory') return;
-			const raw = e.dataTransfer?.getData('application/x-terminal-file-move');
+			if (!writable) return;
+			const raw = e.dataTransfer?.getData(dragType);
 			if (!raw) return;
 			e.preventDefault();
 			e.stopPropagation();
 			dragOverFolder = false;
+			clearExpandTimer();
 			try {
 				const data = JSON.parse(raw);
-				const paths = data.paths || (data.path ? [data.path] : []);
-				const destFolder = `${currentPath}${entry.name}/`;
-				for (const p of paths) {
-					if (p + '/' === destFolder || p === destFolder) continue;
-					onMove(p, destFolder);
-				}
+				const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
+				const destFolder = directoryPath;
+				await onMove(
+					paths.filter((p) => p + '/' !== destFolder && p !== destFolder),
+					destFolder
+				);
 			} catch {}
 		}}
 	>
+		{#if variant === 'workspace'}
+			<span class="shrink-0" style:width={rowIndent}></span>
+		{:else if entry.type === 'directory'}
+			<button
+				type="button"
+				class="mr-1.5 flex w-5 shrink-0 items-center self-stretch justify-center text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400"
+				style="margin-left: {rowIndent};"
+				on:click|stopPropagation={() => onToggleExpand(directoryPath)}
+				aria-label={expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}
+			>
+				<Icon
+					name={expanded ? 'chevron-down' : 'chevron-right'}
+					size={9}
+					strokeWidth={1.5}
+					class={loadingChildren ? 'animate-pulse' : ''}
+				/>
+			</button>
+		{:else}
+			<span class="mr-1.5 w-5 shrink-0 self-stretch" style="margin-left: {rowIndent};"></span>
+		{/if}
+
+		{#if selectionMode || selected}
+			<button
+				type="button"
+				role="checkbox"
+				aria-checked={selected}
+				aria-label={$i18n.t('Select {{name}}', { name: entry.name })}
+				class="mr-2 flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {selected
+					? 'bg-gray-900 border-gray-900 text-white dark:bg-gray-200 dark:border-gray-200 dark:text-gray-900'
+					: 'border-gray-300 dark:border-gray-600'}"
+				on:click|stopPropagation={(event) => onSelect(entry, event, entryPath, rowIndex)}
+			>
+				{#if selected}<Icon name="check" size={10} strokeWidth={2} />{/if}
+			</button>
+		{/if}
+
 		<button
-			class="flex-1 flex items-center gap-2 px-3 py-1.5 text-left min-w-0"
-			draggable={true}
+			type="button"
+			class="flex min-w-0 flex-1 items-center py-1.5 pr-2 text-left {variant === 'workspace'
+				? 'gap-1.5'
+				: 'gap-2'}"
+			draggable={canMutate}
 			on:dragstart={(e) => {
-				const filePath = `${currentPath}${entry.name}`;
+				if (!canMutate) {
+					e.preventDefault();
+					return;
+				}
+				const filePath = entryPath.replace(/\/$/, '');
 				// If dragging a selected item, drag all selected
 				if (selected && selectedPaths.size > 1) {
-					e.dataTransfer?.setData(
-						'application/x-terminal-file-move',
-						JSON.stringify({ paths: [...selectedPaths] })
-					);
+					e.dataTransfer?.setData(dragType, JSON.stringify({ paths: [...selectedPaths] }));
 					// Custom drag ghost showing count
 					const ghost = document.createElement('div');
 					ghost.style.cssText =
-						'position:fixed;top:-1000px;left:-1000px;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:#374151;color:#fff;font-size:12px;white-space:nowrap;pointer-events:none;';
+						'position:fixed;top:-1000px;left:-1000px;display:flex;align-items:center;gap:0.375rem;padding:0.25rem 0.625rem;border-radius:0.5rem;background:#374151;color:#fff;font-size:0.75rem;white-space:nowrap;pointer-events:none;';
 					ghost.textContent = `${selectedPaths.size} items`;
 					document.body.appendChild(ghost);
 					e.dataTransfer?.setDragImage(ghost, 0, 0);
 					requestAnimationFrame(() => ghost.remove());
 				} else {
 					e.dataTransfer?.setData(
-						'application/x-terminal-file-move',
-						JSON.stringify({ path: filePath, name: entry.name })
+						dragType,
+						JSON.stringify({
+							path: entry.type === 'directory' ? directoryPath : filePath,
+							name: entry.name
+						})
 					);
 				}
-				if (entry.type === 'file') {
+				if (entry.type === 'file' && terminalUrl) {
 					e.dataTransfer?.setData(
 						'application/x-terminal-file',
 						JSON.stringify({
@@ -210,59 +300,27 @@
 			on:pointerdown={onPointerDown}
 			on:pointerup={onPointerUp}
 			on:pointercancel={onPointerCancel}
+			aria-expanded={variant === 'workspace' && entry.type === 'directory' ? expanded : undefined}
 			on:click={handleClick}
 			on:dblclick|preventDefault|stopPropagation={() => {
 				startRename();
 			}}
 		>
-			{#if selectionMode || selected}
-				<!-- Checkbox indicator -->
-				<div
-					class="size-3.5 shrink-0 rounded border transition-colors flex items-center justify-center
-						{selected
-						? 'bg-blue-500 dark:bg-blue-600 border-blue-500 dark:border-blue-600 text-white'
-						: 'border-gray-300 dark:border-gray-600'}"
-				>
-					{#if selected}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-2.5"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					{/if}
-				</div>
+			{#if variant === 'workspace'}
+				{#if entry.type === 'directory'}
+					<Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={12} strokeWidth={1.5} />
+				{:else}<span class="w-3 shrink-0"></span>{/if}
 			{/if}
-			{#if entry.type === 'directory'}
-				<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
-			{:else}
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					class="size-4 shrink-0 text-gray-400"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-					/>
-				</svg>
-			{/if}
+			<FileTypeIcon name={entry.name} type={entry.type} size={variant === 'workspace' ? 14 : 12} />
 			{#if renaming}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<input
 					bind:this={renameInput}
 					bind:value={renameValue}
-					class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500 text-gray-800 dark:text-gray-200 min-w-0"
+					class="flex-1 text-xs bg-transparent outline-none text-gray-800 dark:text-gray-200 min-w-0 {variant ===
+					'workspace'
+						? 'h-4 p-0 leading-4'
+						: 'border border-gray-100 dark:border-white/[0.06] rounded px-1.5 py-0.5 focus:border-blue-400 dark:focus:border-blue-500'}"
 					on:keydown={(e) => {
 						if (e.key === 'Enter') {
 							e.preventDefault();
@@ -281,102 +339,135 @@
 					{entry.name}
 				</span>
 			{/if}
+			{#if !writable && !renaming && variant !== 'workspace'}
+				<span class="text-[0.625rem] text-gray-400 shrink-0">{$i18n.t('Read-only')}</span>
+			{/if}
 			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
 				{#if showDate && entry.modified}
-					<span class="text-[10px] text-gray-400 shrink-0"
+					<span class="text-[0.625rem] text-gray-400 shrink-0"
 						>{formatRelativeTime(entry.modified)}</span
 					>
 				{/if}
 				<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
 			{:else if entry.type === 'directory' && showDate && entry.modified && !renaming}
-				<span class="text-[10px] text-gray-400 shrink-0">{formatRelativeTime(entry.modified)}</span>
+				<span class="text-[0.625rem] text-gray-400 shrink-0"
+					>{formatRelativeTime(entry.modified)}</span
+				>
 			{/if}
 		</button>
 
-		<Dropdown align="end" sideOffset={4}>
+		<Dropdown bind:show={menuOpen} align="end" sideOffset={4}>
 			<button
-				class="shrink-0 p-0.5 mr-1 rounded-lg transition
+				type="button"
+				class="shrink-0 flex h-5 w-5 items-center justify-center mr-1 rounded transition
 					text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400
-					hover:bg-gray-100 dark:hover:bg-gray-800"
+					hover:bg-gray-50/40 dark:hover:bg-white/4"
 				aria-label={$i18n.t('More')}
 			>
-				<EllipsisHorizontal className="size-3.5" />
+				<Icon name="three-dots" size={12} strokeWidth={1.4} />
 			</button>
 
 			<div slot="content">
-				<div
-					class="min-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-				>
-					<button
-						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
-						on:click={(e) => {
-							e.stopPropagation();
-							const path =
-								entry.type === 'directory'
-									? `${currentPath}${entry.name}/`
-									: `${currentPath}${entry.name}`;
-							onDownload(path);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-4"
+				<DropdownMenu className="min-w-[9.375rem] z-[9999999]">
+					{#if variant !== 'workspace' || entry.type !== 'directory'}
+						<button
+							type="button"
+							class={menuItemClass}
+							on:click={(e) => {
+								e.stopPropagation();
+								menuOpen = false;
+								onOpen(entry);
+							}}
 						>
-							<path
-								d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
+							<Icon
+								name={entry.type === 'directory' ? 'folder' : 'eye'}
+								size={12}
+								strokeWidth={1.4}
 							/>
-							<path
-								d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
+							<div class="flex items-center">
+								{entry.type === 'directory' ? $i18n.t('Open Folder') : $i18n.t('Open')}
+							</div>
+						</button>
+					{/if}
+					{#if entry.type === 'directory'}
+						<button
+							type="button"
+							class={menuItemClass}
+							on:click={(e) => {
+								e.stopPropagation();
+								menuOpen = false;
+								onToggleExpand(directoryPath);
+							}}
+						>
+							<Icon
+								name={expanded ? 'chevron-down' : 'chevron-right'}
+								size={12}
+								strokeWidth={1.4}
 							/>
-						</svg>
-						<div class="flex items-center">{$i18n.t('Download')}</div>
-					</button>
+							<div class="flex items-center">
+								{expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}
+							</div>
+						</button>
+					{:else}
+						<button
+							type="button"
+							class={menuItemClass}
+							on:click={(e) => {
+								e.stopPropagation();
+								menuOpen = false;
+								onDownload(entryPath);
+							}}
+						>
+							<Icon name="download" size={12} strokeWidth={1.4} />
+							<div class="flex items-center">{$i18n.t('Download')}</div>
+						</button>
+					{/if}
 
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
-						on:click={(e) => {
+						class={menuItemClass}
+						on:click={async (e) => {
 							e.stopPropagation();
-							const path =
-								entry.type === 'directory'
-									? `${currentPath}${entry.name}/`
-									: `${currentPath}${entry.name}`;
-							navigator.clipboard.writeText(path).then(() => {
+							menuOpen = false;
+							if (await copyToClipboard(entryPath)) {
 								toast.success($i18n.t('Path copied'));
-							});
+							}
 						}}
 					>
-						<Clipboard className="size-4" strokeWidth="1.5" />
+						<Icon name="copy" size={12} strokeWidth={1.4} />
 						<div class="flex items-center">{$i18n.t('Copy Path')}</div>
 					</button>
 
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="{menuItemClass} disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!canMutate}
 						on:click={(e) => {
 							e.stopPropagation();
+							if (!canMutate) return;
+							menuOpen = false;
 							startRename();
 						}}
 					>
-						<Pencil className="size-4" strokeWidth="1.5" />
+						<Icon name="pencil" size={12} strokeWidth={1.4} />
 						<div class="flex items-center">{$i18n.t('Rename')}</div>
 					</button>
 
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="{menuItemClass} disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!canMutate}
 						on:click={(e) => {
 							e.stopPropagation();
-							onDelete(`${currentPath}${entry.name}`, entry.name);
+							if (!canMutate) return;
+							menuOpen = false;
+							onDelete(entryPath.replace(/\/$/, ''), entry.name);
 						}}
 					>
-						<GarbageBin className="size-4" />
+						<Icon name="trash" size={12} strokeWidth={1.4} />
 						<div class="flex items-center">{$i18n.t('Delete')}</div>
 					</button>
-				</div>
+				</DropdownMenu>
 			</div>
 		</Dropdown>
 	</div>

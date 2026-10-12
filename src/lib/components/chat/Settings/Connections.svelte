@@ -1,14 +1,10 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
-	import { getModels as _getModels } from '$lib/apis';
+	import { onMount, getContext } from 'svelte';
 
-	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { models, settings, user } from '$lib/stores';
+	import { settings } from '$lib/stores';
 
-	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -76,70 +72,83 @@
 		updateHandler();
 	}}
 >
-	<div class=" overflow-y-scroll scrollbar-hidden h-full">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.personal.connections.title')}
+	</h2>
+
+	<div class="flex flex-1 min-h-0 flex-col overflow-y-auto scrollbar-hover pr-1.5">
 		{#if config !== null}
-			<div class="">
-				<div class="pr-1.5">
-					<div class="">
-						<div class="flex justify-between items-center mb-0.5">
-							<div class="font-medium">{$i18n.t('Manage Direct Connections')}</div>
-
-							<Tooltip content={$i18n.t(`Add Connection`)}>
-								<button
-									class="px-1"
-									aria-label={$i18n.t('Add Connection')}
-									on:click={() => {
-										showConnectionModal = true;
-									}}
-									type="button"
-								>
-									<Plus />
-								</button>
-							</Tooltip>
-						</div>
-
-						<div class="flex flex-col gap-1.5">
-							{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
-								<Connection
-									bind:url
-									bind:key={config.OPENAI_API_KEYS[idx]}
-									bind:config={config.OPENAI_API_CONFIGS[idx]}
-									onSubmit={() => {
-										updateHandler();
-									}}
-									onDelete={() => {
-										config.OPENAI_API_BASE_URLS = config.OPENAI_API_BASE_URLS.filter(
-											(url, urlIdx) => idx !== urlIdx
-										);
-										config.OPENAI_API_KEYS = config.OPENAI_API_KEYS.filter(
-											(key, keyIdx) => idx !== keyIdx
-										);
-
-										let newConfig = {};
-										config.OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
-											newConfig[newIdx] =
-												config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
-										});
-										config.OPENAI_API_CONFIGS = newConfig;
-									}}
-								/>
-							{/each}
-						</div>
+			<section class="space-y-3" aria-labelledby="direct-connections-heading">
+				<div class="flex items-start justify-between gap-3">
+					<div class="min-w-0">
+						<h3 id="direct-connections-heading" class="text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('settings.personal.connections.sections.directConnections.title')}
+						</h3>
+						<p class="mt-1 text-[0.6875rem] leading-relaxed text-gray-400 dark:text-gray-600">
+							{$i18n.t('settings.personal.connections.addConnection.description')}
+						</p>
 					</div>
 
-					<div class="my-1.5">
-						<div
-							class="text-xs {($settings?.highContrastMode ?? false)
-								? 'text-gray-800 dark:text-gray-100'
-								: 'text-gray-500'}"
+					<Tooltip content={$i18n.t('settings.personal.connections.addConnection.label')}>
+						<button
+							class="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+							aria-label={$i18n.t('settings.personal.connections.addConnection.label')}
+							on:click={() => {
+								showConnectionModal = true;
+							}}
+							type="button"
 						>
-							{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
-							<br />
-							{$i18n.t(
-								'CORS must be properly configured by the provider to allow requests from Open WebUI.'
-							)}
-						</div>
-					</div>
+							<Plus />
+						</button>
+					</Tooltip>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
+						<Connection
+							bind:url
+							bind:key={config.OPENAI_API_KEYS[idx]}
+							bind:config={config.OPENAI_API_CONFIGS[idx]}
+							onSubmit={() => {
+								updateHandler();
+							}}
+							onDelete={() => {
+								config.OPENAI_API_BASE_URLS = config.OPENAI_API_BASE_URLS.filter(
+									(url, urlIdx) => idx !== urlIdx
+								);
+								config.OPENAI_API_KEYS = config.OPENAI_API_KEYS.filter(
+									(key, keyIdx) => idx !== keyIdx
+								);
+
+								let newConfig = {};
+								config.OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
+									newConfig[newIdx] = config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+								});
+								config.OPENAI_API_CONFIGS = newConfig;
+								updateHandler();
+							}}
+						/>
+					{/each}
+				</div>
+			</section>
+
+			<div class="mt-6">
+				<div
+					class="space-y-3 border-t border-gray-100/50 pt-4 text-[0.6875rem] leading-relaxed text-gray-400 dark:border-white/[0.04] dark:text-gray-600"
+				>
+					<p>
+						{$i18n.t(
+							'Connections managed through the Admin Panel are recommended for everyday use. Direct connections provide convenient access to your own endpoints, but rely on your browser session to keep requests running, making them better suited to testing and temporary use.'
+						)}
+					</p>
+					<p>
+						<!-- LICENSE covers this Open WebUI wordmark.
+						Do not alter, remove, obscure, or replace it except as LICENSE permits:
+						https://docs.openwebui.com/license. -->
+						{$i18n.t(
+							'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+						)}
+					</p>
 				</div>
 			</div>
 		{:else}
@@ -151,9 +160,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 			type="submit"
 		>
 			{$i18n.t('Save')}

@@ -254,6 +254,61 @@ export const updateLdapServer = async (token: string = '', body: object) => {
 	return res;
 };
 
+export const getOAuthConfig = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config/oauth`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateOAuthConfig = async (token: string, body: object) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config/oauth`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const userSignIn = async (email: string, password: string) => {
 	let error = null;
 
@@ -350,6 +405,36 @@ export const userSignOut = async () => {
 
 	sessionStorage.clear();
 	return res;
+};
+
+export const getLogoutRedirectUrl = (redirectUrl?: string | null) => {
+	const logoutUrl = new URL('/auth?state=logout', window.location.origin);
+	const postLogoutUrl = new URL('/auth', window.location.origin);
+	if (!redirectUrl) {
+		return logoutUrl.href;
+	}
+
+	const url = new URL(redirectUrl, window.location.origin);
+	if (url.origin === window.location.origin && url.pathname === '/auth') {
+		url.searchParams.set('state', 'logout');
+		return url.href;
+	}
+
+	const postLogoutRedirectUri = url.searchParams.get('post_logout_redirect_uri');
+	if (postLogoutRedirectUri) {
+		const configuredPostLogoutUrl = new URL(postLogoutRedirectUri, window.location.origin);
+		if (
+			configuredPostLogoutUrl.origin === window.location.origin &&
+			configuredPostLogoutUrl.pathname === '/auth'
+		) {
+			url.searchParams.set('state', 'logout');
+		}
+		return url.href;
+	}
+
+	url.searchParams.set('post_logout_redirect_uri', postLogoutUrl.href);
+	url.searchParams.set('state', 'logout');
+	return url.href;
 };
 
 export const addUser = async (

@@ -27,14 +27,13 @@ export const getAudioConfig = async (token: string) => {
 	return res;
 };
 
-type OpenAIConfigForm = {
-	url: string;
-	key: string;
-	model: string;
-	speaker: string;
+type AudioConfigForm = {
+	tts: Record<string, unknown>;
+	stt: Record<string, unknown>;
+	realtime?: Record<string, unknown>;
 };
 
-export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
+export const updateAudioConfig = async (token: string, payload: AudioConfigForm) => {
 	let error = null;
 
 	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {

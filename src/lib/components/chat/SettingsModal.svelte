@@ -1,21 +1,32 @@
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import english from '$lib/i18n/locales/en-US/translation.json';
+	import {
+		buildSettingsSearchIndex,
+		searchSettingsTabs,
+		type SettingsTab
+	} from '$lib/utils/settings-search';
+	import { browser } from '$app/environment';
+	import { getContext, tick } from 'svelte';
+	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings, user } from '$lib/stores';
-	import { updateUserSettings } from '$lib/apis/users';
-	import { getModels as _getModels } from '$lib/apis';
-	import { goto } from '$app/navigation';
+	import type { SettingsModalRequest } from '$lib/stores';
+	import { getUserSettings, updateUserSettings } from '$lib/apis/users';
+	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
 	import About from './Settings/About.svelte';
 	import General from './Settings/General.svelte';
 	import Interface from './Settings/Interface.svelte';
+	import Notifications from './Settings/Notifications.svelte';
+	import Shortcuts from './Settings/Shortcuts.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import DataControls from './Settings/DataControls.svelte';
+	import Usage from './Settings/Usage.svelte';
+	import ArchivedChats from './Settings/ArchivedChats.svelte';
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
-	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Integrations from './Settings/Integrations.svelte';
 	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
@@ -27,472 +38,356 @@
 	import WrenchAlt from '../icons/WrenchAlt.svelte';
 	import Face from '../icons/Face.svelte';
 	import AppNotification from '../icons/AppNotification.svelte';
-	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
+	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import ArchiveBox from '../icons/ArchiveBox.svelte';
+	import ChevronLeft from '../icons/ChevronLeft.svelte';
+	import Keyboard from '../icons/Keyboard.svelte';
+	import UsageIcon from '../icons/UsageIcon.svelte';
+	import AdminTabIcon from '$lib/components/admin/Settings/AdminTabIcon.svelte';
+	import AdminGeneral from '$lib/components/admin/Settings/General.svelte';
+	import AdminAuthentication from '$lib/components/admin/Settings/Authentication.svelte';
+	import AdminConnections from '$lib/components/admin/Settings/Connections.svelte';
+	import AdminModels from '$lib/components/admin/Settings/Models.svelte';
+	import AdminSubagents from '$lib/components/admin/Settings/Subagents.svelte';
+	import AdminEvaluations from '$lib/components/admin/Settings/Evaluations.svelte';
+	import AdminAnalytics from '$lib/components/admin/Analytics.svelte';
+	import AdminIntegrations from '$lib/components/admin/Settings/Integrations.svelte';
+	import AdminDocuments from '$lib/components/admin/Settings/Documents.svelte';
+	import AdminWebSearch from '$lib/components/admin/Settings/WebSearch.svelte';
+	import AdminCodeExecution from '$lib/components/admin/Settings/CodeExecution.svelte';
+	import AdminInterface from '$lib/components/admin/Settings/Interface.svelte';
+	import AdminAudio from '$lib/components/admin/Settings/Audio.svelte';
+	import AdminImages from '$lib/components/admin/Settings/Images.svelte';
+	import AdminPipelines from '$lib/components/admin/Settings/Pipelines.svelte';
+	import AdminDatabase from '$lib/components/admin/Settings/Database.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<any> = getContext('i18n');
 
-	export let show: boolean | string = false;
+	export let show: boolean | string | SettingsModalRequest = false;
+	let modalShow = false;
+	let lastShow: boolean | string | SettingsModalRequest = false;
+	let tabState: Record<string, unknown> | null = null;
+	let personalUiSettings: Record<string, any> = {};
 
-	$: if (show) {
-		if (typeof show === 'string') {
+	const mergeUiSettings = (defaults: Record<string, any>, userSettings: Record<string, any>) => {
+		const merged = { ...defaults };
+		for (const [key, value] of Object.entries(userSettings)) {
+			const defaultValue = merged[key];
+			merged[key] =
+				defaultValue &&
+				value &&
+				typeof defaultValue === 'object' &&
+				typeof value === 'object' &&
+				!Array.isArray(defaultValue) &&
+				!Array.isArray(value)
+					? mergeUiSettings(defaultValue, value)
+					: value;
+		}
+		return merged;
+	};
+
+	const loadPersonalUiSettings = async () => {
+		const userSettings = await getUserSettings(localStorage.token, true).catch((error) => {
+			console.error(error);
+			return null;
+		});
+		personalUiSettings =
+			userSettings?.ui && typeof userSettings.ui === 'object' && !Array.isArray(userSettings.ui)
+				? userSettings.ui
+				: {};
+	};
+
+	$: if (show !== lastShow) {
+		lastShow = show;
+		search = '';
+		if (show && typeof show === 'object') {
+			selectedTab = show.tab;
+			tabState = show.state ?? null;
+			show = true;
+			lastShow = true;
+			modalShow = true;
+			loadPersonalUiSettings();
+		} else if (typeof show === 'string') {
 			selectedTab = show;
 			show = true;
+			lastShow = true;
+			modalShow = true;
+			loadPersonalUiSettings();
+		} else {
+			modalShow = show;
+			if (show) {
+				loadPersonalUiSettings();
+			}
+			if (!show) {
+				selectedTab = 'general';
+				tabState = null;
+			}
 		}
-		addScrollListener();
-	} else {
+	}
+
+	$: if (!modalShow && show !== false) {
+		show = false;
+		search = '';
+		lastShow = false;
 		selectedTab = 'general';
-		removeScrollListener();
+		tabState = null;
 	}
 
-	interface SettingsTab {
-		id: string;
-		title: string;
-		keywords: string[];
-	}
+	const isAdminTab = (tabId: string) => tabId.startsWith('admin:');
+	const adminTabSegment = (tabId: string) => tabId.replace('admin:', '');
+	const adminTabPanelId = (tabId: string) => `tab-${tabId.replace(':', '-')}`;
+	let personalSettingGroups: Record<string, string> = {};
+	let adminSettingGroups: Record<string, string> = {};
 
-	const allSettings: SettingsTab[] = [
+	$: personalSettingGroups = {
+		general: $i18n.t('Basics'),
+		interface: $i18n.t('Basics'),
+		notifications: $i18n.t('Basics'),
+		shortcuts: $i18n.t('Basics'),
+		connections: $i18n.t('Services'),
+		tools: $i18n.t('Services'),
+		personalization: $i18n.t('Preferences'),
+		audio: $i18n.t('Preferences'),
+		data_controls: $i18n.t('Data'),
+		usage: $i18n.t('Data'),
+		archived_chats: $i18n.t('Data'),
+		account: $i18n.t('Profile'),
+		about: $i18n.t('Profile')
+	};
+	// $i18n.t('Experience');
+	$: adminSettingGroups = {
+		'admin:general': $i18n.t('System'),
+		'admin:authentication': $i18n.t('System'),
+		'admin:interface': $i18n.t('System'),
+		'admin:connections': $i18n.t('AI'),
+		'admin:models': $i18n.t('AI'),
+		'admin:subagents': $i18n.t('AI'),
+		'admin:integrations': $i18n.t('Tools'),
+		'admin:documents': $i18n.t('Tools'),
+		'admin:audio': $i18n.t('Tools'),
+		'admin:images': $i18n.t('Tools'),
+		'admin:web': $i18n.t('Tools'),
+		'admin:code-execution': $i18n.t('Tools'),
+		'admin:pipelines': $i18n.t('Tools'),
+		'admin:evaluations': $i18n.t('Quality'),
+		'admin:analytics': $i18n.t('Quality'),
+		'admin:db': $i18n.t('Data')
+	};
+	const settingGroupTitle = (tabId: string) =>
+		(isAdminTab(tabId) ? adminSettingGroups[tabId] : personalSettingGroups[tabId]) ??
+		$i18n.t('General');
+	const shouldShowSettingGroup = (tabIds: string[], index: number) =>
+		index === 0 || settingGroupTitle(tabIds[index]) !== settingGroupTitle(tabIds[index - 1]);
+	const settingGroupHeadingClass = (first: boolean) =>
+		`hidden md:block shrink-0 text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 ${
+			first ? 'mt-0.5' : 'mt-2'
+		} mb-0.5`;
+
+	let allSettings: SettingsTab[];
+	$: allSettings = [
 		{
 			id: 'general',
-			title: 'General',
-			keywords: [
-				'advancedparams',
-				'advancedparameters',
-				'advanced params',
-				'advanced parameters',
-				'configuration',
-				'defaultparameters',
-				'default parameters',
-				'defaultsettings',
-				'default settings',
-				'general',
-				'keepalive',
-				'keep alive',
-				'languages',
-				'notifications',
-				'requestmode',
-				'request mode',
-				'systemparameters',
-				'system parameters',
-				'systemprompt',
-				'system prompt',
-				'systemsettings',
-				'system settings',
-				'theme',
-				'translate',
-				'webuisettings',
-				'webui settings'
-			]
+			titleKey: 'settings.personal.general.title',
+			title: $i18n.t('settings.personal.general.title'),
+			searchPrefixes: ['settings.personal.general.']
 		},
 		{
 			id: 'interface',
-			title: 'Interface',
-			keywords: [
-				'allow user location',
-				'allow voice interruption in call',
-				'allowuserlocation',
-				'allowvoiceinterruptionincall',
-				'always collapse codeblocks',
-				'always collapse code blocks',
-				'always expand details',
-				'always on web search',
-				'always play notification sound',
-				'alwayscollapsecodeblocks',
-				'alwaysexpanddetails',
-				'alwaysonwebsearch',
-				'alwaysplaynotificationsound',
-				'android',
-				'auto chat tags',
-				'auto copy response to clipboard',
-				'auto title',
-				'autochattags',
-				'autocopyresponsetoclipboard',
-				'autotitle',
-				'beta',
-				'call',
-				'chat background image',
-				'chat bubble ui',
-				'chat direction',
-				'chat tags autogen',
-				'chat tags autogeneration',
-				'chat ui',
-				'chatbackgroundimage',
-				'chatbubbleui',
-				'chatdirection',
-				'chat tags autogeneration',
-				'chattagsautogeneration',
-				'chatui',
-				'copy formatted text',
-				'copyformattedtext',
-				'default model',
-				'defaultmodel',
-				'design',
-				'detect artifacts automatically',
-				'detectartifactsautomatically',
-				'display emoji in call',
-				'display username',
-				'displayemojiincall',
-				'displayusername',
-				'enter key behavior',
-				'enterkeybehavior',
-				'expand mode',
-				'expandmode',
-				'file',
-				'followup autogeneration',
-				'followupautogeneration',
-				'fullscreen',
-				'fullwidthmode',
-				'full width mode',
-				'haptic feedback',
-				'hapticfeedback',
-				'high contrast mode',
-				'highcontrastmode',
-				'iframe sandbox allow forms',
-				'iframe sandbox allow same origin',
-				'iframesandboxallowforms',
-				'iframesandboxallowsameorigin',
-				'imagecompression',
-				'image compression',
-				'imagemaxcompressionsize',
-				'image max compression size',
-				'interface customization',
-				'interface options',
-				'interfacecustomization',
-				'interfaceoptions',
-				'landing page mode',
-				'landingpagemode',
-				'layout',
-				'left to right',
-				'left-to-right',
-				'lefttoright',
-				'ltr',
-				'paste large text as file',
-				'pastelargetextasfile',
-				'reset background',
-				'resetbackground',
-				'response auto copy',
-				'responseautocopy',
-				'rich text input for chat',
-				'richtextinputforchat',
-				'right to left',
-				'right-to-left',
-				'righttoleft',
-				'rtl',
-				'scroll behavior',
-				'scroll on branch change',
-				'scrollbehavior',
-				'scrollonbranchchange',
-				'select model',
-				'selectmodel',
-				'settings',
-				'show username',
-				'showusername',
-				'stream large chunks',
-				'streamlargechunks',
-				'stylized pdf export',
-				'stylizedpdfexport',
-				'title autogeneration',
-				'titleautogeneration',
-				'toast notifications for new updates',
-				'toastnotificationsfornewupdates',
-				'upload background',
-				'uploadbackground',
-				'user interface',
-				'user location access',
-				'userinterface',
-				'userlocationaccess',
-				'vibration',
-				'voice control',
-				'voicecontrol',
-				'widescreen mode',
-				'widescreenmode',
-				'whatsnew',
-				'whats new',
-				'websearchinchat',
-				'web search in chat'
-			]
+			titleKey: 'settings.personal.interface.title',
+			title: $i18n.t('settings.personal.interface.title'),
+			searchPrefixes: ['settings.personal.interface.']
+		},
+		{
+			id: 'notifications',
+			titleKey: 'settings.personal.notifications.title',
+			title: $i18n.t('settings.personal.notifications.title'),
+			searchPrefixes: ['settings.personal.notifications.']
+		},
+		{
+			id: 'shortcuts',
+			titleKey: 'settings.personal.shortcuts.title',
+			title: $i18n.t('settings.personal.shortcuts.title'),
+			searchPrefixes: ['settings.personal.shortcuts.']
 		},
 		{
 			id: 'connections',
-			title: 'Connections',
-			keywords: [
-				'addconnection',
-				'add connection',
-				'manageconnections',
-				'manage connections',
-				'manage direct connections',
-				'managedirectconnections',
-				'settings'
-			]
+			titleKey: 'settings.personal.connections.title',
+			title: $i18n.t('settings.personal.connections.title'),
+			searchPrefixes: ['settings.personal.connections.']
 		},
 		{
 			id: 'tools',
-			title: 'Integrations',
-			keywords: [
-				'addconnection',
-				'add connection',
-				'integrations',
-				'managetools',
-				'manage tools',
-				'manage tool servers',
-				'managetoolservers',
-				'open terminal',
-				'openterminal',
-				'terminal',
-				'settings'
-			]
+			titleKey: 'settings.personal.tools.title',
+			title: $i18n.t('settings.personal.tools.title'),
+			searchPrefixes: ['settings.personal.tools.']
 		},
-
 		{
 			id: 'personalization',
-			title: 'Personalization',
-			keywords: [
-				'account preferences',
-				'account settings',
-				'accountpreferences',
-				'accountsettings',
-				'custom settings',
-				'customsettings',
-				'experimental',
-				'memories',
-				'memory',
-				'personalization',
-				'personalize',
-				'personal settings',
-				'personalsettings',
-				'profile',
-				'user preferences',
-				'userpreferences'
-			]
+			titleKey: 'settings.personal.personalization.title',
+			title: $i18n.t('settings.personal.personalization.title'),
+			searchPrefixes: ['settings.personal.personalization.']
 		},
 		{
 			id: 'audio',
-			title: 'Audio',
-			keywords: [
-				'audio config',
-				'audio control',
-				'audio features',
-				'audio input',
-				'audio output',
-				'audio playback',
-				'audio voice',
-				'audioconfig',
-				'audiocontrol',
-				'audiofeatures',
-				'audioinput',
-				'audiooutput',
-				'audioplayback',
-				'audiovoice',
-				'auto playback response',
-				'autoplaybackresponse',
-				'auto transcribe',
-				'autotranscribe',
-				'instant auto send after voice transcription',
-				'instantautosendaftervoicetranscription',
-				'language',
-				'non local voices',
-				'nonlocalvoices',
-				'save settings',
-				'savesettings',
-				'set voice',
-				'setvoice',
-				'sound settings',
-				'soundsettings',
-				'speech config',
-				'speech mode',
-				'speech playback speed',
-				'speech rate',
-				'speech recognition',
-				'speech settings',
-				'speech speed',
-				'speech synthesis',
-				'speech to text engine',
-				'speechconfig',
-				'speechmode',
-				'speechplaybackspeed',
-				'speechrate',
-				'speechrecognition',
-				'speechsettings',
-				'speechspeed',
-				'speechsynthesis',
-				'speechtotextengine',
-				'speedch playback rate',
-				'speedchplaybackrate',
-				'stt settings',
-				'sttsettings',
-				'text to speech engine',
-				'text to speech',
-				'textospeechengine',
-				'texttospeech',
-				'texttospeechvoice',
-				'text to speech voice',
-				'voice control',
-				'voice modes',
-				'voice options',
-				'voice playback',
-				'voice recognition',
-				'voice speed',
-				'voicecontrol',
-				'voicemodes',
-				'voiceoptions',
-				'voiceplayback',
-				'voicerecognition',
-				'voicespeed',
-				'volume'
-			]
+			titleKey: 'settings.personal.audio.title',
+			title: $i18n.t('settings.personal.audio.title'),
+			searchPrefixes: ['settings.personal.audio.']
 		},
 		{
 			id: 'data_controls',
-			title: 'Data Controls',
-			keywords: [
-				'archive all chats',
-				'archive chats',
-				'archiveallchats',
-				'archivechats',
-				'archived chats',
-				'archivedchats',
-				'chat activity',
-				'chat history',
-				'chat settings',
-				'chatactivity',
-				'chathistory',
-				'chatsettings',
-				'conversation activity',
-				'conversation history',
-				'conversationactivity',
-				'conversationhistory',
-				'conversations',
-				'convos',
-				'delete all chats',
-				'delete chats',
-				'deleteallchats',
-				'deletechats',
-				'export chats',
-				'exportchats',
-				'import chats',
-				'importchats',
-				'message activity',
-				'message archive',
-				'message history',
-				'messagearchive',
-				'messagehistory'
-			]
+			titleKey: 'settings.personal.dataControls.title',
+			title: $i18n.t('settings.personal.dataControls.title'),
+			searchPrefixes: ['settings.personal.dataControls.']
+		},
+		{
+			id: 'usage',
+			titleKey: 'settings.personal.usage.title',
+			title: $i18n.t('settings.personal.usage.title'),
+			searchPrefixes: ['settings.personal.usage.']
+		},
+		{
+			id: 'archived_chats',
+			titleKey: 'settings.personal.archivedChats.title',
+			title: $i18n.t('settings.personal.archivedChats.title'),
+			searchPrefixes: ['settings.personal.archivedChats.']
 		},
 		{
 			id: 'account',
-			title: 'Account',
-			keywords: [
-				'account preferences',
-				'account settings',
-				'accountpreferences',
-				'accountsettings',
-				'api keys',
-				'apikeys',
-				'change password',
-				'changepassword',
-				'jwt token',
-				'jwttoken',
-				'login',
-				'new password',
-				'newpassword',
-				'notification webhook url',
-				'notificationwebhookurl',
-				'personal settings',
-				'personalsettings',
-				'privacy settings',
-				'privacysettings',
-				'profileavatar',
-				'profile avatar',
-				'profile details',
-				'profile image',
-				'profile picture',
-				'profiledetails',
-				'profileimage',
-				'profilepicture',
-				'security settings',
-				'securitysettings',
-				'update account',
-				'update password',
-				'updateaccount',
-				'updatepassword',
-				'user account',
-				'user data',
-				'user preferences',
-				'user profile',
-				'useraccount',
-				'userdata',
-				'username',
-				'userpreferences',
-				'userprofile',
-				'webhook url',
-				'webhookurl'
-			]
+			titleKey: 'settings.personal.account.title',
+			title: $i18n.t('settings.personal.account.title'),
+			searchPrefixes: ['settings.personal.account.']
 		},
 		{
 			id: 'about',
-			title: 'About',
-			keywords: [
-				'about app',
-				'about me',
-				'about open webui',
-				'about page',
-				'about us',
-				'aboutapp',
-				'aboutme',
-				'aboutopenwebui',
-				'aboutpage',
-				'aboutus',
-				'check for updates',
-				'checkforupdates',
-				'contact',
-				'copyright',
-				'details',
-				'discord',
-				'documentation',
-				'github',
-				'help',
-				'information',
-				'license',
-				'redistributions',
-				'release',
-				'see whats new',
-				'seewhatsnew',
-				'settings',
-				'software info',
-				'softwareinfo',
-				'support',
-				'terms and conditions',
-				'terms of use',
-				'termsandconditions',
-				'termsofuse',
-				'timothy jae ryang baek',
-				'timothy j baek',
-				'timothyjaeryangbaek',
-				'timothyjbaek',
-				'twitter',
-				'update info',
-				'updateinfo',
-				'version info',
-				'versioninfo'
-			]
+			titleKey: 'settings.personal.about.title',
+			title: $i18n.t('settings.personal.about.title'),
+			searchPrefixes: ['settings.personal.about.']
 		}
 	];
-
-	let availableSettings = [];
-	let filteredSettings = [];
+	let adminSettings: SettingsTab[];
+	$: adminSettings = [
+		{
+			id: 'admin:general',
+			titleKey: 'settings.admin.general.title',
+			title: $i18n.t('settings.admin.general.title'),
+			searchPrefixes: ['settings.admin.general.', 'settings.personal.interface.']
+		},
+		{
+			id: 'admin:authentication',
+			titleKey: 'settings.admin.authentication.title',
+			title: $i18n.t('settings.admin.authentication.title'),
+			searchPrefixes: ['settings.admin.authentication.']
+		},
+		{
+			id: 'admin:interface',
+			titleKey: 'settings.admin.interface.title',
+			title: $i18n.t('settings.admin.interface.title'),
+			searchPrefixes: ['settings.admin.interface.', 'settings.personal.general.parameters.']
+		},
+		{
+			id: 'admin:connections',
+			titleKey: 'settings.admin.connections.title',
+			title: $i18n.t('settings.admin.connections.title'),
+			searchPrefixes: ['settings.admin.connections.']
+		},
+		{
+			id: 'admin:models',
+			titleKey: 'settings.admin.models.title',
+			title: $i18n.t('settings.admin.models.title'),
+			searchPrefixes: ['settings.admin.models.', 'settings.personal.general.parameters.']
+		},
+		{
+			id: 'admin:subagents',
+			titleKey: 'settings.admin.subagents.title',
+			title: $i18n.t('settings.admin.subagents.title'),
+			searchPrefixes: ['settings.admin.subagents.']
+		},
+		{
+			id: 'admin:integrations',
+			titleKey: 'settings.admin.integrations.title',
+			title: $i18n.t('settings.admin.integrations.title'),
+			searchPrefixes: ['settings.admin.integrations.']
+		},
+		{
+			id: 'admin:documents',
+			titleKey: 'settings.admin.documents.title',
+			title: $i18n.t('settings.admin.documents.title'),
+			searchPrefixes: ['settings.admin.documents.']
+		},
+		{
+			id: 'admin:audio',
+			titleKey: 'settings.admin.audio.title',
+			title: $i18n.t('settings.admin.audio.title'),
+			searchPrefixes: ['settings.admin.audio.']
+		},
+		{
+			id: 'admin:images',
+			titleKey: 'settings.admin.images.title',
+			title: $i18n.t('settings.admin.images.title'),
+			searchPrefixes: ['settings.admin.images.']
+		},
+		{
+			id: 'admin:web',
+			titleKey: 'settings.admin.web.title',
+			title: $i18n.t('settings.admin.web.title'),
+			searchPrefixes: ['settings.admin.web.']
+		},
+		{
+			id: 'admin:code-execution',
+			titleKey: 'settings.admin.codeExecution.title',
+			title: $i18n.t('settings.admin.codeExecution.title'),
+			searchPrefixes: ['settings.admin.codeExecution.']
+		},
+		{
+			id: 'admin:pipelines',
+			titleKey: 'settings.admin.pipelines.title',
+			title: $i18n.t('settings.admin.pipelines.title'),
+			searchPrefixes: ['settings.admin.pipelines.']
+		},
+		{
+			id: 'admin:analytics',
+			titleKey: 'settings.admin.analytics.title',
+			title: $i18n.t('settings.admin.analytics.title'),
+			searchPrefixes: ['settings.admin.analytics.']
+		},
+		{
+			id: 'admin:evaluations',
+			titleKey: 'settings.admin.evaluations.title',
+			title: $i18n.t('settings.admin.evaluations.title'),
+			searchPrefixes: ['settings.admin.evaluations.']
+		},
+		{
+			id: 'admin:db',
+			titleKey: 'settings.admin.db.title',
+			title: $i18n.t('settings.admin.db.title'),
+			searchPrefixes: ['settings.admin.db.']
+		}
+	];
+	let availableSettings: SettingsTab[] = [];
+	let filteredSettings: string[] = [];
+	let filteredPersonalSettings: string[] = [];
+	let filteredAdminSettings: string[] = [];
 
 	let search = '';
-	let searchDebounceTimeout;
+	let englishRequested = false;
+	$: if (modalShow && !englishRequested) {
+		englishRequested = true;
+		$i18n.loadLanguages('en-US').catch((error: unknown) => {
+			console.error(error);
+		});
+	}
 
-	const getAvailableSettings = () => {
-		return allSettings.filter((tab) => {
+	const getAvailableSettings = (personalTabs: SettingsTab[], administratorTabs: SettingsTab[]) => {
+		const personalSettings = personalTabs.filter((tab) => {
 			if (tab.id === 'connections') {
 				return $config?.features?.enable_direct_connections;
 			}
 
 			if (tab.id === 'tools') {
 				return (
-					$user?.role === 'admin' ||
-					($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)
+					$config?.features?.enable_direct_integrations === true &&
+					($user?.role === 'admin' ||
+						($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers))
 				);
 			}
 
@@ -509,458 +404,510 @@
 
 			return true;
 		});
+
+		return (
+			$user?.role === 'admin' ? [...personalSettings, ...administratorTabs] : personalSettings
+		).filter(
+			(tab) => tab.id !== 'admin:analytics' || ($config?.features?.enable_admin_analytics ?? true)
+		);
 	};
 
-	const setFilteredSettings = () => {
-		filteredSettings = availableSettings
-			.filter((tab) => {
-				return (
-					search === '' ||
-					tab.title.toLowerCase().includes(search.toLowerCase().trim()) ||
-					tab.keywords.some((keyword) => keyword.includes(search.toLowerCase().trim()))
-				);
-			})
-			.map((tab) => tab.id);
+	$: searchIndex = buildSettingsSearchIndex(availableSettings, english, $i18n, {
+		user: $user,
+		config: $config
+	});
+	$: filteredSettings = searchSettingsTabs(searchIndex, search);
+	$: filteredPersonalSettings = filteredSettings.filter((id) => !isAdminTab(id));
+	$: filteredAdminSettings = filteredSettings.filter(isAdminTab);
 
-		if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
-			selectedTab = filteredSettings[0];
+	const selectTab = (id: string) => {
+		if (!availableSettings.some((tab) => tab.id === id)) return;
+		selectedTab = id;
+	};
+
+	const searchKeydown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape' && search) {
+			event.preventDefault();
+			event.stopPropagation();
+			search = '';
+		} else if (event.key === 'Enter') {
+			event.preventDefault();
+			if (filteredSettings.length) selectTab(filteredSettings[0]);
 		}
 	};
 
-	const searchDebounceHandler = () => {
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-
-		searchDebounceTimeout = setTimeout(() => {
-			setFilteredSettings();
-		}, 100);
-	};
-
-	const saveSettings = async (updated) => {
-		console.log(updated);
-		await settings.set({ ...$settings, ...updated });
+	const saveSettings = async (updated: Record<string, any>) => {
+		const saved = await updateUserSettings(localStorage.token, {
+			ui: updated
+		}).catch((error) => {
+			toast.error(`${error}`);
+			throw error;
+		});
+		personalUiSettings =
+			saved?.ui && typeof saved.ui === 'object' && !Array.isArray(saved.ui) ? saved.ui : {};
+		await settings.set(
+			mergeUiSettings($config?.ui?.default_interface_settings ?? {}, personalUiSettings)
+		);
 		await models.set(await getModels());
-		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
 	const getModels = async () => {
 		return await _getModels(
 			localStorage.token,
-			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 		);
 	};
 
+	const adminConfigSaveHandler = async () => {
+		toast.success($i18n.t('Settings saved successfully!'));
+		await tick();
+		await config.set(await getBackendConfig());
+	};
+
+	const tabButtonClass = (active: boolean) =>
+		`flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 ${
+			active
+				? 'font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.04]'
+				: 'text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+		}`;
+
 	let selectedTab = 'general';
-
-	// Function to handle sideways scrolling
-	const scrollHandler = (event) => {
-		const settingsTabsContainer = document.getElementById('settings-tabs-container');
-		if (settingsTabsContainer) {
-			event.preventDefault(); // Prevent default vertical scrolling
-			settingsTabsContainer.scrollLeft += event.deltaY; // Scroll sideways
+	const scrollToSelectedTab = async () => {
+		if (!browser || !modalShow || !selectedTab) {
+			return;
 		}
-	};
 
-	const addScrollListener = async () => {
 		await tick();
-		const settingsTabsContainer = document.getElementById('settings-tabs-container');
-		if (settingsTabsContainer) {
-			settingsTabsContainer.addEventListener('wheel', scrollHandler);
-		}
+		const tabElement = document.querySelector<HTMLElement>(
+			'#settings-tabs-container [role="tab"][aria-selected="true"]'
+		);
+		tabElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
 	};
 
-	const removeScrollListener = async () => {
-		await tick();
-		const settingsTabsContainer = document.getElementById('settings-tabs-container');
-		if (settingsTabsContainer) {
-			settingsTabsContainer.removeEventListener('wheel', scrollHandler);
-		}
-	};
+	$: if ($user?.role !== 'admin' && isAdminTab(selectedTab)) {
+		selectedTab = 'general';
+	}
 
-	onMount(() => {
-		availableSettings = getAvailableSettings();
-		setFilteredSettings();
+	$: if (
+		$config &&
+		$user &&
+		availableSettings.length &&
+		!availableSettings.some((tab) => tab.id === selectedTab)
+	) {
+		selectedTab = 'general';
+	}
 
-		config.subscribe((configData) => {
-			availableSettings = getAvailableSettings();
-			setFilteredSettings();
-		});
-	});
+	$: if (modalShow && selectedTab) {
+		scrollToSelectedTab();
+	}
+
+	$: if ($config && $user) {
+		availableSettings = getAvailableSettings(allSettings, adminSettings);
+	}
 </script>
 
-<Modal size="2xl" bind:show>
-	<div class="text-gray-700 dark:text-gray-100 mx-1">
-		<div class=" flex justify-between dark:text-gray-300 px-4 md:px-4.5 pt-4.5 pb-0.5 md:pb-2.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
-			<button
-				aria-label={$i18n.t('Close settings modal')}
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<XMark className="w-5 h-5"></XMark>
-			</button>
+<Modal
+	size="full"
+	containerClassName="p-4 sm:p-6 lg:p-8"
+	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl overflow-hidden"
+	bind:show={modalShow}
+>
+	<nav
+		id="settings-tabs-container"
+		class="shrink-0 min-w-0 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
+	>
+		<button
+			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-600 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+			type="button"
+			on:click={() => {
+				show = false;
+			}}
+		>
+			<ChevronLeft className="size-3" strokeWidth="2" />
+			<span>{$i18n.t('Back')}</span>
+		</button>
+
+		<div
+			class="flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
+		>
+			<div class="self-center rounded-l-xl bg-transparent">
+				<Search className="size-3.5" strokeWidth="1.5" />
+			</div>
+			<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
+			<input
+				data-settings-search
+				class="w-full text-xs bg-transparent py-1 outline-hidden placeholder:text-gray-600 dark:text-gray-300 dark:placeholder:text-gray-500"
+				bind:value={search}
+				id="search-input-settings-modal"
+				on:keydown={searchKeydown}
+				placeholder={$i18n.t('Search')}
+			/>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full pt-1 pb-4">
-			<div
-				role="tablist"
-				id="settings-tabs-container"
-				class="tabs flex flex-row overflow-x-auto gap-2.5 mx-3 md:pr-4 md:gap-1 md:flex-col flex-1 md:flex-none md:w-50 md:min-h-[min(42rem,calc(100dvh-10rem))] md:max-h-[min(42rem,calc(100dvh-10rem))] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
+		<div class="sr-only" role="status" aria-live="polite">
+			{search
+				? filteredSettings.length
+					? $i18n.t('Matching tabs: {{count}}', { count: filteredSettings.length })
+					: $i18n.t('No matches')
+				: ''}
+		</div>
+
+		<div
+			class="tabs scrollbar-none max-h-32 md:max-h-none flex min-w-0 flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
+		>
+			<span
+				class="hidden md:block text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 mt-1.5 mb-0.5"
 			>
-				<div
-					class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-100/80 dark:bg-gray-850/80 backdrop-blur-2xl my-1 mb-1.5"
-					id="settings-search"
-				>
-					<div class="self-center rounded-l-xl bg-transparent">
-						<Search
-							className="size-3.5"
-							strokeWidth={($settings?.highContrastMode ?? false) ? '3' : '1.5'}
-						/>
-					</div>
-					<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
-					<input
-						class={`w-full py-1 text-sm bg-transparent dark:text-gray-300 outline-hidden
-								${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
-						bind:value={search}
-						id="search-input-settings-modal"
-						on:input={searchDebounceHandler}
-						placeholder={$i18n.t('Search')}
-					/>
-				</div>
-				{#if filteredSettings.length > 0}
-					{#each filteredSettings as tabId (tabId)}
-						{#if tabId === 'general'}
+				{$i18n.t('Personal')}
+			</span>
+
+			{#if filteredPersonalSettings.length > 0}
+				{#each filteredPersonalSettings as tabId, index (tabId)}
+					{#if shouldShowSettingGroup(filteredPersonalSettings, index)}
+						<span class={settingGroupHeadingClass(index === 0)}>
+							{settingGroupTitle(tabId)}
+						</span>
+					{/if}
+
+					{#if tabId === 'general'}
+						<button
+							role="tab"
+							aria-controls="tab-general"
+							aria-selected={selectedTab === 'general'}
+							class={tabButtonClass(selectedTab === 'general')}
+							on:click={() => {
+								selectTab('general');
+							}}
+						>
+							<SettingsAlt className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.general.title')}</span>
+						</button>
+					{:else if tabId === 'interface'}
+						<button
+							role="tab"
+							aria-controls="tab-interface"
+							aria-selected={selectedTab === 'interface'}
+							class={tabButtonClass(selectedTab === 'interface')}
+							on:click={() => {
+								selectTab('interface');
+							}}
+						>
+							<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.interface.title')}</span>
+						</button>
+					{:else if tabId === 'notifications'}
+						<button
+							role="tab"
+							aria-controls="tab-notifications"
+							aria-selected={selectedTab === 'notifications'}
+							class={tabButtonClass(selectedTab === 'notifications')}
+							on:click={() => {
+								selectTab('notifications');
+							}}
+						>
+							<AppNotification className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.notifications.title')}</span>
+						</button>
+					{:else if tabId === 'shortcuts'}
+						<button
+							role="tab"
+							aria-controls="tab-shortcuts"
+							aria-selected={selectedTab === 'shortcuts'}
+							class={tabButtonClass(selectedTab === 'shortcuts')}
+							on:click={() => {
+								selectTab('shortcuts');
+							}}
+						>
+							<Keyboard className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.shortcuts.title')}</span>
+						</button>
+					{:else if tabId === 'connections'}
+						{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 							<button
 								role="tab"
-								aria-controls="tab-general"
-								aria-selected={selectedTab === 'general'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'general'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								aria-controls="tab-connections"
+								aria-selected={selectedTab === 'connections'}
+								class={tabButtonClass(selectedTab === 'connections')}
 								on:click={() => {
-									selectedTab = 'general';
+									selectTab('connections');
 								}}
 							>
-								<div class=" self-center mr-2">
-									<SettingsAlt strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('General')}</div>
-							</button>
-						{:else if tabId === 'interface'}
-							<button
-								role="tab"
-								aria-controls="tab-interface"
-								aria-selected={selectedTab === 'interface'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'interface'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'interface';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<AppNotification strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Interface')}</div>
-							</button>
-						{:else if tabId === 'connections'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
-								<button
-									role="tab"
-									aria-controls="tab-connections"
-									aria-selected={selectedTab === 'connections'}
-									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'connections'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-									on:click={() => {
-										selectedTab = 'connections';
-									}}
-								>
-									<div class=" self-center mr-2">
-										<Link strokeWidth="2" />
-									</div>
-									<div class=" self-center">{$i18n.t('Connections')}</div>
-								</button>
-							{/if}
-						{:else if tabId === 'tools'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
-								<button
-									role="tab"
-									aria-controls="tab-tools"
-									aria-selected={selectedTab === 'tools'}
-									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'tools'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-									on:click={() => {
-										selectedTab = 'tools';
-									}}
-								>
-									<div class=" self-center mr-2">
-										<WrenchAlt strokeWidth="2" />
-									</div>
-									<div class=" self-center">{$i18n.t('Integrations')}</div>
-								</button>
-							{/if}
-						{:else if tabId === 'personalization'}
-							<button
-								role="tab"
-								aria-controls="tab-personalization"
-								aria-selected={selectedTab === 'personalization'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'personalization'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'personalization';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<Face strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Personalization')}</div>
-							</button>
-						{:else if tabId === 'audio'}
-							<button
-								role="tab"
-								aria-controls="tab-audio"
-								aria-selected={selectedTab === 'audio'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'audio'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'audio';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<SoundHigh strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Audio')}</div>
-							</button>
-						{:else if tabId === 'data_controls'}
-							<button
-								role="tab"
-								aria-controls="tab-data-controls"
-								aria-selected={selectedTab === 'data_controls'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'data_controls'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'data_controls';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<DatabaseSettings strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Data Controls')}</div>
-							</button>
-						{:else if tabId === 'account'}
-							<button
-								role="tab"
-								aria-controls="tab-account"
-								aria-selected={selectedTab === 'account'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'account'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'account';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<UserCircle strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Account')}</div>
-							</button>
-						{:else if tabId === 'about'}
-							<button
-								role="tab"
-								aria-controls="tab-about"
-								aria-selected={selectedTab === 'about'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'about'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'about';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<InfoCircle strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('About')}</div>
+								<Link className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.connections.title')}</span>
 							</button>
 						{/if}
-					{/each}
-				{:else}
-					<div class="text-center text-gray-500 mt-4">
-						{$i18n.t('No results found')}
-					</div>
-				{/if}
-				{#if $user?.role === 'admin'}
-					<a
-						href="/admin/settings"
-						draggable="false"
-						class="px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none md:mt-auto flex select-none text-left transition {$settings?.highContrastMode
-							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-						on:click={async (e) => {
-							e.preventDefault();
-							await goto('/admin/settings');
-							show = false;
-						}}
-					>
-						<div class=" self-center mr-2">
-							<UserBadgeCheck strokeWidth="2" />
-						</div>
-						<div class=" self-center">{$i18n.t('Admin Settings')}</div>
-					</a>
-				{/if}
-			</div>
-			<div
-				class="flex-1 px-3.5 md:pl-0 md:pr-4.5 md:min-h-[min(42rem,calc(100dvh-10rem))] max-h-[min(42rem,calc(100dvh-10rem))] overflow-y-auto"
-			>
-				{#if selectedTab === 'general'}
-					<General
-						{getModels}
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'interface'}
-					<Interface
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'connections'}
-					<Connections
-						saveSettings={async (updated) => {
-							await saveSettings(updated);
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'tools'}
-					<Integrations
-						saveSettings={async (updated) => {
-							await saveSettings(updated);
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'personalization'}
-					<Personalization
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'audio'}
-					<Audio
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'data_controls'}
-					<DataControls {saveSettings} />
-				{:else if selectedTab === 'account'}
-					<Account
-						{saveSettings}
-						saveHandler={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'about'}
-					<About />
-				{/if}
-			</div>
+					{:else if tabId === 'tools'}
+						{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
+							<button
+								role="tab"
+								aria-controls="tab-tools"
+								aria-selected={selectedTab === 'tools'}
+								class={tabButtonClass(selectedTab === 'tools')}
+								on:click={() => {
+									selectTab('tools');
+								}}
+							>
+								<WrenchAlt className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.tools.title')}</span>
+							</button>
+						{/if}
+					{:else if tabId === 'personalization'}
+						<button
+							role="tab"
+							aria-controls="tab-personalization"
+							aria-selected={selectedTab === 'personalization'}
+							class={tabButtonClass(selectedTab === 'personalization')}
+							on:click={() => {
+								selectTab('personalization');
+							}}
+						>
+							<Face className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.personalization.title')}</span>
+						</button>
+					{:else if tabId === 'audio'}
+						<button
+							role="tab"
+							aria-controls="tab-audio"
+							aria-selected={selectedTab === 'audio'}
+							class={tabButtonClass(selectedTab === 'audio')}
+							on:click={() => {
+								selectTab('audio');
+							}}
+						>
+							<SoundHigh className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.audio.title')}</span>
+						</button>
+					{:else if tabId === 'data_controls'}
+						<button
+							role="tab"
+							aria-controls="tab-data-controls"
+							aria-selected={selectedTab === 'data_controls'}
+							class={tabButtonClass(selectedTab === 'data_controls')}
+							on:click={() => {
+								selectTab('data_controls');
+							}}
+						>
+							<DatabaseSettings className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.dataControls.title')}</span>
+						</button>
+					{:else if tabId === 'usage'}
+						<button
+							role="tab"
+							aria-controls="tab-usage"
+							aria-selected={selectedTab === 'usage'}
+							class={tabButtonClass(selectedTab === 'usage')}
+							on:click={() => {
+								selectTab('usage');
+							}}
+						>
+							<UsageIcon className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.usage.title')}</span>
+						</button>
+					{:else if tabId === 'archived_chats'}
+						<button
+							role="tab"
+							aria-controls="tab-archived-chats"
+							aria-selected={selectedTab === 'archived_chats'}
+							class={tabButtonClass(selectedTab === 'archived_chats')}
+							on:click={() => {
+								selectTab('archived_chats');
+							}}
+						>
+							<ArchiveBox className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.archivedChats.title')}</span>
+						</button>
+					{:else if tabId === 'account'}
+						<button
+							role="tab"
+							aria-controls="tab-account"
+							aria-selected={selectedTab === 'account'}
+							class={tabButtonClass(selectedTab === 'account')}
+							on:click={() => {
+								selectTab('account');
+							}}
+						>
+							<UserCircle className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.account.title')}</span>
+						</button>
+					{:else if tabId === 'about'}
+						<button
+							role="tab"
+							aria-controls="tab-about"
+							aria-selected={selectedTab === 'about'}
+							class={tabButtonClass(selectedTab === 'about')}
+							on:click={() => {
+								selectTab('about');
+							}}
+						>
+							<InfoCircle className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('settings.personal.about.title')}</span>
+						</button>
+					{/if}
+				{/each}
+			{/if}
+
+			{#if $user?.role === 'admin' && filteredAdminSettings.length > 0}
+				<div
+					class="hidden md:block shrink-0 self-stretch h-px mx-1 my-2 bg-gray-100/40 dark:bg-white/[0.025]"
+				></div>
+				<span class="hidden md:block text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 mb-0.5">
+					{$i18n.t('Admin')}
+				</span>
+
+				{#each filteredAdminSettings as tabId, index (tabId)}
+					{#if shouldShowSettingGroup(filteredAdminSettings, index)}
+						<span class={settingGroupHeadingClass(index === 0)}>
+							{settingGroupTitle(tabId)}
+						</span>
+					{/if}
+
+					{@const tab = adminSettings.find((setting) => setting.id === tabId)}
+					{#if tab}
+						<button
+							role="tab"
+							aria-controls={adminTabPanelId(tab.id)}
+							aria-selected={selectedTab === tab.id}
+							class={tabButtonClass(selectedTab === tab.id)}
+							on:click={() => {
+								selectTab(tab.id);
+							}}
+						>
+							<AdminTabIcon id={adminTabSegment(tab.id)} className="size-3.5" strokeWidth="2" />
+							<span>{tab.title}</span>
+						</button>
+					{/if}
+				{/each}
+			{/if}
+
+			{#if filteredSettings.length === 0}
+				<div class="px-2 py-1 text-xs text-gray-600 dark:text-gray-500">
+					{$i18n.t('No matches')}
+				</div>
+			{/if}
+		</div>
+	</nav>
+
+	<div class="flex-1 min-w-0 min-h-0 p-4 md:px-5 flex flex-col">
+		<div class="flex-1 min-h-0 overflow-hidden">
+			{#if selectedTab === 'general'}
+				<General
+					{getModels}
+					{saveSettings}
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'interface'}
+				<Interface
+					{saveSettings}
+					personalSettingsValue={personalUiSettings}
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'notifications'}
+				<Notifications {saveSettings} />
+			{:else if selectedTab === 'shortcuts'}
+				<Shortcuts {saveSettings} />
+			{:else if selectedTab === 'connections'}
+				<Connections
+					saveSettings={async (updated: Record<string, any>) => {
+						await saveSettings(updated);
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'tools'}
+				<Integrations
+					saveSettings={async (updated: Record<string, any>) => {
+						await saveSettings(updated);
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'personalization'}
+				<Personalization
+					{saveSettings}
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'audio'}
+				<Audio
+					{saveSettings}
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'data_controls'}
+				<DataControls {saveSettings} />
+			{:else if selectedTab === 'usage'}
+				<Usage />
+			{:else if selectedTab === 'archived_chats'}
+				<ArchivedChats />
+			{:else if selectedTab === 'account'}
+				<Account
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'about'}
+				<About />
+			{:else if selectedTab === 'admin:general'}
+				<AdminGeneral saveHandler={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:authentication'}
+				<AdminAuthentication />
+			{:else if selectedTab === 'admin:connections'}
+				<AdminConnections
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:models'}
+				<AdminModels bind:tabState />
+			{:else if selectedTab === 'admin:subagents'}
+				<AdminSubagents />
+			{:else if selectedTab === 'admin:evaluations'}
+				<AdminEvaluations />
+			{:else if selectedTab === 'admin:analytics'}
+				<AdminAnalytics />
+			{:else if selectedTab === 'admin:integrations'}
+				<AdminIntegrations {saveSettings} />
+			{:else if selectedTab === 'admin:documents'}
+				<AdminDocuments on:save={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:web'}
+				<AdminWebSearch saveHandler={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:code-execution'}
+				<AdminCodeExecution saveHandler={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:interface'}
+				<AdminInterface
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:audio'}
+				<AdminAudio
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:images'}
+				<AdminImages
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:db'}
+				<AdminDatabase
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:pipelines'}
+				<AdminPipelines
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{/if}
 		</div>
 	</div>
 </Modal>
-
-<style>
-	input::-webkit-outer-spin-button,
-	input::-webkit-inner-spin-button {
-		/* display: none; <- Crashes Chrome on hover */
-		-webkit-appearance: none;
-		margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
-	}
-
-	.tabs::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
-	}
-
-	.tabs {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
-	}
-
-	input[type='number'] {
-		appearance: textfield;
-		-moz-appearance: textfield; /* Firefox */
-	}
-</style>

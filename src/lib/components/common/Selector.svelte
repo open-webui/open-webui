@@ -1,13 +1,15 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+	const i18n = getContext<any>('i18n');
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Check from '../icons/Check.svelte';
 	import Search from '../icons/Search.svelte';
 	import Select from './Select.svelte';
 
 	export let value = '';
-	export let placeholder = $i18n.t('Select a model');
+	export let placeholder: string | undefined = undefined;
 	export let searchEnabled = true;
-	export let searchPlaceholder = $i18n.t('Search a model');
+	export let searchPlaceholder: string | undefined = undefined;
 
 	export let items = [
 		{ value: 'mango', label: 'Mango' },
@@ -29,7 +31,7 @@
 	bind:value
 	bind:this={selectRef}
 	{items}
-	{placeholder}
+	placeholder={placeholder ?? $i18n.t('Select a model')}
 	triggerClass="relative w-full"
 	contentClass="w-full rounded-lg bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/40 outline-hidden"
 	onClose={() => {
@@ -38,7 +40,7 @@
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
 		<span
-			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate text-lg font-semibold placeholder-gray-400 focus:outline-hidden"
+			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate text-lg font-normal placeholder-gray-400 focus:outline-hidden"
 		>
 			{selectedLabel}
 		</span>
@@ -54,7 +56,7 @@
 					<input
 						bind:value={searchValue}
 						class="w-full text-sm bg-transparent outline-hidden"
-						placeholder={searchPlaceholder}
+						placeholder={searchPlaceholder ?? $i18n.t('Search a model')}
 						on:click|stopPropagation
 					/>
 				</div>
@@ -65,7 +67,7 @@
 			<div class="px-3 my-2 max-h-80 overflow-y-auto">
 				{#each filteredItems as item}
 					<button
-						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer"
+						class="flex w-full font-normal line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer"
 						type="button"
 						on:click={() => selectItem(item)}
 					>
