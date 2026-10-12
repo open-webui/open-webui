@@ -257,4 +257,3 @@ export const createAppInteraction = async (
 
 	return res;
 };
-
