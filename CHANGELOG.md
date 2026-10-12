@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔍 **Faster one-word chat search.** Searching your chats for a single word is now about 40% faster, as each chat is checked once instead of twice. [#32268](https://github.com/open-webui/open-webui/pull/32268), [#32266](https://github.com/open-webui/open-webui/issues/32266)
 - 🔆 **Screen on during calls.** The screen now stays on during Realtime voice calls as well as Standard ones and is allowed to turn off again once the call ends, where Realtime calls let it go dark and Standard calls kept it on after closing the call. [Commit](https://github.com/open-webui/open-webui/commit/a9227421d847eb51d7c59ec336420bbb20dfbcc8), [#32251](https://github.com/open-webui/open-webui/issues/32251)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for Portuguese (Brazil), Italian, Czech, Romanian, Dutch, Ukrainian, Polish, Thai, Spanish, Malay, Persian, Korean, Arabic, Japanese, Indonesian, Russian, Vietnamese, Turkish, Hindi, German, Greek, Hungarian, Hebrew, Bulgarian and Swedish were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for Portuguese (Brazil), Italian, Czech, Romanian, Dutch, Ukrainian, Polish, Thai, Spanish, Malay, Persian, Korean, Arabic, Japanese, Indonesian, Russian, Vietnamese, Turkish, Hindi, German, Greek, Hungarian, Hebrew, Bulgarian, Swedish, Estonian, Norwegian Bokmål, Lithuanian, Croatian, Slovak, Bosnian, Danish, Slovenian and Galician were enhanced and expanded.
 
 ### Fixed
 
