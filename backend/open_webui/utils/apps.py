@@ -200,10 +200,14 @@ def verify_app_token(app: AppModel, token: str, token_type: str = 'webui-app+jwt
 
 
 async def send_app_event(app: AppModel, event_data: dict, *, timeout: float = 3) -> tuple[int, Any]:
+    body = _serialize_json({**event_data, 'app_id': app.id, 'webui_url': app.data['webui_url']})
+    if len(body) > 1048576:
+        log.warning('App %s event exceeds the 1 MiB delivery limit', app.id)
+        raise ValueError('App event exceeds 1 MiB')
     api_key = get_app_encryption_cipher().decrypt(app.api_key.encode()).decode()
     return await send_app_request(
         app.data['url'],
-        body=_serialize_json({**event_data, 'app_id': app.id, 'webui_url': app.data['webui_url']}),
+        body=body,
         timeout=timeout,
         headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {api_key}'},
     )
@@ -335,6 +339,7 @@ def get_app_message_data(message):
         'actions': (message.data or {}).get('app', {}).get('actions', []),
         'created_at': str(message.created_at),
         'updated_at': str(message.updated_at),
+        'etag': str(message.updated_at),
     }
 
 

@@ -125,7 +125,7 @@ class AppUpdateForm(StrictModel):
 
 
 class AppTokenForm(StrictModel):
-    token: str = Field(max_length=100000)
+    token: str = Field(max_length=1048576)
 
 
 class AppConnectionForm(StrictModel):

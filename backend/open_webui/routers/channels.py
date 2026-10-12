@@ -1115,7 +1115,7 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                     user,
                     channel_id,
                     'channel.mention',
-                    {'text': text, 'message_id': message_id},
+                    {'text': text, 'message_id': message_id, 'parent_id': parent_id},
                     operation_id=message_id,
                     db=db,
                     scope='channels:messages:read'
