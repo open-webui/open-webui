@@ -36,10 +36,13 @@ log = logging.getLogger(__name__)
 def get_app_url_origin(url: str) -> str:
     if any(c in url for c in ('\\', '\r', '\n', '\t')):
         raise ValueError('Invalid service URL')
-    parsed_url = urlsplit(url)
+    try:
+        parsed_url = urlsplit(url)
+        port = parsed_url.port or (443 if parsed_url.scheme == 'https' else 80)
+    except ValueError:
+        raise ValueError('Invalid service URL') from None
     if not parsed_url.hostname or parsed_url.username or parsed_url.password or parsed_url.fragment:
         raise ValueError('Invalid service URL')
-    port = parsed_url.port or (443 if parsed_url.scheme == 'https' else 80)
     host = f'[{parsed_url.hostname}]' if ':' in parsed_url.hostname else parsed_url.hostname.lower()
     return f'{parsed_url.scheme}://{host}:{port}'
 
@@ -121,7 +124,9 @@ async def send_app_request(
     except aiohttp.ClientConnectorDNSError:
         raise HTTPException(502, 'App hostname could not be resolved. Check DNS from the WebUI server.') from None
     except aiohttp.ClientConnectorError:
-        raise HTTPException(502, 'Could not reach the app server. Check its address, port and network access.') from None
+        raise HTTPException(
+            502, 'Could not reach the app server. Check its address, port and network access.'
+        ) from None
     except aiohttp.ClientError:
         raise HTTPException(502, 'The app connection failed before a complete response was received.') from None
     except ValueError as exc:

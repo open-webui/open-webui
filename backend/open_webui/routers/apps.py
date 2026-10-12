@@ -418,9 +418,13 @@ async def connect_app_by_id(
         if claims.get('challenge') != challenge:
             raise ValueError()
     except jwt.InvalidSignatureError:
-        raise HTTPException(502, 'App public key does not match the installed key. Review the app public key in settings.') from None
+        raise HTTPException(
+            502, 'App public key does not match the installed key. Review the app public key in settings.'
+        ) from None
     except (jwt.InvalidTokenError, ValueError, TypeError, KeyError):
-        raise HTTPException(502, 'App identity proof is invalid or expired. Check the installed public key and server clocks.') from None
+        raise HTTPException(
+            502, 'App identity proof is invalid or expired. Check the installed public key and server clocks.'
+        ) from None
     result = await db.execute(
         update(App)
         .where(App.id == app_id, App.updated_at == checked_at, App.api_key == api_key)
