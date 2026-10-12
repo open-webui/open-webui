@@ -157,7 +157,11 @@ export const deleteAppById = async (token: string = '', app_id: string) => {
 	return res;
 };
 
-export const previewAppManifest = async (token: string = '', url: string) => {
+export const previewAppManifest = async (
+	token: string = '',
+	url: string,
+	data: { api_key?: string; app_id?: string }
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/apps/manifest/preview`, {
@@ -167,7 +171,7 @@ export const previewAppManifest = async (token: string = '', url: string) => {
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ url })
+		body: JSON.stringify({ url, ...data })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

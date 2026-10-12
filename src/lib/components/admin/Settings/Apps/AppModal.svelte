@@ -77,7 +77,10 @@
 	async function submit() {
 		await run(async () => {
 			if (!manifest) {
-				manifest = await previewAppManifest(localStorage.token, url);
+				manifest = await previewAppManifest(localStorage.token, url, {
+					...(apiKey ? { api_key: apiKey } : {}),
+					...(app ? { app_id: app.id } : {})
+				});
 				manual = false;
 				name = manifest.name;
 				slug =
@@ -288,6 +291,24 @@
 							placeholder="https://app.example.com/events"
 						/>
 					</AdminSettingField>
+					<AdminSettingField
+						label={$i18n.t('API Key')}
+						forId="app-api-key"
+						description={app?.configured
+							? $i18n.t('Leave empty to keep the current API key.')
+							: $i18n.t('Enter the API key provided by the app.')}
+					>
+						<input
+							id="app-api-key"
+							type="password"
+							autocomplete="new-password"
+							class={inputClass}
+							bind:value={apiKey}
+							required={!app?.configured}
+							maxlength="4096"
+							placeholder={app?.configured ? '••••••••' : ''}
+						/>
+					</AdminSettingField>
 				{:else}
 					<div class="flex gap-3">
 						<AdminSettingField label={$i18n.t('Name')} forId="app-name" className="min-w-0 flex-1"
@@ -342,7 +363,10 @@
 								class="mt-2 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
 								on:click={() =>
 									run(async () => {
-										manifest = await previewAppManifest(localStorage.token, url);
+										manifest = await previewAppManifest(localStorage.token, url, {
+											...(apiKey ? { api_key: apiKey } : {}),
+											...(app ? { app_id: app.id } : {})
+										});
 										scopes = scopes.filter((scope) => manifest.requested_scopes.includes(scope));
 										manifestUpdated = true;
 										showScopes = true;
@@ -360,6 +384,7 @@
 								{$i18n.t('Saving approves the updated app identity and selected scopes.')}
 							</p>
 						{/if}
+
 						<AdminSettingField
 							label={$i18n.t('API Key')}
 							forId="app-api-key"

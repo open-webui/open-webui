@@ -102,6 +102,8 @@ class AppInteractionForm(StrictModel):
 
 class AppManifestForm(StrictModel):
     url: str = Field(max_length=2048)
+    api_key: SecretStr | None = Field(default=None, min_length=1, max_length=4096)
+    app_id: str | None = None
 
 
 class AppForm(StrictModel):

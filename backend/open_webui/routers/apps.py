@@ -76,13 +76,30 @@ async def get_apps(user=Depends(get_verified_user), db: AsyncSession = Depends(g
 
 
 @router.post('/manifest/preview', response_model=Manifest)
-async def preview_app_manifest(form_data: AppManifestForm, user=Depends(get_admin_user)):
+async def preview_app_manifest(
+    form_data: AppManifestForm, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     if not await Config.get('apps.enable'):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Apps are disabled')
+    api_key = form_data.api_key.get_secret_value() if form_data.api_key is not None else None
+    if form_data.app_id:
+        app = await get_app_by_id(form_data.app_id, db=db)
+        if form_data.url != app.data['url']:
+            raise HTTPException(400, 'App URL does not match the installed app')
+        if api_key is None and app.api_key:
+            api_key = get_app_encryption_cipher().decrypt(app.api_key.encode()).decode()
+    if not api_key:
+        raise HTTPException(400, 'An app API key is required')
     try:
-        status_code, raw = await send_app_request(form_data.url)
+        status_code, raw = await send_app_request(
+            form_data.url, headers={'Authorization': f'Bearer {api_key}'}
+        )
+        if status_code in (401, 403):
+            raise HTTPException(400, 'App rejected the API key. Check the API key configured on the app server.')
         if status_code != 200:
-            raise HTTPException(502, f'App manifest endpoint returned HTTP {status_code}. Check the URL or enter details manually.')
+            raise HTTPException(
+                502, f'App manifest endpoint returned HTTP {status_code}. Check the URL or enter details manually.'
+            )
         manifest = Manifest.model_validate(raw)
         return manifest.model_dump()
     except HTTPException:
