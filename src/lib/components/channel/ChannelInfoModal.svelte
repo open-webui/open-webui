@@ -3,6 +3,8 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
+	import Apps from './Apps.svelte';
+	import { config } from '$lib/stores';
 	import { removeMembersById } from '$lib/apis/channels';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -130,6 +132,7 @@
 								sort={channel?.type !== 'dm'}
 							/>
 						</div>
+						{#if $config?.features?.enable_apps && channel.type !== 'dm'}<Apps {channel} />{/if}
 					</form>
 				</div>
 			</div>

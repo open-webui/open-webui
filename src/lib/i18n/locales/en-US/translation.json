@@ -1,4 +1,8 @@
 {
+	"Only admins can use this app. Add users or groups to allow others.": "",
+	"Restricted": "",
+	"Everyone": "",
+	"Who can use this app?": "",
 	"-1 for no limit, or a positive integer for a specific limit": "",
 	"(latest)": "",
 	"(leave blank for to use commercial endpoint)": "",
@@ -748,6 +752,7 @@
 	"Discover, download, and explore model presets": "",
 	"Discussion channel where access is based on groups and permissions": "",
 	"Dismiss": "",
+	"Only visible to you": "",
 	"Dismiss notification": "",
 	"Display": "",
 	"Display text": "Display text",
@@ -2638,6 +2643,8 @@
 	"settings.admin.general.banners.label": "Banners",
 	"settings.admin.general.calendar.description": "Allow users to access calendar features.",
 	"settings.admin.general.calendar.label": "Calendar",
+	"settings.admin.general.apps.description": "Allow admins to connect external apps to Open WebUI.",
+	"settings.admin.general.apps.label": "Apps",
 	"settings.admin.general.channels.description": "Allow users to use channels for shared conversations.",
 	"settings.admin.general.channels.label": "Channels",
 	"settings.admin.general.checkForUpdates.label": "Check for updates",
@@ -3872,5 +3879,14 @@
 	"YouTube": "",
 	"YouTube video player": "",
 	"Zoom in": "",
-	"Zoom out": ""
+	"Zoom out": "",
+	"Read messages and history in joined channels": "Read messages and history in joined channels",
+	"Update app": "Update app",
+	"Saving approves the updated app identity and selected scopes.": "Saving approves the updated app identity and selected scopes.",
+	"Manifest discovery is recommended. You can also enter app details manually.": "",
+	"Choose the scopes to grant this app.": "",
+	"Public key": "",
+	"Enter the Ed25519 public key provided by the app.": "",
+	"Edit details manually": "",
+	"Enter details manually": ""
 }

@@ -34,6 +34,8 @@
 	export let onChange: Function = () => {};
 
 	export let accessRoles = ['read'];
+	export let labels: Partial<Record<'title' | 'public' | 'private' | 'read' | 'empty', string>> =
+		{};
 	export let accessGrants: AccessGrant[] | any = [];
 	export let accessControl: any = undefined;
 
@@ -52,9 +54,9 @@
 	let showAddAccessModal = false;
 	$: visibility = getVisibility(accessGrants ?? []);
 	$: visibilityOptions = [
-		{ value: 'private' as const, label: $i18n.t('Private') },
+		{ value: 'private' as const, label: labels.private ?? $i18n.t('Private') },
 		...((share && sharePublic) || hasPublicReadGrant(accessGrants ?? [])
-			? [{ value: 'public' as const, label: $i18n.t('Public') }]
+			? [{ value: 'public' as const, label: labels.public ?? $i18n.t('Public') }]
 			: []),
 		...((share && shareOpen) || hasAnyoneReadGrant(accessGrants ?? [])
 			? [{ value: 'open' as const, label: $i18n.t('Open') }]
@@ -500,7 +502,7 @@
 			<Dropdown closeOnSelect>
 				<button
 					type="button"
-					aria-label={$i18n.t('Visibility')}
+					aria-label={labels.title ?? $i18n.t('Visibility')}
 					class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-gray-800 transition hover:text-gray-950 dark:text-gray-200 dark:hover:text-white"
 				>
 					{#if visibility === 'private'}
@@ -622,7 +624,7 @@
 								<option value="write">{$i18n.t('Write')}</option>
 							</select>
 						{:else}
-							<Badge type={'info'} content={$i18n.t('Read')} />
+							<Badge type={'info'} content={labels.read ?? $i18n.t('Read')} />
 						{/if}
 
 						<button
@@ -676,7 +678,7 @@
 									<option value="write">{$i18n.t('Write')}</option>
 								</select>
 							{:else}
-								<Badge type={'info'} content={$i18n.t('Read')} />
+								<Badge type={'info'} content={labels.read ?? $i18n.t('Read')} />
 							{/if}
 
 							<button
@@ -695,7 +697,7 @@
 
 			{#if getVisibility(accessGrants ?? []) === 'private' && accessGroups.length === 0 && selectedUsers.length === 0}
 				<div class="text-xs text-gray-500 text-center py-3">
-					{$i18n.t('No access grants. Private to you.')}
+					{labels.empty ?? $i18n.t('No access grants. Private to you.')}
 				</div>
 			{/if}
 		</div>

@@ -9,11 +9,12 @@
 	dayjs.extend(relativeTime);
 	dayjs.extend(isToday);
 	dayjs.extend(isYesterday);
-	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+	import { tick, getContext, onMount } from 'svelte';
 
-	import { settings, user } from '$lib/stores';
+	import { settings, socket, user } from '$lib/stores';
 
 	import Message from './Messages/Message.svelte';
+	import AppResponse from './AppResponse.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import {
@@ -40,6 +41,25 @@
 	export let onPin: Function = () => {};
 
 	let messagesLoading = false;
+	let appResponses: Record<string, any> = {};
+	let responseLocation = '';
+	$: if (responseLocation !== `${channel?.id}:${id}`) {
+		responseLocation = `${channel?.id}:${id}`;
+		appResponses = {};
+	}
+
+	const receiveAppResponse = (event) => {
+		if (event.channel_id !== channel?.id || (event.parent_id ?? null) !== (thread ? id : null))
+			return;
+		const key = `${event.message_id}:${event.app_id}`;
+		appResponses = { ...appResponses, [key]: event };
+	};
+
+	onMount(() => {
+		const appSocket = $socket;
+		appSocket?.on('events:app', receiveAppResponse);
+		return () => appSocket?.off('events:app', receiveAppResponse);
+	});
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
@@ -128,6 +148,8 @@
 
 		{#each messageList as message, messageIdx (id ? `${id}-${message.id}` : message.id)}
 			<Message
+				on:response={(event) =>
+					receiveAppResponse({ ...event.detail, parent_id: thread ? id : null })}
 				{message}
 				{channel}
 				{thread}
@@ -256,6 +278,47 @@
 					}
 				}}
 			/>
+			{#each Object.entries(appResponses).filter(([, event]) => event.message_id === message.id) as [key, event] (key)}
+				<div
+					class="flex gap-3 px-4 pt-3 pb-2"
+					data-app-response={event.app_id}
+					dir={$settings.chatDirection}
+				>
+					<span
+						class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[0.625rem] text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+						aria-hidden="true">App</span
+					>
+					<div class="min-w-0 flex-1">
+						<div class="mb-0.5 flex items-baseline gap-1.5 leading-5">
+							<span class="truncate text-[0.8125rem] font-medium text-gray-900 dark:text-gray-100"
+								>{event.app_name ?? $i18n.t('App')}</span
+							>
+							<span class="text-[0.65rem] text-gray-500">{$i18n.t('App')}</span>
+						</div>
+						<div class="[&_.markdown-prose]:text-sm! [&_.markdown-prose]:leading-[1.375rem]!">
+							{#key event.response}
+								<AppResponse
+									appId={event.app_id}
+									channelId={channel.id}
+									response={event.response}
+								/>
+							{/key}
+						</div>
+						<div class="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+							<span>{$i18n.t('Only visible to you')}</span>
+							<span aria-hidden="true">·</span>
+							<button
+								type="button"
+								class="focus-ring rounded hover:text-gray-800 hover:underline dark:hover:text-gray-200"
+								on:click={() => {
+									delete appResponses[key];
+									appResponses = { ...appResponses };
+								}}>{$i18n.t('Dismiss')}</button
+							>
+						</div>
+					</div>
+				</div>
+			{/each}
 		{/each}
 
 		<div class="pb-4"></div>

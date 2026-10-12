@@ -632,6 +632,7 @@
 	}
 
 	onMount(() => {
+
 		const unsubscribe = channelRequestQueues.subscribe(() => {
 			files = [...files];
 		});

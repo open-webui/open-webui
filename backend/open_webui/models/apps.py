@@ -1,0 +1,207 @@
+"""External apps. Credentials never leave the internal model."""
+
+import time
+from typing import Literal
+
+from open_webui.internal.db import Base, get_async_db_context
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.channels import ChannelMember
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class App(Base):
+    __tablename__ = 'app'
+
+    id = Column(Text, primary_key=True)
+    slug = Column(Text, nullable=False, unique=True)
+    name = Column(Text, nullable=False)
+    user_id = Column(Text, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=False)
+    data = Column(JSON, nullable=False)
+    api_key = Column(Text, nullable=True)
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+
+class AppModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    slug: str
+    name: str
+    user_id: str | None = None
+    is_active: bool
+    data: dict
+    api_key: str | None = Field(default=None, exclude=True, repr=False)
+    created_at: int
+    updated_at: int
+
+
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+
+class AppInvitation(StrictModel):
+    app_id: str
+
+
+Scope = Literal['mentions:read', 'messages:read', 'messages:write', 'channels:read']
+
+
+class Manifest(StrictModel):
+    id: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=100)
+    description: str = Field(default='', max_length=2000)
+    public_key: str = Field(max_length=2000)
+    requested_scopes: list[Scope] = Field(max_length=4)
+
+    @field_validator('public_key')
+    @classmethod
+    def validate_public_key(cls, value):
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        key = serialization.load_pem_public_key(value.encode())
+        if not isinstance(key, Ed25519PublicKey):
+            raise ValueError('An Ed25519 public key is required')
+        return key.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo).decode()
+
+
+class Action(StrictModel):
+    action_id: str = Field(min_length=1, max_length=100)
+    label: str = Field(min_length=1, max_length=200)
+    context: dict = Field(default_factory=dict)
+
+
+class AppChannelMessage(StrictModel):
+    content: str = Field(default='', max_length=32000)
+    actions: list[Action] = Field(default_factory=list, max_length=30)
+    reply_to_id: str | None = None
+    parent_id: str | None = None
+
+
+class AppReply(AppChannelMessage):
+    type: Literal['message', 'update', 'deferred', 'download', 'error'] = 'message'
+    visibility: Literal['private', 'channel'] = 'private'
+    title: str = Field(default='', max_length=200)
+    filename: str = Field(default='report.md', pattern=r'^[a-zA-Z0-9_.-]{1,100}\.md$')
+    operation_id: str | None = None
+
+
+class AppInteractionForm(StrictModel):
+    message_id: str
+    action_id: str = Field(min_length=1, max_length=100)
+
+
+####################
+# Forms
+####################
+
+
+class AppManifestForm(StrictModel):
+    url: str = Field(max_length=2048)
+
+
+class AppForm(StrictModel):
+    manifest: Manifest
+    url: str = Field(max_length=2048)
+    api_key: SecretStr = Field(min_length=32, max_length=4096)
+    slug: str = Field(pattern=r'^[a-z][a-z0-9-]{0,39}$')
+    granted_scopes: list[str]
+    access_grants: list[dict] = Field(
+        default_factory=lambda: [{'principal_type': 'user', 'principal_id': '*', 'permission': 'read'}]
+    )
+
+
+class AppUpdateForm(StrictModel):
+    is_active: bool | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    settings: dict | None = None
+    manifest: Manifest | None = None
+    granted_scopes: list[str] | None = None
+    access_grants: list[dict] | None = None
+
+
+class AppContextForm(StrictModel):
+    context: str = Field(max_length=100000)
+
+
+class AppConnectionForm(StrictModel):
+    api_key: SecretStr | None = Field(default=None, min_length=32, max_length=4096)
+
+
+####################
+# Responses
+####################
+
+
+class AppResponse(BaseModel):
+    id: str
+    slug: str
+    name: str
+    is_active: bool
+    configured: bool
+    data: dict
+    created_at: int
+    updated_at: int
+
+
+class AppAccessResponse(AppResponse):
+    access_grants: list[dict] = Field(default_factory=list)
+
+
+class AppsTable:
+    async def get_app_by_id(self, id: str, db: AsyncSession | None = None) -> AppModel | None:
+        async with get_async_db_context(db) as db:
+            app = await db.scalar(select(App).where(App.id == id).execution_options(populate_existing=True))
+            return AppModel.model_validate(app) if app else None
+
+    async def get_app_ids_by_channel_id(
+        self, channel_id: str, joined_before: int, db: AsyncSession | None = None
+    ) -> list[str]:
+        async with get_async_db_context(db) as db:
+            return list(
+                await db.scalars(
+                    select(App.id)
+                    .join(ChannelMember, ChannelMember.app_id == App.id)
+                    .where(
+                        App.is_active.is_(True),
+                        ChannelMember.channel_id == channel_id,
+                        ChannelMember.is_active.is_(True),
+                        ChannelMember.joined_at <= joined_before,
+                    )
+                )
+            )
+
+    async def update_app_by_id(
+        self,
+        id: str,
+        data: dict,
+        access_grants: list[dict] | None = None,
+        db: AsyncSession | None = None,
+    ) -> AppModel | None:
+        async with get_async_db_context(db) as db:
+            await db.execute(update(App).where(App.id == id).values(**data))
+            if access_grants is not None:
+                await AccessGrants.replace_access_grants(db, 'app', id, access_grants)
+            await db.commit()
+            return await self.get_app_by_id(id, db=db)
+
+    async def uninstall_app_by_id(self, id: str, db: AsyncSession | None = None) -> AppModel | None:
+        async with get_async_db_context(db) as db:
+            app = await db.get(App, id)
+            if not app:
+                return None
+            app.is_active = False
+            app.api_key = None
+            app.updated_at = max(time.time_ns(), app.updated_at + 1)
+            await db.execute(
+                update(ChannelMember).where(ChannelMember.app_id == id).values(is_active=False, left_at=time.time_ns())
+            )
+            await db.commit()
+            return AppModel.model_validate(app)
+
+
+Apps = AppsTable()

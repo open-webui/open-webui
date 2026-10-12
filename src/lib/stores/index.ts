@@ -381,6 +381,7 @@ type Config = {
 		enable_tools?: boolean;
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
+		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_direct_integrations?: boolean;

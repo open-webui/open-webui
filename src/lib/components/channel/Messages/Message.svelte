@@ -23,6 +23,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { getMessageData } from '$lib/apis/channels';
 
+	import AppResponse from '../AppResponse.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import StructuredOutputRenderer from '$lib/components/chat/Messages/StructuredOutputRenderer.svelte';
 	import { buildOutputDisplayItems } from '$lib/components/chat/Messages/structuredOutput';
@@ -399,6 +400,7 @@
 									e.currentTarget.src = '/favicon.png';
 								}}
 							/>
+						{:else if message.app_id}<span class="flex size-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-xs" aria-label="App">App</span>
 						{:else if message.user?.role === 'webhook'}
 							<ProfileImage
 								src={`${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image`}
@@ -442,6 +444,7 @@
 								{/if}
 							</div>
 
+							{#if message.app_id}<span class="text-[0.65rem] text-gray-500">App</span>{/if}
 							{#if message.created_at}
 								<div
 									class=" shrink-0 translate-y-px text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400 font-normal first-letter:capitalize"
@@ -574,7 +577,7 @@
 									<Markdown
 										id={renderedMessageId}
 										content={message.content}
-										paragraphTag="span"
+										paragraphTag={message.app_id ? 'p' : 'span'}
 										allowEmbeds={false}
 									/>
 								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
@@ -583,6 +586,12 @@
 									>{/if}
 							{/if}
 						</div>
+
+						{#if message.app_id && message?.data?.app}
+							<div class="mt-2">
+								<AppResponse on:response appId={message.app_id} channelId={channel.id} source={message} response={{ actions: message.data.app.actions }} />
+							</div>
+						{/if}
 
 						{#if (message?.reactions ?? []).length > 0}
 							<div>
