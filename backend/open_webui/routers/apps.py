@@ -293,4 +293,3 @@ async def create_app_interaction(
         source={'id': message.id, 'updated_at': message.updated_at},
         db=db,
     )
-

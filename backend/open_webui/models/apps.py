@@ -223,7 +223,9 @@ class AppsTable:
                 return None
             app.is_active = False
             app.api_key = None
-            app.data = {k: v for k, v in app.data.items() if k not in ('connection_token', 'installation_id', 'webui_url')}
+            app.data = {
+                k: v for k, v in app.data.items() if k not in ('connection_token', 'installation_id', 'webui_url')
+            }
             app.updated_at = max(time.time_ns(), app.updated_at + 1)
             await db.execute(
                 update(ChannelMember).where(ChannelMember.app_id == id).values(is_active=False, left_at=time.time_ns())
