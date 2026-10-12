@@ -1114,7 +1114,7 @@ async def app_response_handler(channel_id, message_id, user_id):
                     app,
                     user,
                     channel_id,
-                    'mention',
+                    'channel.mention',
                     {'text': text, 'message_id': message_id},
                     operation_id=message_id,
                     db=db,

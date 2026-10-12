@@ -340,10 +340,10 @@ def get_app_message_data(message):
 
 async def publish_app_message_event(message, kind):
     # Model output is streamed into this row; only publish its completed update.
-    if kind == 'message.updated' and (message.meta or {}).get('model_id') and not (message.meta or {}).get('done'):
+    if kind == 'channel.message.updated' and (message.meta or {}).get('model_id') and not (message.meta or {}).get('done'):
         return
     value = deepcopy(get_app_message_data(message))
-    if kind == 'message.deleted':
+    if kind == 'channel.message.deleted':
         value = {k: value[k] for k in ('id', 'channel_id', 'parent_id', 'updated_at')}
     # shortcut: events are lost on failure/restart; add durable delivery only if replay becomes required.
     await create_task(None, send_app_message_event(value, kind, time.time_ns()))

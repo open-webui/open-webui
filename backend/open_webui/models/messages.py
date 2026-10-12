@@ -177,7 +177,7 @@ class MessageTable:
 
             await db.commit()
             await db.refresh(result)
-            await publish_app_message_event(result, 'message.created')
+            await publish_app_message_event(result, 'channel.message.created')
             return MessageModel.model_validate(result) if result else None
 
     async def insert_new_app_message(
@@ -201,7 +201,7 @@ class MessageTable:
             await db.commit()
             from open_webui.utils.apps import publish_app_message_event
 
-            await publish_app_message_event(message, 'message.created')
+            await publish_app_message_event(message, 'channel.message.created')
             response = await self.get_message_by_id(message.id, db=db)
             await db.commit()
             return response
@@ -227,7 +227,7 @@ class MessageTable:
             await db.commit()
             from open_webui.utils.apps import publish_app_message_event
 
-            await publish_app_message_event(message, 'message.updated')
+            await publish_app_message_event(message, 'channel.message.updated')
             response = await self.get_message_by_id(id, db=db)
             await db.commit()
             return response
@@ -480,7 +480,7 @@ class MessageTable:
 
             await db.commit()
             await db.refresh(message)
-            await publish_app_message_event(message, 'message.updated')
+            await publish_app_message_event(message, 'channel.message.updated')
             return MessageModel.model_validate(message) if message else None
 
     async def update_is_pinned_by_id(
@@ -658,7 +658,7 @@ class MessageTable:
             await db.execute(delete(Message).filter_by(parent_id=id))
             await db.commit()
             for message in messages:
-                await publish_app_message_event(message, 'message.deleted')
+                await publish_app_message_event(message, 'channel.message.deleted')
             return True
 
     async def delete_message_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
@@ -673,7 +673,7 @@ class MessageTable:
 
             await db.commit()
             if message:
-                await publish_app_message_event(message, 'message.deleted')
+                await publish_app_message_event(message, 'channel.message.deleted')
             return True
 
     async def search_messages_by_channel_ids(

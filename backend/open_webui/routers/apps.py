@@ -454,7 +454,7 @@ async def create_app_interaction(
         app,
         user,
         message.channel_id,
-        'action',
+        'channel.action',
         {'message_id': message.id, 'action_id': form_data.action_id, 'context': action['context']},
         source={'id': message.id, 'updated_at': message.updated_at},
         db=db,
