@@ -22,7 +22,7 @@ from fastapi import Depends, Header, HTTPException, status
 from open_webui.env import WEBUI_SECRET_KEY
 from open_webui.internal.db import get_async_db, get_async_session
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.apps import AppChannelMessage, AppModel, AppReply, Apps
+from open_webui.models.apps import AppChannelMessage, AppChannelReply, AppModel, Apps
 from open_webui.models.channels import ChannelModel, Channels
 from open_webui.models.config import Config
 from open_webui.models.messages import MessageForm, Messages
@@ -496,7 +496,7 @@ async def generate_app_response(
     if not user:
         raise HTTPException(403, 'Actor is unavailable')
     try:
-        reply = AppReply.model_validate(raw)
+        reply = AppChannelReply.model_validate(raw)
     except Exception:
         raise HTTPException(502, 'App returned an invalid response') from None
     await check_app_invocation_access(app, channel_id, user, db=db)

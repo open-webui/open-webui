@@ -82,7 +82,7 @@ class AppChannelMessage(StrictModel):
     parent_id: str | None = None
 
 
-class AppReply(AppChannelMessage):
+class AppChannelReply(AppChannelMessage):
     type: Literal['message', 'update', 'deferred', 'download', 'error'] = 'message'
     visibility: Literal['private', 'channel'] = 'private'
     title: str = Field(default='', max_length=200)
