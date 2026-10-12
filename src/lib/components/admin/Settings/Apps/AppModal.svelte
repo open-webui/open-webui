@@ -12,7 +12,6 @@
 	} from '$lib/apis/apps';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -261,13 +260,13 @@
 					{/each}
 				</div>
 			</div>
-			<div class="mt-5 flex justify-start">
+			<div class="mt-5 flex justify-end">
 				<button
 					type="button"
-					class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+					class={buttonClass}
 					on:click={() => {
 						showScopes = false;
-					}}><ChevronLeft className="size-3" />{$i18n.t('Back')}</button
+					}}>{$i18n.t('Continue')}</button
 				>
 			</div>
 		</div>
