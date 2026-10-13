@@ -569,13 +569,16 @@
 				console.log(tags);
 
 				if (tags) {
-					updatedMessage.annotation.tags = tags;
-					feedbackItem.data.tags = tags;
+					const taggedMessage = {
+						...message,
+						annotation: { ...(message?.annotation ?? {}), tags: tags }
+					};
+					feedbackItem.data = { ...feedbackItem.data, ...taggedMessage.annotation };
 
-					saveMessage(message.id, updatedMessage);
+					saveMessage(message.id, taggedMessage);
 					await updateFeedbackById(
 						localStorage.token,
-						updatedMessage.feedbackId,
+						taggedMessage.feedbackId,
 						feedbackItem
 					).catch((error) => {
 						toast.error(`${error}`);
