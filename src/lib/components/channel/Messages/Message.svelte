@@ -24,6 +24,7 @@
 	import { getMessageData } from '$lib/apis/channels';
 
 	import AppChannelReply from '../AppChannelReply.svelte';
+	import { getAppMessageText } from '$lib/utils/apps';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import StructuredOutputRenderer from '$lib/components/chat/Messages/StructuredOutputRenderer.svelte';
 	import { buildOutputDisplayItems } from '$lib/components/chat/Messages/structuredOutput';
@@ -353,6 +354,16 @@
 									e.currentTarget.src = '/favicon.png';
 								}}
 							/>
+						{:else if message.reply_to_message.app_id}
+							{#if message.reply_to_message.user?.profile_image_url}
+								<ProfileImage
+									src={message.reply_to_message.user.profile_image_url}
+									allowExternal
+									className="size-4 ml-0.5 rounded!"
+								/>
+							{:else}
+								<Grid className="size-4 ml-0.5" />
+							{/if}
 						{:else}
 							<img
 								src={message.reply_to_message.user?.role === 'webhook'
@@ -374,7 +385,8 @@
 						>
 							<Markdown
 								id={`${renderedMessageId}-reply-to`}
-								content={message?.reply_to_message?.content}
+								content={getAppMessageText(message?.reply_to_message)}
+								allowHtml={!message?.reply_to_message?.app_id}
 								allowEmbeds={false}
 							/>
 						</div>
@@ -603,9 +615,15 @@
 							{/if}
 						</div>
 
-						{#if message.app_id && message?.data?.app}
+						{#if message.app_id && (message?.data?.app?.embeds?.length || message?.data?.app?.actions?.length)}
 							<div class="mt-2">
-								<AppChannelReply on:reply appId={message.app_id} channelId={channel.id} source={message} reply={{ actions: message.data.app.actions }} />
+								<AppChannelReply
+									on:reply
+									appId={message.app_id}
+									channelId={channel.id}
+									source={message}
+									reply={{ embeds: message.data.app.embeds, actions: message.data.app.actions }}
+								/>
 							</div>
 						{/if}
 

@@ -322,6 +322,7 @@ def get_app_message_data(message):
         'reply_to_id': message.reply_to_id,
         'files': (message.data or {}).get('files', []),
         'actions': (message.data or {}).get('app', {}).get('actions', []),
+        'embeds': (message.data or {}).get('app', {}).get('embeds', []),
         'created_at': str(message.created_at),
         'updated_at': str(message.updated_at),
         'etag': str(message.updated_at),
@@ -411,7 +412,12 @@ async def create_app_message(db, app, channel_id, form):
         channel_id,
         MessageForm(
             content=form.content,
-            data={'app': {'actions': [x.model_dump() for x in form.actions]}},
+            data={
+                'app': {
+                    'actions': [x.model_dump() for x in form.actions],
+                    'embeds': [x.model_dump() for x in form.embeds],
+                }
+            },
             parent_id=form.parent_id,
             reply_to_id=form.reply_to_id,
         ),
@@ -436,7 +442,15 @@ async def update_app_message(db, app, message_id, form, if_match):
         message_id,
         app.id,
         message.updated_at,
-        MessageForm(content=form.content, data={'app': {'actions': [x.model_dump() for x in form.actions]}}),
+        MessageForm(
+            content=form.content,
+            data={
+                'app': {
+                    'actions': [x.model_dump() for x in form.actions],
+                    'embeds': [x.model_dump() for x in form.embeds],
+                }
+            },
+        ),
         db=db,
     )
     if not updated:

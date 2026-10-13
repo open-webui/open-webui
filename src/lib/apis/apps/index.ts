@@ -1,5 +1,16 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+export type Embed = {
+	title?: string;
+	description?: string;
+	url?: string | null;
+	color?: number | null;
+	author?: { name: string } | null;
+	footer?: { text: string } | null;
+	thumbnail?: { url: string } | null;
+	fields?: { name: string; value: string; inline?: boolean }[];
+};
+
 export type App = {
 	connection_status: 'connecting' | 'connected' | 'disconnected';
 	id: string;
