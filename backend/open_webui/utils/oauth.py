@@ -1008,6 +1008,12 @@ class OAuthClientManager:
                 ) as resp:
                     if resp.status < 400:
                         return True
+
+                    # Bot challenge pages echo the request URL, so their keywords say nothing about the client
+                    if resp.headers.get('cf-mitigated'):
+                        log.debug('Skipping OAuth preflight for client %s: bot challenge', client_info.client_id)
+                        return True
+
                     response_text = await resp.text()
 
                     error = None
