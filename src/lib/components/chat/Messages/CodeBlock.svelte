@@ -308,7 +308,7 @@
 				}
 			}
 
-			if (data['result']) {
+			if (typeof data['result'] === 'string') {
 				result = data['result'];
 				const resultLines = result.split('\n');
 
