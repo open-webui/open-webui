@@ -6,6 +6,7 @@ import io
 import json
 import re
 import stat
+import time
 import zipfile
 from pathlib import PurePosixPath
 from typing import Literal
@@ -25,6 +26,8 @@ SKILL_PREVIEW_MAX_CHARS = 5_000
 SKILL_OVERVIEW_LIST_MAX_CHARS = 2_500
 SKILL_MANIFEST_MAX_ENTRIES = 50
 SKILL_MANIFEST_MAX_CHARS = 5_000
+SKILL_GREP_MAX_CHARS = 6_000
+SKILL_GREP_EXCERPT_MAX_CHARS = 1_200
 
 
 def skill_content_page(content: str, offset: int = 0, max_chars: int = SKILL_CONTENT_MAX_CHARS) -> dict:
@@ -47,8 +50,8 @@ def bounded_skill_manifest(entries: list, field: str = 'files', max_chars: int =
     return result
 
 
-def skill_heading_index(content: str) -> dict:
-    headings, size, offset = [], 2, 0
+def iter_skill_headings(content: str):
+    offset = 0
     frontmatter_match = re.match(r'\A---[ \t]*\r?\n.*?\r?\n---[ \t]*(?:\r?\n|$)', content, re.DOTALL)
     body_start = frontmatter_match.end() if frontmatter_match else 0
     fence = None
@@ -69,13 +72,110 @@ def skill_heading_index(content: str) -> dict:
         heading = re.match(r' {0,3}(#{1,6})(?:[ \t]+(.*)|$)', text)
         if heading:
             title = re.sub(r'(?:^|[ \t]+)#+[ \t]*$', '', heading[2] or '').strip()
-            entry = {'title': title, 'level': len(heading[1]), 'offset': line_offset}
-            entry_size = len(json.dumps(entry, ensure_ascii=False)) + (2 if headings else 0)
-            if size + entry_size > SKILL_OVERVIEW_LIST_MAX_CHARS:
-                return {'headings': headings, 'headings_truncated': True}
-            headings.append(entry)
-            size += entry_size
+            yield {'title': title, 'level': len(heading[1]), 'offset': line_offset}
+
+
+def skill_heading_index(content: str) -> dict:
+    headings, size = [], 2
+    for entry in iter_skill_headings(content):
+        entry_size = len(json.dumps(entry, ensure_ascii=False)) + (2 if headings else 0)
+        if size + entry_size > SKILL_OVERVIEW_LIST_MAX_CHARS:
+            return {'headings': headings, 'headings_truncated': True}
+        headings.append(entry)
+        size += entry_size
     return {'headings': headings, 'headings_truncated': False}
+
+
+def _skill_match_window(content: str, start: int, end: int) -> tuple[int, int]:
+    left = max(0, start - 300)
+    right = min(len(content), end + 300, left + SKILL_GREP_EXCERPT_MAX_CHARS)
+    # Trim partial context words inward, but retain the match even when it is one long word.
+    if left and not content[left - 1].isspace():
+        boundary = next((i for i in range(left, start) if content[i].isspace()), None)
+        if boundary is not None:
+            left = boundary + 1
+    if right < len(content) and not content[right].isspace():
+        boundary = next((i for i in range(right - 1, end - 1, -1) if content[i].isspace()), None)
+        if boundary is not None:
+            right = boundary
+    return left, right
+
+
+def grep_skill_content(files: list[dict], pattern: str, case_insensitive: bool = True, max_results: int = 10) -> str:
+    from open_webui.tools.knowledge_fs import MATCH_BUDGET_SECONDS, MatchBudgetExceeded, build_span_matcher
+    from open_webui.utils.json_codec import JSONCodec
+
+    deadline = time.monotonic() + MATCH_BUDGET_SECONDS
+
+    def check_budget():
+        if time.monotonic() >= deadline:
+            raise MatchBudgetExceeded(f'Search exceeded {MATCH_BUDGET_SECONDS:g}s, narrow the pattern')
+
+    matcher, error = build_span_matcher(pattern, case_insensitive, deadline=deadline)
+    if error:
+        raise ValueError(error)
+    max_results = min(30, max(1, max_results))
+    result = {'matches': [], 'total_matches': 0, 'truncated': False}
+    # Reserve the notice while collecting so a full response can still explain omissions.
+    notice = 'Narrow the pattern or specify path.'
+    accepting = True
+    for file in sorted(files, key=lambda file: (file['path'] != 'SKILL.md', file['path'])):
+        check_budget()
+        if file.get('encoding'):
+            continue
+        content, offset = file['content'], 0
+        headings = iter_skill_headings(content)
+        heading, next_heading = None, next(headings, None) if accepting else None
+        previous_window = None
+        for line in content.splitlines(keepends=True):
+            check_budget()
+            for start, end in matcher(line.rstrip('\r\n')):
+                check_budget()
+                result['total_matches'] += 1
+                if not accepting:
+                    continue
+                start, end = offset + start, offset + end
+                while next_heading is not None and next_heading['offset'] <= start:
+                    heading, next_heading = next_heading, next(headings, None)
+                    check_budget()
+                left, right = _skill_match_window(content, start, end)
+                merge = (
+                    previous_window is not None
+                    and left < previous_window[1]
+                    and max(right, previous_window[1]) - previous_window[0] <= SKILL_GREP_EXCERPT_MAX_CHARS
+                )
+                if merge:
+                    left, right = previous_window[0], max(right, previous_window[1])
+                    entry = {**result['matches'][-1], 'excerpt': content[left:right]}
+                    candidates = [*result['matches'][:-1], entry]
+                else:
+                    entry = {
+                        'path': file['path'],
+                        'offset': start,
+                        'match_length': end - start,
+                        'section': heading['title'] if heading else None,
+                        'section_offset': heading['offset'] if heading else None,
+                        'excerpt': content[left:right],
+                    }
+                    candidates = [*result['matches'], entry]
+                candidate = {**result, 'matches': candidates, 'truncated': True, 'notice': notice}
+                if (
+                    len(candidates) > max_results
+                    or len(JSONCodec.dumps(candidate, ensure_ascii=False)) > SKILL_GREP_MAX_CHARS
+                ):
+                    accepting = False
+                    result.update(truncated=True, notice=notice)
+                else:
+                    result['matches'] = candidates
+                    previous_window = left, right
+            offset += len(line)
+    check_budget()
+    serialized = JSONCodec.dumps(result, ensure_ascii=False)
+    while len(serialized) > SKILL_GREP_MAX_CHARS:
+        result['matches'].pop()
+        result.update(truncated=True, notice=notice)
+        serialized = JSONCodec.dumps(result, ensure_ascii=False)
+    return serialized
 
 
 def skill_overview(content: str, files: list, field: str = 'files', tools_enabled: bool = True) -> dict:
@@ -93,10 +193,9 @@ def skill_overview(content: str, files: list, field: str = 'files', tools_enable
     if large:
         overview.update(skill_heading_index(content))
         overview['reading_hint'] = (
-            'This is an opening preview, not the complete instructions. Read applicable sections, including mandatory '
-            'rules, with read_skill_file using the skill id, path="SKILL.md", a heading offset, '
-            'and max_chars up to 20000. '
-            'Offsets count characters in the original file. Use next_offset for additional text when needed.'
+            'This preview is incomplete: use grep_skill_files to find specific rules, then read_skill_file to read '
+            'applicable passages, including mandatory rules, using character offsets or next_offset '
+            '(up to 20000 characters).'
         )
     return overview
 
@@ -114,8 +213,8 @@ def format_skill_content(page: dict, skill_id: str, tools_enabled: bool) -> str:
         content += '\nSkill instructions truncated.'
         if tools_enabled:
             content += (
-                f'\nRead additional text when needed with read_skill_file(id={json.dumps(skill_id)}, '
-                f'path="SKILL.md", offset={page["next_offset"]}).'
+                f'\nFind specific rules with grep_skill_files(id={json.dumps(skill_id)}, pattern=...), '
+                f'then read passages with read_skill_file(path="SKILL.md", offset={page["next_offset"]}).'
             )
     return content
 

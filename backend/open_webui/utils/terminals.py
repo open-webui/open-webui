@@ -233,19 +233,16 @@ def add_terminal_agents_md(messages: list[dict], agents_md: str) -> list[dict]:
     return messages
 
 
-async def get_terminal_skill(
+async def load_terminal_skill(
     request,
     user,
     metadata: dict,
     skill_name: str,
     extra_params: dict | None = None,
     *,
-    offset: int = 0,
-    max_chars: int = SKILL_CONTENT_MAX_CHARS,
     refresh: bool = True,
-    overview: bool = False,
-    tools_enabled: bool = True,
 ) -> dict | None:
+    """Load the full source internally and pin/check its fingerprint before shaping model output."""
     skill = await get_terminal_json(
         request, user, metadata, f'/skills/read?name={quote(skill_name, safe="")}', extra_params
     )
@@ -262,6 +259,25 @@ async def get_terminal_skill(
     if not refresh and previous is not None and previous != fingerprint:
         raise ValueError('Skill changed while reading. Call view_skill again and restart reading.')
     fingerprints[skill_id] = fingerprint
+    return skill
+
+
+async def get_terminal_skill(
+    request,
+    user,
+    metadata: dict,
+    skill_name: str,
+    extra_params: dict | None = None,
+    *,
+    offset: int = 0,
+    max_chars: int = SKILL_CONTENT_MAX_CHARS,
+    refresh: bool = True,
+    overview: bool = False,
+    tools_enabled: bool = True,
+) -> dict | None:
+    skill = await load_terminal_skill(request, user, metadata, skill_name, extra_params, refresh=refresh)
+    if skill is None:
+        return None
 
     location = skill.get('location') or skill.get('path') or ''
     directory = location.rsplit('/', 1)[0] if '/' in location else location
