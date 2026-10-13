@@ -348,7 +348,7 @@ async def follow_up_generation_template(
 def parse_follow_ups(content: str, max_count: int = 5) -> list[str]:
     if not isinstance(content, str):
         return []
-    content = re.sub(r'^```(?:json)?\s*|\s*```$', '', content.strip())
+    content = content[content.find('{') : content.rfind('}') + 1]
     try:
         data = JSONCodec.loads(content)
     except (ValueError, TypeError):
