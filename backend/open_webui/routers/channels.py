@@ -52,10 +52,10 @@ from open_webui.tasks import create_task
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.apps import (
     check_app_channel_access,
-    generate_app_channel_reply,
     get_app_by_id,
     get_app_response,
     has_app_access,
+    send_app_mention,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.channels import extract_mentions, replace_mentions
@@ -1110,11 +1110,10 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                 user = await Users.get_user_by_id(user_id, db=db)
                 if not user:
                     continue
-                value = await generate_app_channel_reply(
+                await send_app_mention(
                     app,
                     user,
                     channel_id,
-                    'channel.mention',
                     {'text': text, 'message_id': message_id, 'parent_id': parent_id},
                     operation_id=message_id,
                     db=db,
@@ -1124,11 +1123,15 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                 )
         except Exception as exc:
             log.warning('App mention delivery failed: %s', type(exc).__name__)
-            value = {
-                'type': 'error',
-                'content': 'App could not respond. Check access and connection status before retrying.',
-            }
-        if value.get('type') != 'ack' and value.get('visibility') != 'channel':
+            status_code = getattr(exc, 'status_code', None)
+            if status_code == 504:
+                detail = 'App delivery was not confirmed. It may have accepted the message; check the channel before retrying.'
+            elif status_code in (401, 403):
+                detail = 'App access was denied. Check permissions before retrying.'
+            elif status_code == 503:
+                detail = 'App is unavailable or busy. The message was not accepted.'
+            else:
+                detail = 'App delivery failed. Check its connection and server logs before retrying.'
             await emit_to_users(
                 'events:app',
                 {
@@ -1137,7 +1140,7 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                     'channel_id': channel_id,
                     'message_id': message_id,
                     'parent_id': parent_id,
-                    'reply': value,
+                    'reply': {'type': 'error', 'content': detail},
                 },
                 [user_id],
             )

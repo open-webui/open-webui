@@ -62,7 +62,9 @@
 	{#if reply?.title}<h3 class="font-medium">{reply.title}</h3>{/if}
 	{#if reply?.content}<Markdown content={reply.content} allowEmbeds={false} />{/if}
 	{#each reply.embeds ?? [] as embed}<AppEmbed {embed} />{/each}
-	{#if reply?.type === 'error'}<p role="alert">The app could not complete this operation.</p>{/if}
+	{#if reply?.type === 'error' && !reply?.content}<p role="alert">
+			The app could not complete this operation.
+		</p>{/if}
 	{#if error}<p role="alert" class="text-red-600">{error}</p>{/if}
 	{#if reply?.type === 'download'}<button
 			class="focus-ring flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
