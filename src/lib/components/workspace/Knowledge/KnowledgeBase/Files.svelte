@@ -273,15 +273,14 @@
 				toast.success($i18n.t('File removed successfully.'));
 				onChanged(undefined, [deletion.file.id!]);
 			} else if (deletion.directory) {
-				await deleteKnowledgeDirectory(
+				const res = await deleteKnowledgeDirectory(
 					localStorage.token,
 					knowledge.id,
 					deletion.directory.id,
 					!deleteContents
 				);
 				toast.success($i18n.t('Directory deleted.'));
-				// The selected document may be in an unloaded descendant; let the browser verify membership.
-				onChanged();
+				onChanged(undefined, res.file_ids);
 				expanded.delete(deletion.directory.id);
 				expanded = new Set(expanded);
 			}
