@@ -162,8 +162,12 @@ def grep_skill_content(files: list[dict], pattern: str, case_insensitive: bool =
                         }
                         candidates = [*result['matches'], entry]
                     candidate = {
-                        **result, 'matches': candidates, 'truncated': True, 'notice': notice,
-                        'omitted_matches': [], 'omitted_matches_truncated': False,
+                        **result,
+                        'matches': candidates,
+                        'truncated': True,
+                        'notice': notice,
+                        'omitted_matches': [],
+                        'omitted_matches_truncated': False,
                     }
                     if (
                         len(candidates) <= max_results
@@ -175,10 +179,18 @@ def grep_skill_content(files: list[dict], pattern: str, case_insensitive: bool =
                         continue
                     accepting = False
                     result.update(truncated=True, notice=notice, omitted_matches=[], omitted_matches_truncated=False)
-                locations = [*result['omitted_matches'], {
-                    'path': file['path'], 'offset': start, 'section': heading['title'] if heading else None,
-                }]
-                if len(locations) <= 30 and len(JSONCodec.dumps(locations, ensure_ascii=False)) <= SKILL_GREP_LOCATIONS_MAX_CHARS:
+                locations = [
+                    *result['omitted_matches'],
+                    {
+                        'path': file['path'],
+                        'offset': start,
+                        'section': heading['title'] if heading else None,
+                    },
+                ]
+                if (
+                    len(locations) <= 30
+                    and len(JSONCodec.dumps(locations, ensure_ascii=False)) <= SKILL_GREP_LOCATIONS_MAX_CHARS
+                ):
                     result['omitted_matches'] = locations
                 else:
                     accepting_locations = False
@@ -225,9 +237,7 @@ def format_skill_content(page: dict, skill_id: str, tools_enabled: bool) -> str:
     if page['next_offset'] is not None:
         content += '\nSkill instructions truncated.'
         if tools_enabled:
-            content += (
-                f'\nread_skill_file(id={json.dumps(skill_id)}, path="SKILL.md", offset={page["next_offset"]}).'
-            )
+            content += f'\nread_skill_file(id={json.dumps(skill_id)}, path="SKILL.md", offset={page["next_offset"]}).'
     return content
 
 

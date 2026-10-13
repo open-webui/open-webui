@@ -2844,7 +2844,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     available_skills = []
     terminal_skills = []
-    view_skill_ids = []
     if is_note_chat:
         note_id = (chat.meta or {}).get('note_id')
         note = await Notes.get_note_by_id(note_id) if note_id else None
@@ -2931,7 +2930,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     append=True,
                 )
             else:
-                view_skill_ids.append(skill.id)
                 skill_manifest += (
                     f'<skill>\n<id>{skill.id}</id>\n<name>{skill.name}</name>\n'
                     f'<description>{skill.description or ""}</description>\n</skill>\n'
@@ -2973,7 +2971,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         append=True,
                     )
             else:
-                view_skill_ids.append(sid)
                 skill_manifest += format_terminal_skill_manifest_entry(skill)
 
         if skill_manifest:
@@ -3221,7 +3218,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 {
                     **extra_params,
                     '__event_emitter__': event_emitter,
-                    '__skill_ids__': view_skill_ids,
+                    '__skill_ids__': sorted(resolved_skill_ids),
                 },
                 features,
                 model,
