@@ -221,7 +221,6 @@ def skill_overview(content: str, files: list, field: str = 'files', tools_enable
     }
     if large:
         overview.update(skill_heading_index(content))
-        overview['reading_hint'] = 'Partial preview; offsets are character positions.'
     return overview
 
 
@@ -231,7 +230,7 @@ def format_skill_content(page: dict, skill_id: str, tools_enabled: bool) -> str:
         content += '\nSection index: ' + json.dumps(page['headings'], ensure_ascii=False)
         if page.get('headings_truncated'):
             content += '\nAdditional headings omitted.'
-        content += f'\n{page["reading_hint"]} Skill ID: {json.dumps(skill_id)}.'
+        content += f'\nSkill ID: {json.dumps(skill_id)}.'
         content += f'\nnext_offset: {page["next_offset"]}'
         return content
     if page['next_offset'] is not None:
