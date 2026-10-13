@@ -3508,8 +3508,6 @@ async def view_skill(
 ) -> str:
     """Read skill instructions and file list. Large skills return an opening preview and section offsets.
 
-    Use grep_skill_files to find specific rules, then read_skill_file for applicable passages, including mandatory rules.
-
     :param id: Skill ID from the available skills manifest.
     """
     if __request__ is None or not __user__:
@@ -3648,12 +3646,13 @@ async def grep_skill_files(
     __metadata__: dict = None,
     __event_call__: callable = None,
 ) -> str:
-    """Find specific rules in skill files without reading every page; then use read_skill_file for relevant passages.
+    """Search skill files for text or regex matches.
 
     Literal text or auto-detected RE2 regex; no lookarounds/backreferences, and shorthand character classes are ASCII-only.
     Searches each line for non-empty, non-overlapping matches and returns merged, bounded excerpts (6000 characters total).
     Offsets and match_length describe the first match in each excerpt, in original-file characters; total_matches counts
-    occurrences, not excerpts. Terminal skills support SKILL.md only. No skill version is created.
+    occurrences, not excerpts. Omitted excerpts have compact locations in omitted_matches; omitted_matches_truncated
+    indicates when more locations remain. Terminal skills support SKILL.md only. No skill version is created.
 
     :param id: Skill ID, including terminal: IDs.
     :param pattern: Text or auto-detected regex to find (up to 4096 characters).

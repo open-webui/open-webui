@@ -28,6 +28,7 @@ SKILL_MANIFEST_MAX_ENTRIES = 50
 SKILL_MANIFEST_MAX_CHARS = 5_000
 SKILL_GREP_MAX_CHARS = 6_000
 SKILL_GREP_EXCERPT_MAX_CHARS = 1_200
+SKILL_GREP_LOCATIONS_MAX_CHARS = 2_000
 
 
 def skill_content_page(content: str, offset: int = 0, max_chars: int = SKILL_CONTENT_MAX_CHARS) -> dict:
@@ -116,64 +117,80 @@ def grep_skill_content(files: list[dict], pattern: str, case_insensitive: bool =
         raise ValueError(error)
     max_results = min(30, max(1, max_results))
     result = {'matches': [], 'total_matches': 0, 'truncated': False}
-    # Reserve the notice while collecting so a full response can still explain omissions.
-    notice = 'Narrow the pattern or specify path.'
+    # Reserve room for locations so large excerpts cannot hide all the remaining matches.
+    notice = 'Excerpts omitted; see omitted_matches.'
     accepting = True
+    accepting_locations = True
     for file in sorted(files, key=lambda file: (file['path'] != 'SKILL.md', file['path'])):
         check_budget()
         if file.get('encoding'):
             continue
         content, offset = file['content'], 0
         headings = iter_skill_headings(content)
-        heading, next_heading = None, next(headings, None) if accepting else None
+        heading, next_heading = None, next(headings, None) if accepting or accepting_locations else None
         previous_window = None
         for line in content.splitlines(keepends=True):
             check_budget()
             for start, end in matcher(line.rstrip('\r\n')):
                 check_budget()
                 result['total_matches'] += 1
-                if not accepting:
+                if not accepting and not accepting_locations:
                     continue
                 start, end = offset + start, offset + end
                 while next_heading is not None and next_heading['offset'] <= start:
                     heading, next_heading = next_heading, next(headings, None)
                     check_budget()
-                left, right = _skill_match_window(content, start, end)
-                merge = (
-                    previous_window is not None
-                    and left < previous_window[1]
-                    and max(right, previous_window[1]) - previous_window[0] <= SKILL_GREP_EXCERPT_MAX_CHARS
-                )
-                if merge:
-                    left, right = previous_window[0], max(right, previous_window[1])
-                    entry = {**result['matches'][-1], 'excerpt': content[left:right]}
-                    candidates = [*result['matches'][:-1], entry]
-                else:
-                    entry = {
-                        'path': file['path'],
-                        'offset': start,
-                        'match_length': end - start,
-                        'section': heading['title'] if heading else None,
-                        'section_offset': heading['offset'] if heading else None,
-                        'excerpt': content[left:right],
+                if accepting:
+                    left, right = _skill_match_window(content, start, end)
+                    merge = (
+                        previous_window is not None
+                        and left < previous_window[1]
+                        and max(right, previous_window[1]) - previous_window[0] <= SKILL_GREP_EXCERPT_MAX_CHARS
+                    )
+                    if merge:
+                        left, right = previous_window[0], max(right, previous_window[1])
+                        entry = {**result['matches'][-1], 'excerpt': content[left:right]}
+                        candidates = [*result['matches'][:-1], entry]
+                    else:
+                        entry = {
+                            'path': file['path'],
+                            'offset': start,
+                            'match_length': end - start,
+                            'section': heading['title'] if heading else None,
+                            'section_offset': heading['offset'] if heading else None,
+                            'excerpt': content[left:right],
+                        }
+                        candidates = [*result['matches'], entry]
+                    candidate = {
+                        **result, 'matches': candidates, 'truncated': True, 'notice': notice,
+                        'omitted_matches': [], 'omitted_matches_truncated': False,
                     }
-                    candidates = [*result['matches'], entry]
-                candidate = {**result, 'matches': candidates, 'truncated': True, 'notice': notice}
-                if (
-                    len(candidates) > max_results
-                    or len(JSONCodec.dumps(candidate, ensure_ascii=False)) > SKILL_GREP_MAX_CHARS
-                ):
+                    if (
+                        len(candidates) <= max_results
+                        and len(JSONCodec.dumps(candidate, ensure_ascii=False))
+                        <= SKILL_GREP_MAX_CHARS - SKILL_GREP_LOCATIONS_MAX_CHARS
+                    ):
+                        result['matches'] = candidates
+                        previous_window = left, right
+                        continue
                     accepting = False
-                    result.update(truncated=True, notice=notice)
+                    result.update(truncated=True, notice=notice, omitted_matches=[], omitted_matches_truncated=False)
+                locations = [*result['omitted_matches'], {
+                    'path': file['path'], 'offset': start, 'section': heading['title'] if heading else None,
+                }]
+                if len(locations) <= 30 and len(JSONCodec.dumps(locations, ensure_ascii=False)) <= SKILL_GREP_LOCATIONS_MAX_CHARS:
+                    result['omitted_matches'] = locations
                 else:
-                    result['matches'] = candidates
-                    previous_window = left, right
+                    accepting_locations = False
+                    result['omitted_matches_truncated'] = True
+                    result['notice'] = 'More locations omitted; narrow the pattern or specify path.'
             offset += len(line)
     check_budget()
     serialized = JSONCodec.dumps(result, ensure_ascii=False)
     while len(serialized) > SKILL_GREP_MAX_CHARS:
-        result['matches'].pop()
-        result.update(truncated=True, notice=notice)
+        result['omitted_matches'].pop()
+        result['omitted_matches_truncated'] = True
+        result['notice'] = 'More locations omitted; narrow the pattern or specify path.'
         serialized = JSONCodec.dumps(result, ensure_ascii=False)
     return serialized
 
@@ -192,11 +209,7 @@ def skill_overview(content: str, files: list, field: str = 'files', tools_enable
     }
     if large:
         overview.update(skill_heading_index(content))
-        overview['reading_hint'] = (
-            'This preview is incomplete: use grep_skill_files to find specific rules, then read_skill_file to read '
-            'applicable passages, including mandatory rules, using character offsets or next_offset '
-            '(up to 20000 characters).'
-        )
+        overview['reading_hint'] = 'Partial preview; offsets are character positions.'
     return overview
 
 
@@ -213,8 +226,7 @@ def format_skill_content(page: dict, skill_id: str, tools_enabled: bool) -> str:
         content += '\nSkill instructions truncated.'
         if tools_enabled:
             content += (
-                f'\nFind specific rules with grep_skill_files(id={json.dumps(skill_id)}, pattern=...), '
-                f'then read passages with read_skill_file(path="SKILL.md", offset={page["next_offset"]}).'
+                f'\nread_skill_file(id={json.dumps(skill_id)}, path="SKILL.md", offset={page["next_offset"]}).'
             )
     return content
 

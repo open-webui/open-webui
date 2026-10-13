@@ -2917,9 +2917,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 root_content = format_skill_content(overview, skill.id, skill_tools_enabled)
                 resources = '\n'.join(overview['files'])
                 resource_hint = (
-                    f'\nFind rules with grep_skill_files(id="{skill.id}", pattern=...), '
-                    f'then read relevant passages with read_skill_file(id="{skill.id}", path=...).\n{resources}'
-                    if use_builtin_tools and model_builtin_tools.get('skills', True)
+                    f'\nSupporting files:\n{resources}'
+                    if skill_tools_enabled and resources
                     else '\nSupporting files require a model with skill tools enabled.'
                     if resources
                     else ''
