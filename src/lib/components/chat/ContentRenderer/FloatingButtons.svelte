@@ -61,12 +61,12 @@
 		prompt = prompt.replace(toolIdPattern, '');
 
 		if (prompt.includes('{{INPUT_CONTENT}}') && floatingInput) {
-			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
+			prompt = prompt.replace('{{INPUT_CONTENT}}', () => floatingInputValue);
 			floatingInputValue = '';
 		}
 
-		prompt = prompt.replace('{{CONTENT}}', selectedText);
-		prompt = prompt.replace('{{SELECTED_CONTENT}}', selectedContent);
+		prompt = prompt.replace('{{CONTENT}}', () => selectedText);
+		prompt = prompt.replace('{{SELECTED_CONTENT}}', () => selectedContent);
 
 		// Prepopulate the main chat input instead of inline streaming
 		onSetInputText(prompt);
