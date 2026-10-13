@@ -94,7 +94,8 @@ def skill_overview(content: str, files: list, field: str = 'files', tools_enable
         overview.update(skill_heading_index(content))
         overview['reading_hint'] = (
             'This is an opening preview, not the complete instructions. Read applicable sections, including mandatory '
-            'rules, with read_skill_file using the skill id, path="SKILL.md", a heading offset, and max_chars up to 20000. '
+            'rules, with read_skill_file using the skill id, path="SKILL.md", a heading offset, '
+            'and max_chars up to 20000. '
             'Offsets count characters in the original file. Use next_offset for additional text when needed.'
         )
     return overview
