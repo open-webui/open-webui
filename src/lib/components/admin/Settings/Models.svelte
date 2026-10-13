@@ -485,7 +485,10 @@
 		model = { ...model, ...(isPresetModel(model) ? {} : { base_model_id: null }), ...overrides };
 
 		if (savedModels.find((m: ModelListItem) => m.id === model.id) || isPresetModel(model)) {
-			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
+			const res = await updateModelById(localStorage.token, model.id, {
+				...savedModels.find((m: ModelListItem) => m.id === model.id),
+				...model
+			}).catch((error) => {
 				return null;
 			});
 
