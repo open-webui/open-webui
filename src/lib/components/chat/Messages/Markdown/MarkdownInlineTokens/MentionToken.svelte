@@ -107,7 +107,10 @@
 			browser &&
 			idType === 'U' &&
 			requestedUserId !== id &&
-			(!token?.label || token.label === id || /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(token.label))
+			(!token?.label ||
+				token.label === _id ||
+				token.label === id ||
+				/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(token.label))
 		) {
 			requestedUserId = id;
 			resolvedUser = null;
