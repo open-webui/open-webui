@@ -305,8 +305,13 @@ def _build_context_usage(tokens: int, threshold: int) -> dict:
 def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:
     summary = None
     summary_idx = None
+    cut_idx = None
+    kept_output = None
 
     for idx, message in enumerate(messages):
+        if checkpoint := _find_tool_loop_checkpoint(messages, idx):
+            summary, cut_idx, kept_output = checkpoint
+            summary_idx = cut_idx - 1
         value = message.get('contextSummary') or message.get('context_summary')
         if isinstance(value, str) and value.strip():
             summary = value
@@ -314,7 +319,36 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
 
     if summary_idx is None:
         return messages, None
-    return messages[summary_idx:], summary
+    return [
+        {**message, 'output': kept_output} if idx == cut_idx else message
+        for idx, message in enumerate(messages)
+        if idx >= summary_idx
+    ], summary
+
+
+def _find_tool_loop_checkpoint(messages: list[dict], idx: int) -> tuple[str, int, list[dict]] | None:
+    """Tool loop summary saved in this reply, with the reply it cut and that reply's remaining output."""
+    output = messages[idx].get('output') or []
+    marker = next((item for item in reversed(output) if item.get('type') == 'open_webui:context_compaction'), None)
+    if not marker:
+        return None
+    # The loop can cut into an earlier reply when this one started near the threshold.
+    for cut_idx in range(idx, -1, -1):
+        cut_output = messages[cut_idx].get('output') or []
+        start = next(
+            (
+                position
+                for position, item in enumerate(cut_output)
+                if item.get('type') == 'function_call' and item.get('call_id') == marker['call_id']
+            ),
+            None,
+        )
+        if start is not None:
+            while start and cut_output[start - 1].get('type') != 'function_call_output':
+                start -= 1
+            kept_output = [item for item in cut_output[start:] if item.get('type') != 'open_webui:context_compaction']
+            return marker['summary'], cut_idx, kept_output
+    return None
 
 
 def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: str | None, threshold: int) -> bool:

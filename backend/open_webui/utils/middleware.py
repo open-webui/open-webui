@@ -6326,6 +6326,20 @@ async def streaming_chat_response_handler(response, ctx):
                                         idx for idx, message in enumerate(messages) if message.get('role') != 'system'
                                     )
                                     messages[checkpoint] = {**messages[checkpoint], 'contextSummary': context_summary}
+                                    kept_call_id = next(
+                                        message['tool_calls'][0]['id']
+                                        for message in messages
+                                        if message.get('tool_calls')
+                                    )
+                                    output.append(
+                                        {
+                                            'type': 'open_webui:context_compaction',
+                                            'id': output_id('cc'),
+                                            'call_id': kept_call_id,
+                                            'summary': context_summary,
+                                        }
+                                    )
+                                    await emit_output()
                             except Exception:
                                 log.exception('Tool loop context compaction failed; keeping the current context')
 
