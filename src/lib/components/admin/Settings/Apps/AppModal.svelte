@@ -40,10 +40,12 @@
 		showGrants = false,
 		confirm = false;
 	let showScopes = false;
+	let scopeMode: 'granted' | 'requested' = 'granted';
 	let manifestUpdated = false;
 	let manual = false;
 	let scopeQuery = '';
-	$: availableScopes = manual ? Object.keys(scopeLabels) : (manifest?.requested_scopes ?? []);
+	$: availableScopes =
+		scopeMode === 'requested' ? Object.keys(scopeLabels) : (manifest?.requested_scopes ?? []);
 	$: filteredScopes = availableScopes.filter((scope: string) =>
 		`${scope} ${$i18n.t(scopeLabels[scope] ?? scope)}`
 			.toLowerCase()
@@ -98,8 +100,7 @@
 					manifest = {
 						...manifest,
 						id: manifest.id || slug,
-						name: app ? manifest.name : name,
-						requested_scopes: [...new Set([...manifest.requested_scopes, ...scopes])]
+						name: app ? manifest.name : name
 					};
 					manifestUpdated = !!app && JSON.stringify(manifest) !== JSON.stringify(app.data.manifest);
 				}
@@ -150,8 +151,9 @@
 	let opened = false;
 	async function initialize() {
 		manifestUpdated = false;
-		manual = !!app;
+		manual = false;
 		showScopes = false;
+		scopeMode = 'granted';
 		scopeQuery = '';
 		url = app?.data.url ?? '';
 		apiKey = '';
@@ -204,7 +206,13 @@
 <Modal size="sm" bind:show>
 	<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 		<h1 class="text-lg font-medium self-center font-primary">
-			{showScopes ? $i18n.t('Scopes') : app ? $i18n.t('Configure app') : $i18n.t('Add app')}
+			{showScopes
+				? scopeMode === 'requested'
+					? $i18n.t('Requested scopes')
+					: $i18n.t('Scopes')
+				: app
+					? $i18n.t('Configure app')
+					: $i18n.t('Add app')}
 		</h1>
 		<button
 			type="button"
@@ -218,8 +226,8 @@
 	{#if showScopes}
 		<div class="px-5 pb-4 text-sm dark:text-gray-200">
 			<p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
-				{manual
-					? $i18n.t('Choose the scopes to grant this app.')
+				{scopeMode === 'requested'
+					? $i18n.t('Enter the scopes requested by the app.')
 					: app
 						? $i18n.t('Scopes requested by {{APP_NAME}}', { APP_NAME: name })
 						: $i18n.t('Review the scopes this app is requesting before adding it.')}
@@ -255,10 +263,19 @@
 									</div>{/if}
 							</div>
 							<Switch
-								state={scopes.includes(scope)}
+								state={(scopeMode === 'requested' ? manifest.requested_scopes : scopes).includes(
+									scope
+								)}
 								ariaLabelledbyId={labelId}
 								on:change={(event) => {
-									scopes = event.detail ? [...scopes, scope] : scopes.filter((s) => s !== scope);
+									if (scopeMode === 'requested') {
+										manifest.requested_scopes = event.detail
+											? [...manifest.requested_scopes, scope]
+											: manifest.requested_scopes.filter((s) => s !== scope);
+										scopes = scopes.filter((s) => manifest.requested_scopes.includes(s));
+									} else {
+										scopes = event.detail ? [...scopes, scope] : scopes.filter((s) => s !== scope);
+									}
 								}}
 							/>
 						</AdminSettingRow>
@@ -360,6 +377,15 @@
 								placeholder="-----BEGIN PUBLIC KEY-----"
 							></textarea>
 						</AdminSettingField>
+						<button
+							type="button"
+							class="mt-2 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
+							on:click={() => {
+								scopeQuery = '';
+								scopeMode = 'requested';
+								showScopes = true;
+							}}>{$i18n.t('Requested scopes')}</button
+						>
 					{/if}
 					<AdminSettingSection title={$i18n.t('Connection')}>
 						<div class="flex items-center gap-2">
@@ -377,6 +403,8 @@
 													...(apiKey ? { api_key: apiKey } : {}),
 													app_id: app!.id
 												});
+												manual = false;
+												scopeMode = 'granted';
 												scopes = scopes.filter((scope) =>
 													manifest.requested_scopes.includes(scope)
 												);
@@ -391,6 +419,14 @@
 								</Tooltip>
 							{/if}
 						</div>
+						{#if app && !manual}
+							<button
+								type="button"
+								disabled={busy}
+								class="mt-2 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
+								on:click={editDetailsManually}>{$i18n.t('Edit details manually')}</button
+							>
+						{/if}
 						{#if manifestUpdated}
 							<p class="mt-2 text-xs text-gray-500">
 								{$i18n.t('Saving approves the updated app identity and selected scopes.')}
@@ -429,6 +465,7 @@
 									class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
 									on:click={() => {
 										scopeQuery = '';
+										scopeMode = 'granted';
 										showScopes = true;
 									}}
 								>
