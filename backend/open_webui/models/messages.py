@@ -117,6 +117,10 @@ class MessageUserSlimResponse(MessageUserResponse):
 
     @field_validator('data', mode='before')
     def convert_data_to_bool(cls, v):
+        # A listed reply validates its quoted message twice, so keep the flag.
+        if isinstance(v, bool):
+            return v
+
         # No data or not a dict → False
         if not isinstance(v, dict):
             return False

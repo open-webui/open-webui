@@ -156,6 +156,17 @@
 		loadMessageData();
 	}
 
+	const loadReplyToMessageData = async () => {
+		const res = await getMessageData(localStorage.token, channel?.id, message.reply_to_message.id);
+		if (res) {
+			message.reply_to_message.data = res;
+		}
+	};
+
+	$: if (message?.reply_to_message?.app_id && message.reply_to_message.data === true) {
+		loadReplyToMessageData();
+	}
+
 	$: messageOutput = Array.isArray(message?.data?.output) ? message.data.output : [];
 	$: hasStructuredOutput = buildOutputDisplayItems(messageOutput).length > 0;
 </script>
