@@ -912,10 +912,6 @@ async def get_builtin_tools(
         )
 
         spec = get_builtin_tool_spec(func)
-        if func.__name__ in {'view_skill', 'read_skill_file', 'grep_skill_files'}:
-            spec['parameters']['properties']['id']['enum'] = skill_ids
-        elif func.__name__ == 'update_skill_files':
-            spec['parameters']['properties']['id']['enum'] = workspace_skill_ids
         if func.__name__ == 'delegate_task' and not config.get('subagents.background_enabled'):
             parameters = spec.get('parameters', {})
             parameters.get('properties', {}).pop('background', None)
