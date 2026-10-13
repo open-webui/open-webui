@@ -2385,7 +2385,7 @@ async def delete_knowledge_directory(
         subject_id=dir_id,
         data={'knowledge_id': id, 'move_files': move_files},
     )
-    return {'status': True}
+    return {'status': True, 'file_ids': [file.id for file in files]}
 
 
 @router.post('/{id}/file/move')
