@@ -16,6 +16,15 @@
 	let selectedText = '';
 	let floatingInputValue = '';
 
+	const portal = (node: HTMLElement) => {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				node.remove();
+			}
+		};
+	};
+
 	$: DEFAULT_ACTIONS = [
 		{
 			id: 'ask',
@@ -82,8 +91,9 @@
 </script>
 
 <div
+	use:portal
 	id={`floating-buttons-${id}`}
-	class="absolute rounded-lg mt-1 text-xs z-9999"
+	class="fixed rounded-lg mt-1 text-xs z-9999"
 	style="display: none"
 >
 	{#if !floatingInput}
