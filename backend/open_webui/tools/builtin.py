@@ -3544,7 +3544,6 @@ async def view_skill(
         return JSONCodec.dumps(
             {
                 'id': skill.id,
-                'version_id': version_id,
                 'name': snapshot['name'],
                 **skill_content_page(snapshot['content']),
                 **bounded_skill_manifest(file_summaries(snapshot['data']['files'])),
@@ -3618,14 +3617,12 @@ async def read_skill_file(
             return JSONCodec.dumps(
                 {
                     **file_summaries([file])[0],
-                    'version_id': version_id,
-                    'url': '/workspace/skills/edit?' + urlencode({'id': id, 'version_id': version_id, 'path': path}),
+                    'url': '/workspace/skills/edit?' + urlencode({'id': id, 'path': path}),
                 }
             )
         return JSONCodec.dumps(
             {
                 'path': path,
-                'version_id': version_id,
                 **skill_content_page(file['content'], offset, max_chars),
             },
             ensure_ascii=False,
@@ -3682,9 +3679,7 @@ async def create_skill(
             SimpleNamespace(**__user__),
             None,
         )
-        return JSONCodec.dumps(
-            {'id': result.id, 'version_id': result.version_id, 'url': '/workspace/skills/edit?id=' + result.id}
-        )
+        return JSONCodec.dumps({'id': result.id, 'url': '/workspace/skills/edit?id=' + result.id})
     except Exception as error:
         return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
 
@@ -3734,9 +3729,12 @@ async def update_skill_files(
         )
         versions[skill.id] = result.version_id
         await publish_event(__request__, EVENTS.SKILL_UPDATED, actor=user, subject_id=id, data={'name': result.name})
-        return JSONCodec.dumps({'id': result.id, 'version_id': result.version_id})
+        return JSONCodec.dumps({'id': result.id})
     except Exception as error:
-        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+        detail = getattr(error, 'detail', str(error))
+        if isinstance(detail, dict) and detail.get('code') == 'version_conflict':
+            detail = {'code': 'version_conflict', 'message': 'Skill changed. Call view_skill again and reapply the edit.'}
+        return JSONCodec.dumps({'error': detail})
 
 
 # =============================================================================

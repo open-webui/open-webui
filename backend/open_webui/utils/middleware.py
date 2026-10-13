@@ -2926,7 +2926,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 if manifest.get('notice'):
                     resource_hint += '\n' + manifest['notice']
                 form_data['messages'] = add_or_update_system_message(
-                    f'<skill id="{skill.id}" version_id="{version_id}" name="{skill.name}">\n'
+                    f'<skill id="{skill.id}" name="{skill.name}">\n'
                     f'{root_content}{resource_hint}\n</skill>',
                     form_data['messages'],
                     append=True,
