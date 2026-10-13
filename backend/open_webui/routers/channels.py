@@ -905,15 +905,15 @@ async def remove_app(
 
 
 class MessageUserResponse(MessageResponse):
-    data: bool | None = None
+    data: dict | bool | None = None
 
     @field_validator('data', mode='before')
-    def convert_data_to_bool(cls, v):
-        # No data or not a dict → False
+    def serialize_data(cls, v, info):
         if not isinstance(v, dict):
             return False
-
-        # True if ANY value in the dict is non-empty
+        # App cards and buttons are message content, not lazy-loaded attachments.
+        if info.data.get('app_id'):
+            return v
         return any(bool(val) for val in v.values())
 
 

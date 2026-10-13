@@ -137,6 +137,12 @@ class MessageReplyToResponse(MessageUserResponse):
 class MessageWithReactionsResponse(MessageUserSlimResponse):
     reactions: list[Reactions]
 
+    @field_validator('data', mode='before')
+    def summarize_data(cls, v, info):
+        if info.data.get('app_id') and isinstance(v, dict):
+            return v
+        return super().summarize_data(v)
+
 
 class MessageResponse(MessageReplyToResponse):
     latest_reply_at: Optional[int]
