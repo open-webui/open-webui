@@ -1292,6 +1292,8 @@ class ChatTable:
                         user_id=user.id,
                         user={'id': user.id, 'name': user.name},
                     )
+                elif 'models' in user_message:
+                    message = {**existing, 'models': user_message['models']}
                 turn[user_message_id] = self.upsert_message_to_history(
                     history, user_message_id, self._clean_null_bytes(message)
                 )
