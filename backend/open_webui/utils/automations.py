@@ -573,7 +573,7 @@ async def _check_calendar_alerts(app) -> None:
 
     for event, user_tz in upcoming:
         # Skip if already alerted for this start time
-        if event.meta and event.meta.get('alerted_at'):
+        if event.meta and event.meta.get('alerted_at') == event.start_at:
             continue
 
         # Compute minutes until event starts
@@ -604,7 +604,7 @@ async def _check_calendar_alerts(app) -> None:
         try:
             await CalendarEvents.update_event_by_id(
                 event.id,
-                CalendarEventUpdateForm(meta={'alerted_at': now_ns}),
+                CalendarEventUpdateForm(meta={'alerted_at': event.start_at}),
             )
         except Exception:
             log.debug('Failed to mark event %s as alerted', event.id, exc_info=True)
