@@ -1,4 +1,8 @@
 {
+	"Only admins can use this app. Add users or groups to allow others.": "Somente administradores podem usar este aplicativo. Adicione usuários ou grupos para permitir que outras pessoas usem.",
+	"Restricted": "Restrito",
+	"Everyone": "Todos",
+	"Who can use this app?": "Quem pode usar este aplicativo?",
 	"-1 for no limit, or a positive integer for a specific limit": "-1 para nenhum limite ou um inteiro positivo para um limite específico",
 	"(latest)": "(mais recente)",
 	"(leave blank for to use commercial endpoint)": "(deixe em branco para usar o endpoint comercial)",
@@ -759,6 +763,7 @@
 	"Discover, download, and explore model presets": "Descubra, baixe e explore predefinições de modelos",
 	"Discussion channel where access is based on groups and permissions": "Canal de discussão onde o acesso é baseado em grupos e permissões.",
 	"Dismiss": "Dispensar",
+	"Only visible to you": "Visível apenas para você",
 	"Dismiss notification": "Dispensar notificação",
 	"Display": "Exibir",
 	"Display text": "Texto exibido",
@@ -2655,6 +2660,8 @@
 	"settings.admin.general.banners.label": "Banners",
 	"settings.admin.general.calendar.description": "Permita que os usuários acessem os recursos de calendário.",
 	"settings.admin.general.calendar.label": "Calendário",
+	"settings.admin.general.apps.description": "Permita que administradores conectem aplicativos externos ao Open WebUI.",
+	"settings.admin.general.apps.label": "Aplicativos",
 	"settings.admin.general.channels.description": "Permita que os usuários usem canais para conversas compartilhadas.",
 	"settings.admin.general.channels.label": "Canais",
 	"settings.admin.general.checkForUpdates.label": "Verificar atualizações",
@@ -3890,5 +3897,14 @@
 	"YouTube": "YouTube",
 	"YouTube video player": "Reprodutor de vídeo do YouTube",
 	"Zoom in": "Aumentar zoom",
-	"Zoom out": "Diminuir zoom"
+	"Zoom out": "Diminuir zoom",
+	"Read messages and history in joined channels": "Ler mensagens e o histórico dos canais em que você entrou.",
+	"Update app": "Atualizar aplicativo",
+	"Saving approves the updated app identity and selected scopes.": "Ao salvar, você aprova a identidade atualizada do aplicativo e os escopos selecionados.",
+	"Manifest discovery is recommended. You can also enter app details manually.": "Recomendamos a descoberta pelo manifesto. Você também pode informar os detalhes do aplicativo manualmente.",
+	"Choose the scopes to grant this app.": "Escolha os escopos que você concede a este aplicativo.",
+	"Public key": "Chave pública",
+	"Enter the Ed25519 public key provided by the app.": "Digite a chave pública Ed25519 fornecida pelo aplicativo.",
+	"Edit details manually": "Editar detalhes manualmente",
+	"Enter details manually": "Informar detalhes manualmente"
 }
