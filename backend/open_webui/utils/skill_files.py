@@ -19,7 +19,10 @@ MAX_FILE_BYTES = 10 * 1024 * 1024
 MAX_SKILL_BYTES = 50 * 1024 * 1024
 MAX_IMPORT_BYTES = 200 * 1024 * 1024
 MAX_FILES = 1000
-SKILL_CONTENT_MAX_CHARS = 100_000
+SKILL_CONTENT_MAX_CHARS = 20_000
+SKILL_INJECTION_MAX_CHARS = 100_000
+SKILL_PREVIEW_MAX_CHARS = 5_000
+SKILL_OVERVIEW_LIST_MAX_CHARS = 2_500
 SKILL_MANIFEST_MAX_ENTRIES = 50
 SKILL_MANIFEST_MAX_CHARS = 5_000
 
@@ -30,11 +33,11 @@ def skill_content_page(content: str, offset: int = 0, max_chars: int = SKILL_CON
     return {'content': content[offset:end], 'next_offset': end if end < len(content) else None}
 
 
-def bounded_skill_manifest(entries: list, field: str = 'files') -> dict:
+def bounded_skill_manifest(entries: list, field: str = 'files', max_chars: int = SKILL_MANIFEST_MAX_CHARS) -> dict:
     bounded, size = [], 2  # Include the JSON array brackets and separators in the budget.
     for entry in entries[:SKILL_MANIFEST_MAX_ENTRIES]:
         entry_size = len(json.dumps(entry, ensure_ascii=False)) + (2 if bounded else 0)
-        if size + entry_size > SKILL_MANIFEST_MAX_CHARS:
+        if size + entry_size > max_chars:
             break
         bounded.append(entry)
         size += entry_size
@@ -44,13 +47,73 @@ def bounded_skill_manifest(entries: list, field: str = 'files') -> dict:
     return result
 
 
+def skill_heading_index(content: str) -> dict:
+    headings, size, offset = [], 2, 0
+    frontmatter_match = re.match(r'\A---[ \t]*\r?\n.*?\r?\n---[ \t]*(?:\r?\n|$)', content, re.DOTALL)
+    body_start = frontmatter_match.end() if frontmatter_match else 0
+    fence = None
+    for line in content.splitlines(keepends=True):
+        line_offset = offset
+        offset += len(line)
+        if line_offset < body_start:
+            continue
+        text = line.rstrip('\r\n')
+        marker = re.match(r' {0,3}(`{3,}|~{3,})(.*)$', text)
+        if fence:
+            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip():
+                fence = None
+            continue
+        if marker and (marker[1][0] == '~' or '`' not in marker[2]):
+            fence = marker[1]
+            continue
+        heading = re.match(r' {0,3}(#{1,6})(?:[ \t]+(.*)|$)', text)
+        if heading:
+            title = re.sub(r'(?:^|[ \t]+)#+[ \t]*$', '', heading[2] or '').strip()
+            entry = {'title': title, 'level': len(heading[1]), 'offset': line_offset}
+            entry_size = len(json.dumps(entry, ensure_ascii=False)) + (2 if headings else 0)
+            if size + entry_size > SKILL_OVERVIEW_LIST_MAX_CHARS:
+                return {'headings': headings, 'headings_truncated': True}
+            headings.append(entry)
+            size += entry_size
+    return {'headings': headings, 'headings_truncated': False}
+
+
+def skill_overview(content: str, files: list, field: str = 'files', tools_enabled: bool = True) -> dict:
+    if not tools_enabled:
+        return {
+            'content': content[:SKILL_INJECTION_MAX_CHARS],
+            'next_offset': SKILL_INJECTION_MAX_CHARS if len(content) > SKILL_INJECTION_MAX_CHARS else None,
+            **bounded_skill_manifest(files, field),
+        }
+    large = len(content) > SKILL_CONTENT_MAX_CHARS
+    overview = {
+        **skill_content_page(content, max_chars=SKILL_PREVIEW_MAX_CHARS if large else SKILL_CONTENT_MAX_CHARS),
+        **bounded_skill_manifest(files, field, SKILL_OVERVIEW_LIST_MAX_CHARS),
+    }
+    if large:
+        overview.update(skill_heading_index(content))
+        overview['reading_hint'] = (
+            'This is an opening preview, not the complete instructions. Read applicable sections, including mandatory '
+            'rules, with read_skill_file using the skill id, path="SKILL.md", a heading offset, and max_chars up to 20000. '
+            'Offsets count characters in the original file. Use next_offset for additional text when needed.'
+        )
+    return overview
+
+
 def format_skill_content(page: dict, skill_id: str, tools_enabled: bool) -> str:
     content = page['content']
+    if tools_enabled and 'headings' in page:
+        content += '\nSection index: ' + json.dumps(page['headings'], ensure_ascii=False)
+        if page.get('headings_truncated'):
+            content += '\nAdditional headings omitted.'
+        content += f'\n{page["reading_hint"]} Skill ID: {json.dumps(skill_id)}.'
+        content += f'\nnext_offset: {page["next_offset"]}'
+        return content
     if page['next_offset'] is not None:
         content += '\nSkill instructions truncated.'
         if tools_enabled:
             content += (
-                f'\nContinue reading with read_skill_file(id={json.dumps(skill_id)}, '
+                f'\nRead additional text when needed with read_skill_file(id={json.dumps(skill_id)}, '
                 f'path="SKILL.md", offset={page["next_offset"]}).'
             )
     return content

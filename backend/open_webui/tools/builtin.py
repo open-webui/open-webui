@@ -69,7 +69,7 @@ from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
-from open_webui.utils.skill_files import SkillFile, SkillFileOperation, bounded_skill_manifest, skill_content_page
+from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
 
 log = logging.getLogger(__name__)
 
@@ -3506,7 +3506,9 @@ async def view_skill(
     __metadata__: dict = None,
     __event_call__: callable = None,
 ) -> str:
-    """Read skill instructions and file list. Use read_skill_file to continue from next_offset.
+    """Read skill instructions and file list. Large skills return an opening preview and section offsets.
+
+    Use read_skill_file to read applicable sections, including mandatory rules, when the instructions are incomplete.
 
     :param id: Skill ID from the available skills manifest.
     """
@@ -3519,7 +3521,12 @@ async def view_skill(
 
             skill_name = unquote(id.removeprefix(terminal_skill_prefix))
             skill = await get_terminal_skill(
-                __request__, __user__, __metadata__ or {}, skill_name, {'__event_call__': __event_call__}
+                __request__,
+                __user__,
+                __metadata__ if __metadata__ is not None else {},
+                skill_name,
+                {'__event_call__': __event_call__},
+                overview=True,
             )
             if not skill:
                 return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
@@ -3545,8 +3552,7 @@ async def view_skill(
             {
                 'id': skill.id,
                 'name': snapshot['name'],
-                **skill_content_page(snapshot['content']),
-                **bounded_skill_manifest(file_summaries(snapshot['data']['files'])),
+                **skill_overview(snapshot['content'], file_summaries(snapshot['data']['files'])),
             },
             ensure_ascii=False,
         )
@@ -3569,7 +3575,7 @@ async def read_skill_file(
     :param id: Skill ID.
     :param path: Relative path within the skill.
     :param offset: Character offset for paging text.
-    :param max_chars: Maximum characters to return, up to 100000.
+    :param max_chars: Maximum characters to return, up to 20000 (default 10000).
     """
     try:
         from types import SimpleNamespace

@@ -14,6 +14,7 @@ from open_webui.utils.skill_files import (
     bounded_skill_manifest,
     format_skill_content,
     skill_content_page,
+    skill_overview,
 )
 
 TERMINAL_CONTEXT_HEADER = 'X-Terminal-Context-Id'
@@ -242,6 +243,8 @@ async def get_terminal_skill(
     offset: int = 0,
     max_chars: int = SKILL_CONTENT_MAX_CHARS,
     refresh: bool = True,
+    overview: bool = False,
+    tools_enabled: bool = True,
 ) -> dict | None:
     skill = await get_terminal_json(
         request, user, metadata, f'/skills/read?name={quote(skill_name, safe="")}', extra_params
@@ -266,9 +269,15 @@ async def get_terminal_skill(
     return {
         'name': skill.get('name'),
         'description': skill.get('description'),
-        **skill_content_page(skill['content'], offset, max_chars),
         'directory': directory,
-        **bounded_skill_manifest(resources, 'resources'),
+        **(
+            skill_overview(skill['content'], resources, 'resources', tools_enabled)
+            if overview
+            else {
+                **skill_content_page(skill['content'], offset, max_chars),
+                **bounded_skill_manifest(resources, 'resources'),
+            }
+        ),
     }
 
 
