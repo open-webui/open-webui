@@ -486,9 +486,22 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             room=f'user:{automation.user_id}',
         )
 
+        # Same fallback chain the chat UI uses to decide whether to send features.memory.
+        ui_settings = (user.settings.ui if user.settings else None) or {}
+        memory_setting = ui_settings.get('memory')
+        if memory_setting is None:
+            default_interface_settings = await Config.get('ui.default_interface_settings') or {}
+            memory_setting = default_interface_settings.get('memory')
+        if memory_setting is None:
+            memory_setting = await Config.get('memories.enable')
+
+        model_defaults = await _resolve_model_defaults(app, model_id)
+        if memory_setting:
+            model_defaults['features'] = {**model_defaults.get('features', {}), 'memory': True}
+
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
-            **await _resolve_model_defaults(app, model_id),
+            **model_defaults,
             'model': model_id,
             'messages': [{'role': 'user', 'content': prompt}],
             'stream': True,
