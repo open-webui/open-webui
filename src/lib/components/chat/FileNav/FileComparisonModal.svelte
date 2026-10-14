@@ -3,6 +3,7 @@
 	import { readComparisonSource } from '$lib/apis/terminal';
 	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import FileCompare from './FileCompare.svelte';
@@ -152,13 +153,13 @@
 					</header>
 					<div class="grid grid-cols-2 gap-4 px-4 py-2">
 						{#each sourceFiles as file}
-							<div
-								class="min-w-0 rounded-lg bg-gray-50/70 px-3 py-2 text-gray-500 dark:bg-white/[0.03]"
-								title={file.path}
+							<Tooltip
+								content={file.path}
+								allowHTML={false}
+								className="min-w-0 rounded-lg bg-gray-50/70 px-3 py-2 text-gray-500 dark:bg-white/[0.03]"
 							>
 								<p class="truncate font-medium">{file.name}</p>
-								
-							</div>
+							</Tooltip>
 						{/each}
 					</div>
 					{#if loading}

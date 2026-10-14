@@ -208,11 +208,10 @@
 		>
 	</div>
 	<div class="grid shrink-0 grid-cols-2 border-b border-black/5 dark:border-white/5">
-		{#each [{ label: $i18n.t('Original'), path: original }, { label: $i18n.t('Revised'), path: revised }] as file}
-			<div class="min-w-0 px-3 py-2" title={file.path}>
-				
-				<div class="truncate font-normal text-gray-700 dark:text-gray-300">{name(file.path)}</div>
-			</div>
+		{#each [original, revised] as path}
+			<Tooltip content={path} allowHTML={false} className="min-w-0 px-3 py-2">
+				<div class="truncate font-normal text-gray-700 dark:text-gray-300">{name(path)}</div>
+			</Tooltip>
 		{/each}
 	</div>
 	{#if loading}

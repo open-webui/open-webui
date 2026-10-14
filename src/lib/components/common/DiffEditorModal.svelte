@@ -11,6 +11,7 @@
 	import { oneDark } from '@codemirror/theme-one-dark';
 	import type { MergeView } from '@codemirror/merge';
 	import Modal from './Modal.svelte';
+	import Tooltip from './Tooltip.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import FileCodeEditor from '$lib/components/chat/FileNav/FileCodeEditor.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -404,8 +405,9 @@
 		<div class="diff-editor flex h-full min-h-0 flex-col text-xs" on:keydown|capture={preventSave}>
 			<header class="flex shrink-0 flex-wrap items-center gap-3 px-5 pt-4 pb-2">
 				<div class="min-w-0 flex-1">
-					<h2 class="font-medium" title={session.path ?? undefined}>{session.title || $i18n.t('Compare revision')}</h2>
-					
+					<Tooltip content={session.path ?? ''} allowHTML={false} className="min-w-0">
+						<h2 class="truncate font-medium">{session.title || $i18n.t('Compare revision')}</h2>
+					</Tooltip>
 				</div>
 				{#if !comparing && session.mode === 'edit'}
 					<button type="button" class="primary" on:click={() => (comparing = true)}
@@ -506,13 +508,12 @@
 									<div
 										class="pane-header flex min-w-0 items-center gap-2 rounded-lg bg-gray-50/70 px-3 py-2 text-gray-500 dark:bg-white/[0.03]"
 									>
-										<div class="min-w-0" title={file?.path}>
+										<Tooltip content={file?.path ?? ''} allowHTML={false} className="min-w-0">
 											<span class="block truncate font-medium"
 												>{file?.name ??
 													(side === 'a' ? $i18n.t('Original') : $i18n.t('Proposed revision'))}</span
 											>
-
-										</div>
+										</Tooltip>
 										{#if comparing && !loading}
 											<span
 												class="whitespace-nowrap"
