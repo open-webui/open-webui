@@ -17,7 +17,7 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { chatId, socket } from '$lib/stores';
 
@@ -208,15 +208,12 @@
 				</div>
 			{/if}
 
-			<a
+			<div
 				class=" w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850"
-				draggable="false"
-				href={`/c/${chat.id}`}
-				on:click={() => markChatRead(chat, unread)}
 			>
-				<div class="flex min-w-0 items-center w-full sm:basis-3/5">
-					{#if showOwnerInfo && chat.user_id && chat.owner_name}
-						<Tooltip content={chat.owner_name} className="flex shrink-0 me-2">
+				{#if showOwnerInfo && chat.user_id && chat.owner_name}
+					<div class="flex shrink-0 me-2">
+						<ProfilePreview user={{ id: chat.user_id, name: chat.owner_name }}>
 							<img
 								src="{WEBUI_API_BASE_URL}/users/{chat.user_id}/profile/image"
 								alt=""
@@ -227,36 +224,45 @@
 									}
 								}}
 							/>
-						</Tooltip>
-					{/if}
-
-					{#if chat.active}
-						<div class="shrink-0 self-center pr-2">
-							<Spinner className="size-3" />
-						</div>
-					{:else if unread}
-						<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
-							<div class="size-1.5 bg-sky-500 rounded-full"></div>
-						</div>
-					{/if}
-
-					<div
-						class="text-ellipsis line-clamp-1 min-w-0 {unread
-							? 'font-normal text-gray-800 dark:text-gray-200'
-							: ''}"
-					>
-						{chat?.title}
+						</ProfilePreview>
 					</div>
-				</div>
+				{/if}
 
-				<div class="hidden sm:flex sm:basis-2/5 items-center justify-end gap-2">
-					<div class=" text-gray-500 dark:text-gray-400 text-xs">
-						{dayjs((chat.updated_at ?? chat.created_at ?? 0) * 1000)
-							.locale($i18n.language)
-							.calendar()}
+				<a
+					class="flex min-w-0 flex-1 justify-between items-center"
+					draggable="false"
+					href={`/c/${chat.id}`}
+					on:click={() => markChatRead(chat, unread)}
+				>
+					<div class="flex min-w-0 items-center w-full sm:basis-3/5">
+						{#if chat.active}
+							<div class="shrink-0 self-center pr-2">
+								<Spinner className="size-3" />
+							</div>
+						{:else if unread}
+							<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
+								<div class="size-1.5 bg-sky-500 rounded-full"></div>
+							</div>
+						{/if}
+
+						<div
+							class="text-ellipsis line-clamp-1 min-w-0 {unread
+								? 'font-normal text-gray-800 dark:text-gray-200'
+								: ''}"
+						>
+							{chat?.title}
+						</div>
 					</div>
-				</div>
-			</a>
+
+					<div class="hidden sm:flex sm:basis-2/5 items-center justify-end gap-2">
+						<div class=" text-gray-500 dark:text-gray-400 text-xs">
+							{dayjs((chat.updated_at ?? chat.created_at ?? 0) * 1000)
+								.locale($i18n.language)
+								.calendar()}
+						</div>
+					</div>
+				</a>
+			</div>
 		{/each}
 
 		{#if totalPages > 1}
