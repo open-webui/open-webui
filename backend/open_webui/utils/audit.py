@@ -264,8 +264,8 @@ class AuditLoggingMiddleware:
                 return False  # Do NOT skip logging for auth endpoints
 
         # Skip logging if the request is not authenticated
-        # Check both Authorization header (API keys) and token cookie (browser sessions)
-        if not request.headers.get('authorization') and not request.cookies.get('token'):
+        # Token is set by AppHTTPMiddleware from any accepted credential
+        if not getattr(request.state, 'token', None):
             return True
 
         # Whitelist mode: only log paths that match included_paths
