@@ -441,6 +441,9 @@ def _split_tool_calls(
     return expanded
 
 
+CITATION_TOOL_NAMES = ('fetch_url', 'view_file', 'view_knowledge_file', 'query_knowledge_files', 'query_chat_files')
+
+
 def get_citation_source_from_tool_result(
     tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ''
 ) -> list[dict]:
@@ -3622,6 +3625,14 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                     request, name, result, tool_type, direct_tool, metadata, user
                 )
                 await terminal_event_handler(name, params, result, event_emitter)
+                citations_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
+                    'citations', True
+                )
+                if event_emitter and citations_enabled and name in CITATION_TOOL_NAMES and result:
+                    for source in get_citation_source_from_tool_result(
+                        tool_name=name, tool_params=params, tool_result=result, tool_id=tool.get('tool_id', '')
+                    ):
+                        await event_emitter({'type': 'source', 'data': source})
             content = tool_result_content(result)
             item['arguments'] = tool_call.get('function', {}).get('arguments', '{}')
             output_parts = [{'type': 'input_text', 'text': content}]
@@ -6138,18 +6149,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         # Extract citation sources from tool results
-                        if (
-                            citations_enabled
-                            and tool_function_name
-                            in [
-                                'fetch_url',
-                                'view_file',
-                                'view_knowledge_file',
-                                'query_knowledge_files',
-                                'query_chat_files',
-                            ]
-                            and tool_result
-                        ):
+                        if citations_enabled and tool_function_name in CITATION_TOOL_NAMES and tool_result:
                             try:
                                 citation_sources = get_citation_source_from_tool_result(
                                     tool_name=tool_function_name,
