@@ -1462,6 +1462,8 @@ async def post_new_message(
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
+    # Message metadata is set by the server only.
+    form_data.meta = None
 
     try:
         message, channel = await new_message_handler(request, id, form_data, user, db)
@@ -1769,6 +1771,7 @@ async def update_message_by_id(
         if user.role != 'admin' and message.user_id != user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
+    form_data.meta = None
     try:
         await Messages.update_message_by_id(message_id, form_data, db=db)
         message = await Messages.get_message_by_id(message_id, db=db)
