@@ -14,6 +14,8 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
+	import type { Readable } from 'svelte/store';
+	import type { i18n as I18n } from 'i18next';
 	import {
 		terminalServers,
 		settings,
@@ -62,7 +64,7 @@
 	import PortPreview from './FileNav/PortPreview.svelte';
 	import TerminalDock from './TerminalDock.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Readable<I18n>>('i18n');
 
 	export let overlay = false;
 	export let chatId: string | null = null;
@@ -1441,6 +1443,11 @@
 
 	// Click outside panel to clear selection
 	const handleWindowClick = (e: MouseEvent) => {
+		// A close click may reach the window after its modal has already been destroyed.
+		if (
+			e.composedPath().some((node) => node instanceof Element && node.classList.contains('modal'))
+		)
+			return;
 		if (directoryMenu) directoryMenu = null;
 		if (
 			!comparison &&
@@ -1821,22 +1828,6 @@
 				</Tooltip>
 			</FileNavToolbar>
 
-			{#if pinnedComparison}
-				<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
-					<Tooltip content={pinnedComparison.path}>
-						<span class="block max-w-[16rem] truncate"
-							>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
-						>
-					</Tooltip>
-					<button
-						type="button"
-						class="shrink-0 hover:text-gray-900 dark:hover:text-white"
-						aria-label={$i18n.t('Clear comparison selection')}
-						on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
-					>
-				</div>
-			{/if}
-
 			{#if !selectedFile}
 				<div
 					class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
@@ -1857,6 +1848,22 @@
 							<Icon name="xmark" size={11} strokeWidth={1.5} />
 						</button>
 					{/if}
+				</div>
+			{/if}
+
+			{#if pinnedComparison}
+				<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
+					<Tooltip content={pinnedComparison.path}>
+						<span class="block max-w-[16rem] truncate"
+							>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
+						>
+					</Tooltip>
+					<button
+						type="button"
+						class="shrink-0 hover:text-gray-900 dark:hover:text-white"
+						aria-label={$i18n.t('Clear comparison selection')}
+						on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
+					>
 				</div>
 			{/if}
 

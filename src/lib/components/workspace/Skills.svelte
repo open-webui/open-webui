@@ -265,7 +265,7 @@
 		}
 	};
 
-	const exportHandler = async (skill, format: 'json' | 'zip' = 'json') => {
+	const exportHandler = async (skill, format: 'json' | 'zip' | 'skill' = 'json') => {
 		try {
 			saveAs(
 				await exportSkillBundle(localStorage.token, format, [skill.id]),
@@ -367,7 +367,7 @@
 	<input
 		bind:this={importInputElement}
 		type="file"
-		accept=".md,.json,.zip"
+		accept=".md,.json,.zip,.skill"
 		multiple
 		hidden
 		on:change={() => {

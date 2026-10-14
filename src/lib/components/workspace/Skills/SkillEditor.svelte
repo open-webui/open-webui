@@ -193,7 +193,7 @@
 			loading = false;
 		}
 	};
-	const exportVersion = async (format: 'json' | 'zip') => {
+	const exportVersion = async (format: 'json' | 'zip' | 'skill') => {
 		try {
 			saveAs(
 				await exportSkillBundle(localStorage.token, format, [id], versionId!),
@@ -569,6 +569,9 @@
 						{/if}
 					{/snippet}
 					{#snippet exports()}
+						<button type="button" on:click={() => exportVersion('skill')}
+							><Download className="size-3.5" />{$i18n.t('Export .skill')}</button
+						>
 						<button type="button" on:click={() => exportVersion('json')}
 							><Download className="size-3.5" />{$i18n.t('Export JSON')}</button
 						>

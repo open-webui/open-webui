@@ -176,6 +176,8 @@ async def export_skills(
         raise HTTPException(403, 'Export permission required')
     if version_id and (not ids or len(ids) != 1):
         raise HTTPException(400, 'Select one skill to export a historical version')
+    if format == 'skill' and (not ids or len(ids) != 1):
+        raise HTTPException(400, 'Select one skill to export as .skill')
     skills = (
         [await authorized_skill(id, user, db=db) for id in ids]
         if ids is not None
@@ -195,14 +197,15 @@ async def export_skills(
             }
         )
     try:
-        if format == 'zip':
+        if format in ('zip', 'skill'):
+            filename = f'{skills[0].id}.skill' if format == 'skill' else 'skills.zip'
             return Response(
                 zip_export(packages),
                 media_type='application/zip',
-                headers={'Content-Disposition': 'attachment; filename="skills.zip"'},
+                headers={'Content-Disposition': f'attachment; filename="{filename}"'},
             )
         if format != 'json':
-            raise ValueError('Export format must be json or zip')
+            raise ValueError('Export format must be json, zip, or skill')
         return packages[0] if ids and len(ids) == 1 else packages
     except ValueError as error:
         raise HTTPException(400, str(error))

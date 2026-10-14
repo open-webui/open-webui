@@ -147,7 +147,7 @@
 							type="button"
 							class="shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
 							aria-label={$i18n.t('Close')}
-							on:click={close}><XMark className="size-4" /></button
+							on:click|stopPropagation={close}><XMark className="size-4" /></button
 						>
 					</header>
 					<div class="grid grid-cols-2 gap-4 px-4 py-2">

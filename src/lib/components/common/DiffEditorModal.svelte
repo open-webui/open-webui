@@ -492,7 +492,7 @@
 					type="button"
 					class="comparison-close shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
 					aria-label={$i18n.t('Close')}
-					on:click={requestClose}><XMark className="size-4" /></button
+					on:click|stopPropagation={requestClose}><XMark className="size-4" /></button
 				>
 			</header>
 			{#if error}<p class="px-4 py-2 text-red-600" role="alert">{error}</p>{/if}
@@ -643,7 +643,7 @@
 						{applyDescription ??
 							$i18n.t('Apply uses the proposed revision on the right. Save your draft afterward.')}
 					</p>
-					<button type="button" class="secondary" on:click={requestClose}
+					<button type="button" class="secondary" on:click|stopPropagation={requestClose}
 						>{$i18n.t('Cancel')}</button
 					>
 					<button type="button" class="primary" disabled={loading} on:click={apply}

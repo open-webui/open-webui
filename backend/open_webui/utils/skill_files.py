@@ -363,7 +363,7 @@ def parse_import(
     if filename.lower().endswith('.json'):
         value = json.loads(data)
         packages = value if isinstance(value, list) else [value]
-    elif filename.lower().endswith('.zip'):
+    elif filename.lower().endswith(('.zip', '.skill')):
         entries = {}
         links = []
         total = 0
@@ -388,7 +388,12 @@ def parse_import(
                 total += info.file_size
                 if info.file_size > MAX_FILE_BYTES or total > MAX_IMPORT_BYTES or len(entries) >= 10000:
                     raise ValueError('Archive exceeds import limits')
-                entries[path] = archive.read(info)
+                if info.flag_bits & 1:
+                    raise ValueError('Encrypted skill archives are not supported')
+                try:
+                    entries[path] = archive.read(info)
+                except NotImplementedError as error:
+                    raise ValueError('Skill archive uses an unsupported compression method') from error
         roots = (
             [''] if 'SKILL.md' in entries else sorted(p[: -len('SKILL.md')] for p in entries if p.endswith('/SKILL.md'))
         )
@@ -406,7 +411,7 @@ def parse_import(
     elif filename.lower().endswith('.md'):
         packages = [{'files': [encode_file('SKILL.md', data)]}]
     else:
-        raise ValueError('Use JSON, ZIP, or Markdown')
+        raise ValueError('Use JSON, ZIP, .skill, or Markdown')
     total = 0
     result = []
     for package in packages:
@@ -500,7 +505,7 @@ async def load_skill_from_url(url: str) -> list[dict]:
                         raise ValueError('Could not download the skill. Check that the URL is accessible.')
                     content_type = response.content_type
                     if content_type == 'text/html':
-                        raise ValueError('The URL returned a web page. Use a raw skill file or a ZIP download link.')
+                        raise ValueError('The URL returned a web page. Use a raw skill file or a ZIP/.skill download link.')
                     data = bytearray()
                     async for chunk in response.content.iter_chunked(64 * 1024):
                         data.extend(chunk)

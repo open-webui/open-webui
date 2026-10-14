@@ -203,7 +203,7 @@
 		<button
 			type="button"
 			class="shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
-			on:click={onClose}
+			on:click|stopPropagation={onClose}
 			aria-label={$i18n.t('Close')}><Icon name="xmark" size={16} /></button
 		>
 	</div>
@@ -245,7 +245,7 @@
 						...new Set([...(result.original.notices ?? []), ...(result.revised.notices ?? [])])
 					].join('\n')}
 				>
-					<span tabindex="0">{$i18n.t('Text only')}</span>
+					<button type="button" class="cursor-help">{$i18n.t('Text only')}</button>
 				</Tooltip>
 			</span>
 		</div>
