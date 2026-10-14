@@ -3117,7 +3117,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         **extra_params,
                         '__model__': models[task_model_id],
                         '__messages__': form_data['messages'],
-                        '__files__': metadata.get('files', []),
+                        '__files__': metadata.get('files') or [],
                     },
                 )
 
@@ -3507,7 +3507,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
                 function=tool['callable'],
                 extra_params={
                     '__messages__': form_data.get('messages', []),
-                    '__files__': metadata.get('files', []),
+                    '__files__': metadata.get('files') or [],
                 },
             )
             result = await function(**params)
