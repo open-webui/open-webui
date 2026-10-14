@@ -18,7 +18,11 @@
 		user
 	} from '$lib/stores';
 	import { processingQueueChannels, processNextInQueue } from '$lib/utils/channelQueue';
-	import { getMentionUserQueries, resolveMentions, getChannelMentionCandidates } from '$lib/utils/channelMentions';
+	import {
+		getMentionUserQueries,
+		resolveMentions,
+		getChannelMentionCandidates
+	} from '$lib/utils/channelMentions';
 	import type { Editor } from '@tiptap/core';
 	import QueuedMessageItem from '../chat/MessageInput/QueuedMessageItem.svelte';
 	import {

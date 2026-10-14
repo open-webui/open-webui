@@ -15,7 +15,7 @@
 </script>
 
 <script lang="ts">
-	import type { Token } from 'marked';
+	import type { Tokens } from 'marked';
 	import { LinkPreview } from 'bits-ui';
 
 	import { getContext } from 'svelte';
@@ -27,7 +27,7 @@
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	export let token: Token;
+	export let token: Tokens.Generic;
 
 	let triggerChar = '';
 	let label = '';

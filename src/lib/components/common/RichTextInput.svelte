@@ -1042,9 +1042,15 @@
 					const stripMentionLinks = (fragment: Fragment): Fragment => {
 						const nodes: Node[] = [];
 						fragment.forEach((node) => {
-							nodes.push(node.type.name === 'mention'
-								? node.mark(node.marks.filter((mark) => mark.type.name !== 'link'))
-								: node.isLeaf ? node : node.copy(stripMentionLinks(node.content)));
+							nodes.push(
+								node.type.name === 'mention'
+									? node.mark(
+											node.marks.filter((mark) => !['link', 'underline'].includes(mark.type.name))
+										)
+									: node.isLeaf
+										? node
+										: node.copy(stripMentionLinks(node.content))
+							);
 						});
 						return Fragment.fromArray(nodes);
 					};
@@ -1071,7 +1077,7 @@
 				handlePaste: (view, event, slice) => {
 					// Paste literal text when automatic formatting is disabled.
 					if (!richText || !autoFormat) {
-						// swallow HTML completely
+						// Discard formatting while retaining explicit mention identities.
 						event.preventDefault();
 						const { state, dispatch } = view;
 
@@ -1088,8 +1094,10 @@
 						const mentions = plainMentionPaste(slice, state.schema);
 						if (mentions) {
 							dispatch(
-								state.tr.replaceWith(state.selection.from, state.selection.to, mentions)
-									.setMeta('paste', true).scrollIntoView()
+								state.tr
+									.replaceWith(state.selection.from, state.selection.to, mentions)
+									.setMeta('paste', true)
+									.scrollIntoView()
 							);
 							return true;
 						}
