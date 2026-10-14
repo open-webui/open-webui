@@ -673,7 +673,7 @@
 					}}
 				>
 					<LinkPreview.Trigger
-						class="flex min-w-0 flex-1 items-center"
+						class="flex min-w-0 flex-1 -my-1.5 py-1.5 items-center"
 						href="/c/{id}"
 						aria-current={id === $chatId ? 'page' : undefined}
 						onclick={selectChatHandler}
