@@ -84,13 +84,13 @@
 				/>
 				<div class="min-w-0 flex-1">
 					<div
-						class="truncate text-[0.8125rem] font-medium leading-5 text-gray-900 dark:text-gray-100"
+						class="truncate text-[0.8125rem] font-medium leading-4 text-gray-900 dark:text-gray-100"
 						title={user.name}
 					>
 						{user.name}
 					</div>
 					<div
-						class="flex items-center gap-1.5 text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400"
+						class="-mt-0.25 flex items-center gap-1.5 text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400"
 					>
 						<span
 							class="size-1.5 shrink-0 rounded-full {user.is_active
