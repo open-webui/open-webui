@@ -118,7 +118,9 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.streamChatResponse.label')}
 				</div>
 				<button
@@ -153,7 +155,9 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+					<div
+						class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+					>
 						{$i18n.t('settings.personal.general.parameters.streamDeltaChunkSize.label')}
 					</div>
 					<button
@@ -195,7 +199,9 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+					<div
+						class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+					>
 						{$i18n.t('settings.personal.general.parameters.contextCompactionThreshold.label')}
 					</div>
 					<button
@@ -243,7 +249,9 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.functionCalling.label')}
 				</div>
 				<button
@@ -278,7 +286,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.reasoningTags.label')}
 				</div>
 				<button
@@ -343,7 +353,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.seed.label')}
 				</div>
 
@@ -387,7 +399,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.stopSequence.label')}
 				</div>
 
@@ -430,7 +444,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.temperature.label')}
 				</div>
 				<button
@@ -467,7 +483,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.reasoningEffort.label')}
 				</div>
 				<button
@@ -511,7 +529,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.logitBias.label')}
 				</div>
 				<button
@@ -557,7 +577,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.maxTokens.label')}
 				</div>
 
@@ -599,7 +621,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.topK.label')}
 				</div>
 				<button
@@ -657,7 +681,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.topP.label')}
 				</div>
 
@@ -697,7 +723,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.minP.label')}
 				</div>
 				<button
@@ -736,7 +764,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.frequencyPenalty.label')}
 				</div>
 
@@ -776,7 +806,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.presencePenalty.label')}
 				</div>
 
@@ -814,7 +846,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.mirostat.label')}
 				</div>
 				<button
@@ -854,7 +888,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.mirostatEta.label')}
 				</div>
 				<button
@@ -893,7 +929,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.mirostatTau.label')}
 				</div>
 
@@ -931,7 +969,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.repeatLastN.label')}
 				</div>
 
@@ -972,7 +1012,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.tfsZ.label')}
 				</div>
 
@@ -1012,7 +1054,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.repeatPenalty.label')}
 				</div>
 
@@ -1053,7 +1097,9 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+					<div
+						class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+					>
 						{$i18n.t('settings.personal.general.parameters.useMmap.label')}
 					</div>
 					<button
@@ -1096,7 +1142,9 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+					<div
+						class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+					>
 						{$i18n.t('settings.personal.general.parameters.useMlock.label')}
 					</div>
 
@@ -1140,7 +1188,9 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.think.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
@@ -1196,7 +1246,9 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.format.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
@@ -1238,7 +1290,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.numKeep.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
@@ -1280,7 +1334,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.numCtx.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
@@ -1324,7 +1380,9 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+				<div
+					class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+				>
 					{$i18n.t('settings.personal.general.parameters.numBatch.label')} ({$i18n.t(
 						'settings.personal.general.parameters.ollama.label'
 					)})
@@ -1369,7 +1427,9 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+					<div
+						class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+					>
 						{$i18n.t('settings.personal.general.parameters.numThread.label')} ({$i18n.t(
 							'settings.personal.general.parameters.ollama.label'
 						)})
@@ -1412,7 +1472,9 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+					<div
+						class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+					>
 						{$i18n.t('settings.personal.general.parameters.numGpu.label')} ({$i18n.t(
 							'settings.personal.general.parameters.ollama.label'
 						)})
@@ -1455,7 +1517,9 @@
 				className="inline-tooltip"
 			>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
+					<div
+						class="self-center text-xs font-normal text-gray-600 dark:text-gray-400 cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+					>
 						{$i18n.t('settings.personal.general.parameters.keepAlive.label')} ({$i18n.t(
 							'settings.personal.general.parameters.ollama.label'
 						)})
