@@ -46,6 +46,7 @@
 	let activeChunk = 0;
 	let overview: ReturnType<typeof chunkOverview> = [];
 	let chunkCount = 0;
+	let lineNumberDigits = 1;
 	let lineChanges = { removed: 0, added: 0 };
 	let copied: { side: 'a' | 'b'; text: string } | null = null;
 	let approximate = false;
@@ -111,6 +112,7 @@
 			working = merge.a.state.doc.toString();
 			proposal = merge.b.state.doc.toString();
 			chunkCount = merge.chunks.length;
+			lineNumberDigits = String(Math.max(merge.a.state.doc.lines, merge.b.state.doc.lines)).length;
 			lineChanges = changedLineCounts(merge.a.state.doc, merge.b.state.doc, merge.chunks);
 			overview = chunkOverview(merge.a.state.doc, merge.b.state.doc, merge.chunks);
 			approximate = merge.chunks.some((chunk) => !chunk.precise);
@@ -177,6 +179,7 @@
 		let disposed = false;
 		let view: MergeView | null = null;
 		let observer: MutationObserver | undefined;
+		let alignmentFrame = 0;
 		const themes = [new Compartment(), new Compartment()];
 		const language = [new Compartment(), new Compartment()];
 		const path = session?.path;
@@ -193,6 +196,13 @@
 			language[index].of([]),
 			EditorView.updateListener.of((update) => {
 				if (update.docChanged || update.selectionSet) refresh(update, side);
+				if ((update.heightChanged || update.viewportChanged) && !alignmentFrame) {
+					// Align after both virtualized editors have measured their visible lines.
+					alignmentFrame = requestAnimationFrame(() => {
+						alignmentFrame = 0;
+						if (!disposed) view?.reconfigure({});
+					});
+				}
 			}),
 			EditorView.theme({
 				'&': { fontSize: '0.75rem' },
@@ -239,6 +249,7 @@
 		return {
 			destroy: () => {
 				disposed = true;
+				cancelAnimationFrame(alignmentFrame);
 				observer?.disconnect();
 				view?.destroy();
 				if (merge === view) merge = null;
@@ -384,7 +395,11 @@
 							{/each}
 						</div>
 						{#if comparing}
-							<div class="merge-container min-h-0 flex-1" use:mountMerge></div>
+							<div
+								class="merge-container min-h-0 flex-1"
+								style:--diff-line-digits={lineNumberDigits}
+								use:mountMerge
+							></div>
 						{:else}
 							<div class="grid min-h-0 flex-1 grid-cols-2 gap-4">
 								<FileCodeEditor
@@ -587,5 +602,9 @@
 	.diff-editor :global(.cm-gutters) {
 		border: 0;
 		background: transparent;
+	}
+	.merge-container :global(.cm-lineNumbers) {
+		/* Reserve the same gutter width, including padding and fractional glyph rounding. */
+		min-width: calc(var(--diff-line-digits) * 1ch + 9px);
 	}
 </style>
