@@ -41,6 +41,13 @@
 	let mounted = false;
 
 	let focusTrap: FocusTrap.FocusTrap | null = null;
+	let previousOverflow: string | null = null;
+	const restoreOverflow = () => {
+		if (previousOverflow !== null) {
+			document.body.style.overflow = previousOverflow;
+			previousOverflow = null;
+		}
+	};
 
 	const init = () => {
 		_inputValue = inputValue;
@@ -90,6 +97,7 @@
 			focusTrap.activate();
 
 			window.addEventListener('keydown', handleKeyDown);
+			previousOverflow = document.body.style.overflow;
 			document.body.style.overflow = 'hidden';
 		} else if (modalElement) {
 			focusTrap.deactivate();
@@ -97,12 +105,13 @@
 			window.removeEventListener('keydown', handleKeyDown);
 			document.body.removeChild(modalElement);
 
-			document.body.style.overflow = 'unset';
+			restoreOverflow();
 		}
 	}
 
 	onDestroy(() => {
 		show = false;
+		restoreOverflow();
 		window.removeEventListener('keydown', handleKeyDown);
 		if (focusTrap) {
 			focusTrap.deactivate();
