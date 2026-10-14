@@ -23,6 +23,7 @@
 	} from './diffEditorAlignment';
 	import {
 		copyChunk,
+		keepBothChunk,
 		selectedChunk,
 		chunkOverview,
 		changedLineCounts,
@@ -65,6 +66,7 @@
 	let comparing = false;
 	let merge: MergeView | null = null;
 	let activeChunk = 0;
+	let canKeepBoth = false;
 	let overview: ReturnType<typeof chunkOverview> = [];
 	let chunkCount = 0;
 	let lineNumberDigits = 1;
@@ -101,6 +103,7 @@
 		proposal = session.proposal;
 		comparing = proposedContent !== undefined;
 		activeChunk = chunkCount = 0;
+		canKeepBoth = false;
 		overview = [];
 		lineChanges = { removed: 0, added: 0 };
 		copied = null;
@@ -200,6 +203,11 @@
 			if (index >= 0) activeChunk = index;
 		}
 		activeChunk = Math.max(0, Math.min(activeChunk, chunkCount - 1));
+		const chunk = merge.chunks[activeChunk];
+		canKeepBoth =
+			session?.mode === 'edit' &&
+			!!chunk &&
+			keepBothChunk(merge.a.state.doc, merge.b.state.doc, chunk) !== null;
 	};
 	const reveal = (index: number) => {
 		if (!merge || !chunkCount) return;
@@ -215,6 +223,7 @@
 				effects: EditorView.scrollIntoView(position, { y: 'center' })
 			});
 		}
+		refresh();
 	};
 	const navigateOverview = (event: MouseEvent) => {
 		const bounds =
@@ -251,6 +260,21 @@
 			userEvent: 'input.merge'
 		});
 		refresh();
+	};
+
+	const keepBoth = () => {
+		if (session?.mode !== 'edit' || loading || !merge) return;
+		const chunk = merge.chunks[activeChunk];
+		if (!chunk) return;
+		const changes = keepBothChunk(merge.a.state.doc, merge.b.state.doc, chunk);
+		if (!changes) return;
+		merge.b.dispatch({
+			changes,
+			annotations: isolateHistory.of('full'),
+			userEvent: 'input.merge'
+		});
+		refresh();
+		merge.b.focus();
 	};
 
 	const mountMerge = (node: HTMLElement) => {
@@ -403,7 +427,7 @@
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="diff-editor flex h-full min-h-0 flex-col text-xs" on:keydown|capture={preventSave}>
-			<header class="flex shrink-0 flex-wrap items-center gap-3 px-5 pt-4 pb-2">
+			<header class="flex shrink-0 flex-wrap items-center gap-2 px-5 pt-4 pb-2">
 				<div class="min-w-0 flex-1">
 					<Tooltip content={session.path ?? ''} allowHTML={false} className="min-w-0">
 						<h2 class="truncate font-medium">{session.title || $i18n.t('Compare revision')}</h2>
@@ -415,7 +439,7 @@
 					>
 				{/if}
 				{#if comparing}
-					<div class="comparison-controls flex flex-wrap items-center gap-3">
+					<div class="comparison-controls flex flex-wrap items-center gap-1.5">
 						<div class="mr-1 flex items-center gap-1.5">
 							<span class="whitespace-nowrap text-gray-500" role="status" aria-live="polite"
 								>{loading
@@ -468,6 +492,13 @@
 								aria-label={$i18n.t('Copy change to proposal')}
 								title={$i18n.t('Copy change to proposal')}
 								on:click={() => copy('to-proposal')}>{$i18n.t('Proposed revision')} →</button
+							>
+							<button
+								type="button"
+								class="secondary"
+								disabled={loading || !canKeepBoth}
+								title={$i18n.t('Keep both versions in the proposed revision, original first.')}
+								on:click={keepBoth}>{$i18n.t('Keep both')}</button
 							>
 						{:else}
 							<button type="button" class="secondary" disabled={loading} on:click={swap}
@@ -710,13 +741,14 @@
 	.secondary,
 	.primary {
 		display: inline-flex;
-		height: 1.75rem;
+		height: 1.5rem;
+		min-width: 1.5rem;
 		flex-shrink: 0;
 		align-items: center;
 		justify-content: center;
 		gap: 0.375rem;
-		border-radius: 0.5rem;
-		padding: 0 0.625rem;
+		border-radius: 0.375rem;
+		padding: 0 0.5rem;
 		font-size: 0.75rem;
 		font-weight: 400;
 		transition:

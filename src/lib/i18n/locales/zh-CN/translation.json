@@ -1447,6 +1447,8 @@
 	"JSON Spec": "以 JSON 格式定义的接口规范",
 	"July": "七月",
 	"June": "六月",
+	"Keep both": "",
+	"Keep both versions in the proposed revision, original first.": "",
 	"Keep current webhook URL": "保留当前 webhook URL",
 	"Keep in Sidebar": "保留在侧边栏",
 	"Keep tools listed even while your shell is closed.": "",

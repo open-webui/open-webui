@@ -1450,6 +1450,8 @@
 	"JSON Spec": "JSON-ის სპეციფიკაცია",
 	"July": "ივლისი",
 	"June": "ივნისი",
+	"Keep both": "",
+	"Keep both versions in the proposed revision, original first.": "",
 	"Keep current webhook URL": "მიმდინარე ვებჰუკის URL-ის შენარჩუნება",
 	"Keep in Sidebar": "დატოვება გვერდით პანელზე",
 	"Keep tools listed even while your shell is closed.": "ხელსაწყოებს სიაში ტოვებს მაშინაც, როცა თქვენი გარსი დახურულია.",

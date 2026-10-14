@@ -1437,6 +1437,8 @@
 	"JSON Spec": "สเปก JSON",
 	"July": "กรกฎาคม",
 	"June": "มิถุนายน",
+	"Keep both": "",
+	"Keep both versions in the proposed revision, original first.": "",
 	"Keep current webhook URL": "คง URL ของ Webhook ปัจจุบันไว้",
 	"Keep in Sidebar": "ปักหมุดไว้ที่แถบด้านข้าง",
 	"Keep tools listed even while your shell is closed.": "แสดงเครื่องมือในรายการไว้แม้ขณะที่ Shell ของคุณปิดอยู่",

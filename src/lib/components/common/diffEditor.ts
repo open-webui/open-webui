@@ -67,6 +67,22 @@ export function copyChunk(a: Text, b: Text, chunk: Chunk, direction: MergeDirect
 	return { from, to: Math.min(to, destination.length), insert };
 }
 
+export function keepBothChunk(a: Text, b: Text, chunk: Chunk): ChangeSpec | null {
+	// A line-aligned chunk can include text on both sides even for a pure EOF insertion.
+	if (
+		!chunk.changes.some((change) => change.fromA < change.toA) ||
+		!chunk.changes.some((change) => change.fromB < change.toB)
+	)
+		return null;
+	const original = a.sliceString(chunk.fromA, Math.min(chunk.toA, a.length));
+	const proposed = b.sliceString(chunk.fromB, Math.min(chunk.toB, b.length));
+	return {
+		from: chunk.fromB,
+		to: Math.min(chunk.toB, b.length),
+		insert: original + (original.endsWith('\n') ? '' : '\n') + proposed
+	};
+}
+
 export function selectedChunk(chunks: readonly Chunk[], side: 'a' | 'b', position: number) {
 	return chunks.findIndex((chunk) => {
 		const from = side === 'a' ? chunk.fromA : chunk.fromB;
