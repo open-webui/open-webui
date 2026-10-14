@@ -202,7 +202,7 @@
 			indentUnit.of('    '),
 			EditorView.lineWrapping,
 			EditorView.contentAttributes.of({
-				'aria-label': side === 'a' ? $i18n.t('Working copy') : $i18n.t('Proposed revision')
+				'aria-label': side === 'a' ? $i18n.t('Original') : $i18n.t('Proposed revision')
 			}),
 			themes[index].of(document.documentElement.classList.contains('dark') ? oneDark : []),
 			language[index].of([]),
@@ -378,9 +378,9 @@
 							type="button"
 							class="secondary"
 							disabled={!chunkCount}
-							aria-label={$i18n.t('Copy change to working copy')}
-							title={$i18n.t('Copy change to working copy')}
-							on:click={() => copy('to-working')}>← {$i18n.t('Working copy')}</button
+							aria-label={$i18n.t('Copy change to original')}
+							title={$i18n.t('Copy change to original')}
+							on:click={() => copy('to-working')}>← {$i18n.t('Original')}</button
 						>
 						<button
 							type="button"
@@ -410,7 +410,7 @@
 									class="pane-header flex min-w-0 items-center gap-2 rounded-lg bg-gray-50/70 px-3 py-2 text-gray-500 dark:bg-white/[0.03]"
 								>
 									<span class="min-w-0 truncate font-medium"
-										>{side === 'a' ? $i18n.t('Working copy') : $i18n.t('Proposed revision')}</span
+										>{side === 'a' ? $i18n.t('Original') : $i18n.t('Proposed revision')}</span
 									>
 									{#if comparing && !loading}
 										<span
@@ -442,7 +442,7 @@
 										type="button"
 										class="shrink-0 rounded px-1 hover:text-gray-900 dark:hover:text-white"
 										aria-label={side === 'a'
-											? $i18n.t('Copy working copy to clipboard')
+											? $i18n.t('Copy original to clipboard')
 											: $i18n.t('Copy proposed revision to clipboard')}
 										on:click={() => copyPane(side === 'a' ? 'a' : 'b')}
 									>
@@ -464,7 +464,7 @@
 								<FileCodeEditor
 									bind:value={working}
 									filePath={session.path}
-									ariaLabel={$i18n.t('Working copy')}
+									ariaLabel={$i18n.t('Original')}
 								/>
 								<div class="min-h-0 min-w-0">
 									<FileCodeEditor
