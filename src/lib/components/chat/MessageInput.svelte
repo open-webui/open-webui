@@ -1494,6 +1494,7 @@
 							'fork',
 							'status',
 							'model',
+							'compare',
 							'settings',
 							'temporary',
 							'skills:create'
@@ -1532,6 +1533,7 @@
 					onStatus: statusHandler,
 					onFork: forkHandler,
 					onModel: () => modelSelector?.open(),
+					onCompare: openComparison,
 					onSettings: () => showSettings.set(true),
 					onTemporary: temporaryHandler,
 					onCreateSkill: createSkillHandler,

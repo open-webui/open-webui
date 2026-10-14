@@ -1,4 +1,10 @@
 {
+	"Compare text": "",
+	"Use in prompt": "",
+	"Uses the left working copy as your prompt.": "",
+	"Your comparison changes will be discarded. Your prompt will stay unchanged.": "",
+	"Could not open comparison. Please try again.": "",
+	"The prompt has changed. Reopen the comparison before applying.": "",
 	"Only admins can use this app. Add users or groups to allow others.": "",
 	"Restricted": "",
 	"Everyone": "",
