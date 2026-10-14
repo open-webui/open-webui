@@ -144,7 +144,7 @@ Define and get approval for the versioned audit event schema (`event_id`, schema
 
 ### OBS-05: Confirm SSC records mapping and retention clocks
 
-**Type:** Decision (external) | **Depends on:** none | **Ref:** §11, Gate 3
+**Type:** Decision (external) | **Depends on:** none | **Ref:** §11, Gate 3 | **Decision request:** [Canchat-v2-OBS-05-Retention-Mapping.md](Canchat-v2-OBS-05-Retention-Mapping.md) (provisional answers recorded 2026-10-14; waiting for SSC confirmation)
 
 **Description**
 SSC Information Management, Security and ATIP must confirm the proposed retention mapping table in §11 (Loki `app`/`frontend`/`audit`, SIEM/evidence, chat DB, Tempo, Prometheus), including disposal authority and clock triggers.
@@ -166,7 +166,7 @@ SSC Information Management, Security and ATIP must confirm the proposed retentio
 
 ### OBS-06: Specify production capacity, availability and ownership for the observability stack
 
-**Type:** Design | **Depends on:** OBS-03 | **Ref:** §9 Production deployment, Gate 5
+**Type:** Design | **Depends on:** OBS-03 | **Ref:** §9 Production deployment, Gate 5 | **Design:** [Canchat-v2-OBS-06-Production-Deployment.md](Canchat-v2-OBS-06-Production-Deployment.md) (proposed 2026-10-14)
 
 **Description**
 Compose demonstrates local integration only. Define production capacity, HA, backups/restore, credentials, network policies, egress restrictions and infrastructure ownership for the collector, Loki, Tempo, Prometheus (both), Grafana, Alloy, audit worker and tenant proxy. Identify which platform metrics are needed for DB, Redis, GPU and model-server health.
@@ -179,11 +179,11 @@ Compose demonstrates local integration only. Define production capacity, HA, bac
 - [ ] Decision on managed SSC services vs self-run components.
 
 **Testing**
-- None (design). Reviewed by platform/infrastructure team.
+- None (design).
 
 **Definition of done**
 - Common DoD.
-- Design approved and linked from OBS-58.
+- Design linked from OBS-58.
 
 ---
 
@@ -1123,7 +1123,7 @@ Configure per-tenant Loki retention (`app` 6 months, `frontend` 6 months, `audit
 **Type:** Task | **Depends on:** OBS-05 | **Ref:** §11 Scope note
 
 **Description**
-Create `docs/Canchat-v2-Records-Management.md` covering the hold model, hold-aware deletion enforcement across all chat/file/vector deletion paths, the immutable evidence archive and disposition verification. This is not a blocker for PRs 1–4 or 6–7 and gets its own tickets once designed.
+Create `docs/observability/Canchat-v2-Records-Management.md` covering the hold model, hold-aware deletion enforcement across all chat/file/vector deletion paths, the immutable evidence archive and disposition verification. This is not a blocker for PRs 1–4 or 6–7 and gets its own tickets once designed.
 
 **Acceptance criteria**
 - [ ] Document created with the requirements carried over from §11 Implementation.

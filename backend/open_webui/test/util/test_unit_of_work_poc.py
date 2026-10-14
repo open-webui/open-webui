@@ -2,7 +2,7 @@
 
 Self-contained on purpose: importing ``open_webui.internal.db`` runs migrations
 against ``DATABASE_URL``. The helpers below are the ones proposed for
-``internal/db.py`` in docs/Canchat-v2-OBS-02-Unit-of-Work.md; the table class
+``internal/db.py`` in docs/observability/Canchat-v2-OBS-02-Unit-of-Work.md; the table class
 mirrors ``UsersTable`` after the refactor.
 """
 

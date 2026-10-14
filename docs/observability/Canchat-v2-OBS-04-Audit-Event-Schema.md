@@ -1,10 +1,10 @@
 # OBS-04: Audit event schema v1, cardinality limits and audit fail policy
 
-Status: **Proposed**, waiting for SSC Security and tech lead sign-off (§10) | Depends on: OBS-01 (option a, as assumed in [OBS-02](Canchat-v2-OBS-02-Unit-of-Work.md)) | Unblocks: OBS-41, OBS-42, OBS-43, OBS-44, OBS-45, OBS-46 | Ref: [Logging Architecture v2 §5](Canchat-v2-Logging%20Architecture-v2.md#5-audit-events-emit_audit_event-metadata-only), Gates 2 and 4
+Status: **Proposed**. Open questions 1, 2, 3 and 5 decided on 2026-10-13 (§10). Waiting for the SIEM interface answer and SSC Security and tech lead sign-off | Depends on: OBS-01 (option a, as assumed in [OBS-02](Canchat-v2-OBS-02-Unit-of-Work.md)) | Unblocks: OBS-41, OBS-42, OBS-43, OBS-44, OBS-45, OBS-46 | Ref: [Logging Architecture v2 §5](Canchat-v2-Logging%20Architecture-v2.md#5-audit-events-emit_audit_event-metadata-only), Gates 2 and 4
 
 Artifacts:
 
-- **Pydantic model spec and samples:** [test_audit_event_schema_poc.py](../backend/open_webui/test/util/test_audit_event_schema_poc.py). It validates one sample event for each of the 45 actions (all 7 categories), plus forbidden-field, free-text, envelope, size, fail-policy and pseudonym tests. 324 tests pass. OBS-41 moves the models into `observability/audit.py` unchanged.
+- **Pydantic model spec and samples:** [test_audit_event_schema_poc.py](../../backend/open_webui/test/util/test_audit_event_schema_poc.py). It validates one sample event for each of the 46 actions (all 7 categories), plus forbidden-field, free-text, envelope, size, fail-policy and pseudonym tests. 328 tests pass. OBS-41 moves the models into `observability/audit.py` unchanged.
 - **JSON Schema (draft 2020-12):** [obs04-audit-event-v1.schema.json](obs04-audit-event-v1.schema.json), generated from the Pydantic spec. A test fails if the file is out of date. To regenerate it: `OBS04_WRITE_SCHEMA=1 pytest backend/open_webui/test/util/test_audit_event_schema_poc.py`.
 
 ## 1. Design rules
@@ -27,13 +27,13 @@ Artifacts:
 | `outcome` | enum | yes | `success`, `failure`, `denied`, `error`, `cancelled`. Each action allows only some of these (§3) |
 | `actor.type` | enum | yes | `user` or `anonymous` |
 | `actor.id` | UUID | for `user` | Internal user ID. Not allowed for `anonymous` |
-| `actor.role` | enum | no | `admin`, `user`, `pending` at the time of the action |
+| `actor.role` | enum | no | `admin`, `user`, `pending`, `analyst`, `global_analyst` at the time of the action |
 | `actor.auth_method` | enum | login/signup only | `password`, `ldap`, `oauth`, `trusted_header`, `api_key`, `session`, `refresh_token` |
 | `actor.subject_pseudonym` | `ps1:<kid>:<22 chars>` | `login.failure` only | Keyed pseudonym of the submitted login identifier (§6) |
 | `target` | object | depends on action | `{type, id}`. `type` is fixed per action. `id` is a UUID, a model ID (`^[A-Za-z0-9._:/-]{1,128}$`) or a built-in MCP server name. `config`/`permissions` targets have no `id` |
 | `details` | object | depends on action | A closed, action-specific model (§3) |
 | `correlation` | object | no | `request_id`, `operation_id` (`^[A-Za-z0-9._-]{8,64}$`, same rule as `X-Request-Id` validation), `trace_id` (32 hex), `span_id` (16 hex), `session_id` (refresh-session UUID) |
-| `client.address` | IPv4/IPv6 | no | Allowed only for `auth` and `access` events (security-log source address). Never sent to metrics or analytics. See open question 1 |
+| `client.address` | IPv4/IPv6 | no | Recorded for `auth` and `access` events (security-log source address; decided 2026-10-13). Not allowed in other categories. Never sent to metrics or analytics |
 | `source` | object | yes | `service` (label), `version`, `environment` |
 
 **Other rules** (enforced by model validators; JSON Schema can't express them):
@@ -50,7 +50,6 @@ Artifacts:
 ## 3. Action catalogue
 
 Fail modes: **C** = closed under every policy, **O** = open under `block_privileged` and closed under `block_all`, **N** = never block (§5).
-
 | Category | Action | Target | Details (all closed) | Outcomes | Fail | Emitted from |
 |---|---|---|---|---|---|---|
 | auth | `login.success` | user | none | success | O | `issue_tokens_for_user` (signin, ldap, oauth, signup, trusted header) |
@@ -71,6 +70,7 @@ Fail modes: **C** = closed under every policy, **O** = open under `block_privile
 | admin | `config.update`, `config.import` | config | `section` (router label), `keys` (≤ 200 `UPPER_SNAKE` names, never values) | success | C | configs, auths, retrieval, images, audio, tasks, openai, ollama, users, evaluations routers |
 | admin | `domain.create`, `domain.update`, `domain.delete` | domain | none | success | C | `routers/domains.py` |
 | access | `model.denied` | model | `reason`: `no_access`, `model_not_found` | denied | N | `check_model_access` |
+| access | `admin_route.denied` | none | `guard`: `admin`, `metrics`; `method`; `route` (route template such as `/api/v1/users/{user_id}/update`, never the concrete path or query string) | denied | N | `get_admin_user`, `get_metrics_user` (both return 401 today); they need the `Request` to read the route template |
 | resource | `file.upload` | file | `mime_group` (8 values), `size_bucket` (4 values), optional `knowledge_id` | success | C | `POST /files/` |
 | resource | `file.update`, `file.delete` | file | none | success | C | `/files/{id}/data/content/update`, `DELETE /files/{id}` |
 | resource | `file.delete_all`, `knowledge.delete_all` | none | `scope`: `own`, `all_users`; `count` | success | C | `DELETE /files/all`, retrieval reset |
@@ -81,13 +81,13 @@ Fail modes: **C** = closed under every policy, **O** = open under `block_privile
 | mcp | `mcp_server.delete`, `.start`, `.stop`, `.restart` | mcp_server | `server_type` | success | C | external CRUD/start/stop/restart, built-in restart |
 | mcp | `mcp.config_update` | config | `section`, `keys` | success | C | `/mcp/config/update`, `/mcp/urls/update` |
 | export | `metrics.export` | export (the `export_logs` row ID) | `row_count`, `file_size_bytes`, `date_range_start`, `date_range_end` | success | C | `routers/metrics.py` export, same transaction as `ExportLogs.insert_new_export_log` |
-| chat | `message` | message | `chat_id`, `model`, `provider`, `path` (`http_background`, `http_stream`, `http_json`, `crewai`), token counts (nullable), `has_files`, `web_search`, `has_knowledge`, `has_tools`, `mcp_tool` | success, error, cancelled | O | `MessageMetrics.insert_new_metrics` (OBS-45) |
+| chat | `message` | message | `chat_id`, `model`, `provider`, `path` (`http_background`, `http_stream`, `http_json`, `crewai`), token counts (nullable), `has_files`, `web_search`, `has_knowledge`, `has_tools`, `mcp_tool` | success, error, cancelled | N | `MessageMetrics.insert_new_metrics` (OBS-45) |
 | chat | `chat.share`, `chat.unshare` | chat | optional `share_id` | success | C | `/chats/{id}/share` |
 
 Notes:
 
 - **Answers to OBS-02 open question 2:** `domain.*`, `chat.share`/`chat.unshare` and `api_key.*` are included.
-- **State-change events are written only when the change commits**, so their only outcome is `success`. Rejected privileged attempts (for example a non-admin calling an admin route) aren't in v1. See open question 3.
+- **State-change events are written only when the change commits**, so their only outcome is `success`. Rejected attempts to call admin and metrics routes are recorded separately as `admin_route.denied`.
 - **Supersedes OBS-02 examples:** config keys go in `details.keys` (not `target.keys`), and role changes use `details.from_role`/`to_role`.
 - **`user_domain`/`email_domain` are not copied into events.** The domain is a quasi-identifier, and it can be derived from `actor.id` when it's needed. `message_metrics` and `export_logs` keep their existing columns.
 - **Deferred:** chat deletion and retention cleanup (records-management design, OBS-61), workspace model/prompt/tool CRUD, MCP tool-call events, and audit access/hold events (records-management design).
@@ -117,12 +117,12 @@ This policy covers failure to **build, validate, encrypt or insert** the event l
 | Mode | `block_privileged` (default) | `block_all` | Actions |
 |---|---|---|---|
 | **C**: closed | Change rolled back, HTTP 503, nothing applied | same | Every state change: `signup`, `password.change`, `api_key.*`, all `admin`, `resource`, `mcp`, `export`, `chat.share`/`unshare` |
-| **O**: open with alert | Request succeeds, failure metric + alert | Closed (see below) | `login.success`, `message` |
-| **N**: never block | Normal response (the refusal or logout), failure metric + alert | same | `login.failure`, `token.refresh.failure`, `model.denied`, `logout` |
+| **O**: open with alert | Request succeeds, failure metric + alert | Closed: login returns 503 | `login.success` |
+| **N**: never block | Normal response (the refusal, logout or chat reply), failure metric + alert | same | `login.failure`, `token.refresh.failure`, `model.denied`, `admin_route.denied`, `logout`, `message` |
 
 - **Why N exists:** these requests are already refused, or they end a session. Blocking them adds no protection. Blocking logout would also stop users from revoking sessions while auditing is down.
 - **Fail open, as OBS-02 §3.5 describes:** catch errors from build/validate/encrypt only, and skip the insert. An insert failure means the database is failing, so the state change fails too.
-- **`block_all` for `message`:** the event is written when the response is finalized, after the user has already seen it, so it can't fail closed afterwards. Instead, a circuit breaker opens for 60 s after any audit emit failure (or when the outbox health check fails). While it's open, new chat requests get a 503 **before** the provider is called. A response already in progress completes and is counted as a failure.
+- **`message` never blocks, under either policy:** the event is written when the response is finalized, after the user has already seen it, so it can't fail closed afterwards. A pre-call circuit breaker (refusing new chat requests for a short window after an audit failure) was considered and **deferred on 2026-10-13**. It may be added later; if it is, `message` moves to mode O and `block_all` blocks new chat requests while the breaker is open.
 - **`block_all` for `login.success`:** the refresh-session row and the event share one unit of work, so login returns 503.
 - **Alerting:** `audit_emit_failures_total{category,action,stage}`, where `stage` is one of `build`, `validate`, `encrypt`, `persist`. Any increase over 5 minutes pages ops and notifies Security. The application logs one ERROR line with action, stage and error type only.
 - **Startup:** with `AUDIT_ENABLED=true` in production, a missing pseudonym or outbox key stops startup instead of failing every event at runtime.
@@ -138,7 +138,7 @@ pseudonym  = "ps1:" + key_id + ":" + base64url(HMAC-SHA256(key, utf8(normalized)
 
 - One identifier always gives the same pseudonym under the same key, across attempts, replicas and restarts. This is what correlation needs. The architecture doc explicitly rejects a fresh random salt per attempt.
 - The identifier is the value the user typed: email for password and OAuth, username for LDAP. The pseudonym is computed before any lookup, so failures for unknown accounts can be correlated too.
-- If the identifier resolves to an account, `target` also holds that user's ID. This shows attacks against real accounts. See open question 2.
+- If the identifier resolves to an account, `target` also holds that user's ID (decided 2026-10-13). This shows attacks against real accounts.
 - 128 bits makes accidental collisions negligible. It's not reversible without the key. **With the key, it can be brute-forced against candidate identifiers**, so the key is as sensitive as the identifiers it protects.
 
 **Key management**
@@ -165,7 +165,7 @@ pseudonym  = "ps1:" + key_id + ":" + base64url(HMAC-SHA256(key, utf8(normalized)
 | `event` | `socket_*` | `connect`, `disconnect`, `usage`, `crew-mcp-query`, `user-join`, `join-channels`, `channel-events`, `user-list`, `other` | Enum from the registered handlers |
 | `outcome` | all domain metrics | `success`, `error`, `cancelled`, `timeout`, `denied`, `rejected` | Enum |
 | `type` | `llm_tokens_total` | `prompt`, `completion` | Enum |
-| `category`, `action` | `audit_*` | Schema enums (§3) | Enum; 45 actions |
+| `category`, `action` | `audit_*` | Schema enums (§3) | Enum; 46 actions |
 | `stage` | `audit_emit_failures_total` | `build`, `validate`, `encrypt`, `persist` | Enum |
 | `destination` | `audit_delivery_*` | `siem`, `loki` | Enum |
 | `http.*` | `http.server.request.duration` | Stable semconv from `FastAPIInstrumentor`. `http.route` is the route template | Instrumentor; unmatched routes have no route value |
@@ -193,9 +193,11 @@ pseudonym  = "ps1:" + key_id + ":" + base64url(HMAC-SHA256(key, utf8(normalized)
 | **SIEM/evidence archive** (authoritative) | The SSC adapter confirms **at the application level that the event is durably committed**. For example: an HTTP 2xx whose body contains the `event_id` and the SIEM's record/ingest ID, or an indexer acknowledgement. **Not enough:** a TCP/TLS syslog send, a load-balancer or collector 2xx before commit, or a fire-and-forget queue | `receipt_id`, SIEM receive time, our ack time, `payload_sha256` |
 | **Loki search copy** (non-authoritative) | Collector OTLP 2xx (`forwarded`) | ack time |
 
-**Retries:** exponential backoff with full jitter, 1 s base, 5 min cap, no attempt limit for transient errors (network errors, timeouts, 408, 429, 5xx). Any other 4xx or a schema rejection moves the destination to `dead_letter` right away. Delivery is at-least-once: the destination deduplicates on `event_id`, and consumers order by `time`.
+**Retries:** exponential backoff with full jitter, 1 s base, 5 min cap, no attempt limit for transient errors (network errors, timeouts, 408, 429, 5xx). Any other 4xx or a schema rejection moves the destination to `dead_letter` right away. Delivery is at-least-once, and consumers order by `time`.
 
-**Concurrency, shutdown and crashes:** on Postgres, workers lease batches with `FOR UPDATE SKIP LOCKED`, `lease_until` = now + 60 s. SQLite (single replica, dev) runs one worker. On shutdown, the worker stops claiming, finishes in-flight sends for up to 10 s, and clears its leases. After a crash, expired leases are reclaimed. The resend is deduplicated by `event_id`.
+**Duplicates are kept (decided 2026-10-13).** Neither the worker nor the SIEM removes duplicate deliveries. Every copy carries the same `event_id`, so reports and investigations that need exact counts count distinct `event_id`s. This may change later; deduplication would then be added at the SIEM on `event_id`, with no schema change.
+
+**Concurrency, shutdown and crashes:** on Postgres, workers lease batches with `FOR UPDATE SKIP LOCKED`, `lease_until` = now + 60 s. SQLite (single replica, dev) runs one worker. On shutdown, the worker stops claiming, finishes in-flight sends for up to 10 s, and clears its leases. After a crash, expired leases are reclaimed, and the resend can create a duplicate copy with the same `event_id`.
 
 **Outage behaviour:** requests keep succeeding and keep writing to the outbox. A destination outage never triggers the fail policy. Alerts:
 
@@ -225,13 +227,19 @@ Reserved outbox capacity covers **7 days of SIEM outage at peak event rate** (�
 
 `AUDIT_FAIL_POLICY` and `AUDIT_PSEUDONYM_KEY_ID` already exist in §12.
 
-## 10. Open questions and sign-off
+## 10. Decisions and sign-off
 
-1. **`client.address` in `auth`/`access` events:** TBS event logging guidance expects source addresses for security events. Security, please confirm it's required and is covered by the existing collection notice.
-2. **`target.user` on failed logins for existing accounts:** this helps detect targeted attacks. It also records that a given person's account was attempted. Keep it?
-3. **Rejected privileged attempts** (403 on admin routes): add an `access.admin_denied` action in v1.1?
-4. **SSC SIEM interface:** which adapter and protocol give an application-level durable acknowledgement, and can it deduplicate on `event_id`? If it can't deduplicate, queries must deduplicate on `event_id`.
-5. **`block_all` circuit breaker window** (60 s) for chat: is it acceptable to Security and the product owner?
+Decided 2026-10-13:
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Record `client.address` in `auth`/`access` events? | **Yes** |
+| 2 | Record `target.user` on failed logins for existing accounts? | **Yes** |
+| 3 | Audit rejected admin-route attempts? | **Yes**, in v1, as `access` / `admin_route.denied` (§3) |
+| 4 | Remove duplicate deliveries on `event_id`? | **No**, duplicates are kept and counted by distinct `event_id` (§8). May change later |
+| 5 | Circuit breaker for chat under `block_all`? | **Not yet**; `message` never blocks (§5). May change later |
+
+Still open: **SSC SIEM interface.** Which adapter and protocol give an application-level durable acknowledgement (§8)?
 
 | Role | Name | Decision | Date |
 |---|---|---|---|

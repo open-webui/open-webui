@@ -1,7 +1,7 @@
 """OBS-04 proof of concept: audit event schema v1, validated against sample events.
 
-Self-contained spec for docs/Canchat-v2-OBS-04-Audit-Event-Schema.md; OBS-41 moves
-it into observability/audit.py. Regenerate docs/obs04-audit-event-v1.schema.json with
+Self-contained spec for docs/observability/Canchat-v2-OBS-04-Audit-Event-Schema.md; OBS-41 moves
+it into observability/audit.py. Regenerate docs/observability/obs04-audit-event-v1.schema.json with
 OBS04_WRITE_SCHEMA=1 pytest backend/open_webui/test/util/test_audit_event_schema_poc.py
 """
 
@@ -37,7 +37,10 @@ MAX_EVENT_BYTES = 16384
 MAX_IDS = 100
 MAX_KEYS = 200
 SCHEMA_PATH = (
-    Path(__file__).resolve().parents[4] / "docs" / "obs04-audit-event-v1.schema.json"
+    Path(__file__).resolve().parents[4]
+    / "docs"
+    / "observability"
+    / "obs04-audit-event-v1.schema.json"
 )
 SCHEMA_ID = "https://canchat.ssc-spc.gc.ca/schemas/audit-event/v1.json"
 
@@ -85,6 +88,21 @@ class Role(str, Enum):
     ADMIN = "admin"
     USER = "user"
     PENDING = "pending"
+    ANALYST = "analyst"
+    GLOBAL_ANALYST = "global_analyst"
+
+
+class RouteGuard(str, Enum):
+    ADMIN = "admin"  # get_admin_user
+    METRICS = "metrics"  # get_metrics_user
+
+
+class HttpMethod(str, Enum):
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    PATCH = "PATCH"
+    DELETE = "DELETE"
 
 
 class ChangeSource(str, Enum):
@@ -289,6 +307,13 @@ class AccessDeniedDetails(_Strict):
     reason: AccessDeniedReason
 
 
+class RouteDeniedDetails(_Strict):
+    guard: RouteGuard
+    method: HttpMethod
+    # Route template (request.scope["route"].path), never the concrete path.
+    route: Annotated[str, Field(pattern=r"^/[A-Za-z0-9_{}/.-]{0,199}$")]
+
+
 class FileUploadDetails(_Strict):
     mime_group: MimeGroup
     size_bucket: SizeBucket
@@ -353,7 +378,7 @@ class ChatShareDetails(_Strict):
 class FailMode(str, Enum):
     CLOSED = "closed"  # blocks under every policy
     OPEN = "open"  # blocks only under block_all
-    NEVER_BLOCK = "never_block"  # refusals and logout: blocking adds no protection
+    NEVER_BLOCK = "never_block"  # refusals, logout and post-response chat records
 
 
 class AuditFailPolicy(str, Enum):
@@ -426,6 +451,13 @@ CATALOGUE: dict[str, ActionSpec] = {
         _N,
         outcomes=frozenset({Outcome.DENIED}),
     ),
+    "admin_route.denied": ActionSpec(
+        "access",
+        None,
+        RouteDeniedDetails,
+        _N,
+        outcomes=frozenset({Outcome.DENIED}),
+    ),
     # resource
     "file.upload": ActionSpec("resource", "file", FileUploadDetails, _C),
     "file.update": ActionSpec("resource", "file", None, _C),
@@ -457,7 +489,8 @@ CATALOGUE: dict[str, ActionSpec] = {
         "chat",
         "message",
         ChatMessageDetails,
-        _O,
+        # Written after the reply is sent; a pre-call circuit breaker is deferred.
+        _N,
         outcomes=frozenset({Outcome.SUCCESS, Outcome.ERROR, Outcome.CANCELLED}),
     ),
     "chat.share": ActionSpec("chat", "chat", ChatShareDetails, _C),
@@ -726,6 +759,17 @@ SAMPLES: dict[str, dict] = {
         actor={"type": "user", "id": USER_ID, "role": "user"},
         target={"type": "model", "id": "azure/gpt-4o-mini"},
         details={"reason": "no_access"},
+        client={"address": "10.20.30.40"},
+    ),
+    "admin_route.denied": _base(
+        "admin_route.denied",
+        actor={"type": "user", "id": USER_ID, "role": "analyst"},
+        details={
+            "guard": "admin",
+            "method": "POST",
+            "route": "/api/v1/users/{user_id}/update",
+        },
+        client={"address": "10.20.30.40"},
     ),
     "file.upload": _base(
         "file.upload",
@@ -925,6 +969,8 @@ def test_forbidden_fields_rejected(key, where):
         ("message", ("details", "mcp_tool"), "Jane's SharePoint"),
         ("message", ("correlation", "request_id"), "<script>alert(1)</script>"),
         ("login.failure", ("actor", "subject_pseudonym"), "jane.doe@ssc-spc.gc.ca"),
+        ("admin_route.denied", ("details", "route"), "/api/v1/search?q=my secret"),
+        ("admin_route.denied", ("details", "route"), "users/{user_id}"),
     ],
 )
 def test_free_text_and_identifiers_rejected(action, path, value):
@@ -1007,8 +1053,9 @@ def test_pseudonym_is_stable_normalized_and_rotates():
 EXPECTED_BLOCKING = {
     # action: (block_privileged, block_all)
     "login.success": (False, True),
-    "message": (False, True),
+    "message": (False, False),
     "login.failure": (False, False),
+    "admin_route.denied": (False, False),
     "token.refresh.failure": (False, False),
     "logout": (False, False),
     "model.denied": (False, False),

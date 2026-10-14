@@ -2,17 +2,17 @@
 
 Status: **Proposed**, waiting for tech lead approval | Unblocks: OBS-40, OBS-41, OBS-44, OBS-45, OBS-46 | Ref: [Logging Architecture v2 §5](Canchat-v2-Logging%20Architecture-v2.md#5-audit-events-emit_audit_event-metadata-only), Gate 6
 
-Proof of concept: [test_unit_of_work_poc.py](../backend/open_webui/test/util/test_unit_of_work_poc.py), 9 tests passing on SQLite. Postgres is still to be checked in OBS-40.
+Proof of concept: [test_unit_of_work_poc.py](../../backend/open_webui/test/util/test_unit_of_work_poc.py), 9 tests passing on SQLite. Postgres is still to be checked in OBS-40.
 
 ## 1. Problem
 
-Every table method opens its own session through `with get_db() as db:` ([internal/db.py](../backend/open_webui/internal/db.py)) and commits before it returns. That causes three problems for audit:
+Every table method opens its own session through `with get_db() as db:` ([internal/db.py](../../backend/open_webui/internal/db.py)) and commits before it returns. That causes three problems for audit:
 
 1. A state change and its audit outbox row can't be committed or rolled back together.
 2. Methods that call other methods are already non-atomic. Some examples:
-   - [`AuthsTable.insert_new_auth`](../backend/open_webui/models/auths_table.py#L26) commits the `user` row through `Users.insert_new_user` before it commits the `auth` row.
-   - [`UsersTable.delete_user_by_id`](../backend/open_webui/models/users.py#L322) runs three separate transactions: groups, then chats, then the user.
-   - Admin user edits in [routers/users.py](../backend/open_webui/routers/users.py#L439) call password, email and profile updates one after another.
+   - [`AuthsTable.insert_new_auth`](../../backend/open_webui/models/auths_table.py#L26) commits the `user` row through `Users.insert_new_user` before it commits the `auth` row.
+   - [`UsersTable.delete_user_by_id`](../../backend/open_webui/models/users.py#L322) runs three separate transactions: groups, then chats, then the user.
+   - Admin user edits in [routers/users.py](../../backend/open_webui/routers/users.py#L439) call password, email and profile updates one after another.
 3. Most methods catch `Exception` and return `None`/`False`. Inside a shared transaction that would hide a failed write, and the caller could still commit the audit event with `outcome=success`.
 
 ## 2. Options considered
@@ -127,7 +127,7 @@ Events with no state change (login failure, token refresh failure, model access 
 
 ### 3.6 Configs (special case)
 
-Config isn't a table method. Each assignment `request.app.state.config.X = v` calls [`AppConfig.__setattr__`](../backend/open_webui/config.py#L321) → [`PersistentConfig.save`](../backend/open_webui/config.py#L302) → [`save_to_db`](../backend/open_webui/config.py#L48). That changes the in-memory `CONFIG_DATA` and commits the whole JSON document every time. There are about 150 assignment sites across 10 routers. Proposal:
+Config isn't a table method. Each assignment `request.app.state.config.X = v` calls [`AppConfig.__setattr__`](../../backend/open_webui/config.py#L321) → [`PersistentConfig.save`](../../backend/open_webui/config.py#L302) → [`save_to_db`](../../backend/open_webui/config.py#L48). That changes the in-memory `CONFIG_DATA` and commits the whole JSON document every time. There are about 150 assignment sites across 10 routers. Proposal:
 
 - `save_to_db(data, *, db=None)` and `save_config(config, *, db=None)` use `get_db_context` / `commit_or_flush`.
 - `AppConfig.bind(db)` is a context manager. It stores `db` in a **contextvar**, not on the shared `AppConfig` instance, because concurrent requests share that instance. It also takes a snapshot of `CONFIG_DATA` and every `PersistentConfig.value`. `save()` passes the bound `db` along. If an exception reaches the context manager, it restores the snapshot so memory matches the rolled-back database.
@@ -148,7 +148,7 @@ Known limitation, not new: other requests can see the new in-memory values befor
 - `db` is **keyword-only and last**, so existing positional and keyword calls keep working unchanged.
 - With `db=None` a method behaves exactly as it does today: its own session, its own commit, the same swallowed exceptions and the same return values. Unaudited callers keep using that path, including the scheduler, `backend/scripts/*`, CrewAI title/tag updates and streaming `upsert_message_*`.
 - **Read methods** get `db` only where a unit of work has to read the "before" state or read its own writes: `Users.get_user_by_id`, `Groups.get_group_by_id`, `Files.get_file_by_id`, `Knowledges.get_knowledge_by_id`, `MCPServers.get_server_by_id`. Other read methods stay as they are.
-- **Test doubles** that replace model methods with fixed signatures must accept `db=None`/`**kwargs` once callers start passing `db`. One example is `rotate_session_token` in [test_auth_refresh_rotation.py](../backend/open_webui/test/util/test_auth_refresh_rotation.py).
+- **Test doubles** that replace model methods with fixed signatures must accept `db=None`/`**kwargs` once callers start passing `db`. One example is `rotate_session_token` in [test_auth_refresh_rotation.py](../../backend/open_webui/test/util/test_auth_refresh_rotation.py).
 - Merging from upstream: the change is mechanical and limited to the methods in §5, so conflicts stay local to those methods.
 - Atomicity fixes (§1 point 2) apply only when a caller passes `db`. The legacy path keeps today's partial-failure behaviour.
 
@@ -160,9 +160,9 @@ Only **mutating** methods called from an audited path are listed. Category and a
 
 | Method | Audited call sites | Notes |
 |---|---|---|
-| `RefreshSessions.create_session`, `rotate_session_token` ([refresh_sessions_table.py](../backend/open_webui/models/refresh_sessions_table.py#L26)) | `utils/auth.issue_tokens_for_user` (signin, ldap, signup, oauth, refresh) | `login.success` written with the session row |
+| `RefreshSessions.create_session`, `rotate_session_token` ([refresh_sessions_table.py](../../backend/open_webui/models/refresh_sessions_table.py#L26)) | `utils/auth.issue_tokens_for_user` (signin, ldap, signup, oauth, refresh) | `login.success` written with the session row |
 | `RefreshSessions.revoke_session_by_id`, `revoke_sessions_by_user_id` | `routers/auths.py` signout, refresh failure, password change | `logout`, `refresh.failure` |
-| `Auths.insert_new_auth` ([auths_table.py](../backend/open_webui/models/auths_table.py#L26)) → `Users.insert_new_user` | signup, `/add`, ldap, oauth | Fixes the non-atomic user + auth insert |
+| `Auths.insert_new_auth` ([auths_table.py](../../backend/open_webui/models/auths_table.py#L26)) → `Users.insert_new_user` | signup, `/add`, ldap, oauth | Fixes the non-atomic user + auth insert |
 | `Auths.update_user_password_by_id`, `update_email_by_id` | `/update/password`, admin edit in `routers/users.py` | `password.change`; never log the email value |
 | `Users.update_user_api_key_by_id` | `/api_key` create/delete | `api_key.create` / `api_key.delete` |
 | none (no state change) | signin/ldap failure, refresh failure | Standalone unit of work; failed login uses a pseudonym (OBS-43) |
@@ -171,11 +171,11 @@ Only **mutating** methods called from an audited path are listed. Category and a
 
 | Method | Audited call sites | Notes |
 |---|---|---|
-| `Users.update_user_role_by_id` ([users.py](../backend/open_webui/models/users.py#L243)) | `routers/users.py` role update, `utils/oauth.py` role sync | |
+| `Users.update_user_role_by_id` ([users.py](../../backend/open_webui/models/users.py#L243)) | `routers/users.py` role update, `utils/oauth.py` role sync | |
 | `Users.update_user_by_id` | admin user edit; `oauth_sub` link | Settings and profile updates by the user themselves stay legacy |
 | `Users.update_user_oauth_sub_by_id` | `utils/oauth.py` | Account linking |
 | `Auths.delete_auth_by_id` → `Users.delete_user_by_id` → `Groups.remove_user_from_all_groups`, `Chats.delete_chats_by_user_id` | `routers/users.py` delete | Makes user deletion atomic |
-| `Groups.insert_new_group`, `update_group_by_id`, `delete_group_by_id` ([groups.py](../backend/open_webui/models/groups.py#L138)) | `routers/groups.py`, `utils/oauth.py` group sync | Members listed by ID only |
+| `Groups.insert_new_group`, `update_group_by_id`, `delete_group_by_id` ([groups.py](../../backend/open_webui/models/groups.py#L138)) | `routers/groups.py`, `utils/oauth.py` group sync | Members listed by ID only |
 | `Domains.insert_new_domain`, `update_domain_by_id`, `delete_domain_by_id` | `routers/domains.py` | **Not in §5. Recommend adding** (admin, small) |
 
 ### admin: configuration
@@ -194,27 +194,27 @@ Only **mutating** methods called from an audited path are listed. Category and a
 
 | Method | Audited call sites | Notes |
 |---|---|---|
-| `Files.insert_new_file`, `delete_file_by_id`, `delete_all_files` ([files.py](../backend/open_webui/models/files.py#L102)) | `routers/files.py` upload/delete/delete-all, `routers/knowledge.py` remove-file, `routers/retrieval.py` deletes | Storage/vector side effects follow §3.4. The hash/data/metadata updates during processing are not audited and stay legacy |
-| `Knowledges.insert_new_knowledge`, `update_knowledge_by_id`, `update_knowledge_data_by_id`, `delete_knowledge_by_id`, `delete_all_knowledge` ([knowledge.py](../backend/open_webui/models/knowledge.py#L102)) | `routers/knowledge.py`, `routers/retrieval.py` reset | `update_knowledge_data_by_id` covers file add/remove/reset |
+| `Files.insert_new_file`, `delete_file_by_id`, `delete_all_files` ([files.py](../../backend/open_webui/models/files.py#L102)) | `routers/files.py` upload/delete/delete-all, `routers/knowledge.py` remove-file, `routers/retrieval.py` deletes | Storage/vector side effects follow §3.4. The hash/data/metadata updates during processing are not audited and stay legacy |
+| `Knowledges.insert_new_knowledge`, `update_knowledge_by_id`, `update_knowledge_data_by_id`, `delete_knowledge_by_id`, `delete_all_knowledge` ([knowledge.py](../../backend/open_webui/models/knowledge.py#L102)) | `routers/knowledge.py`, `routers/retrieval.py` reset | `update_knowledge_data_by_id` covers file add/remove/reset |
 
 ### resources: MCP servers
 
 | Method | Audited call sites | Notes |
 |---|---|---|
-| `MCPServers.insert_new_server`, `update_server_by_id`, `delete_server_by_id` ([mcp_servers.py](../backend/mcp_backend/models/mcp_servers.py#L85)) | `mcp_backend/routers/mcp.py` create/update/delete | Never put `env`/`args` values in the event (they may hold secrets) |
+| `MCPServers.insert_new_server`, `update_server_by_id`, `delete_server_by_id` ([mcp_servers.py](../../backend/mcp_backend/models/mcp_servers.py#L85)) | `mcp_backend/routers/mcp.py` create/update/delete | Never put `env`/`args` values in the event (they may hold secrets) |
 | `update_server_status` (wrapper around `update_server_by_id`) | `mcp.py` activate/deactivate/restart | Pass `db` through. Process start/stop happens after the commit |
 
 ### export
 
 | Method | Audited call sites | Notes |
 |---|---|---|
-| `ExportLogs.insert_new_export_log` ([export_logs.py](../backend/open_webui/models/export_logs.py#L50)) | `routers/metrics.py` export | The existing export log row and the audit event are written together |
+| `ExportLogs.insert_new_export_log` ([export_logs.py](../../backend/open_webui/models/export_logs.py#L50)) | `routers/metrics.py` export | The existing export log row and the audit event are written together |
 
 ### chat: metadata (OBS-01 option a)
 
 | Method | Audited call sites | Notes |
 |---|---|---|
-| `MessageMetrics.insert_new_metrics` ([message_metrics.py](../backend/open_webui/models/message_metrics.py#L51)) | `utils/middleware.py` (3 sites), `socket/main.py` (1), **`mcp_backend/routers/crew_mcp.py` (2, missing from OBS-01's list)** | Opens its own unit of work internally and writes metrics row + outbox row. Call sites don't change |
+| `MessageMetrics.insert_new_metrics` ([message_metrics.py](../../backend/open_webui/models/message_metrics.py#L51)) | `utils/middleware.py` (3 sites), `socket/main.py` (1), **`mcp_backend/routers/crew_mcp.py` (2, missing from OBS-01's list)** | Opens its own unit of work internally and writes metrics row + outbox row. Call sites don't change |
 | `Chats.insert_shared_chat_by_chat_id`, `delete_shared_chat_by_chat_id` | `routers/chats.py` share/unshare | **Recommend adding** a `chat.share` action in OBS-04 (exposes content through a link) |
 | `Chats.delete_chat_list` | retention cleanup | Deferred to the records-management design (OBS-61) |
 

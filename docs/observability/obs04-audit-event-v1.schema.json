@@ -90,6 +90,75 @@
       "title": "ActorType",
       "type": "string"
     },
+    "AuditEvent_admin_route_denied": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "const": "admin_route.denied",
+          "title": "Action",
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "category": {
+          "const": "access",
+          "title": "Category",
+          "type": "string"
+        },
+        "client": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Client"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correlation": {
+          "$ref": "#/$defs/Correlation"
+        },
+        "details": {
+          "$ref": "#/$defs/RouteDeniedDetails"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_version",
+        "time",
+        "outcome",
+        "actor",
+        "source",
+        "category",
+        "action",
+        "details"
+      ],
+      "title": "AuditEvent_admin_route_denied",
+      "type": "object"
+    },
     "AuditEvent_api_key_create": {
       "additionalProperties": false,
       "properties": {
@@ -3743,6 +3812,17 @@
       "title": "GroupDeleteDetails",
       "type": "object"
     },
+    "HttpMethod": {
+      "enum": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "title": "HttpMethod",
+      "type": "string"
+    },
     "Initiator": {
       "enum": [
         "self",
@@ -4007,7 +4087,9 @@
       "enum": [
         "admin",
         "user",
-        "pending"
+        "pending",
+        "analyst",
+        "global_analyst"
       ],
       "title": "Role",
       "type": "string"
@@ -4045,6 +4127,37 @@
       ],
       "title": "RoleDetails",
       "type": "object"
+    },
+    "RouteDeniedDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "guard": {
+          "$ref": "#/$defs/RouteGuard"
+        },
+        "method": {
+          "$ref": "#/$defs/HttpMethod"
+        },
+        "route": {
+          "pattern": "^/[A-Za-z0-9_{}/.-]{0,199}$",
+          "title": "Route",
+          "type": "string"
+        }
+      },
+      "required": [
+        "guard",
+        "method",
+        "route"
+      ],
+      "title": "RouteDeniedDetails",
+      "type": "object"
+    },
+    "RouteGuard": {
+      "enum": [
+        "admin",
+        "metrics"
+      ],
+      "title": "RouteGuard",
+      "type": "string"
     },
     "SizeBucket": {
       "enum": [
@@ -4357,6 +4470,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "discriminator": {
     "mapping": {
+      "admin_route.denied": "#/$defs/AuditEvent_admin_route_denied",
       "api_key.create": "#/$defs/AuditEvent_api_key_create",
       "api_key.delete": "#/$defs/AuditEvent_api_key_delete",
       "chat.share": "#/$defs/AuditEvent_chat_share",
@@ -4474,6 +4588,9 @@
     },
     {
       "$ref": "#/$defs/AuditEvent_model_denied"
+    },
+    {
+      "$ref": "#/$defs/AuditEvent_admin_route_denied"
     },
     {
       "$ref": "#/$defs/AuditEvent_file_upload"
