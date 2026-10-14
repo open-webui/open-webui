@@ -1098,10 +1098,12 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
     webui_url = await Config.get('webui.url')
     enable_user_webhooks = await Config.get('ui.enable_user_webhooks')
 
-    users = await get_channel_users_with_access(channel, 'read', db=db)
-
     # Batch fetch channel members in 1 query (fixes N+1)
     members = {m.user_id: m for m in await Channels.get_members_by_channel_id(channel.id, db=db)}
+    if channel.type in ['group', 'dm']:
+        users = await Users.get_users_by_user_ids(list(members), db=db)
+    else:
+        users = await get_channel_users_with_access(channel, 'read', db=db)
     mentioned_user_ids = {m['id'] for m in extract_mentions(message.content) if m['id_type'] == 'U'}
     url = f'{webui_url}/channels/{channel.id}'
 
