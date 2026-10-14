@@ -43,6 +43,7 @@ class AuditLogEntry:
     request_uri: str
     user_agent: Optional[str] = None
     source_ip: Optional[str] = None
+    model_id: Optional[str] = None
     # `Request` audit level properties
     request_object: Any = None
     # `Request Response` level
@@ -309,6 +310,7 @@ class AuditLoggingMiddleware:
                 response_status_code=context.metadata.get('response_status_code', None),
                 source_ip=request.client.host if request.client else None,
                 user_agent=request.headers.get('user-agent'),
+                model_id=getattr(request.state, 'model_id', None),
                 request_object=request_body,
                 response_object=response_body,
             )
