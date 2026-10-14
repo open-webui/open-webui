@@ -157,7 +157,7 @@
 								title={file.path}
 							>
 								<p class="truncate font-medium">{file.name}</p>
-								<p class="truncate text-[10px]">{file.path}</p>
+								
 							</div>
 						{/each}
 					</div>

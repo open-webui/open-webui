@@ -81,7 +81,6 @@
 		(side === 'a') !== swapped ? session?.leftFile : session?.rightFile;
 	const paneLabel = (side: string) =>
 		paneFile(side)?.name ?? (side === 'a' ? $i18n.t('Original') : $i18n.t('Proposed revision'));
-	const parentPath = (path: string) => path.replace(/[\\/][^\\/]*$/, '') || '/';
 
 	const begin = () => {
 		session = {
@@ -405,8 +404,8 @@
 		<div class="diff-editor flex h-full min-h-0 flex-col text-xs" on:keydown|capture={preventSave}>
 			<header class="flex shrink-0 flex-wrap items-center gap-3 px-5 pt-4 pb-2">
 				<div class="min-w-0 flex-1">
-					<h2 class="font-medium">{session.title || $i18n.t('Compare revision')}</h2>
-					{#if session.path}<p class="mt-1 truncate font-mono text-gray-500">{session.path}</p>{/if}
+					<h2 class="font-medium" title={session.path ?? undefined}>{session.title || $i18n.t('Compare revision')}</h2>
+					
 				</div>
 				{#if !comparing && session.mode === 'edit'}
 					<button type="button" class="primary" on:click={() => (comparing = true)}
@@ -512,9 +511,7 @@
 												>{file?.name ??
 													(side === 'a' ? $i18n.t('Original') : $i18n.t('Proposed revision'))}</span
 											>
-											{#if file}<span class="block truncate text-[10px]" aria-label={file.path}
-													>{parentPath(file.path)}</span
-												>{/if}
+
 										</div>
 										{#if comparing && !loading}
 											<span

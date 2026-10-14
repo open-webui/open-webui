@@ -210,7 +210,7 @@
 	<div class="grid shrink-0 grid-cols-2 border-b border-black/5 dark:border-white/5">
 		{#each [{ label: $i18n.t('Original'), path: original }, { label: $i18n.t('Revised'), path: revised }] as file}
 			<div class="min-w-0 px-3 py-2" title={file.path}>
-				<div class="text-[0.916667em] text-gray-400 dark:text-gray-500">{file.label}</div>
+				
 				<div class="truncate font-normal text-gray-700 dark:text-gray-300">{name(file.path)}</div>
 			</div>
 		{/each}
