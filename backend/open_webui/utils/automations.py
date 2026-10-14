@@ -505,6 +505,17 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             'automation_id': automation.id,
             'background_tasks': {},
         }
+        # Match the chat UI's memory preference, including inherited defaults.
+        ui_settings = (user.settings.ui or {}) if user.settings else {}
+        memory = ui_settings.get('memory')
+        if memory is None:
+            defaults = await Config.get('ui.default_interface_settings') or {}
+            memory = defaults.get('memory')
+        if memory is None:
+            memory = await Config.get('memories.enable')
+        if memory:
+            form_data.setdefault('features', {})['memory'] = True
+
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
         request = _build_request(app, token=token)

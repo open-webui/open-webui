@@ -76,9 +76,15 @@ class CallProtocol:
 
     def observe(self, event):
         kind = event.get('type')
-        if kind == 'conversation.item.input_audio_transcription.completed':
-            if event.get('transcript', '').strip():
+        if kind in {
+            'conversation.item.input_audio_transcription.completed',
+            'conversation.item.input_audio_transcription.failed',
+        }:
+            if kind.endswith('.completed') and event.get('transcript', '').strip():
                 self.transcripts.add(event['item_id'])
+            else:
+                # Rejected turns must leave the provider's history as well as the chat.
+                return {'type': 'conversation.item.delete', 'item_id': event['item_id']}
         elif kind == 'response.created':
             self.responses.add(event['response']['id'])
             self.response_metadata[event['response']['id']] = event['response'].get('metadata') or {}
@@ -452,12 +458,14 @@ async def realtime_call(ws: WebSocket):
                         'audio': {
                             'input': {
                                 'format': {'type': 'audio/pcm', 'rate': 24000},
+                                'noise_reduction': {'type': 'near_field'},
                                 'transcription': {'model': config['audio.realtime.transcription_model']},
                                 # Wait for the finalized transcript before requesting a response. This gives
                                 # every function call an unambiguous input_item_id, even during barge-in.
                                 'turn_detection': {
                                     'type': 'server_vad',
-                                    'interrupt_response': True,
+                                    # The client pauses playback until speech is confirmed.
+                                    'interrupt_response': False,
                                     'create_response': False,
                                 },
                             },
@@ -502,7 +510,11 @@ async def realtime_call(ws: WebSocket):
                 if kind == 'error':
                     # Provider error text can include prompts or credentials.
                     raise ValueError('Voice provider rejected a request')
-                protocol.observe(event)
+                command = protocol.observe(event)
+                if command:
+                    # Clean up before the client can request another response.
+                    async with asyncio.timeout(5):
+                        await upstream.send_json(command)
                 if kind.startswith(('response.', 'conversation.item.', 'input_audio_buffer.')):
                     async with asyncio.timeout(5):
                         await ws.send_json(event)

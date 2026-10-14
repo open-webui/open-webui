@@ -10,6 +10,7 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 		this.queued = 0;
 		this.received = 0;
 		this.playing = false;
+		this.paused = false;
 		this.rendered = new Map();
 		this.ended = new Set();
 		this.ticks = 0;
@@ -22,6 +23,8 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 			if (data.type === 'capture') {
 				this.enabled = data.enabled;
 				this.captureLength = 0;
+			} else if (data.type === 'pause') {
+				this.paused = data.paused;
 			} else if (data.type === 'audio') {
 				// Speech can arrive faster than playback; release each chunk after it plays.
 				this.received += data.samples.length;
@@ -68,7 +71,7 @@ class RealtimeAudioProcessor extends AudioWorkletProcessor {
 		if (!this.playing && (this.queued >= 1920 || this.ended.has(this.queue[0]?.response_id))) {
 			this.playing = true;
 		}
-		if (this.playing) {
+		if (this.playing && !this.paused) {
 			let offset = 0;
 			while (offset < output.length && this.queue.length) {
 				const chunk = this.queue[0];
