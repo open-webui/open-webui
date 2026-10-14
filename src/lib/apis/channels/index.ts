@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { getApps, type App } from '$lib/apis/apps';
 
 type ChannelForm = {
 	type?: string;
@@ -227,6 +228,24 @@ export const updateChannelMemberActiveStatusById = async (
 	}
 
 	return res;
+};
+
+export const updateChannelMemberMuteStatusById = async (
+	token: string,
+	channel_id: string,
+	is_channel_muted: boolean
+): Promise<{ is_channel_muted: boolean }> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/members/mute`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ is_channel_muted })
+	});
+	if (!res.ok) throw (await res.json()).detail;
+	return res.json();
 };
 
 type UpdateMembersForm = {
@@ -909,6 +928,110 @@ export const deleteChannelWebhook = async (
 		})
 		.catch((err) => {
 			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChannelAppsById = async (
+	token: string = '',
+	channel_id: string
+): Promise<App[]> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${encodeURIComponent(channel_id)}/apps`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err?.detail ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChannelMentionApps = async (token: string, channelId: string): Promise<App[]> => {
+	const [apps, joined] = await Promise.all([getApps(token), getChannelAppsById(token, channelId)]);
+	return apps.filter((app) => app.is_active && joined.some((member) => member.id === app.id));
+};
+
+export const inviteAppToChannel = async (
+	token: string = '',
+	channel_id: string,
+	app_id: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${encodeURIComponent(channel_id)}/apps`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ app_id })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err?.detail ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const removeAppFromChannel = async (
+	token: string = '',
+	channel_id: string,
+	app_id: string
+) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${encodeURIComponent(channel_id)}/apps/${encodeURIComponent(app_id)}`,
+		{
+			method: 'DELETE',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err?.detail ?? err;
 			console.error(err);
 			return null;
 		});

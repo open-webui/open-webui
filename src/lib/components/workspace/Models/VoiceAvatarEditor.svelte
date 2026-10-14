@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import { getContext, onDestroy } from 'svelte';
 	import {
 		AVATAR_MAX_BYTES,
@@ -39,7 +40,7 @@
 			error = $i18n.t('Choose a VRMA file, up to 10 MiB.');
 			return;
 		}
-		const id = crypto.randomUUID();
+		const id = uuidv4();
 		animationFiles = { ...animationFiles, [id]: selected };
 		if (typeof animationTarget === 'number') {
 			value = {
@@ -73,6 +74,9 @@
 	};
 	export let disabled = false;
 	const i18n = getContext<any>('i18n');
+	// Preserve the previous avatar description in the translation catalogs.
+	// $i18n.t('A character for bridge voice calls. The orb is used by default.');
+
 	const inputClass =
 		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	let input: HTMLInputElement;
@@ -132,7 +136,7 @@
 <fieldset {disabled} class="avatar-editor my-4 min-w-0 w-full">
 	<legend class="text-xs text-gray-500">{$i18n.t('Voice avatar')}</legend>
 	<p class="text-xs text-gray-500 mt-1 mb-3">
-		{$i18n.t('A character for bridge voice calls. The orb is used by default.')}
+		{$i18n.t('A character for voice calls. The default visualization is used without an avatar.')}
 	</p>
 	<input
 		bind:this={input}
@@ -361,7 +365,7 @@
 	<div class="flex gap-3 items-center mt-3 text-xs">
 		<button
 			type="button"
-			class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-850"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
 			on:click={() => input.click()}
 			>{value ? $i18n.t('Replace avatar') : $i18n.t('Upload VRM')}</button
 		>

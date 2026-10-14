@@ -19,6 +19,7 @@
 	import Users from '../icons/Users.svelte';
 	import Pin from '../icons/Pin.svelte';
 	import PinnedMessagesModal from './PinnedMessagesModal.svelte';
+	import ChannelMenu from './ChannelMenu.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -188,6 +189,7 @@
 							</button>
 						</Tooltip>
 					{/if}
+					<ChannelMenu {channel} />
 				{/if}
 			</div>
 		</div>

@@ -69,7 +69,7 @@ from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
-from open_webui.utils.skill_files import SkillFile, SkillFileOperation, bounded_skill_manifest, skill_content_page
+from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
 
 log = logging.getLogger(__name__)
 
@@ -3373,7 +3373,6 @@ async def query_knowledge_files(
                     **filter_source_metadata(metadata),
                     'content': doc,
                     'source': metadata.get('source', metadata.get('name', knowledge.name)),
-                    'file_id': metadata.get('file_id', f'external-{knowledge.id}'),
                     'type': 'external',
                     'knowledge_id': knowledge.id,
                 }
@@ -3507,7 +3506,7 @@ async def view_skill(
     __metadata__: dict = None,
     __event_call__: callable = None,
 ) -> str:
-    """Read skill instructions and file list. Use read_skill_file to continue from next_offset.
+    """Read skill instructions and file list. Large skills return an opening preview and next_offset.
 
     :param id: Skill ID from the available skills manifest.
     """
@@ -3520,7 +3519,12 @@ async def view_skill(
 
             skill_name = unquote(id.removeprefix(terminal_skill_prefix))
             skill = await get_terminal_skill(
-                __request__, __user__, __metadata__ or {}, skill_name, {'__event_call__': __event_call__}
+                __request__,
+                __user__,
+                __metadata__ if __metadata__ is not None else {},
+                skill_name,
+                {'__event_call__': __event_call__},
+                overview=True,
             )
             if not skill:
                 return JSONCodec.dumps({'error': f"Skill '{id}' not found"})
@@ -3545,10 +3549,8 @@ async def view_skill(
         return JSONCodec.dumps(
             {
                 'id': skill.id,
-                'version_id': version_id,
                 'name': snapshot['name'],
-                **skill_content_page(snapshot['content']),
-                **bounded_skill_manifest(file_summaries(snapshot['data']['files'])),
+                **skill_overview(snapshot['content'], file_summaries(snapshot['data']['files'])),
             },
             ensure_ascii=False,
         )
@@ -3571,7 +3573,7 @@ async def read_skill_file(
     :param id: Skill ID.
     :param path: Relative path within the skill.
     :param offset: Character offset for paging text.
-    :param max_chars: Maximum characters to return, up to 100000.
+    :param max_chars: Maximum characters to return, up to 20000 (default 10000).
     """
     try:
         from types import SimpleNamespace
@@ -3619,20 +3621,98 @@ async def read_skill_file(
             return JSONCodec.dumps(
                 {
                     **file_summaries([file])[0],
-                    'version_id': version_id,
-                    'url': '/workspace/skills/edit?' + urlencode({'id': id, 'version_id': version_id, 'path': path}),
+                    'url': '/workspace/skills/edit?' + urlencode({'id': id, 'path': path}),
                 }
             )
         return JSONCodec.dumps(
             {
                 'path': path,
-                'version_id': version_id,
                 **skill_content_page(file['content'], offset, max_chars),
             },
             ensure_ascii=False,
         )
     except Exception as error:
         return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+
+
+async def grep_skill_files(
+    id: str,
+    pattern: str,
+    path: str | None = None,
+    case_insensitive: bool = True,
+    max_results: int = 10,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+    __event_call__: callable = None,
+) -> str:
+    """Search skill files for text or regex matches.
+
+    Literal text or auto-detected RE2 regex; no lookarounds/backreferences, and shorthand character classes are ASCII-only.
+    Searches each line for non-empty, non-overlapping matches and returns merged, bounded excerpts (6000 characters total).
+    Offsets and match_length describe the first match in each excerpt, in original-file characters; total_matches counts
+    occurrences, not excerpts. Omitted excerpts have compact locations in omitted_matches; omitted_matches_truncated
+    indicates when more locations remain. Terminal skills support SKILL.md only. No skill version is created.
+
+    :param id: Skill ID, including terminal: IDs.
+    :param pattern: Text or auto-detected regex to find (up to 4096 characters).
+    :param path: Optional exact skill file path; otherwise search all text files, skipping binary files.
+    :param case_insensitive: Ignore case when matching (default true).
+    :param max_results: Maximum excerpts to return, from 1 to 30 (default 10).
+    """
+    from open_webui.utils.skill_files import SKILL_GREP_MAX_CHARS, grep_skill_content
+
+    try:
+        if __request__ is None or not __user__:
+            raise ValueError('Request and user context required')
+        metadata = __metadata__ if __metadata__ is not None else {}
+        if id.startswith('terminal:'):
+            from open_webui.utils.terminals import load_terminal_skill
+
+            if path is not None and path != 'SKILL.md':
+                raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
+            skill = await load_terminal_skill(
+                __request__,
+                __user__,
+                metadata,
+                unquote(id.removeprefix('terminal:')),
+                {'__event_call__': __event_call__},
+                refresh=False,
+            )
+            if skill is None:
+                raise ValueError(f"Skill '{id}' not found")
+            files = [{'path': 'SKILL.md', 'content': skill['content']}]
+        else:
+            from types import SimpleNamespace
+            from open_webui.models.skills import get_skill_snapshot
+            from open_webui.routers.skills import authorized_skill
+
+            actor = SimpleNamespace(**__user__)
+            skill = await authorized_skill(id, actor)
+            if not skill.is_active:
+                await authorized_skill(id, actor, 'write')
+            context = metadata.get('chat_context') or {}
+            metadata['chat_context'] = context
+            versions = context.setdefault('skill_versions', {})
+            version_id = versions.get(skill.id) or skill.version_id
+            snapshot = await get_skill_snapshot(skill, version_id)
+            versions[skill.id] = version_id
+            files = snapshot['data']['files']
+            if path is not None:
+                file = next((file for file in files if file['path'] == path), None)
+                if file is None:
+                    raise ValueError('File not found')
+                if file.get('encoding'):
+                    raise ValueError('File is not a text file')
+                files = [file]
+        return await asyncio.to_thread(grep_skill_content, files, pattern, case_insensitive, max_results)
+    except Exception as error:
+        detail = str(getattr(error, 'detail', str(error)))
+        result = JSONCodec.dumps({'error': detail}, ensure_ascii=False)
+        while len(result) > SKILL_GREP_MAX_CHARS:
+            detail = detail[: max(0, len(detail) - (len(result) - SKILL_GREP_MAX_CHARS))]
+            result = JSONCodec.dumps({'error': detail}, ensure_ascii=False)
+        return result
 
 
 async def create_skill(
@@ -3683,9 +3763,7 @@ async def create_skill(
             SimpleNamespace(**__user__),
             None,
         )
-        return JSONCodec.dumps(
-            {'id': result.id, 'version_id': result.version_id, 'url': '/workspace/skills/edit?id=' + result.id}
-        )
+        return JSONCodec.dumps({'id': result.id, 'url': '/workspace/skills/edit?id=' + result.id})
     except Exception as error:
         return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
 
@@ -3735,9 +3813,15 @@ async def update_skill_files(
         )
         versions[skill.id] = result.version_id
         await publish_event(__request__, EVENTS.SKILL_UPDATED, actor=user, subject_id=id, data={'name': result.name})
-        return JSONCodec.dumps({'id': result.id, 'version_id': result.version_id})
+        return JSONCodec.dumps({'id': result.id})
     except Exception as error:
-        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+        detail = getattr(error, 'detail', str(error))
+        if isinstance(detail, dict) and detail.get('code') == 'version_conflict':
+            detail = {
+                'code': 'version_conflict',
+                'message': 'Skill changed. Call view_skill again and reapply the edit.',
+            }
+        return JSONCodec.dumps({'error': detail})
 
 
 # =============================================================================

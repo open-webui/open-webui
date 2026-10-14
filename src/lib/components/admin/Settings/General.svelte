@@ -368,6 +368,13 @@
 					</AdminSettingRow>
 				{/if}
 				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.apps.label')}
+					description={$i18n.t('settings.admin.general.apps.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_APPS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.calendar.label')}
 					description={$i18n.t('settings.admin.general.calendar.description')}
 					let:labelId

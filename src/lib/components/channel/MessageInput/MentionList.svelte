@@ -1,9 +1,13 @@
 <script lang="ts">
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import { getAbortSignal, getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { channels, models } from '$lib/stores';
+	import { getChannelMentionApps } from '$lib/apis/channels';
+	import { mentionAttributes } from '$lib/utils/channelMentions';
+	import { channels, models, config } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Grid from '$lib/components/icons/Grid.svelte';
 	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 	import Lock from '$lib/components/icons/Lock.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -26,10 +30,11 @@
 	let _models = [];
 	let _users = [];
 	let _channels = [];
+	let _apps: { type: string; id: string; label: string; profile_image_url?: string | null }[] = [];
 
 	type UserSuggestion = { id: string; name: string };
 
-	$: filteredItems = [..._users, ..._models, ..._channels].filter(
+	$: filteredItems = [..._users, ..._models, ..._channels, ..._apps].filter(
 		(u) =>
 			u.label.toLowerCase().includes(query.toLowerCase()) ||
 			u.id.toLowerCase().includes(query.toLowerCase())
@@ -85,14 +90,7 @@
 		const item = filteredItems[index];
 		if (!item) return;
 
-		// Add the "U:", "M:" or "C:" prefix to the id
-		// and also append the label after a pipe |
-		// so that the mention renderer can show the label
-		if (item)
-			command({
-				id: `${item.type === 'user' ? 'U' : item.type === 'model' ? 'M' : 'C'}:${item.id}|${item.label}`,
-				label: item.label
-			});
+		command(mentionAttributes(item));
 	};
 
 	const onKeyDown = (event: KeyboardEvent) => {
@@ -132,6 +130,18 @@
 	}
 
 	onMount(() => {
+		if ($config?.features?.enable_apps && channelId && triggerChar === '@') {
+			getChannelMentionApps(localStorage.token, channelId)
+				.then((apps) => {
+					_apps = apps.map((a) => ({
+						type: 'app',
+						id: a.id,
+						label: a.name,
+						profile_image_url: a.data.manifest.profile_image_url
+					}));
+				})
+				.catch(() => {});
+		}
 		const keydownListener = (e: KeyboardEvent) => {
 			// required to prevent the default enter behavior
 			if (e.key === 'Enter') {
@@ -197,6 +207,8 @@
 							{$i18n.t('Users')}
 						{:else if item?.type === 'model'}
 							{$i18n.t('Models')}
+						{:else if item?.type === 'app'}
+							{$i18n.t('Apps')}
 						{:else if item?.type === 'channel'}
 							{$i18n.t('Channels')}
 						{/if}
@@ -224,6 +236,14 @@
 									<Lock className="size-[0.9375rem]" strokeWidth="2" />
 								{/if}
 							</div>
+						{:else if item.type === 'app'}
+							{#if item.profile_image_url}
+								<ProfileImage
+									src={item.profile_image_url}
+									allowExternal
+									className="size-5 mr-2 rounded-lg!"
+								/>
+							{:else}<Grid className="size-4 mr-2" />{/if}
 						{:else if item.type === 'model'}
 							<img
 								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
@@ -259,6 +279,8 @@
 								{$i18n.t('User')}
 							{:else if item.type === 'model'}
 								{$i18n.t('Model')}
+							{:else if item.type === 'app'}
+								{$i18n.t('App')}
 							{:else if item.type === 'channel'}
 								{$i18n.t('Channel')}
 							{/if}

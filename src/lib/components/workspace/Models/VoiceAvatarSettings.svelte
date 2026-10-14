@@ -39,7 +39,7 @@
 >
 	<span class="text-gray-600 dark:text-gray-400">{$i18n.t('Voice avatar')}</span>
 	<span class="truncate text-gray-900 dark:text-gray-100"
-		>{value ? $i18n.t('Custom avatar') : $i18n.t('Default orb')}</span
+		>{value ? $i18n.t('Custom avatar') : $i18n.t('Default')}</span
 	>
 	<span class="text-gray-500 dark:text-gray-400">{$i18n.t('Configure')}</span>
 </button>

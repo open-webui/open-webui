@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
@@ -251,7 +252,7 @@
 
 	const cloneHandler = async (skill) => {
 		try {
-			const suffix = crypto.randomUUID().slice(0, 7);
+			const suffix = uuidv4().slice(0, 7);
 			const result = await cloneSkill(
 				localStorage.token,
 				skill.id,
@@ -264,7 +265,7 @@
 		}
 	};
 
-	const exportHandler = async (skill, format: 'json' | 'zip' = 'json') => {
+	const exportHandler = async (skill, format: 'json' | 'zip' | 'skill' = 'json') => {
 		try {
 			saveAs(
 				await exportSkillBundle(localStorage.token, format, [skill.id]),
@@ -353,22 +354,20 @@
 			showImport = true;
 		}}
 	/>
-	{#key bundleFiles}
-		<SkillImport
-			bind:show={showImport}
-			files={bundleFiles}
-			onImported={async () => {
-				toast.success($i18n.t('Skill imported successfully'));
-				page = 1;
-				await loadSkillItems();
-				_skills.set(await getSkills(localStorage.token));
-			}}
-		/>
-	{/key}
+	<SkillImport
+		bind:show={showImport}
+		files={bundleFiles}
+		onImported={async () => {
+			toast.success($i18n.t('Skill imported successfully'));
+			page = 1;
+			await loadSkillItems();
+			_skills.set(await getSkills(localStorage.token));
+		}}
+	/>
 	<input
 		bind:this={importInputElement}
 		type="file"
-		accept=".md,.json,.zip"
+		accept=".md,.json,.zip,.skill"
 		multiple
 		hidden
 		on:change={() => {

@@ -1,5 +1,6 @@
 import { get } from 'svelte/store';
 import { config } from '$lib/stores';
+import { checkSourceSize, readSourceResponse } from './sourceText';
 export type FileEntry = {
 	name: string;
 	type: 'file' | 'directory';
@@ -317,6 +318,27 @@ export const getFileMatches = async (
 	if (!res?.ok) return null;
 	const json = await res.json().catch(() => null);
 	return Array.isArray(json?.results) ? json : null;
+};
+
+export const readComparisonSource = async (
+	baseUrl: string,
+	apiKey: string,
+	path: string,
+	signal: AbortSignal,
+	sessionId?: string,
+	size?: number
+): Promise<string> => {
+	checkSourceSize(size);
+	const headers = bearerHeaders(apiKey);
+	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const response = await fetch(
+		`${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`,
+		{ headers, signal }
+	).catch(() => {
+		signal.throwIfAborted();
+		throw new Error('Could not read file. Check your terminal connection.');
+	});
+	return readSourceResponse(response, signal);
 };
 
 export const readFile = async (

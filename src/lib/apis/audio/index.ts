@@ -27,10 +27,23 @@ export const getAudioConfig = async (token: string) => {
 	return res;
 };
 
+export type RealtimeConfig = {
+	ENABLED: boolean;
+	PROVIDER: 'openai' | 'azure';
+	AUTH_TYPE: 'api_key' | 'microsoft_entra_id';
+	OPENAI_API_BASE_URL: string;
+	OPENAI_API_KEY: string;
+	MODEL: string;
+	VOICE: string;
+	TRANSCRIPTION_MODEL: string;
+	INPUT_PARAMS: Record<string, unknown> | null;
+	REALTIME_CALL_PROMPT_TEMPLATE: string | null;
+};
+
 type AudioConfigForm = {
 	tts: Record<string, unknown>;
 	stt: Record<string, unknown>;
-	realtime?: Record<string, unknown>;
+	realtime?: Partial<RealtimeConfig>;
 };
 
 export const updateAudioConfig = async (token: string, payload: AudioConfigForm) => {

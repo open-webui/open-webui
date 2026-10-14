@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.12.0",
+	"version": "0.12.1",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -57,6 +57,7 @@
 		"@codemirror/lang-javascript": "^6.2.2",
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/language-data": "^6.5.1",
+		"@codemirror/merge": "^6.12.2",
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@floating-ui/dom": "^1.7.2",
 		"@huggingface/transformers": "^3.0.0",
@@ -124,7 +125,7 @@
 		"lowlight": "^3.3.0",
 		"mammoth": "^1.11.0",
 		"marked": "^9.1.0",
-		"mermaid": "^11.10.1",
+		"mermaid": "^11.17.2",
 		"panzoom": "^9.4.3",
 		"pdfjs-dist": "^5.4.149",
 		"prosemirror-collab": "^1.3.1",

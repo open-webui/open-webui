@@ -4,7 +4,7 @@ import re
 def extract_mentions(message: str, triggerChar: str = '@'):
     # Escape triggerChar in case it's a regex special character
     triggerChar = re.escape(triggerChar)
-    pattern = rf'<{triggerChar}([A-Z]):([^|>]+)'
+    pattern = rf'<{triggerChar}([A-Z]):([^|>]+)(?:\|[^>]+)?>'
 
     matches = re.findall(pattern, message)
     return [{'id_type': id_type, 'id': id_value} for id_type, id_value in matches]

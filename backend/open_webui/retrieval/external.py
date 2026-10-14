@@ -50,12 +50,13 @@ def _normalize_result(result: dict, mapping: dict, knowledge: KnowledgeModel, di
             'name': title or metadata.get('name') or source_name,
             'source': source_name,
             'url': url,
-            'file_id': document_id or f'external-{knowledge.id}',
             'knowledge_id': knowledge.id,
             'knowledge_name': knowledge.name,
             'external': True,
         }
     )
+    # external results are not Open WebUI files, even when the payload carries a file_id
+    metadata.pop('file_id', None)
     if page is not None:
         metadata['page'] = page
     if document_id is not None:

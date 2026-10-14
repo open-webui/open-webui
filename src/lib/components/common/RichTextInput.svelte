@@ -138,7 +138,7 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const eventDispatch = createEventDispatcher();
 
-	import { Fragment, DOMParser } from 'prosemirror-model';
+	import { Fragment, DOMParser, Slice, type Node, type Schema } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension, markInputRule, mergeAttributes } from '@tiptap/core';
@@ -301,6 +301,27 @@
 		const ch = node.attrs.mentionSuggestionChar ?? suggestion?.char ?? '@';
 		const char = ch === '/' ? '$' : ch;
 		return `${char}${label}`;
+	};
+
+	// Plain-text mode still preserves mention identities from the clipboard's HTML.
+	const plainMentionPaste = (slice: Slice, schema: Schema): Fragment | null => {
+		const nodes: Node[] = [];
+		let hasMention = false;
+		let firstBlock = true;
+		slice.content.descendants((node) => {
+			if (node.isTextblock) {
+				if (!firstBlock) nodes.push(schema.nodes.hardBreak.create());
+				firstBlock = false;
+			}
+			if (node.type.name === 'mention') {
+				hasMention = true;
+				nodes.push(node.mark([]));
+				return false;
+			}
+			if (node.isText) nodes.push(schema.text(node.text!));
+			else if (node.type.name === 'hardBreak') nodes.push(node.mark([]));
+		});
+		return hasMention ? Fragment.fromArray(nodes) : null;
 	};
 
 	export let onSelectionUpdate = (e) => {};
@@ -992,6 +1013,7 @@
 					json: jsonValue,
 					md: mdValue
 				});
+				if (transaction.getMeta('paste')) eventDispatch('pasted');
 
 				if (json) {
 					value = jsonValue;
@@ -1016,6 +1038,24 @@
 				// the tiptap placeholder never becomes the field's accessible name;
 				// function form so a placeholder change is picked up after mount
 				attributes: () => ({ id, 'aria-label': _placeholder }),
+				transformPasted: (slice) => {
+					const stripMentionLinks = (fragment: Fragment): Fragment => {
+						const nodes: Node[] = [];
+						fragment.forEach((node) => {
+							nodes.push(
+								node.type.name === 'mention'
+									? node.mark(
+											node.marks.filter((mark) => !['link', 'underline'].includes(mark.type.name))
+										)
+									: node.isLeaf
+										? node
+										: node.copy(stripMentionLinks(node.content))
+							);
+						});
+						return Fragment.fromArray(nodes);
+					};
+					return new Slice(stripMentionLinks(slice.content), slice.openStart, slice.openEnd);
+				},
 				handleDrop: (view, event) => {
 					// Intercept sidebar chat item drops to prevent ProseMirror
 					// from inserting the raw JSON as text. The actual handling
@@ -1034,10 +1074,10 @@
 					}
 					return false;
 				},
-				handlePaste: (view, event) => {
+				handlePaste: (view, event, slice) => {
 					// Paste literal text when automatic formatting is disabled.
 					if (!richText || !autoFormat) {
-						// swallow HTML completely
+						// Discard formatting while retaining explicit mention identities.
 						event.preventDefault();
 						const { state, dispatch } = view;
 
@@ -1048,6 +1088,17 @@
 
 						if (state.selection.$from.parent.type.spec.code) {
 							dispatch(state.tr.insertText(plainText).scrollIntoView());
+							return true;
+						}
+
+						const mentions = plainMentionPaste(slice, state.schema);
+						if (mentions) {
+							dispatch(
+								state.tr
+									.replaceWith(state.selection.from, state.selection.to, mentions)
+									.setMeta('paste', true)
+									.scrollIntoView()
+							);
 							return true;
 						}
 
@@ -1067,6 +1118,7 @@
 						dispatch(
 							state.tr
 								.replaceWith(state.selection.from, state.selection.to, fragment)
+								.setMeta('paste', true)
 								.scrollIntoView()
 						);
 
@@ -1252,7 +1304,7 @@
 									});
 
 									const fragment = Fragment.fromArray(nodes);
-									const tr = state.tr.replaceWith(from, to, fragment);
+									const tr = state.tr.replaceWith(from, to, fragment).setMeta('paste', true);
 									dispatch(tr.scrollIntoView());
 									event.preventDefault();
 									return true;

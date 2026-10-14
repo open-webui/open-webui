@@ -654,6 +654,12 @@
 		}
 	});
 
+	onMount(() => {
+		const socketInstance = $socket;
+		socketInstance?.on('connect', initChannels);
+		return () => socketInstance?.off('connect', initChannels);
+	});
+
 	onMount(async () => {
 		try {
 			const width = Number(localStorage.getItem('sidebarWidth'));
@@ -716,11 +722,6 @@
 		}
 
 		const socketInstance = $socket;
-		const scheduleChannelRefresh = () => {
-			socketInstance?.off('connect', initChannels);
-			socketInstance?.once('connect', initChannels);
-		};
-		socketInstance?.on('access:updated', scheduleChannelRefresh);
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
@@ -760,8 +761,6 @@
 				dropZone.removeEventListener('dragleave', onDragLeave);
 			}
 
-			socketInstance?.off('access:updated', scheduleChannelRefresh);
-			socketInstance?.off('connect', initChannels);
 			socketInstance?.off('events', chatActiveEventHandler);
 			socketInstance?.off('connect', refreshChatRows);
 

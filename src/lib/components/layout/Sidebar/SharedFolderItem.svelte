@@ -130,6 +130,7 @@
 						lastReadAt={chat.last_read_at}
 						active={chat.active ?? false}
 						ownerName={chat.owner_name}
+						participants={chat.participants ?? []}
 						ownerUserId={chat.user_id}
 						readonly={chat.readonly ?? !isWritable}
 					/>

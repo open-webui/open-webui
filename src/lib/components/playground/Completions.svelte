@@ -150,7 +150,7 @@
 				<div class="flex gap-2 shrink-0 ml-2">
 					{#if !loading}
 						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 							on:click={() => {
 								submitHandler();
 							}}
@@ -159,7 +159,7 @@
 						</button>
 					{:else}
 						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-gray-300 text-black transition rounded-lg flex items-center gap-2"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
 							on:click={() => {
 								stopResponse();
 							}}

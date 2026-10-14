@@ -244,14 +244,14 @@
 			{#if state.editing}
 				<button
 					type="button"
-					class="shrink-0 px-1 py-0.5 text-gray-500"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
 					disabled={saving}
 					on:click={() => (state = { ...state, draft: state.indexed ?? '', editing: false })}
 					>{$i18n.t('Cancel')}</button
 				>
 				<button
 					type="button"
-					class="flex shrink-0 items-center gap-1 px-1 py-0.5"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 					disabled={saving || state.indexed === null}
 					on:click={save}
 				>
@@ -260,7 +260,7 @@
 			{:else}
 				<button
 					type="button"
-					class="shrink-0 px-1 py-0.5 text-gray-500"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
 					on:click={() => {
 						state = { ...state, mode: 'indexed', editing: true, draft: state.indexed ?? '' };
 					}}>{$i18n.t('Edit')}</button

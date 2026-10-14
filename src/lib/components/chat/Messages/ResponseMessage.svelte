@@ -569,13 +569,16 @@
 				console.log(tags);
 
 				if (tags) {
-					updatedMessage.annotation.tags = tags;
-					feedbackItem.data.tags = tags;
+					const taggedMessage = {
+						...message,
+						annotation: { ...(message?.annotation ?? {}), tags: tags }
+					};
+					feedbackItem.data = { ...feedbackItem.data, ...taggedMessage.annotation };
 
-					saveMessage(message.id, updatedMessage);
+					saveMessage(message.id, taggedMessage);
 					await updateFeedbackById(
 						localStorage.token,
-						updatedMessage.feedbackId,
+						taggedMessage.feedbackId,
 						feedbackItem
 					).catch((error) => {
 						toast.error(`${error}`);
@@ -799,7 +802,7 @@
 									<div>
 										<button
 											id="save-new-message-button"
-											class="px-2.5 py-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -811,7 +814,7 @@
 									<div class="flex space-x-1.5">
 										<button
 											id="close-edit-message-button"
-											class="px-2.5 py-1 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+											class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
 											on:click={() => {
 												cancelEditMessage();
 											}}
@@ -819,15 +822,17 @@
 											{$i18n.t('Cancel')}
 										</button>
 
-										<button
-											id="confirm-edit-message-button"
-											class="px-2.5 py-1 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
-											on:click={() => {
-												editMessageConfirmHandler();
-											}}
-										>
-											{$i18n.t('Save')}
-										</button>
+										{#if !message.user_id || message.user_id === $user?.id}
+											<button
+												id="confirm-edit-message-button"
+												class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+												on:click={() => {
+													editMessageConfirmHandler();
+												}}
+											>
+												{$i18n.t('Save')}
+											</button>
+										{/if}
 									</div>
 								</div>
 							</div>

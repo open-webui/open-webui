@@ -12,7 +12,7 @@ import uuid
 import wave
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import aiofiles
@@ -101,11 +101,14 @@ TTS_CONFIG_KEYS = {
 
 REALTIME_CONFIG_KEYS = {
     'ENABLED': 'audio.realtime.enabled',
+    'PROVIDER': 'audio.realtime.provider',
+    'AUTH_TYPE': 'audio.realtime.auth_type',
     'OPENAI_API_BASE_URL': 'audio.realtime.openai.api_base_url',
     'OPENAI_API_KEY': 'audio.realtime.openai.api_key',
     'MODEL': 'audio.realtime.model',
     'VOICE': 'audio.realtime.voice',
     'TRANSCRIPTION_MODEL': 'audio.realtime.transcription_model',
+    'INPUT_PARAMS': 'audio.realtime.input_params',
     'REALTIME_CALL_PROMPT_TEMPLATE': 'audio.realtime.prompt_template',
 }
 
@@ -293,11 +296,14 @@ class STTConfigForm(BaseModel):
 
 class RealtimeConfigForm(BaseModel):
     ENABLED: bool = False
+    PROVIDER: Literal['openai', 'azure'] = 'openai'
+    AUTH_TYPE: Literal['api_key', 'microsoft_entra_id'] = 'api_key'
     OPENAI_API_BASE_URL: str = 'https://api.openai.com/v1'
     OPENAI_API_KEY: str = ''
     MODEL: str = Field(default='gpt-realtime-2.1-mini', min_length=1, max_length=200)
     VOICE: str = Field(default='marin', min_length=1, max_length=200)
     TRANSCRIPTION_MODEL: str = Field(default='gpt-transcribe', min_length=1, max_length=200)
+    INPUT_PARAMS: Optional[dict] = None
     REALTIME_CALL_PROMPT_TEMPLATE: Optional[str] = None
 
 

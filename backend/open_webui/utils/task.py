@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import Any, Optional
 
 from open_webui.config import DEFAULT_RAG_TEMPLATE
-from open_webui.utils.misc import get_last_user_message, get_messages_content
+from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_messages_content
 
 log = logging.getLogger(__name__)
 
@@ -311,13 +312,57 @@ async def title_generation_template(template: str, messages: list[dict], user: O
     return template
 
 
-async def follow_up_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
+async def follow_up_generation_template(
+    template: str, messages: list[dict], user: Optional[Any] = None, *, use_default: bool = False
+) -> str:
+    if use_default:
+        start = max(0, len(messages) - 4)
+        first_user = next((i for i, message in enumerate(messages) if message.get('role') == 'user'), None)
+        messages = ([messages[first_user]] if first_user is not None and first_user < start else []) + messages[start:]
+
+    normalized = []
+    for message in messages:
+        content = message.get('content')
+        if isinstance(content, list):
+            content = '\n'.join(
+                item['text']
+                for item in content
+                if isinstance(item, dict) and item.get('type') == 'text' and isinstance(item.get('text'), str)
+            )
+        else:
+            content = get_content_from_message(message) or ''
+        if use_default and len(content) > 1000:
+            # truncate_content adds three characters for the omission marker.
+            content = truncate_content(content, 997)
+        normalized.append({**message, 'content': content})
+    messages = normalized
+
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
     template = await prompt_template(template, user)
     return template
+
+
+def parse_follow_ups(content: str, max_count: int = 5) -> list[str]:
+    if not isinstance(content, str):
+        return []
+    content = content[content.find('{') : content.rfind('}') + 1]
+    try:
+        data = JSONCodec.loads(content)
+    except (ValueError, TypeError):
+        return []
+    suggestions = data.get('follow_ups') if isinstance(data, dict) else None
+    if not isinstance(suggestions, list) or any(not isinstance(item, str) for item in suggestions):
+        return []
+
+    result = []
+    for item in suggestions:
+        item = item.strip()
+        if item and len(item) <= 400 and item not in result:
+            result.append(item)
+    return result[:max_count]
 
 
 async def tags_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:

@@ -157,7 +157,7 @@
 			<ChevronDown className="size-3" />
 		</button>
 		<div slot="content">
-			<DropdownMenu className="w-56">
+			<DropdownMenu className="w-72 max-w-[calc(100vw-2rem)]">
 				<VersionMenuItem
 					entry={production}
 					status={$i18n.t('Production')}

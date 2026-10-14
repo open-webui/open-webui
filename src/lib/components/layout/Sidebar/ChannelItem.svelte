@@ -10,12 +10,12 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import ChannelModal from './ChannelModal.svelte';
+	import ChannelMenu from '$lib/components/channel/ChannelMenu.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
 	import LockIcon from '$lib/components/icons/Lock.svelte';
-	import SettingsIcon from '$lib/components/icons/Settings.svelte';
 	import UserIcon from './icons/User.svelte';
-	import XMarkIcon from './icons/XMark.svelte';
 
 	export let onUpdate: Function = () => {};
 
@@ -80,16 +80,56 @@
 <div
 	id="sidebar-channel-item"
 	bind:this={itemElement}
+	class:opacity-60={channel?.is_channel_muted}
 	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
 		? 'bg-gray-100 dark:bg-gray-900 selected'
-		: ''} {channel?.type === 'dm' ? 'px-1 py-[0.1875rem]' : 'p-1'}  {channel?.unread_count > 0
+		: ''} {channel?.type === 'dm' ? 'px-1 py-[0.1875rem]' : 'p-1'}  {channel?.unread_count > 0 &&
+	!channel?.is_channel_muted
 		? 'font-normal dark:text-white text-black'
 		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
+	{#if channel?.type === 'dm' && channel?.users}
+		{@const channelMembers = channel.users.filter((u) => u.id !== $user?.id)}
+		<div class="self-center mr-1">
+			<div class="flex ml-[0.0625rem] mr-0.5 relative">
+				{#each channelMembers.slice(0, 2) as u, index}
+					<div class={index === 1 ? '-ml-2.5' : ''}>
+						<ProfilePreview user={u}>
+							<img
+								src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
+								alt={u.name}
+								class="size-5.5 rounded-full border-2 border-white dark:border-gray-900"
+							/>
+						</ProfilePreview>
+					</div>
+				{/each}
+
+				{#if channelMembers.length === 1}
+					<div class="absolute bottom-0 right-0 pointer-events-none">
+						<span class="relative flex size-2">
+							{#if channelMembers[0]?.is_active}
+								<span
+									class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+								></span>
+							{/if}
+							<span
+								class="relative inline-flex size-2 rounded-full {channelMembers[0]?.is_active
+									? 'bg-green-500'
+									: 'bg-gray-300 dark:bg-gray-700'} border-[1.5px] border-white dark:border-gray-900"
+							></span>
+						</span>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 	<a
 		class="min-w-0 flex flex-1"
 		href="/channels/{channel.id}"
+		title={channel?.is_channel_muted
+			? $i18n.t('Muted. Direct @mentions can still notify you.')
+			: undefined}
 		on:click={() => {
 			console.log(channel);
 
@@ -111,52 +151,19 @@
 		draggable="false"
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-1">
-			<div>
-				{#if channel?.type === 'dm'}
-					{#if channel?.users}
-						{@const channelMembers = channel.users.filter((u) => u.id !== $user?.id)}
-						<div class="flex ml-[0.0625rem] mr-0.5 relative">
-							{#each channelMembers.slice(0, 2) as u, index}
-								<img
-									src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
-									alt={u.name}
-									class=" size-5.5 rounded-full border-2 border-white dark:border-gray-900 {index ===
-									1
-										? '-ml-2.5'
-										: ''}"
-								/>
-							{/each}
-
-							{#if channelMembers.length === 1}
-								<div class="absolute bottom-0 right-0">
-									<span class="relative flex size-2">
-										{#if channelMembers[0]?.is_active}
-											<span
-												class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-											></span>
-										{/if}
-										<span
-											class="relative inline-flex size-2 rounded-full {channelMembers[0]?.is_active
-												? 'bg-green-500'
-												: 'bg-gray-300 dark:bg-gray-700'} border-[1.5px] border-white dark:border-gray-900"
-										></span>
-									</span>
-								</div>
-							{/if}
-						</div>
-					{:else}
-						<UserIcon className="size-4 ml-1 mr-0.5" strokeWidth="1.5" />
-					{/if}
-				{:else}
-					<div class=" size-4 justify-center flex items-center ml-1">
-						{#if isPublicChannel(channel)}
-							<HashtagIcon className="size-3" strokeWidth="1.8" />
-						{:else}
-							<LockIcon className="size-3.5" strokeWidth="1.7" />
-						{/if}
-					</div>
+			{#if channel?.type === 'dm'}
+				{#if !channel?.users}
+					<UserIcon className="size-4 ml-1 mr-0.5" strokeWidth="1.5" />
 				{/if}
-			</div>
+			{:else}
+				<div class="size-4 shrink-0 justify-center flex items-center ml-1">
+					{#if isPublicChannel(channel)}
+						<HashtagIcon className="size-3" strokeWidth="1.8" />
+					{:else}
+						<LockIcon className="size-3.5" strokeWidth="1.7" />
+					{/if}
+				</div>
+			{/if}
 
 			<div class="text-left self-center min-w-0 flex-1 pr-1 flex items-center gap-1.5">
 				{#if channel?.name}
@@ -190,7 +197,11 @@
 					{/if}
 				{/if}
 
-				{#if channel?.unread_count > 0}
+				{#if channel?.is_channel_muted}
+					<span class="sr-only">{$i18n.t('Mentions only')}</span>
+				{/if}
+
+				{#if channel?.unread_count > 0 && !channel?.is_channel_muted}
 					<div
 						class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
 						title={$i18n.t('Unread')}
@@ -202,44 +213,25 @@
 		</div>
 	</a>
 
-	{#if ['dm'].includes(channel?.type)}
-		<div class="ml-0.5 mr-1 hover-reveal self-center flex shrink-0 items-center dark:text-gray-300">
-			<button
-				type="button"
-				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-				on:click={async (e) => {
-					e.stopImmediatePropagation();
-					e.stopPropagation();
-
-					channels.update((chs) =>
-						chs.filter((ch) => {
-							return ch.id !== channel.id;
-						})
-					);
-
-					await updateChannelMemberActiveStatusById(localStorage.token, channel.id, false).catch(
-						(error) => {
+	<div class="ml-0.5 mr-1 self-center shrink-0">
+		<ChannelMenu
+			{channel}
+			sidebar
+			onEdit={channel.type !== 'dm' && ($user?.role === 'admin' || channel.user_id === $user?.id)
+				? () => {
+						showEditChannelModal = true;
+					}
+				: undefined}
+			onHide={channel.type === 'dm'
+				? async () => {
+						try {
+							await updateChannelMemberActiveStatusById(localStorage.token, channel.id, false);
+							channels.update((items) => items.filter((item) => item.id !== channel.id));
+						} catch (error) {
 							toast.error(`${error}`);
 						}
-					);
-				}}
-			>
-				<XMarkIcon className="size-3.5" />
-			</button>
-		</div>
-	{:else if $user?.role === 'admin' || channel.user_id === $user?.id}
-		<div class="ml-0.5 mr-1 hover-reveal self-center flex shrink-0 items-center dark:text-gray-300">
-			<button
-				type="button"
-				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-				on:click={(e) => {
-					e.stopImmediatePropagation();
-					e.stopPropagation();
-					showEditChannelModal = true;
-				}}
-			>
-				<SettingsIcon className="size-3.5" strokeWidth="1.5" />
-			</button>
-		</div>
-	{/if}
+					}
+				: undefined}
+		/>
+	</div>
 </div>

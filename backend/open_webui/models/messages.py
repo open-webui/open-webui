@@ -6,8 +6,8 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.channels import ChannelMember, Channels
 from open_webui.models.tags import Tag, TagModel, Tags
 from open_webui.models.users import User, UserNameResponse, Users
-from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, and_, delete, func, or_, select, text
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, and_, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import exists
 
@@ -40,6 +40,7 @@ class Message(Base):
     id = Column(Text, primary_key=True, unique=True)
 
     user_id = Column(Text)
+    app_id = Column(Text, nullable=True)
     channel_id = Column(Text, nullable=True)
 
     reply_to_id = Column(Text, nullable=True)
@@ -62,7 +63,8 @@ class MessageModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    user_id: str
+    user_id: Optional[str] = None
+    app_id: Optional[str] = None
     channel_id: Optional[str] = None
 
     reply_to_id: Optional[str] = None
@@ -79,6 +81,11 @@ class MessageModel(BaseModel):
 
     created_at: int  # timestamp in epoch (time_ns)
     updated_at: int  # timestamp in epoch (time_ns)
+
+    @computed_field
+    @property
+    def etag(self) -> str:
+        return str(self.updated_at)
 
 
 ####################
@@ -106,13 +113,18 @@ class MessageUserResponse(MessageModel):
 
 
 class MessageUserSlimResponse(MessageUserResponse):
-    data: bool | None = None
+    data: dict | bool | None = None
 
     @field_validator('data', mode='before')
-    def convert_data_to_bool(cls, v):
+    def summarize_data(cls, v):
         # No data or not a dict → False
         if not isinstance(v, dict):
             return False
+
+        # Reply previews need card text, but not actions or other message data.
+        app = v.get('app')
+        if isinstance(app, dict) and app.get('embeds'):
+            return {'app': {'embeds': app['embeds']}}
 
         # True if ANY value in the dict is non-empty
         return any(bool(val) for val in v.values())
@@ -124,6 +136,12 @@ class MessageReplyToResponse(MessageUserResponse):
 
 class MessageWithReactionsResponse(MessageUserSlimResponse):
     reactions: list[Reactions]
+
+    @field_validator('data', mode='before')
+    def summarize_data(cls, v, info):
+        if info.data.get('app_id') and isinstance(v, dict):
+            return v
+        return super().summarize_data(v)
 
 
 class MessageResponse(MessageReplyToResponse):
@@ -163,12 +181,67 @@ class MessageTable:
                     'updated_at': ts,
                 }
             )
-            result = Message(**message.model_dump())
+            result = Message(**message.model_dump(exclude={'etag'}))
 
             db.add(result)
+            from open_webui.utils.apps import publish_app_message_event
+
             await db.commit()
             await db.refresh(result)
+            await publish_app_message_event(result, 'channel.message.created')
             return MessageModel.model_validate(result) if result else None
+
+    async def insert_new_app_message(
+        self, app_id: str, channel_id: str, form_data: MessageForm, db: AsyncSession | None = None
+    ) -> MessageResponse:
+        async with get_async_db_context(db) as db:
+            now = time.time_ns()
+            message = Message(
+                id=str(uuid.uuid4()),
+                app_id=app_id,
+                user_id=None,
+                channel_id=channel_id,
+                content=form_data.content,
+                data=form_data.data,
+                parent_id=form_data.parent_id,
+                reply_to_id=form_data.reply_to_id,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(message)
+            await db.commit()
+            from open_webui.utils.apps import publish_app_message_event
+
+            await publish_app_message_event(message, 'channel.message.created')
+            response = await self.get_message_by_id(message.id, db=db)
+            await db.commit()
+            return response
+
+    async def update_app_message_by_id(
+        self,
+        id: str,
+        app_id: str,
+        updated_at: int,
+        form_data: MessageForm,
+        db: AsyncSession | None = None,
+    ) -> MessageResponse | None:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                update(Message)
+                .where(Message.id == id, Message.app_id == app_id, Message.updated_at == updated_at)
+                .values(content=form_data.content, data=form_data.data, updated_at=max(time.time_ns(), updated_at + 1))
+            )
+            if result.rowcount != 1:
+                await db.rollback()
+                return None
+            message = await db.get(Message, id, populate_existing=True)
+            await db.commit()
+            from open_webui.utils.apps import publish_app_message_event
+
+            await publish_app_message_event(message, 'channel.message.updated')
+            response = await self.get_message_by_id(id, db=db)
+            await db.commit()
+            return response
 
     async def get_message_by_id(
         self,
@@ -195,7 +268,9 @@ class MessageTable:
 
             # Check if message was sent by webhook (webhook info in meta takes precedence)
             webhook_info = message.meta.get('webhook') if message.meta else None
-            if webhook_info and webhook_info.get('id'):
+            if message.app_id:
+                user_info = await self._resolve_user_info(message, db)
+            elif webhook_info and webhook_info.get('id'):
                 # Look up webhook by ID to get current name
                 webhook = await Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
                 if webhook:
@@ -228,6 +303,16 @@ class MessageTable:
 
     async def _resolve_user_info(self, message: Message, db: AsyncSession) -> Optional[dict]:
         """Resolve user info from message, handling webhook messages."""
+        if message.app_id:
+            from open_webui.models.apps import App
+
+            app = await db.get(App, message.app_id)
+            return {
+                'id': message.app_id,
+                'name': app.name if app else 'Removed App',
+                'role': 'app',
+                'profile_image_url': app.data.get('manifest', {}).get('profile_image_url') if app else None,
+            }
         webhook_info = message.meta.get('webhook') if message.meta else None
         if webhook_info and webhook_info.get('id'):
             webhook = await Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
@@ -276,7 +361,7 @@ class MessageTable:
     async def get_reply_user_ids_by_message_id(self, id: str, db: Optional[AsyncSession] = None) -> list[str]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Message.user_id).filter_by(parent_id=id))
-            return [row[0] for row in result.all()]
+            return [row[0] for row in result.all() if row[0] is not None]
 
     async def get_messages_by_channel_id(
         self,
@@ -408,8 +493,11 @@ class MessageTable:
                 **(form_data.meta if form_data.meta else {}),
             }
             message.updated_at = int(time.time_ns())
+            from open_webui.utils.apps import publish_app_message_event
+
             await db.commit()
             await db.refresh(message)
+            await publish_app_message_event(message, 'channel.message.updated')
             return MessageModel.model_validate(message) if message else None
 
     async def update_is_pinned_by_id(
@@ -442,7 +530,7 @@ class MessageTable:
                 Message.created_at > (last_read_at if last_read_at else 0),
             )
             if user_id:
-                stmt = stmt.filter(Message.user_id != user_id)
+                stmt = stmt.filter(or_(Message.user_id != user_id, Message.user_id.is_(None)))
             result = await db.execute(stmt)
             return result.scalar()
 
@@ -581,18 +669,28 @@ class MessageTable:
 
     async def delete_replies_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:
+            from open_webui.utils.apps import publish_app_message_event
+
+            messages = (await db.scalars(select(Message).filter_by(parent_id=id))).all()
             await db.execute(delete(Message).filter_by(parent_id=id))
             await db.commit()
+            for message in messages:
+                await publish_app_message_event(message, 'channel.message.deleted')
             return True
 
     async def delete_message_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:
+            from open_webui.utils.apps import publish_app_message_event
+
+            message = await db.get(Message, id)
             await db.execute(delete(Message).filter_by(id=id))
 
             # Delete all reactions to this message
             await db.execute(delete(MessageReaction).filter_by(message_id=id))
 
             await db.commit()
+            if message:
+                await publish_app_message_event(message, 'channel.message.deleted')
             return True
 
     async def search_messages_by_channel_ids(

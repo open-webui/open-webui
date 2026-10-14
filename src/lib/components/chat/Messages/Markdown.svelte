@@ -51,6 +51,7 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let allowEmbeds = false;
+	export let allowHtml = true;
 
 	export let sourceIds = [];
 
@@ -77,6 +78,11 @@
 		lastParsedContent = processed;
 
 		tokens = marked.lexer(processed);
+		if (!allowHtml) {
+			marked.walkTokens(tokens, (token) => {
+				if (token.type === 'html') Object.assign(token, { type: 'text' });
+			});
+		}
 	};
 
 	const updateHandler = (content) => {

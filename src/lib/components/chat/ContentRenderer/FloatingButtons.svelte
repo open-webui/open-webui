@@ -16,6 +16,15 @@
 	let selectedText = '';
 	let floatingInputValue = '';
 
+	const portal = (node: HTMLElement) => {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				node.remove();
+			}
+		};
+	};
+
 	$: DEFAULT_ACTIONS = [
 		{
 			id: 'ask',
@@ -61,12 +70,12 @@
 		prompt = prompt.replace(toolIdPattern, '');
 
 		if (prompt.includes('{{INPUT_CONTENT}}') && floatingInput) {
-			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
+			prompt = prompt.replace('{{INPUT_CONTENT}}', () => floatingInputValue);
 			floatingInputValue = '';
 		}
 
-		prompt = prompt.replace('{{CONTENT}}', selectedText);
-		prompt = prompt.replace('{{SELECTED_CONTENT}}', selectedContent);
+		prompt = prompt.replace('{{CONTENT}}', () => selectedText);
+		prompt = prompt.replace('{{SELECTED_CONTENT}}', () => selectedContent);
 
 		// Prepopulate the main chat input instead of inline streaming
 		onSetInputText(prompt);
@@ -82,8 +91,9 @@
 </script>
 
 <div
+	use:portal
 	id={`floating-buttons-${id}`}
-	class="absolute rounded-lg mt-1 text-xs z-9999"
+	class="fixed rounded-lg mt-1 text-xs z-9999"
 	style="display: none"
 >
 	{#if !floatingInput}

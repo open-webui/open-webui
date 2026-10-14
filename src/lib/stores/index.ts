@@ -55,7 +55,16 @@ export const TTSWorker = writable(null);
 export const chatId = writable('');
 export const chatTitle = writable('');
 
-export const channels = writable([]);
+type ChannelListItem = {
+	id: string;
+	type: string | null;
+	is_channel_muted: boolean;
+	unread_count: number;
+	last_message_at: number | null;
+	[key: string]: unknown;
+};
+
+export const channels = writable<ChannelListItem[]>([]);
 export const channelId = writable(null);
 
 export { chats, pinnedChats } from './chatList';
@@ -381,6 +390,7 @@ type Config = {
 		enable_tools?: boolean;
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
+		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_direct_integrations?: boolean;

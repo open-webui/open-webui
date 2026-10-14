@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
+	import { resolveLocalizedPromptSuggestions } from '$lib/utils/localizedContent';
 
 	const i18n = getContext<any>('i18n');
 
@@ -17,9 +18,7 @@
 		locale !== '' && Array.isArray(localizedPromptSuggestions?.[locale]?.suggestion_prompts);
 
 	$: localePrompts = clone(
-		hasCustomLocalePrompts
-			? localizedPromptSuggestions[locale].suggestion_prompts
-			: promptSuggestions
+		resolveLocalizedPromptSuggestions(promptSuggestions, localizedPromptSuggestions, locale)
 	);
 
 	const updateLocalePrompts = (suggestions) => {

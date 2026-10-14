@@ -31,6 +31,7 @@ DICT_CONFIG_KEY_ALIASES = {
     'image_generation.automatic1111.api_params': ('AUTOMATIC1111_PARAMS',),
     'image_generation.openai.params': ('IMAGES_OPENAI_API_PARAMS',),
     'audio.tts.openai.params': ('AUDIO_TTS_OPENAI_PARAMS',),
+    'audio.realtime.input_params': ('AUDIO_REALTIME_INPUT_PARAMS',),
     'models.default_metadata': ('DEFAULT_MODEL_METADATA',),
     'models.default_params': ('DEFAULT_MODEL_PARAMS',),
     'task.model.params': ('TASK_MODEL_PARAMS',),

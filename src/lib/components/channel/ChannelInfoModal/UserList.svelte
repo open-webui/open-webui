@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user as _user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
@@ -20,10 +21,18 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ProfilePreview from '../Messages/Message/ProfilePreview.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Grid from '$lib/components/icons/Grid.svelte';
+	import type { App } from '$lib/apis/apps';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	export let channel = null;
+	export let apps: App[] = [];
+	export let onRemoveApp: ((appId: string) => Promise<void>) | null = null;
+	let removingApp = '';
+	$: filteredApps = apps.filter((app) =>
+		`${app.name} ${app.slug}`.toLowerCase().includes(query.toLowerCase())
+	);
 
 	export let onAdd = null;
 	export let onRemove = null;
@@ -108,14 +117,14 @@
 				<span class="text-sm">
 					{$i18n.t('Members')}
 				</span>
-				<span class="text-sm text-gray-500">{total}</span>
+				<span class="text-sm text-gray-500">{total + filteredApps.length}</span>
 			</div>
 
 			{#if onAdd}
 				<div class="">
 					<button
 						type="button"
-						class=" px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:text-white dark:bg-gray-850/50 text-black transition font-normal text-xs flex items-center justify-center"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
 						on:click={onAdd}
 					>
 						<Plus className="size-3.5 " />
@@ -155,7 +164,7 @@
 			</div>
 		{/if}
 
-		{#if users.length > 0}
+		{#if users.length > 0 || filteredApps.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
 				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
 					<!-- <div
@@ -214,6 +223,45 @@
 						</div>
 					</div> -->
 					<div class="w-full">
+						{#each filteredApps as app (app.id)}
+							<div class="text-xs flex items-center justify-between">
+								<div class="px-2 py-1.5 font-normal text-gray-900 dark:text-white flex-1 min-w-0">
+									<div class="flex items-center gap-2">
+										<div
+											class="size-6 rounded-lg bg-gray-100 dark:bg-gray-850 flex items-center justify-center shrink-0"
+										>
+											{#if app.data.manifest.profile_image_url}
+												<ProfileImage
+													src={app.data.manifest.profile_image_url}
+													allowExternal
+													className="size-6 rounded-lg!"
+												/>
+											{:else}<Grid className="size-3.5" />{/if}
+										</div>
+										<span class="truncate">{app.name}</span>
+									</div>
+								</div>
+								<div class="px-2 py-1 flex items-center gap-1 translate-y-0.5">
+									<Badge type="muted" content={$i18n.t('App')} />
+									{#if onRemoveApp}
+										<button
+											type="button"
+											aria-label={$i18n.t('Remove {{name}}', { name: app.name })}
+											disabled={!!removingApp}
+											class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition disabled:opacity-50"
+											on:click={async () => {
+												removingApp = app.id;
+												try {
+													await onRemoveApp?.(app.id);
+												} finally {
+													removingApp = '';
+												}
+											}}><XMark /></button
+										>
+									{/if}
+								</div>
+							</div>
+						{/each}
 						{#each users as user, userIdx (user.id)}
 							<div class=" dark:border-gray-850 text-xs flex items-center justify-between">
 								<div class="px-2 py-1.5 font-normal text-gray-900 dark:text-white flex-1">

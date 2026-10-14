@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ModelSettingsLabel from '$lib/components/workspace/Models/ModelSettingsLabel.svelte';
 	import { getContext, tick } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
 	// @ts-expect-error The existing SortableJS dependency does not ship declarations.
 	import Sortable from 'sortablejs';
 	import type { ModelControl } from '$lib/apis';
@@ -41,7 +42,7 @@
 	};
 	const focus = (node: HTMLInputElement) => node.focus();
 	const addOption = () => {
-		options = [...options, { id: crypto.randomUUID(), label: '', params: { '': '' } }];
+		options = [...options, { id: uuidv4(), label: '', params: { '': '' } }];
 	};
 	const edit = async (key = '') => {
 		editingKey = key;

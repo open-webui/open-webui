@@ -6,6 +6,7 @@
 	import { getModels } from '$lib/apis';
 	import ModelHistory from './ModelHistory.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { config, models, tools, functions, user, settings } from '$lib/stores';
@@ -58,7 +59,8 @@
 	import { copyToClipboard, extractInputVariables } from '$lib/utils';
 	import {
 		modelControlTranslationSource,
-		pruneEmptyLocaleEntries
+		pruneEmptyLocaleEntries,
+		resolveLocalizedPromptSuggestions
 	} from '$lib/utils/localizedContent';
 
 	const i18n: any = getContext('i18n');
@@ -153,6 +155,34 @@
 	}
 
 	let system = '';
+	let showComparison = false;
+	let comparison: {
+		id: string;
+		modelId: string | undefined;
+		versionId: string | null | undefined;
+		content: string;
+	} | null = null;
+	const compareRevision = () => {
+		if (!loaded || readOnly || historical || loading || promotingVersion) return;
+		comparison = { id, modelId: model?.id, versionId: model?.version_id, content: system };
+		showComparison = true;
+	};
+	const applyComparison = (content: string) => {
+		if (
+			!comparison ||
+			readOnly ||
+			historical ||
+			loading ||
+			promotingVersion ||
+			comparison.id !== id ||
+			comparison.modelId !== model?.id ||
+			comparison.versionId !== model?.version_id ||
+			comparison.content !== system
+		)
+			throw new Error($i18n.t('The model has changed. Reopen the comparison before applying.'));
+		system = content;
+		showSystemPrompt = true;
+	};
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -212,7 +242,7 @@
 		.map(([locale]) => locale);
 	$: editingLocaleLabel = languages.find((language) => language.code === editingLocale)?.title;
 
-	const localizedField = (field: string) => info?.meta?.i18n?.[editingLocale]?.[field] ?? '';
+	$: localizedField = (field: string) => info?.meta?.i18n?.[editingLocale]?.[field] ?? '';
 	const setLocalizedField = (field: string, value: string) => {
 		if (!editingLocale) return;
 
@@ -742,6 +772,12 @@
 </script>
 
 {#if loaded}
+	<DiffEditorModal
+		bind:show={showComparison}
+		initialContent={comparison?.content ?? ''}
+		filePath="system-prompt.md"
+		onApply={applyComparison}
+	/>
 	<input
 		bind:this={backgroundInput}
 		type="file"
@@ -1284,19 +1320,30 @@
 						<div class="px-2.5 md:px-4">
 							<section class="mt-4">
 								<div class="space-y-2 px-1">
-									<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
+									<div
+										class="flex items-center justify-between gap-2 text-xs font-normal text-gray-600 dark:text-gray-400"
+									>
 										<ModelSettingsLabel
 											label={$i18n.t('System Prompt')}
 											description={$i18n.t(
 												'Set instructions that guide how this model behaves throughout a chat.'
 											)}
 										/>
+										{#if !readOnly && !historical}
+											<button
+												type="button"
+												class="shrink-0 rounded-md px-2 py-1 text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:hover:text-gray-100"
+												disabled={loading || promotingVersion}
+												on:click={compareRevision}>{$i18n.t('Compare revision')}</button
+											>
+										{/if}
 									</div>
 
 									{#if showSystemPrompt || !system.trim()}
 										<fieldset disabled={readOnly} class="min-w-0">
 											<div>
 												<Textarea
+													ariaLabel={$i18n.t('System Prompt')}
 													className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
 													placeholder={$i18n.t(
 														'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
@@ -1498,7 +1545,13 @@
 									>
 										{#if editingLocale}
 											<LocalizedPromptSuggestions
-												promptSuggestions={info.meta.suggestion_prompts ?? []}
+												promptSuggestions={info.meta.suggestion_prompts ??
+													resolveLocalizedPromptSuggestions(
+														$config?.default_prompt_suggestions,
+														$config?.default_prompt_suggestions_i18n ?? {},
+														editingLocale,
+														(key) => $i18n.t(key)
+													)}
 												bind:localizedPromptSuggestions={info.meta.i18n}
 												locale={editingLocale}
 												localeLabel={editingLocaleLabel}
@@ -1585,11 +1638,11 @@
 											$config?.audio?.realtime?.enabled
 												? voice.voice || $i18n.t('Admin default')
 												: null,
-											$config?.audio?.realtime?.enabled || voiceAvatar
-												? voiceAvatar
-													? $i18n.t('Custom avatar')
-													: $i18n.t('Default orb')
-												: null,
+											voiceAvatar
+												? $i18n.t('Custom avatar')
+												: $config?.audio?.realtime?.enabled
+													? $i18n.t('Default orb')
+													: null,
 											tts.voice
 										]
 											.filter(Boolean)
@@ -1615,14 +1668,12 @@
 												/>
 											</div>
 										{/if}
-										{#if $config?.audio?.realtime?.enabled || voiceAvatar}
-											<VoiceAvatarSettings
-												bind:value={voiceAvatar}
-												bind:file={avatarFile}
-												bind:animationFiles
-												disabled={loading || readOnly}
-											/>
-										{/if}
+										<VoiceAvatarSettings
+											bind:value={voiceAvatar}
+											bind:file={avatarFile}
+											bind:animationFiles
+											disabled={loading || readOnly}
+										/>
 										<div
 											class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>

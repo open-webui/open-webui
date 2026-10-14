@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	import { getContext } from 'svelte';
+	const i18n = getContext<any>('i18n');
 
-	import { addMembersById } from '$lib/apis/channels';
+	import { addMembersById, inviteAppToChannel } from '$lib/apis/channels';
+	import { getApps, type App } from '$lib/apis/apps';
+	import { config } from '$lib/stores';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -11,36 +13,69 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	export let show = false;
-	export let channel = null;
+	export let channel: any = null;
+	export let joinedApps: App[] = [];
+	let apps: App[] = [];
+	let appIds: string[] = [];
+	$: availableApps = apps.filter(
+		(app) => app.is_active && !joinedApps.some((joined) => joined.id === app.id)
+	);
 
 	export let onUpdate = () => {};
 
-	let groupIds = [];
-	let userIds = [];
+	let groupIds: string[] = [];
+	let userIds: string[] = [];
 
 	let loading = false;
 
 	const submitHandler = async () => {
-		const res = await addMembersById(localStorage.token, channel.id, {
-			user_ids: userIds,
-			group_ids: groupIds
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
+		if (loading) return;
+		loading = true;
+		let changed = false;
+		try {
+			if (userIds.length || groupIds.length) {
+				await addMembersById(localStorage.token, channel.id, {
+					user_ids: userIds,
+					group_ids: groupIds
+				});
+				userIds = [];
+				groupIds = [];
+				changed = true;
+			}
+			for (const id of [...appIds]) {
+				await inviteAppToChannel(localStorage.token, channel.id, id);
+				appIds = appIds.filter((appId) => appId !== id);
+				changed = true;
+			}
 			toast.success($i18n.t('Members added successfully'));
-			onUpdate();
 			show = false;
-		} else {
-			toast.error($i18n.t('Failed to add members'));
+		} catch (error) {
+			// Preserve the previous fallback error in the translation catalogs.
+			// $i18n.t('Failed to add members');
+			toast.error(`${error}`);
+		} finally {
+			if (changed) onUpdate();
+			loading = false;
 		}
 	};
+
+	let opened = false;
+	$: if (show && !opened) {
+		opened = true;
+		if ($config?.features?.enable_apps && channel?.type !== 'dm') {
+			getApps(localStorage.token)
+				.then((value) => (apps = value))
+				.catch((error) => toast.error(`${error}`));
+		}
+	} else if (!show) {
+		opened = false;
+		apps = [];
+	}
 
 	const reset = () => {
 		userIds = [];
 		groupIds = [];
+		appIds = [];
 		loading = false;
 	};
 
@@ -78,14 +113,21 @@
 						}}
 					>
 						<div class="flex flex-col w-full h-full pb-2">
-							<MemberSelector bind:userIds bind:groupIds includeGroups={true} />
+							<MemberSelector
+								bind:userIds
+								bind:groupIds
+								bind:appIds
+								apps={availableApps}
+								includeGroups={channel.type === 'group'}
+								includeUsers={channel.type === 'group'}
+							/>
 						</div>
 
 						<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 							<button
 								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 								type="submit"
-								disabled={loading}
+								disabled={loading || !(userIds.length || groupIds.length || appIds.length)}
 							>
 								{$i18n.t('Add')}
 

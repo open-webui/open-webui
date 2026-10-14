@@ -128,6 +128,7 @@ ADMIN_CONFIG_KEYS = {
     'AUTOMATION_MIN_INTERVAL': 'automations.min_interval',
     'ENABLE_AUTOMATIONS': 'automations.enable',
     'ENABLE_CHANNELS': 'channels.enable',
+    'ENABLE_APPS': 'apps.enable',
     'CHANNEL_MODEL_RESPONSE_MODE': 'channels.model_response_mode',
     'ENABLE_CALENDAR': 'calendar.enable',
     'ENABLE_MEMORIES': 'memories.enable',
@@ -1177,6 +1178,7 @@ class AdminConfig(MfaConfigForm):
     AUTOMATION_MIN_INTERVAL: int | str | None = None
     ENABLE_AUTOMATIONS: bool
     ENABLE_CHANNELS: bool
+    ENABLE_APPS: bool = False
     CHANNEL_MODEL_RESPONSE_MODE: str = 'thread'
     ENABLE_CALENDAR: bool
     ENABLE_MEMORIES: bool
@@ -1223,6 +1225,8 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
             updates.pop(key, None)
     if 'ENABLE_LOGIN_FORM' not in form_data.model_fields_set:
         updates.pop('ui.enable_login_form', None)
+    if 'ENABLE_APPS' not in form_data.model_fields_set:
+        updates.pop('apps.enable', None)
     if 'I18N' not in form_data.model_fields_set:
         updates.pop('ui.i18n', None)
     updates['ui.default_interface_settings'] = form_data.DEFAULT_INTERFACE_SETTINGS or {}

@@ -52,6 +52,7 @@
 	import AdminEvaluations from '$lib/components/admin/Settings/Evaluations.svelte';
 	import AdminAnalytics from '$lib/components/admin/Analytics.svelte';
 	import AdminIntegrations from '$lib/components/admin/Settings/Integrations.svelte';
+	import AdminApps from '$lib/components/admin/Settings/Apps.svelte';
 	import AdminDocuments from '$lib/components/admin/Settings/Documents.svelte';
 	import AdminWebSearch from '$lib/components/admin/Settings/WebSearch.svelte';
 	import AdminCodeExecution from '$lib/components/admin/Settings/CodeExecution.svelte';
@@ -163,6 +164,7 @@
 		'admin:models': $i18n.t('AI'),
 		'admin:subagents': $i18n.t('AI'),
 		'admin:integrations': $i18n.t('Tools'),
+		'admin:apps': $i18n.t('Tools'),
 		'admin:documents': $i18n.t('Tools'),
 		'admin:audio': $i18n.t('Tools'),
 		'admin:images': $i18n.t('Tools'),
@@ -309,6 +311,12 @@
 			searchPrefixes: ['settings.admin.integrations.']
 		},
 		{
+			id: 'admin:apps',
+			titleKey: 'Apps',
+			title: $i18n.t('Apps'),
+			searchPrefixes: []
+		},
+		{
 			id: 'admin:documents',
 			titleKey: 'settings.admin.documents.title',
 			title: $i18n.t('settings.admin.documents.title'),
@@ -408,7 +416,9 @@
 		return (
 			$user?.role === 'admin' ? [...personalSettings, ...administratorTabs] : personalSettings
 		).filter(
-			(tab) => tab.id !== 'admin:analytics' || ($config?.features?.enable_admin_analytics ?? true)
+			(tab) =>
+				(tab.id !== 'admin:analytics' || ($config?.features?.enable_admin_analytics ?? true)) &&
+				(tab.id !== 'admin:apps' || $config?.features?.enable_apps)
 		);
 	};
 
@@ -871,6 +881,8 @@
 				<AdminAnalytics />
 			{:else if selectedTab === 'admin:integrations'}
 				<AdminIntegrations {saveSettings} />
+			{:else if selectedTab === 'admin:apps'}
+				<AdminApps />
 			{:else if selectedTab === 'admin:documents'}
 				<AdminDocuments on:save={adminConfigSaveHandler} />
 			{:else if selectedTab === 'admin:web'}

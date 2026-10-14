@@ -6,6 +6,7 @@ import io
 import json
 import re
 import stat
+import time
 import zipfile
 from pathlib import PurePosixPath
 from typing import Literal
@@ -19,9 +20,15 @@ MAX_FILE_BYTES = 10 * 1024 * 1024
 MAX_SKILL_BYTES = 50 * 1024 * 1024
 MAX_IMPORT_BYTES = 200 * 1024 * 1024
 MAX_FILES = 1000
-SKILL_CONTENT_MAX_CHARS = 100_000
+SKILL_CONTENT_MAX_CHARS = 20_000
+SKILL_INJECTION_MAX_CHARS = 100_000
+SKILL_PREVIEW_MAX_CHARS = 5_000
+SKILL_OVERVIEW_LIST_MAX_CHARS = 2_500
 SKILL_MANIFEST_MAX_ENTRIES = 50
 SKILL_MANIFEST_MAX_CHARS = 5_000
+SKILL_GREP_MAX_CHARS = 6_000
+SKILL_GREP_EXCERPT_MAX_CHARS = 1_200
+SKILL_GREP_LOCATIONS_MAX_CHARS = 2_000
 
 
 def skill_content_page(content: str, offset: int = 0, max_chars: int = SKILL_CONTENT_MAX_CHARS) -> dict:
@@ -30,11 +37,11 @@ def skill_content_page(content: str, offset: int = 0, max_chars: int = SKILL_CON
     return {'content': content[offset:end], 'next_offset': end if end < len(content) else None}
 
 
-def bounded_skill_manifest(entries: list, field: str = 'files') -> dict:
+def bounded_skill_manifest(entries: list, field: str = 'files', max_chars: int = SKILL_MANIFEST_MAX_CHARS) -> dict:
     bounded, size = [], 2  # Include the JSON array brackets and separators in the budget.
     for entry in entries[:SKILL_MANIFEST_MAX_ENTRIES]:
         entry_size = len(json.dumps(entry, ensure_ascii=False)) + (2 if bounded else 0)
-        if size + entry_size > SKILL_MANIFEST_MAX_CHARS:
+        if size + entry_size > max_chars:
             break
         bounded.append(entry)
         size += entry_size
@@ -44,15 +51,172 @@ def bounded_skill_manifest(entries: list, field: str = 'files') -> dict:
     return result
 
 
+def iter_skill_headings(content: str):
+    offset = 0
+    frontmatter_match = re.match(r'\A---[ \t]*\r?\n.*?\r?\n---[ \t]*(?:\r?\n|$)', content, re.DOTALL)
+    body_start = frontmatter_match.end() if frontmatter_match else 0
+    fence = None
+    for line in content.splitlines(keepends=True):
+        line_offset = offset
+        offset += len(line)
+        if line_offset < body_start:
+            continue
+        text = line.rstrip('\r\n')
+        marker = re.match(r' {0,3}(`{3,}|~{3,})(.*)$', text)
+        if fence:
+            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip():
+                fence = None
+            continue
+        if marker and (marker[1][0] == '~' or '`' not in marker[2]):
+            fence = marker[1]
+            continue
+        heading = re.match(r' {0,3}(#{1,6})(?:[ \t]+(.*)|$)', text)
+        if heading:
+            title = re.sub(r'(?:^|[ \t]+)#+[ \t]*$', '', heading[2] or '').strip()
+            yield {'title': title, 'level': len(heading[1]), 'offset': line_offset}
+
+
+def _skill_match_window(content: str, start: int, end: int) -> tuple[int, int]:
+    left = max(0, start - 300)
+    right = min(len(content), end + 300, left + SKILL_GREP_EXCERPT_MAX_CHARS)
+    # Trim partial context words inward, but retain the match even when it is one long word.
+    if left and not content[left - 1].isspace():
+        boundary = next((i for i in range(left, start) if content[i].isspace()), None)
+        if boundary is not None:
+            left = boundary + 1
+    if right < len(content) and not content[right].isspace():
+        boundary = next((i for i in range(right - 1, end - 1, -1) if content[i].isspace()), None)
+        if boundary is not None:
+            right = boundary
+    return left, right
+
+
+def grep_skill_content(files: list[dict], pattern: str, case_insensitive: bool = True, max_results: int = 10) -> str:
+    from open_webui.tools.knowledge_fs import MATCH_BUDGET_SECONDS, MatchBudgetExceeded, build_span_matcher
+    from open_webui.utils.json_codec import JSONCodec
+
+    deadline = time.monotonic() + MATCH_BUDGET_SECONDS
+
+    def check_budget():
+        if time.monotonic() >= deadline:
+            raise MatchBudgetExceeded(f'Search exceeded {MATCH_BUDGET_SECONDS:g}s, narrow the pattern')
+
+    matcher, error = build_span_matcher(pattern, case_insensitive, deadline=deadline)
+    if error:
+        raise ValueError(error)
+    max_results = min(30, max(1, max_results))
+    result = {'matches': [], 'total_matches': 0, 'truncated': False}
+    # Reserve room for locations so large excerpts cannot hide all the remaining matches.
+    notice = 'Excerpts omitted; see omitted_matches.'
+    accepting = True
+    accepting_locations = True
+    for file in sorted(files, key=lambda file: (file['path'] != 'SKILL.md', file['path'])):
+        check_budget()
+        if file.get('encoding'):
+            continue
+        content, offset = file['content'], 0
+        headings = iter_skill_headings(content)
+        heading, next_heading = None, next(headings, None) if accepting or accepting_locations else None
+        previous_window = None
+        for line in content.splitlines(keepends=True):
+            check_budget()
+            for start, end in matcher(line.rstrip('\r\n')):
+                check_budget()
+                result['total_matches'] += 1
+                if not accepting and not accepting_locations:
+                    continue
+                start, end = offset + start, offset + end
+                while next_heading is not None and next_heading['offset'] <= start:
+                    heading, next_heading = next_heading, next(headings, None)
+                    check_budget()
+                if accepting:
+                    left, right = _skill_match_window(content, start, end)
+                    merge = (
+                        previous_window is not None
+                        and left < previous_window[1]
+                        and max(right, previous_window[1]) - previous_window[0] <= SKILL_GREP_EXCERPT_MAX_CHARS
+                    )
+                    if merge:
+                        left, right = previous_window[0], max(right, previous_window[1])
+                        entry = {**result['matches'][-1], 'excerpt': content[left:right]}
+                        candidates = [*result['matches'][:-1], entry]
+                    else:
+                        entry = {
+                            'path': file['path'],
+                            'offset': start,
+                            'match_length': end - start,
+                            'section': heading['title'] if heading else None,
+                            'section_offset': heading['offset'] if heading else None,
+                            'excerpt': content[left:right],
+                        }
+                        candidates = [*result['matches'], entry]
+                    candidate = {
+                        **result,
+                        'matches': candidates,
+                        'truncated': True,
+                        'notice': notice,
+                        'omitted_matches': [],
+                        'omitted_matches_truncated': False,
+                    }
+                    if (
+                        len(candidates) <= max_results
+                        and len(JSONCodec.dumps(candidate, ensure_ascii=False))
+                        <= SKILL_GREP_MAX_CHARS - SKILL_GREP_LOCATIONS_MAX_CHARS
+                    ):
+                        result['matches'] = candidates
+                        previous_window = left, right
+                        continue
+                    accepting = False
+                    result.update(truncated=True, notice=notice, omitted_matches=[], omitted_matches_truncated=False)
+                locations = [
+                    *result['omitted_matches'],
+                    {
+                        'path': file['path'],
+                        'offset': start,
+                        'section': heading['title'] if heading else None,
+                    },
+                ]
+                if (
+                    len(locations) <= 30
+                    and len(JSONCodec.dumps(locations, ensure_ascii=False)) <= SKILL_GREP_LOCATIONS_MAX_CHARS
+                ):
+                    result['omitted_matches'] = locations
+                else:
+                    accepting_locations = False
+                    result['omitted_matches_truncated'] = True
+                    result['notice'] = 'More locations omitted; narrow the pattern or specify path.'
+            offset += len(line)
+    check_budget()
+    serialized = JSONCodec.dumps(result, ensure_ascii=False)
+    while len(serialized) > SKILL_GREP_MAX_CHARS:
+        result['omitted_matches'].pop()
+        result['omitted_matches_truncated'] = True
+        result['notice'] = 'More locations omitted; narrow the pattern or specify path.'
+        serialized = JSONCodec.dumps(result, ensure_ascii=False)
+    return serialized
+
+
+def skill_overview(content: str, files: list, field: str = 'files', tools_enabled: bool = True) -> dict:
+    if not tools_enabled:
+        return {
+            'content': content[:SKILL_INJECTION_MAX_CHARS],
+            'next_offset': SKILL_INJECTION_MAX_CHARS if len(content) > SKILL_INJECTION_MAX_CHARS else None,
+            **bounded_skill_manifest(files, field),
+        }
+    large = len(content) > SKILL_CONTENT_MAX_CHARS
+    return {
+        **skill_content_page(content, max_chars=SKILL_PREVIEW_MAX_CHARS if large else SKILL_CONTENT_MAX_CHARS),
+        **bounded_skill_manifest(files, field, SKILL_OVERVIEW_LIST_MAX_CHARS),
+    }
+
+
 def format_skill_content(page: dict, skill_id: str, tools_enabled: bool) -> str:
     content = page['content']
     if page['next_offset'] is not None:
         content += '\nSkill instructions truncated.'
         if tools_enabled:
-            content += (
-                f'\nContinue reading with read_skill_file(id={json.dumps(skill_id)}, '
-                f'path="SKILL.md", offset={page["next_offset"]}).'
-            )
+            content += f'\nSkill ID: {json.dumps(skill_id)}.'
+            content += f'\nnext_offset: {page["next_offset"]}'
     return content
 
 
@@ -179,14 +343,16 @@ def parse_import(
     if filename.lower().endswith('.json'):
         value = json.loads(data)
         packages = value if isinstance(value, list) else [value]
-    elif filename.lower().endswith('.zip'):
+    elif filename.lower().endswith(('.zip', '.skill')):
         entries = {}
+        links = []
         total = 0
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             for info in archive.infolist():
                 path = validate_path(info.filename.rstrip('/'))
                 mode = info.external_attr >> 16
-                if stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR):
+                special = stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR)
+                if special and not discover_skills:
                     raise ValueError('Archives cannot contain links or special files')
                 if info.is_dir():
                     continue
@@ -194,18 +360,28 @@ def parse_import(
                     path = path.partition('/')[2]
                     if not path.startswith(directory):
                         continue
+                if special:
+                    links.append(path)
+                    continue
                 if path in entries:
                     raise ValueError(f'Duplicate archive path: {path}')
                 total += info.file_size
                 if info.file_size > MAX_FILE_BYTES or total > MAX_IMPORT_BYTES or len(entries) >= 10000:
                     raise ValueError('Archive exceeds import limits')
-                entries[path] = archive.read(info)
+                if info.flag_bits & 1:
+                    raise ValueError('Encrypted skill archives are not supported')
+                try:
+                    entries[path] = archive.read(info)
+                except NotImplementedError as error:
+                    raise ValueError('Skill archive uses an unsupported compression method') from error
         roots = (
             [''] if 'SKILL.md' in entries else sorted(p[: -len('SKILL.md')] for p in entries if p.endswith('/SKILL.md'))
         )
         if not roots:
             raise ValueError('Archive contains no SKILL.md')
         roots = [root for root in roots if not any(root != parent and root.startswith(parent) for parent in roots)]
+        if any(path.startswith(root) for path in links for root in roots):
+            raise ValueError('Archives cannot contain links or special files')
         if not discover_skills and any(not any(p.startswith(root) for root in roots) for p in entries):
             raise ValueError('Archive contains files outside skill directories')
         packages = [
@@ -215,7 +391,7 @@ def parse_import(
     elif filename.lower().endswith('.md'):
         packages = [{'files': [encode_file('SKILL.md', data)]}]
     else:
-        raise ValueError('Use JSON, ZIP, or Markdown')
+        raise ValueError('Use JSON, ZIP, .skill, or Markdown')
     total = 0
     result = []
     for package in packages:
@@ -309,7 +485,9 @@ async def load_skill_from_url(url: str) -> list[dict]:
                         raise ValueError('Could not download the skill. Check that the URL is accessible.')
                     content_type = response.content_type
                     if content_type == 'text/html':
-                        raise ValueError('The URL returned a web page. Use a raw skill file or a ZIP download link.')
+                        raise ValueError(
+                            'The URL returned a web page. Use a raw skill file or a ZIP/.skill download link.'
+                        )
                     data = bytearray()
                     async for chunk in response.content.iter_chunked(64 * 1024):
                         data.extend(chunk)

@@ -70,6 +70,8 @@
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
+	import { acquireWakeLock } from '$lib/utils/wakeLock';
+	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import {
 		applyResponseStreamEvent,
@@ -78,6 +80,7 @@
 	} from './Messages/structuredOutput';
 
 	import {
+		addTagById,
 		archiveChatById,
 		compactChatById,
 		createNewChat,
@@ -100,6 +103,8 @@
 		updateUserSettings
 	} from '$lib/apis/users';
 	import {
+		generateTitle,
+		generateTags,
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
@@ -407,6 +412,7 @@
 
 	// Non-owners may reply when the sharing mode allows it, but cannot save chat edits.
 	$: isShared = chat != null && chat.user_id !== $user?.id;
+	$: if (isShared && $showCallOverlay) showCallOverlay.set(false);
 	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
 	let cloning = false;
 
@@ -1406,6 +1412,18 @@
 
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
+		if (event?.data?.type === 'voice:play_animation') {
+			cb?.(
+				routeAvatarAnimation(eventTarget, event, {
+					active: $showCallOverlay && callMode === 'current' && selectedModelIds.length === 1,
+					chatId: $chatId,
+					modelId: selectedModelIds[0],
+					messageId: history.currentId,
+					message: history.messages[event.message_id]
+				})
+			);
+			return;
+		}
 		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
 		const interactionType = event?.data?.type;
 		const interactionData = event?.data?.data;
@@ -2197,9 +2215,53 @@
 
 	let callMode = 'current';
 	let bridge: RealtimeCall;
+	let releaseCallWakeLock = () => {};
+	const updateCallWakeLock = (active: boolean) => {
+		releaseCallWakeLock();
+		releaseCallWakeLock = active ? acquireWakeLock() : () => {};
+	};
+	$: callInProgress =
+		($showCallOverlay && callMode === 'current') || !!(bridge?.connected || bridge?.connecting);
+	$: updateCallWakeLock(callInProgress);
+	onDestroy(() => releaseCallWakeLock());
+
 	const bridgeCancellations = new Map<string, () => void>();
 	const visibleMessageText = (message: any) =>
 		getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
+
+	const generateVoiceChatMetadata = async (
+		_chatId: string,
+		modelId: string,
+		content: string,
+		initialTitle: string
+	) => {
+		const token = localStorage.token;
+		const messages = [{ role: 'user', content }];
+		const autoTitle = $settings?.title?.auto ?? true;
+		const autoTags = $settings?.autoTags ?? true;
+		const title = autoTitle
+			? await generateTitle(token, modelId, messages, _chatId).catch((error) => {
+					console.error('Could not generate voice chat title', error);
+					return null;
+				})
+			: null;
+		const savedChat = await getChatById(token, _chatId);
+		if (savedChat.title === initialTitle) {
+			const updated = await updateChatById(token, _chatId, {
+				title: title || content.slice(0, 100)
+			});
+			if ($chatId === _chatId) {
+				chatTitle.set(updated.title);
+				if (embedded) await onEmbeddedChatTitle?.(_chatId, updated.title);
+			}
+			await refreshChatList(token);
+		}
+		if (autoTags) {
+			const tags = await generateTags(token, modelId, messages, _chatId);
+			for (const tag of tags) await addTagById(token, _chatId, tag);
+			allTags.set(await getAllTags(token));
+		}
+	};
 
 	const addVoiceMessage = async (
 		role: string,
@@ -2245,8 +2307,16 @@
 		}
 		if (history.currentId === parentId) history.currentId = id;
 		history = history;
-		if (!$chatId) await initChatHandler(history);
-		else if (!$temporaryChatEnabled) {
+		if (!$chatId) {
+			const modelId = selectedModelIds[0];
+			const _chatId = await initChatHandler(history);
+			if (!$temporaryChatEnabled) {
+				// Realtime replies need no chat completion; start metadata work at chat creation.
+				void generateVoiceChatMetadata(_chatId, modelId, content, chat.title).catch((error) => {
+					console.error('Could not save voice chat metadata', error);
+				});
+			}
+		} else if (!$temporaryChatEnabled) {
 			// Patch only the new message, so a running backend turn keeps its current output.
 			await updateChatById(localStorage.token, $chatId, {
 				history: { currentId: history.currentId, messages: changedMessages }
@@ -2448,6 +2518,8 @@
 	//////////////////////////
 
 	const openCallOverlay = () => {
+		if (isShared) return;
+
 		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.call ?? true))) {
 			return;
 		}
@@ -3117,10 +3189,32 @@
 		if (selectedModels.length === 0) {
 			toast.error($i18n.t('Model not selected'));
 		} else {
-			const modelId = selectedModels[0];
-			const model = $models.filter((m) => m.id === modelId).at(0);
+			const userMessageId = uuidv4();
 
-			if (!model) {
+			const responseMessages = [];
+			for (const [modelIdx, modelId] of selectedModels.entries()) {
+				const model = $models.filter((m) => m.id === modelId).at(0);
+
+				if (model) {
+					const responseMessageId = uuidv4();
+					responseMessages.push({
+						id: responseMessageId,
+						parentId: userMessageId,
+						childrenIds: [],
+						role: 'assistant',
+						user_id: $user?.id,
+						content: `[RESPONSE] ${responseMessageId}`,
+						done: true,
+
+						model: modelId,
+						modelName: model.name ?? model.id,
+						modelIdx: modelIdx,
+						timestamp: Math.floor(Date.now() / 1000)
+					});
+				}
+			}
+
+			if (responseMessages.length === 0) {
 				toast.error($i18n.t('Model not found'));
 				return;
 			}
@@ -3128,33 +3222,16 @@
 			const messages = createMessagesList(history, history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
 
-			const userMessageId = uuidv4();
-			const responseMessageId = uuidv4();
-
 			const userMessage = {
 				id: userMessageId,
 				parentId: parentMessage ? parentMessage.id : null,
-				childrenIds: [responseMessageId],
+				childrenIds: responseMessages.map((m) => m.id),
 				role: 'user',
 				user_id: $user?.id,
 				user: { id: $user?.id, name: $user?.name },
 				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
-				timestamp: Math.floor(Date.now() / 1000)
-			};
-
-			const responseMessage = {
-				id: responseMessageId,
-				parentId: userMessageId,
-				childrenIds: [],
-				role: 'assistant',
-				user_id: $user?.id,
-				content: `[RESPONSE] ${responseMessageId}`,
-				done: true,
-
-				model: modelId,
-				modelName: model.name ?? model.id,
-				modelIdx: 0,
-				timestamp: Math.floor(Date.now() / 1000)
+				timestamp: Math.floor(Date.now() / 1000),
+				models: selectedModels
 			};
 
 			if (parentMessage) {
@@ -3162,9 +3239,11 @@
 				history.messages[parentMessage.id] = parentMessage;
 			}
 			history.messages[userMessageId] = userMessage;
-			history.messages[responseMessageId] = responseMessage;
+			for (const responseMessage of responseMessages) {
+				history.messages[responseMessage.id] = responseMessage;
+			}
 
-			history.currentId = responseMessageId;
+			history.currentId = responseMessages.at(-1).id;
 
 			await tick();
 
@@ -3917,7 +3996,7 @@
 
 		if ($config?.features)
 			features = {
-				voice: $showCallOverlay && callMode === 'current',
+				voice: ($showCallOverlay && callMode === 'current') || !!bridge?.connected,
 				image_generation:
 					$config?.features?.enable_image_generation &&
 					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
@@ -4230,6 +4309,8 @@
 					});
 					await chatId.set(res.chat_id);
 					if (!$temporaryChatEnabled && !embedded) {
+						// Carry the picks made on the new-chat page over to this chat
+						saveDraft(getChatInputDraft(), res.chat_id, false);
 						window.history.replaceState(window.history.state, '', `/c/${res.chat_id}`);
 						await refreshChatList(localStorage.token);
 
@@ -4272,6 +4353,7 @@
 		const responseMessage = messageId ? history.messages[messageId] : null;
 		if (responseMessage && (responseMessage.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id)
 			return;
+		eventTarget.dispatchEvent(new CustomEvent('voice:cancel_animation'));
 		cancelBrowserInteractions();
 		if (bridge?.connected && responseMessage) responseMessage.bridgeStopping = true;
 		const hasTaskIds = (taskIds?.length ?? 0) > 0;
@@ -4491,6 +4573,7 @@
 			await chatId.set(_chatId);
 
 			if (!embedded) {
+				saveDraft(getChatInputDraft(), _chatId, false);
 				window.history.replaceState(window.history.state, '', `/c/${_chatId}`);
 			}
 
@@ -5034,6 +5117,7 @@
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
+										callEnabled={!isShared}
 										bind:this={messageInput}
 										{history}
 										{taskIds}
@@ -5129,6 +5213,7 @@
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
+										callEnabled={!isShared}
 										bind:this={messageInput}
 										{history}
 										{taskIds}
@@ -5191,6 +5276,7 @@
 							<div class="flex items-center h-full">
 								<Placeholder
 									callActive={!!(bridge?.connected || bridge?.connecting)}
+									callEnabled={!isShared}
 									bind:selectedModelIdx
 									{history}
 									bind:selectedModels

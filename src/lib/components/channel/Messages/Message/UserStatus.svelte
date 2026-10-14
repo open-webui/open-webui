@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import dayjs, { getDayjsLocale } from '$lib/dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+
+	dayjs.extend(relativeTime);
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
@@ -30,9 +34,14 @@
 	let localTime = '';
 
 	$: lastSeen = user?.last_active_at
+		? dayjs(user.last_active_at * 1000)
+				.locale(getDayjsLocale($i18n.language))
+				.from(now)
+		: '';
+	$: lastSeenTimestamp = user?.last_active_at
 		? new Date(user.last_active_at * 1000).toLocaleString($i18n.language, {
 				dateStyle: 'medium',
-				timeStyle: 'short'
+				timeStyle: 'long'
 			})
 		: '';
 
@@ -84,13 +93,13 @@
 				/>
 				<div class="min-w-0 flex-1">
 					<div
-						class="truncate text-[0.8125rem] font-medium leading-5 text-gray-900 dark:text-gray-100"
+						class="truncate text-[0.8125rem] font-medium leading-4 text-gray-900 dark:text-gray-100"
 						title={user.name}
 					>
 						{user.name}
 					</div>
 					<div
-						class="flex items-center gap-1.5 text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400"
+						class="-mt-0.25 flex items-center gap-1.5 text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400"
 					>
 						<span
 							class="size-1.5 shrink-0 rounded-full {user.is_active
@@ -166,7 +175,11 @@
 										<span class="sr-only">{$i18n.t('Last seen')}</span>
 									</Tooltip>
 								</dt>
-								<dd>{lastSeen}</dd>
+								<dd>
+									<Tooltip content={lastSeenTimestamp}>
+										<span>{lastSeen}</span>
+									</Tooltip>
+								</dd>
 							</div>
 						{/if}
 					</dl>

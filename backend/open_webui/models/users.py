@@ -814,6 +814,10 @@ class UsersTable:
                 return None
             for key, value in updated.items():
                 setattr(user, key, value)
+            if 'email' in updated:
+                from open_webui.models.auths import Auth
+
+                await session.execute(update(Auth).where(Auth.id == id).values(email=updated['email']))
             await session.commit()
             return UserModel.model_validate(user)
 

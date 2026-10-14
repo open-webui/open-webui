@@ -7,8 +7,23 @@
 
 	const i18n: any = getContext('i18n');
 
-	import { channelRequestQueues, config, mobile, settings, socket, user } from '$lib/stores';
+	import {
+		channelRequestQueues,
+		channels,
+		models,
+		config,
+		mobile,
+		settings,
+		socket,
+		user
+	} from '$lib/stores';
 	import { processingQueueChannels, processNextInQueue } from '$lib/utils/channelQueue';
+	import {
+		getMentionUserQueries,
+		resolveMentions,
+		getChannelMentionCandidates
+	} from '$lib/utils/channelMentions';
+	import type { Editor } from '@tiptap/core';
 	import QueuedMessageItem from '../chat/MessageInput/QueuedMessageItem.svelte';
 	import {
 		convertHeicToJpeg,
@@ -50,6 +65,7 @@
 
 	export let id: string | null = null;
 	export let channel: any = null;
+	export let messages: any[] | null = [];
 
 	export let typingUsers = [];
 	export let inputLoading = false;
@@ -77,6 +93,7 @@
 
 	let recording = false;
 	let content = '';
+	let inputEditor: Editor | null = null;
 	let files: any[] = [];
 	let isDestroyed = false;
 	$: parentId = id === 'root' ? null : id;
@@ -579,10 +596,43 @@
 		void processNextInQueue(queueKey);
 	};
 
+	const resolveInputMentions = async () => {
+		const targetQueueKey = queueKey;
+		const editor = inputEditor;
+		if (editor && /[@#]/.test(content)) {
+			const state = editor.state;
+			try {
+				const candidates = await getChannelMentionCandidates(
+					localStorage.token,
+					channel.id,
+					getMentionUserQueries(state.doc),
+					{
+						users: userSuggestions,
+						apps: $config?.features?.enable_apps ?? false,
+						models: $models,
+						channels: channelSuggestions ? $channels : []
+					}
+				);
+				if (isDestroyed || targetQueueKey !== queueKey || editor.isDestroyed) return false;
+				const tr = resolveMentions(state, candidates);
+				// A paste lookup may have finished while Send was waiting for the same result.
+				if (editor.state.doc.eq(tr.doc)) return true;
+				if (editor.state.doc !== state.doc) return false;
+				if (tr.docChanged) editor.view.dispatch(tr);
+			} catch (error) {
+				toast.error(`${error}`);
+				return false;
+			}
+		}
+		return true;
+	};
+
 	const submitHandler = async () => {
 		if (disabled || !$user?.id || (content === '' && files.length === 0)) return;
 
 		const targetQueueKey = queueKey;
+		if (inputEditor && /[@#]/.test(content) && !(await resolveInputMentions())) return;
+		if (content === '' && files.length === 0) return;
 		const entry = {
 			id: uuidv4(),
 			prompt: content,
@@ -998,6 +1048,7 @@
 											id="chat-input"
 											className="input-prose min-h-fit h-full text-sm!"
 											bind:this={chatInputElement}
+											bind:editor={inputEditor}
 											json={true}
 											messageInput={true}
 											editable={!disabled}
@@ -1014,6 +1065,7 @@
 											largeTextAsFile={$settings?.largeTextAsFile ?? false}
 											floatingMenuPlacement={'top-start'}
 											{suggestions}
+											on:pasted={resolveInputMentions}
 											onChange={(e) => {
 												const { md } = e;
 												content = md;
@@ -1027,6 +1079,30 @@
 													document.getElementById('suggestions-container');
 
 												if (!suggestionsContainerElement) {
+													if (
+														e.key === 'ArrowUp' &&
+														!e.isComposing &&
+														!isCtrlPressed &&
+														!e.shiftKey &&
+														!e.altKey &&
+														!disabled &&
+														content === '' &&
+														files.length === 0
+													) {
+														const message = messages?.find(
+															(message) => message.user_id === $user?.id && !message.temp_id
+														);
+														if (message) {
+															const messageId = parentId ? `${parentId}-${message.id}` : message.id;
+															const editButton = document.getElementById(
+																`edit-message-${messageId}`
+															);
+															if (editButton) {
+																e.preventDefault();
+																editButton.click();
+															}
+														}
+													}
 													if (
 														!$mobile ||
 														!(

@@ -9,6 +9,7 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -80,6 +81,14 @@
 	let showDeleteVersion = false;
 	let deleteVersionId: string | null = null;
 	let discardAction: () => void = () => {};
+	let showComparison = false;
+	let comparison: {
+		promptId: string | undefined;
+		versionId: string | undefined;
+		productionVersionId: string | undefined;
+		content: string;
+		path: string;
+	} | null = null;
 
 	$: selectedVersionId = selectedHistoryEntry?.id ?? prompt?.version_id;
 	$: historical = edit && !!selectedHistoryEntry && selectedVersionId !== prompt?.version_id;
@@ -90,6 +99,31 @@
 		JSON.stringify(tags) !== JSON.stringify(originalTags);
 	$: dirty = ready && !disabled && (content !== savedContent || !!commitMessage || metadataDirty);
 	$: if (!edit && !hasManualEdit) command = name !== '' ? slugify(name) : '';
+
+	const compareRevision = () => {
+		if (!ready || readOnly || loading || historyLoading) return;
+		comparison = {
+			promptId: prompt?.id,
+			versionId: selectedVersionId,
+			productionVersionId: prompt?.version_id,
+			content,
+			path: `${command || 'prompt'}.md`
+		};
+		showComparison = true;
+	};
+	const applyComparison = (result: string) => {
+		if (
+			!comparison ||
+			readOnly ||
+			loading ||
+			comparison.promptId !== prompt?.id ||
+			comparison.versionId !== selectedVersionId ||
+			comparison.productionVersionId !== prompt?.version_id ||
+			comparison.content !== content
+		)
+			throw new Error($i18n.t('The prompt has changed. Reopen the comparison before applying.'));
+		content = result;
+	};
 
 	const confirmDiscard = (action: () => void) => {
 		if (dirty) {
@@ -349,6 +383,13 @@
 	});
 </script>
 
+<DiffEditorModal
+	bind:show={showComparison}
+	initialContent={comparison?.content ?? ''}
+	filePath={comparison?.path ?? null}
+	onApply={applyComparison}
+/>
+
 <AccessControlModal
 	bind:show={showAccessControlModal}
 	bind:accessGrants
@@ -515,7 +556,7 @@
 				>
 					<div class="min-w-0 flex-1">
 						{#if edit}
-							<Dropdown bind:show={showHistory}>
+							<Dropdown bind:show={showHistory} align="start">
 								<button
 									type="button"
 									aria-label={$i18n.t('History')}
@@ -529,7 +570,7 @@
 									><ChevronDown className="size-3 shrink-0" />
 								</button>
 								<div slot="content">
-									<DropdownMenu className="w-56 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto">
+									<DropdownMenu className="w-72 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto">
 										<VersionMenuItem
 											entry={history.find((entry) => entry.id === prompt?.version_id) ||
 												(productionEntry?.id === prompt?.version_id ? productionEntry : null)}
@@ -578,6 +619,14 @@
 							</Dropdown>
 						{:else}<span class="text-gray-500">{$i18n.t('Prompt Content')}</span>{/if}
 					</div>
+					{#if !readOnly}
+						<button
+							type="button"
+							class="shrink-0 rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+							disabled={!ready || loading || historyLoading}
+							on:click={compareRevision}>{$i18n.t('Compare revision')}</button
+						>
+					{/if}
 					<Tooltip
 						content={`${$i18n.t('Use')} {{${$i18n.t('variable')}}} ${$i18n.t('for placeholders')}`}
 						><span class="px-1 text-gray-400">{'{{'}{$i18n.t('variable')}{'}}'}</span></Tooltip

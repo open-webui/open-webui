@@ -29,6 +29,7 @@
 	export let query = '';
 	export let onSelect = (e) => {};
 	export let canCompact = false;
+	export let canCompare = false;
 	export let compactDisabled = false;
 	export let canStatus = false;
 	export let canFork = false;
@@ -69,6 +70,9 @@
 			: []),
 		...('settings'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'settings' } }]
+			: []),
+		...(canCompare && 'compare'.startsWith(query.toLowerCase())
+			? [{ type: 'command', data: { id: 'compare' } }]
 			: []),
 		...(hasChatContent &&
 		($user?.role === 'admin' || $user?.permissions?.workspace?.skills) &&
@@ -383,6 +387,38 @@
 					</span>
 				</button>
 			</Tooltip>
+		{:else if item.data.id === 'compare'}
+			<button
+				type="button"
+				aria-label={$i18n.t('Compare text')}
+				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
+					{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
+				on:mousedown={(e) => e.preventDefault()}
+				on:click={() => onSelect(item)}
+				on:mouseenter={() => (selectedIdx = commandIdx)}
+				on:focus={() => {}}
+				data-selected={commandIdx === selectedIdx}
+			>
+				<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
+					<svg
+						class="size-3.5"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<rect x="3" y="4" width="18" height="16" rx="2" />
+						<path d="M12 4v16M5.5 12h4M14.5 12h4M16.5 10v4" />
+					</svg>
+				</span>
+				<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+					<span class="truncate">{$i18n.t('Compare text')}</span>
+					<span class="app-muted text-[0.625rem] truncate shrink-0">/compare</span>
+				</span>
+			</button>
 		{:else if item.data.id === 'skills:create'}
 			<Tooltip
 				content={$i18n.t('Create a reusable terminal skill from this chat.')}

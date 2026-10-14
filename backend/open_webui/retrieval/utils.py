@@ -1421,7 +1421,7 @@ async def get_sources_from_items(
                     # Fallback to item content
                     query_result = {
                         'documents': [[item.get('content')]],
-                        'metadatas': [[{'file_id': item.get('id'), 'name': item.get('name')}]],
+                        'metadatas': [[{'name': item.get('name')}]],
                     }
 
         elif item.get('type') == 'note':

@@ -64,6 +64,9 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     }.get(rule._freq)
 
     if step is None:
+        # dateutil's default anchor carries seconds and the server timezone
+        if not has_dtstart:
+            return rrulestr(stripped, dtstart=anchor.replace(second=0, microsecond=0), ignoretz=True)
         if not rule._dtstart.tzinfo:
             return parsed
         return rrulestr(stripped, dtstart=start, ignoretz=True)
