@@ -70,6 +70,8 @@
 			</Popover.Trigger>
 			<Popover.Portal>
 				<Popover.Content
+					role="dialog"
+					trapFocus={false}
 					side="bottom"
 					align="start"
 					sideOffset={6}
