@@ -870,6 +870,13 @@ async def delete_user(
             detail=f'User {user_id} not found',
         )
 
+    # An IdP prune must not lock the instance out by deleting an admin.
+    if user.role == 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
+
     success = await Auths.delete_auth_by_id(user_id, db=db)
     if not success:
         raise HTTPException(
