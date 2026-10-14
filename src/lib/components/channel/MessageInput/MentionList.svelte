@@ -3,8 +3,8 @@
 	import { getAbortSignal, getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { getChannelAppsById } from '$lib/apis/channels';
-	import { getApps } from '$lib/apis/apps';
+	import { getChannelMentionApps } from '$lib/apis/channels';
+	import { mentionAttributes } from '$lib/utils/channelMentions';
 	import { channels, models, config } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Grid from '$lib/components/icons/Grid.svelte';
@@ -90,14 +90,7 @@
 		const item = filteredItems[index];
 		if (!item) return;
 
-		// Add the "U:", "M:" or "C:" prefix to the id
-		// and also append the label after a pipe |
-		// so that the mention renderer can show the label
-		if (item)
-			command({
-				id: `${item.type === 'user' ? 'U' : item.type === 'model' ? 'M' : item.type === 'app' ? 'A' : 'C'}:${item.id}|${item.label}`,
-				label: item.label
-			});
+		command(mentionAttributes(item));
 	};
 
 	const onKeyDown = (event: KeyboardEvent) => {
@@ -138,16 +131,14 @@
 
 	onMount(() => {
 		if ($config?.features?.enable_apps && channelId && triggerChar === '@') {
-			Promise.all([getApps(localStorage.token), getChannelAppsById(localStorage.token, channelId)])
-				.then(([apps, joined]) => {
-					_apps = apps
-						.filter((a) => a.is_active && joined.some((member) => member.id === a.id))
-						.map((a) => ({
-							type: 'app',
-							id: a.id,
-							label: a.name,
-							profile_image_url: a.data.manifest.profile_image_url
-						}));
+			getChannelMentionApps(localStorage.token, channelId)
+				.then((apps) => {
+					_apps = apps.map((a) => ({
+						type: 'app',
+						id: a.id,
+						label: a.name,
+						profile_image_url: a.data.manifest.profile_image_url
+					}));
 				})
 				.catch(() => {});
 		}

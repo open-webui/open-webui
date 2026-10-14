@@ -134,37 +134,45 @@
 
 <LinkPreview.Root openDelay={0} closeDelay={0} bind:open={openPreview}>
 	<LinkPreview.Trigger class=" cursor-pointer no-underline! font-normal! ">
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		{#snippet child({ props })}
+			<span {...props}>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
 
-		<span
-			class="mention"
-			on:click={async () => {
-				if (triggerChar === '@') {
-					if (idType === 'U') {
-						// Open user profile
-						console.log('Clicked user mention', id);
-					} else if (idType === 'M') {
-						console.log('Clicked model mention', id);
-						await goto(`/?model=${id}`);
-					}
-				} else if (triggerChar === '#') {
-					if (idType === 'C') {
-						// Open channel
-						if ($channels.find((c) => c.id === id)) {
-							await goto(`/channels/${id}`);
+				<span
+					class="mention"
+					data-type="mention"
+					data-id={`${token.id.split('|')[0]}|${label}`}
+					data-label={label}
+					data-mention-suggestion-char={triggerChar}
+					on:click={async () => {
+						if (triggerChar === '@') {
+							if (idType === 'U') {
+								// Open user profile
+								console.log('Clicked user mention', id);
+							} else if (idType === 'M') {
+								console.log('Clicked model mention', id);
+								await goto(`/?model=${id}`);
+							}
+						} else if (triggerChar === '#') {
+							if (idType === 'C') {
+								// Open channel
+								if ($channels.find((c) => c.id === id)) {
+									await goto(`/channels/${id}`);
+								}
+							} else if (idType === 'T') {
+								// Open thread
+							}
+						} else {
+							// Unknown trigger char, just log
+							console.log('Clicked mention', id);
 						}
-					} else if (idType === 'T') {
-						// Open thread
-					}
-				} else {
-					// Unknown trigger char, just log
-					console.log('Clicked mention', id);
-				}
-			}}
-		>
-			{triggerChar}{label}
-		</span>
+					}}
+				>
+					{triggerChar}{label}
+				</span>
+			</span>
+		{/snippet}
 	</LinkPreview.Trigger>
 
 	{#if triggerChar === '@' && idType === 'U'}

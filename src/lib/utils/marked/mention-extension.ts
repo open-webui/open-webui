@@ -37,7 +37,8 @@ function mentionRenderer(token: any, options: MentionOptions = {}) {
 	const attrs = Object.entries({
 		class: cls,
 		'data-type': 'mention',
-		'data-id': token.id,
+		'data-id': `${token.id}|${token.label}`,
+		'data-label': token.label,
 		'data-mention-suggestion-char': trigger,
 		...extra
 	})

@@ -1,5 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import type { App } from '$lib/apis/apps';
+import { getApps, type App } from '$lib/apis/apps';
 
 type ChannelForm = {
 	type?: string;
@@ -968,6 +968,11 @@ export const getChannelAppsById = async (
 	}
 
 	return res;
+};
+
+export const getChannelMentionApps = async (token: string, channelId: string): Promise<App[]> => {
+	const [apps, joined] = await Promise.all([getApps(token), getChannelAppsById(token, channelId)]);
+	return apps.filter((app) => app.is_active && joined.some((member) => member.id === app.id));
 };
 
 export const inviteAppToChannel = async (

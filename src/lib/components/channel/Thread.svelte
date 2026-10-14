@@ -222,7 +222,7 @@
 						id={threadId}
 						{channel}
 						{top}
-						{messages}
+						bind:messages
 						{replyToMessage}
 						thread={true}
 						{onPin}
@@ -258,6 +258,7 @@
 
 		<div class=" pb-3 px-3 w-full">
 			<MessageInput
+				{messages}
 				bind:replyToMessage
 				bind:chatInputElement
 				id={threadId}

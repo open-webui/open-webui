@@ -14,7 +14,7 @@
 	dayjs.extend(isYesterday);
 	dayjs.extend(localizedFormat);
 
-	import { getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -286,10 +286,18 @@
 							{#if onEdit}
 								<Tooltip content={$i18n.t('Edit')}>
 									<button
+										id="edit-message-{renderedMessageId}"
 										class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-										on:click={() => {
+										on:click={async () => {
 											edit = true;
 											editedContent = message.content;
+											await tick();
+											const textarea = document
+												.getElementById(`message-${renderedMessageId}`)
+												?.querySelector('textarea');
+											textarea?.focus();
+											textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
+											textarea?.scrollIntoView({ block: 'center' });
 										}}
 									>
 										<Pencil />
@@ -543,7 +551,7 @@
 					{#if edit}
 						<div class="py-2">
 							<Textarea
-								className=" bg-transparent outline-hidden w-full resize-none"
+								className=" bg-transparent outline-hidden w-full resize-none text-sm leading-[1.375rem]"
 								bind:value={editedContent}
 								onKeydown={(e) => {
 									if (e.key === 'Escape') {
