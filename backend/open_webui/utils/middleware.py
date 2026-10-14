@@ -1000,7 +1000,7 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
                 source_ids[source_id] = len(source_ids) + 1
             src_name = source.get('source', {}).get('name')
             src_type = source.get('source', {}).get('type')
-            src_rid = source.get('source', {}).get('id')
+            src_rid = source.get('source', {}).get('id') if src_type != 'text' else None
             body = doc if include_content else ''
             extra_attrs = ''
             for key, value in filter_source_metadata(meta).items():
