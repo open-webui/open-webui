@@ -303,11 +303,7 @@
 						</div>
 						<div class="[&_.markdown-prose]:text-sm! [&_.markdown-prose]:leading-[1.375rem]!">
 							{#key event.reply}
-								<AppChannelReply
-									appId={event.app_id}
-									channelId={channel.id}
-									reply={event.reply}
-								/>
+								<AppChannelReply appId={event.app_id} channelId={channel.id} reply={event.reply} />
 							{/key}
 						</div>
 						<div class="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">

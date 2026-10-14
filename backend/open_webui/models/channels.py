@@ -610,7 +610,9 @@ class ChannelTable:
         self, channel_id: str, db: Optional[AsyncSession] = None
     ) -> list[ChannelMemberModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChannelMember).filter(ChannelMember.channel_id == channel_id, ChannelMember.user_id.is_not(None)))
+            result = await db.execute(
+                select(ChannelMember).filter(ChannelMember.channel_id == channel_id, ChannelMember.user_id.is_not(None))
+            )
             memberships = result.scalars().all()
             return [ChannelMemberModel.model_validate(membership) for membership in memberships]
 

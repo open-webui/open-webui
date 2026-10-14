@@ -485,7 +485,9 @@ async def load_skill_from_url(url: str) -> list[dict]:
                         raise ValueError('Could not download the skill. Check that the URL is accessible.')
                     content_type = response.content_type
                     if content_type == 'text/html':
-                        raise ValueError('The URL returned a web page. Use a raw skill file or a ZIP/.skill download link.')
+                        raise ValueError(
+                            'The URL returned a web page. Use a raw skill file or a ZIP/.skill download link.'
+                        )
                     data = bytearray()
                     async for chunk in response.content.iter_chunked(64 * 1024):
                         data.extend(chunk)

@@ -305,6 +305,7 @@ class MessageTable:
         """Resolve user info from message, handling webhook messages."""
         if message.app_id:
             from open_webui.models.apps import App
+
             app = await db.get(App, message.app_id)
             return {
                 'id': message.app_id,
