@@ -219,6 +219,11 @@ export async function createAvatarRenderer(
 		gestureElapsed = 0;
 	let enabled = true;
 	let cameraDistance = 0;
+	let yaw = 0,
+		pitch = 0,
+		spin = 0,
+		zoom = 1;
+	const pan = new THREE.Vector2();
 	const switchClip = (clip: THREE.AnimationClip, once: boolean) => {
 		if (outgoing) {
 			outgoing.stop();
@@ -282,6 +287,30 @@ export async function createAvatarRenderer(
 			return 'started' as const;
 		},
 		cancelGesture,
+		rotateView(dx: number, dy: number) {
+			const scale = (2 * Math.PI) / Math.max(height, 1);
+			yaw -= dx * scale;
+			pitch = THREE.MathUtils.clamp(pitch + dy * scale, -1.3, 1.3);
+			spin = 0;
+		},
+		spinView(velocity: number) {
+			spin = (-velocity * 2 * Math.PI) / Math.max(height, 1);
+		},
+		panView(dx: number, dy: number) {
+			const scale =
+				(2 * cameraDistance * zoom * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) /
+				Math.max(height, 1);
+			pan.x -= dx * scale;
+			pan.y += dy * scale;
+		},
+		zoomView(scale: number) {
+			zoom = THREE.MathUtils.clamp(zoom * scale, 0.3, 3);
+		},
+		resetView() {
+			yaw = pitch = spin = 0;
+			zoom = 1;
+			pan.set(0, 0);
+		},
 		render(delta: number, config: VoiceAvatarConfig, input: AvatarSignals, reducedMotion: boolean) {
 			const dt = Math.min(delta, 0.05);
 			elapsed += dt;
@@ -420,8 +449,14 @@ export async function createAvatarRenderer(
 				(Math.max(fitHeight, fitWidth / camera.aspect) * 1.2) / (2 * Math.tan(Math.PI / 12));
 			// Widen before a limb reaches the edge; never zoom in/out on each gesture.
 			cameraDistance = Math.max(distance, cameraDistance);
-			camera.position.set(center.x, center.y, center.z + cameraDistance);
+			spin = reducedMotion || Math.abs(spin) < 0.01 ? 0 : spin * Math.exp(-dt * 3);
+			yaw += spin * dt;
+			camera.position
+				.setFromSphericalCoords(cameraDistance * zoom, Math.PI / 2 - pitch, yaw)
+				.add(center);
 			camera.lookAt(center);
+			camera.translateX(pan.x);
+			camera.translateY(pan.y);
 			renderer.render(scene, camera);
 		},
 		dispose() {

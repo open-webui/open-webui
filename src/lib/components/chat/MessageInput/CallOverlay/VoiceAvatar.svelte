@@ -35,6 +35,52 @@
 	}
 	const dispatch = createEventDispatcher();
 	let canvas: HTMLCanvasElement;
+	const pointers = new Map<number, { x: number; y: number }>();
+	let moved = 0,
+		velocity = 0,
+		lastMove = 0,
+		lastTap = 0;
+	const pointerDown = (event: PointerEvent) => {
+		if (!renderer) return;
+		canvas.setPointerCapture(event.pointerId);
+		pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+		if (pointers.size === 1) moved = velocity = 0;
+	};
+	const pointerMove = (event: PointerEvent) => {
+		const point = pointers.get(event.pointerId);
+		if (!point || !renderer) return;
+		const dx = event.clientX - point.x,
+			dy = event.clientY - point.y;
+		const other = [...pointers.values()].find((p) => p !== point);
+		const before = other ? Math.hypot(point.x - other.x, point.y - other.y) : 0;
+		point.x = event.clientX;
+		point.y = event.clientY;
+		moved += Math.hypot(dx, dy);
+		if (other) {
+			renderer.panView(dx / 2, dy / 2);
+			renderer.zoomView(before / Math.max(1, Math.hypot(point.x - other.x, point.y - other.y)));
+			velocity = 0;
+		} else if (event.buttons & 6 || event.shiftKey) {
+			renderer.panView(dx, dy);
+			velocity = 0;
+		} else {
+			renderer.rotateView(dx, dy);
+			velocity = velocity * 0.5 + (dx / Math.max(1, event.timeStamp - lastMove)) * 1000 * 0.5;
+		}
+		lastMove = event.timeStamp;
+	};
+	const pointerUp = (event: PointerEvent) => {
+		if (!pointers.delete(event.pointerId) || !renderer || pointers.size) return;
+		if (moved < 5) {
+			if (event.timeStamp - lastTap < 300) renderer.resetView();
+			lastTap = event.timeStamp;
+		} else if (velocity && event.timeStamp - lastMove < 50) renderer.spinView(velocity);
+	};
+	const wheel = (event: WheelEvent) => {
+		if (!renderer) return;
+		event.preventDefault();
+		renderer.zoomView(Math.exp(event.deltaY * (event.deltaMode ? 0.05 : 0.001)));
+	};
 
 	// The parent keys this component by file, keeping settings changes inexpensive.
 	onMount(() => {
@@ -162,13 +208,30 @@
 	});
 </script>
 
-<canvas bind:this={canvas} aria-hidden="true" class="avatar-canvas"></canvas>
+<canvas
+	bind:this={canvas}
+	aria-hidden="true"
+	class="avatar-canvas"
+	on:pointerdown={pointerDown}
+	on:pointermove={pointerMove}
+	on:pointerup={pointerUp}
+	on:pointercancel={pointerUp}
+	on:click={(event) => {
+		if (moved >= 5) event.stopPropagation();
+	}}
+	on:contextmenu|preventDefault
+	on:wheel|nonpassive={wheel}
+></canvas>
 
 <style>
 	.avatar-canvas {
 		display: block;
 		width: 100%;
 		height: 100%;
-		pointer-events: none;
+		cursor: grab;
+		touch-action: none;
+	}
+	.avatar-canvas:active {
+		cursor: grabbing;
 	}
 </style>
