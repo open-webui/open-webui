@@ -30,7 +30,7 @@ from open_webui.routers.images import (
 )
 from open_webui.storage.provider import Storage
 
-BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)
+BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/[\w.+-]+;base64,', re.IGNORECASE)
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r'!\[(.*?)\]\((.+?)\)', re.IGNORECASE)
 FILE_CONTENT_URL_PATTERN = re.compile(r'^/api/v1/files/([^/?#]+)/content(?:[?#]|$)')
 

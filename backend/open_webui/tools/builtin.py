@@ -752,7 +752,10 @@ async def execute_code(
         # Get actual user object for image upload (upload_image requires user.id attribute)
         if __user__ and __user__.get('id'):
             from open_webui.models.users import Users
-            from open_webui.utils.files import get_image_url_from_base64
+            from open_webui.utils.files import (
+                BASE64_IMAGE_URL_PREFIX,
+                get_image_url_from_base64,
+            )
 
             user = await Users.get_user_by_id(__user__['id'])
 
@@ -760,7 +763,7 @@ async def execute_code(
             if stdout and isinstance(stdout, str):
                 stdout_lines = stdout.split('\n')
                 for idx, line in enumerate(stdout_lines):
-                    if 'data:image/png;base64' in line:
+                    if BASE64_IMAGE_URL_PREFIX.match(line):
                         image_url = await get_image_url_from_base64(
                             __request__,
                             line,
@@ -775,7 +778,7 @@ async def execute_code(
             if result and isinstance(result, str):
                 result_lines = result.split('\n')
                 for idx, line in enumerate(result_lines):
-                    if 'data:image/png;base64' in line:
+                    if BASE64_IMAGE_URL_PREFIX.match(line):
                         image_url = await get_image_url_from_base64(
                             __request__,
                             line,

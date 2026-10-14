@@ -91,6 +91,7 @@ from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.context_compaction import compact_messages_for_request
 from open_webui.utils.files import (
+    BASE64_IMAGE_URL_PREFIX,
     convert_markdown_base64_images,
     get_file_url_from_base64,
     get_image_base64_from_url,
@@ -1807,7 +1808,7 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
         if not url:
             continue
 
-        if re.match(r'data:image/\w+;base64', url):
+        if BASE64_IMAGE_URL_PREFIX.match(url):
             url = await get_image_url_from_base64(request, url, metadata, user)
 
         image_urls.append(url)
@@ -6482,7 +6483,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     if isinstance(stdout, str):
                                         stdoutLines = stdout.split('\n')
                                         for idx, line in enumerate(stdoutLines):
-                                            if re.match(r'data:image/\w+;base64', line):
+                                            if BASE64_IMAGE_URL_PREFIX.match(line):
                                                 image_url = await get_image_url_from_base64(
                                                     request,
                                                     line,
@@ -6499,7 +6500,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     if isinstance(result, str):
                                         resultLines = result.split('\n')
                                         for idx, line in enumerate(resultLines):
-                                            if re.match(r'data:image/\w+;base64', line):
+                                            if BASE64_IMAGE_URL_PREFIX.match(line):
                                                 image_url = await get_image_url_from_base64(
                                                     request,
                                                     line,
