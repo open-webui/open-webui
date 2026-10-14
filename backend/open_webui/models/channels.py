@@ -638,6 +638,30 @@ class ChannelTable:
             await db.commit()
             return True
 
+    async def update_member_mute_status(
+        self, channel_id: str, user_id: str, is_channel_muted: bool, db: Optional[AsyncSession] = None
+    ) -> bool:
+        async with get_async_db_context(db) as db:
+            membership = await db.scalar(select(ChannelMember).filter_by(channel_id=channel_id, user_id=user_id))
+            now = time.time_ns()
+            if membership is None:
+                # Accessible legacy channels may not have a membership yet. Muting is not reading.
+                membership = ChannelMember(
+                    id=str(uuid.uuid4()),
+                    channel_id=channel_id,
+                    user_id=user_id,
+                    status='joined',
+                    is_active=True,
+                    joined_at=now,
+                    last_read_at=None,
+                    created_at=now,
+                )
+                db.add(membership)
+            membership.is_channel_muted = is_channel_muted
+            membership.updated_at = now
+            await db.commit()
+            return membership.is_channel_muted
+
     async def update_member_last_read_at(
         self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> bool:

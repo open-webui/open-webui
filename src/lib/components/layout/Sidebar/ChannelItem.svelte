@@ -10,13 +10,13 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import ChannelModal from './ChannelModal.svelte';
+	import ChannelMenu from '$lib/components/channel/ChannelMenu.svelte';
+	import BellSlash from '$lib/components/icons/BellSlash.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
 	import LockIcon from '$lib/components/icons/Lock.svelte';
-	import SettingsIcon from '$lib/components/icons/Settings.svelte';
 	import UserIcon from './icons/User.svelte';
-	import XMarkIcon from './icons/XMark.svelte';
 
 	export let onUpdate: Function = () => {};
 
@@ -84,7 +84,8 @@
 	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
 		? 'bg-gray-100 dark:bg-gray-900 selected'
-		: ''} {channel?.type === 'dm' ? 'px-1 py-[0.1875rem]' : 'p-1'}  {channel?.unread_count > 0
+		: ''} {channel?.type === 'dm' ? 'px-1 py-[0.1875rem]' : 'p-1'}  {channel?.unread_count > 0 &&
+	!channel?.is_channel_muted
 		? 'font-normal dark:text-white text-black'
 		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
@@ -193,7 +194,17 @@
 					{/if}
 				{/if}
 
-				{#if channel?.unread_count > 0}
+				{#if channel?.is_channel_muted}
+					<span
+						class="shrink-0 text-gray-400 dark:text-gray-500"
+						title={$i18n.t('Muted. Direct @mentions can still notify you.')}
+						aria-label={$i18n.t('Mentions only')}
+					>
+						<BellSlash className="size-3" />
+					</span>
+				{/if}
+
+				{#if channel?.unread_count > 0 && !channel?.is_channel_muted}
 					<div
 						class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
 						title={$i18n.t('Unread')}
@@ -205,44 +216,25 @@
 		</div>
 	</a>
 
-	{#if ['dm'].includes(channel?.type)}
-		<div class="ml-0.5 mr-1 hover-reveal self-center flex shrink-0 items-center dark:text-gray-300">
-			<button
-				type="button"
-				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-				on:click={async (e) => {
-					e.stopImmediatePropagation();
-					e.stopPropagation();
-
-					channels.update((chs) =>
-						chs.filter((ch) => {
-							return ch.id !== channel.id;
-						})
-					);
-
-					await updateChannelMemberActiveStatusById(localStorage.token, channel.id, false).catch(
-						(error) => {
+	<div class="ml-0.5 mr-1 self-center shrink-0">
+		<ChannelMenu
+			{channel}
+			sidebar
+			onEdit={channel.type !== 'dm' && ($user?.role === 'admin' || channel.user_id === $user?.id)
+				? () => {
+						showEditChannelModal = true;
+					}
+				: undefined}
+			onHide={channel.type === 'dm'
+				? async () => {
+						try {
+							await updateChannelMemberActiveStatusById(localStorage.token, channel.id, false);
+							channels.update((items) => items.filter((item) => item.id !== channel.id));
+						} catch (error) {
 							toast.error(`${error}`);
 						}
-					);
-				}}
-			>
-				<XMarkIcon className="size-3.5" />
-			</button>
-		</div>
-	{:else if $user?.role === 'admin' || channel.user_id === $user?.id}
-		<div class="ml-0.5 mr-1 hover-reveal self-center flex shrink-0 items-center dark:text-gray-300">
-			<button
-				type="button"
-				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-				on:click={(e) => {
-					e.stopImmediatePropagation();
-					e.stopPropagation();
-					showEditChannelModal = true;
-				}}
-			>
-				<SettingsIcon className="size-3.5" strokeWidth="1.5" />
-			</button>
-		</div>
-	{/if}
+					}
+				: undefined}
+		/>
+	</div>
 </div>

@@ -230,6 +230,24 @@ export const updateChannelMemberActiveStatusById = async (
 	return res;
 };
 
+export const updateChannelMemberMuteStatusById = async (
+	token: string,
+	channel_id: string,
+	is_channel_muted: boolean
+): Promise<{ is_channel_muted: boolean }> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/members/mute`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ is_channel_muted })
+	});
+	if (!res.ok) throw (await res.json()).detail;
+	return res.json();
+};
+
 type UpdateMembersForm = {
 	user_ids?: string[];
 	group_ids?: string[];

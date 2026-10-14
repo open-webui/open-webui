@@ -179,6 +179,7 @@ async def check_channels_access(request: Request, user: Optional[UserModel] = No
 
 
 class ChannelListItemResponse(ChannelModel):
+    is_channel_muted: bool = False
     user_ids: Optional[list[str]] = None  # 'dm' channels only
     users: Optional[list[UserIdNameStatusResponse]] = None  # 'dm' channels only
 
@@ -229,6 +230,7 @@ async def get_channels(
                 users=users,
                 last_message_at=last_message_at,
                 unread_count=unread_count,
+                is_channel_muted=channel_member.is_channel_muted if channel_member else False,
             )
         )
 
@@ -391,6 +393,7 @@ async def create_new_channel(
 
 
 class ChannelFullResponse(ChannelResponse):
+    is_channel_muted: bool = False
     user_ids: Optional[list[str]] = None  # 'group'/'dm' channels only
     users: Optional[list[UserIdNameStatusResponse]] = None  # 'group'/'dm' channels only
 
@@ -444,6 +447,7 @@ async def get_channel_by_id(
                 'write_access': True,
                 'user_count': len(users),
                 'last_read_at': channel_member.last_read_at if channel_member else None,
+                'is_channel_muted': channel_member.is_channel_muted if channel_member else False,
                 'unread_count': unread_count,
             }
         )
@@ -481,6 +485,7 @@ async def get_channel_by_id(
                 'write_access': write_access or user.role == 'admin',
                 'user_count': user_count,
                 'last_read_at': channel_member.last_read_at if channel_member else None,
+                'is_channel_muted': channel_member.is_channel_muted if channel_member else False,
                 'unread_count': unread_count,
             }
         )
@@ -603,6 +608,37 @@ async def get_channel_members_by_id(
 
 class UpdateActiveMemberForm(BaseModel):
     is_active: bool
+
+
+class UpdateMutedMemberForm(BaseModel):
+    is_channel_muted: bool
+
+
+@router.post('/{id}/members/mute', response_model=UpdateMutedMemberForm)
+async def update_member_mute_status(
+    request: Request,
+    id: str,
+    form_data: UpdateMutedMemberForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await check_channels_access(request, user)
+    channel = await Channels.get_channel_by_id(id, db=db)
+    if not channel:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if channel.type in ['group', 'dm']:
+        if not await Channels.is_user_channel_member(id, user.id, db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+    elif user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    is_channel_muted = await Channels.update_member_mute_status(id, user.id, form_data.is_channel_muted, db=db)
+    await emit_to_users(
+        'events:channel',
+        {'channel_id': id, 'data': {'type': 'channel:mute', 'data': {'is_channel_muted': is_channel_muted}}},
+        [user.id],
+    )
+    return {'is_channel_muted': is_channel_muted}
 
 
 @router.post('/{id}/members/active', response_model=bool)
@@ -1065,11 +1101,15 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
     users = await get_channel_users_with_access(channel, 'read', db=db)
 
     # Batch fetch channel members in 1 query (fixes N+1)
-    member_ids = {m.user_id for m in await Channels.get_members_by_channel_id(channel.id, db=db)}
+    members = {m.user_id: m for m in await Channels.get_members_by_channel_id(channel.id, db=db)}
+    mentioned_user_ids = {m['id'] for m in extract_mentions(message.content) if m['id_type'] == 'U'}
     url = f'{webui_url}/channels/{channel.id}'
 
     for u in users:
-        if (u.id not in active_user_ids) and u.id in member_ids:
+        member = members.get(u.id)
+        if member and member.is_channel_muted and u.id not in mentioned_user_ids:
+            continue
+        if (u.id not in active_user_ids) and member:
             if enable_user_webhooks and u.settings:
                 await publish_event(
                     request,
