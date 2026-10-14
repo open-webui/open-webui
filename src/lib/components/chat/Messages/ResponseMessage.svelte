@@ -315,58 +315,64 @@
 			const voiceId = getVoiceId();
 			console.debug('Prepared message content for TTS', messageContentParts, 'voice:', voiceId);
 
-			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-				if (!$TTSWorker) {
-					await TTSWorker.set(
-						new KokoroWorker({
-							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-						})
-					);
+			const releaseHold = $audioQueue.hold();
 
-					await $TTSWorker.init();
-				}
+			try {
+				if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+					if (!$TTSWorker) {
+						await TTSWorker.set(
+							new KokoroWorker({
+								dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+							})
+						);
 
-				for (const [, sentence] of messageContentParts.entries()) {
-					if (signal.aborted) return;
-
-					const url = await $TTSWorker
-						.generate({ text: sentence, voice: voiceId })
-						.catch((error) => {
-							console.error(error);
-							toast.error(`${error}`);
-							speaking = false;
-							loadingSpeech = false;
-						});
-
-					if (signal.aborted) return;
-
-					if (url && speaking) {
-						$audioQueue.enqueue(url);
-						loadingSpeech = false;
+						await $TTSWorker.init();
 					}
-				}
-			} else {
-				for (const [, sentence] of messageContentParts.entries()) {
-					if (signal.aborted) return;
 
-					const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
-						(error) => {
-							console.error(error);
-							toast.error(`${error}`);
-							speaking = false;
+					for (const [, sentence] of messageContentParts.entries()) {
+						if (signal.aborted) return;
+
+						const url = await $TTSWorker
+							.generate({ text: sentence, voice: voiceId })
+							.catch((error) => {
+								console.error(error);
+								toast.error(`${error}`);
+								speaking = false;
+								loadingSpeech = false;
+							});
+
+						if (signal.aborted) return;
+
+						if (url && speaking) {
+							$audioQueue.enqueue(url);
 							loadingSpeech = false;
 						}
-					);
+					}
+				} else {
+					for (const [, sentence] of messageContentParts.entries()) {
+						if (signal.aborted) return;
 
-					if (signal.aborted) return;
+						const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
+							(error) => {
+								console.error(error);
+								toast.error(`${error}`);
+								speaking = false;
+								loadingSpeech = false;
+							}
+						);
 
-					if (res && speaking) {
-						const blob = await res.blob();
-						const url = URL.createObjectURL(blob);
-						$audioQueue.enqueue(url);
-						loadingSpeech = false;
+						if (signal.aborted) return;
+
+						if (res && speaking) {
+							const blob = await res.blob();
+							const url = URL.createObjectURL(blob);
+							$audioQueue.enqueue(url);
+							loadingSpeech = false;
+						}
 					}
 				}
+			} finally {
+				releaseHold();
 			}
 		}
 	};

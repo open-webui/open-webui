@@ -1186,7 +1186,11 @@ export const extractSentencesForAudio = (text: string) => {
 			const previousText = mergedTexts[lastIndex];
 			const wordCount = previousText.split(/\s+/).length;
 			const charCount = previousText.length;
-			if (wordCount < 4 || charCount < 50) {
+			// Only merge when the current text is also short. Otherwise a
+			// brief opener (e.g. "Right.") swallows the following sentence
+			// into one request and delays playback until it fully
+			// synthesizes.
+			if ((wordCount < 4 || charCount < 50) && currentText.length < 50) {
 				mergedTexts[lastIndex] = previousText + ' ' + currentText;
 			} else {
 				mergedTexts.push(currentText);
