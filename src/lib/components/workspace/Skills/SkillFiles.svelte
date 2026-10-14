@@ -2,6 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { onDestroy, getContext, tick, type Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { copyToClipboard } from '$lib/utils';
 	import { createFocusTrap } from 'focus-trap';
 	import { mobile } from '$lib/stores';
 	import Drawer from '$lib/components/common/Drawer.svelte';
@@ -152,6 +153,12 @@
 			loadedValue = value;
 			dirty = true;
 		}
+	};
+	const copyContent = async () => {
+		if (loading || loadError || !loadedPath || objectUrl) return;
+		if (await copyToClipboard(codeEditor?.getValue() ?? value))
+			toast.success($i18n.t('Copied to clipboard'));
+		else toast.error($i18n.t('Could not copy to clipboard. Please try again.'));
 	};
 	const compareRevision = () => {
 		if (readOnly || loading || loadError || !loadedPath || objectUrl) return;
@@ -611,6 +618,14 @@
 						if (preview) await renderPreview();
 					}}>{preview ? 'Edit' : 'Preview'}</button
 				>{/if}
+			{#if loadedPath && !objectUrl && !loading && !loadError}
+				<button
+					type="button"
+					aria-label={$i18n.t('Copy content')}
+					class="shrink-0 rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={copyContent}>{$i18n.t('Copy')}</button
+				>
+			{/if}
 			<button
 				type="button"
 				class="rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
