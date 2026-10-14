@@ -13,7 +13,7 @@
 	export let apiKey: string;
 	export let chatId: string | null = null;
 	export let paths: [string, string];
-	export let onBack: () => void;
+	export let onClose: () => void;
 
 	const i18n = getContext<Readable<I18n>>('i18n');
 	let original = paths[0];
@@ -121,23 +121,13 @@
 />
 
 <div
-	class="flex h-full min-h-0 flex-col text-[0.75em] font-normal text-gray-600 dark:text-gray-400"
+	class="flex h-full min-h-0 flex-col text-xs font-normal text-gray-600 dark:text-gray-400"
 	aria-label={$i18n.t('Compare')}
 >
-	<div
-		class="m-0 flex shrink-0 items-center gap-1 border-b border-gray-50 px-1 pt-0 pb-1.5 dark:border-gray-850/30"
-	>
-		<div class="flex shrink-0 items-center gap-0.5 px-1">
-			<Tooltip content={$i18n.t('Back')}>
-				<button
-					class="flex h-5 min-w-6 shrink-0 items-center justify-center rounded px-1.5 text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-					on:click|stopPropagation={onBack}
-					aria-label={$i18n.t('Back')}
-					><Icon name="chevron-left" size={11} strokeWidth={1.5} /></button
-				>
-			</Tooltip>
-		</div>
-		<span class="min-w-0 flex-1 truncate font-normal">{$i18n.t('Compare')}</span>
+	<div class="flex shrink-0 flex-wrap items-center gap-3 px-5 pt-4 pb-2">
+		<h2 class="min-w-0 flex-1 font-medium text-gray-900 dark:text-gray-100">
+			{$i18n.t('Compare files')}
+		</h2>
 		<Tooltip content={$i18n.t('Swap')}>
 			<button
 				class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
@@ -210,6 +200,12 @@
 				</DropdownMenu>
 			</div>
 		</Dropdown>
+		<button
+			type="button"
+			class="shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
+			on:click={onClose}
+			aria-label={$i18n.t('Close')}><Icon name="xmark" size={16} /></button
+		>
 	</div>
 	<div class="grid shrink-0 grid-cols-2 border-b border-black/5 dark:border-white/5">
 		{#each [{ label: $i18n.t('Original'), path: original }, { label: $i18n.t('Revised'), path: revised }] as file}
@@ -243,7 +239,15 @@
 				aria-label={$i18n.t('{{count}} removed lines', { count: result.deletions })}
 				>−{result.deletions}</span
 			>
-			<span class="ml-auto text-[0.916667em] text-gray-400">{$i18n.t('Extracted text lines')}</span>
+			<span class="ml-auto text-[11px] text-gray-400">
+				<Tooltip
+					content={[
+						...new Set([...(result.original.notices ?? []), ...(result.revised.notices ?? [])])
+					].join('\n')}
+				>
+					<span tabindex="0">{$i18n.t('Text only')}</span>
+				</Tooltip>
+			</span>
 		</div>
 		{#if result.hunks.length === 0}
 			<p class="p-4" role="status">{$i18n.t('No text differences')}</p>
@@ -334,7 +338,7 @@
 	}
 	.diff-scroll {
 		font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-		font-size: 0.916667em;
+		font-size: 0.75rem;
 		line-height: 1.636364;
 	}
 	.diff-content {

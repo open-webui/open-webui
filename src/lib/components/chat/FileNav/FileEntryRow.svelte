@@ -24,6 +24,9 @@
 	export let terminalKey: string = '';
 
 	export let onOpen: (entry: FileEntry) => void = () => {};
+	export let onSelectForComparison: (() => void) | undefined = undefined;
+	export let onCompareWithSelected: (() => void) | undefined = undefined;
+	export let comparisonPath: string | null = null;
 	export let onDownload: (path: string) => void = () => {};
 	export let onDelete: (path: string, name: string) => void = () => {};
 	export let onMove: (sources: string[], destFolder: string) => void | Promise<void> = () => {};
@@ -388,6 +391,33 @@
 								{entry.type === 'directory' ? $i18n.t('Open Folder') : $i18n.t('Open')}
 							</div>
 						</button>
+					{/if}
+					{#if entry.type === 'file' && onSelectForComparison}
+						<button
+							type="button"
+							class={menuItemClass}
+							on:click|stopPropagation={() => {
+								menuOpen = false;
+								onSelectForComparison?.();
+							}}
+						>
+							<Icon name="page" size={12} /><span>{$i18n.t('Select for Compare')}</span>
+						</button>
+						{#if onCompareWithSelected}
+							<button
+								type="button"
+								class="{menuItemClass} disabled:opacity-40"
+								disabled={comparisonPath === entryPath}
+								on:click|stopPropagation={() => {
+									menuOpen = false;
+									onCompareWithSelected?.();
+								}}
+							>
+								<Icon name="split-horizontal" size={12} /><span
+									>{$i18n.t('Compare with Selected')}</span
+								>
+							</button>
+						{/if}
 					{/if}
 					{#if entry.type === 'directory'}
 						<button

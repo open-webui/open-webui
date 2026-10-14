@@ -53,7 +53,7 @@
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
-	import FileCompare from './FileNav/FileCompare.svelte';
+	import FileComparisonModal from './FileNav/FileComparisonModal.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import Icon from './FileNav/Icon.svelte';
 	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
@@ -73,7 +73,35 @@
 	let isDraggingHandle = false;
 	let containerEl: HTMLElement;
 	let terminalEnabled = true;
-	let comparePaths: [string, string] | null = null;
+	type ComparisonFile = { name: string; path: string; size?: number };
+	let pinnedComparison: ComparisonFile | null = null;
+	let comparison: {
+		files: [ComparisonFile, ComparisonFile];
+		terminal: { url: string; key: string };
+		chatId: string | null;
+		opener: HTMLElement | null;
+	} | null = null;
+	const comparisonFile = (entry: FileEntry & { fullPath: string }): ComparisonFile => ({
+		name: entry.name,
+		path: entry.fullPath,
+		size: entry.size
+	});
+	const openComparison = (files: [ComparisonFile, ComparisonFile]) => {
+		if (!selectedTerminal || files[0].path === files[1].path) return;
+		comparison = {
+			files: files.map((file) => ({ ...file })) as [ComparisonFile, ComparisonFile],
+			terminal: { ...selectedTerminal },
+			chatId,
+			opener: document.activeElement instanceof HTMLElement ? document.activeElement : null
+		};
+	};
+	const closeComparison = async () => {
+		const opener = comparison?.opener;
+		comparison = null;
+		await tick();
+		// Let the modal's focus trap finish releasing before restoring the browser control.
+		setTimeout(() => (opener?.isConnected ? opener : containerEl)?.focus(), 0);
+	};
 
 	const onHandleMouseDown = (e: MouseEvent) => {
 		e.preventDefault();
@@ -395,6 +423,7 @@
 	// Svelte re-runs this block when any of them update.
 	// The `mounted` flag prevents the initial run from racing with onMount.
 	let prevTerminalUrl = '';
+	let prevTerminalId = $selectedTerminalId;
 	let prevChatId = chatId;
 	let mounted = false;
 	$: {
@@ -406,10 +435,17 @@
 		const oldChatId = prevChatId;
 		if (chatChanged) prevChatId = chatId;
 
-		const terminalChanged = terminal && terminal.url !== prevTerminalUrl;
-		if (terminalChanged) prevTerminalUrl = terminal.url;
+		const terminalChanged =
+			terminal && (terminal.url !== prevTerminalUrl || $selectedTerminalId !== prevTerminalId);
+		if (terminalChanged) {
+			prevTerminalUrl = terminal.url;
+			prevTerminalId = $selectedTerminalId;
+		}
 
-		if (chatChanged || terminalChanged || !terminal) comparePaths = null;
+		if (chatChanged || terminalChanged || !terminal) {
+			comparison = null;
+			pinnedComparison = null;
+		}
 		if (chatChanged || terminalChanged || !terminal) previewPort = null;
 
 		if (mounted && terminal) {
@@ -724,7 +760,6 @@
 	) => {
 		const terminal = selectedTerminal;
 		if (!terminal) return;
-		comparePaths = null;
 		const directory = clampToFileRoot(path);
 		if (options.restoreTree) {
 			restoreTreeState(directory);
@@ -1295,7 +1330,9 @@
 	let selectionMode = false;
 
 	$: selectedCount = selectedEntries.size;
-	$: comparisonEntries = visibleEntries.filter((entry) => selectedEntries.has(entry.fullPath));
+	$: comparisonEntries = [...selectedEntries]
+		.map((path) => visibleEntries.find((entry) => entry.fullPath === path))
+		.filter((entry) => entry !== undefined);
 	$: canCompare =
 		selectedCount === 2 &&
 		comparisonEntries.length === 2 &&
@@ -1395,7 +1432,7 @@
 
 	// Escape to clear selection
 	const handleKeydown = (e: KeyboardEvent) => {
-		if (comparePaths) return;
+		if (comparison) return;
 		if (e.key === 'Escape' && selectedCount > 0) {
 			e.preventDefault();
 			clearSelection();
@@ -1406,7 +1443,7 @@
 	const handleWindowClick = (e: MouseEvent) => {
 		if (directoryMenu) directoryMenu = null;
 		if (
-			!comparePaths &&
+			!comparison &&
 			selectedCount > 0 &&
 			containerEl &&
 			!containerEl.contains(e.target as Node)
@@ -1423,7 +1460,7 @@
 		let handledDisplayFile = false;
 
 		const unsubFileNav = showFileNavPath.subscribe(async (request) => {
-			if (!request || !selectedTerminal) return;
+			if (!request || !selectedTerminal || comparison) return;
 			handledDisplayFile = true;
 			showFileNavPath.set(null);
 			let filePath = typeof request === 'string' ? request : request.path;
@@ -1462,6 +1499,7 @@
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
 			invalidateTreeCache(dir);
+			if (comparison) return;
 
 			if (selectedFile) {
 				if (selectedFile === filePath || currentPath.startsWith(dir)) {
@@ -1508,7 +1546,7 @@
 		const onVisibilityChange = () => {
 			if (
 				document.visibilityState === 'visible' &&
-				!comparePaths &&
+				!comparison &&
 				!selectedFile &&
 				selectedTerminal &&
 				!terminalChatContextPending &&
@@ -1557,6 +1595,18 @@
 
 <svelte:window on:keydown={handleKeydown} on:click={handleWindowClick} />
 
+{#if comparison}
+	{#key comparison}
+		<FileComparisonModal
+			files={comparison.files}
+			baseUrl={comparison.terminal.url}
+			apiKey={comparison.terminal.key}
+			chatId={comparison.chatId}
+			onClose={closeComparison}
+		/>
+	{/key}
+{/if}
+
 {#if terminalChatContextHidden}
 	<div class="hidden"></div>
 {:else if terminalChatContextPending}
@@ -1595,6 +1645,7 @@
 		on:drop={(e) => !isSearching && handleDrop(e)}
 		role="region"
 		aria-label={$i18n.t('File browser')}
+		tabindex="-1"
 	>
 		{#if isDragOver && !isSearching}
 			<div
@@ -1607,7 +1658,7 @@
 			</div>
 		{/if}
 
-		{#if previewPort === null && !comparePaths}
+		{#if previewPort === null}
 			<FileNavToolbar
 				breadcrumbs={buildBreadcrumbs(currentPath)}
 				{selectedFile}
@@ -1770,6 +1821,22 @@
 				</Tooltip>
 			</FileNavToolbar>
 
+			{#if pinnedComparison}
+				<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
+					<Tooltip content={pinnedComparison.path}>
+						<span class="block max-w-[16rem] truncate"
+							>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
+						>
+					</Tooltip>
+					<button
+						type="button"
+						class="shrink-0 hover:text-gray-900 dark:hover:text-white"
+						aria-label={$i18n.t('Clear comparison selection')}
+						on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
+					>
+				</div>
+			{/if}
+
 			{#if !selectedFile}
 				<div
 					class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
@@ -1800,7 +1867,10 @@
 					{canCompare}
 					onCompare={() => {
 						if (canCompare)
-							comparePaths = [comparisonEntries[0].fullPath, comparisonEntries[1].fullPath];
+							openComparison([
+								comparisonFile(comparisonEntries[0]),
+								comparisonFile(comparisonEntries[1])
+							]);
 					}}
 					canDelete={selectedEntriesWritable}
 					onDelete={() => {
@@ -1819,24 +1889,16 @@
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
 				closeDirectoryMenu();
-				if (!comparePaths && e.target === e.currentTarget && selectedCount > 0) clearSelection();
+				if (!comparison && e.target === e.currentTarget && selectedCount > 0) clearSelection();
 			}}
 			on:contextmenu={(e) => {
-				if (comparePaths || selectedFile || previewPort !== null || isSearching) return;
+				if (comparison || selectedFile || previewPort !== null || isSearching) return;
 				if ((e.target as HTMLElement)?.closest('[data-file-row]')) return;
 				e.preventDefault();
 				directoryMenu = { x: e.clientX, y: e.clientY };
 			}}
 		>
-			{#if comparePaths && selectedTerminal}
-				<FileCompare
-					paths={comparePaths}
-					baseUrl={selectedTerminal.url}
-					apiKey={selectedTerminal.key}
-					{chatId}
-					onBack={() => (comparePaths = null)}
-				/>
-			{:else if previewPort !== null}
+			{#if previewPort !== null}
 				<PortPreview
 					baseUrl={portPreviewBaseUrl}
 					port={previewPort}
@@ -2092,6 +2154,14 @@
 											depth: entry.depth,
 											rowIndex: entry.rowIndex
 										})}
+									onSelectForComparison={() => (pinnedComparison = comparisonFile(entry))}
+									comparisonPath={pinnedComparison?.path ?? null}
+									onCompareWithSelected={pinnedComparison
+										? () => {
+												if (pinnedComparison)
+													openComparison([pinnedComparison, comparisonFile(entry)]);
+											}
+										: undefined}
 									onDownload={downloadFile}
 									onDelete={requestDelete}
 									onMove={handleMovePaths}

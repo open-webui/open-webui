@@ -77,9 +77,6 @@
 	let swapped = false;
 	let refreshing = false;
 	let editorRevision = 0;
-	$: displayedFiles = swapped
-		? [session?.rightFile, session?.leftFile]
-		: [session?.leftFile, session?.rightFile];
 	const paneFile = (side: string) =>
 		(side === 'a') !== swapped ? session?.leftFile : session?.rightFile;
 	const paneLabel = (side: string) =>
@@ -493,7 +490,7 @@
 				{/if}
 				<button
 					type="button"
-					class="comparison-close rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+					class="comparison-close shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
 					aria-label={$i18n.t('Close')}
 					on:click={requestClose}><XMark className="size-4" /></button
 				>
@@ -504,9 +501,9 @@
 					<div class="min-h-0 min-w-0 flex-1 overflow-x-auto px-4">
 						<div class="flex h-full min-w-[640px] flex-col">
 							<div class="grid shrink-0 grid-cols-2 gap-4 py-2">
-								{#each ['a', 'b'] as side, index}
+								{#each ['a', 'b'] as side}
 									{@const lines = (side === 'a' ? working : proposal).split(/\r\n|\r|\n/).length}
-									{@const file = displayedFiles[index]}
+									{@const file = (side === 'a') !== swapped ? session.leftFile : session.rightFile}
 									<div
 										class="pane-header flex min-w-0 items-center gap-2 rounded-lg bg-gray-50/70 px-3 py-2 text-gray-500 dark:bg-white/[0.03]"
 									>
