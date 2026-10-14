@@ -51,7 +51,10 @@
 						(open) => setProfileOpen(person.id, open)
 					}
 				>
-					{@render avatar(person, `${avatarClass} bg-white ring-1 ring-white dark:bg-gray-900 dark:ring-gray-900`)}
+					{@render avatar(
+						person,
+						`${avatarClass} bg-white ring-1 ring-white dark:bg-gray-900 dark:ring-gray-900`
+					)}
 				</ProfilePreview>
 			</div>
 		{/each}
