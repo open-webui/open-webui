@@ -14,6 +14,7 @@
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import FileCodeEditor from '$lib/components/chat/FileNav/FileCodeEditor.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { lineAlignment, alignChangedLines } from './diffEditorAlignment';
 	import {
 		copyChunk,
 		selectedChunk,
@@ -186,6 +187,7 @@
 		loading = true;
 		const extensions = (side: 'a' | 'b', index: number) => [
 			basicSetup,
+			lineAlignment,
 			keymap.of([indentWithTab, { key: 'Mod-s', run: () => true }]),
 			indentUnit.of('    '),
 			EditorView.lineWrapping,
@@ -196,11 +198,19 @@
 			language[index].of([]),
 			EditorView.updateListener.of((update) => {
 				if (update.docChanged || update.selectionSet) refresh(update, side);
-				if ((update.heightChanged || update.viewportChanged) && !alignmentFrame) {
+				if (
+					(update.geometryChanged ||
+						update.viewportChanged ||
+						update.transactions.some((tr) => tr.effects.length)) &&
+					!alignmentFrame
+				) {
 					// Align after both virtualized editors have measured their visible lines.
 					alignmentFrame = requestAnimationFrame(() => {
 						alignmentFrame = 0;
-						if (!disposed) view?.reconfigure({});
+						if (!disposed && view) {
+							alignChangedLines(view.a, view.b, view.chunks);
+							view.reconfigure({});
+						}
 					});
 				}
 			}),
