@@ -473,6 +473,7 @@
 							<div class="min-w-0">
 								<Dropdown
 									bind:show={showHistory}
+									align="start"
 									onOpenChange={(open) => {
 										if (open) {
 											historyPage = 1;
@@ -497,7 +498,7 @@
 									</button>
 									<div slot="content">
 										<DropdownMenu
-											className="w-56 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto"
+											className="w-72 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto"
 										>
 											<VersionMenuItem
 												entry={currentHistoryEntry?.id === currentVersionId

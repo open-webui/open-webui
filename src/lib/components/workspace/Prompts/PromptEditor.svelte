@@ -515,7 +515,7 @@
 				>
 					<div class="min-w-0 flex-1">
 						{#if edit}
-							<Dropdown bind:show={showHistory}>
+							<Dropdown bind:show={showHistory} align="start">
 								<button
 									type="button"
 									aria-label={$i18n.t('History')}
@@ -529,7 +529,7 @@
 									><ChevronDown className="size-3 shrink-0" />
 								</button>
 								<div slot="content">
-									<DropdownMenu className="w-56 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto">
+									<DropdownMenu className="w-72 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto">
 										<VersionMenuItem
 											entry={history.find((entry) => entry.id === prompt?.version_id) ||
 												(productionEntry?.id === prompt?.version_id ? productionEntry : null)}

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import dayjs, { getDayjsLocale } from '$lib/dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { user } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -8,6 +10,7 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	dayjs.extend(relativeTime);
 	let showActions = false;
 
 	export let entry: {
@@ -54,6 +57,18 @@
 		<Tooltip as="span" className="block min-w-0 flex-1" content={message} allowHTML={false}>
 			<span class="block truncate text-xs">{message}</span>
 		</Tooltip>
+		{#if date}
+			<Tooltip
+				as="span"
+				className="flex shrink-0 items-center"
+				content={date.toLocaleString($i18n.language)}
+				allowHTML={false}
+			>
+				<time datetime={date.toISOString()} class="whitespace-nowrap text-[0.625rem] text-gray-400">
+					{dayjs(date).locale(getDayjsLocale($i18n.language)).fromNow()}
+				</time>
+			</Tooltip>
+		{/if}
 		{#if status && entry}<span class="shrink-0 text-[0.625rem] text-gray-400">{status}</span>{/if}
 		{#if selected}<Check className="size-3.5 shrink-0 text-blue-500" />{/if}
 	</button>
