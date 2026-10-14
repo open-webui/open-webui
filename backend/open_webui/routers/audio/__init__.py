@@ -108,6 +108,7 @@ REALTIME_CONFIG_KEYS = {
     'MODEL': 'audio.realtime.model',
     'VOICE': 'audio.realtime.voice',
     'TRANSCRIPTION_MODEL': 'audio.realtime.transcription_model',
+    'INPUT_PARAMS': 'audio.realtime.input_params',
     'REALTIME_CALL_PROMPT_TEMPLATE': 'audio.realtime.prompt_template',
 }
 
@@ -302,6 +303,7 @@ class RealtimeConfigForm(BaseModel):
     MODEL: str = Field(default='gpt-realtime-2.1-mini', min_length=1, max_length=200)
     VOICE: str = Field(default='marin', min_length=1, max_length=200)
     TRANSCRIPTION_MODEL: str = Field(default='gpt-transcribe', min_length=1, max_length=200)
+    INPUT_PARAMS: Optional[dict] = None
     REALTIME_CALL_PROMPT_TEMPLATE: Optional[str] = None
 
 

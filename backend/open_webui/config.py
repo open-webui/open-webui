@@ -1657,6 +1657,13 @@ AUDIO_REALTIME_OPENAI_API_KEY = os.getenv('AUDIO_REALTIME_OPENAI_API_KEY', '')
 AUDIO_REALTIME_MODEL = os.getenv('AUDIO_REALTIME_MODEL', 'gpt-realtime-2.1-mini')
 AUDIO_REALTIME_VOICE = os.getenv('AUDIO_REALTIME_VOICE', 'marin')
 AUDIO_REALTIME_TRANSCRIPTION_MODEL = os.getenv('AUDIO_REALTIME_TRANSCRIPTION_MODEL', 'gpt-transcribe')
+audio_realtime_input_params = os.getenv('AUDIO_REALTIME_INPUT_PARAMS', '')
+try:
+    audio_realtime_input_params = JSONCodec.loads(audio_realtime_input_params)
+except JSONCodec.JSONDecodeError:
+    audio_realtime_input_params = None
+
+AUDIO_REALTIME_INPUT_PARAMS = audio_realtime_input_params if isinstance(audio_realtime_input_params, dict) else None
 REALTIME_CALL_PROMPT_TEMPLATE = os.getenv('REALTIME_CALL_PROMPT_TEMPLATE')
 
 AUDIO_TTS_SPLIT_ON = os.getenv('AUDIO_TTS_SPLIT_ON', 'punctuation')
@@ -3136,6 +3143,7 @@ DEFAULT_CONFIG = {
     'audio.realtime.model': AUDIO_REALTIME_MODEL,
     'audio.realtime.voice': AUDIO_REALTIME_VOICE,
     'audio.realtime.transcription_model': AUDIO_REALTIME_TRANSCRIPTION_MODEL,
+    'audio.realtime.input_params': AUDIO_REALTIME_INPUT_PARAMS,
     'audio.realtime.prompt_template': REALTIME_CALL_PROMPT_TEMPLATE,
     'audio.tts.engine': AUDIO_TTS_ENGINE,
     'audio.tts.model': AUDIO_TTS_MODEL,

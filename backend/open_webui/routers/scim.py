@@ -20,12 +20,14 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.env import SCIM_AUTH_PROVIDER
 from open_webui.internal.db import get_async_session
+from open_webui.models.auths import Auths
 from open_webui.models.groups import GroupModel, Groups, GroupHierarchyError
 from open_webui.models.users import UserModel, Users
 from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
     get_current_user,
+    get_password_hash,
     get_verified_user,
 )
 from pydantic import BaseModel, ConfigDict, Field
@@ -620,9 +622,6 @@ async def create_user(
             detail=f'User with email {email} already exists',
         )
 
-    # Create user
-    user_id = str(uuid.uuid4())
-
     # Parse name if provided
     name = user_data.displayName
     if user_data.name:
@@ -636,10 +635,10 @@ async def create_user(
     if user_data.photos and len(user_data.photos) > 0:
         profile_image = user_data.photos[0].value
 
-    new_user = await Users.insert_new_user(
-        id=user_id,
-        name=name,
+    new_user = await Auths.insert_new_auth(
         email=email,
+        password=await get_password_hash(str(uuid.uuid4())),
+        name=name,
         profile_image_url=profile_image,
         role='user' if user_data.active else 'pending',
         db=db,
@@ -651,7 +650,7 @@ async def create_user(
             detail='Failed to create user',
         )
 
-    new_user = await Users.update_user_scim_by_id(user_id, get_scim_provider(), user_data.externalId, db=db)
+    new_user = await Users.update_user_scim_by_id(new_user.id, get_scim_provider(), user_data.externalId, db=db)
     if not new_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -871,7 +870,7 @@ async def delete_user(
             detail=f'User {user_id} not found',
         )
 
-    success = await Users.delete_user_by_id(user_id, db=db)
+    success = await Auths.delete_auth_by_id(user_id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

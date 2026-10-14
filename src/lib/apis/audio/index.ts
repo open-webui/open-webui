@@ -36,6 +36,7 @@ export type RealtimeConfig = {
 	MODEL: string;
 	VOICE: string;
 	TRANSCRIPTION_MODEL: string;
+	INPUT_PARAMS: Record<string, unknown> | null;
 	REALTIME_CALL_PROMPT_TEMPLATE: string | null;
 };
 

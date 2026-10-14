@@ -46,8 +46,10 @@
 		MODEL: 'gpt-realtime-2.1-mini',
 		VOICE: 'marin',
 		TRANSCRIPTION_MODEL: 'gpt-transcribe',
+		INPUT_PARAMS: null,
 		REALTIME_CALL_PROMPT_TEMPLATE: ''
 	};
+	let REALTIME_INPUT_PARAMS = '';
 
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
@@ -151,9 +153,23 @@
 
 	const updateConfigHandler = async () => {
 		let openaiParams = {};
+		let realtimeInputParams: Record<string, unknown> | null = null;
 		try {
 			openaiParams = TTS_OPENAI_PARAMS ? JSON.parse(TTS_OPENAI_PARAMS) : {};
 			TTS_OPENAI_PARAMS = JSON.stringify(openaiParams, null, 2);
+			if (REALTIME_INPUT_PARAMS.trim()) {
+				realtimeInputParams = JSON.parse(REALTIME_INPUT_PARAMS);
+				if (
+					!realtimeInputParams ||
+					typeof realtimeInputParams !== 'object' ||
+					Array.isArray(realtimeInputParams)
+				) {
+					throw new Error('Input parameters must be a JSON object');
+				}
+			}
+			REALTIME_INPUT_PARAMS = realtimeInputParams
+				? JSON.stringify(realtimeInputParams, null, 2)
+				: '';
 		} catch {
 			toast.error($i18n.t('Invalid JSON format for Parameters'));
 			return;
@@ -162,6 +178,7 @@
 		const res = await updateAudioConfig(localStorage.token, {
 			realtime: {
 				...realtime,
+				INPUT_PARAMS: realtimeInputParams,
 				REALTIME_CALL_PROMPT_TEMPLATE: (realtime.REALTIME_CALL_PROMPT_TEMPLATE ?? '').trim() || null
 			},
 			tts: {
@@ -240,6 +257,9 @@
 				...res.realtime,
 				REALTIME_CALL_PROMPT_TEMPLATE: res.realtime?.REALTIME_CALL_PROMPT_TEMPLATE ?? ''
 			};
+			REALTIME_INPUT_PARAMS = res.realtime?.INPUT_PARAMS
+				? JSON.stringify(res.realtime.INPUT_PARAMS, null, 2)
+				: '';
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
 			STT_OPENAI_API_REQUEST_FORMAT = res.stt.OPENAI_API_REQUEST_FORMAT || 'multipart';
@@ -363,6 +383,16 @@
 				</div>
 				<AdminSettingField label={$i18n.t('Input Transcription Model')}>
 					<input class={inputClass} bind:value={realtime.TRANSCRIPTION_MODEL} />
+				</AdminSettingField>
+				<AdminSettingField
+					label={$i18n.t('settings.audio.realtime.inputParams')}
+					description={$i18n.t('settings.audio.realtime.inputParamsHelp')}
+				>
+					<Textarea
+						className={textareaClass}
+						bind:value={REALTIME_INPUT_PARAMS}
+						placeholder={$i18n.t('Enter additional parameters in JSON format')}
+					/>
 				</AdminSettingField>
 				<AdminSettingField label={$i18n.t('Prompt Template')}>
 					<Textarea

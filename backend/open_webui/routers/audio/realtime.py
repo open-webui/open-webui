@@ -384,6 +384,7 @@ async def realtime_call(ws: WebSocket):
             'audio.realtime.model',
             'audio.realtime.voice',
             'audio.realtime.transcription_model',
+            'audio.realtime.input_params',
             'audio.realtime.prompt_template',
             'user.permissions',
         )
@@ -458,7 +459,6 @@ async def realtime_call(ws: WebSocket):
                         'audio': {
                             'input': {
                                 'format': {'type': 'audio/pcm', 'rate': 24000},
-                                'noise_reduction': {'type': 'near_field'},
                                 'transcription': {'model': config['audio.realtime.transcription_model']},
                                 # Wait for the finalized transcript before requesting a response. This gives
                                 # every function call an unambiguous input_item_id, even during barge-in.
@@ -468,6 +468,7 @@ async def realtime_call(ws: WebSocket):
                                     'interrupt_response': False,
                                     'create_response': False,
                                 },
+                                **(config.get('audio.realtime.input_params') or {}),
                             },
                             'output': {'format': {'type': 'audio/pcm', 'rate': 24000}, 'voice': voice},
                         },

@@ -3108,6 +3108,8 @@
 	"settings.audio.realtime.entra": "Microsoft Entra ID",
 	"settings.audio.realtime.entraHelp": "Uses DefaultAzureCredential on the backend server, not the signed-in browser user. Configure a managed identity or Azure credentials on the server.",
 	"settings.audio.realtime.openai": "OpenAI / compatible",
+	"settings.audio.realtime.inputParams": "Input Parameters",
+	"settings.audio.realtime.inputParamsHelp": "Additional parameters for realtime audio input in JSON format.",
 	"settings.personal.about.checkForUpdates.label": "Check for updates",
 	"settings.personal.about.sections.community.title": "Community",
 	"settings.personal.about.sections.ollamaVersion.title": "Ollama Version",
