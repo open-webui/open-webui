@@ -65,7 +65,7 @@ export function alignChangedLines(a: EditorView, b: EditorView, chunks: readonly
 		const block = view.lineBlockAt(pos);
 		const text = Array.isArray(block.type)
 			? block.type.find((part) => part.type === BlockType.Text && part.from === pos)
-			: block;
+			: block.type === BlockType.Text ? block : null;
 		return text?.from === pos ? text.top : null;
 	};
 	const align = (posA: number, posB: number) => {
