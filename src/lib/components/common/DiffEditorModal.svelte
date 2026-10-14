@@ -93,7 +93,7 @@
 	};
 	const apply = () => {
 		try {
-			onApply(working);
+			onApply(proposal);
 			close();
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : String(cause);
@@ -527,7 +527,7 @@
 			<footer class="flex shrink-0 flex-wrap items-center gap-2 px-5 py-3">
 				<p class="mr-auto text-gray-500">
 					{applyDescription ??
-						$i18n.t('Apply uses the left working copy. Save your draft afterward.')}
+						$i18n.t('Apply uses the proposed revision on the right. Save your draft afterward.')}
 				</p>
 				<button type="button" class="secondary" on:click={requestClose}>{$i18n.t('Cancel')}</button>
 				<button type="button" class="primary" disabled={loading} on:click={apply}

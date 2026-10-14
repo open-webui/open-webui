@@ -1699,7 +1699,7 @@
 		title={$i18n.t('Compare text')}
 		initialContent={comparisonTarget?.content ?? ''}
 		applyLabel={$i18n.t('Use in prompt')}
-		applyDescription={$i18n.t('Uses the left working copy as your prompt.')}
+		applyDescription={$i18n.t('Uses the proposed revision as your prompt.')}
 		discardMessage={$i18n.t(
 			'Your comparison changes will be discarded. Your prompt will stay unchanged.'
 		)}
