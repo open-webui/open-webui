@@ -323,6 +323,11 @@ export const getSharedFolders = async (token: string) => {
 	return res;
 };
 
+export type ChatParticipant = {
+	id: string;
+	name: string | null;
+};
+
 export const getSharedFolderChats = async (
 	token: string,
 	folderId: string,

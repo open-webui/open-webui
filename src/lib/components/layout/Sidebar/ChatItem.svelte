@@ -16,7 +16,7 @@
 
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import type { ChatParticipant } from '$lib/apis/folders';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
@@ -50,7 +50,7 @@
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChatHoverPreview from './ChatHoverPreview.svelte';
-	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
+	import ChatParticipants from '$lib/components/common/ChatParticipants.svelte';
 	import ChatIcon from './icons/Chat.svelte';
 	import MoreHorizontalIcon from './icons/MoreHorizontal.svelte';
 	import SparklesIcon from './icons/Sparkles.svelte';
@@ -79,6 +79,7 @@
 
 	export let ownerName: string | null = null;
 	export let ownerUserId: string | null = null;
+	export let participants: ChatParticipant[] = [];
 	export let onReadStateChange: (data: Record<string, unknown>) => void = () => {};
 
 	export let onDragEnd = () => {};
@@ -108,9 +109,10 @@
 	let focusWithin = false;
 	let menuOpen = false;
 	let openPreview = false;
-	let openProfilePreview = false;
+	let activeProfileId: string | null = null;
+	let overflowOpen = false;
 
-	$: if (openProfilePreview) openPreview = false;
+	$: if (activeProfileId || overflowOpen) openPreview = false;
 
 	const closeHoverPreview = () => {
 		if (openPreview) {
@@ -636,23 +638,15 @@
 		</div>
 	{:else}
 		<div id="sidebar-chat-item" class={chatItemClass}>
-			{#if ownerUserId}
+			{#if ownerUserId || participants.length > 1}
 				<div class="flex items-center self-center shrink-0 mr-2">
-					<ProfilePreview
-						user={{ id: ownerUserId, name: ownerName }}
-						bind:openPreview={openProfilePreview}
-					>
-						<img
-							src="{WEBUI_API_BASE_URL}/users/{ownerUserId}/profile/image"
-							alt=""
-							class="size-3.5 rounded-full shrink-0 object-cover"
-							on:error={(e) => {
-								if (!e.currentTarget.src.endsWith('/static/favicon.png')) {
-									e.currentTarget.src = `${WEBUI_BASE_URL}/static/favicon.png`;
-								}
-							}}
-						/>
-					</ProfilePreview>
+					<ChatParticipants
+						{participants}
+						owner={ownerUserId ? { id: ownerUserId, name: ownerName } : null}
+						avatarClass="size-3.5"
+						bind:activeProfileId
+						bind:overflowOpen
+					/>
 				</div>
 			{/if}
 			{#if $mobile}
@@ -672,7 +666,10 @@
 					disabled={confirmEdit || dragged || !($settings?.chatHoverPreview ?? true)}
 					bind:open={openPreview}
 					onOpenChange={(open) => {
-						if (open) openProfilePreview = false;
+						if (open) {
+							activeProfileId = null;
+							overflowOpen = false;
+						}
 					}}
 				>
 					<LinkPreview.Trigger

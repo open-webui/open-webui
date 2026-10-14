@@ -996,6 +996,7 @@
 							lastReadAt={chat.last_read_at}
 							active={chat.active ?? false}
 							ownerName={chat.owner_name ?? null}
+							participants={chat.participants ?? []}
 							ownerUserId={folders[folderId]?.showOwnerInfo ||
 							folders[folderId]?.shared ||
 							chat.user_id !== $user?.id
