@@ -22,6 +22,13 @@ log = logging.getLogger(__name__)
 
 BASE64_DATA_URI_RE = re.compile(r'data:[\w/+.;=%-]*;base64,[A-Za-z0-9+/=]*')
 
+# The chat UI keeps rendering the original stored messages, so the summary is the
+# model's only copy of assistant-authored structure; detect it so it can be flagged.
+STRUCTURED_CONTENT_RE = re.compile(
+    r'(^[ \t]*(?:[-*+][ \t]+(?:\[[ xX]\][ \t]+)?|\d+[.)][ \t]+))|(^[ \t]*```)|(^[ \t]*\|.*\|)',
+    re.MULTILINE,
+)
+
 DEFAULT_CONTEXT_COMPACTION_PROMPT = """### Task:
 Summarize the conversation history that will be compacted out of the active chat context.
 
@@ -29,6 +36,8 @@ Summarize the conversation history that will be compacted out of the active chat
 - Preserve key decisions, user preferences, and constraints.
 - Preserve files, artifacts, tool results, and code changes that matter going forward.
 - Preserve the current task state, unresolved questions, and next steps.
+- Preserve structured content the assistant produced (task lists, checklists, tables,
+  fenced code blocks) verbatim: keep every item and its wording exactly.
 - Be factual and specific. Do not invent details.
 - Keep the summary concise, but complete enough for the assistant to continue without the removed messages.
 
@@ -348,6 +357,21 @@ def _find_compaction_boundary(messages: list[dict], retention_percentage: int = 
     return next((idx for idx in reversed(boundaries) if idx <= target), 0)
 
 
+def _flatten_message_for_summary(message: dict) -> dict:
+    content = get_content_from_message(message)
+    # The text-only prompt formatter otherwise omits tool names and arguments.
+    if message.get('tool_calls'):
+        return {
+            **message,
+            'content': (f'{content or ""}\n[TOOL CALLS] {JSONCodec.dumps(message["tool_calls"])}'),
+        }
+    # The stored message stays visible in the UI, but this summary is the model's
+    # only copy of the structure it authored — flag it so it is kept verbatim.
+    if message.get('role') == 'assistant' and content and STRUCTURED_CONTENT_RE.search(content):
+        return {**message, 'content': f'{content}\n[STRUCTURED CONTENT — PRESERVE VERBATIM]'}
+    return message
+
+
 async def _generate_summary(
     request,
     user,
@@ -373,15 +397,10 @@ async def _generate_summary(
         raise ValueError('No available model for context compaction')
 
     summary_prompt_template = summary_prompt_template.strip() or DEFAULT_CONTEXT_COMPACTION_PROMPT
-    # The text-only prompt formatter otherwise omits tool names and arguments.
     compacted_messages, recent_messages = list(compacted_messages), list(recent_messages)
     for messages in (compacted_messages, recent_messages):
         for idx, message in enumerate(messages):
-            if message.get('tool_calls'):
-                messages[idx] = {
-                    **message,
-                    'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(message["tool_calls"])}',
-                }
+            messages[idx] = _flatten_message_for_summary(message)
     all_messages = [*compacted_messages, *recent_messages]
     prompt = replace_prompt_variable(summary_prompt_template, get_last_user_message(all_messages) or '')
     prompt = replace_messages_variable(prompt, all_messages)
