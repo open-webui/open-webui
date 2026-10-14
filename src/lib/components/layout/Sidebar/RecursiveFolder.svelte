@@ -1,3 +1,7 @@
+<script context="module">
+	let closeActiveHoverPreview = null;
+</script>
+
 <script>
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
@@ -90,6 +94,17 @@
 		showShareModal
 	) {
 		openPreview = false;
+	}
+
+	const closeHoverPreview = () => {
+		if (openPreview) {
+			openPreview = false;
+		}
+	};
+
+	$: if (openPreview && closeActiveHoverPreview !== closeHoverPreview) {
+		closeActiveHoverPreview?.();
+		closeActiveHoverPreview = closeHoverPreview;
 	}
 
 	let name = '';
@@ -444,6 +459,10 @@
 
 	onDestroy(() => {
 		delete folderRegistry[folderId];
+
+		if (closeActiveHoverPreview === closeHoverPreview) {
+			closeActiveHoverPreview = null;
+		}
 
 		if (folderElement) {
 			folderElement.removeEventListener('dragover', onDragOver);
@@ -800,7 +819,9 @@
 					{/if}
 				</button>
 
-				<div class="translate-y-[0.5px] flex min-w-0 flex-1 items-center gap-1.5 pr-6 text-start">
+				<div
+					class="translate-y-[0.5px] flex min-w-0 flex-1 self-stretch items-center gap-1.5 pr-6 text-start"
+				>
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
@@ -836,7 +857,7 @@
 							<LinkPreview.Trigger
 								href={`/folders/${folderId}`}
 								draggable="false"
-								class="flex min-w-0 flex-1 items-center gap-1.5"
+								class="flex min-w-0 flex-1 self-stretch -my-1 items-center gap-1.5"
 								ondblclick={(e) => {
 									if (!isWritable || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 									if (clickTimer) {
