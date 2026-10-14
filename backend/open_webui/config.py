@@ -1650,6 +1650,8 @@ AUDIO_TTS_VOICE = os.getenv('AUDIO_TTS_VOICE', 'alloy')
 REALTIME_TTS_PROMPT_TEMPLATE = os.getenv('REALTIME_TTS_PROMPT_TEMPLATE')
 
 AUDIO_REALTIME_ENABLED = os.getenv('AUDIO_REALTIME_ENABLED', 'False').lower() == 'true'
+AUDIO_REALTIME_PROVIDER = os.getenv('AUDIO_REALTIME_PROVIDER', 'openai')
+AUDIO_REALTIME_AUTH_TYPE = os.getenv('AUDIO_REALTIME_AUTH_TYPE', 'api_key')
 AUDIO_REALTIME_OPENAI_API_BASE_URL = os.getenv('AUDIO_REALTIME_OPENAI_API_BASE_URL', 'https://api.openai.com/v1')
 AUDIO_REALTIME_OPENAI_API_KEY = os.getenv('AUDIO_REALTIME_OPENAI_API_KEY', '')
 AUDIO_REALTIME_MODEL = os.getenv('AUDIO_REALTIME_MODEL', 'gpt-realtime-2.1-mini')
@@ -3127,6 +3129,8 @@ DEFAULT_CONFIG = {
     'audio.tts.openai.params': AUDIO_TTS_OPENAI_PARAMS,
     'audio.tts.api_key': AUDIO_TTS_API_KEY,
     'audio.realtime.enabled': AUDIO_REALTIME_ENABLED,
+    'audio.realtime.provider': AUDIO_REALTIME_PROVIDER,
+    'audio.realtime.auth_type': AUDIO_REALTIME_AUTH_TYPE,
     'audio.realtime.openai.api_base_url': AUDIO_REALTIME_OPENAI_API_BASE_URL,
     'audio.realtime.openai.api_key': AUDIO_REALTIME_OPENAI_API_KEY,
     'audio.realtime.model': AUDIO_REALTIME_MODEL,

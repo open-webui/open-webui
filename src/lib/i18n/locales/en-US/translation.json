@@ -3908,5 +3908,12 @@
 	"Public key": "",
 	"Enter the Ed25519 public key provided by the app.": "",
 	"Edit details manually": "",
-	"Enter details manually": ""
+	"Enter details manually": "",
+	"settings.audio.realtime.openai": "OpenAI / compatible",
+	"settings.audio.realtime.entra": "Microsoft Entra ID",
+	"settings.audio.realtime.azureUrl": "Azure OpenAI API Base URL",
+	"settings.audio.realtime.azureUrlHelp": "Use the full API base URL, for example https://<resource>.openai.azure.com/openai/v1.",
+	"settings.audio.realtime.entraHelp": "Uses DefaultAzureCredential on the backend server, not the signed-in browser user. Configure a managed identity or Azure credentials on the server.",
+	"settings.audio.realtime.deployment": "Realtime Deployment Name",
+	"settings.audio.realtime.deploymentHelp": "Enter your Azure deployment name, which can differ from the model name. Choose a voice and transcription model supported by that deployment."
 }

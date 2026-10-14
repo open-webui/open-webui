@@ -15,6 +15,7 @@ from open_webui.models.config import Config
 from open_webui.models.models import Models, ModelVoice
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
+from open_webui.utils.headers import get_microsoft_entra_id_access_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import check_model_access, get_all_models
 from open_webui.utils.session_pool import get_session
@@ -300,6 +301,55 @@ class CallProtocol:
         raise ValueError('Unsupported call command')
 
 
+async def _get_realtime_connection(config: dict) -> tuple[str, dict[str, str]]:
+    provider = config.get('audio.realtime.provider', 'openai')
+    auth_type = config.get('audio.realtime.auth_type', 'api_key')
+    if provider not in {'openai', 'azure'} or auth_type not in {'api_key', 'microsoft_entra_id'}:
+        raise ValueError('Unsupported Realtime provider or authentication method')
+    if provider != 'azure' and auth_type == 'microsoft_entra_id':
+        raise ValueError('Microsoft Entra ID requires the Azure OpenAI Realtime provider')
+
+    try:
+        url = urlsplit(config.get('audio.realtime.openai.api_base_url') or '')
+        valid_url = (
+            url.scheme in {'http', 'https'}
+            and url.hostname
+            and not (url.username or url.password or url.query or url.fragment)
+        )
+        url.port  # Validate a supplied port before opening the connection.
+    except ValueError:
+        valid_url = False
+    if not valid_url:
+        raise ValueError('Invalid Realtime provider URL')
+    model = config.get('audio.realtime.model')
+    if not model:
+        raise ValueError('Configure the Realtime model')
+    ws_url = urlunsplit(
+        (
+            'wss' if url.scheme == 'https' else 'ws',
+            url.netloc,
+            url.path.rstrip('/') + '/realtime',
+            urlencode({'model': model}),
+            '',
+        )
+    )
+
+    if auth_type == 'microsoft_entra_id':
+        try:
+            token = await asyncio.to_thread(get_microsoft_entra_id_access_token)
+        except Exception:
+            raise ValueError('Unable to obtain a Microsoft Entra ID token for Realtime calls') from None
+        if not token:
+            raise ValueError('Unable to obtain a Microsoft Entra ID token for Realtime calls')
+        headers = {'Authorization': f'Bearer {token}'}
+    else:
+        key = config.get('audio.realtime.openai.api_key')
+        if not key:
+            raise ValueError('Configure the Realtime API key')
+        headers = {'api-key': key} if provider == 'azure' else {'Authorization': f'Bearer {key}'}
+    return ws_url, headers
+
+
 @router.websocket('/realtime')
 async def realtime_call(ws: WebSocket):
     await ws.accept()
@@ -321,6 +371,8 @@ async def realtime_call(ws: WebSocket):
             raise ValueError('Authentication expired or invalid')
         config = await Config.get_many(
             'audio.realtime.enabled',
+            'audio.realtime.provider',
+            'audio.realtime.auth_type',
             'audio.realtime.openai.api_base_url',
             'audio.realtime.openai.api_key',
             'audio.realtime.model',
@@ -360,38 +412,30 @@ async def realtime_call(ws: WebSocket):
         override = ModelVoice.model_validate((model_info.meta.model_dump().get('voice') if model_info else None) or {})
         voice_model = config.get('audio.realtime.model')
         voice = override.voice or config.get('audio.realtime.voice')
-        key = config.get('audio.realtime.openai.api_key')
-        url = urlsplit(config.get('audio.realtime.openai.api_base_url') or '')
-        if (
-            url.scheme not in {'http', 'https'}
-            or not url.netloc
-            or url.username
-            or url.password
-            or url.query
-            or url.fragment
-        ):
-            raise ValueError('Invalid Realtime provider URL')
-        if not key or not voice_model or not voice or not config.get('audio.realtime.transcription_model'):
-            raise ValueError('Configure the Realtime API key, model, voice, and transcription model')
-        ws_url = urlunsplit(
-            (
-                'wss' if url.scheme == 'https' else 'ws',
-                url.netloc,
-                url.path.rstrip('/') + '/realtime',
-                urlencode({'model': voice_model}),
-                '',
-            )
-        )
-        session = await get_session()
+        if not voice_model or not voice or not config.get('audio.realtime.transcription_model'):
+            raise ValueError('Configure the Realtime model, voice, and transcription model')
         async with asyncio.timeout(30):
             async with asyncio.timeout(15):
-                upstream = await session.ws_connect(
-                    ws_url,
-                    headers={'Authorization': f'Bearer {key}'},
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                    heartbeat=20,
-                    max_msg_size=MAX_EVENT_BYTES,
-                )
+                ws_url, headers = await _get_realtime_connection(config)
+                session = await get_session()
+                try:
+                    upstream = await session.ws_connect(
+                        ws_url,
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        heartbeat=20,
+                        max_msg_size=MAX_EVENT_BYTES,
+                    )
+                except aiohttp.WSServerHandshakeError as exc:
+                    if exc.status in {401, 403}:
+                        raise ValueError(
+                            'Realtime provider authentication rejected. Check the credentials and access.'
+                        ) from None
+                    if exc.status == 404:
+                        raise ValueError(
+                            'Realtime endpoint not found. Check the API base URL and deployment name.'
+                        ) from None
+                    raise
             event = await upstream.receive_json()
             if event.get('type') != 'session.created':
                 raise ValueError('Provider did not create a voice session')
