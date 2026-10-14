@@ -1,4 +1,4 @@
-import { StateEffect, StateField } from '@codemirror/state';
+import { StateEffect, StateField, type Text } from '@codemirror/state';
 import {
 	BlockType,
 	Decoration,
@@ -7,6 +7,21 @@ import {
 	type DecorationSet
 } from '@codemirror/view';
 import type { Chunk } from '@codemirror/merge';
+
+export function pairedLinePosition(a: Text, b: Text, chunks: readonly Chunk[], position: number) {
+	let offset = 0;
+	for (const chunk of chunks) {
+		if (position < chunk.fromA) break;
+		if (position < chunk.toA) {
+			const row = a.lineAt(position).number - a.lineAt(chunk.fromA).number;
+			const start = b.lineAt(Math.min(chunk.fromB, b.length)).number;
+			const end = b.lineAt(Math.min(Math.max(chunk.fromB, chunk.toB - 1), b.length)).number;
+			return b.line(Math.min(start + row, end)).from;
+		}
+		offset = chunk.toB - chunk.toA;
+	}
+	return Math.max(0, Math.min(position + offset, b.length));
+}
 
 class RowSpacer extends WidgetType {
 	constructor(readonly height: number) {
@@ -65,7 +80,9 @@ export function alignChangedLines(a: EditorView, b: EditorView, chunks: readonly
 		const block = view.lineBlockAt(pos);
 		const text = Array.isArray(block.type)
 			? block.type.find((part) => part.type === BlockType.Text && part.from === pos)
-			: block.type === BlockType.Text ? block : null;
+			: block.type === BlockType.Text
+				? block
+				: null;
 		return text?.from === pos ? text.top : null;
 	};
 	const align = (posA: number, posB: number) => {

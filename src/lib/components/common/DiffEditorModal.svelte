@@ -14,7 +14,12 @@
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import FileCodeEditor from '$lib/components/chat/FileNav/FileCodeEditor.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { lineAlignment, alignChangedLines, clearLineAlignment } from './diffEditorAlignment';
+	import {
+		lineAlignment,
+		alignChangedLines,
+		clearLineAlignment,
+		pairedLinePosition
+	} from './diffEditorAlignment';
 	import {
 		copyChunk,
 		selectedChunk,
@@ -222,10 +227,32 @@
 								(alignmentDocuments[0] !== documents[0] ||
 									alignmentDocuments[1] !== documents[1] ||
 									geometry !== alignmentGeometry);
+							const resized = alignmentDocuments && geometry !== alignmentGeometry;
 							alignmentDocuments = documents;
 							alignmentGeometry = geometry;
 							if (!reset || !clearLineAlignment(view.a, view.b))
 								alignChangedLines(view.a, view.b, view.chunks);
+							if (resized) {
+								// Reflow can leave one viewport entirely inside an old EOF spacer.
+								// Measure both panes around the row the reader was looking at.
+								const top = Math.max(0, node.getBoundingClientRect().top - view.a.documentTop);
+								const position = Math.min(
+									view.a.lineBlockAtHeight(top).from,
+									view.a.state.doc.length
+								);
+								const other = pairedLinePosition(
+									view.a.state.doc,
+									view.b.state.doc,
+									view.chunks,
+									position
+								);
+								view.a.dispatch({
+									effects: EditorView.scrollIntoView(position, { y: 'start', yMargin: 0 })
+								});
+								view.b.dispatch({
+									effects: EditorView.scrollIntoView(other, { y: 'start', yMargin: 0 })
+								});
+							}
 							view.reconfigure({});
 						}
 					});
