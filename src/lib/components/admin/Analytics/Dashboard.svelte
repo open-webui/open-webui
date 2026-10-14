@@ -70,8 +70,11 @@
 
 	type TokenUsage = { input_tokens: number; output_tokens: number; total_tokens: number };
 	$: tokenColumns = [
+		// $i18n.t('Input Tokens')
 		{ key: 'input_tokens', label: $i18n.t('Input') },
+		// $i18n.t('Output Tokens')
 		{ key: 'output_tokens', label: $i18n.t('Output') },
+		// $i18n.t('Total Tokens')
 		{ key: 'total_tokens', label: $i18n.t('Total') }
 	] as const;
 	let selectedLeaderboard = 'models';
@@ -404,6 +407,7 @@
 	<div class="min-w-0">
 		{#if selectedLeaderboard === 'models'}
 			<!-- Model Usage Table -->
+			<!-- {$i18n.t('Model Usage')} -->
 			<div>
 				<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 					<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
@@ -482,6 +486,7 @@
 										{/if}
 									</div>
 								</th>
+								<!-- {$i18n.t('Tokens')} -->
 								{#each tokenColumns as column}
 									<th
 										scope="col"
@@ -577,6 +582,7 @@
 			</div>
 		{:else}
 			<!-- User Activity Table -->
+			<!-- {$i18n.t('User Activity')} -->
 			<div>
 				<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 					<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
@@ -619,6 +625,7 @@
 										{/if}
 									</div>
 								</th>
+								<!-- {$i18n.t('Tokens')} -->
 								{#each tokenColumns as column}
 									<th
 										scope="col"
