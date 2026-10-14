@@ -46,6 +46,7 @@
 	let hasStartedSpeaking = false;
 	let mediaRecorder;
 	let audioStream = null;
+	let audioContext: AudioContext | undefined;
 	let audioChunks = [];
 	let destroyed = false;
 	let avatarView: VoiceAvatar | undefined;
@@ -358,6 +359,12 @@
 		}
 	};
 
+	// Chrome on Android caps open audio outputs at 10.
+	const closeAudioContext = () => {
+		void audioContext?.close();
+		audioContext = undefined;
+	};
+
 	const stopAudioStream = async () => {
 		try {
 			if (mediaRecorder) {
@@ -366,6 +373,8 @@
 		} catch (error) {
 			console.log('Error stopping audio stream:', error);
 		}
+
+		closeAudioContext();
 
 		if (!audioStream) return;
 
@@ -387,7 +396,8 @@
 	};
 
 	const analyseAudio = (stream) => {
-		const audioContext = new AudioContext();
+		closeAudioContext();
+		audioContext = new AudioContext();
 		const audioStreamSource = audioContext.createMediaStreamSource(stream);
 
 		const analyser = audioContext.createAnalyser();

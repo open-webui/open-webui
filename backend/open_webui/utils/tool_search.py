@@ -1,7 +1,7 @@
 """
 Tool search: large tool schemas are left out of the provider `tools` array and listed by name in an
 `<available_tools>` system prompt block. `search_tools` returns the full definitions of matching tools,
-which the model then calls by name. The `tools` array never changes during a chat, so prompt caches hold.
+which the model invokes through `call_tool`. Discovery does not change the provider `tools` array.
 """
 
 import fnmatch
@@ -14,6 +14,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message
 
 SEARCH_TOOL_NAME = 'search_tools'
+CALL_TOOL_NAME = 'call_tool'
 MANIFEST_DESCRIPTION_MAX_CHARS = 100
 MAX_SEARCH_COUNT = 20
 DEFAULT_SEARCH_COUNT = 5
@@ -66,15 +67,20 @@ def build_deferred_tools_manifest(tools_dict: dict[str, dict], deferred: list[st
         '<available_tools>\n'
         'The following tools are available but their definitions are not loaded. '
         f'To use one, call `{SEARCH_TOOL_NAME}` with a short keyword query or the exact tool name to get its '
-        'definition, then call the tool by name with the parameters it defines. '
+        f'definition, then use `{CALL_TOOL_NAME}` with `tool_name` set to its exact name and `params` set '
+        'to a JSON-encoded object containing its arguments. Do not call deferred tools directly. '
+        'For example: call_tool(tool_name="get_weather", params=\'{"city":"Dubai"}\'). '
         'Never tell the user a capability is unavailable without searching first.\n'
         f'{entries}</available_tools>'
     )
 
 
-async def apply_tool_search(form_data: dict, metadata: dict, tools_dict: dict[str, dict]) -> set[str]:
-    """Add search_tools and the manifest when tools can be deferred; returns the names to leave out of `tools`."""
-    config = SEARCH_TOOL_NAME not in tools_dict and await get_tool_search_config()
+async def apply_tool_search(
+    form_data: dict, metadata: dict, tools_dict: dict[str, dict], extra_tools: list[dict] | None = None
+) -> set[str]:
+    """Add discovery and dispatch when tools can be deferred; return names to omit from provider tools."""
+    names = set(tools_dict) | {(tool.get('function') or tool).get('name') for tool in extra_tools or []}
+    config = not names.intersection({SEARCH_TOOL_NAME, CALL_TOOL_NAME}) and await get_tool_search_config()
     deferred = select_deferred_tools(tools_dict, config) if config else []
     if not deferred:
         return set()
@@ -100,7 +106,62 @@ async def apply_tool_search(form_data: dict, metadata: dict, tools_dict: dict[st
         'spec': get_builtin_tool_spec(search_tools),
         'type': 'builtin',
     }
+    # Middleware resolves this before approvals and execution, preserving the target tool's behavior.
+    tools_dict[CALL_TOOL_NAME] = {
+        'tool_id': f'builtin:{CALL_TOOL_NAME}',
+        'type': 'builtin',
+        'spec': {
+            'name': CALL_TOOL_NAME,
+            'description': (
+                'Invoke a tool found by search_tools. Use its exact name and encode its arguments as a JSON '
+                'object string matching the returned definition. Use "{}" for a tool without arguments.'
+            ),
+            'strict': True,
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'tool_name': {'type': 'string', 'description': 'Exact tool name returned by search_tools.'},
+                    'params': {'type': 'string', 'description': 'JSON-encoded object of arguments for the tool.'},
+                },
+                'required': ['tool_name', 'params'],
+                'additionalProperties': False,
+            },
+        },
+    }
     return set(deferred)
+
+
+def resolve_tool_call(tool_call: dict, tools: dict[str, dict]) -> str | None:
+    """Unwrap our dispatcher in place, retaining the provider call for history replay. Never execute here."""
+    function = tool_call.get('function', {})
+    if (
+        function.get('name') != CALL_TOOL_NAME
+        or tools.get(CALL_TOOL_NAME, {}).get('tool_id') != f'builtin:{CALL_TOOL_NAME}'
+    ):
+        return None
+
+    try:
+        arguments = JSONCodec.loads(function.get('arguments', ''))
+        if not isinstance(arguments, dict) or set(arguments) != {'tool_name', 'params'}:
+            raise ValueError('call_tool requires tool_name and params.')
+        name = arguments['tool_name']
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError('tool_name must be a non-empty string.')
+        if name in {SEARCH_TOOL_NAME, CALL_TOOL_NAME}:
+            raise ValueError('call_tool cannot invoke search_tools or itself.')
+        if name not in tools:
+            raise ValueError(f'Tool "{name}" is not available. Search for an available tool.')
+        if not isinstance(arguments['params'], str):
+            raise ValueError('params must be a JSON-encoded object string.')
+        params = JSONCodec.loads(arguments['params'])
+        if not isinstance(params, dict):
+            raise ValueError('params must decode to a JSON object.')
+    except (TypeError, ValueError) as error:
+        return f'Error: {error}'
+
+    tool_call['provider_function'] = dict(function)
+    tool_call['function'] = {'name': name, 'arguments': JSONCodec.dumps(params)}
+    return None
 
 
 def strip_deferred_tools_manifest(system_prompt: str | None) -> str | None:

@@ -17,6 +17,7 @@ from open_webui.config import (
     MILVUS_INDEX_TYPE,
     MILVUS_IVF_FLAT_NLIST,
     MILVUS_METRIC_TYPE,
+    MILVUS_SERVER_PEM_PATH,
     MILVUS_TOKEN,
     MILVUS_URI,
 )
@@ -244,9 +245,11 @@ class MilvusClient(VectorDBBase):
     def __init__(self):
         self.collection_prefix = 'open_webui'
         if MILVUS_TOKEN is None:
-            self.client = Client(uri=MILVUS_URI, db_name=MILVUS_DB)
+            self.client = Client(uri=MILVUS_URI, db_name=MILVUS_DB, server_pem_path=MILVUS_SERVER_PEM_PATH)
         else:
-            self.client = Client(uri=MILVUS_URI, db_name=MILVUS_DB, token=MILVUS_TOKEN)
+            self.client = Client(
+                uri=MILVUS_URI, db_name=MILVUS_DB, token=MILVUS_TOKEN, server_pem_path=MILVUS_SERVER_PEM_PATH
+            )
         if ENABLE_DB_MIGRATIONS:
             collections = {
                 collection_name_full.removesuffix(BM25_STAGING_SUFFIX)

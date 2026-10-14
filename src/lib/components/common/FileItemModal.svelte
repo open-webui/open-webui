@@ -261,21 +261,16 @@
 				<div>
 					<div class=" font-normal text-lg dark:text-gray-100">
 						<a
-							href="#"
+							href={item?.type === 'file'
+								? item?.url?.startsWith('http')
+									? item.url
+									: `${WEBUI_API_BASE_URL}/files/${item?.id ?? item?.tempId}/content`
+								: item?.type === 'collection' && item?.id
+									? `/workspace/knowledge/${item.id}`
+									: safeLinkUrl(item?.url)}
+							target="_blank"
+							rel="noreferrer"
 							class="hover:underline line-clamp-1"
-							on:click|preventDefault={() => {
-								if (item.type === 'file' || safeLinkUrl(item.url)) {
-									let fileId = item?.id ?? item?.tempId;
-									window.open(
-										item.type === 'file'
-											? item?.url?.startsWith('http')
-												? item.url
-												: `${WEBUI_API_BASE_URL}/files/${fileId}/content`
-											: item.url,
-										'_blank'
-									);
-								}
-							}}
 						>
 							{item?.name ?? 'File'}
 						</a>

@@ -389,7 +389,7 @@
 	let terminalChatContextPending = false;
 	let terminalChatContextHidden = false;
 	let isPerChatTerminal = false;
-	$: portPreviewBaseUrl =
+	$: previewBaseUrl =
 		selectedTerminal && isPerChatTerminal && chatId
 			? `${selectedTerminal.url}/chats/${encodeURIComponent(chatId)}`
 			: (selectedTerminal?.url ?? '');
@@ -1033,7 +1033,12 @@
 			// Directories end with '/', downloaded as a ZIP archive
 			const isDir = path.endsWith('/');
 			const result = isDir
-				? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
+				? await archiveFromTerminal(
+						terminal.url,
+						terminal.key,
+						[path.replace(/\/$/, '')],
+						chatId ?? undefined
+					)
 				: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
 			if (!result) {
 				toast.error($i18n.t('Download failed'));
@@ -1218,7 +1223,13 @@
 		if (!terminal) return;
 
 		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
-		const result = await uploadToTerminal(terminal.url, terminal.key, currentPath, emptyFile);
+		const result = await uploadToTerminal(
+			terminal.url,
+			terminal.key,
+			currentPath,
+			emptyFile,
+			chatId ?? undefined
+		);
 		toast[result ? 'success' : 'error'](
 			result ? $i18n.t('File created') : $i18n.t('Failed to create file')
 		);
@@ -1387,7 +1398,12 @@
 		const paths = [...selectedEntries];
 		let ok = 0;
 		for (const p of paths) {
-			const result = await deleteEntry(terminal.url, terminal.key, p.replace(/\/$/, ''));
+			const result = await deleteEntry(
+				terminal.url,
+				terminal.key,
+				p.replace(/\/$/, ''),
+				chatId ?? undefined
+			);
 			if (result) ok++;
 		}
 		toast[ok > 0 ? 'success' : 'error'](
@@ -1415,7 +1431,12 @@
 		const toastId = toast.loading($i18n.t('Preparing download...'));
 		try {
 			// Archive everything into a single ZIP
-			const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
+			const result = await archiveFromTerminal(
+				terminal.url,
+				terminal.key,
+				paths,
+				chatId ?? undefined
+			);
 			if (!result) {
 				toast.error($i18n.t('Download failed'));
 				return;
@@ -1907,7 +1928,7 @@
 		>
 			{#if previewPort !== null}
 				<PortPreview
-					baseUrl={portPreviewBaseUrl}
+					baseUrl={previewBaseUrl}
 					port={previewPort}
 					overlay={overlay || isDraggingHandle}
 					onClose={() => {
@@ -1945,7 +1966,7 @@
 						const DOMPurify = (await import('dompurify')).default;
 						fileOfficeHtml = DOMPurify.sanitize(result.html);
 					}}
-					baseUrl={selectedTerminal?.url ?? ''}
+					baseUrl={previewBaseUrl}
 					apiKey={selectedTerminal?.key ?? ''}
 					overlay={overlay || isDraggingHandle}
 					onSave={async (content) => {
@@ -1954,7 +1975,13 @@
 						const fileName = selectedFile.split('/').pop() ?? 'file';
 						const dir = selectedFile.substring(0, selectedFile.lastIndexOf('/') + 1) || '/';
 						const file = new File([content], fileName, { type: 'text/plain' });
-						const result = await uploadToTerminal(terminal.url, terminal.key, dir, file);
+						const result = await uploadToTerminal(
+							terminal.url,
+							terminal.key,
+							dir,
+							file,
+							chatId ?? undefined
+						);
 						toast[result ? 'success' : 'error'](
 							result ? $i18n.t('File saved') : $i18n.t('Failed to save file')
 						);
@@ -2192,7 +2219,7 @@
 				{#key JSON.stringify([chatId, selectedTerminal.url])}
 					<PortList
 						baseUrl={selectedTerminal.url}
-						previewBaseUrl={portPreviewBaseUrl}
+						{previewBaseUrl}
 						apiKey={selectedTerminal.key}
 						{chatId}
 						on:previewPort={(e) => {

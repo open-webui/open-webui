@@ -336,6 +336,18 @@ def get_reasoning_details(payload: dict):
     return payload.get('reasoning_details') or provider_details
 
 
+def get_provider_function(item: dict) -> dict:
+    """Restore the model's call when OWUI displays and executes a resolved target instead."""
+    function = item.get('provider_function')
+    if not isinstance(function, dict):
+        function = item
+    arguments = function.get('arguments', '{}')
+    return {
+        'name': function.get('name', ''),
+        'arguments': arguments if isinstance(arguments, str) else JSONCodec.dumps(arguments),
+    }
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
@@ -502,18 +514,11 @@ def convert_output_to_messages(
                 continue
 
             # Collect tool calls to batch into assistant message
-            arguments = item.get('arguments', '{}')
-            # Ensure arguments is always a JSON string
-            if not isinstance(arguments, str):
-                arguments = JSONCodec.dumps(arguments)
             pending_tool_calls.append(
                 {
                     'id': item.get('call_id', ''),
                     'type': 'function',
-                    'function': {
-                        'name': item.get('name', ''),
-                        'arguments': arguments,
-                    },
+                    'function': get_provider_function(item),
                 }
             )
 

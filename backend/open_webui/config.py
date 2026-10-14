@@ -603,6 +603,7 @@ if VECTOR_DB == 'mariadb-vector':
 MILVUS_URI = os.getenv('MILVUS_URI', f'{DATA_DIR}/vector_db/milvus.db')
 MILVUS_DB = os.getenv('MILVUS_DB', 'default')
 MILVUS_TOKEN = os.getenv('MILVUS_TOKEN', None)
+MILVUS_SERVER_PEM_PATH = os.getenv('MILVUS_SERVER_PEM_PATH', '')
 MILVUS_INDEX_TYPE = os.getenv('MILVUS_INDEX_TYPE', 'HNSW')
 MILVUS_METRIC_TYPE = os.getenv('MILVUS_METRIC_TYPE', 'COSINE')
 MILVUS_HNSW_M = int(os.getenv('MILVUS_HNSW_M', '16'))

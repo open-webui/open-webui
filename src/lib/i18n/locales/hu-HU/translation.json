@@ -1450,6 +1450,8 @@
 	"JSON Spec": "JSON-specifikáció",
 	"July": "Július",
 	"June": "Június",
+	"Keep both": "",
+	"Keep both versions in the proposed revision, original first.": "",
 	"Keep current webhook URL": "Jelenlegi webhook URL megtartása",
 	"Keep in Sidebar": "Megtartás az oldalsávon",
 	"Keep tools listed even while your shell is closed.": "Az eszközök akkor is a listában maradnak, ha a shell be van zárva.",

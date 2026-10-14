@@ -357,6 +357,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     session_id + chat_id + message_id → async task → pipeline handles everything
     (filters, model params, knowledge/RAG, tools, DB saves, webhooks).
     """
+    chat = None
     try:
         user = await Users.get_user_by_id(automation.user_id)
         if not user:
@@ -521,6 +522,12 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         request = _build_request(app, token=token)
         await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
+        reply = await Chats.get_message_by_id_and_message_id(chat.id, assistant_msg_id)
+        if reply and reply.get('error'):
+            raise ValueError(str(reply['error']['content']))
+        if not reply or not reply.get('done'):
+            raise ValueError('Automation reply did not complete')
+
         # Notify user
         from open_webui.socket.main import sio
 
@@ -544,16 +551,18 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             data={'name': automation.name, 'chat_id': chat.id},
         )
 
-    except Exception as e:
+    except (Exception, asyncio.CancelledError) as e:
         log.exception(f'Automation {automation.id} failed')
-        error = str(e)[:4000]
-        await _record_run(automation.id, 'error', error=error)
+        error = 'Automation reply was cancelled' if isinstance(e, asyncio.CancelledError) else str(e)[:4000]
+        await _record_run(automation.id, 'error', chat_id=chat.id if chat else None, error=error)
         await publish_event(
             app,
             EVENTS.AUTOMATION_RUN_FAILED,
             subject_id=automation.id,
-            data={'name': automation.name, 'error': error},
+            data={'name': automation.name, 'error': error, **({'chat_id': chat.id} if chat else {})},
         )
+        if isinstance(e, asyncio.CancelledError):
+            raise
 
 
 ####################

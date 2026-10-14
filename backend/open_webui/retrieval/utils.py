@@ -1318,20 +1318,22 @@ async def filter_accessible_collections(
 
     validated = set()
     for name in safe_names:
-        if name == 'knowledge-bases':
+        # Some vector stores fold case and _/- together, so authorize a name as the collection it can resolve to.
+        canonical = name.lower().replace('_', '-')
+        if canonical == 'knowledge-bases':
             # System meta-collection — never exposed to non-admins.
             continue
-        elif name.startswith('file-'):
-            file_id = name[len('file-') :]
+        elif canonical.startswith('file-'):
+            file_id = canonical[len('file-') :]
             if await has_access_to_file(file_id=file_id, access_type=access_type, user=user):
                 validated.add(name)
-        elif name.startswith('user-memory-'):
-            if name == f'user-memory-{user.id}':
+        elif canonical.startswith('user-memory-'):
+            if canonical == f'user-memory-{user.id}':
                 validated.add(name)
-        elif name.startswith('web-search-'):
+        elif canonical.startswith('web-search-'):
             # Ephemeral per-query collections, owner-bound: process_web_search mints
             # them as web-search-{user.id}-<hash>, so only the creator may read/write.
-            if name.startswith(f'web-search-{user.id}-'):
+            if canonical.startswith(f'web-search-{user.id}-'):
                 validated.add(name)
         else:
             # May be a knowledge-base ID or a legacy/ephemeral collection.
@@ -1340,9 +1342,9 @@ async def filter_accessible_collections(
             # ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS:
             #   False (default) — deny (closes the unscoped namespace)
             #   True  — allow (preserves legacy behaviour)
-            if await Knowledges.check_access_by_user_id(name, user.id, permission=access_type):
+            if await Knowledges.check_access_by_user_id(canonical, user.id, permission=access_type):
                 validated.add(name)
-            elif ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS and not await Knowledges.get_knowledge_by_id(name):
+            elif ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS and not await Knowledges.get_knowledge_by_id(canonical):
                 # Not a KB at all — legacy/ephemeral collection, allow
                 validated.add(name)
     return validated

@@ -1449,6 +1449,8 @@
 	"JSON Spec": "JSON仕様",
 	"July": "7月",
 	"June": "6月",
+	"Keep both": "",
+	"Keep both versions in the proposed revision, original first.": "",
 	"Keep current webhook URL": "現在のウェブフックURLを保持",
 	"Keep in Sidebar": "サイドバーに残す",
 	"Keep tools listed even while your shell is closed.": "シェルが閉じている間もツールを一覧に残します。",

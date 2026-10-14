@@ -14,6 +14,7 @@ from open_webui.config import (
     MILVUS_INDEX_TYPE,
     MILVUS_IVF_FLAT_NLIST,
     MILVUS_METRIC_TYPE,
+    MILVUS_SERVER_PEM_PATH,
     MILVUS_TOKEN,
     MILVUS_URI,
 )
@@ -76,7 +77,9 @@ class MilvusClient(VectorDBBase):
     def __init__(self):
         # Milvus collection names can only contain numbers, letters, and underscores.
         self.collection_prefix = MILVUS_COLLECTION_PREFIX.replace('-', '_')
-        self.client = Client(uri=MILVUS_URI, token=MILVUS_TOKEN, db_name=MILVUS_DB)
+        self.client = Client(
+            uri=MILVUS_URI, token=MILVUS_TOKEN, db_name=MILVUS_DB, server_pem_path=MILVUS_SERVER_PEM_PATH
+        )
 
         # Main collection types for multi-tenancy
         self.MEMORY_COLLECTION = f'{self.collection_prefix}_memories'

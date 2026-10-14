@@ -156,6 +156,7 @@ def file_format(record: 'Record'):
         'response_status_code': record['extra'].get('response_status_code', 0),
         'source_ip': record['extra'].get('source_ip', ''),
         'user_agent': record['extra'].get('user_agent', ''),
+        'model_id': record['extra'].get('model_id', ''),
         'request_object': record['extra'].get('request_object', b''),
         'response_object': record['extra'].get('response_object', b''),
         'extra': record['extra'].get('extra', {}),
