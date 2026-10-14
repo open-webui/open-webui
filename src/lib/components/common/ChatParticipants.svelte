@@ -32,8 +32,9 @@
 		draggable="false"
 		class="{className} rounded-full shrink-0 object-cover"
 		onerror={(event) => {
-			if (!event.currentTarget.src.endsWith('/static/favicon.png')) {
-				event.currentTarget.src = `${WEBUI_BASE_URL}/static/favicon.png`;
+			const image = event.currentTarget as HTMLImageElement;
+			if (!image.src.endsWith('/static/favicon.png')) {
+				image.src = `${WEBUI_BASE_URL}/static/favicon.png`;
 			}
 		}}
 	/>
