@@ -3996,7 +3996,7 @@
 
 		if ($config?.features)
 			features = {
-				voice: $showCallOverlay && callMode === 'current',
+				voice: ($showCallOverlay && callMode === 'current') || !!bridge?.connected,
 				image_generation:
 					$config?.features?.enable_image_generation &&
 					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
