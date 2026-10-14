@@ -4966,6 +4966,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal last_response_id
 
                     response_tool_calls = []
+                    response_usage = {}
 
                     delta_count = 0
                     delta_chunk_size = max(
@@ -5228,6 +5229,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                                         # Normalize and capture usage for DB persistence
                                         if response_metadata.get('usage'):
+                                            response_usage = response_metadata['usage']
                                             usage = merge_usage(usage, response_metadata['usage'])
                                             response_metadata['usage'] = usage
 
@@ -5270,6 +5272,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     raw_usage = data.get('usage', {}) or {}
                                     raw_usage.update(data.get('timings', {}))  # llama.cpp
                                     if raw_usage:
+                                        response_usage = raw_usage
                                         usage = merge_usage(usage, raw_usage)
                                         await event_emitter(
                                             {
@@ -5906,9 +5909,11 @@ async def streaming_chat_response_handler(response, ctx):
                         if responses_api_tool_calls:
                             tool_calls.append(_split_tool_calls(responses_api_tool_calls))
 
+                    return normalize_usage(response_usage)
+
                 output_start = len(prior_output)
                 try:
-                    await stream_body_handler(response, form_data)
+                    response_usage = await stream_body_handler(response, form_data)
                 finally:
                     if response.background:
                         await response.background()
@@ -6284,6 +6289,9 @@ async def streaming_chat_response_handler(response, ctx):
                                             image_urls.append(part.get('image_url', ''))
                                     message['content'] = ''.join(text_parts)
 
+                            if response_usage and tool_messages:
+                                tool_messages[0]['usage'] = response_usage
+
                             # Refresh citation context without restoring compacted history.
                             user_prompt = get_last_user_message_item(form_data['messages'])
                             for message in messages:
@@ -6324,6 +6332,19 @@ async def streaming_chat_response_handler(response, ctx):
                                         idx for idx, message in enumerate(messages) if message.get('role') != 'system'
                                     )
                                     messages[checkpoint] = {**messages[checkpoint], 'contextSummary': context_summary}
+                                    output.append(
+                                        {
+                                            'type': 'open_webui:context_compaction',
+                                            'id': output_id('cc'),
+                                            'call_id': next(
+                                                message['tool_calls'][0]['id']
+                                                for message in messages
+                                                if message.get('tool_calls')
+                                            ),
+                                            'summary': context_summary,
+                                        }
+                                    )
+                                    await emit_output()
                             except Exception:
                                 log.exception('Tool loop context compaction failed; keeping the current context')
 
@@ -6384,7 +6405,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     prior_output.pop()
                             output = []
                             output_start = len(prior_output)
-                            await stream_body_handler(res, new_form_data)
+                            response_usage = await stream_body_handler(res, new_form_data)
                         elif getattr(res, 'status_code', 200) >= 400:
                             await emit_message_error(get_message_error_content(get_response_error_detail(res)))
                             break
