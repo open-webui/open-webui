@@ -8,6 +8,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Grid from '$lib/components/icons/Grid.svelte';
@@ -54,7 +55,10 @@
 
 <AppModal bind:show app={selected} onChange={load} />
 <div class="flex h-full flex-col text-sm">
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Apps')}</h2>
+	<div class="flex items-center gap-2 mb-4">
+		<h2 class="text-sm font-medium text-gray-900 dark:text-white">{$i18n.t('Apps')}</h2>
+		<ExperimentalBadge />
+	</div>
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<AdminSettingSection first>
 			<div>
