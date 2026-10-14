@@ -50,6 +50,8 @@
 			toast.success($i18n.t('Members added successfully'));
 			show = false;
 		} catch (error) {
+			// Preserve the previous fallback error in the translation catalogs.
+			// $i18n.t('Failed to add members');
 			toast.error(`${error}`);
 		} finally {
 			if (changed) onUpdate();

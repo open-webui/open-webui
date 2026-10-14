@@ -13,6 +13,9 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 
 	const i18n = getContext<any>('i18n');
+	// Keep the dynamic menu labels visible to i18next-parser.
+	// $i18n.t('Conversation options');
+	// $i18n.t('Channel options');
 	export let channel: { id: string; type?: string | null; is_channel_muted?: boolean };
 	export let sidebar = false;
 	export let onEdit: (() => void) | undefined = undefined;

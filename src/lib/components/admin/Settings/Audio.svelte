@@ -32,6 +32,11 @@
 
 	export let saveHandler: () => void;
 
+	// Keep dynamic realtime labels and the previous URL label in the translation catalogs.
+	// $i18n.t('settings.audio.realtime.azureUrl');
+	// $i18n.t('settings.audio.realtime.deployment');
+	// $i18n.t('Voice Model');
+	// $i18n.t('OpenAI API Base URL');
 	let realtime: RealtimeConfig & { REALTIME_CALL_PROMPT_TEMPLATE: string } = {
 		ENABLED: false,
 		PROVIDER: 'openai',

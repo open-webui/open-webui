@@ -755,6 +755,8 @@
 	let showComparison = false;
 	let comparisonLoading = false;
 	let ComparisonModal: typeof import('../common/DiffEditorModal.svelte').default | null = null;
+	// Preserve the previous comparison description in the translation catalogs.
+	// $i18n.t('Uses the left working copy as your prompt.');
 	let comparisonTarget: {
 		chatId: string;
 		input: RichTextInput;

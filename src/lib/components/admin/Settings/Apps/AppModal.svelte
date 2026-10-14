@@ -34,12 +34,16 @@
 		error = '';
 	let manifest: any = app?.data.manifest ?? null;
 	let scopes = [...(app?.data.granted_scopes ?? [])];
+	// Preserve the previous access label in the translation catalogs.
+	// $i18n.t('Who can use this app?');
 	let grants: any[] = [];
 	let busy = false,
 		loading = !!app,
 		showGrants = false,
 		confirm = false;
 	let showScopes = false;
+	// Preserve the previous scope description in the translation catalogs.
+	// $i18n.t('Choose the scopes to grant this app.');
 	let scopeMode: 'granted' | 'requested' = 'granted';
 	let manifestUpdated = false;
 	let manual = false;
@@ -55,6 +59,8 @@
 		'w-full min-w-0 bg-transparent text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 disabled:text-gray-400 dark:disabled:text-gray-600';
 	const buttonClass =
 		'flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white';
+	// Keep the dynamic scope label visible to i18next-parser.
+	// $i18n.t('Read messages and history in joined channels');
 	const scopeLabels: Record<string, string> = {
 		'channels:mentions:read': 'Read app mentions in joined channels',
 		'channels:messages:read': 'Read messages and history in joined channels',

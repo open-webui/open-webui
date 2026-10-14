@@ -13,6 +13,8 @@
 	export let activeProfileId: string | null = null;
 	export let overflowOpen = false;
 
+	// Preserve the base overflow label alongside its generated plural forms.
+	// $i18n.t('Show all {{count}} contributors');
 	$: people = participants.length ? participants : owner?.id ? [owner] : [];
 	$: if (activeProfileId && !people.some((person) => person.id === activeProfileId)) {
 		activeProfileId = null;

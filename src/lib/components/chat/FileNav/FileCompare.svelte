@@ -17,6 +17,9 @@
 
 	const i18n = getContext<Readable<I18n>>('i18n');
 	let original = paths[0];
+	// Preserve the previous comparison labels in the translation catalogs.
+	// $i18n.t('Revised');
+	// $i18n.t('Extracted text lines');
 	let revised = paths[1];
 	let mode: 'unified' | 'split' = 'unified';
 	let ignoreWhitespace = false;

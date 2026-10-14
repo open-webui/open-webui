@@ -74,6 +74,9 @@
 	};
 	export let disabled = false;
 	const i18n = getContext<any>('i18n');
+	// Preserve the previous avatar description in the translation catalogs.
+	// $i18n.t('A character for bridge voice calls. The orb is used by default.');
+
 	const inputClass =
 		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	let input: HTMLInputElement;
