@@ -3837,10 +3837,12 @@ async def search_tools(
     """
     Search the tools listed in <available_tools> and return their full definitions.
     Pass the exact tool name when you already know it.
+    Invoke a result with call_tool(tool_name, params), where params is a JSON-encoded object
+    matching the tool's parameters. Do not call deferred tools directly by name.
 
     :param query: Keywords describing the capability you need (e.g. "jira create issue"), or an exact tool name
     :param count: Maximum number of results to return (default: 5, max: 20)
-    :return: JSON with the definitions of the matching tools, which can then be called by name
+    :return: JSON with the definitions of the matching tools, which can then be invoked through call_tool
     """
     from open_webui.utils.tool_search import search_deferred_tools
 

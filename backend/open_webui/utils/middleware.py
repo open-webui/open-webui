@@ -145,7 +145,7 @@ from open_webui.utils.task import (
     tools_function_calling_generation_template,
 )
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
-from open_webui.utils.tool_search import apply_tool_search
+from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
 from open_webui.utils.tools import (
     connect_mcp_server,
     get_attached_knowledge,
@@ -3290,7 +3290,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             metadata['tools'] = tools_dict
 
             if metadata.get('params', {}).get('function_calling') != 'legacy':
-                deferred = await apply_tool_search(form_data, metadata, tools_dict)
+                deferred = await apply_tool_search(form_data, metadata, tools_dict, inlet_filter_tools)
 
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [
@@ -3438,6 +3438,9 @@ async def build_chat_response_context(request, form_data, user, model, metadata,
 
 
 async def execute_tool_call(form_data, metadata, event_caller, tool_call):
+    error = resolve_tool_call(tool_call, metadata.get('tools', {}))
+    if error:
+        return {}, error, None, None, False
     name = tool_call.get('function', {}).get('name', '')
     tool_args = tool_call.get('function', {}).get('arguments', '{}')
     params = {}
@@ -5981,7 +5984,41 @@ async def streaming_chat_response_handler(response, ctx):
                 ):
                     tool_call_iterations += 1
 
-                    response_tool_calls = tool_calls.pop(0)
+                    # Resolve dispatch before approvals and special handling such as ask_user.
+                    response_tool_calls = []
+                    output_by_call_id = {
+                        item.get('call_id'): item for item in output if item.get('type') == 'function_call'
+                    }
+                    for tool_call in tool_calls.pop(0):
+                        error = resolve_tool_call(tool_call, metadata.get('tools', {}))
+                        call_id = tool_call.get('id') or output_id('fc')
+                        tool_call['id'] = call_id
+                        function = tool_call.get('function', {})
+                        item = output_by_call_id.get(call_id)
+                        if item is None:
+                            item = {'type': 'function_call', 'id': call_id, 'call_id': call_id}
+                            output.append(item)
+                            output_by_call_id[call_id] = item
+                        item.update(
+                            name=function.get('name', ''),
+                            arguments=function.get('arguments', '{}'),
+                            status='failed' if error else item.get('status', 'in_progress'),
+                        )
+                        if 'provider_function' in tool_call:
+                            item['provider_function'] = tool_call['provider_function']
+                        if error:
+                            output.append(
+                                {
+                                    'type': 'function_call_output',
+                                    'id': output_id('fco'),
+                                    'call_id': call_id,
+                                    'output': [{'type': 'input_text', 'text': error}],
+                                    'status': 'failed',
+                                }
+                            )
+                        else:
+                            response_tool_calls.append(tool_call)
+
                     ask_user_staged, ask_user_error = stage_ask_user_tool_calls(response_tool_calls, output, output_id)
                     if ask_user_error:
                         response_tool_calls = [
@@ -6005,24 +6042,6 @@ async def streaming_chat_response_handler(response, ctx):
                         for item in output:
                             if item.get('name') == 'ask_user' and item.get('status') == 'pending':
                                 item['status'] = 'in_progress'
-
-                    # Append function_call items for each tool call
-                    # (Responses API already has them from streaming, so skip duplicates)
-                    existing_call_ids = {item.get('call_id') for item in output if item.get('type') == 'function_call'}
-                    for tc in response_tool_calls:
-                        call_id = tc.get('id', '')
-                        if call_id not in existing_call_ids:
-                            func = tc.get('function', {})
-                            output.append(
-                                {
-                                    'type': 'function_call',
-                                    'id': call_id or output_id('fc'),
-                                    'call_id': call_id,
-                                    'name': func.get('name', ''),
-                                    'arguments': func.get('arguments', '{}'),
-                                    'status': 'in_progress',
-                                }
-                            )
 
                     tool_approval_mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
                     if (
