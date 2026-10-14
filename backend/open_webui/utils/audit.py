@@ -254,6 +254,9 @@ class AuditLoggingMiddleware:
         if request.method not in self.audited_methods:
             return True
 
+        if request.url.path.startswith('/ws/socket.io'):
+            return True
+
         path = request.url.path.lower()
         for endpoint in self.ALWAYS_LOG_ENDPOINTS:
             if path.startswith(endpoint):
