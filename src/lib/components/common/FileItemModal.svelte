@@ -6,7 +6,7 @@
 
 	import { formatFileSize, getLineCount, safeLinkUrl } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { settings } from '$lib/stores';
+	import { settings, user } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
 	import { getFileById, getFileContentById } from '$lib/apis/files';
 
@@ -65,6 +65,19 @@
 	const resetImageView = () => {
 		panzoomRef?.reset();
 	};
+
+	$: canViewKnowledge = $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge;
+
+	let itemUrl: string | undefined;
+	$: if (item?.type === 'file') {
+		itemUrl = item?.url?.startsWith('http')
+			? item.url
+			: `${WEBUI_API_BASE_URL}/files/${item?.id ?? item?.tempId}/content`;
+	} else if (item?.type === 'collection' && item?.id && canViewKnowledge) {
+		itemUrl = `/workspace/knowledge/${item.id}`;
+	} else {
+		itemUrl = safeLinkUrl(item?.url);
+	}
 
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
@@ -260,23 +273,7 @@
 			<div class="flex items-start justify-between">
 				<div>
 					<div class=" font-normal text-lg dark:text-gray-100">
-						<a
-							href="#"
-							class="hover:underline line-clamp-1"
-							on:click|preventDefault={() => {
-								if (item.type === 'file' || safeLinkUrl(item.url)) {
-									let fileId = item?.id ?? item?.tempId;
-									window.open(
-										item.type === 'file'
-											? item?.url?.startsWith('http')
-												? item.url
-												: `${WEBUI_API_BASE_URL}/files/${fileId}/content`
-											: item.url,
-										'_blank'
-									);
-								}
-							}}
-						>
+						<a href={itemUrl} target="_blank" rel="noreferrer" class="hover:underline line-clamp-1">
 							{item?.name ?? 'File'}
 						</a>
 					</div>
