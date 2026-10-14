@@ -1453,7 +1453,7 @@
 			!comparison &&
 			selectedCount > 0 &&
 			containerEl &&
-			!containerEl.contains(e.target as Node)
+			!e.composedPath().includes(containerEl)
 		) {
 			clearSelection();
 		}
