@@ -767,12 +767,7 @@
 		const target = { chatId, input: chatInputElement };
 		try {
 			ComparisonModal = (await import('../common/DiffEditorModal.svelte')).default;
-			if (
-				!target.input ||
-				target.chatId !== chatId ||
-				target.input !== chatInputElement
-			)
-				return;
+			if (!target.input || target.chatId !== chatId || target.input !== chatInputElement) return;
 			comparisonTarget = { chatId, input: target.input, content: prompt };
 			showComparison = true;
 		} catch {
@@ -783,7 +778,6 @@
 	};
 
 	const applyComparisonToPrompt = (text: string) => {
-
 		if (
 			!chatInputElement ||
 			comparisonTarget?.chatId !== chatId ||
