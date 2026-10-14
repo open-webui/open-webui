@@ -334,25 +334,27 @@
 					>
 				{/if}
 				{#if comparing}
-					<div class="comparison-controls flex flex-wrap items-center gap-2">
-						<span class="whitespace-nowrap text-gray-500" role="status" aria-live="polite"
-							>{loading
-								? $i18n.t('Loading...')
-								: chunkCount
-									? $i18n.t('Change {{current}} of {{total}}', {
-											current: activeChunk + 1,
-											total: chunkCount
-										})
-									: $i18n.t('No differences')}</span
-						>
-						{#if approximate}<span
-								role="img"
-								class="text-gray-500"
-								aria-label={$i18n.t('Approximate comparison')}
-								title={$i18n.t(
-									'Comparison reached its time limit; some changes are grouped together.'
-								)}>≈</span
-							>{/if}
+					<div class="comparison-controls flex flex-wrap items-center gap-3">
+						<div class="mr-1 flex items-center gap-1.5">
+							<span class="whitespace-nowrap text-gray-500" role="status" aria-live="polite"
+								>{loading
+									? $i18n.t('Loading...')
+									: chunkCount
+										? $i18n.t('Change {{current}} of {{total}}', {
+												current: activeChunk + 1,
+												total: chunkCount
+											})
+										: $i18n.t('No differences')}</span
+							>
+							{#if approximate}<span
+									role="img"
+									class="text-gray-500"
+									aria-label={$i18n.t('Approximate comparison')}
+									title={$i18n.t(
+										'Comparison reached its time limit; some changes are grouped together.'
+									)}>≈</span
+								>{/if}
+						</div>
 						<button
 							type="button"
 							class="secondary"
