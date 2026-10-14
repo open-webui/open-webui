@@ -84,16 +84,12 @@ def search_perplexity(
                 if i == 0:
                     content = json_response['choices'][0]['message']['content']
 
-            result = {'link': citation, 'title': f'Source {i + 1}', 'snippet': content}
-            results.append(result)
+            results.append({'link': citation, 'title': f'Source {i + 1}', 'snippet': content})
 
         if filter_list:
             results = get_filtered_results(results, filter_list)
 
-        return [
-            SearchResult(link=result['link'], title=result['title'], snippet=result['snippet'])
-            for result in results[:count]
-        ]
+        return [SearchResult.from_provider_result(result) for result in results[:count]]
 
     except Exception as e:
         log.error(f'Error searching with Perplexity API: {e}')

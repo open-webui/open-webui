@@ -54,6 +54,11 @@ from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import UserModel, Users
 from open_webui.retrieval.utils import filter_source_metadata, get_sources_from_items
+from open_webui.retrieval.web.main import (
+    SearchResult,
+    get_public_site_identity,
+    web_search_result_metadata,
+)
 from open_webui.routers.images import (
     CreateImageForm,
     EditImageForm,
@@ -412,8 +417,153 @@ def _split_tool_calls(
     return expanded
 
 
+REFERENCE_DEFINITION_RE = re.compile(
+    r'^[ \t]{0,3}\[([^\]\n]+)\]:[ \t]*(?:<([^>\n]+)>|(\S+))'
+    r'(?:[ \t]+(?:"([^"\n]*)"|\'([^\'\n]*)\'|\(([^)\n]*)\)))?[ \t]*$',
+    re.MULTILINE,
+)
+REFERENCE_LINK_RE = re.compile(r'\[([^\]\n]+)\]\[([^\]\n]+)\]')
+INLINE_LINK_RE = re.compile(r'\[([^\]\n]+)\]\((?:<([^>\n]+)>|([^\s)\n]+))(?:\s+["\'][^"\']*["\'])?\)')
+
+
+def _normalize_markdown_link_label(value: str) -> str:
+    return ' '.join(value.split()).casefold()
+
+
+def _markdown_citation_links(content: str) -> tuple[dict, dict]:
+    definitions = {}
+    for match in REFERENCE_DEFINITION_RE.finditer(content):
+        label = _normalize_markdown_link_label(match.group(1))
+        definitions[label] = {
+            'url': match.group(2) or match.group(3) or '',
+            'name': next((value for value in match.groups()[3:] if value), ''),
+        }
+
+    links_by_name = {}
+    for match in REFERENCE_LINK_RE.finditer(content):
+        link_text, label = match.groups()
+        definition = definitions.get(_normalize_markdown_link_label(label), {})
+        links_by_name[_normalize_markdown_link_label(link_text)] = definition
+        definitions.setdefault(_normalize_markdown_link_label(label), definition)
+
+    for match in INLINE_LINK_RE.finditer(content):
+        link_text = match.group(1)
+        links_by_name[_normalize_markdown_link_label(link_text)] = {
+            'url': match.group(2) or match.group(3) or '',
+            'name': link_text,
+        }
+
+    return definitions, links_by_name
+
+
+def _citation_field(citation: dict, name: str):
+    return citation.get(name, citation.get(f'schema:{name}'))
+
+
+def _citation_agents(value) -> list[str]:
+    values = value if isinstance(value, list) else [value]
+    agents = []
+    for item in values:
+        if isinstance(item, str) and item.strip():
+            agents.append(item.strip())
+        elif isinstance(item, dict):
+            name = _citation_field(item, 'name')
+            if isinstance(name, str) and name.strip():
+                agents.append(name.strip())
+    return agents
+
+
+def _citation_image_url(value) -> str | None:
+    if isinstance(value, str) and value:
+        return value
+    if isinstance(value, dict):
+        url = _citation_field(value, 'url')
+        return url if isinstance(url, str) and url else None
+    return None
+
+
+def _mcp_citation_sources(
+    tool_name: str,
+    tool_result: str,
+    citations: list,
+    tool_id: str,
+    tool_call_id: str,
+) -> list[dict]:
+    definitions, links_by_name = _markdown_citation_links(tool_result)
+    citation_sources = []
+    scope = tool_call_id or tool_id or tool_name
+
+    for index, citation in enumerate(citations):
+        if not isinstance(citation, dict):
+            continue
+
+        citation_id = _citation_field(citation, 'id')
+        raw_name = _citation_field(citation, 'name')
+        name = raw_name.strip() if isinstance(raw_name, str) and raw_name.strip() else None
+        url = _citation_field(citation, 'url')
+        definition = (
+            definitions.get(_normalize_markdown_link_label(citation_id)) if isinstance(citation_id, str) else None
+        )
+        inline_link = links_by_name.get(_normalize_markdown_link_label(name)) if isinstance(name, str) else None
+        matched_link = definition or inline_link or {}
+
+        url = url or matched_link.get('url') or ''
+        name = name or matched_link.get('name') or citation_id or url or f'Citation {index + 1}'
+        citation_key = citation_id or name or url or str(index)
+        source_key = f'mcp:{scope}:{citation_key}'
+        text = _citation_field(citation, 'text')
+        description = _citation_field(citation, 'description')
+        thumbnail_url = _citation_field(citation, 'thumbnailUrl')
+        image_url = _citation_image_url(_citation_field(citation, 'image'))
+        og_image_url = _citation_image_url(citation.get('og:image', _citation_field(citation, 'ogImage')))
+        date_published = _citation_field(citation, 'datePublished')
+        authors = _citation_agents(_citation_field(citation, 'author'))
+        publishers = _citation_agents(_citation_field(citation, 'publisher'))
+        display_name = publishers[0] if publishers else name
+        annotations = citation.get('mcp:annotations')
+        display = citation.get('display')
+
+        metadata = {
+            'source': source_key,
+            'name': name,
+            'display_name': display_name,
+            **({'url': url} if url else {}),
+            **({'citation_id': citation_id} if citation_id else {}),
+            **({'description': description} if description else {}),
+            **({'thumbnail_url': thumbnail_url} if thumbnail_url else {}),
+            **({'image_url': image_url} if image_url else {}),
+            **({'og_image_url': og_image_url} if og_image_url else {}),
+            **({'date_published': date_published} if date_published else {}),
+            **({'author': authors} if authors else {}),
+            **({'publisher': publishers} if publishers else {}),
+            **({'display': display} if display else {}),
+            **({'mcp_annotations': annotations} if isinstance(annotations, dict) else {}),
+            'provenance': 'mcp',
+        }
+        citation_sources.append(
+            {
+                'source': {
+                    'id': citation_id or str(index),
+                    'name': name,
+                    'display_name': display_name,
+                    'type': 'mcp',
+                    **({'url': url} if url else {}),
+                },
+                'document': [text if isinstance(text, str) else ''],
+                'metadata': [metadata],
+            }
+        )
+
+    return citation_sources
+
+
 def get_citation_source_from_tool_result(
-    tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ''
+    tool_name: str,
+    tool_params: dict,
+    tool_result: str,
+    tool_id: str = '',
+    citations: list | None = None,
+    tool_call_id: str = '',
 ) -> list[dict]:
     """
     Parse a tool's result and convert it to source dicts for citation display.
@@ -426,6 +576,15 @@ def get_citation_source_from_tool_result(
     Returns a list of sources (usually one, but query_knowledge_files/query_chat_files may return multiple).
     """
     try:
+        if citations is not None:
+            return _mcp_citation_sources(
+                tool_name,
+                tool_result,
+                citations,
+                tool_id,
+                tool_call_id,
+            )
+
         try:
             tool_result = JSONCodec.loads(tool_result)
         except (JSONCodec.JSONDecodeError, TypeError):
@@ -550,6 +709,61 @@ def get_citation_source_from_tool_result(
                 'metadata': [{'source': tool_name}],
             }
         ]
+
+
+def get_display_sources_from_tool_result(tool_name: str, tool_result: str) -> list[dict]:
+    """Return non-citable sources that are useful only for frontend display."""
+    if tool_name != 'search_web':
+        return []
+
+    try:
+        try:
+            results = JSONCodec.loads(tool_result)
+        except (JSONCodec.JSONDecodeError, TypeError):
+            return []
+        if not isinstance(results, list):
+            return []
+
+        sources = []
+        seen_urls = set()
+        for raw_result in results:
+            if not isinstance(raw_result, dict) or raw_result.get('error'):
+                continue
+            try:
+                result = SearchResult.from_provider_result(raw_result)
+            except (TypeError, ValueError):
+                continue
+            if not get_public_site_identity(result.link) or result.link in seen_urls:
+                continue
+            seen_urls.add(result.link)
+
+            metadata = web_search_result_metadata(result)
+            metadata.update(
+                {
+                    'citable': False,
+                    'fetched': False,
+                    'provenance': 'web_search',
+                }
+            )
+            sources.append(
+                {
+                    'source': {
+                        'id': result.link,
+                        'name': result.name or result.title or result.link,
+                        'display_name': result.display_name,
+                        'type': 'web_search',
+                        'url': result.link,
+                        'citable': False,
+                        'fetched': False,
+                    },
+                    'document': [result.snippet or ''],
+                    'metadata': [metadata],
+                }
+            )
+        return sources
+    except Exception as e:
+        log.exception(f'Error parsing display-only tool result for {tool_name}: {e}')
+        return []
 
 
 def deep_merge(target, source):
@@ -945,7 +1159,11 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
     if source_ids is None:
         source_ids = {}
     for source in sources:
+        if source.get('citable') is False or source.get('source', {}).get('citable') is False:
+            continue
         for doc, meta in zip(source.get('document', []), source.get('metadata', [])):
+            if meta.get('citable') is False:
+                continue
             source_id = meta.get('source') or source.get('source', {}).get('id') or 'N/A'
             if source_id not in source_ids:
                 source_ids[source_id] = len(source_ids) + 1
@@ -1059,6 +1277,7 @@ async def process_tool_result(
     user=None,
 ):
     tool_result_embeds = []
+    tool_result_citations = []
     EXTERNAL_TOOL_TYPES = ('external', 'action', 'terminal')
 
     # Support (HTMLResponse, result_context) tuples: the optional second
@@ -1167,6 +1386,14 @@ async def process_tool_result(
 
     tool_result_files = []
 
+    if tool_type == 'mcp' and isinstance(tool_result, dict):
+        tool_result_citations = tool_result.get('citations')
+        if not isinstance(tool_result_citations, list):
+            tool_result_citations = []
+        tool_result = tool_result.get('content')
+        if not isinstance(tool_result, list):
+            tool_result = []
+
     # Detect base64 image data URIs from tool results (e.g. binary image
     # responses from execute_tool_server).  Move the data URI to
     # tool_result_files and replace tool_result with a text summary.
@@ -1232,7 +1459,15 @@ async def process_tool_result(
                                 )
                         elif resource.get('uri'):
                             tool_response.append(resource.get('uri'))
-            tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
+                    elif item.get('type') == 'resource_link':
+                        resource_uri = item.get('uri', '')
+                        if resource_uri:
+                            resource_name = item.get('name') or resource_uri
+                            tool_response.append(f'[{resource_name}]({resource_uri})')
+            if tool_response and all(isinstance(item, str) for item in tool_response):
+                tool_result = '\n\n'.join(tool_response)
+            else:
+                tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
         else:  # OpenAPI
             # Images are left to extract_base64_images below, which attaches them so the model can see them.
             for item in list(tool_result):
@@ -1263,7 +1498,7 @@ async def process_tool_result(
         else:
             tool_result = str(tool_result)
 
-    return tool_result, tool_result_files, tool_result_embeds
+    return tool_result, tool_result_files, tool_result_embeds, tool_result_citations
 
 
 def parse_terminal_tool_result(tool_result: Any) -> dict:
@@ -1425,6 +1660,7 @@ async def chat_completion_tools_handler(
 
                 log.debug('tool_call=%r', tool_call)
 
+                tool_call_id = tool_call.get('id') or f'call_{uuid4().hex[:24]}'
                 tool_function_name = tool_call.get('name', None)
                 if tool_function_name not in tools:
                     log.warning(f'Tool "{tool_function_name}" not found')
@@ -1465,7 +1701,7 @@ async def chat_completion_tools_handler(
                 except Exception as e:
                     tool_result = {'error': str(e)}
 
-                tool_result, tool_result_files, tool_result_embeds = await process_tool_result(
+                tool_result, tool_result_files, tool_result_embeds, tool_result_citations = await process_tool_result(
                     request,
                     tool_function_name,
                     tool_result,
@@ -1509,7 +1745,19 @@ async def chat_completion_tools_handler(
                             }
                         )
 
-                if tool_result:
+                if tool_result_citations:
+                    tool = tools[tool_function_name]
+                    sources.extend(
+                        get_citation_source_from_tool_result(
+                            tool_name=tool_function_name,
+                            tool_params=tool_function_params,
+                            tool_result=tool_result or '',
+                            tool_id=tool.get('tool_id', ''),
+                            citations=tool_result_citations,
+                            tool_call_id=tool_call_id,
+                        )
+                    )
+                elif tool_result:
                     tool = tools[tool_function_name]
                     tool_id = tool.get('tool_id', '')
 
@@ -3389,7 +3637,7 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
     if terminal_file_result:
         result = terminal_file_result
 
-    result, files, embeds = await process_tool_result(
+    result, files, embeds, result_citations = await process_tool_result(
         request,
         name,
         result,
@@ -3400,6 +3648,22 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
     )
 
     await terminal_event_handler(name, params, result, event_emitter)
+
+    citation_sources = (
+        get_citation_source_from_tool_result(
+            tool_name=name,
+            tool_params=params,
+            tool_result=result or '',
+            tool_id=tool.get('tool_id', ''),
+            citations=result_citations,
+            tool_call_id=tool_call.get('id', ''),
+        )
+        if result_citations
+        else []
+    )
+    if event_emitter:
+        for source in citation_sources:
+            await event_emitter({'type': 'source', 'data': source})
 
     return {
         'tool_call_id': tool_call.get('id', ''),
@@ -5835,6 +6099,7 @@ async def streaming_chat_response_handler(response, ctx):
                 )
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
+                display_tool_sources = []  # Frontend-only sources; never enter model context
                 user_message = get_last_user_message(form_data['messages'])
 
                 # Check if citations are enabled for this model
@@ -6069,7 +6334,12 @@ async def streaming_chat_response_handler(response, ctx):
                         if terminal_file_result:
                             tool_result = terminal_file_result
 
-                        tool_result, tool_result_files, tool_result_embeds = await process_tool_result(
+                        (
+                            tool_result,
+                            tool_result_files,
+                            tool_result_embeds,
+                            tool_result_citations,
+                        ) = await process_tool_result(
                             request,
                             tool_function_name,
                             tool_result,
@@ -6087,17 +6357,28 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         # Extract citation sources from tool results
+                        if citations_enabled and tool_function_name == 'search_web' and tool_result:
+                            display_tool_sources.extend(
+                                get_display_sources_from_tool_result(
+                                    tool_function_name,
+                                    tool_result,
+                                )
+                            )
+
                         if (
                             citations_enabled
-                            and tool_function_name
-                            in [
-                                'fetch_url',
-                                'view_file',
-                                'view_knowledge_file',
-                                'query_knowledge_files',
-                                'query_chat_files',
-                            ]
-                            and tool_result
+                            and (
+                                tool_result_citations
+                                or tool_function_name
+                                in [
+                                    'fetch_url',
+                                    'view_file',
+                                    'view_knowledge_file',
+                                    'query_knowledge_files',
+                                    'query_chat_files',
+                                ]
+                            )
+                            and (tool_result or tool_result_citations)
                         ):
                             try:
                                 citation_sources = get_citation_source_from_tool_result(
@@ -6105,6 +6386,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     tool_params=tool_function_params,
                                     tool_result=tool_result,
                                     tool_id=tool.get('tool_id', '') if tool else '',
+                                    citations=tool_result_citations or None,
+                                    tool_call_id=tool_call_id,
                                 )
                                 tool_call_sources.extend(citation_sources)
                             except Exception as e:
@@ -6162,7 +6445,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Emit citation sources to the frontend for display
                     if citations_enabled:
-                        for source in tool_call_sources:
+                        for source in [*tool_call_sources, *display_tool_sources]:
                             await event_emitter({'type': 'source', 'data': source})
 
                         # Apply tool source context to messages for the model.
@@ -6221,6 +6504,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         append=False,
                                     )
                         tool_call_sources.clear()
+                        display_tool_sources.clear()
 
                     await emit_output()
 

@@ -2695,9 +2695,9 @@ async def register_client(request, client_id: str) -> bool:
 
     server_url = connection.get('url')
     auth_type = connection.get('auth_type', 'none')
-    oauth_scope = (connection.get('info') or {}).get('oauth_scope') or (connection.get('config') or {}).get(
-        'oauth_scope'
-    )
+    connection_info = connection.get('info') or {}
+    oauth_scope = connection_info.get('oauth_scope') or (connection.get('config') or {}).get('oauth_scope')
+    oauth_redirect_uri = connection_info.get('oauth_redirect_uri')
     oauth_server_key = (connection.get('config') or {}).get('oauth_server_key')
 
     try:
@@ -2730,6 +2730,7 @@ async def register_client(request, client_id: str) -> bool:
                 server_url,
                 oauth_server_key,
                 oauth_scope=oauth_scope,
+                redirect_uri=oauth_redirect_uri,
             )
     except InvalidToken:
         log.error(
@@ -2818,6 +2819,24 @@ async def oauth_client_callback(
     request: Request,
     response: Response,
 ):
+    return await oauth_client_manager.handle_callback(
+        request,
+        client_id=client_id,
+        response=response,
+    )
+
+
+@app.get('/oauth/callback')
+async def oauth_shared_client_callback(
+    request: Request,
+    response: Response,
+):
+    client_id = await oauth_client_manager.get_client_id_for_state(request)
+    if not client_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='OAuth callback state is invalid or expired',
+        )
     return await oauth_client_manager.handle_callback(
         request,
         client_id=client_id,

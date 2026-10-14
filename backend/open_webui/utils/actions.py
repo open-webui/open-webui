@@ -127,7 +127,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                 data = action(**params)
 
             # Process action result for Rich UI embeds (HTMLResponse, tuple with headers)
-            processed_result, _, action_embeds = await process_tool_result(
+            processed_result, _, action_embeds, _ = await process_tool_result(
                 request,
                 action_id,
                 data,

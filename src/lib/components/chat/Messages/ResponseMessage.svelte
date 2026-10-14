@@ -857,10 +857,8 @@
 									}}
 									{onToolCallResolved}
 									onSourceClick={async (id) => {
-										console.log(id);
-
 										if (citationsElement) {
-											citationsElement?.showSourceModal(id);
+											citationsElement?.openSource(id);
 										}
 									}}
 									onSetInputText={(text) => {
@@ -910,9 +908,7 @@
 								<Citations
 									bind:this={citationsElement}
 									id={message?.id}
-									{chatId}
 									sources={message?.sources ?? message?.citations}
-									{readOnly}
 								/>
 							{/if}
 

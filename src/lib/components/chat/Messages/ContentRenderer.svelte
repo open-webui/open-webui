@@ -1,5 +1,6 @@
 <script>
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
+	import { onDestroy, onMount, tick, getContext, setContext } from 'svelte';
+	import { writable } from 'svelte/store';
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
@@ -15,6 +16,11 @@
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
+	import {
+		buildCitableCitationEntries,
+		buildCitationEntries,
+		getCitationDisplayName
+	} from '$lib/utils/citations';
 
 	/**
 	 * Extracts all top-level <details>...</details> blocks from content,
@@ -100,29 +106,25 @@
 	let contentContainerElement;
 	let floatingButtonsElement;
 
+	/** @type {import('svelte/store').Writable<import('$lib/utils/citations').CitationEntry[]>} */
+	const citationEntries = writable([]);
+	setContext('citationEntries', citationEntries);
+	const displaySourceEntries = writable([]);
+	setContext('displaySourceEntries', displaySourceEntries);
+
 	let sourceIds = [];
 	$: getSourceIds(sources);
 
 	const getSourceIds = (sources) => {
-		const result = [];
-		for (const source of sources ?? []) {
-			for (let index = 0; index < (source.document ?? []).length; index++) {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					result.push('N/A');
-					continue;
-				}
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
-				if (metadata?.name) {
-					result.push(metadata.name);
-				} else if (id.startsWith('http://') || id.startsWith('https://')) {
-					result.push(id);
-				} else {
-					result.push(source?.source?.name ?? id);
-				}
-			}
-		}
-		sourceIds = [...new Set(result)];
+		const allEntries = buildCitationEntries(sources ?? []);
+		const entries = buildCitableCitationEntries(sources ?? []);
+		displaySourceEntries.set(allEntries);
+		citationEntries.set(entries);
+		sourceIds = entries.map((entry) =>
+			model?.info?.meta?.capabilities?.citations == false
+				? 'N/A'
+				: getCitationDisplayName(entry.source, entry.metadata[0])
+		);
 	};
 
 	/** @param {string} messageContent */

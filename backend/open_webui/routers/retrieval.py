@@ -100,7 +100,7 @@ from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 
 # Web search engines
-from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.main import SearchResult, web_search_result_metadata
 from open_webui.retrieval.web.microsoft_web_iq import search_microsoft_web_iq
 from open_webui.retrieval.web.mojeek import search_mojeek
 from open_webui.retrieval.web.ollama import search_ollama_cloud
@@ -2508,7 +2508,7 @@ async def process_web(
         )
 
 
-async def search_web(request: Request, engine: str, query: str, user=None) -> list[SearchResult]:
+async def _search_web(request: Request, engine: str, query: str, user=None) -> list[SearchResult]:
     """Dispatch a web search query to the configured engine and return results.
 
     Providers that have been migrated to async (aiohttp) are awaited natively.
@@ -2879,6 +2879,15 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
         raise Exception('No search engine API key found in environment variables')
 
 
+async def search_web(request: Request, engine: str, query: str, user=None) -> list[SearchResult]:
+    """Return every engine's results in the normalized web citation shape."""
+    results = await _search_web(request, engine, query, user)
+    return [
+        result if isinstance(result, SearchResult) else SearchResult.from_provider_result(result)
+        for result in results
+    ]
+
+
 @router.post('/process/web/search')
 async def process_web_search(request: Request, form_data: SearchForm, user=Depends(get_verified_user)):
     config = await get_retrieval_config()
@@ -2963,12 +2972,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
             docs = [
                 Document(
                     page_content=result.snippet,
-                    metadata={
-                        'source': result.link,
-                        'title': result.title,
-                        'snippet': result.snippet,
-                        'link': result.link,
-                    },
+                    metadata=web_search_result_metadata(result),
                 )
                 for result in search_results
                 if hasattr(result, 'snippet') and result.snippet is not None
@@ -2983,6 +2987,12 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 loader_config=loader_config,
             )
             docs = await loader.aload()
+
+        results_by_url = {item.link: item for item in result_items}
+        for doc in docs:
+            result = results_by_url.get(doc.metadata.get('source'))
+            if result:
+                doc.metadata = web_search_result_metadata(result, doc.metadata)
 
         urls = [
             doc.metadata.get('source') for doc in docs if doc.metadata.get('source')

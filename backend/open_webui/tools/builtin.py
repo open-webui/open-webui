@@ -322,7 +322,7 @@ async def search_web(
         results = results[:count] if results else []
 
         return JSONCodec.dumps(
-            [{'title': r.title, 'link': r.link, 'snippet': r.snippet} for r in results],
+            [result.model_dump() for result in results],
             ensure_ascii=False,
         )
     except Exception as e:

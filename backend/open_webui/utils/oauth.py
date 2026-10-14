@@ -506,6 +506,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
     oauth_server_url: str,
     oauth_server_key: Optional[str] = None,
     oauth_scope: str | None = None,
+    redirect_uri: str | None = None,
 ) -> OAuthClientInformationFull:
     try:
         oauth_server_metadata = None
@@ -513,13 +514,14 @@ async def get_oauth_client_info_with_dynamic_client_registration(
 
         webui_url = await Config.get('webui.url')
         redirect_base_url = (str(webui_url or request.base_url)).rstrip('/')
+        callback_uri = redirect_uri or f'{redirect_base_url}/oauth/clients/{client_id}/callback'
 
         oauth_client_metadata = OAuthClientMetadata(
             # LICENSE covers this Open WebUI OAuth client identifier.
             # Do not alter, remove, obscure, or replace it except as LICENSE permits:
             # https://docs.openwebui.com/license.
             client_name='Open WebUI',
-            redirect_uris=[f'{redirect_base_url}/oauth/clients/{client_id}/callback'],
+            redirect_uris=[callback_uri],
             grant_types=['authorization_code', 'refresh_token'],
             response_types=['code'],
         )
@@ -1230,6 +1232,18 @@ class OAuthClientManager:
                     'documents may be missing or unreachable.'
                 ),
             )
+
+    async def get_client_id_for_state(self, request) -> str | None:
+        """Resolve a shared OAuth callback to the client that created its state."""
+        state = request.query_params.get('state')
+        if not state:
+            return None
+
+        for client_id, client in self.clients.items():
+            state_data = await client.framework.get_state_data(request.session, state)
+            if state_data:
+                return client_id
+        return None
 
     async def handle_callback(self, request, client_id: str, response):
         client = await self.get_client(client_id)

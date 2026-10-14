@@ -148,6 +148,7 @@ export function fileIconName(name: string, type: string = 'file'): string {
 		case '7z':
 		case 'rar':
 			return 'archive';
+		case 'doc':
 		case 'docx':
 			return 'docx-logo';
 		case 'txt':
@@ -155,6 +156,7 @@ export function fileIconName(name: string, type: string = 'file'): string {
 		case 'xlsx':
 		case 'xls':
 			return 'xlsx-logo';
+		case 'ppt':
 		case 'pptx':
 			return 'pptx-logo';
 		default:

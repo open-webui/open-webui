@@ -4,6 +4,7 @@
 
 	import type { Token } from 'marked';
 	import { getContext } from 'svelte';
+	import { readable, type Readable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
@@ -11,22 +12,33 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { skills, terminalSkills } from '$lib/stores';
 	import { copyToClipboard, safeLinkUrl, unescapeHtml } from '$lib/utils';
+	import {
+		buildTextFragmentUrl,
+		findCitationEntryForLink,
+		getCitationDisplayName,
+		getSafeCitationUrl,
+		selectCitationEntry,
+		type CitationEntry
+	} from '$lib/utils/citations';
 
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
-	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
 	import TextToken from './MarkdownInlineTokens/TextToken.svelte';
 	import CodespanToken from './MarkdownInlineTokens/CodespanToken.svelte';
 	import MentionToken from './MarkdownInlineTokens/MentionToken.svelte';
 	import NoteLinkToken from './MarkdownInlineTokens/NoteLinkToken.svelte';
 	import SourceToken from './SourceToken.svelte';
+	import CitationHovercard from '../Citations/CitationHovercard.svelte';
 
 	export let id: string;
 	export let done = true;
 	export let tokens: Token[];
-	export let sourceIds = [];
-	export let onSourceClick: Function = () => {};
+	export let sourceIds: string[] = [];
+	export let onSourceClick: (identifier: string | number) => void = () => {};
+
+	const displaySourceEntries =
+		getContext<Readable<CitationEntry[]>>('displaySourceEntries') ?? readable<CitationEntry[]>([]);
 
 	/**
 	 * Check if a URL is a same-origin note link and return the note ID if so.
@@ -72,12 +84,38 @@
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
-		<HtmlToken {id} {token} {onSourceClick} />
+		<HtmlToken {id} {token} />
 	{:else if token.type === 'link'}
 		{@const noteId = getNoteIdFromHref(token.href)}
 		{@const safeHref = safeLinkUrl(token.href)}
+		{@const citationMatch = findCitationEntryForLink(
+			$displaySourceEntries,
+			token.href,
+			token.text,
+			token.title
+		)}
 		{#if noteId}
 			<NoteLinkToken {noteId} href={token.href} />
+		{:else if citationMatch}
+			{@const selectedCitation = selectCitationEntry(citationMatch.entry, citationMatch.identifier)}
+			{@const citationHref =
+				getSafeCitationUrl(token.href) ??
+				getSafeCitationUrl(
+					buildTextFragmentUrl({
+						source: selectedCitation.source,
+						metadata: selectedCitation.metadata[0],
+						document: selectedCitation.document[0]
+					})
+				)}
+			<CitationHovercard
+				entry={citationMatch.entry}
+				identifier={citationMatch.identifier}
+				title={getCitationDisplayName(selectedCitation.source, selectedCitation.metadata[0])}
+				href={citationHref}
+				source={selectedCitation.source}
+				metadata={selectedCitation.metadata[0]}
+				onClick={onSourceClick}
+			/>
 		{:else if token.tokens}
 			<a
 				href={safeHref}
@@ -125,8 +163,8 @@
 			frameborder="0"
 			on:load={(e) => {
 				try {
-					e.currentTarget.style.height =
-						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+					const iframe = e.currentTarget as HTMLIFrameElement;
+					iframe.style.height = iframe.contentWindow!.document.body.scrollHeight + 20 + 'px';
 				} catch {}
 			}}
 		></iframe>
@@ -142,7 +180,7 @@
 		) || ''}
 	{:else if token.type === 'citation'}
 		{#if (sourceIds ?? []).length > 0}
-			<SourceToken {id} {token} {sourceIds} onClick={onSourceClick} />
+			<SourceToken {token} {sourceIds} onClick={onSourceClick} />
 		{:else}
 			<TextToken {token} {done} />
 		{/if}

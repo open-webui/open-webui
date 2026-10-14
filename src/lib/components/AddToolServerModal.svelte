@@ -67,6 +67,7 @@
 	let oauthServerUrl = '';
 	let oauthScope = '';
 	let oauthResourceParameter = 'auto';
+	let oauthRedirectUri = '';
 
 	let enable = true;
 	let loading = false;
@@ -131,10 +132,12 @@
 			client_secret?: string;
 			oauth_server_url?: string;
 			oauth_scope?: string;
+			redirect_uri?: string;
 		} = {
 			url: url,
 			client_id: id,
 			...(oauthScope ? { oauth_scope: oauthScope } : {}),
+			...(oauthRedirectUri ? { redirect_uri: oauthRedirectUri } : {}),
 			...(auth_type === 'oauth_2.1_static'
 				? { client_secret: oauthClientSecret, oauth_server_url: oauthServerUrl }
 				: {})
@@ -275,6 +278,7 @@
 					description = data.info.description ?? '';
 					oauthScope = data.info.oauth_scope ?? '';
 					oauthResourceParameter = data.info.oauth_resource_parameter ?? 'auto';
+					oauthRedirectUri = data.info.oauth_redirect_uri ?? '';
 				}
 
 				if (data.config) {
@@ -313,7 +317,8 @@
 					...(type === 'mcp' && ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)
 						? {
 								...(oauthScope ? { oauth_scope: oauthScope } : {}),
-								oauth_resource_parameter: oauthResourceParameter
+								oauth_resource_parameter: oauthResourceParameter,
+								...(oauthRedirectUri ? { oauth_redirect_uri: oauthRedirectUri } : {})
 							}
 						: {})
 				}
@@ -399,7 +404,8 @@
 				...(type === 'mcp' && oauthAuthTypes.includes(auth_type)
 					? {
 							...(oauthScope ? { oauth_scope: oauthScope } : {}),
-							oauth_resource_parameter: oauthResourceParameter
+							oauth_resource_parameter: oauthResourceParameter,
+							...(oauthRedirectUri ? { oauth_redirect_uri: oauthRedirectUri } : {})
 						}
 					: {}),
 				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {}),
@@ -440,6 +446,7 @@
 		oauthServerUrl = '';
 		oauthScope = '';
 		oauthResourceParameter = 'auto';
+		oauthRedirectUri = '';
 
 		enable = true;
 		functionNameFilterList = '';
@@ -470,6 +477,7 @@
 			oauthServerUrl = connection.info?.oauth_server_url ?? '';
 			oauthScope = connection.info?.oauth_scope ?? '';
 			oauthResourceParameter = connection.info?.oauth_resource_parameter ?? 'auto';
+			oauthRedirectUri = connection.info?.oauth_redirect_uri ?? '';
 
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';

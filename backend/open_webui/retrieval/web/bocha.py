@@ -50,7 +50,4 @@ def search_bocha(api_key: str, query: str, count: int, filter_list: Optional[lis
     if filter_list:
         results = get_filtered_results(results, filter_list)
 
-    return [
-        SearchResult(link=result['url'], title=result.get('name'), snippet=result.get('summary'))
-        for result in results[:count]
-    ]
+    return [SearchResult.from_provider_result(result) for result in results[:count]]

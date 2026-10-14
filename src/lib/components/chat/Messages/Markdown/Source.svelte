@@ -1,14 +1,20 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { decodeString } from '$lib/utils';
+	import type { SourceInfo, SourceMetadata } from '$lib/utils/citations';
+	import CitationSourceIcon from '../Citations/CitationSourceIcon.svelte';
 
 	const i18n = getContext('i18n');
 
-	export let id;
+	export let id: string | number;
 
 	export let title: string = 'N/A';
+	export let href: string | null = null;
+	export let source: SourceInfo | undefined = undefined;
+	export let metadata: SourceMetadata | undefined = undefined;
+	export let onClick: (id: string | number) => void = () => {};
 
-	export let onClick: Function = () => {};
+	$: iconSource = source ?? { name: title };
 
 	// Helper function to return only the domain from a URL
 	function getDomain(url: string): string {
@@ -39,15 +45,33 @@
 </script>
 
 {#if title !== 'N/A'}
-	<button
-		aria-label={$i18n.t('View source: {{title}}', { title: formattedTitle(decodeString(title)) })}
-		class="text-[0.625rem] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
-		on:click={() => {
-			onClick(id);
-		}}
-	>
+	{@const label = formattedTitle(decodeString(title))}
+	{@const chipClass =
+		'text-[0.625rem] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl inline-flex items-center gap-1 !no-underline hover:!no-underline visited:!no-underline focus-visible:!no-underline'}
+	{#snippet content()}
+		<CitationSourceIcon source={iconSource} {metadata} size={12} />
 		<span class="line-clamp-1">
-			{getDisplayTitle(formattedTitle(decodeString(title)))}
+			{getDisplayTitle(label)}
 		</span>
-	</button>
+	{/snippet}
+	{#if href}
+		<a
+			{href}
+			target="_blank"
+			rel="nofollow noopener noreferrer"
+			referrerpolicy="no-referrer"
+			aria-label={$i18n.t('Open source: {{title}}', { title: label })}
+			class={chipClass}
+		>
+			{@render content()}
+		</a>
+	{:else}
+		<button
+			aria-label={$i18n.t('View source: {{title}}', { title: label })}
+			class={chipClass}
+			on:click={() => onClick(id)}
+		>
+			{@render content()}
+		</button>
+	{/if}
 {/if}

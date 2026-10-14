@@ -46,11 +46,4 @@ def search_duckduckgo(
         search_results = get_filtered_results(search_results, filter_list)
 
     # Return the list of search results
-    return [
-        SearchResult(
-            link=result['href'],
-            title=result.get('title'),
-            snippet=result.get('body'),
-        )
-        for result in search_results
-    ]
+    return [SearchResult.from_provider_result(result) for result in search_results]
