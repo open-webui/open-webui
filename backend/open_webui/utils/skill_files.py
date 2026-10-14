@@ -76,17 +76,6 @@ def iter_skill_headings(content: str):
             yield {'title': title, 'level': len(heading[1]), 'offset': line_offset}
 
 
-def skill_heading_index(content: str) -> dict:
-    headings, size = [], 2
-    for entry in iter_skill_headings(content):
-        entry_size = len(json.dumps(entry, ensure_ascii=False)) + (2 if headings else 0)
-        if size + entry_size > SKILL_OVERVIEW_LIST_MAX_CHARS:
-            return {'headings': headings, 'headings_truncated': True}
-        headings.append(entry)
-        size += entry_size
-    return {'headings': headings, 'headings_truncated': False}
-
-
 def _skill_match_window(content: str, start: int, end: int) -> tuple[int, int]:
     left = max(0, start - 300)
     right = min(len(content), end + 300, left + SKILL_GREP_EXCERPT_MAX_CHARS)
@@ -215,28 +204,19 @@ def skill_overview(content: str, files: list, field: str = 'files', tools_enable
             **bounded_skill_manifest(files, field),
         }
     large = len(content) > SKILL_CONTENT_MAX_CHARS
-    overview = {
+    return {
         **skill_content_page(content, max_chars=SKILL_PREVIEW_MAX_CHARS if large else SKILL_CONTENT_MAX_CHARS),
         **bounded_skill_manifest(files, field, SKILL_OVERVIEW_LIST_MAX_CHARS),
     }
-    if large:
-        overview.update(skill_heading_index(content))
-    return overview
 
 
 def format_skill_content(page: dict, skill_id: str, tools_enabled: bool) -> str:
     content = page['content']
-    if tools_enabled and 'headings' in page:
-        content += '\nSection index: ' + json.dumps(page['headings'], ensure_ascii=False)
-        if page.get('headings_truncated'):
-            content += '\nAdditional headings omitted.'
-        content += f'\nSkill ID: {json.dumps(skill_id)}.'
-        content += f'\nnext_offset: {page["next_offset"]}'
-        return content
     if page['next_offset'] is not None:
         content += '\nSkill instructions truncated.'
         if tools_enabled:
-            content += f'\nread_skill_file(id={json.dumps(skill_id)}, path="SKILL.md", offset={page["next_offset"]}).'
+            content += f'\nSkill ID: {json.dumps(skill_id)}.'
+            content += f'\nnext_offset: {page["next_offset"]}'
     return content
 
 

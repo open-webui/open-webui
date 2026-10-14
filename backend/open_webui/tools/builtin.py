@@ -3506,7 +3506,7 @@ async def view_skill(
     __metadata__: dict = None,
     __event_call__: callable = None,
 ) -> str:
-    """Read skill instructions and file list. Large skills return an opening preview and section offsets.
+    """Read skill instructions and file list. Large skills return an opening preview and next_offset.
 
     :param id: Skill ID from the available skills manifest.
     """

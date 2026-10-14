@@ -509,11 +509,19 @@ async def send_app_invocation(
             504: 'App processing timed out; execution outcome may be unknown.',
         }.get(status, f'App returned HTTP {status}. Check the app server logs.')
         if isinstance(raw, str) and raw.strip():
-            detail = raw.strip()
-            for secret in (app.api_key, app.data.get('connection_token'), token):
-                if secret:
-                    detail = detail.replace(secret, '[redacted]')
-            detail = detail[:2000]
+            try:
+                cipher = get_app_encryption_cipher()
+                secrets = [token]
+                for stored in filter(None, (app.api_key, app.data.get('connection_token'))):
+                    secrets.extend((stored, cipher.decrypt(stored.encode()).decode()))
+                sanitized = raw.strip()
+                for secret in sorted(filter(None, secrets), key=len, reverse=True):
+                    sanitized = sanitized.replace(secret, '[redacted]')
+            except Exception:
+                # Keep the generic error if credentials cannot be safely scrubbed.
+                log.warning('Could not redact app error credentials')
+            else:
+                detail = sanitized[:2000]
         raise HTTPException(status if 400 <= status < 600 else 502, detail)
     return raw
 
