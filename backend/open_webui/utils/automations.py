@@ -35,6 +35,7 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.messages import MessageForm
 from open_webui.models.users import Users
+from open_webui.tasks import tasks
 from open_webui.utils.auth import create_token
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.models import get_all_models
@@ -519,7 +520,24 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
         request = _build_request(app, token=token)
-        await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
+        result = await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
+
+        # The handler only starts the reply; wait for it so the run reflects how it ended.
+        reply_tasks = [tasks[task_id] for task_id in result.get('task_ids', []) if task_id in tasks]
+        await asyncio.gather(*reply_tasks, return_exceptions=True)
+
+        reply = await Chats.get_message_by_id_and_message_id(chat.id, assistant_msg_id) or {}
+        if reply_error := reply.get('error'):
+            error = str(reply_error['content'])[:4000]
+            await _record_run(automation.id, 'error', chat_id=chat.id, error=error)
+            await publish_event(
+                app,
+                EVENTS.AUTOMATION_RUN_FAILED,
+                actor=user,
+                subject_id=automation.id,
+                data={'name': automation.name, 'chat_id': chat.id, 'error': error},
+            )
+            return
 
         # Notify user
         from open_webui.socket.main import sio
