@@ -1434,6 +1434,9 @@ async def generate_chat_completion(
     metadata = payload.pop('metadata', None)
 
     model_id = form_data.get('model')
+    # keep the model the client asked for when reached from /api/chat/completions
+    if not hasattr(request.state, 'model_id'):
+        request.state.model_id = model_id
     model_info = await Models.get_model_by_id(model_id)
 
     # Check model info and override the payload
@@ -1821,6 +1824,7 @@ async def responses(
 
     idx = 0
     model_id = form_data.model
+    request.state.model_id = model_id
 
     # Enforce per-model access control
     await check_model_access(user, await Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL)
@@ -1944,6 +1948,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     idx = 0
     model_id = payload.get('model') if isinstance(payload, dict) else None
+    request.state.model_id = model_id
     if model_id:
         models = request.app.state.OPENAI_MODELS
         if not models or model_id not in models:
