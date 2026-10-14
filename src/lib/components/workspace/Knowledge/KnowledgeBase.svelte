@@ -962,7 +962,7 @@
 									placeholder={$i18n.t('Ask this knowledge source a test question')}
 								/>
 								<button
-									class="px-3 py-2 rounded-xl bg-black text-white dark:bg-white dark:text-black text-xs"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 									on:click={externalTestHandler}
 								>
 									{$i18n.t('Test')}

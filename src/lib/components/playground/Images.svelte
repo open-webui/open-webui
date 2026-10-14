@@ -245,7 +245,7 @@
 							/>
 							<button
 								type="button"
-								class="px-3.5 py-1.5 text-sm font-normal bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
 								on:click={() => fileInputElement?.click()}
 								on:dragover|preventDefault
 								on:drop={handleDrop}
@@ -258,14 +258,14 @@
 							{#if !loading}
 								<button
 									disabled={prompt.trim() === ''}
-									class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 									on:click={submitHandler}
 								>
 									{$i18n.t('Run')}
 								</button>
 							{:else}
 								<button
-									class="px-3.5 py-1.5 text-sm font-normal bg-gray-300 text-black transition rounded-lg flex items-center gap-2"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
 									disabled
 								>
 									<Spinner className="size-4" />

@@ -362,7 +362,7 @@
 	<div class="flex gap-3 items-center mt-3 text-xs">
 		<button
 			type="button"
-			class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-850"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
 			on:click={() => input.click()}
 			>{value ? $i18n.t('Replace avatar') : $i18n.t('Upload VRM')}</button
 		>

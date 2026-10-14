@@ -272,7 +272,7 @@
 				{#if total > 0}
 					<Dropdown align="end">
 						<button
-							class="flex h-8 shrink-0 items-center gap-1 px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 dark:text-gray-200 transition text-xs"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
 						>
 							{$i18n.t('Export')}
 							<ChevronDown className="size-3" strokeWidth="2.5" />

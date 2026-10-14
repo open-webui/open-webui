@@ -157,7 +157,7 @@
 	<div slot="footer">
 		<div class="flex flex-wrap text-sm font-normal gap-1.5 mt-2 m-1 justify-end w-full">
 			<button
-				class=" px-3.5 py-1.5 font-normal hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
 				disabled={loading}
 				on:click={() => {
 					showUnshareAllConfirmDialog = true;

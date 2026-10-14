@@ -58,7 +58,7 @@
 {:else}
 	<button
 		type="button"
-		class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-200/80 dark:bg-gray-700 text-gray-500 dark:text-blue-400 text-sm font-normal hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+		class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
 		on:click={openInput}
 	>
 		<span>+</span>

@@ -35,6 +35,9 @@
 	export let proposedContent: string | undefined = undefined;
 	export let filePath: string | null = null;
 	export let title = '';
+	export let applyLabel: string | null = null;
+	export let applyDescription: string | null = null;
+	export let discardMessage: string | null = null;
 	export let onApply: (content: string) => void = () => {};
 	export let onClose: () => void = () => {};
 
@@ -523,11 +526,12 @@
 			</div>
 			<footer class="flex shrink-0 flex-wrap items-center gap-2 px-5 py-3">
 				<p class="mr-auto text-gray-500">
-					{$i18n.t('Apply uses the left working copy. Save your draft afterward.')}
+					{applyDescription ??
+						$i18n.t('Apply uses the left working copy. Save your draft afterward.')}
 				</p>
 				<button type="button" class="secondary" on:click={requestClose}>{$i18n.t('Cancel')}</button>
 				<button type="button" class="primary" disabled={loading} on:click={apply}
-					>{$i18n.t('Apply to draft')}</button
+					>{applyLabel ?? $i18n.t('Apply to draft')}</button
 				>
 			</footer>
 		</div>
@@ -535,9 +539,10 @@
 	<ConfirmDialog
 		bind:show={confirmDiscard}
 		title={$i18n.t('Discard comparison changes?')}
-		message={$i18n.t(
-			'Your changes in this comparison will be discarded. The original draft will stay unchanged.'
-		)}
+		message={discardMessage ??
+			$i18n.t(
+				'Your changes in this comparison will be discarded. The original draft will stay unchanged.'
+			)}
 		confirmLabel={$i18n.t('Discard')}
 		onConfirm={close}
 	/>
@@ -589,31 +594,58 @@
 
 	.secondary,
 	.primary {
+		display: inline-flex;
+		height: 1.75rem;
+		flex-shrink: 0;
+		align-items: center;
+		justify-content: center;
+		gap: 0.375rem;
 		border-radius: 0.5rem;
-		padding: 0.375rem 0.625rem;
+		padding: 0 0.625rem;
+		font-size: 0.75rem;
+		font-weight: 400;
+		transition:
+			background-color 150ms,
+			color 150ms;
 	}
 	.secondary {
 		background: var(--color-gray-100);
-		color: var(--color-gray-700);
+		color: var(--color-gray-800);
+	}
+	.secondary:hover {
+		background: color-mix(in oklab, var(--color-gray-100) 70%, transparent);
 	}
 	.primary {
 		background: var(--color-gray-900);
 		color: white;
 	}
+	.primary:hover {
+		background: black;
+	}
 	button:disabled {
 		opacity: 0.4;
+	}
+	.secondary:disabled,
+	.primary:disabled {
+		opacity: 0.6;
 	}
 	button:focus-visible {
 		outline: 2px solid var(--color-gray-500);
 		outline-offset: 2px;
 	}
 	:global(.dark) .secondary {
-		background: var(--color-gray-800);
-		color: var(--color-gray-200);
+		background: var(--color-gray-850);
+		color: white;
+	}
+	:global(.dark) .secondary:hover {
+		background: color-mix(in oklab, var(--color-gray-850) 60%, transparent);
 	}
 	:global(.dark) .primary {
 		background: var(--color-gray-100);
 		color: var(--color-gray-900);
+	}
+	:global(.dark) .primary:hover {
+		background: white;
 	}
 	.merge-container :global(.cm-mergeView) {
 		height: 100%;
