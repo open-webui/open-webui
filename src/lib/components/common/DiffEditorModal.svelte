@@ -3,7 +3,7 @@
 	import { getContext } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 	import { basicSetup, EditorView } from 'codemirror';
-	import { Compartment } from '@codemirror/state';
+	import { Compartment, type Text } from '@codemirror/state';
 	import { keymap, type ViewUpdate } from '@codemirror/view';
 	import { indentWithTab, isolateHistory } from '@codemirror/commands';
 	import { LanguageDescription, indentUnit } from '@codemirror/language';
@@ -14,7 +14,7 @@
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import FileCodeEditor from '$lib/components/chat/FileNav/FileCodeEditor.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { lineAlignment, alignChangedLines } from './diffEditorAlignment';
+	import { lineAlignment, alignChangedLines, clearLineAlignment } from './diffEditorAlignment';
 	import {
 		copyChunk,
 		selectedChunk,
@@ -181,6 +181,8 @@
 		let view: MergeView | null = null;
 		let observer: MutationObserver | undefined;
 		let alignmentFrame = 0;
+		let alignmentDocuments: readonly [Text, Text] | null = null;
+		let alignmentGeometry = '';
 		const themes = [new Compartment(), new Compartment()];
 		const language = [new Compartment(), new Compartment()];
 		const path = session?.path;
@@ -208,7 +210,22 @@
 					alignmentFrame = requestAnimationFrame(() => {
 						alignmentFrame = 0;
 						if (!disposed && view) {
-							alignChangedLines(view.a, view.b, view.chunks);
+							const documents = [view.a.state.doc, view.b.state.doc] as const;
+							const geometry = [
+								view.a.contentDOM.clientWidth,
+								view.b.contentDOM.clientWidth,
+								view.a.defaultLineHeight,
+								view.b.defaultLineHeight
+							].join(':');
+							const reset =
+								alignmentDocuments &&
+								(alignmentDocuments[0] !== documents[0] ||
+									alignmentDocuments[1] !== documents[1] ||
+									geometry !== alignmentGeometry);
+							alignmentDocuments = documents;
+							alignmentGeometry = geometry;
+							if (!reset || !clearLineAlignment(view.a, view.b))
+								alignChangedLines(view.a, view.b, view.chunks);
 							view.reconfigure({});
 						}
 					});

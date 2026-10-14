@@ -30,10 +30,21 @@ export const lineAlignment = StateField.define<DecorationSet>({
 	create: () => Decoration.none,
 	update: (value, transaction) => {
 		for (const effect of transaction.effects) if (effect.is(setSpacers)) return effect.value;
-		return value.map(transaction.changes);
+		return transaction.docChanged ? Decoration.none : value;
 	},
 	provide: (field) => EditorView.decorations.from(field)
 });
+
+export function clearLineAlignment(a: EditorView, b: EditorView) {
+	let changed = false;
+	for (const view of [a, b]) {
+		if (view.state.field(lineAlignment).size) {
+			view.dispatch({ effects: setSpacers.of(Decoration.none) });
+			changed = true;
+		}
+	}
+	return changed;
+}
 
 // Only remeasure paired rows present in both virtualized viewports. Recomputing
 // offscreen spacers from estimated heights would move already aligned content.
