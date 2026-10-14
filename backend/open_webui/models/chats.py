@@ -1374,6 +1374,7 @@ class ChatTable:
                 self._repair_chat_current_id(chat)
 
                 history = chat.get('history', {})
+                parent_id = ((history.get('messages') or {}).get(message_id) or {}).get('parentId')
                 deleted_ids = self.delete_message_from_history(history, message_id)
                 await ChatMessages.delete_message_ids_by_chat_id(id, deleted_ids, db=session)
                 if not deleted_ids:
@@ -1383,6 +1384,12 @@ class ChatTable:
                     flag_modified(chat_item, 'chat')
 
                     return ChatModel.model_validate(chat_item)
+
+                for mid, message in (history.get('messages') or {}).items():
+                    if message.get('parentId') == parent_id:
+                        await ChatMessages.upsert_message(
+                            mid, id, message.get('user_id') or chat_item.user_id, message, db=session
+                        )
 
                 chat['history'] = history
                 chat_item.chat = chat
