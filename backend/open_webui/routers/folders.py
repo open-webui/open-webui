@@ -32,7 +32,7 @@ from open_webui.utils.access_control import (
     filter_allowed_access_grants,
 )
 from open_webui.utils.access_control.files import can_read_all_folder_files, get_accessible_folder_files
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.tasks import has_active_tasks
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,7 +92,7 @@ async def check_folders_permission(request: Request, user, db=None):
 @router.get('/', response_model=list[FolderNameIdResponse])
 async def get_folders(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folders_permission(request, user, db=db)
@@ -151,7 +151,7 @@ async def get_folders(
 async def create_folder(
     request: Request,
     form_data: FolderForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folders_permission(request, user, db=db)
@@ -242,7 +242,7 @@ async def create_folder(
 @router.get('/shared')
 async def get_shared_folders(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get folders shared with or by the current user."""
@@ -296,7 +296,7 @@ class FolderResponse(FolderModel):
 
 @router.get('/{id}', response_model=FolderResponse)
 async def get_folder_by_id(
-    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
@@ -334,7 +334,7 @@ async def update_folder_name_by_id(
     request: Request,
     id: str,
     form_data: FolderUpdateForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folders_permission(request, user, db=db)
@@ -427,7 +427,7 @@ async def update_folder_parent_id_by_id(
     request: Request,
     id: str,
     form_data: FolderParentIdForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folders_permission(request, user, db=db)
@@ -489,7 +489,7 @@ async def update_folder_is_expanded_by_id(
     request: Request,
     id: str,
     form_data: FolderIsExpandedForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folders_permission(request, user, db=db)
@@ -534,7 +534,7 @@ async def update_folder_access_by_id(
     request: Request,
     id: str,
     form_data: FolderAccessGrantsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folders_permission(request, user, db=db)
@@ -593,7 +593,7 @@ async def get_shared_folder_chats(
     page: int | None = Query(None, ge=1),
     sort_by: str = Query('unread_updated_at'),
     sort_dir: str = Query('desc'),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get chats within a shared folder. Returns readonly flag based on permission."""
@@ -656,7 +656,7 @@ async def get_shared_folder_chats(
 async def mark_folder_chats_read_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folders_permission(request, user, db=db)
@@ -700,7 +700,7 @@ async def delete_folder_by_id(
     request: Request,
     id: str,
     delete_contents: Optional[bool] = True,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folders_permission(request, user, db=db)

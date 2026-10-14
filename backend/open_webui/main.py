@@ -360,6 +360,42 @@ https://github.com/open-webui/open-webui
         print(f'Open WebUI v{VERSION} - building the best AI user interface.\nhttps://github.com/open-webui/open-webui')
 
 
+async def periodic_guest_cleanup():
+    """Purge expired guest user records on a regular interval."""
+    import time as _time
+
+    from open_webui.config import GUEST_ACCOUNT_TTL
+    from open_webui.internal.db import get_async_db_context
+    from open_webui.models.auths import Auths
+    from open_webui.models.users import User, Users
+    from open_webui.utils.misc import parse_duration
+
+    cleanup_interval = 3600
+    while True:
+        await asyncio.sleep(cleanup_interval)
+        try:
+            ttl = parse_duration(GUEST_ACCOUNT_TTL)
+            if ttl is None:
+                continue
+            cutoff = int(_time.time()) - int(ttl.total_seconds())
+            async with get_async_db_context() as db:
+                from sqlalchemy import select
+
+                guest_ids = (
+                    await db.execute(
+                        select(User.id).where(User.role == 'guest', User.created_at < cutoff)
+                    )
+                ).scalars().all()
+
+            for uid in guest_ids:
+                await Auths.delete_auth_by_id(uid)
+
+            if guest_ids:
+                log.info('Cleaned up %d expired guest account(s)', len(guest_ids))
+        except Exception:
+            log.exception('Guest cleanup failed')
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Store reference to main event loop for sync->async calls (e.g., embedding generation)
@@ -425,6 +461,7 @@ async def lifespan(app: FastAPI):
     app.state.periodic_socket_authentication = asyncio.create_task(periodic_socket_authentication())
     app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
     app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
+    app.state.periodic_guest_cleanup = asyncio.create_task(periodic_guest_cleanup())
 
     from open_webui.utils.automations import scheduler_worker_loop
 
@@ -520,6 +557,7 @@ async def lifespan(app: FastAPI):
     app.state.periodic_socket_authentication.cancel()
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
+    app.state.periodic_guest_cleanup.cancel()
     app.state.scheduler_worker_loop.cancel()
 
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
@@ -2318,6 +2356,7 @@ async def get_app_config(request: Request):
         'oauth.auto_redirect',
         'ldap.enable',
         'ui.enable_signup',
+        'ui.enable_guest_access',
         'ui.enable_login_form',
         'auth.enable_api_keys',
         'ui.enable_password_change_form',
@@ -2395,6 +2434,7 @@ async def get_app_config(request: Request):
             'enable_signup_password_confirmation': ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
             'enable_ldap': config.get('ldap.enable'),
             'enable_signup': config.get('ui.enable_signup'),
+            'enable_guest_access': config.get('ui.enable_guest_access'),
             'enable_login_form': config.get('ui.enable_login_form'),
             'enable_websocket': ENABLE_WEBSOCKET_SUPPORT,
             **(

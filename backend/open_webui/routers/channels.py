@@ -44,7 +44,7 @@ from open_webui.socket.main import (
     sio,
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.utils.files import get_image_base64_from_file_id
 from open_webui.utils.models import (
@@ -173,7 +173,7 @@ class ChannelListItemResponse(ChannelModel):
 @router.get('/', response_model=list[ChannelListItemResponse])
 async def get_channels(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -222,7 +222,7 @@ async def get_channels(
 @router.get('/list', response_model=list[ChannelModel])
 async def get_all_channels(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -240,7 +240,7 @@ async def get_all_channels(
 async def get_dm_channel_by_user_id(
     request: Request,
     user_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -298,7 +298,7 @@ async def get_dm_channel_by_user_id(
 async def create_new_channel(
     request: Request,
     form_data: CreateChannelForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -386,7 +386,7 @@ class ChannelFullResponse(ChannelResponse):
 async def get_channel_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -519,7 +519,7 @@ async def get_channel_members_by_id(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -594,7 +594,7 @@ async def update_is_active_member_by_id_and_user_id(
     request: Request,
     id: str,
     form_data: UpdateActiveMemberForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -631,7 +631,7 @@ async def add_members_by_id(
     request: Request,
     id: str,
     form_data: UpdateMembersForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -685,7 +685,7 @@ async def remove_members_by_id(
     request: Request,
     id: str,
     form_data: RemoveMembersForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -728,7 +728,7 @@ async def update_channel_by_id(
     request: Request,
     id: str,
     form_data: ChannelForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -782,7 +782,7 @@ async def update_channel_by_id(
 async def delete_channel_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -834,7 +834,7 @@ async def get_channel_messages(
     id: str,
     skip: int = 0,
     limit: int = 50,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -901,7 +901,7 @@ async def get_pinned_channel_messages(
     request: Request,
     id: str,
     page: int = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1247,7 +1247,7 @@ async def post_new_message(
     id: str,
     form_data: MessageForm,
     background_tasks: BackgroundTasks,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1308,7 +1308,7 @@ async def get_channel_message(
     request: Request,
     id: str,
     message_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1349,7 +1349,7 @@ async def get_channel_message_data(
     request: Request,
     id: str,
     message_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1389,7 +1389,7 @@ async def pin_channel_message(
     id: str,
     message_id: str,
     form_data: PinMessageForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1464,7 +1464,7 @@ async def get_channel_thread_messages(
     message_id: str,
     skip: int = 0,
     limit: int = 50,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1525,7 +1525,7 @@ async def update_message_by_id(
     id: str,
     message_id: str,
     form_data: MessageForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1603,7 +1603,7 @@ async def add_reaction_to_message(
     id: str,
     message_id: str,
     form_data: ReactionForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1677,7 +1677,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
     id: str,
     message_id: str,
     form_data: ReactionForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1751,7 +1751,7 @@ async def delete_message_by_id(
     request: Request,
     id: str,
     message_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1847,7 +1847,7 @@ async def delete_message_by_id(
 async def get_webhook_profile_image(
     request: Request,
     webhook_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get webhook profile image by webhook ID."""
@@ -1906,7 +1906,7 @@ async def get_webhook_profile_image(
 async def get_channel_webhooks(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1926,7 +1926,7 @@ async def create_channel_webhook(
     request: Request,
     id: str,
     form_data: ChannelWebhookForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1958,7 +1958,7 @@ async def update_channel_webhook(
     id: str,
     webhook_id: str,
     form_data: ChannelWebhookForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)
@@ -1993,7 +1993,7 @@ async def delete_channel_webhook(
     request: Request,
     id: str,
     webhook_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_channels_access(request, user)

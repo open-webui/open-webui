@@ -124,7 +124,7 @@ from open_webui.retrieval.web.linkup import search_linkup
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.misc import (
     calculate_sha256_string,
     sanitize_text_for_db,
@@ -1572,7 +1572,7 @@ def has_vector_results(result) -> bool:
 async def process_file(
     request: Request,
     form_data: ProcessFileForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -1847,7 +1847,7 @@ class ProcessTextForm(BaseModel):
 async def process_text(
     request: Request,
     form_data: ProcessTextForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     collection_name = form_data.collection_name
     if collection_name is None:
@@ -2005,7 +2005,7 @@ async def process_url(
     request: Request,
     form_data: ProcessUrlForm,
     process: bool = Query(True, description='Whether to process and save the content'),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     try:
         if is_youtube_url(form_data.url):
@@ -2089,7 +2089,7 @@ async def process_web(
     form_data: ProcessUrlForm,
     process: bool = Query(True, description='Whether to process and save the content'),
     overwrite: bool = Query(True, description='Whether to overwrite existing collection'),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     config = await Config.get_many(*RETRIEVAL_CONFIG_KEYS.values())
 
@@ -2551,7 +2551,7 @@ async def search_web(
 
 
 @router.post('/process/web/search')
-async def process_web_search(request: Request, form_data: SearchForm, user=Depends(get_verified_user)):
+async def process_web_search(request: Request, form_data: SearchForm, user=Depends(get_non_guest_user)):
     config = await Config.get_many(*RETRIEVAL_CONFIG_KEYS.values())
     if not config['web.search.enable']:
         raise HTTPException(
@@ -2749,7 +2749,7 @@ class QueryDocForm(BaseModel):
 async def query_doc_handler(
     request: Request,
     form_data: QueryDocForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     config = await Config.get_many(*RETRIEVAL_CONFIG_KEYS.values())
     await _validate_collection_access([form_data.collection_name], user)
@@ -2815,7 +2815,7 @@ class QueryCollectionsForm(BaseModel):
 async def query_collection_handler(
     request: Request,
     form_data: QueryCollectionsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     config = await Config.get_many(*RETRIEVAL_CONFIG_KEYS.values())
     await _validate_collection_access(form_data.collection_names, user)
@@ -3017,7 +3017,7 @@ class BatchProcessFilesResponse(BaseModel):
 async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db=None,
 ) -> BatchProcessFilesResponse:
     """

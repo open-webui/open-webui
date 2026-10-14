@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.config import Config
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.misc import get_gravatar_url
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.get('/gravatar')
-async def get_gravatar(email: str, user=Depends(get_verified_user)):
+async def get_gravatar(email: str, user=Depends(get_non_guest_user)):
     return get_gravatar_url(email)
 
 
@@ -39,7 +39,7 @@ async def format_code(form_data: CodeForm, user=Depends(get_admin_user)):
 
 
 @router.post('/code/execute')
-async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_verified_user)):
+async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_non_guest_user)):
     if not await Config.get('code_execution.enable'):
         raise HTTPException(
             status_code=403,

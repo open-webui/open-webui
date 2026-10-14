@@ -20,7 +20,7 @@ from open_webui.models.channels import Channels
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.utils.access_control import has_permission
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.automations import (
     execute_automation,
     next_n_runs_ns,
@@ -166,7 +166,7 @@ async def get_automation_items(
     status: Optional[str] = None,
     folder_id: Optional[str] = None,
     page: Optional[int] = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
@@ -209,7 +209,7 @@ async def get_automation_items(
 async def create_new_automation(
     request: Request,
     form_data: AutomationForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
@@ -247,7 +247,7 @@ async def create_new_automation(
 async def get_automation_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
@@ -266,7 +266,7 @@ async def update_automation_by_id(
     request: Request,
     id: str,
     form_data: AutomationForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
@@ -307,7 +307,7 @@ async def update_automation_by_id(
 async def toggle_automation_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
@@ -335,7 +335,7 @@ async def toggle_automation_by_id(
 async def run_automation_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
@@ -362,7 +362,7 @@ async def run_automation_by_id(
 async def delete_automation_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
@@ -392,7 +392,7 @@ async def get_automation_runs(
     id: str,
     skip: int = 0,
     limit: int = 50,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)

@@ -24,7 +24,7 @@ from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_non_guest_user, get_verified_user
 from open_webui.utils.calendar import expand_recurring_event
 from open_webui.utils.recurrence import schedule_start_ns
 
@@ -86,7 +86,7 @@ async def _check_calendar_access(calendar_id: str, user: UserModel, permission: 
 
 
 @router.get('/', response_model=list[CalendarModel])
-async def get_calendars(request: Request, user: UserModel = Depends(get_verified_user)):
+async def get_calendars(request: Request, user: UserModel = Depends(get_non_guest_user)):
     """List user's calendars (owned + shared), plus a virtual Scheduled Tasks calendar
     when automations are available."""
     await check_calendar_permission(request, user)
@@ -111,7 +111,7 @@ async def get_calendars(request: Request, user: UserModel = Depends(get_verified
 
 
 @router.post('/create', response_model=CalendarModel)
-async def create_calendar(request: Request, form_data: CalendarForm, user: UserModel = Depends(get_verified_user)):
+async def create_calendar(request: Request, form_data: CalendarForm, user: UserModel = Depends(get_non_guest_user)):
     """Create a new user calendar."""
     await check_calendar_permission(request, user)
     # Strip public/user grants the requesting user is not permitted to assign
@@ -147,7 +147,7 @@ async def get_events(
     start: str,
     end: str,
     calendar_ids: Optional[str] = None,
-    user: UserModel = Depends(get_verified_user),
+    user: UserModel = Depends(get_non_guest_user),
 ):
     """Get events in date range.
 
@@ -280,7 +280,7 @@ async def get_events(
 
 
 @router.post('/events/create', response_model=CalendarEventModel)
-async def create_event(request: Request, form_data: CalendarEventForm, user: UserModel = Depends(get_verified_user)):
+async def create_event(request: Request, form_data: CalendarEventForm, user: UserModel = Depends(get_non_guest_user)):
     await check_calendar_permission(request, user)
     await _check_calendar_access(form_data.calendar_id, user, 'write')
     try:
@@ -303,14 +303,14 @@ async def search_events(
     query: Optional[str] = None,
     skip: int = 0,
     limit: int = 30,
-    user: UserModel = Depends(get_verified_user),
+    user: UserModel = Depends(get_non_guest_user),
 ):
     await check_calendar_permission(request, user)
     return await CalendarEvents.search_events(user_id=user.id, query=query, skip=skip, limit=limit)
 
 
 @router.get('/events/{event_id}', response_model=CalendarEventModel)
-async def get_event(request: Request, event_id: str, user: UserModel = Depends(get_verified_user)):
+async def get_event(request: Request, event_id: str, user: UserModel = Depends(get_non_guest_user)):
     await check_calendar_permission(request, user)
     event = await CalendarEvents.get_event_by_id(event_id)
     if not event:
@@ -323,7 +323,7 @@ async def get_event(request: Request, event_id: str, user: UserModel = Depends(g
 
 @router.post('/events/{event_id}/update', response_model=CalendarEventModel)
 async def update_event(
-    request: Request, event_id: str, form_data: CalendarEventUpdateForm, user: UserModel = Depends(get_verified_user)
+    request: Request, event_id: str, form_data: CalendarEventUpdateForm, user: UserModel = Depends(get_non_guest_user)
 ):
     await check_calendar_permission(request, user)
     event = await CalendarEvents.get_event_by_id(event_id)
@@ -355,7 +355,7 @@ async def update_event(
 
 
 @router.delete('/events/{event_id}/delete')
-async def delete_event(request: Request, event_id: str, user: UserModel = Depends(get_verified_user)):
+async def delete_event(request: Request, event_id: str, user: UserModel = Depends(get_non_guest_user)):
     await check_calendar_permission(request, user)
     event = await CalendarEvents.get_event_by_id(event_id)
     if not event:
@@ -378,7 +378,7 @@ async def delete_event(request: Request, event_id: str, user: UserModel = Depend
 
 @router.post('/events/{event_id}/rsvp', response_model=dict)
 async def rsvp_event(
-    request: Request, event_id: str, form_data: RSVPForm, user: UserModel = Depends(get_verified_user)
+    request: Request, event_id: str, form_data: RSVPForm, user: UserModel = Depends(get_non_guest_user)
 ):
     """Update own RSVP status for an event."""
     await check_calendar_permission(request, user)
@@ -404,7 +404,7 @@ async def rsvp_event(
 
 
 @router.get('/{calendar_id}', response_model=CalendarModel)
-async def get_calendar_by_id(request: Request, calendar_id: str, user: UserModel = Depends(get_verified_user)):
+async def get_calendar_by_id(request: Request, calendar_id: str, user: UserModel = Depends(get_non_guest_user)):
     await check_calendar_permission(request, user)
     cal = await _check_calendar_access(calendar_id, user, 'read')
     return cal
@@ -412,7 +412,7 @@ async def get_calendar_by_id(request: Request, calendar_id: str, user: UserModel
 
 @router.post('/{calendar_id}/update', response_model=CalendarModel)
 async def update_calendar(
-    request: Request, calendar_id: str, form_data: CalendarUpdateForm, user: UserModel = Depends(get_verified_user)
+    request: Request, calendar_id: str, form_data: CalendarUpdateForm, user: UserModel = Depends(get_non_guest_user)
 ):
     await check_calendar_permission(request, user)
     cal = await _check_calendar_access(calendar_id, user, 'write')
@@ -449,7 +449,7 @@ async def update_calendar(
 
 
 @router.delete('/{calendar_id}/delete')
-async def delete_calendar(request: Request, calendar_id: str, user: UserModel = Depends(get_verified_user)):
+async def delete_calendar(request: Request, calendar_id: str, user: UserModel = Depends(get_non_guest_user)):
     await check_calendar_permission(request, user)
 
     # Block deletion of the virtual Scheduled Tasks calendar
@@ -480,7 +480,7 @@ async def delete_calendar(request: Request, calendar_id: str, user: UserModel = 
 
 
 @router.post('/{calendar_id}/default')
-async def set_default_calendar(request: Request, calendar_id: str, user: UserModel = Depends(get_verified_user)):
+async def set_default_calendar(request: Request, calendar_id: str, user: UserModel = Depends(get_non_guest_user)):
     await check_calendar_permission(request, user)
     cal = await Calendars.set_default_calendar(user.id, calendar_id)
     if not cal:

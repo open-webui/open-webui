@@ -256,19 +256,27 @@
 			await gotoAuth();
 			return;
 		}
-		if (!['user', 'admin'].includes($user?.role)) {
+		if (!['user', 'admin', 'guest'].includes($user?.role)) {
 			return;
+		}
+
+		if ($user?.role === 'guest') {
+			temporaryChatEnabled.set(true);
 		}
 
 		clearChatInputStorage();
 		try {
-			await Promise.all([
-				setBanners().catch((e) => console.error('Failed to load banners:', e)),
-				setTools().catch((e) => console.error('Failed to load tools:', e)),
-				setUserSettings(async () => {
-					await setModels().catch((e) => console.error('Failed to load models:', e));
-				})
-			]);
+			if ($user?.role === 'guest') {
+				await setModels().catch((e) => console.error('Failed to load models:', e));
+			} else {
+				await Promise.all([
+					setBanners().catch((e) => console.error('Failed to load banners:', e)),
+					setTools().catch((e) => console.error('Failed to load tools:', e)),
+					setUserSettings(async () => {
+						await setModels().catch((e) => console.error('Failed to load models:', e));
+					})
+				]);
+			}
 		} catch (e) {
 			console.error('Failed to load user settings:', e);
 			toast.error($i18n.t('Failed to load Interface settings'));
@@ -484,7 +492,7 @@
 		<div
 			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 		>
-			{#if !['user', 'admin'].includes($user?.role)}
+			{#if !['user', 'admin', 'guest'].includes($user?.role)}
 				<AccountPending />
 			{:else}
 				<Sidebar />

@@ -37,7 +37,7 @@ from open_webui.utils.access_control import (
     has_connection_access,
     has_permission,
 )
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.plugin import (
     get_tool_contents_cache,
     get_tool_module_from_cache,
@@ -77,7 +77,7 @@ async def get_tool_module(request, tool_id, load_from_db=True):
 async def get_tools(
     request: Request,
     query: Optional[str] = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     tools = []
@@ -203,7 +203,7 @@ async def get_tools(
 
 
 @router.get('/id/{id}/specs')
-async def get_tool_specs(request: Request, id: str, user=Depends(get_verified_user)):
+async def get_tool_specs(request: Request, id: str, user=Depends(get_non_guest_user)):
     """Discover tools for an accessible connection. Currently supports MCP."""
     if not id.startswith('server:mcp:'):
         raise HTTPException(status_code=404, detail='Tool not found')
@@ -234,7 +234,7 @@ async def get_tool_specs(request: Request, id: str, user=Depends(get_verified_us
 
 
 @router.get('/list', response_model=list[ToolAccessResponse])
-async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_tool_list(user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     if not ENABLE_TOOLS:
         return []
 
@@ -355,7 +355,7 @@ async def load_tool_from_url(request: Request, form_data: LoadUrlForm, user=Depe
 @router.get('/export', response_model=list[ToolModel])
 async def export_tools(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not await has_permission(
@@ -386,7 +386,7 @@ async def export_tools(
 async def create_new_tools(
     request: Request,
     form_data: ToolForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Create a new tool from user-supplied Python source code."""
@@ -472,7 +472,7 @@ async def create_new_tools(
 
 
 @router.get('/id/{id}', response_model=ToolAccessResponse | None)
-async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_tools_by_id(id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     tools = await Tools.get_tool_by_id(id, db=db)
 
     if tools:
@@ -525,7 +525,7 @@ async def update_tools_by_id(
     request: Request,
     id: str,
     form_data: ToolForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     return await _update_tool(request, id, form_data, user, db)
@@ -637,7 +637,7 @@ async def update_tool_access_by_id(
     request: Request,
     id: str,
     form_data: ToolAccessGrantsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     tools = await Tools.get_tool_by_id(id, db=db)
@@ -693,7 +693,7 @@ async def update_tool_access_by_id(
 async def delete_tools_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     tools = await Tools.get_tool_by_id(id, db=db)
@@ -743,7 +743,7 @@ async def delete_tools_by_id(
 
 @router.get('/id/{id}/valves', response_model=dict | None)
 async def get_tools_valves_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
@@ -787,7 +787,7 @@ async def get_tools_valves_by_id(
 async def get_tools_valves_spec_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     tools = await Tools.get_tool_by_id(id, db=db)
@@ -834,7 +834,7 @@ async def update_tools_valves_by_id(
     request: Request,
     id: str,
     form_data: dict,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     tools = await Tools.get_tool_by_id(id, db=db)
@@ -896,7 +896,7 @@ async def update_tools_valves_by_id(
 
 @router.get('/id/{id}/valves/user', response_model=dict | None)
 async def get_tools_user_valves_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
@@ -935,7 +935,7 @@ async def get_tools_user_valves_by_id(
 async def get_tools_user_valves_spec_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     tools = await Tools.get_tool_by_id(id, db=db)
@@ -977,7 +977,7 @@ async def update_tools_user_valves_by_id(
     request: Request,
     id: str,
     form_data: dict,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     tools = await Tools.get_tool_by_id(id, db=db)
@@ -1065,7 +1065,7 @@ async def require_tool_history_entry(id, history_id, db):
 
 @router.get('/id/{id}/history')
 async def get_tool_history(
-    id: str, page: int = 1, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, page: int = 1, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     await require_tool_history_access(id, user, db)
     return await ToolHistories.get_history_by_tool_id(id, page, db=db)
@@ -1073,7 +1073,7 @@ async def get_tool_history(
 
 @router.get('/id/{id}/history/diff')
 async def get_tool_history_diff(
-    id: str, from_id: str, to_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, from_id: str, to_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     await require_tool_history_access(id, user, db)
     before = await require_tool_history_entry(id, from_id, db)
@@ -1083,7 +1083,7 @@ async def get_tool_history_diff(
 
 @router.get('/id/{id}/history/{history_id}')
 async def get_tool_history_entry(
-    id: str, history_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, history_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     await require_tool_history_access(id, user, db)
     return await require_tool_history_entry(id, history_id, db)
@@ -1091,7 +1091,7 @@ async def get_tool_history_entry(
 
 @router.delete('/id/{id}/history/{history_id}')
 async def delete_tool_history_entry(
-    id: str, history_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, history_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     await require_tool_history_access(id, user, db)
     if not await ToolHistories.delete_history_entry(id, history_id, db=db):
@@ -1108,7 +1108,7 @@ async def set_tool_production(
     request: Request,
     id: str,
     form_data: ToolVersionForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await require_tool_history_access(id, user, db)

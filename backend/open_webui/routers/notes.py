@@ -30,7 +30,7 @@ from open_webui.utils.access_control import (
     has_public_read_access_grant,
     has_public_write_access_grant,
 )
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,7 +98,7 @@ class NoteItemResponse(BaseModel):
 async def get_notes(
     request: Request,
     page: Optional[int] = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -140,7 +140,7 @@ async def get_notes(
 @router.get('/pinned', response_model=list[NoteItemResponse])
 async def get_pinned_notes(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -175,7 +175,7 @@ async def search_notes(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -222,7 +222,7 @@ async def search_notes(
 async def create_new_note(
     request: Request,
     form_data: NoteForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -264,7 +264,7 @@ class NoteResponse(NoteModel):
 async def get_note_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -311,7 +311,7 @@ async def get_note_by_id(
 async def get_note_chat_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     log.info('[note-chat] get-or-create requested note_id=%s user_id=%s', id, user.id)
@@ -396,7 +396,7 @@ async def get_note_chat_by_id(
 async def get_note_chats_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -448,7 +448,7 @@ async def get_note_chats_by_id(
 async def create_note_chat_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -512,7 +512,7 @@ async def update_note_by_id(
     request: Request,
     id: str,
     form_data: NoteForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -592,7 +592,7 @@ async def update_note_access_by_id(
     request: Request,
     id: str,
     form_data: NoteAccessGrantsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -645,7 +645,7 @@ async def update_note_access_by_id(
 async def pin_note_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
@@ -688,7 +688,7 @@ async def pin_note_by_id(
 async def delete_note_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)

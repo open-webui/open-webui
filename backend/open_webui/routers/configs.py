@@ -11,7 +11,7 @@ from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, E
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.headers import bearer_auth_header, get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
@@ -760,7 +760,7 @@ class ModelsConfigForm(BaseModel):
 
 
 @router.get('/models/defaults')
-async def get_models_defaults(request: Request, user=Depends(get_verified_user)):
+async def get_models_defaults(request: Request, user=Depends(get_non_guest_user)):
     return {
         'DEFAULT_MODEL_METADATA': await Config.get('models.default_metadata'),
     }
@@ -892,6 +892,6 @@ async def set_banners(
 @router.get('/banners', response_model=list[BannerModel])
 async def get_banners(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     return await Config.get('ui.banners')

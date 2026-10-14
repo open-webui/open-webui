@@ -196,6 +196,14 @@
 				</AdminSettingRow>
 
 				<AdminSettingRow
+					label={$i18n.t('settings.admin.authentication.guestAccess.label')}
+					description={$i18n.t('settings.admin.authentication.guestAccess.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_GUEST_ACCESS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
+				<AdminSettingRow
 					label={$i18n.t('settings.admin.authentication.apiKeys.label')}
 					description={$i18n.t('settings.admin.authentication.apiKeys.description')}
 					let:labelId

@@ -52,6 +52,8 @@ async def get_mfa_config() -> MfaConfigForm:
 def is_mfa_required(auth_method: str, config: MfaConfigForm) -> bool:
     if not config.ENABLE_MFA:
         return False
+    if auth_method == 'guest':
+        return False
     if auth_method == 'oauth' and config.MFA_ALLOW_OAUTH_BYPASS:
         return False
     return not (auth_method == 'trusted_header' and config.MFA_ALLOW_TRUSTED_HEADER_BYPASS)

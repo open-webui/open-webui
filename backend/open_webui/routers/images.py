@@ -32,7 +32,7 @@ from open_webui.models.config import Config
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.routers.files import get_file_content_by_id, upload_file_handler
 from open_webui.utils.access_control import has_permission
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
@@ -361,7 +361,7 @@ async def verify_connection(form_data: ConnectionVerificationForm, user=Depends(
 
 
 @router.get('/models')
-async def get_models(request: Request, user=Depends(get_verified_user)):
+async def get_models(request: Request, user=Depends(get_non_guest_user)):
     image_config = await get_image_config()
     try:
         if image_config.IMAGE_GENERATION_ENGINE == 'openai':
@@ -566,7 +566,7 @@ async def upload_image(request, image_data, content_type, metadata, user, db=Non
 
 
 @router.post('/generations')
-async def generate_images(request: Request, form_data: CreateImageForm, user=Depends(get_verified_user)):
+async def generate_images(request: Request, form_data: CreateImageForm, user=Depends(get_non_guest_user)):
     image_config = await get_image_config()
     if not image_config.ENABLE_IMAGE_GENERATION:
         raise HTTPException(
@@ -862,7 +862,7 @@ class EditImageForm(BaseModel):
 
 
 @router.post('/edit')
-async def edit_images(request: Request, form_data: EditImageForm, user=Depends(get_verified_user)):
+async def edit_images(request: Request, form_data: EditImageForm, user=Depends(get_non_guest_user)):
     # Authorize the direct route like /generations and the edit_image tool: enforce the
     # global image-edit switch and the per-user image-generation permission. The internal
     # callers (edit_image tool, chat middleware) gate themselves and call image_edits()
@@ -903,7 +903,7 @@ async def image_edits(
     request: Request,
     form_data: EditImageForm,
     metadata: dict | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     image_config = await get_image_config()
     size = None

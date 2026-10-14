@@ -19,7 +19,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
-from open_webui.utils.auth import get_verified_user, get_verified_user_by_token
+from open_webui.utils.auth import get_non_guest_user, get_verified_user, get_verified_user_by_token
 from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.terminals import (
@@ -85,7 +85,7 @@ def _sanitize_proxy_path(path: str) -> str | None:
 
 
 @router.get('/')
-async def list_terminal_servers(request: Request, user=Depends(get_verified_user)):
+async def list_terminal_servers(request: Request, user=Depends(get_non_guest_user)):
     """Return terminal servers the authenticated user has access to."""
     if not ENABLE_TOOL_SERVERS:
         return []
@@ -116,7 +116,7 @@ async def proxy_terminal(
     server_id: str,
     path: str,
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     """Proxy a request to the admin terminal server identified by *server_id*."""
     if not ENABLE_TOOL_SERVERS:

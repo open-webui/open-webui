@@ -47,7 +47,7 @@ from open_webui.models.models import (
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import filter_allowed_access_grants, has_access, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.models import get_all_models
 from open_webui.utils.validate import BACKGROUND_IMAGE_MAX_BYTES, validate_background_image
@@ -231,7 +231,7 @@ async def get_models(
     order_by: str | None = None,
     direction: str | None = None,
     page: int | None = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     limit = PAGE_ITEM_COUNT
@@ -328,7 +328,7 @@ async def get_base_models(
 
 
 @router.get('/tags', response_model=list[str])
-async def get_model_tags(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_model_tags(user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     tags = await Models.get_all_tags(
         user_id=user.id,
         is_admin=(user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL),
@@ -346,7 +346,7 @@ async def get_model_tags(user=Depends(get_verified_user), db: AsyncSession = Dep
 async def create_new_model(
     request: Request,
     form_data: ModelForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Create a new workspace model entry."""
@@ -444,7 +444,7 @@ class ModelExportResponse(ModelModel):
 async def export_models(
     request: Request,
     ids: list[str] | None = Query(None),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not await has_permission(
@@ -503,7 +503,7 @@ class ModelsImportForm(BaseModel):
 @router.post('/import', response_model=bool)
 async def import_models(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     form_data: ModelsImportForm = (...),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -797,7 +797,7 @@ class ModelIdForm(BaseModel):
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
 @router.get('/model', response_model=ModelAccessResponse | None)
-async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_model_by_id(id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     model = await Models.get_model_by_id(id, db=db)
     if model:
         write_access = (
@@ -869,7 +869,7 @@ async def authorized_model_history(id, user, db):
 async def get_model_history(
     id: str,
     page: int = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await authorized_model_history(id, user, db)
@@ -880,7 +880,7 @@ async def get_model_history(
 async def get_model_history_entry(
     id: str,
     history_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await authorized_model_history(id, user, db)
@@ -894,7 +894,7 @@ async def get_model_history_entry(
 async def delete_model_history_entry(
     id: str,
     history_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await authorized_model_history(id, user, db)
@@ -958,7 +958,7 @@ async def set_model_version(
     request: Request,
     id: str,
     form_data: ModelVersionForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     model = await authorized_model_history(id, user, db)
@@ -991,7 +991,7 @@ async def set_model_version(
 async def get_model_profile_image(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     profile_image_url = None
@@ -1098,7 +1098,7 @@ async def get_model_profile_image(
 
 @router.post('/model/toggle', response_model=ModelResponse | None)
 async def toggle_model_by_id(
-    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     model = await Models.get_model_by_id(id, db=db)
     if model:
@@ -1151,7 +1151,7 @@ async def toggle_model_by_id(
 async def update_model_by_id(
     request: Request,
     form_data: ModelForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update a workspace model's configuration."""
@@ -1258,7 +1258,7 @@ class ModelAccessGrantsForm(BaseModel):
 async def update_model_access_by_id(
     request: Request,
     form_data: ModelAccessGrantsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     model = await Models.get_model_by_id(form_data.id, db=db)
@@ -1334,7 +1334,7 @@ async def update_model_access_by_id(
 async def delete_model_by_id(
     request: Request,
     form_data: ModelIdForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     model = await Models.get_model_by_id(form_data.id, db=db)

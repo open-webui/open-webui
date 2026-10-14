@@ -40,6 +40,7 @@ from open_webui.models.tools import Tools
 from open_webui.utils.access_control import get_permissions, has_permission
 from open_webui.utils.auth import (
     get_admin_user,
+    get_non_guest_user,
     get_password_hash,
     get_verified_user,
     revoke_user_tokens,
@@ -140,7 +141,7 @@ async def search_users(
     order_by: str | None = None,
     direction: str | None = None,
     page: int | None = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     limit = PAGE_ITEM_COUNT
@@ -168,7 +169,7 @@ async def search_users(
 
 @router.get('/groups')
 async def get_user_groups(
-    include_inherited: bool = False, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    include_inherited: bool = False, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     return await user_groups_response(user.id, include_inherited, db)
 
@@ -181,7 +182,7 @@ async def get_user_groups(
 @router.get('/permissions')
 async def get_user_permissisions(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     user_permissions = await get_permissions(user.id, await Config.get('user.permissions'), db=db)
@@ -459,7 +460,7 @@ async def get_default_user_permissions_defaults(user=Depends(get_admin_user)):
 @router.get('/user/settings', response_model=UserSettings | None)
 async def get_user_settings_by_session_user(
     raw: bool = False,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     # user already fetched by get_verified_user — no need to refetch
     if raw:
@@ -485,7 +486,7 @@ async def get_user_settings_by_session_user(
 async def update_user_settings_by_session_user(
     request: Request,
     form_data: UserSettings,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     updated_user_settings = form_data.model_dump(exclude_unset=True)
@@ -572,7 +573,7 @@ async def update_user_settings_by_session_user(
 @router.get('/user/status')
 async def get_user_status_by_session_user(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     if not await Config.get('users.enable_status'):
         raise HTTPException(
@@ -592,7 +593,7 @@ async def get_user_status_by_session_user(
 async def update_user_status_by_session_user(
     request: Request,
     form_data: UserStatus,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if not await Config.get('users.enable_status'):
@@ -622,7 +623,7 @@ async def update_user_status_by_session_user(
 
 
 @router.get('/user/info', response_model=dict | None)
-async def get_user_info_by_session_user(user=Depends(get_verified_user)):
+async def get_user_info_by_session_user(user=Depends(get_non_guest_user)):
     # user already fetched by get_verified_user — no need to refetch
     return user.info
 
@@ -641,7 +642,7 @@ class UserVariablesResponse(BaseModel):
 
 
 @router.get('/user/variables', response_model=UserVariablesResponse)
-async def get_user_variables_by_session_user(user=Depends(get_verified_user)):
+async def get_user_variables_by_session_user(user=Depends(get_non_guest_user)):
     return UserVariablesResponse(variables=normalize_user_variables(user.variables))
 
 
@@ -653,7 +654,7 @@ async def get_user_variables_by_session_user(user=Depends(get_verified_user)):
 @router.post('/user/variables/update', response_model=UserVariablesResponse)
 async def update_user_variables_by_session_user(
     form_data: UserVariablesForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
@@ -681,7 +682,7 @@ async def update_user_variables_by_session_user(
 @router.post('/user/info/update', response_model=dict | None)
 async def update_user_info_by_session_user(  # PATCH-style merge
     form_data: dict,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Merge caller-supplied fields into the current user's info dict.
@@ -710,7 +711,7 @@ async def get_user_usage_by_session_user(
     days: Optional[int] = Query(None, ge=7, le=732),
     start_date: Optional[int] = Query(None),
     end_date: Optional[int] = Query(None),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     now = int(time.time())
@@ -815,7 +816,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_admin_user), db: AsyncSe
 
 @router.get('/{user_id}/info', response_model=UserInfoResponse)
 async def get_user_info_by_id(
-    user_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    user_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     user = await Users.get_user_by_id(user_id, db=db)
     if user:
@@ -854,7 +855,7 @@ async def get_user_oauth_sessions_by_id(
 
 
 @router.get('/{user_id}/profile/image')
-async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_user)):
+async def get_user_profile_image_by_id(user_id: str, user=Depends(get_non_guest_user)):
     user = await Users.get_user_by_id(user_id)
     if user:
         if user.profile_image_url:
@@ -902,7 +903,7 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
 
 @router.get('/{user_id}/active', response_model=dict)
 async def get_user_active_status_by_id(
-    user_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    user_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     return {
         'active': await Users.is_user_active(user_id, db=db),

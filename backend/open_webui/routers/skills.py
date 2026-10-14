@@ -29,7 +29,7 @@ from open_webui.models.skills import (
     get_skill_snapshot,
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.skill_files import (
     MAX_IMPORT_BYTES,
     file_bytes,
@@ -57,7 +57,7 @@ router = APIRouter()
 async def get_skills(
     request: Request,
     query: Optional[str] = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
@@ -84,7 +84,7 @@ async def get_skill_list(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     limit = PAGE_ITEM_COUNT
@@ -167,7 +167,7 @@ async def export_skills(
     format: str = 'json',
     ids: list[str] | None = Query(None),
     version_id: str | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not await has_permission(
@@ -217,7 +217,7 @@ async def export_skills(
 async def create_new_skill(
     request: Request,
     form_data: SkillForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not (
@@ -293,7 +293,7 @@ async def create_new_skill(
 
 
 @router.get('/id/{id}', response_model=Optional[SkillDetailResponse])
-async def get_skill_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_skill_by_id(id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     skill = await Skills.get_skill_by_id(id, db=db)
 
     if skill:
@@ -344,7 +344,7 @@ async def update_skill_by_id(
     request: Request,
     id: str,
     form_data: SkillForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     skill = await Skills.get_skill_by_id(id, db=db)
@@ -427,7 +427,7 @@ async def update_skill_access_by_id(
     request: Request,
     id: str,
     form_data: SkillAccessGrantsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     skill = await Skills.get_skill_by_id(id, db=db)
@@ -483,7 +483,7 @@ async def update_skill_access_by_id(
 async def toggle_skill_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     skill = await Skills.get_skill_by_id(id, db=db)
@@ -536,7 +536,7 @@ async def toggle_skill_by_id(
 async def delete_skill_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     skill = await Skills.get_skill_by_id(id, db=db)
@@ -578,7 +578,7 @@ async def delete_skill_by_id(
 async def get_skill_files(
     id: str,
     version_id: str | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     skill = await authorized_skill(id, user, db=db)
@@ -591,7 +591,7 @@ async def get_skill_files(
 
 @router.get('/id/{id}/files/content')
 async def get_skill_file(
-    id: str, path: str, version_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, path: str, version_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     skill = await authorized_skill(id, user, db=db)
     snapshot = await get_skill_snapshot(skill, version_id, db)
@@ -612,7 +612,7 @@ async def get_skill_file(
 
 @router.get('/id/{id}/history')
 async def get_skill_history(
-    id: str, page: int = 1, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, page: int = 1, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     await authorized_skill(id, user, db=db)
     return await SkillHistories.get_history_by_skill_id(id, page, db)
@@ -620,7 +620,7 @@ async def get_skill_history(
 
 @router.get('/id/{id}/history/diff')
 async def diff_skill_history(
-    id: str, from_id: str, to_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, from_id: str, to_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     skill = await authorized_skill(id, user, db=db)
     before, after = (
@@ -652,7 +652,7 @@ async def diff_skill_file(
     from_id: str,
     to_id: str,
     path: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     skill = await authorized_skill(id, user, db=db)
@@ -681,7 +681,7 @@ async def diff_skill_file(
 
 @router.get('/id/{id}/history/{history_id}')
 async def get_skill_history_entry(
-    id: str, history_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, history_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     skill = await authorized_skill(id, user, db=db)
     entry = await selected_history(skill, history_id, db)
@@ -697,7 +697,7 @@ async def get_skill_history_entry(
 
 @router.delete('/id/{id}/history/{history_id}', response_model=bool)
 async def delete_skill_history_entry(
-    id: str, history_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, history_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     await authorized_skill(id, user, 'write', db)
     if not await SkillHistories.delete_history_entry(id, history_id, db):
@@ -715,7 +715,7 @@ async def set_skill_version(
     id: str,
     request: Request,
     form_data: SkillVersionUpdateForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await authorized_skill(id, user, 'write', db)
@@ -737,7 +737,7 @@ async def clone_skill(
     id: str,
     request: Request,
     form_data: CloneSkillForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     skill = await authorized_skill(id, user, db=db)
@@ -812,7 +812,7 @@ async def load_skill_by_url(
 
 @router.post('/import/preview')
 async def preview_skill_import(
-    files: list[UploadFile] = File(...), user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    files: list[UploadFile] = File(...), user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     await require_import(user, db)
     packages = await read_import(files)
@@ -845,7 +845,7 @@ async def import_skills(
     request: Request,
     files: list[UploadFile] = File(...),
     decisions: str = Form(...),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await require_import(user, db)

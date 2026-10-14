@@ -29,7 +29,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserInfoResponse, Users, User
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from pydantic import BaseModel
@@ -48,7 +48,7 @@ router = APIRouter()
 @router.get('/', response_model=list[GroupResponse])
 async def get_groups(
     share: Optional[bool] = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     filter = {}
@@ -128,7 +128,7 @@ async def get_group_by_id(id: str, user=Depends(get_admin_user), db: AsyncSessio
 
 
 @router.get('/id/{id}/info', response_model=Optional[GroupInfoResponse])
-async def get_group_info_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_group_info_by_id(id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     group = await Groups.get_group_by_id(id, db=db)
     if group:
         return GroupInfoResponse(

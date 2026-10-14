@@ -41,7 +41,7 @@ from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.folders import has_folder_write_access
-from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
+from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_non_guest_user, get_verified_user
 from open_webui.utils.chat_fork import build_fork_history
 from open_webui.utils.context_compaction import compact_chat_branch, get_chat_context_usage
 from open_webui.utils.json_codec import JSONCodec
@@ -294,7 +294,7 @@ async def require_chat_import_permission(request: Request, user, db: AsyncSessio
 @router.get('/list', response_model=list[ChatTitleIdResponse])
 async def get_session_user_chat_list(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     page: int | None = None,
     include_pinned: bool | None = False,
     include_folders: bool | None = False,
@@ -334,7 +334,7 @@ async def get_session_user_chat_list(
 
 @router.post('/read')
 async def mark_chats_read_by_user_id(
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     return {
@@ -353,7 +353,7 @@ async def mark_chats_read_by_user_id(
 async def get_session_user_chat_usage_stats(
     items_per_page: int | None = 50,
     page: int | None = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
@@ -657,7 +657,7 @@ async def export_chat_stats(
     updated_at: int | None = None,
     page: int | None = 1,
     stream: bool = False,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     # Check if the user has permission to share/export chats
     if (user.role != 'admin') and (not await Config.get('ui.enable_community_sharing')):
@@ -701,7 +701,7 @@ async def export_chat_stats(
 async def export_single_chat_stats(
     request: Request,
     chat_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -752,7 +752,7 @@ async def export_single_chat_stats(
 @router.delete('/', response_model=bool)
 async def delete_all_user_chats(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'user' and not await has_permission(user.id, 'chat.delete', await Config.get('user.permissions')):
@@ -822,7 +822,7 @@ async def get_user_chat_list_by_user_id(
 async def create_new_chat(
     request: Request,
     form_data: ChatForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if form_data.folder_id is not None and not await has_folder_write_access(user.id, form_data.folder_id, db=db):
@@ -857,7 +857,7 @@ async def create_new_chat(
 async def import_chats(
     request: Request,
     form_data: ChatsImportForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await require_chat_import_permission(request, user, db)
@@ -928,7 +928,7 @@ async def search_user_chats(
     request: Request,
     text: str,
     page: int | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if page is None:
@@ -972,7 +972,7 @@ async def search_user_chats(
 
 @router.get('/folder/{folder_id}', response_model=list[ChatResponse])
 async def get_chats_by_folder_id(
-    folder_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    folder_id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     folder_ids = [folder_id]
     children_folders = await Folders.get_children_folders_by_id_and_user_id(folder_id, user.id, db=db)
@@ -992,7 +992,7 @@ async def get_chat_list_by_folder_id(
     page: int | None = 1,
     sort_by: str = 'unread_updated_at',
     sort_dir: str = 'desc',
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
@@ -1022,7 +1022,7 @@ async def get_chat_list_by_folder_id(
 
 @router.get('/pinned', response_model=list[ChatTitleIdResponse])
 async def get_user_pinned_chats(
-    request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     chats = await Chats.get_pinned_chats_by_user_id(user.id, db=db)
     return await add_active_state_to_chat_list(request, chats)
@@ -1067,7 +1067,7 @@ async def generate_chat_export_ndjson(user_id: str):
 
 
 @router.get('/all')
-async def get_user_chats(user=Depends(get_verified_user)):
+async def get_user_chats(user=Depends(get_non_guest_user)):
     return StreamingResponse(
         generate_chat_export_ndjson(user.id),
         media_type='application/x-ndjson',
@@ -1080,7 +1080,7 @@ async def get_user_chats(user=Depends(get_verified_user)):
 
 
 @router.get('/all/archived', response_model=list[ChatResponse])
-async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_user_archived_chats(user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     return [
         ChatResponse.model_validate(chat, from_attributes=True)
         for chat in await Chats.get_archived_chats_by_user_id(user.id, db=db)
@@ -1093,7 +1093,7 @@ async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSess
 
 
 @router.get('/all/tags', response_model=list[TagModel])
-async def get_all_user_tags(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_all_user_tags(user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     try:
         tags = await Tags.get_tags_by_user_id(user.id, db=db)
         return tags
@@ -1126,7 +1126,7 @@ async def get_archived_session_user_chat_list(
     query: str | None = None,
     order_by: str | None = None,
     direction: str | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if page is None:
@@ -1160,7 +1160,7 @@ async def get_archived_session_user_chat_list(
 
 @router.get('/archived/count', response_model=int)
 async def get_archived_session_user_chat_count(
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     return await Chats.count_archived_chats_by_user_id(user.id, db=db)
@@ -1173,7 +1173,7 @@ async def get_archived_session_user_chat_count(
 
 @router.post('/archive/all', response_model=bool)
 async def archive_all_chats(
-    request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     result = await Chats.archive_all_chats_by_user_id(user.id, db=db)
     if result:
@@ -1188,7 +1188,7 @@ async def archive_all_chats(
 
 @router.post('/unarchive/all', response_model=bool)
 async def unarchive_all_chats(
-    request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     tag_ids = {
         tag_id
@@ -1209,7 +1209,7 @@ async def unarchive_all_chats(
 
 @router.delete('/share/all', response_model=bool)
 async def unshare_all_chats(
-    request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     # Collect chat_ids that have shares so we can clear share_id and access grants
     shared_list = await SharedChats.get_by_user_id(user.id, db=db)
@@ -1241,7 +1241,7 @@ async def get_shared_session_user_chat_list(
     query: str | None = None,
     order_by: str | None = None,
     direction: str | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if page is None:
@@ -1335,7 +1335,7 @@ class TagFilterForm(TagForm):
 async def get_user_chat_list_by_tag_name(
     request: Request,
     form_data: TagFilterForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chats = await Chats.get_chat_list_by_user_id_and_tag_name(
@@ -1357,7 +1357,7 @@ async def compact_chat_by_id(
     request: Request,
     id: str,
     form_data: CompactChatForm | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
@@ -1410,7 +1410,7 @@ async def compact_chat_by_id(
 async def get_chat_by_id(
     id: str,
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_accessible_chat_by_id(
@@ -1446,7 +1446,7 @@ async def update_chat_by_id(
     request: Request,
     id: str,
     form_data: ChatForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
@@ -1493,7 +1493,7 @@ async def update_chat_message_by_id(
     id: str,
     message_id: str,
     form_data: MessageForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id(id, db=db)
@@ -1559,7 +1559,7 @@ async def delete_chat_message_by_id(
     request: Request,
     id: str,
     message_id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id(id, db=db)
@@ -1607,7 +1607,7 @@ async def send_chat_message_event_by_id(
     id: str,
     message_id: str,
     form_data: EventForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id(id, db=db)
@@ -1658,7 +1658,7 @@ async def send_chat_message_event_by_id(
 async def delete_chat_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     # Authorize before any side effect: cancelling a chat's in-flight tasks must
@@ -1714,7 +1714,7 @@ async def delete_chat_by_id(
 
 @router.get('/{id}/pinned', response_model=bool | None)
 async def get_pinned_status_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
@@ -1730,7 +1730,7 @@ async def get_pinned_status_by_id(
 
 @router.post('/{id}/pin', response_model=ChatResponse | None)
 async def pin_chat_by_id(
-    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
@@ -1765,7 +1765,7 @@ async def fork_chat_by_id(
     request: Request,
     id: str,
     form_data: ForkForm | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await require_chat_import_permission(request, user, db)
@@ -1880,7 +1880,7 @@ async def clone_chat_by_id(
     request: Request,
     form_data: CloneForm,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await require_chat_import_permission(request, user, db)
@@ -1938,7 +1938,7 @@ async def clone_chat_by_id(
 async def clone_shared_chat_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await require_chat_import_permission(request, user, db)
@@ -2015,7 +2015,7 @@ async def clone_shared_chat_by_id(
 async def archive_chat_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
@@ -2050,7 +2050,7 @@ async def share_chat_by_id(
     request: Request,
     id: str,
     form_data: ShareChatForm | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not await has_permission(user.id, 'chat.share', await Config.get('user.permissions')):
@@ -2098,7 +2098,7 @@ async def share_chat_by_id(
 
 @router.delete('/{id}/share', response_model=bool | None)
 async def delete_shared_chat_by_id(
-    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if not chat:
@@ -2136,7 +2136,7 @@ async def update_shared_chat_access_by_id(
     request: Request,
     id: str,
     form_data: ChatAccessGrantsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
@@ -2177,7 +2177,7 @@ async def update_shared_chat_access_by_id(
 @router.get('/shared/{id}/access', response_model=list)
 async def get_shared_chat_access_by_id(
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
@@ -2214,7 +2214,7 @@ class ChatFolderIdForm(BaseModel):
 @router.post('/{id}/unread')
 async def mark_chat_unread_by_id(
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.mark_chat_unread_by_id(id, user.id, db=db)
@@ -2238,7 +2238,7 @@ async def update_chat_folder_id_by_id(
     request: Request,
     id: str,
     form_data: ChatFolderIdForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
@@ -2269,7 +2269,7 @@ async def update_chat_folder_id_by_id(
 
 
 @router.get('/{id}/tags', response_model=list[TagModel])
-async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_chat_tags_by_id(id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_accessible_chat_by_id(
         id,
         user,
@@ -2293,7 +2293,7 @@ async def add_tag_by_id_and_tag_name(
     request: Request,
     id: str,
     form_data: TagForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
@@ -2334,7 +2334,7 @@ async def delete_tag_by_id_and_tag_name(
     request: Request,
     id: str,
     form_data: TagForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)

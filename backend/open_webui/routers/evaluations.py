@@ -21,7 +21,7 @@ from open_webui.models.feedbacks import (
     ModelHistoryResponse,
 )
 from open_webui.models.users import UserModel, Users
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -369,7 +369,7 @@ PAGE_ITEM_COUNT = 30
 @router.get('/feedbacks/user', response_model=FeedbackListResponse)
 async def get_user_feedbacks(
     page: Optional[int] = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     limit = PAGE_ITEM_COUNT
@@ -381,7 +381,7 @@ async def get_user_feedbacks(
 @router.delete('/feedbacks', response_model=bool)
 async def delete_feedbacks(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     success = await Feedbacks.delete_feedbacks_by_user_id(user.id, db=db)
@@ -426,7 +426,7 @@ async def get_feedbacks(
 async def create_feedback(
     request: Request,
     form_data: FeedbackForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     feedback = await Feedbacks.insert_new_feedback(user_id=user.id, form_data=form_data, db=db)
@@ -447,7 +447,7 @@ async def create_feedback(
 
 
 @router.get('/feedback/{id}', response_model=FeedbackModel)
-async def get_feedback_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_feedback_by_id(id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     if user.role == 'admin':
         feedback = await Feedbacks.get_feedback_by_id(id=id, db=db)
     else:
@@ -464,7 +464,7 @@ async def update_feedback_by_id(
     request: Request,
     id: str,
     form_data: FeedbackForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin':
@@ -489,7 +489,7 @@ async def update_feedback_by_id(
 async def delete_feedback_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin':

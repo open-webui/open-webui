@@ -1683,6 +1683,10 @@ ENABLE_SIGNUP = False if not WEBUI_AUTH else os.getenv('ENABLE_SIGNUP', 'True').
 
 ENABLE_LOGIN_FORM = os.getenv('ENABLE_LOGIN_FORM', 'True').lower() == 'true'
 
+ENABLE_GUEST_ACCESS = os.getenv('ENABLE_GUEST_ACCESS', 'False').lower() == 'true'
+
+GUEST_ACCOUNT_TTL = os.getenv('GUEST_ACCOUNT_TTL', '24h')
+
 ENABLE_PASSWORD_CHANGE_FORM = os.getenv('ENABLE_PASSWORD_CHANGE_FORM', 'True').lower() == 'true'
 
 ENABLE_PASSWORD_AUTH = os.getenv('ENABLE_PASSWORD_AUTH', 'True').lower() == 'true'
@@ -3140,6 +3144,7 @@ DEFAULT_CONFIG = {
     'audio.tts.mistral.api_base_url': AUDIO_TTS_MISTRAL_API_BASE_URL,
     'webui.url': WEBUI_URL,
     'ui.enable_signup': ENABLE_SIGNUP,
+    'ui.enable_guest_access': ENABLE_GUEST_ACCESS,
     'ui.enable_login_form': ENABLE_LOGIN_FORM,
     'ui.enable_password_change_form': ENABLE_PASSWORD_CHANGE_FORM,
     'ui.default_locale': DEFAULT_LOCALE,

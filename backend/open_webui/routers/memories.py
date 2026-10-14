@@ -14,7 +14,7 @@ from open_webui.models.memories import Memories, MemoryModel
 from open_webui.models.users import Users
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.utils.access_control import has_permission
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.memory import (
     clean_memory_content,
     clean_memory_path,
@@ -57,7 +57,7 @@ async def check_memories_permission(user):
 @router.get('/', response_model=list[MemoryModel])
 async def get_memories(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_memories_permission(user)
@@ -184,7 +184,7 @@ async def upsert_memory_vectors_or_reindex(request: Request, user, items: list[d
 async def add_memory(
     request: Request,
     form_data: AddMemoryForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     """Persist a new memory and embed it into the user's vector collection.
 
@@ -235,7 +235,7 @@ async def add_memory(
 async def update_memories(
     request: Request,
     form_data: UpdateMemoriesForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     await check_memories_permission(user)
 
@@ -333,7 +333,7 @@ class QueryMemoryForm(BaseModel):
 async def query_memory(
     request: Request,
     form_data: QueryMemoryForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_memories_by_user_id) manage their own short-lived sessions.
@@ -391,7 +391,7 @@ async def query_memory(
 @router.post('/search', response_model=list[MemoryModel])
 async def search_memories(
     form_data: SearchMemoriesForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     await check_memories_permission(user)
 
@@ -409,7 +409,7 @@ async def search_memories(
 @router.post('/paths')
 async def list_memory_paths(
     form_data: ListMemoryPathsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     await check_memories_permission(user)
 
@@ -425,7 +425,7 @@ async def list_memory_paths(
 @router.post('/path')
 async def read_memory_path(
     form_data: ReadMemoryPathForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     await check_memories_permission(user)
 
@@ -483,7 +483,7 @@ async def reindex_memories_from_vector_db(
 @router.post('/reset', response_model=bool)
 async def reset_memory_from_vector_db(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     """Reset user's memory vector embeddings.
 
@@ -516,7 +516,7 @@ async def reset_memory_from_vector_db(
 @router.delete('/delete/user', response_model=bool)
 async def delete_memory_by_user_id(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_memories_permission(user)
@@ -550,7 +550,7 @@ async def update_memory_by_id(
     memory_id: str,
     request: Request,
     form_data: MemoryUpdateModel,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (update_memory_by_id_and_user_id) manage their own
@@ -611,7 +611,7 @@ async def update_memory_by_id(
 async def delete_memory_by_id(
     memory_id: str,
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_memories_permission(user)

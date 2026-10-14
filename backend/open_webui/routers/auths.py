@@ -64,6 +64,7 @@ from open_webui.routers.mfa import MfaRoute
 from open_webui.utils.access_control import get_permissions, has_permission
 from open_webui.utils.auth import (
     create_api_key,
+    create_session_response,
     create_signin_response,
     create_token,
     decode_token,
@@ -93,6 +94,7 @@ log = logging.getLogger(__name__)
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(limit=5 * 3, window=60 * 3)
+guest_rate_limiter = RateLimiter(limit=5, window=60)
 # Best-effort throttle only: there is no caller identity before the provider answers,
 # and deployments may derive request.client from proxy headers.
 token_exchange_rate_limiter = (
@@ -112,6 +114,7 @@ ADMIN_CONFIG_KEYS = {
     'WEBUI_URL': 'webui.url',
     'ENABLE_LOGIN_FORM': 'ui.enable_login_form',
     'ENABLE_SIGNUP': 'ui.enable_signup',
+    'ENABLE_GUEST_ACCESS': 'ui.enable_guest_access',
     'ENABLE_API_KEYS': 'auth.enable_api_keys',
     'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS': 'auth.api_key.endpoint_restrictions',
     'API_KEYS_ALLOWED_ENDPOINTS': 'auth.api_key.allowed_endpoints',
@@ -894,6 +897,54 @@ async def signup(
     except Exception as err:
         log.error(f'Signup error: {str(err)}')
         raise HTTPException(500, detail='An internal error occurred during signup.')
+
+
+############################
+# Guest Login
+############################
+
+
+@router.post('/guest', response_model=SigninResult)
+async def guest_login(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not await Config.get('ui.enable_guest_access'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    client_ip = request.client.host if request.client else 'unknown'
+    if await guest_rate_limiter.is_limited(request.app.state.redis, client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+        )
+
+    guest_id = str(uuid.uuid4())[:8]
+    email = f'guest-{guest_id}@guest.local'
+    name = f'Guest {guest_id}'
+    password = str(uuid.uuid4())
+
+    hashed = await get_password_hash(password)
+    user = await Auths.insert_new_auth(
+        email=email,
+        password=hashed,
+        name=name,
+        profile_image_url='/user.png',
+        role='guest',
+        db=db,
+    )
+    if not user:
+        raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+    auth = await Auths.get_auth_by_id(user.id, db=db)
+    return await create_session_response(
+        request, user, db, response,
+        set_cookie=True, source='guest', auth=auth,
+    )
 
 
 @router.post('/signout')

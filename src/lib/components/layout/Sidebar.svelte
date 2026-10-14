@@ -157,6 +157,7 @@
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
 	$: isMenuItemVisible = (id) => {
+		if ($user?.role === 'guest') return false;
 		switch (id) {
 			case 'notes':
 				return (
@@ -1318,6 +1319,11 @@
 						</SidebarSection>
 					{/if}
 
+					{#if $user?.role === 'guest'}
+						<div class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 py-4 px-2 text-center">
+							{$i18n.t('Sign up for full access to save chats and more.')}
+						</div>
+					{:else}
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true)) && $pinnedNotes.length > 0}
 						<SidebarSection
 							id="sidebar-pinned-notes"
@@ -1716,6 +1722,7 @@
 							</div>
 						</div>
 					</SidebarSection>
+					{/if}
 				</div>
 
 				<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">

@@ -45,7 +45,7 @@ from open_webui.routers.retrieval import (
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.json_codec import JSONCodec
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -172,7 +172,7 @@ async def _verify_directory_in_knowledge(
 @router.get('/', response_model=KnowledgeAccessListResponse)
 async def get_knowledge_bases(
     page: int | None = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     page = max(page, 1)
@@ -226,7 +226,7 @@ async def search_knowledge_bases(
     page: int | None = 1,
     order_by: str | None = None,
     direction: str | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     page = max(page, 1)
@@ -288,7 +288,7 @@ async def search_knowledge_files(
     query: str | None = None,
     include_content: bool = Query(False, description='Include file content in search (expensive).'),
     page: int | None = 1,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     page = max(page, 1)
@@ -319,7 +319,7 @@ async def search_knowledge_files(
 async def create_new_knowledge(
     request: Request,
     form_data: KnowledgeForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (has_permission, filter_allowed_access_grants, insert_new_knowledge) manage their own sessions.
@@ -374,7 +374,7 @@ async def create_new_knowledge(
 @router.post('/reindex', response_model=bool)
 async def reindex_knowledge_files(
     request: Request,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin':
@@ -1097,7 +1097,7 @@ class KnowledgeFilesResponse(KnowledgeResponse):
 
 
 @router.get('/{id}', response_model=KnowledgeFilesResponse | None)
-async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_knowledge_by_id(id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
 
     if knowledge:
@@ -1148,7 +1148,7 @@ async def update_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations manage their own short-lived sessions internally.
@@ -1226,7 +1226,7 @@ async def update_knowledge_access_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeAccessGrantsForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
@@ -1285,7 +1285,7 @@ async def update_knowledge_access_by_id(
 async def get_pending_knowledge_files(
     id: str,
     stream: bool = Query(False),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     """Return files that are being processed for this knowledge base but not yet linked.
 
@@ -1359,7 +1359,7 @@ async def get_knowledge_files_by_id(
     directory_id: str | None = Query(None, description='Filter by directory ID. Pass empty string for root.'),
     page: int | None = 1,
     limit: int | None = Query(None, description='Page size (admin only). Defaults to 30.'),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
@@ -1427,7 +1427,7 @@ async def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
@@ -1526,7 +1526,7 @@ async def update_file_from_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
@@ -1616,7 +1616,7 @@ async def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     delete_file: bool = Query(not ENABLE_KNOWLEDGE_FILE_RETENTION),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
@@ -1703,7 +1703,7 @@ async def remove_file_from_knowledge_by_id(
 async def delete_knowledge_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
@@ -1794,7 +1794,7 @@ async def reset_knowledge_by_id(
     request: Request,
     id: str,
     include_directories: bool = Query(True),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
@@ -1876,7 +1876,7 @@ class SyncDiffResponse(BaseModel):
 async def sync_knowledge_diff(
     id: str,
     form_data: SyncDiffForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -1996,7 +1996,7 @@ class SyncCleanupForm(BaseModel):
 async def sync_knowledge_cleanup(
     id: str,
     form_data: SyncCleanupForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -2053,7 +2053,7 @@ async def add_files_to_knowledge_batch(
     request: Request,
     id: str,
     form_data: list[KnowledgeFileIdForm],
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -2270,7 +2270,7 @@ async def create_knowledge_directory(
     request: Request,
     id: str,
     form_data: KnowledgeDirectoryCreateForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await _verify_knowledge_write_access(id, user, db)
@@ -2305,7 +2305,7 @@ async def update_knowledge_directory(
     id: str,
     dir_id: str,
     form_data: KnowledgeDirectoryUpdateForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await _verify_knowledge_write_access(id, user, db)
@@ -2342,7 +2342,7 @@ async def delete_knowledge_directory(
     id: str,
     dir_id: str,
     move_files: bool = Query(True, description='If true, move contained files to parent. If false, delete them.'),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await _verify_knowledge_write_access(id, user, db)
@@ -2393,7 +2393,7 @@ async def move_file_in_knowledge(
     request: Request,
     id: str,
     form_data: KnowledgeFileMoveForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await _verify_knowledge_write_access(id, user, db)

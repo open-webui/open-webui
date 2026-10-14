@@ -43,7 +43,7 @@ from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.audio import transcribe
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -285,7 +285,7 @@ async def upload_file(
     metadata: Optional[dict | str] = Form(None),
     process: bool = Query(True),
     process_in_background: bool = Query(True),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     result = await upload_file_handler(
@@ -327,7 +327,7 @@ async def upload_file_handler(
     metadata: Optional[dict | str] = Form(None),
     process: bool = Query(True),
     process_in_background: bool = Query(True),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     background_tasks: Optional[BackgroundTasks] = None,
     db: Optional[AsyncSession] = None,
 ):
@@ -488,7 +488,7 @@ PAGE_SIZE = 50
 
 @router.get('/', response_model=FileListResponse)
 async def list_files(
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     page: int = Query(1, ge=1, description='Page number (1-indexed)'),
     content: bool = Query(True),
     db: AsyncSession = Depends(get_async_session),
@@ -520,7 +520,7 @@ async def search_files(
     content: bool = Query(True),
     skip: int = Query(0, ge=0, description='Number of files to skip'),
     limit: int = Query(100, ge=1, le=1000, description='Maximum number of files to return'),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -560,7 +560,7 @@ async def search_files(
 
 @router.get('/count', response_model=int)
 async def count_files(
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     user_id = None if (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
@@ -603,7 +603,7 @@ async def delete_all_files(
 
 
 @router.get('/{id}', response_model=Optional[FileModel])
-async def get_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_file_by_id(id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -625,7 +625,7 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
 async def get_file_process_status(
     id: str,
     stream: bool = Query(False),
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
 ):
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations manage their own short-lived sessions internally.
@@ -687,7 +687,7 @@ async def get_file_process_status(
 
 @router.get('/{id}/data/content')
 async def get_file_data_content_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     file = await Files.get_file_by_id(id, db=db)
 
@@ -720,7 +720,7 @@ async def update_file_data_content_by_id(
     request: Request,
     id: str,
     form_data: ContentForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     file = await Files.get_file_by_id(id, db=db)
@@ -805,7 +805,7 @@ async def update_file_data_content_by_id(
 @router.get('/{id}/content')
 async def get_file_content_by_id(
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     attachment: bool = Query(False),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -869,7 +869,7 @@ async def get_file_content_by_id(
 
 @router.get('/{id}/content/html')
 async def get_html_file_content_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     file = await Files.get_file_by_id(id, db=db)
 
@@ -918,7 +918,7 @@ async def get_html_file_content_by_id(
 
 @router.get('/{id}/content/{file_name}')
 async def get_file_content_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     file = await Files.get_file_by_id(id, db=db)
 
@@ -981,7 +981,7 @@ async def rename_file_by_id(
     request: Request,
     id: str,
     form_data: FileRenameForm,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     file = await Files.get_file_by_id(id, db=db)
@@ -1022,7 +1022,7 @@ async def rename_file_by_id(
 
 @router.delete('/{id}')
 async def delete_file_by_id(
-    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request, id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     file = await Files.get_file_by_id(id, db=db)
 

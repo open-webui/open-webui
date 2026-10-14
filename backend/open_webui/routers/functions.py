@@ -22,7 +22,7 @@ from open_webui.models.functions import (
     FunctionUserResponse,
     FunctionWithValvesModel,
 )
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_non_guest_user, get_verified_user
 from open_webui.utils.plugin import (
     get_function_contents_cache,
     get_function_module_from_cache,
@@ -48,7 +48,7 @@ router = APIRouter()
 
 
 @router.get('/', response_model=list[FunctionResponse])
-async def get_functions(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_functions(user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)):
     if not ENABLE_FUNCTIONS:
         return []
 
@@ -578,7 +578,7 @@ async def update_function_valves_by_id(
 
 @router.get('/id/{id}/valves/user', response_model=dict | None)
 async def get_function_user_valves_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str, user=Depends(get_non_guest_user), db: AsyncSession = Depends(get_async_session)
 ):
     function = await Functions.get_function_by_id(id, db=db)
     if function:
@@ -601,7 +601,7 @@ async def get_function_user_valves_by_id(
 async def get_function_user_valves_spec_by_id(
     request: Request,
     id: str,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     function = await Functions.get_function_by_id(id, db=db)
@@ -630,7 +630,7 @@ async def update_function_user_valves_by_id(
     request: Request,
     id: str,
     form_data: dict,
-    user=Depends(get_verified_user),
+    user=Depends(get_non_guest_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     function = await Functions.get_function_by_id(id, db=db)
