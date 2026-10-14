@@ -11,7 +11,6 @@
 
 	import ChannelModal from './ChannelModal.svelte';
 	import ChannelMenu from '$lib/components/channel/ChannelMenu.svelte';
-	import BellSlash from '$lib/components/icons/BellSlash.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
@@ -81,6 +80,7 @@
 <div
 	id="sidebar-channel-item"
 	bind:this={itemElement}
+	class:opacity-60={channel?.is_channel_muted}
 	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
 		? 'bg-gray-100 dark:bg-gray-900 selected'
@@ -127,6 +127,9 @@
 	<a
 		class="min-w-0 flex flex-1"
 		href="/channels/{channel.id}"
+		title={channel?.is_channel_muted
+			? $i18n.t('Muted. Direct @mentions can still notify you.')
+			: undefined}
 		on:click={() => {
 			console.log(channel);
 
@@ -195,13 +198,7 @@
 				{/if}
 
 				{#if channel?.is_channel_muted}
-					<span
-						class="shrink-0 text-gray-400 dark:text-gray-500"
-						title={$i18n.t('Muted. Direct @mentions can still notify you.')}
-						aria-label={$i18n.t('Mentions only')}
-					>
-						<BellSlash className="size-3" />
-					</span>
+					<span class="sr-only">{$i18n.t('Mentions only')}</span>
 				{/if}
 
 				{#if channel?.unread_count > 0 && !channel?.is_channel_muted}
