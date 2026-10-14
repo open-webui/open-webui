@@ -6,6 +6,26 @@ export const diffEditorConfig: DiffConfig = { timeout: 100 };
 
 export type MergeDirection = 'to-working' | 'to-proposal';
 
+export function changedLineCounts(a: Text, b: Text, chunks: readonly Chunk[]) {
+	const count = (doc: Text, side: 'A' | 'B') => {
+		let total = 0;
+		let lastLine = 0;
+		for (const chunk of chunks) {
+			for (const change of chunk.changes) {
+				const from = chunk[`from${side}`] + change[`from${side}`];
+				const to = chunk[`from${side}`] + change[`to${side}`];
+				if (from === to) continue;
+				const first = doc.lineAt(from).number;
+				const last = doc.lineAt(to - 1).number;
+				total += Math.max(0, last - Math.max(first - 1, lastLine));
+				lastLine = last;
+			}
+		}
+		return total;
+	};
+	return { removed: count(a, 'A'), added: count(b, 'B') };
+}
+
 export function chunkOverview(a: Text, b: Text, chunks: readonly Chunk[]) {
 	const range = (doc: Text, from: number, to: number) => ({
 		from: (doc.lineAt(Math.min(from, doc.length)).number - 1) / doc.lines,

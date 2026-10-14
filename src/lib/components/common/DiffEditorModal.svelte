@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '$lib/utils/codemirror';
 	import { getContext } from 'svelte';
+	import { copyToClipboard } from '$lib/utils';
 	import { basicSetup, EditorView } from 'codemirror';
 	import { Compartment } from '@codemirror/state';
 	import { keymap, type ViewUpdate } from '@codemirror/view';
@@ -17,6 +18,7 @@
 		copyChunk,
 		selectedChunk,
 		chunkOverview,
+		changedLineCounts,
 		nearestOverviewChunk,
 		diffEditorConfig,
 		type MergeDirection
@@ -44,6 +46,8 @@
 	let activeChunk = 0;
 	let overview: ReturnType<typeof chunkOverview> = [];
 	let chunkCount = 0;
+	let lineChanges = { removed: 0, added: 0 };
+	let copied: { side: 'a' | 'b'; text: string } | null = null;
 	let approximate = false;
 	let loading = false;
 	let error = '';
@@ -56,6 +60,8 @@
 		comparing = proposedContent !== undefined;
 		activeChunk = chunkCount = 0;
 		overview = [];
+		lineChanges = { removed: 0, added: 0 };
+		copied = null;
 		loading = approximate = false;
 		error = '';
 		confirmDiscard = false;
@@ -83,6 +89,16 @@
 			error = cause instanceof Error ? cause.message : String(cause);
 		}
 	};
+	const copyPane = async (side: 'a' | 'b') => {
+		const text = side === 'a' ? working : proposal;
+		const currentSession = session;
+		const success = await copyToClipboard(text);
+		if (session !== currentSession) return;
+		if (success) {
+			copied = { side, text };
+			error = '';
+		} else error = $i18n.t('Could not copy to clipboard. Please try again.');
+	};
 	const preventSave = (event: KeyboardEvent) => {
 		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
 			event.preventDefault();
@@ -95,6 +111,7 @@
 			working = merge.a.state.doc.toString();
 			proposal = merge.b.state.doc.toString();
 			chunkCount = merge.chunks.length;
+			lineChanges = changedLineCounts(merge.a.state.doc, merge.b.state.doc, merge.chunks);
 			overview = chunkOverview(merge.a.state.doc, merge.b.state.doc, merge.chunks);
 			approximate = merge.chunks.some((chunk) => !chunk.precise);
 		}
@@ -317,16 +334,54 @@
 				<div class="min-h-0 min-w-0 flex-1 overflow-x-auto px-4">
 					<div class="flex h-full min-w-[640px] flex-col">
 						<div class="grid shrink-0 grid-cols-2 gap-4 py-2">
-							<div
-								class="rounded-lg bg-gray-50/70 px-3 py-2 font-medium text-gray-500 dark:bg-white/[0.03]"
-							>
-								{$i18n.t('Working copy')}
-							</div>
-							<div
-								class="rounded-lg bg-gray-50/70 px-3 py-2 font-medium text-gray-500 dark:bg-white/[0.03]"
-							>
-								{$i18n.t('Proposed revision')}
-							</div>
+							{#each ['a', 'b'] as side}
+								{@const lines = (side === 'a' ? working : proposal).split('\n').length}
+								<div
+									class="pane-header flex min-w-0 items-center gap-2 rounded-lg bg-gray-50/70 px-3 py-2 text-gray-500 dark:bg-white/[0.03]"
+								>
+									<span class="min-w-0 truncate font-medium"
+										>{side === 'a' ? $i18n.t('Working copy') : $i18n.t('Proposed revision')}</span
+									>
+									{#if comparing && !loading}
+										<span
+											class="whitespace-nowrap"
+											class:text-red-600={side === 'a'}
+											class:dark:text-red-400={side === 'a'}
+											class:text-teal-700={side === 'b'}
+											class:dark:text-teal-400={side === 'b'}
+											title={$i18n.t('Lines containing changed text')}
+										>
+											<span aria-hidden="true">{side === 'a' ? '−' : '+'}</span>
+											{side === 'a'
+												? $i18n.t(
+														lineChanges.removed === 1 ? '{{count}} removal' : '{{count}} removals',
+														{ count: lineChanges.removed }
+													)
+												: $i18n.t(
+														lineChanges.added === 1 ? '{{count}} addition' : '{{count}} additions',
+														{ count: lineChanges.added }
+													)}
+										</span>
+									{/if}
+									<span class="ml-auto whitespace-nowrap text-[11px]"
+										>{$i18n.t(lines === 1 ? '{{count}} line' : '{{count}} lines', {
+											count: lines
+										})}</span
+									>
+									<button
+										type="button"
+										class="shrink-0 rounded px-1 hover:text-gray-900 dark:hover:text-white"
+										aria-label={side === 'a'
+											? $i18n.t('Copy working copy to clipboard')
+											: $i18n.t('Copy proposed revision to clipboard')}
+										on:click={() => copyPane(side === 'a' ? 'a' : 'b')}
+									>
+										{copied?.side === side && copied.text === (side === 'a' ? working : proposal)
+											? $i18n.t('Copied')
+											: $i18n.t('Copy')}
+									</button>
+								</div>
+							{/each}
 						</div>
 						{#if comparing}
 							<div class="merge-container min-h-0 flex-1" use:mountMerge></div>
