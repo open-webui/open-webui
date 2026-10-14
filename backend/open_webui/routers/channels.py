@@ -13,7 +13,7 @@ from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, STATIC_DIR
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db, get_async_session
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
-from open_webui.models.apps import App, AppInvitation
+from open_webui.models.apps import App, AppChannelMessage, AppInvitation
 from open_webui.models.channels import (
     ChannelForm,
     ChannelMember,
@@ -52,6 +52,7 @@ from open_webui.tasks import create_task
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.apps import (
     check_app_channel_access,
+    create_app_message,
     get_app_by_id,
     get_app_response,
     has_app_access,
@@ -831,7 +832,9 @@ async def delete_channel_by_id(
 
 
 @router.get('/{channel_id}/apps')
-async def get_channel_apps(channel_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_channel_apps(
+    channel_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     await check_app_channel_access(channel_id, user=user, db=db)
     apps = (
         await db.scalars(
@@ -1122,16 +1125,37 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                     else 'channels:mentions:read',
                 )
         except Exception as exc:
-            log.warning('App mention delivery failed: %s', type(exc).__name__)
+            log.warning(
+                'App mention delivery failed: app=%s message=%s status=%s',
+                app_id,
+                message_id,
+                getattr(exc, 'status_code', None),
+            )
             status_code = getattr(exc, 'status_code', None)
+            detail = (
+                exc.detail
+                if isinstance(exc, HTTPException) and isinstance(exc.detail, str)
+                else 'Unexpected error while delivering the message.'
+            )
             if status_code == 504:
-                detail = 'App delivery was not confirmed. It may have accepted the message; check the channel before retrying.'
-            elif status_code in (401, 403):
-                detail = 'App access was denied. Check permissions before retrying.'
-            elif status_code == 503:
-                detail = 'App is unavailable or busy. The message was not accepted.'
-            else:
-                detail = 'App delivery failed. Check its connection and server logs before retrying.'
+                detail += '\nDelivery was not confirmed. The app may have accepted the message; check before retrying.'
+            try:
+                async with get_async_db() as db:
+                    app = await get_app_by_id(app_id, require_active=True, db=db)
+                    await create_app_message(
+                        db,
+                        app,
+                        channel_id,
+                        AppChannelMessage(
+                            content='App error:\n\n```text\n' + detail[:2400].replace('```', '` ` `') + '\n```',
+                            parent_id=parent_id,
+                            reply_to_id=message_id,
+                        ),
+                    )
+                continue
+            except Exception:
+                # An inactive/removed app or one without write access cannot post a public reply.
+                log.warning('Could not save app error reply: app=%s message=%s', app_id, message_id)
             await emit_to_users(
                 'events:app',
                 {
@@ -1565,7 +1589,9 @@ async def pin_channel_message(
         message_data = MessageUserResponse(
             **{
                 **message.model_dump(),
-                'user': UserNameResponse(**message_user.model_dump()) if message_user else getattr(message, 'user', None),
+                'user': UserNameResponse(**message_user.model_dump())
+                if message_user
+                else getattr(message, 'user', None),
             }
         )
 

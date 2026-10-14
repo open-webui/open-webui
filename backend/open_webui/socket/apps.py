@@ -412,7 +412,7 @@ class AppConnections:
         status = result.get('status')
         if type(status) is not int:
             raise HTTPException(502, 'App returned an invalid status')
-        return status, result.get('data')
+        return status, result.get('data') if status == 200 else result.get('error')
 
     async def status(self, app):
         if not app.is_active:

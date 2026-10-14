@@ -508,7 +508,13 @@ async def send_app_invocation(
             503: 'App is busy or shutting down. The event was not accepted.',
             504: 'App processing timed out; execution outcome may be unknown.',
         }.get(status, f'App returned HTTP {status}. Check the app server logs.')
-        raise HTTPException(status if status in (401, 403, 503, 504) else 502, detail)
+        if isinstance(raw, str) and raw.strip():
+            detail = raw.strip()
+            for secret in (app.api_key, app.data.get('connection_token'), token):
+                if secret:
+                    detail = detail.replace(secret, '[redacted]')
+            detail = detail[:2000]
+        raise HTTPException(status if 400 <= status < 600 else 502, detail)
     return raw
 
 
