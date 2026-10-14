@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	import { flyAndScale } from '$lib/utils/transitions';
@@ -10,15 +10,18 @@
 	export let size = 'md';
 	export let containerClassName = 'p-3';
 	export let className = 'bg-white dark:bg-gray-900 rounded-4xl';
+	export let onRequestClose: (() => void) | null = null;
+	export let ariaLabel: string | undefined = undefined;
+	const requestClose = () => (onRequestClose ? onRequestClose() : (show = false));
 
-	let modalElement = null;
-	let mounted = false;
+	let modalElement: HTMLDivElement | null = null;
+	let previousOverflow: string | null = null;
 	// Create focus trap to trap user tabs inside modal
 	// https://www.w3.org/WAI/WCAG21/Understanding/focus-order.html
 	// https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
 	let focusTrap: FocusTrap.FocusTrap | null = null;
 
-	const sizeToWidth = (size) => {
+	const sizeToWidth = (size: string) => {
 		if (size === 'full') {
 			return 'w-full';
 		}
@@ -48,8 +51,7 @@
 					matchKeybinding(event) === Shortcut.CLOSE_MODAL)) &&
 			isTopModal()
 		) {
-			console.log('Escape');
-			show = false;
+			requestClose();
 		}
 	};
 
@@ -58,20 +60,31 @@
 		return modals.length && modals[modals.length - 1] === modalElement;
 	};
 
-	onMount(() => {
-		mounted = true;
-	});
-
-	let handleOutsidePointerDown;
-	let handleModalFocusIn;
+	let handleOutsidePointerDown: ((event: PointerEvent) => void) | undefined;
+	let handleModalFocusIn: (() => void) | undefined;
+	const release = () => {
+		if (typeof document === 'undefined') return;
+		focusTrap?.deactivate();
+		focusTrap = null;
+		if (handleOutsidePointerDown)
+			document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+		if (handleModalFocusIn) modalElement?.removeEventListener('focusin', handleModalFocusIn);
+		window.removeEventListener('keydown', handleKeyDown);
+		if (previousOverflow !== null) {
+			document.body.style.overflow = previousOverflow;
+			previousOverflow = null;
+		}
+	};
 
 	$: if (show && modalElement) {
 		document.body.appendChild(modalElement);
 		focusTrap = FocusTrap.createFocusTrap(modalElement, {
+			escapeDeactivates: false,
 			allowOutsideClick: (e) => {
 				return (
-					e.target.closest('[data-sonner-toast]') !== null ||
-					e.target.closest('.modal-content') === null
+					e.target instanceof Element &&
+					(e.target.closest('[data-sonner-toast]') !== null ||
+						e.target.closest('.modal-content') === null)
 				);
 			}
 		});
@@ -79,7 +92,12 @@
 
 		// Auto-pause focus trap when interacting with portaled content (e.g. Dropdown)
 		handleOutsidePointerDown = (e) => {
-			if (focusTrap && modalElement && !modalElement.contains(e.target)) {
+			if (
+				focusTrap &&
+				modalElement &&
+				e.target instanceof Node &&
+				!modalElement.contains(e.target)
+			) {
 				focusTrap.pause();
 			}
 		};
@@ -92,28 +110,16 @@
 		modalElement.addEventListener('focusin', handleModalFocusIn);
 
 		window.addEventListener('keydown', handleKeyDown);
+		previousOverflow = document.body.style.overflow;
 		document.body.style.overflow = 'hidden';
 	} else if (modalElement) {
-		if (focusTrap) {
-			focusTrap.deactivate();
-			focusTrap = null;
-		}
-		if (handleOutsidePointerDown) {
-			document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
-		}
-		if (handleModalFocusIn) {
-			modalElement.removeEventListener('focusin', handleModalFocusIn);
-		}
-		window.removeEventListener('keydown', handleKeyDown);
-		document.body.removeChild(modalElement);
-		document.body.style.overflow = 'unset';
+		release();
+		modalElement.remove();
 	}
 
 	onDestroy(() => {
 		show = false;
-		if (focusTrap) {
-			focusTrap.deactivate();
-		}
+		release();
 		if (modalElement && modalElement.parentNode === document.body) {
 			document.body.removeChild(modalElement);
 		}
@@ -127,13 +133,13 @@
 	<div
 		bind:this={modalElement}
 		aria-modal="true"
+		aria-label={ariaLabel}
 		role="dialog"
+		tabindex="-1"
 		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/45 dark:bg-black/60 w-full h-screen max-h-[100dvh] {containerClassName}  flex justify-center z-9999 overflow-y-auto overscroll-contain"
 		style="scrollbar-gutter: stable;"
 		in:fade={{ duration: 10 }}
-		on:mousedown={() => {
-			show = false;
-		}}
+		on:mousedown={requestClose}
 	>
 		<div
 			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'

@@ -1,0 +1,536 @@
+<script lang="ts">
+	import '$lib/utils/codemirror';
+	import { getContext } from 'svelte';
+	import { basicSetup, EditorView } from 'codemirror';
+	import { Compartment } from '@codemirror/state';
+	import { keymap, type ViewUpdate } from '@codemirror/view';
+	import { indentWithTab, isolateHistory } from '@codemirror/commands';
+	import { LanguageDescription, indentUnit } from '@codemirror/language';
+	import { languages } from '@codemirror/language-data';
+	import { oneDark } from '@codemirror/theme-one-dark';
+	import type { MergeView } from '@codemirror/merge';
+	import Modal from './Modal.svelte';
+	import ConfirmDialog from './ConfirmDialog.svelte';
+	import FileCodeEditor from '$lib/components/chat/FileNav/FileCodeEditor.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import {
+		copyChunk,
+		selectedChunk,
+		chunkOverview,
+		nearestOverviewChunk,
+		diffEditorConfig,
+		type MergeDirection
+	} from './diffEditor';
+
+	export let show = false;
+	export let initialContent = '';
+	export let proposedContent: string | undefined = undefined;
+	export let filePath: string | null = null;
+	export let title = '';
+	export let onApply: (content: string) => void = () => {};
+	export let onClose: () => void = () => {};
+
+	const i18n = getContext<any>('i18n');
+	let session: {
+		original: string;
+		proposal: string;
+		path: string | null;
+		title: string;
+	} | null = null;
+	let working = '';
+	let proposal = '';
+	let comparing = false;
+	let merge: MergeView | null = null;
+	let activeChunk = 0;
+	let overview: ReturnType<typeof chunkOverview> = [];
+	let chunkCount = 0;
+	let approximate = false;
+	let loading = false;
+	let error = '';
+	let confirmDiscard = false;
+
+	const begin = () => {
+		session = { original: initialContent, proposal: proposedContent ?? '', path: filePath, title };
+		working = session.original;
+		proposal = session.proposal;
+		comparing = proposedContent !== undefined;
+		activeChunk = chunkCount = 0;
+		overview = [];
+		loading = approximate = false;
+		error = '';
+		confirmDiscard = false;
+	};
+	$: if (show && !session) begin();
+	$: if (!show && session) {
+		session = null;
+		confirmDiscard = false;
+	}
+
+	const close = () => {
+		show = false;
+		onClose();
+	};
+	const requestClose = () => {
+		if (session && (working !== session.original || proposal !== session.proposal))
+			confirmDiscard = true;
+		else close();
+	};
+	const apply = () => {
+		try {
+			onApply(working);
+			close();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : String(cause);
+		}
+	};
+	const preventSave = (event: KeyboardEvent) => {
+		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+	};
+	const refresh = (update?: ViewUpdate, side: 'a' | 'b' = 'a') => {
+		if (!merge) return;
+		if (!update || update.docChanged) {
+			working = merge.a.state.doc.toString();
+			proposal = merge.b.state.doc.toString();
+			chunkCount = merge.chunks.length;
+			overview = chunkOverview(merge.a.state.doc, merge.b.state.doc, merge.chunks);
+			approximate = merge.chunks.some((chunk) => !chunk.precise);
+		}
+		if (update?.selectionSet) {
+			const index = selectedChunk(merge.chunks, side, update.state.selection.main.head);
+			if (index >= 0) activeChunk = index;
+		}
+		activeChunk = Math.max(0, Math.min(activeChunk, chunkCount - 1));
+	};
+	const reveal = (index: number) => {
+		if (!merge || !chunkCount) return;
+		activeChunk = Math.max(0, Math.min(index, chunkCount - 1));
+		const chunk = merge.chunks[activeChunk];
+		for (const [view, start] of [
+			[merge.a, chunk.fromA],
+			[merge.b, chunk.fromB]
+		] as const) {
+			const position = Math.min(start, view.state.doc.length);
+			view.dispatch({
+				selection: { anchor: position },
+				effects: EditorView.scrollIntoView(position, { y: 'center' })
+			});
+		}
+	};
+	const navigateOverview = (event: MouseEvent) => {
+		const bounds =
+			event.currentTarget instanceof HTMLElement && event.currentTarget.getBoundingClientRect();
+		if (!bounds || !chunkCount) return;
+		const side = event.clientX - bounds.left < bounds.width / 2 ? 'a' : 'b';
+		reveal(nearestOverviewChunk(overview, side, (event.clientY - bounds.top) / bounds.height));
+	};
+	const overviewKeydown = (event: KeyboardEvent) => {
+		const positions: Record<string, number> = {
+			ArrowUp: activeChunk - 1,
+			ArrowDown: activeChunk + 1,
+			Home: 0,
+			End: chunkCount - 1
+		};
+		const index = positions[event.key];
+		if (index === undefined) return;
+		event.preventDefault();
+		event.stopPropagation();
+		reveal(index);
+	};
+
+	const copy = (direction: MergeDirection) => {
+		if (!merge || !merge.chunks[activeChunk]) return;
+		const destination = direction === 'to-working' ? merge.a : merge.b;
+		destination.dispatch({
+			changes: copyChunk(
+				merge.a.state.doc,
+				merge.b.state.doc,
+				merge.chunks[activeChunk],
+				direction
+			),
+			annotations: isolateHistory.of('full'),
+			userEvent: 'input.merge'
+		});
+		refresh();
+	};
+
+	const mountMerge = (node: HTMLElement) => {
+		let disposed = false;
+		let view: MergeView | null = null;
+		let observer: MutationObserver | undefined;
+		const themes = [new Compartment(), new Compartment()];
+		const language = [new Compartment(), new Compartment()];
+		const path = session?.path;
+		loading = true;
+		const extensions = (side: 'a' | 'b', index: number) => [
+			basicSetup,
+			keymap.of([indentWithTab, { key: 'Mod-s', run: () => true }]),
+			indentUnit.of('    '),
+			EditorView.lineWrapping,
+			EditorView.contentAttributes.of({
+				'aria-label': side === 'a' ? $i18n.t('Working copy') : $i18n.t('Proposed revision')
+			}),
+			themes[index].of(document.documentElement.classList.contains('dark') ? oneDark : []),
+			language[index].of([]),
+			EditorView.updateListener.of((update) => {
+				if (update.docChanged || update.selectionSet) refresh(update, side);
+			}),
+			EditorView.theme({
+				'&': { fontSize: '0.75rem' },
+				'.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
+				'&.cm-focused': { outline: 'none' }
+			})
+		];
+		void (async () => {
+			try {
+				const { MergeView } = await import('@codemirror/merge');
+				if (disposed) return;
+				view = new MergeView({
+					a: { doc: working, extensions: extensions('a', 0) },
+					b: { doc: proposal, extensions: extensions('b', 1) },
+					parent: node,
+					diffConfig: diffEditorConfig
+				});
+				merge = view;
+				refresh();
+				loading = false;
+				observer = new MutationObserver(() => {
+					const theme = document.documentElement.classList.contains('dark') ? oneDark : [];
+					view?.a.dispatch({ effects: themes[0].reconfigure(theme) });
+					view?.b.dispatch({ effects: themes[1].reconfigure(theme) });
+				});
+				observer.observe(document.documentElement, {
+					attributes: true,
+					attributeFilter: ['class']
+				});
+				const match = path && LanguageDescription.matchFilename(languages, path);
+				if (match) {
+					const support = await match.load();
+					if (disposed) return;
+					view.a.dispatch({ effects: language[0].reconfigure(support) });
+					view.b.dispatch({ effects: language[1].reconfigure(support) });
+				}
+			} catch (cause) {
+				if (!disposed) {
+					error = cause instanceof Error ? cause.message : String(cause);
+					loading = false;
+				}
+			}
+		})();
+		return {
+			destroy: () => {
+				disposed = true;
+				observer?.disconnect();
+				view?.destroy();
+				if (merge === view) merge = null;
+			}
+		};
+	};
+</script>
+
+{#if show && session}
+	<Modal
+		{show}
+		ariaLabel={session.title || $i18n.t('Compare revision')}
+		size="full"
+		containerClassName="p-2 sm:p-4"
+		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-white dark:bg-gray-900 !border-0"
+		onRequestClose={requestClose}
+	>
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div class="diff-editor flex h-full min-h-0 flex-col text-xs" on:keydown|capture={preventSave}>
+			<header class="flex shrink-0 flex-wrap items-center gap-3 px-5 pt-4 pb-2">
+				<div class="min-w-0 flex-1">
+					<h2 class="font-medium">{session.title || $i18n.t('Compare revision')}</h2>
+					{#if session.path}<p class="mt-1 truncate font-mono text-gray-500">{session.path}</p>{/if}
+				</div>
+				{#if !comparing}
+					<button type="button" class="primary" on:click={() => (comparing = true)}
+						>{$i18n.t('Compare')}</button
+					>
+				{/if}
+				{#if comparing}
+					<div class="comparison-controls flex flex-wrap items-center gap-2">
+						<span class="whitespace-nowrap text-gray-500" role="status" aria-live="polite"
+							>{loading
+								? $i18n.t('Loading...')
+								: chunkCount
+									? $i18n.t('Change {{current}} of {{total}}', {
+											current: activeChunk + 1,
+											total: chunkCount
+										})
+									: $i18n.t('No differences')}</span
+						>
+						{#if approximate}<span
+								role="img"
+								class="text-gray-500"
+								aria-label={$i18n.t('Approximate comparison')}
+								title={$i18n.t(
+									'Comparison reached its time limit; some changes are grouped together.'
+								)}>≈</span
+							>{/if}
+						<button
+							type="button"
+							class="secondary"
+							aria-label={$i18n.t('Previous change')}
+							title={$i18n.t('Previous change')}
+							disabled={!chunkCount || activeChunk === 0}
+							on:click={() => reveal(activeChunk - 1)}><span aria-hidden="true">↑</span></button
+						>
+						<button
+							type="button"
+							class="secondary"
+							aria-label={$i18n.t('Next change')}
+							title={$i18n.t('Next change')}
+							disabled={!chunkCount || activeChunk === chunkCount - 1}
+							on:click={() => reveal(activeChunk + 1)}><span aria-hidden="true">↓</span></button
+						>
+						<button
+							type="button"
+							class="secondary"
+							disabled={!chunkCount}
+							aria-label={$i18n.t('Copy change to working copy')}
+							title={$i18n.t('Copy change to working copy')}
+							on:click={() => copy('to-working')}>← {$i18n.t('Working copy')}</button
+						>
+						<button
+							type="button"
+							class="secondary"
+							disabled={!chunkCount}
+							aria-label={$i18n.t('Copy change to proposal')}
+							title={$i18n.t('Copy change to proposal')}
+							on:click={() => copy('to-proposal')}>{$i18n.t('Proposed revision')} →</button
+						>
+					</div>
+				{/if}
+				<button
+					type="button"
+					class="comparison-close rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+					aria-label={$i18n.t('Close')}
+					on:click={requestClose}><XMark className="size-4" /></button
+				>
+			</header>
+			{#if error}<p class="px-4 py-2 text-red-600" role="alert">{error}</p>{/if}
+			<div class="relative flex min-h-0 flex-1">
+				<div class="min-h-0 min-w-0 flex-1 overflow-x-auto px-4">
+					<div class="flex h-full min-w-[640px] flex-col">
+						<div class="grid shrink-0 grid-cols-2 gap-4 py-2">
+							<div
+								class="rounded-lg bg-gray-50/70 px-3 py-2 font-medium text-gray-500 dark:bg-white/[0.03]"
+							>
+								{$i18n.t('Working copy')}
+							</div>
+							<div
+								class="rounded-lg bg-gray-50/70 px-3 py-2 font-medium text-gray-500 dark:bg-white/[0.03]"
+							>
+								{$i18n.t('Proposed revision')}
+							</div>
+						</div>
+						{#if comparing}
+							<div class="merge-container min-h-0 flex-1" use:mountMerge></div>
+						{:else}
+							<div class="grid min-h-0 flex-1 grid-cols-2 gap-4">
+								<FileCodeEditor
+									bind:value={working}
+									filePath={session.path}
+									ariaLabel={$i18n.t('Working copy')}
+								/>
+								<div class="min-h-0 min-w-0">
+									<FileCodeEditor
+										bind:value={proposal}
+										filePath={session.path}
+										ariaLabel={$i18n.t('Proposed revision')}
+										placeholder={$i18n.t('Paste a proposed revision here...')}
+									/>
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+				{#if comparing}
+					<div
+						class="diff-overview"
+						role="slider"
+						tabindex={chunkCount ? 0 : -1}
+						aria-label={$i18n.t('Change overview')}
+						aria-orientation="vertical"
+						aria-valuemin={1}
+						aria-valuemax={Math.max(1, chunkCount)}
+						aria-valuenow={activeChunk + 1}
+						aria-valuetext={chunkCount
+							? $i18n.t('Change {{current}} of {{total}}', {
+									current: activeChunk + 1,
+									total: chunkCount
+								})
+							: $i18n.t('No differences')}
+						aria-disabled={!chunkCount}
+						on:click={navigateOverview}
+						on:keydown={overviewKeydown}
+						title={$i18n.t('Click to jump to a change. Use arrow keys to navigate.')}
+					>
+						<svg viewBox="0 0 20 1000" preserveAspectRatio="none" aria-hidden="true">
+							<rect class="overview-track" x="2" y="0" width="6" height="1000" rx="3" />
+							<rect class="overview-track" x="12" y="0" width="6" height="1000" rx="3" />
+							{#each overview as range, index}
+								<rect
+									class="overview-removed"
+									class:overview-active={index === activeChunk}
+									x="2"
+									y={Math.min(997, range.a.from * 1000)}
+									width="6"
+									height={Math.max(3, (range.a.to - range.a.from) * 1000)}
+								/>
+								<rect
+									class="overview-added"
+									class:overview-active={index === activeChunk}
+									x="12"
+									y={Math.min(997, range.b.from * 1000)}
+									width="6"
+									height={Math.max(3, (range.b.to - range.b.from) * 1000)}
+								/>
+							{/each}
+						</svg>
+					</div>
+				{/if}
+			</div>
+			<footer class="flex shrink-0 flex-wrap items-center gap-2 px-5 py-3">
+				<p class="mr-auto text-gray-500">
+					{$i18n.t('Apply uses the left working copy. Save your draft afterward.')}
+				</p>
+				<button type="button" class="secondary" on:click={requestClose}>{$i18n.t('Cancel')}</button>
+				<button type="button" class="primary" disabled={loading} on:click={apply}
+					>{$i18n.t('Apply to draft')}</button
+				>
+			</footer>
+		</div>
+	</Modal>
+	<ConfirmDialog
+		bind:show={confirmDiscard}
+		title={$i18n.t('Discard comparison changes?')}
+		message={$i18n.t(
+			'Your changes in this comparison will be discarded. The original draft will stay unchanged.'
+		)}
+		confirmLabel={$i18n.t('Discard')}
+		onConfirm={close}
+	/>
+{/if}
+
+<style>
+	.comparison-controls {
+		margin-left: auto;
+	}
+	.diff-overview {
+		flex: 0 0 20px;
+		margin: 2.75rem 6px 0 -10px;
+		cursor: pointer;
+		border-radius: 4px;
+	}
+	.diff-overview:focus-visible {
+		outline: 2px solid var(--color-gray-500);
+		outline-offset: 2px;
+	}
+	.diff-overview svg {
+		width: 100%;
+		height: 100%;
+		display: block;
+	}
+	.overview-track {
+		fill: #94a3b81a;
+	}
+	.overview-removed {
+		fill: #f0a394;
+	}
+	.overview-added {
+		fill: #7dd3c5;
+	}
+	.overview-active.overview-removed {
+		fill: #e4654c;
+	}
+	.overview-active.overview-added {
+		fill: #0d9488;
+	}
+	@media (max-width: 900px) {
+		.comparison-controls {
+			order: 3;
+			width: 100%;
+		}
+		.comparison-close {
+			order: 2;
+		}
+	}
+
+	.secondary,
+	.primary {
+		border-radius: 0.5rem;
+		padding: 0.375rem 0.625rem;
+	}
+	.secondary {
+		background: var(--color-gray-100);
+		color: var(--color-gray-700);
+	}
+	.primary {
+		background: var(--color-gray-900);
+		color: white;
+	}
+	button:disabled {
+		opacity: 0.4;
+	}
+	button:focus-visible {
+		outline: 2px solid var(--color-gray-500);
+		outline-offset: 2px;
+	}
+	:global(.dark) .secondary {
+		background: var(--color-gray-800);
+		color: var(--color-gray-200);
+	}
+	:global(.dark) .primary {
+		background: var(--color-gray-100);
+		color: var(--color-gray-900);
+	}
+	.merge-container :global(.cm-mergeView) {
+		height: 100%;
+		overflow: auto;
+	}
+	.merge-container :global(.cm-mergeViewEditor) {
+		min-width: 0;
+	}
+	.merge-container :global(.cm-merge-a .cm-changedLine) {
+		background: #fce9e6;
+	}
+	.merge-container :global(.cm-merge-b .cm-changedLine) {
+		background: #e0f5f1;
+	}
+	.merge-container :global(.cm-merge-a .cm-changedText) {
+		background: #f9b9ad;
+	}
+	.merge-container :global(.cm-merge-b .cm-changedText) {
+		background: #a3e3d8;
+	}
+	.merge-container :global(.cm-changedText) {
+		border-radius: 3px;
+	}
+	.merge-container :global(.cm-mergeSpacer) {
+		background: repeating-linear-gradient(135deg, transparent 0 3px, #94a3b814 3px 4px);
+	}
+	:global(.dark) .merge-container :global(.cm-merge-a .cm-changedLine) {
+		background: #ef6b5520;
+	}
+	:global(.dark) .merge-container :global(.cm-merge-b .cm-changedLine) {
+		background: #2dd4bf18;
+	}
+	:global(.dark) .merge-container :global(.cm-merge-a .cm-changedText) {
+		background: #ef6b5555;
+	}
+	:global(.dark) .merge-container :global(.cm-merge-b .cm-changedText) {
+		background: #2dd4bf45;
+	}
+	.merge-container :global(.cm-mergeViewEditors) {
+		gap: 1rem;
+	}
+	.diff-editor :global(.cm-gutters) {
+		border: 0;
+		background: transparent;
+	}
+</style>

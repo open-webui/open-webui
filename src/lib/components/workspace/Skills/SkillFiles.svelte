@@ -22,6 +22,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import FileCodeEditor from '$lib/components/chat/FileNav/FileCodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 	import {
 		getSkillFiles,
 		getSkillFile,
@@ -61,6 +62,8 @@
 	let showFileDrawer = false;
 	let sidebarWidth = 256;
 	let codeEditor: FileCodeEditor | undefined;
+	let showComparison = false;
+	let comparison: { path: string; content: string; key: string; request: number } | null = null;
 	let value = '';
 	let loadedValue = '';
 	let loadedPath = '';
@@ -149,6 +152,27 @@
 			loadedValue = value;
 			dirty = true;
 		}
+	};
+	const compareRevision = () => {
+		if (readOnly || loading || loadError || !loadedPath || objectUrl) return;
+		flush();
+		comparison = { path: loadedPath, content: value, key: loadKey, request: requestId };
+		preview = false;
+		showComparison = true;
+	};
+	const applyComparison = (content: string) => {
+		if (
+			readOnly ||
+			!comparison ||
+			comparison.path !== loadedPath ||
+			comparison.key !== loadKey ||
+			comparison.request !== requestId ||
+			!files.some((file) => file.path === comparison?.path)
+		)
+			throw new Error($i18n.t('The file has changed. Reopen the comparison before applying.'));
+		codeEditor?.setValue(content);
+		value = content;
+		flush();
 	};
 	const fileDrawer = (node: HTMLElement) => {
 		const trap = createFocusTrap(node, { escapeDeactivates: false });
@@ -480,6 +504,14 @@
 	});
 </script>
 
+<DiffEditorModal
+	bind:show={showComparison}
+	initialContent={comparison?.content ?? ''}
+	filePath={comparison?.path ?? null}
+	onApply={applyComparison}
+	onClose={() => (comparison = null)}
+/>
+
 <ConfirmDialog
 	bind:show={dialog.show}
 	title={dialog.title}
@@ -564,6 +596,13 @@
 				</button>
 			{/if}
 			<span class="min-w-0 flex-1 truncate text-gray-500" title={selected}>{selected}</span>
+			{#if !readOnly && loadedPath && !objectUrl && !loading && !loadError}
+				<button
+					type="button"
+					class="rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={compareRevision}>{$i18n.t('Compare revision')}</button
+				>
+			{/if}
 			{#if /\.md$/i.test(selected) && !loading}<button
 					type="button"
 					class="rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
