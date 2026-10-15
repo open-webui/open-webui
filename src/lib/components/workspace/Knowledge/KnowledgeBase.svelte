@@ -629,10 +629,8 @@
 			}
 
 			const res = await updateKnowledgeById(localStorage.token, id, {
-				...knowledge,
 				name: knowledge.name,
-				description: knowledge.description,
-				access_grants: knowledge.access_grants ?? []
+				description: knowledge.description
 			}).catch((e) => {
 				toast.error(`${e}`);
 			});
