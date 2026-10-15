@@ -86,12 +86,12 @@
 	$: enabledTools = allTools.filter((key) => builtinTools[key] !== false);
 
 	const setBuiltinTool = (tool: keyof typeof toolLabels, checked: boolean) => {
+		builtinTools = { ...builtinTools };
 		if (checked) {
 			delete builtinTools[tool];
 		} else {
 			builtinTools[tool] = false;
 		}
-		builtinTools = builtinTools;
 	};
 </script>
 
