@@ -235,9 +235,11 @@ def get_session_pool_batches():
 async def publish_chat_presence(chat_id: str):
     # Room maps only contain this worker's sockets; the session pool spans workers.
     lock = (
-        REDIS.lock(f'{REDIS_KEY_PREFIX}:chat:{chat_id}:presence:lock',
+        REDIS.lock(
+            f'{REDIS_KEY_PREFIX}:chat:{chat_id}:presence:lock',
             timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
-            blocking_timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT)
+            blocking_timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+        )
         if REDIS is not None
         else SOCKET_EVENT_LOCKS.setdefault(('chat', chat_id), asyncio.Lock())
     )
@@ -298,7 +300,10 @@ async def periodic_session_pool_cleanup():
                         if expired:
                             log.warning('Reaping %d orphaned session(s) from the session pool', len(expired))
                             chat_ids = {
-                                chat_id for sid, entry in batch if sid in expired for chat_id in entry.get('chat_ids', [])
+                                chat_id
+                                for sid, entry in batch
+                                if sid in expired
+                                for chat_id in entry.get('chat_ids', [])
                             }
                             if WEBSOCKET_MANAGER == 'redis':
                                 SESSION_POOL.delete_many(*expired)
@@ -634,7 +639,8 @@ async def refresh_chat_access(chat_id=None):
                     current = SESSION_POOL.get(sid)
                     if current:
                         SESSION_POOL[sid] = {
-                            **current, 'chat_ids': [id for id in current.get('chat_ids', []) if id != cid]
+                            **current,
+                            'chat_ids': [id for id in current.get('chat_ids', []) if id != cid],
                         }
                 await sio.emit(
                     'events', {'chat_id': cid, 'shared': True, 'data': {'type': 'chat:access', 'data': {}}}, to=sid
