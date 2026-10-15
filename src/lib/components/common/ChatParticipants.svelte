@@ -84,7 +84,7 @@
 					? 'h-6 text-xs'
 					: 'text-[0.625rem]'} text-gray-500 hover:bg-gray-100 focus-visible:outline dark:text-gray-400 dark:hover:bg-gray-800"
 				aria-label={mode === 'presence'
-					? $i18n.t('People here')
+					? $i18n.t('Collaborators')
 					: $i18n.t('Show all {{count}} contributors', { count: people.length })}
 			>
 				+{people.length - 3}
@@ -97,11 +97,11 @@
 					align={mode === 'presence' ? 'end' : 'start'}
 					sideOffset={6}
 					class="z-[9999] w-60 max-w-[calc(100vw-1.5rem)] max-h-80 overflow-y-auto rounded-xl bg-white p-2 text-gray-900 shadow-lg ring-1 ring-black/5 dark:bg-gray-850 dark:text-gray-100 dark:ring-white/10"
-					aria-label={mode === 'presence' ? $i18n.t('People here') : $i18n.t('Contributors')}
+					aria-label={mode === 'presence' ? $i18n.t('Collaborators') : $i18n.t('Contributors')}
 				>
 					{#if mode === 'presence'}
 						<div class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
-							{$i18n.t('People here')}
+							{$i18n.t('Collaborators')}
 						</div>
 					{/if}
 					<ul class="space-y-1">
