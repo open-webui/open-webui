@@ -97,8 +97,8 @@
 		onUpdate={updateMembers}
 	/>
 	<Modal size="sm" bind:show>
-		<div>
-			<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
+		<div class="flex max-h-[calc(100dvh-3rem)] flex-col">
+			<div class="flex shrink-0 justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 				<div class="self-center text-base">
 					<div class="flex items-center gap-0.5 shrink-0">
 						{#if channel?.type === 'dm'}
@@ -130,16 +130,18 @@
 				</button>
 			</div>
 
-			<div class="flex flex-col md:flex-row w-full px-3 pb-4 md:space-x-4 dark:text-gray-200">
-				<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
+			<div
+				class="flex min-h-0 flex-col md:flex-row w-full px-3 pb-4 md:space-x-4 dark:text-gray-200"
+			>
+				<div class="flex min-h-0 flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 					<form
-						class="flex flex-col w-full"
+						class="flex min-h-0 flex-col w-full"
 						on:submit={(e) => {
 							e.preventDefault();
 							submitHandler();
 						}}
 					>
-						<div class="flex flex-col w-full h-full pb-2">
+						<div class="flex min-h-0 flex-col w-full pb-2">
 							<UserList
 								{channel}
 								apps={joinedApps}
