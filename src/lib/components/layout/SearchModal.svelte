@@ -127,13 +127,6 @@
 		onClose();
 	}
 
-	function dismissLayer() {
-		if (panel) panel = null;
-		else if (preview) preview = false;
-		else close();
-		input?.focus();
-	}
-
 	async function open(result = selected) {
 		if (!result) return;
 		await goto(result.url);
@@ -218,7 +211,7 @@
 	bind:show
 	size={preview ? 'xl' : 'lg'}
 	ariaLabel={$i18n.t('Search workspace')}
-	onRequestClose={dismissLayer}
+	onRequestClose={close}
 	className="bg-white dark:bg-gray-850 rounded-2xl !border-gray-100 dark:!border-gray-800"
 >
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
