@@ -450,7 +450,7 @@
 			}
 		}
 
-		if (defaultFeatureIds.length > 0) {
+		if (defaultFeatureIds.length > 0 || defaultMeta.defaultFeatureIds?.length > 0) {
 			modelInfo.meta.defaultFeatureIds = defaultFeatureIds;
 		} else {
 			if (modelInfo.meta.defaultFeatureIds) {
