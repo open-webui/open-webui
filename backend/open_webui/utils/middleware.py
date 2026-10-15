@@ -6337,9 +6337,28 @@ async def streaming_chat_response_handler(response, ctx):
                                 )
 
                             try:
+                                # Compact what the user typed, without the source context wrapped around it.
+                                base_user_prompt = metadata.get('base_user_prompt') or user_message
+                                wrapped_messages = {}
+                                compaction_messages = []
+                                for message in messages:
+                                    if (
+                                        user_prompt
+                                        and message.get('role') == 'user'
+                                        and message.get('content') == user_prompt.get('content')
+                                    ):
+                                        source_free_message = set_last_user_message_content(
+                                            base_user_prompt, [copy.deepcopy(message)]
+                                        )[0]
+                                        wrapped_messages[id(source_free_message)] = message
+                                        compaction_messages.append(source_free_message)
+                                    else:
+                                        compaction_messages.append(message)
+
                                 messages, context_summary, compacted = await compact_messages_for_request(
-                                    request, user, messages, metadata, model_id, request.app.state.MODELS
+                                    request, user, compaction_messages, metadata, model_id, request.app.state.MODELS
                                 )
+                                messages = [wrapped_messages.get(id(message), message) for message in messages]
                                 if compacted:
                                     if user_prompt is not None:
                                         messages = [message for message in messages if message != user_prompt]
