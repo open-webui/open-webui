@@ -3388,6 +3388,7 @@
 	"settings.personal.shortcuts.addPrompt.label": "Add Custom Prompt",
 	"settings.personal.shortcuts.allowToolCall.label": "Allow Tool Call",
 	"settings.personal.shortcuts.attachFile.label": "Attach File From Knowledge",
+	"settings.personal.shortcuts.clearToolsAndFeatures.label": "Clear Tools and Features",
 	"settings.personal.shortcuts.closeModal.label": "Close Modal",
 	"settings.personal.shortcuts.command.label": "Command",
 	"settings.personal.shortcuts.copyLastCodeBlock.label": "Copy Last Code Block",

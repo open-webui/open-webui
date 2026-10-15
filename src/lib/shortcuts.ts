@@ -36,6 +36,7 @@ export enum Shortcut {
 
 	//Input
 	FOCUS_INPUT = 'focusInput',
+	CLEAR_TOOLS_AND_FEATURES = 'clearToolsAndFeatures',
 	ACCEPT_AUTOCOMPLETE = 'acceptAutocomplete',
 	PREVENT_FILE_CREATION = 'preventFileCreation',
 	NAVIGATE_PROMPT_HISTORY_UP = 'navigatePromptHistoryUp',
@@ -71,6 +72,7 @@ export const CONFIGURABLE_SHORTCUTS = [
 	Shortcut.TOGGLE_CONTROLS,
 	Shortcut.CLOSE_MODAL,
 	Shortcut.FOCUS_INPUT,
+	Shortcut.CLEAR_TOOLS_AND_FEATURES,
 	Shortcut.GENERATE_MESSAGE_PAIR,
 	Shortcut.REGENERATE_RESPONSE,
 	Shortcut.ALLOW_TOOL_CALL,
@@ -97,6 +99,7 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
 	[Shortcut.TOGGLE_CONTROLS]: '',
 	[Shortcut.CLOSE_MODAL]: 'Escape',
 	[Shortcut.FOCUS_INPUT]: 'Shift+Escape',
+	[Shortcut.CLEAR_TOOLS_AND_FEATURES]: 'Escape',
 	[Shortcut.GENERATE_MESSAGE_PAIR]: 'Cmd+Shift+Enter',
 	[Shortcut.REGENERATE_RESPONSE]: 'Cmd+R',
 	[Shortcut.ALLOW_TOOL_CALL]: 'Cmd+Alt+Enter',
@@ -299,6 +302,13 @@ export const shortcuts: ShortcutRegistry = {
 		keys: ['shift', 'Escape'],
 		category: 'Input',
 		configurable: true
+	},
+	[Shortcut.CLEAR_TOOLS_AND_FEATURES]: {
+		name: (t) => t('settings.personal.shortcuts.clearToolsAndFeatures.label'),
+		keys: ['Escape'],
+		category: 'Input',
+		configurable: true,
+		tooltip: 'Only active when the chat input is in focus.'
 	},
 	[Shortcut.ACCEPT_AUTOCOMPLETE]: {
 		name: (t) => t('settings.personal.shortcuts.acceptAutocomplete.label'),

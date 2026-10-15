@@ -2278,7 +2278,10 @@
 															}
 														}
 
-														if (e.key === 'Escape') {
+														if (
+															$settings?.keyboardShortcuts !== false &&
+															matchKeybinding(e) === Shortcut.CLEAR_TOOLS_AND_FEATURES
+														) {
 															console.log('Escape');
 															atSelectedModel = undefined;
 															selectedToolIds = [];
