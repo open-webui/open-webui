@@ -1343,7 +1343,17 @@
 	) => {
 		const currentId = history.currentId;
 		const next = incoming?.messages ?? {};
+		// An edited prompt adds a sibling; other viewers should keep their selected branch.
+		const hasNewBranch = Object.values(next).some(
+			(message: any) =>
+				message.role === 'user' &&
+				!history.messages[message.id] &&
+				Object.values(history.messages).some(
+					(existing: any) => existing.role === 'user' && existing.parentId === message.parentId
+				)
+		);
 		const follow =
+			!hasNewBranch &&
 			!generating &&
 			!(
 				taskIds?.length &&

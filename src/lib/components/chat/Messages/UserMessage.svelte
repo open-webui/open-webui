@@ -45,6 +45,7 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+	export let shareMode: 'continue' | null = null;
 	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
@@ -334,7 +335,7 @@
 
 					<div class=" mt-2 -mx-1 flex justify-between text-sm font-normal">
 						<div>
-							{#if isOwn}
+							{#if isOwn && !readOnly}
 								<button
 									id="save-edit-message-button"
 									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
@@ -544,7 +545,7 @@
 							</div>
 						{/if}
 					{/if}
-					{#if !compactPreview && !readOnly}
+					{#if !compactPreview && (!readOnly || (shareMode === 'continue' && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.edit ?? true))))}
 						<Tooltip content={$i18n.t('Edit')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)

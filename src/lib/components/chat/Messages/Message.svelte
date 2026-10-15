@@ -89,6 +89,7 @@
 				{deleteMessage}
 				{allowDelete}
 				{readOnly}
+				{shareMode}
 				{compactPreview}
 				{editCodeBlock}
 				{topPadding}
