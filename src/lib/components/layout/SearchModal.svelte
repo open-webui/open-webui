@@ -4,7 +4,9 @@
 	import { toast } from 'svelte-sonner';
 	import { settings } from '$lib/stores';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
-	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
 	import {
@@ -277,7 +279,9 @@
 						class="{quietButton} !h-[1.375rem] bg-gray-50/60 dark:bg-gray-800/40"
 						on:click={() => (sharing = 'all')}
 						aria-label={$i18n.t('Remove sharing filter')}
-						>{$i18n.t(sharing === 'mine' ? 'Created by you' : 'Shared with you')}<XMark className="size-2.5" /></button
+						>{$i18n.t(sharing === 'mine' ? 'Created by you' : 'Shared with you')}<XMark
+							className="size-2.5"
+						/></button
 					>{/if}
 				{#if scope}<button
 						class="{quietButton} !h-[1.375rem] max-w-48 bg-gray-50/60 dark:bg-gray-800/40"
@@ -312,46 +316,96 @@
 			</div>
 		{/if}
 		{#if panel === 'filters'}
-			<div class="absolute right-2 top-10 z-10 w-72 max-w-[calc(100%-1rem)]" data-search-panel>
-				<DropdownMenu
-					><div class="px-2 py-1">
-						<div class="flex items-center justify-between gap-3 py-1">
-							<span class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('View')}</span
-							><SettingsSelect bind:value={sharing} ariaLabel={$i18n.t('View')}
-								><option value="all">{$i18n.t('All')}</option><option
-									value="mine">{$i18n.t('Created by you')}</option
-								><option value="shared">{$i18n.t('Shared with you')}</option></SettingsSelect
+			<div class="absolute right-2 top-10 z-10 w-52 max-w-[calc(100%-1rem)]" data-search-panel>
+				<DropdownMenu>
+					<DropdownSub maxWidth={208} contentClass="w-52 font-normal">
+						<button
+							slot="trigger"
+							class="focus-ring flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] font-normal"
+						>
+							<span>{$i18n.t('View')}</span>
+							<span class="ml-auto truncate text-gray-500 dark:text-gray-400"
+								>{$i18n.t(
+									sharing === 'all'
+										? 'All'
+										: sharing === 'mine'
+											? 'Created by you'
+											: 'Shared with you'
+								)}</span
 							>
-						</div>
-						<div class="flex items-center justify-between gap-3 py-1">
-							<span class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('Location')}</span
-							><SettingsSelect
-								bind:value={scope}
-								className="max-w-[70%]"
-								ariaLabel={$i18n.t('Location')}
-								><option value="">{$i18n.t('Everywhere')}</option><optgroup
-									label={$i18n.t('Folders')}
-									>{#each scopes.filter((s) => s.kind === 'folder') as item}<option value={item.id}
-											>{item.name}</option
-										>{/each}</optgroup
-								><optgroup label={$i18n.t('Channels')}
-									>{#each scopes.filter((s) => s.kind === 'channel') as item}<option value={item.id}
-											>{item.name}</option
-										>{/each}</optgroup
-								></SettingsSelect
-							>
-						</div>
-						<div class="flex justify-end gap-1 pt-0.5">
-							<button class={quietButton} on:click={resetFilters}>{$i18n.t('Reset')}</button><button
-								class={quietButton}
+							<ChevronRight className="size-3.5 shrink-0 text-gray-400" />
+						</button>
+						{#each [{ value: 'all', label: 'All' }, { value: 'mine', label: 'Created by you' }, { value: 'shared', label: 'Shared with you' }] as option}
+							<button
+								data-search-panel
+								aria-pressed={sharing === option.value}
 								on:click={() => {
+									sharing = option.value;
 									panel = null;
 									input.focus();
-								}}>{$i18n.t('Done')}</button
+								}}
 							>
-						</div>
-					</div></DropdownMenu
-				>
+								{$i18n.t(option.label)}
+								{#if sharing === option.value}<Check className="ml-auto size-3.5" />{/if}
+							</button>
+						{/each}
+					</DropdownSub>
+					<DropdownSub
+						maxWidth={208}
+						contentClass="w-52 max-h-64 overflow-y-auto scrollbar-hover font-normal"
+					>
+						<button
+							slot="trigger"
+							class="focus-ring flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] font-normal"
+						>
+							<span>{$i18n.t('Location')}</span>
+							<span class="ml-auto truncate text-gray-500 dark:text-gray-400"
+								>{scopeName || $i18n.t('Everywhere')}</span
+							>
+							<ChevronRight className="size-3.5 shrink-0 text-gray-400" />
+						</button>
+						<button
+							data-search-panel
+							aria-pressed={!scope}
+							on:click={() => {
+								scope = '';
+								panel = null;
+								input.focus();
+							}}
+						>
+							{$i18n.t('Everywhere')}{#if !scope}<Check className="ml-auto size-3.5" />{/if}
+						</button>
+						{#each [{ kind: 'folder', label: 'Folders' }, { kind: 'channel', label: 'Channels' }] as group}
+							{#if scopes.some((item) => item.kind === group.kind)}
+								<div
+									data-search-panel
+									class="px-2 pb-1 pt-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+								>
+									{$i18n.t(group.label)}
+								</div>
+								{#each scopes.filter((item) => item.kind === group.kind) as item}
+									<button
+										data-search-panel
+										aria-pressed={scope === item.id}
+										on:click={() => {
+											scope = item.id;
+											panel = null;
+											input.focus();
+										}}
+									>
+										<span class="min-w-0 truncate">{item.name}</span>{#if scope === item.id}<Check
+												className="ml-auto size-3.5 shrink-0"
+											/>{/if}
+									</button>
+								{/each}
+							{/if}
+						{/each}
+					</DropdownSub>
+					{#if kind !== 'all' || sharing !== 'all' || scope}
+						<hr class="border-gray-100 dark:border-gray-800" />
+						<button on:click={resetFilters}>{$i18n.t('Reset')}</button>
+					{/if}
+				</DropdownMenu>
 			</div>
 		{/if}
 		<div
