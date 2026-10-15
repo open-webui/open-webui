@@ -48,7 +48,11 @@
 {/snippet}
 
 <div class="flex shrink-0 items-center gap-1" data-chat-participants draggable="false">
-	<div class="flex items-center {mode === 'presence' ? '-space-x-2' : '-space-x-1'} rtl:space-x-reverse">
+	<div
+		class="flex items-center {mode === 'presence'
+			? '-space-x-2'
+			: '-space-x-1'} rtl:space-x-reverse"
+	>
 		{#each people.slice(0, 3) as person (person.id)}
 			<div class="relative rounded-full hover:z-10 focus-within:z-10">
 				<ProfilePreview
@@ -102,7 +106,9 @@
 					{/if}
 					<ul class="space-y-1">
 						{#each people as person (person.id)}
-							<li class="rounded-lg p-1 hover:bg-gray-50 dark:hover:bg-gray-800">
+							<li
+								class="rounded-lg p-1 hover:bg-gray-50 dark:hover:bg-gray-800 [&>button]:max-w-full"
+							>
 								<ProfilePreview
 									side={mode === 'presence' ? 'bottom' : 'right'}
 									align={mode === 'presence' ? 'end' : 'center'}
