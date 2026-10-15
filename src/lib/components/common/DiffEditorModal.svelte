@@ -10,7 +10,14 @@
 	import { LanguageDescription, indentUnit } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 	import { oneDark } from '@codemirror/theme-one-dark';
-	import type { MergeView } from '@codemirror/merge';
+	import type { Chunk, MergeView } from '@codemirror/merge';
+	import Dropdown from './Dropdown.svelte';
+	import DropdownMenu from './DropdownMenu.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import Italic from '$lib/components/icons/Italic.svelte';
+	import LineSpaceSmaller from '$lib/components/icons/LineSpaceSmaller.svelte';
+
 	import Modal from './Modal.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
@@ -23,6 +30,12 @@
 		pairedLinePosition
 	} from './diffEditorAlignment';
 	import {
+		diffPresentation,
+		setDiffPresentation,
+		visibleDiffChunks,
+		unchangedRanges,
+		presentationDecorations,
+		type CollapsedPair,
 		copyChunk,
 		keepBothChunk,
 		selectedChunk,
@@ -66,6 +79,13 @@
 	let proposal = '';
 	let comparing = false;
 	let merge: MergeView | null = null;
+	let visibleChunks: readonly Chunk[] = [];
+	let showOptions = false;
+	let optionsDropdown: Dropdown;
+	let ignoreWhitespace = false;
+	let ignoreEmphasis = false;
+	let onlyChanges = false;
+	let updatePresentation: ((reset?: boolean) => void) | null = null;
 	let activeChunk = 0;
 	let canKeepBoth = false;
 	let undoSide: 'a' | 'b' | null = null;
@@ -116,6 +136,7 @@
 				? $i18n.t('Both files are required for comparison.')
 				: '';
 		confirmDiscard = false;
+		showOptions = false;
 	};
 	$: if (show && !session) begin();
 	$: if (!show && session) {
@@ -195,18 +216,26 @@
 				working = merge.a.state.doc.toString();
 				proposal = merge.b.state.doc.toString();
 			}
-			chunkCount = merge.chunks.length;
+			visibleChunks = visibleDiffChunks(
+				merge.a.state.doc,
+				merge.b.state.doc,
+				merge.chunks,
+				ignoreWhitespace,
+				ignoreEmphasis
+			);
+			chunkCount = visibleChunks.length;
 			lineNumberDigits = String(Math.max(merge.a.state.doc.lines, merge.b.state.doc.lines)).length;
-			lineChanges = changedLineCounts(merge.a.state.doc, merge.b.state.doc, merge.chunks);
-			overview = chunkOverview(merge.a.state.doc, merge.b.state.doc, merge.chunks);
+			lineChanges = changedLineCounts(merge.a.state.doc, merge.b.state.doc, visibleChunks);
+			overview = chunkOverview(merge.a.state.doc, merge.b.state.doc, visibleChunks);
 			approximate = merge.chunks.some((chunk) => !chunk.precise);
+			updatePresentation?.();
 		}
 		if (update?.selectionSet) {
-			const index = selectedChunk(merge.chunks, side, update.state.selection.main.head);
+			const index = selectedChunk(visibleChunks, side, update.state.selection.main.head);
 			if (index >= 0) activeChunk = index;
 		}
 		activeChunk = Math.max(0, Math.min(activeChunk, chunkCount - 1));
-		const chunk = merge.chunks[activeChunk];
+		const chunk = visibleChunks[activeChunk];
 		canKeepBoth =
 			session?.mode === 'edit' &&
 			!!chunk &&
@@ -215,7 +244,7 @@
 	const reveal = (index: number) => {
 		if (!merge || !chunkCount) return;
 		activeChunk = Math.max(0, Math.min(index, chunkCount - 1));
-		const chunk = merge.chunks[activeChunk];
+		const chunk = visibleChunks[activeChunk];
 		for (const [view, start] of [
 			[merge.a, chunk.fromA],
 			[merge.b, chunk.fromB]
@@ -250,13 +279,13 @@
 	};
 
 	const copy = (direction: MergeDirection) => {
-		if (session?.mode === 'review' || !merge || !merge.chunks[activeChunk]) return;
+		if (session?.mode === 'review' || !merge || !visibleChunks[activeChunk]) return;
 		const destination = direction === 'to-working' ? merge.a : merge.b;
 		destination.dispatch({
 			changes: copyChunk(
 				merge.a.state.doc,
 				merge.b.state.doc,
-				merge.chunks[activeChunk],
+				visibleChunks[activeChunk],
 				direction
 			),
 			annotations: isolateHistory.of('full'),
@@ -274,7 +303,7 @@
 
 	const keepBoth = () => {
 		if (session?.mode !== 'edit' || loading || !merge) return;
-		const chunk = merge.chunks[activeChunk];
+		const chunk = visibleChunks[activeChunk];
 		if (!chunk) return;
 		const changes = keepBothChunk(merge.a.state.doc, merge.b.state.doc, chunk);
 		if (!changes) return;
@@ -287,11 +316,60 @@
 		merge.b.focus();
 	};
 
+	const toggleDisplay = (option: 'whitespace' | 'emphasis' | 'unchanged') => {
+		if (option === 'whitespace') ignoreWhitespace = !ignoreWhitespace;
+		else if (option === 'emphasis') ignoreEmphasis = !ignoreEmphasis;
+		else onlyChanges = !onlyChanges;
+		activeChunk = 0;
+		if (merge) {
+			clearLineAlignment(merge.a, merge.b);
+			merge.reconfigure({ gutter: !ignoreWhitespace && !ignoreEmphasis });
+		}
+		updatePresentation?.(true);
+		refresh();
+	};
+
 	const mountMerge = (node: HTMLElement) => {
 		let disposed = false;
 		let view: MergeView | null = null;
 		let observer: MutationObserver | undefined;
 		let alignmentFrame = 0;
+		let presentationFrame = 0;
+		let expanded: CollapsedPair[] = [];
+		const schedulePresentation = (reset = false) => {
+			if (reset) expanded = [];
+			if (presentationFrame) return;
+			presentationFrame = requestAnimationFrame(() => {
+				presentationFrame = 0;
+				if (disposed || !view) return;
+				const folds = onlyChanges
+					? unchangedRanges(view.a.state.doc, view.b.state.doc, visibleChunks).filter(
+							(pair) =>
+								!expanded.some((open) => open.a.from <= pair.a.to && open.a.to >= pair.a.from)
+						)
+					: [];
+				for (const side of ['a', 'b'] as const) {
+					view[side].dispatch({
+						effects: setDiffPresentation.of(
+							presentationDecorations(
+								view[side].state.doc,
+								side,
+								visibleChunks,
+								ignoreWhitespace,
+								ignoreEmphasis,
+								folds,
+								(lines) => $i18n.t('Show {{count}} unchanged lines', { count: lines }),
+								(pair) => {
+									expanded.push(pair);
+									schedulePresentation();
+								}
+							)
+						)
+					});
+				}
+			});
+		};
+		updatePresentation = schedulePresentation;
 		let alignmentDocuments: readonly [Text, Text] | null = null;
 		let alignmentGeometry = '';
 		const themes = [new Compartment(), new Compartment()];
@@ -307,6 +385,7 @@
 			EditorState.readOnly.of(review),
 			EditorView.editable.of(!review),
 			lineAlignment,
+			diffPresentation,
 			keymap.of([indentWithTab, { key: 'Mod-s', run: () => true }]),
 			indentUnit.of('    '),
 			EditorView.lineWrapping,
@@ -317,6 +396,14 @@
 			themes[index].of(document.documentElement.classList.contains('dark') ? oneDark : []),
 			language[index].of([]),
 			EditorView.updateListener.of((update) => {
+				for (const transaction of update.transactions) {
+					if (transaction.docChanged) {
+						for (const pair of expanded) {
+							pair[side].from = transaction.changes.mapPos(pair[side].from);
+							pair[side].to = transaction.changes.mapPos(pair[side].to, 1);
+						}
+					}
+				}
 				for (const transaction of update.transactions) undoHistory.record(side, transaction);
 				undoSide = undoHistory.nextSide;
 				if (update.docChanged || update.selectionSet) refresh(update, side);
@@ -387,6 +474,7 @@
 					a: { doc: working, extensions: extensions('a', 0) },
 					b: { doc: proposal, extensions: extensions('b', 1) },
 					parent: node,
+					gutter: !ignoreWhitespace && !ignoreEmphasis,
 					diffConfig: diffEditorConfig
 				});
 				merge = view;
@@ -423,6 +511,8 @@
 			destroy: () => {
 				disposed = true;
 				cancelAnimationFrame(alignmentFrame);
+				cancelAnimationFrame(presentationFrame);
+				if (updatePresentation === schedulePresentation) updatePresentation = null;
 				observer?.disconnect();
 				view?.destroy();
 				if (merge === view) merge = null;
@@ -541,6 +631,77 @@
 						{/if}
 					</div>
 				{/if}
+				{#if comparing}
+					<Dropdown bind:this={optionsDropdown} bind:show={showOptions} align="end">
+						<button
+							type="button"
+							class="comparison-options shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
+							disabled={loading}
+							aria-label={$i18n.t('Comparison options')}
+							aria-haspopup="menu"
+							aria-expanded={showOptions}
+						>
+							<EllipsisHorizontal className="size-4" />
+						</button>
+						<div
+							slot="content"
+							role="presentation"
+							on:keydown={(event) => {
+								if (event.key === 'Escape') {
+									event.stopPropagation();
+									optionsDropdown.close();
+								}
+							}}
+						>
+							<DropdownMenu className="min-w-48">
+								<button
+									type="button"
+									role="menuitemcheckbox"
+									aria-checked={ignoreWhitespace}
+									on:click={() => toggleDisplay('whitespace')}
+								>
+									<svg
+										class="size-3.5 shrink-0"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.5"
+										aria-hidden="true"
+										><path d="M4 9v6h16V9" stroke-linecap="round" stroke-linejoin="round" /></svg
+									>
+									<span class="flex-1 text-left">{$i18n.t('Ignore whitespace')}</span>
+									<span class="size-3.5 shrink-0"
+										>{#if ignoreWhitespace}<Check className="size-3.5" />{/if}</span
+									>
+								</button>
+								<button
+									type="button"
+									role="menuitemcheckbox"
+									aria-checked={ignoreEmphasis}
+									on:click={() => toggleDisplay('emphasis')}
+								>
+									<Italic className="size-3.5 shrink-0" />
+									<span class="flex-1 text-left">{$i18n.t('Ignore emphasis markers')}</span>
+									<span class="size-3.5 shrink-0"
+										>{#if ignoreEmphasis}<Check className="size-3.5" />{/if}</span
+									>
+								</button>
+								<button
+									type="button"
+									role="menuitemcheckbox"
+									aria-checked={onlyChanges}
+									on:click={() => toggleDisplay('unchanged')}
+								>
+									<LineSpaceSmaller className="size-3.5 shrink-0" />
+									<span class="flex-1 text-left">{$i18n.t('Only show changes')}</span>
+									<span class="size-3.5 shrink-0"
+										>{#if onlyChanges}<Check className="size-3.5" />{/if}</span
+									>
+								</button>
+							</DropdownMenu>
+						</div>
+					</Dropdown>
+				{/if}
 				<button
 					type="button"
 					class="comparison-close shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
@@ -617,6 +778,7 @@
 								{#key editorRevision}
 									<div
 										class="merge-container min-h-0 flex-1"
+										class:filtering-differences={ignoreWhitespace || ignoreEmphasis}
 										style:--diff-line-digits={lineNumberDigits}
 										use:mountMerge
 									></div>
@@ -754,6 +916,7 @@
 			order: 3;
 			width: 100%;
 		}
+		.comparison-options,
 		.comparison-close {
 			order: 2;
 		}
@@ -822,39 +985,49 @@
 	.merge-container :global(.cm-mergeViewEditor) {
 		min-width: 0;
 	}
-	.merge-container :global(.cm-merge-a .cm-changedLine) {
+	.merge-container :global(.cm-merge-a .cm-changedLine),
+	.merge-container :global(.cm-merge-a .cm-visibleChangedLine) {
 		background: #fce9e6;
 	}
-	.merge-container :global(.cm-merge-b .cm-changedLine) {
+	.merge-container :global(.cm-merge-b .cm-changedLine),
+	.merge-container :global(.cm-merge-b .cm-visibleChangedLine) {
 		background: #e0f5f1;
 	}
-	.merge-container :global(.cm-merge-a .cm-changedText) {
+	.merge-container :global(.cm-merge-a .cm-changedText),
+	.merge-container :global(.cm-merge-a .cm-visibleChangedText) {
 		background: #f9b9ad;
 	}
-	.merge-container :global(.cm-merge-b .cm-changedText) {
+	.merge-container :global(.cm-merge-b .cm-changedText),
+	.merge-container :global(.cm-merge-b .cm-visibleChangedText) {
 		background: #a3e3d8;
 	}
-	.merge-container :global(.cm-changedText) {
+	.merge-container :global(.cm-changedText),
+	.merge-container :global(.cm-visibleChangedText) {
 		border-radius: 3px;
 	}
 	.merge-container :global(.cm-mergeSpacer) {
 		background: repeating-linear-gradient(135deg, transparent 0 3px, #94a3b814 3px 4px);
 	}
-	:global(.dark) .merge-container :global(.cm-merge-a .cm-changedLine) {
+	:global(.dark) .merge-container :global(.cm-merge-a .cm-changedLine),
+	:global(.dark) .merge-container :global(.cm-merge-a .cm-visibleChangedLine) {
 		background: #3d1915;
 		color: #f4d0c7;
 	}
-	:global(.dark) .merge-container :global(.cm-merge-b .cm-changedLine) {
+	:global(.dark) .merge-container :global(.cm-merge-b .cm-changedLine),
+	:global(.dark) .merge-container :global(.cm-merge-b .cm-visibleChangedLine) {
 		background: #0d302a;
 		color: #a9e9dd;
 	}
-	:global(.dark) .merge-container :global(.cm-changedLine span) {
+	:global(.dark) .merge-container :global(.cm-changedLine span),
+	:global(.dark) .merge-container :global(.cm-visibleChangedLine span) {
 		color: inherit;
 	}
-	:global(.dark) .merge-container :global(.cm-merge-a .cm-changedText) {
+	:global(.dark) .merge-container :global(.cm-merge-a .cm-changedText),
+	:global(.dark) .merge-container :global(.cm-merge-a .cm-visibleChangedText) {
 		background: #77362c;
 	}
-	:global(.dark) .merge-container :global(.cm-merge-b .cm-changedText) {
+	:global(.dark) .merge-container :global(.cm-merge-b .cm-changedText),
+	:global(.dark) .merge-container :global(.cm-merge-b .cm-visibleChangedText) {
 		background: #176456;
 	}
 	:global(.dark) .merge-container :global(.cm-merge-a .cm-changedLineGutter) {
@@ -879,5 +1052,13 @@
 	.merge-container :global(.cm-lineNumbers) {
 		/* Reserve the same gutter width, including padding and fractional glyph rounding. */
 		min-width: calc(var(--diff-line-digits) * 1ch + 9px);
+	}
+
+	.filtering-differences :global(.cm-changedLine:not(.cm-visibleChangedLine)) {
+		background: transparent !important;
+		color: inherit !important;
+	}
+	.filtering-differences :global(.cm-changedText:not(.cm-visibleChangedText)) {
+		background: transparent !important;
 	}
 </style>
