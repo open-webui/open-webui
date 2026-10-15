@@ -458,7 +458,10 @@
 			}
 		}
 
-		if (Object.keys(builtinTools).length > 0) {
+		if (
+			Object.keys(builtinTools).length > 0 ||
+			Object.keys(defaultMeta.builtinTools ?? {}).length > 0
+		) {
 			modelInfo.meta.builtinTools = builtinTools;
 		} else {
 			if (modelInfo.meta.builtinTools) {
