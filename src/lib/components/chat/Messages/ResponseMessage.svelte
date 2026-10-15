@@ -1617,7 +1617,7 @@
 									{/each}
 
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
-										{#if siblings.length > 1}
+										{#if (!readOnly || ($user?.role === 'admin' && $config?.features?.enable_admin_chat_access)) && siblings.length > 1}
 											<Tooltip content={$i18n.t('Delete')} placement="bottom">
 												<button
 													type="button"
