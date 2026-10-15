@@ -7,7 +7,10 @@
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
-	const markdown = getContext<{ allowRemoteContent: boolean } | undefined>('markdown');
+	const markdown = getContext<
+		| { allowRemoteContent: boolean; document?: boolean; parseInline?: (tokens: Token[]) => string }
+		| undefined
+	>('markdown');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { skills, terminalSkills } from '$lib/stores';
@@ -82,16 +85,24 @@
 			// Invalid URL, let browser handle it
 		}
 	};
+	$: inlineHtml =
+		markdown?.document && tokens.some((token) => token.type === 'html')
+			? DOMPurify.sanitize(markdown.parseInline?.(tokens) ?? '')
+			: null;
 </script>
 
-{#each tokens as token, tokenIdx (tokenIdx)}
+<!-- Keep paired inline HTML tags together; sanitizing individual tags loses their contents. -->
+{#if inlineHtml !== null}
+	{@html inlineHtml}
+{/if}
+{#each inlineHtml === null ? tokens : [] as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'link'}
 		{@const linkToken = getLinkToken(token)}
-		{#if linkToken.noteId && markdown?.allowRemoteContent !== false}
+		{#if linkToken.noteId && !markdown?.document && markdown?.allowRemoteContent !== false}
 			<NoteLinkToken noteId={linkToken.noteId} href={linkToken.href} />
 		{:else if token.tokens && !linkToken.isAutolink}
 			<a
@@ -162,6 +173,10 @@
 			<TextToken {token} {done} />
 		{/if}
 	{:else if token.type === 'text'}
-		<TextToken {token} {done} />
+		{#if markdown?.document}
+			{unescapeHtml(token.text)}
+		{:else}
+			<TextToken {token} {done} />
+		{/if}
 	{/if}
 {/each}

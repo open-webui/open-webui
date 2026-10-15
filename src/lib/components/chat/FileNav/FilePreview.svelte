@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	import { marked } from 'marked';
-	import DOMPurify from 'dompurify';
+	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
-	import { initMermaid, renderMermaidDiagram, sanitizeSvg } from '$lib/utils';
+	import { sanitizeSvg } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PdfPagesPreview from '../../common/PdfPagesPreview.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
@@ -125,46 +124,6 @@
 		isHtml && selectedFile && baseUrl && baseUrl.includes('/api/v1/terminals/')
 			? `${baseUrl}/files/serve/${selectedFile.replace(/^\//, '')}`
 			: null;
-	$: renderedHtml =
-		isMarkdown && fileContent
-			? DOMPurify.sanitize(marked.parse(fileContent, { async: false }) as string)
-			: '';
-
-	let markdownEl: HTMLDivElement;
-	let mermaidInstance: any = null;
-
-	const renderMermaidBlocks = async (el: HTMLDivElement) => {
-		if (!el) return;
-		const codeEls = el.querySelectorAll('code.language-mermaid');
-		if (codeEls.length === 0) return;
-
-		if (!mermaidInstance) {
-			mermaidInstance = await initMermaid();
-		}
-
-		for (const codeEl of codeEls) {
-			const pre = codeEl.parentElement;
-			if (!pre || pre.tagName !== 'PRE' || pre.dataset.mermaidRendered) continue;
-			pre.dataset.mermaidRendered = 'true';
-
-			try {
-				const svg = await renderMermaidDiagram(mermaidInstance, codeEl.textContent ?? '');
-				if (svg) {
-					const wrapper = document.createElement('div');
-					wrapper.className = 'mermaid-diagram flex justify-center py-2';
-					wrapper.innerHTML = svg;
-					pre.replaceWith(wrapper);
-				}
-			} catch (e) {
-				console.error('Mermaid render error:', e);
-			}
-		}
-	};
-
-	$: if (renderedHtml && markdownEl) {
-		tick().then(() => renderMermaidBlocks(markdownEl));
-	}
-
 	// Simple CSV parser that handles quoted fields
 	const parseCsv = (text: string, delimiter: string): string[][] => {
 		const rows: string[][] = [];
@@ -424,9 +383,9 @@
 				/>
 			</div>
 		{:else if isMarkdown && !showRaw}
-			<div bind:this={markdownEl} class="prose dark:prose-invert max-w-full text-sm p-3">
-				{@html renderedHtml}
-			</div>
+			{#key selectedFile}
+				<MarkdownDocument content={fileContent} id={`file-${selectedFile}`} />
+			{/key}
 		{:else if isMarkdown && showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor

@@ -30,7 +30,9 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
-	const markdown = getContext<{ allowRemoteContent: boolean } | undefined>('markdown');
+	const markdown = getContext<{ allowRemoteContent: boolean; document?: boolean } | undefined>(
+		'markdown'
+	);
 
 	export let id = '';
 	export let edit = true;
@@ -370,7 +372,10 @@
 	const render = async () => {
 		onUpdate(token, id);
 		if (markdown?.allowRemoteContent === false) return;
-		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
+		if (
+			lang === 'mermaid' &&
+			(markdown?.document || (token?.raw ?? '').slice(-4).includes('```'))
+		) {
 			try {
 				renderHTML = await renderMermaid(code);
 			} catch (error) {
@@ -381,7 +386,7 @@
 			}
 		} else if (
 			(lang === 'vega' || lang === 'vega-lite') &&
-			(token?.raw ?? '').slice(-4).includes('```')
+			(markdown?.document || (token?.raw ?? '').slice(-4).includes('```'))
 		) {
 			try {
 				renderHTML = await renderVegaVisualization(code, lang);

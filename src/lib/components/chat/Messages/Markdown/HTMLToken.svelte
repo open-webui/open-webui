@@ -7,6 +7,7 @@
 	import { settings } from '$lib/stores';
 
 	const i18n: any = getContext('i18n');
+	const markdown = getContext<{ document?: boolean } | undefined>('markdown');
 
 	export let id: string;
 	export let token: Token;
@@ -18,7 +19,9 @@
 </script>
 
 {#if token.type === 'html'}
-	{#if html && html.includes('<video')}
+	{#if markdown?.document}
+		{@html html ?? ''}
+	{:else if html && html.includes('<video')}
 		{@const video = html.match(/<video[^>]*>([\s\S]*?)<\/video>/)}
 		{@const videoSrc = video && video[1]}
 		{#if videoSrc}
