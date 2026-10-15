@@ -289,7 +289,10 @@
 		} else {
 			$audioQueue.setId(`${message.id}`);
 			$audioQueue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
+			let synthesizing = true;
 			$audioQueue.onStopped = ({ event }) => {
+				if (event === 'empty-queue' && synthesizing) return;
+
 				speaking = false;
 				speakingIdx = undefined;
 
@@ -368,6 +371,8 @@
 					}
 				}
 			}
+
+			synthesizing = false;
 		}
 	};
 
