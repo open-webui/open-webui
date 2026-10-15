@@ -8,7 +8,6 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import EditPencil from '../icons/EditPencil.svelte';
 	import FolderIcon from '../icons/Folder.svelte';
-	import ShareIcon from '../icons/Share.svelte';
 	import TrashIcon from '../icons/Trash.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '../icons/Download.svelte';
@@ -17,8 +16,6 @@
 	export let align: 'start' | 'end' = 'start';
 	export let onEdit = () => {};
 	export let onExport = () => {};
-	export let onShare = () => {};
-	export let canShare = false;
 	export let onDelete = () => {};
 	export let onCreateSubFolder = () => {};
 	export let onMarkAllRead = () => {};
@@ -92,18 +89,6 @@
 				<Download className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</button>
-
-			{#if canShare}
-				<button
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
-					on:click={() => {
-						onShare();
-					}}
-				>
-					<ShareIcon className="size-3.5" />
-					<div class="flex items-center">{$i18n.t('Share')}</div>
-				</button>
-			{/if}
 
 			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
