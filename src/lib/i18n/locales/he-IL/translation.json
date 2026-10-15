@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[ביום] dddd [שעבר בשעה] HH:mm",
 	"[Today at] h:mm A": "[היום בשעה] HH:mm",
 	"[Yesterday at] h:mm A": "[אתמול בשעה] HH:mm",
-	"{{ models }}": "{{ מודלים }}",
+	"{{ models }}": "{{ models }}",
 	"{{count}} added lines_one": "נוספה שורה אחת",
 	"{{count}} added lines_two": "נוספו {{count}} שורות",
 	"{{count}} added lines_other": "נוספו {{count}} שורות",
