@@ -4876,6 +4876,24 @@ async def streaming_chat_response_handler(response, ctx):
             usage = None
             finish_reason = None
             last_response_id = None
+            # Stateful Responses API: reuse the response_id persisted on the
+            # previous assistant message so previous_response_id is sent across
+            # turns, not only inside tool-call loops.
+            if ENABLE_RESPONSES_API_STATEFUL and not continuing and save_to_chat:
+                try:
+                    db_messages = await load_messages_from_db(metadata['chat_id'], metadata['message_id'])
+                    if db_messages:
+                        for prior in reversed(db_messages):
+                            if prior.get('role') != 'assistant':
+                                continue
+                            for item in prior.get('output') or []:
+                                if item.get('response_id'):
+                                    last_response_id = item['response_id']
+                                    break
+                            if last_response_id:
+                                break
+                except Exception:
+                    log.debug('Failed to restore stateful response_id', exc_info=True)
 
             def full_output():
                 if (
@@ -6639,6 +6657,14 @@ async def streaming_chat_response_handler(response, ctx):
                 for item in [*prior_output, *output]:
                     if item.get('status') == 'in_progress':
                         item['status'] = 'completed'
+
+                # Persist the Responses API response_id on the output so the
+                # next turn can anchor previous_response_id to this response
+                # (stateful mode, issue #27096).
+                if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
+                    for item in [*prior_output, *output]:
+                        if isinstance(item, dict):
+                            item['response_id'] = last_response_id
 
                 current_output = full_output()
                 title = await Chats.get_chat_title_by_id(metadata['chat_id']) if save_to_chat else ''
