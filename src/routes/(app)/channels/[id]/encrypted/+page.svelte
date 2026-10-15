@@ -188,17 +188,16 @@
 								updated_at: message.created_at
 							}}
 						>
-							<span slot="content" class="markdown-prose">
+							<div slot="content" class="markdown-prose">
 								<Markdown
 									id={message.id}
 									content={message.text}
-									paragraphTag="span"
 									allowHtml={false}
 									allowEmbeds={false}
 									allowRemoteContent={false}
 									editCodeBlock={false}
 								/>
-							</span>
+							</div>
 							<svelte:fragment slot="status">
 								{#if message.sender === state.self}
 									{#if message.expected.length > 0 && message.received.length === message.expected.length}
