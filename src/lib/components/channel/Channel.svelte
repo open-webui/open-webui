@@ -106,7 +106,9 @@
 
 	$: if (channel && $page.url.searchParams.get('thread')) {
 		threadId = $page.url.searchParams.get('thread');
-		window.history.replaceState(history.state, '', `/channels/${id}`);
+		if (!$page.url.searchParams.has('message')) {
+			window.history.replaceState(history.state, '', `/channels/${id}`);
+		}
 	}
 
 	const scrollToBottom = () => {

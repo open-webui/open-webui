@@ -479,12 +479,13 @@ export const getChannelThreadMessages = async (
 	channel_id: string,
 	message_id: string,
 	skip: number = 0,
-	limit: number = 50
+	limit: number = 50,
+	anchor: { around?: string; before?: string } = {}
 ) => {
 	let error = null;
 
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}`,
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}&${new URLSearchParams(anchor)}`,
 		{
 			method: 'GET',
 			headers: {

@@ -1685,6 +1685,8 @@ async def get_channel_thread_messages(
     message_id: str,
     skip: int = 0,
     limit: int = 50,
+    around: str | None = None,
+    before: str | None = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -1700,7 +1702,7 @@ async def get_channel_thread_messages(
         if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    message_list = await Messages.get_messages_by_parent_id(id, message_id, skip, limit, db=db)
+    message_list = await Messages.get_messages_by_parent_id(id, message_id, skip, min(max(limit, 1), 100), db=db, around=around, before=before)
 
     if not message_list:
         return []

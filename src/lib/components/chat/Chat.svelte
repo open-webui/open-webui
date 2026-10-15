@@ -907,7 +907,7 @@
 			await tick();
 			loading = false;
 			noteChatDebug('embedded chat loading false');
-			window.setTimeout(() => scrollToBottom(), 0);
+			if (!$page.url.searchParams.has('message')) window.setTimeout(() => scrollToBottom(), 0);
 
 			await tick();
 
@@ -1220,6 +1220,18 @@
 			settingDefaults = false;
 		}
 	};
+
+	let revealedSearchMessage = '';
+	$: if (!embedded && !loading && messagesRef && chat?.id === $page.params.id) {
+		const target = $page.url.searchParams.get('message');
+		const key = `${chat.id}:${target}`;
+		if (target && history.messages[target] && key !== revealedSearchMessage) {
+			revealedSearchMessage = key;
+			autoScroll = false;
+			history.currentId = getDeepestChildId(history, target);
+			tick().then(() => messagesRef?.scrollToMessage(target));
+		} else if (!target) revealedSearchMessage = '';
+	}
 
 	const showMessage = async (message, scroll = true, save = true) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
