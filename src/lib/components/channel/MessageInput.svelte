@@ -1077,6 +1077,9 @@
 											}}
 											on:keydown={async (e) => {
 												e = e.detail.event;
+												// IME confirmation must finish before a shortcut can send and clear the editor.
+												if (e.isComposing || e.keyCode === 229 || inputEditor?.view.composing) return;
+
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
 												const suggestionsContainerElement =
