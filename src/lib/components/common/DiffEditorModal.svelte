@@ -5,7 +5,8 @@
 	import { basicSetup, EditorView } from 'codemirror';
 	import { Compartment, EditorState, type Text } from '@codemirror/state';
 	import { keymap, type ViewUpdate } from '@codemirror/view';
-	import { indentWithTab, isolateHistory } from '@codemirror/commands';
+	import { indentWithTab, isolateHistory, undo } from '@codemirror/commands';
+	import { DiffUndoHistory } from './diffEditorHistory';
 	import { LanguageDescription, indentUnit } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 	import { oneDark } from '@codemirror/theme-one-dark';
@@ -67,6 +68,7 @@
 	let merge: MergeView | null = null;
 	let activeChunk = 0;
 	let canKeepBoth = false;
+	let undoSide: 'a' | 'b' | null = null;
 	let overview: ReturnType<typeof chunkOverview> = [];
 	let chunkCount = 0;
 	let lineNumberDigits = 1;
@@ -104,6 +106,7 @@
 		comparing = proposedContent !== undefined;
 		activeChunk = chunkCount = 0;
 		canKeepBoth = false;
+		undoSide = null;
 		overview = [];
 		lineChanges = { removed: 0, added: 0 };
 		copied = null;
@@ -262,6 +265,13 @@
 		refresh();
 	};
 
+	const undoLastChange = () => {
+		if (session?.mode !== 'edit' || loading || !merge || !undoSide) return;
+		const view = merge[undoSide];
+		undo(view);
+		view.focus();
+	};
+
 	const keepBoth = () => {
 		if (session?.mode !== 'edit' || loading || !merge) return;
 		const chunk = merge.chunks[activeChunk];
@@ -288,9 +298,12 @@
 		const language = [new Compartment(), new Compartment()];
 		const paths = ['a', 'b'].map((side) => paneFile(side)?.path ?? session?.path);
 		const review = session?.mode === 'review';
+		const undoHistory = new DiffUndoHistory();
+		undoSide = null;
 		loading = true;
 		const extensions = (side: 'a' | 'b', index: number) => [
 			basicSetup,
+			undoHistory.extension(side),
 			EditorState.readOnly.of(review),
 			EditorView.editable.of(!review),
 			lineAlignment,
@@ -304,6 +317,8 @@
 			themes[index].of(document.documentElement.classList.contains('dark') ? oneDark : []),
 			language[index].of([]),
 			EditorView.updateListener.of((update) => {
+				for (const transaction of update.transactions) undoHistory.record(side, transaction);
+				undoSide = undoHistory.nextSide;
 				if (update.docChanged || update.selectionSet) refresh(update, side);
 				if (
 					(update.geometryChanged ||
@@ -480,10 +495,8 @@
 							<button
 								type="button"
 								class="secondary"
-								disabled={!chunkCount}
-								aria-label={$i18n.t('Copy change to original')}
-								title={$i18n.t('Copy change to original')}
-								on:click={() => copy('to-working')}>← {$i18n.t('Original')}</button
+								disabled={loading || !undoSide}
+								on:click={undoLastChange}>{$i18n.t('Undo')}</button
 							>
 							<button
 								type="button"
@@ -491,7 +504,15 @@
 								disabled={!chunkCount}
 								aria-label={$i18n.t('Copy change to proposal')}
 								title={$i18n.t('Copy change to proposal')}
-								on:click={() => copy('to-proposal')}>{$i18n.t('Proposed revision')} →</button
+								on:click={() => copy('to-proposal')}>{$i18n.t('Original')} →</button
+							>
+							<button
+								type="button"
+								class="secondary"
+								disabled={!chunkCount}
+								aria-label={$i18n.t('Copy change to original')}
+								title={$i18n.t('Copy change to original')}
+								on:click={() => copy('to-working')}>← {$i18n.t('Proposed revision')}</button
 							>
 							<button
 								type="button"
