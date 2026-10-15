@@ -44,6 +44,7 @@
 	const initHandler = async () => {
 		messages = null;
 		top = false;
+		replyToMessage = null;
 
 		typingUsers = [];
 		typingUsersTimeout = {};
