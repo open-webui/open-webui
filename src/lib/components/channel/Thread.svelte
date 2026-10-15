@@ -49,6 +49,7 @@
 		searchAnchor = anchor;
 		messages = null;
 		top = false;
+		replyToMessage = null;
 
 		typingUsers = [];
 		typingUsersTimeout = {};
