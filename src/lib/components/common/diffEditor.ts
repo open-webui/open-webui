@@ -6,6 +6,48 @@ export const diffEditorConfig: DiffConfig = { timeout: 100 };
 
 export type MergeDirection = 'to-working' | 'to-proposal';
 
+// Match rows by the text preserved inside a chunk, not their ordinal position.
+export function changedLinePairs(a: Text, b: Text, chunk: Chunk): [number, number][] {
+	const candidates = new Map<number, Map<number, { a: number; b: number; weight: number }>>();
+	let fromA = chunk.fromA;
+	let fromB = chunk.fromB;
+	for (let index = 0; index <= chunk.changes.length; index++) {
+		const change = chunk.changes[index];
+		const endA = change ? chunk.fromA + change.fromA : Math.min(chunk.toA, a.length);
+		const endB = change ? chunk.fromB + change.fromB : Math.min(chunk.toB, b.length);
+		while (fromA < endA && fromB < endB) {
+			const lineA = a.lineAt(fromA),
+				lineB = b.lineAt(fromB);
+			const length = Math.min(endA - fromA, endB - fromB, lineA.to - fromA, lineB.to - fromB);
+			const weight = a.sliceString(fromA, fromA + length).replace(/\s/g, '').length;
+			if (weight) {
+				let row = candidates.get(lineA.from);
+				if (!row) candidates.set(lineA.from, (row = new Map()));
+				const pair = row.get(lineB.from) ?? { a: lineA.from, b: lineB.from, weight: 0 };
+				pair.weight += weight;
+				row.set(lineB.from, pair);
+			}
+			fromA += length || 1;
+			fromB += length || 1;
+		}
+		if (change) {
+			fromA = chunk.fromA + change.toA;
+			fromB = chunk.fromB + change.toB;
+		}
+	}
+	const bestA = new Map<number, { a: number; b: number; weight: number }>();
+	const bestB = new Map<number, { a: number; b: number; weight: number }>();
+	for (const row of candidates.values()) {
+		for (const pair of row.values()) {
+			if (pair.weight > (bestA.get(pair.a)?.weight ?? 0)) bestA.set(pair.a, pair);
+			if (pair.weight > (bestB.get(pair.b)?.weight ?? 0)) bestB.set(pair.b, pair);
+		}
+	}
+	return [...bestA.values()]
+		.filter((pair) => bestB.get(pair.b) === pair)
+		.map((pair) => [pair.a, pair.b]);
+}
+
 export function changedLineCounts(a: Text, b: Text, chunks: readonly Chunk[]) {
 	const count = (doc: Text, side: 'A' | 'B') => {
 		let total = 0;
