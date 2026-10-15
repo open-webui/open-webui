@@ -3,6 +3,7 @@
 </script>
 
 <script lang="ts">
+	import type { TerminalContext } from '$lib/types';
 	import { onMount, tick, getContext } from 'svelte';
 	import {
 		config,
@@ -34,6 +35,7 @@
 	export let models = [];
 
 	export let chatId = null;
+	export let terminalContext: TerminalContext | null = null;
 	export let chatUser = null;
 
 	export let chatFiles = [];
@@ -298,7 +300,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav {chatId} />
+								<FileNav {chatId} bind:terminalContext />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
@@ -428,7 +430,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav overlay={dragged} {chatId} />
+								<FileNav overlay={dragged} {chatId} bind:terminalContext />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav overlay={dragged} />
 							{:else}

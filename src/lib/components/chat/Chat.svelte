@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { TerminalContext } from '$lib/types';
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
@@ -473,6 +474,7 @@
 	let prompt = '';
 	let chatFiles = [];
 	let files: any[] = [];
+	let terminalContext: TerminalContext | null = null;
 	let params = {};
 	let chatVariables = {};
 	let showChatVariablesModal = false;
@@ -938,6 +940,7 @@
 	};
 
 	const initEmbeddedDraft = async () => {
+		terminalContext = null;
 		clearTimeout(saveControlsTimer);
 		await saveControls();
 
@@ -1062,6 +1065,7 @@
 
 	let lastTerminalSkillSelector: string | null = null;
 	$: if ($selectedTerminalId !== lastTerminalSkillSelector) {
+		terminalContext = null;
 		selectedSkillIds = selectedSkillIds.filter((id) => !id.startsWith('terminal:'));
 		terminalSkills.set([]);
 		lastTerminalSkillSelector = $selectedTerminalId;
@@ -2544,6 +2548,7 @@
 	};
 
 	const initNewChat = async () => {
+		if ($chatId) terminalContext = null;
 		cancelBrowserInteractions();
 		bridge?.end();
 		console.log('initNewChat');
@@ -2787,6 +2792,7 @@
 	};
 
 	const loadChat = async () => {
+		if (chatIdProp && chatIdProp !== $chatId) terminalContext = null;
 		noteChatDebug('loadChat start');
 		// chatIdProp is empty for chats started from the home page (URL set via replaceState)
 		chatId.set(chatIdProp || $chatId);
@@ -5115,6 +5121,7 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
+										{terminalContext}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -5211,6 +5218,7 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
+										{terminalContext}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -5276,6 +5284,7 @@
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
+									{terminalContext}
 									callActive={!!(bridge?.connected || bridge?.connecting)}
 									callEnabled={!isShared}
 									bind:selectedModelIdx
@@ -5332,6 +5341,7 @@
 
 				{#if !embedded}
 					<ChatControls
+						bind:terminalContext
 						bind:history
 						bind:chatFiles
 						bind:params

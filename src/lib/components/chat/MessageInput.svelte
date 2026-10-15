@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { TerminalContext } from '$lib/types';
 	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
 	import { functions as localizedFunctions } from '$lib/stores';
 	import DOMPurify from 'dompurify';
@@ -151,6 +152,7 @@
 	export let statusHandler: Function = () => {};
 	export let forkHandler: Function = () => {};
 	export let chatId = '';
+	export let terminalContext: TerminalContext | null = null;
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
@@ -1014,13 +1016,17 @@
 		if (filesystemUploadTerminal) {
 			try {
 				const cwd =
+					(terminalContext?.terminalId === $selectedTerminalId
+						? terminalContext?.currentDirectory
+						: null) ||
 					(
 						await getCwd(
 							filesystemUploadTerminal.url,
 							filesystemUploadTerminal.key,
 							chatId || undefined
 						)
-					)?.cwd || '/';
+					)?.cwd;
+				if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
 				const uploadedFile = await uploadNewFileToTerminal(
 					filesystemUploadTerminal.url,
 					filesystemUploadTerminal.key,

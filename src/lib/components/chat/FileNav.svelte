@@ -12,6 +12,7 @@
 </script>
 
 <script lang="ts">
+	import type { TerminalContext } from '$lib/types';
 	import { toast } from 'svelte-sonner';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
@@ -70,6 +71,7 @@
 
 	export let overlay = false;
 	export let chatId: string | null = null;
+	export let terminalContext: TerminalContext | null = null;
 
 	// ── Terminal panel state ────────────────────────────────────────────
 	let terminalExpanded = false;
@@ -779,6 +781,7 @@
 		clearFilePreview();
 		clearSelection();
 		currentPath = directory;
+		terminalContext = { terminalId: $selectedTerminalId, currentDirectory: directory };
 		savedPath = directory;
 		pushNavHistory(directory);
 
@@ -1552,12 +1555,11 @@
 				terminalEnabled = config?.features?.terminal !== false;
 
 				const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
-				const useServerPath = !!chatId || savedPath === '/';
 				const serverPath = applyCwd(serverCwd);
-				if (useServerPath) {
-					// Fetch session-specific cwd from the server (or global default for new chats)
-					savedPath = serverPath;
-				}
+				savedPath =
+					terminalContext && terminalContext.terminalId === $selectedTerminalId
+						? terminalContext.currentDirectory
+						: serverPath;
 				savedPath = clampToFileRoot(savedPath);
 				loadDir(savedPath, { restoreTree: true });
 			})();

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { TerminalContext } from '$lib/types';
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
@@ -50,6 +51,7 @@
 
 	export let prompt = '';
 	export let files = [];
+	export let terminalContext: TerminalContext | null = null;
 	export let messageInput = null;
 
 	export let selectedToolIds = [];
@@ -243,6 +245,7 @@
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
 				{#if !($selectedFolder && folderReadOnly)}
 					<MessageInput
+						{terminalContext}
 						{callActive}
 						{callEnabled}
 						bind:this={messageInput}
