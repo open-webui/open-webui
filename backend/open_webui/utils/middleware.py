@@ -81,7 +81,7 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-from open_webui.tasks import clear_response_stream, save_response_stream
+from open_webui.tasks import append_response_stream, clear_response_stream, replay_response_stream, save_response_stream
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
@@ -623,6 +623,19 @@ def get_response_completion_event_data(event: dict) -> dict:
         **event,
         'response': response_data,
     }
+
+
+def get_response_delta_key(delta_data: dict) -> tuple | None:
+    event_type = delta_data.get('type', '')
+    if not event_type.startswith('response.') or not event_type.endswith('.delta'):
+        return None
+    return (
+        event_type,
+        delta_data.get('item_id'),
+        delta_data.get('output_index'),
+        delta_data.get('content_index'),
+        delta_data.get('summary_index'),
+    )
 
 
 def handle_responses_streaming_event(
@@ -4898,6 +4911,49 @@ async def streaming_chat_response_handler(response, ctx):
                     ]
                 return prior_output + output if prior_output else output
 
+            has_response_stream = bool(chat_id and metadata.get('message_id'))
+            response_stream_lines: list[str] = []
+            response_stream_saved = False
+            appended_size = 0
+
+            def set_response_stream_base(response_output: list):
+                nonlocal response_stream_lines, response_stream_saved, appended_size
+                base = {'chat_id': chat_id, 'message_id': metadata.get('message_id'), 'output': response_output}
+                response_stream_lines = [JSONCodec.dumps(base) + '\n']
+                response_stream_saved = False
+                appended_size = 0
+
+            async def ensure_response_stream_saved():
+                nonlocal response_stream_saved
+                if not response_stream_saved:
+                    response_stream_saved = await save_response_stream(
+                        request.app.state.redis, response_stream_task_id, ''.join(response_stream_lines)
+                    )
+
+            if has_response_stream:
+                set_response_stream_base(full_output())
+                await ensure_response_stream_saved()
+
+            async def emit_stream_event(event: dict):
+                """Emit an event that changes the output, logging it first for reloads to replay."""
+                nonlocal response_stream_saved, appended_size
+                if has_response_stream:
+                    if event['type'] == 'chat:completion':
+                        set_response_stream_base(event['data']['output'])
+                    else:
+                        line = JSONCodec.dumps(event['data']) + '\n'
+                        response_stream_lines.append(line)
+                        appended_size += len(line)
+                        # Fold into a new base once the lines outgrow it, keeping the log linear in the reply
+                        if appended_size >= len(response_stream_lines[0]):
+                            set_response_stream_base(replay_response_stream(''.join(response_stream_lines))['output'])
+                        elif response_stream_saved:
+                            response_stream_saved = await append_response_stream(
+                                request.app.state.redis, response_stream_task_id, line
+                            )
+                    await ensure_response_stream_saved()
+                await event_emitter(event)
+
             def get_message_error_content(error):
                 if isinstance(error, HTTPException):
                     error = error.detail
@@ -4991,45 +5047,6 @@ async def streaming_chat_response_handler(response, ctx):
                     last_delta_type = None
                     last_delta_key = None
 
-                    joined_content = ''
-                    joined_part_count = 0
-
-                    async def save_current_response_stream(stream_output: list | None = None):
-                        nonlocal joined_content
-                        nonlocal joined_part_count
-
-                        if not chat_id or not metadata.get('message_id'):
-                            return
-
-                        # content_parts is append-only, so its length tells us when the join is stale
-                        if joined_part_count != len(content_parts):
-                            joined_content = ''.join(content_parts)
-                            joined_part_count = len(content_parts)
-
-                        current_stream_output = stream_output if stream_output is not None else full_output()
-                        await save_response_stream(
-                            request.app.state.redis,
-                            response_stream_task_id,
-                            chat_id,
-                            metadata.get('message_id'),
-                            get_output_text(current_stream_output)
-                            if continuing
-                            else joined_content or get_output_text(current_stream_output),
-                            current_stream_output,
-                        )
-
-                    def get_response_delta_key(delta_data: dict):
-                        event_type = delta_data.get('type', '')
-                        if not event_type.startswith('response.') or not event_type.endswith('.delta'):
-                            return None
-                        return (
-                            event_type,
-                            delta_data.get('item_id'),
-                            delta_data.get('output_index'),
-                            delta_data.get('content_index'),
-                            delta_data.get('summary_index'),
-                        )
-
                     def get_response_data_with_full_output_index(response_data: dict):
                         if prior_output and isinstance(response_data.get('output_index'), int):
                             return {
@@ -5053,7 +5070,7 @@ async def streaming_chat_response_handler(response, ctx):
                         nonlocal last_delta_key
 
                         if delta_count >= threshold and last_delta_data:
-                            await event_emitter(
+                            await emit_stream_event(
                                 {
                                     'type': 'chat:completion' if continuing else 'response:completion',
                                     'data': {'output': full_output(), 'type': last_delta_data.get('type')}
@@ -5061,7 +5078,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     else last_delta_data,
                                 }
                             )
-                            await save_current_response_stream()
                             delta_count = 0
                             last_delta_data = None
                             last_delta_type = None
@@ -5095,7 +5111,7 @@ async def streaming_chat_response_handler(response, ctx):
                         if delta_count >= delta_chunk_size:
                             await flush_pending_delta_data(delta_chunk_size)
 
-                    async def emit_response_completion_event(response_data: dict, stream_output: list | None = None):
+                    async def emit_response_completion_event(response_data: dict):
                         if response_data.get('type', '').endswith('.delta'):
                             await queue_pending_delta_data(
                                 response_data,
@@ -5105,7 +5121,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                         response_data = get_response_data_with_full_output_index(response_data)
                         await flush_pending_delta_data()
-                        await event_emitter(
+                        await emit_stream_event(
                             {
                                 'type': 'chat:completion' if continuing else 'response:completion',
                                 'data': {'output': full_output()}
@@ -5113,7 +5129,6 @@ async def streaming_chat_response_handler(response, ctx):
                                 else get_response_completion_event_data(response_data),
                             }
                         )
-                        await save_current_response_stream(stream_output)
 
                     filter_extra_params = {'__body__': form_data, **extra_params} if filter_functions else None
 
@@ -5484,7 +5499,6 @@ async def streaming_chat_response_handler(response, ctx):
                                                         }
                                                     )
 
-                                            await save_current_response_stream()
                                             data = None
                                             delta_type = 'tool_call'
 
@@ -5622,10 +5636,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                 reasoning_detail_items,
                                             )
                                             await flush_pending_delta_data()
-                                            await event_emitter(
+                                            await emit_stream_event(
                                                 {'type': 'chat:completion', 'data': {'output': full_output()}}
                                             )
-                                            await save_current_response_stream()
                                             data = None
 
                                     if value:
@@ -5810,10 +5823,9 @@ async def streaming_chat_response_handler(response, ctx):
                                         # the raw chunk still carries the tag text: resend the cleaned output instead
                                         if tag_output is not None:
                                             await flush_pending_delta_data()
-                                            await event_emitter(
+                                            await emit_stream_event(
                                                 {'type': 'chat:completion', 'data': {'output': full_output()}}
                                             )
-                                            await save_current_response_stream()
                                             data = None
 
                                 if delta and data:
@@ -5970,7 +5982,7 @@ async def streaming_chat_response_handler(response, ctx):
                         frontend_output.append(item)
 
                     if snapshot:
-                        await event_emitter(
+                        await emit_stream_event(
                             {
                                 'type': 'chat:completion',
                                 'data': {'output': frontend_output, 'flush': True},
@@ -5979,7 +5991,7 @@ async def streaming_chat_response_handler(response, ctx):
                         return
 
                     for output_index, item in enumerate(frontend_output, start=output_start):
-                        await event_emitter(
+                        await emit_stream_event(
                             {
                                 'type': 'response:completion',
                                 'data': {
@@ -6046,7 +6058,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 form_data,
                                 metadata,
                             )
-                        await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
+                        await emit_stream_event({'type': 'chat:completion', 'data': {'output': full_output()}})
                         return
                     elif ask_user_staged:
                         # Live questions await the socket callback, not the saved-chat resolver.
@@ -6068,7 +6080,7 @@ async def streaming_chat_response_handler(response, ctx):
                             form_data,
                             metadata,
                         )
-                        await event_emitter(
+                        await emit_stream_event(
                             {
                                 'type': 'chat:completion',
                                 'data': {
@@ -6450,7 +6462,7 @@ async def streaming_chat_response_handler(response, ctx):
                     retries = 0
 
                     while output and output[-1].get('type') == 'open_webui:code_interpreter' and retries < MAX_RETRIES:
-                        await event_emitter(
+                        await emit_stream_event(
                             {
                                 'type': 'chat:completion',
                                 'data': {
@@ -6577,7 +6589,7 @@ async def streaming_chat_response_handler(response, ctx):
                             }
                         )
 
-                        await event_emitter(
+                        await emit_stream_event(
                             {
                                 'type': 'chat:completion',
                                 'data': {

@@ -2,19 +2,22 @@
 import asyncio
 import logging
 from contextlib import suppress
+from itertools import groupby
 from uuid import uuid4
 
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL, REDIS_TASK_TTL
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
+from open_webui.utils.misc import get_output_text
 
 log = logging.getLogger(__name__)
 
 # A dictionary to keep track of active tasks
 tasks: dict[str, asyncio.Task] = {}
 item_tasks = {}
-response_streams: dict[str, dict] = {}
+response_streams: dict[str, list[str]] = {}
 
 
 REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
@@ -98,7 +101,7 @@ async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline(transaction=False)
     pipe.delete(f'{REDIS_TASKS_KEY}:{task_id}')
     pipe.hdel(REDIS_TASKS_KEY, task_id)
-    pipe.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
+    pipe.delete(f'{REDIS_RESPONSE_STREAMS_KEY}:{task_id}')
     if item_id:
         pipe.srem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
     await pipe.execute()
@@ -196,31 +199,59 @@ async def list_task_ids_by_item_id(redis, id):
     return list(item_tasks.get(id, []))
 
 
-async def save_response_stream(
-    redis,
-    task_id: str | None,
-    chat_id: str | None,
-    message_id: str | None,
-    content: str,
-    output: list,
-):
-    if not task_id or not chat_id or not message_id:
-        return
-
-    data = {
-        'chat_id': chat_id,
-        'message_id': message_id,
-        'content': content,
-        'output': output,
-    }
-
+async def save_response_stream(redis: Redis | None, task_id: str, stream_data: str) -> bool:
+    """Replace a stream's live log; False when Redis did not take it."""
     if redis:
-        await redis.hset(REDIS_RESPONSE_STREAMS_KEY, task_id, dumps_bytes(data))
-        if REDIS_RESPONSE_STREAM_TTL > 0:
-            with suppress(Exception):
-                await redis.hexpire(REDIS_RESPONSE_STREAMS_KEY, REDIS_RESPONSE_STREAM_TTL, task_id)
+        try:
+            await redis.set(
+                f'{REDIS_RESPONSE_STREAMS_KEY}:{task_id}',
+                stream_data,
+                ex=REDIS_RESPONSE_STREAM_TTL if REDIS_RESPONSE_STREAM_TTL > 0 else None,
+            )
+        except RedisError:
+            return False
     else:
-        response_streams[task_id] = data
+        response_streams[task_id] = [stream_data]
+    return True
+
+
+async def append_response_stream(redis: Redis | None, task_id: str, line: str) -> bool:
+    """Append an event line; False when Redis did not take it or had lost the log."""
+    if redis:
+        key = f'{REDIS_RESPONSE_STREAMS_KEY}:{task_id}'
+        pipe = redis.pipeline(transaction=False)
+        pipe.append(key, line)
+        if REDIS_RESPONSE_STREAM_TTL > 0:
+            pipe.expire(key, REDIS_RESPONSE_STREAM_TTL)
+        try:
+            log_size, *_ = await pipe.execute()
+        except RedisError:
+            return False
+        return log_size > len(line.encode())
+    else:
+        response_streams[task_id].append(line)
+        return True
+
+
+def replay_response_stream(stream_data: str) -> dict:
+    """Apply the logged events to the base line's output."""
+    from open_webui.utils.middleware import get_response_delta_key, handle_responses_streaming_event
+
+    def get_text_delta_key(event: dict) -> tuple | None:
+        return get_response_delta_key(event) if isinstance(event.get('delta'), str) else None
+
+    base, *events = (JSONCodec.loads(line) for line in stream_data.split('\n') if line)
+    output = base['output']
+    # Merge text deltas first so the replay copies the text once, not once per token
+    for delta_key, run in groupby(events, key=get_text_delta_key):
+        if delta_key:
+            first, *rest = run
+            merged = {**first, 'delta': first['delta'] + ''.join(event['delta'] for event in rest)}
+            output, _ = handle_responses_streaming_event(merged, output)
+        else:
+            for event in run:
+                output, _ = handle_responses_streaming_event(event, output)
+    return {**base, 'output': output}
 
 
 async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
@@ -229,29 +260,32 @@ async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
         return []
 
     if redis:
-        values = await redis.hmget(REDIS_RESPONSE_STREAMS_KEY, task_ids)
-        streams = []
-        for value in values:
-            if not value:
-                continue
-            try:
-                data = JSONCodec.loads(value)
-            except Exception:
-                continue
-            if data.get('chat_id') == chat_id:
-                streams.append(data)
-        return streams
+        pipe = redis.pipeline(transaction=False)
+        for task_id in task_ids:
+            pipe.get(f'{REDIS_RESPONSE_STREAMS_KEY}:{task_id}')
+        values = await pipe.execute()
+    else:
+        values = [''.join(response_streams.get(task_id, [])) for task_id in task_ids]
 
-    return [
-        stream for task_id in task_ids if (stream := response_streams.get(task_id)) and stream.get('chat_id') == chat_id
-    ]
+    streams = []
+    for value in values:
+        if not value:
+            continue
+        try:
+            stream = replay_response_stream(value)
+        except Exception:
+            continue
+        if stream.get('chat_id') == chat_id:
+            stream['content'] = get_output_text(stream['output'])
+            streams.append(stream)
+    return streams
 
 
 async def clear_response_stream(redis, task_id: str | None):
     if not task_id:
         return
     if redis:
-        await redis.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
+        await redis.delete(f'{REDIS_RESPONSE_STREAMS_KEY}:{task_id}')
     else:
         response_streams.pop(task_id, None)
 
