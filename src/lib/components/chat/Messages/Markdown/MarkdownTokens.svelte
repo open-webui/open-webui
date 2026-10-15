@@ -327,10 +327,10 @@
 		{#if token.ordered}
 			<ol start={token.start || 1} dir="auto">
 				{#each token.items as item, itemIdx}
-					<li class="text-start">
+					<li dir="auto" class="text-start">
 						{#if item?.task}
 							<input
-								class=" translate-y-[1px] -translate-x-1 flex-shrink-0"
+								class=" translate-y-[1px] -translate-x-1 [&:dir(rtl)]:translate-x-1 flex-shrink-0"
 								type="checkbox"
 								disabled={markdown?.document ?? false}
 								checked={item.checked}
@@ -369,7 +369,12 @@
 		{:else}
 			<ul dir="auto" class="">
 				{#each token.items as item, itemIdx}
-					<li class="text-start {item?.task ? 'flex -translate-x-6.5 gap-3 ' : ''}">
+					<li
+						dir="auto"
+						class="text-start {item?.task
+							? 'flex -translate-x-6.5 [&:dir(rtl)]:translate-x-6.5 gap-3 '
+							: ''}"
+					>
 						{#if item?.task}
 							<input
 								class="flex-shrink-0"
@@ -647,3 +652,15 @@
 		{console.log('Unknown token', token)}
 	{/if}
 {/each}
+
+<style>
+	/* Reserve marker space on each item's start side, independently of the list's direction. */
+	ul,
+	ol {
+		padding-inline: 0;
+	}
+
+	li {
+		margin-inline-start: 1.5em;
+	}
+</style>

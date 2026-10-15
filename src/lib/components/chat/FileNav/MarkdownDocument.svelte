@@ -73,7 +73,7 @@
 		margin: 0.5rem 0;
 	}
 	.document-markdown :global(li) {
-		margin: 0.125rem 0;
+		margin-block: 0.125rem;
 	}
 	.document-markdown :global(blockquote) {
 		margin: 0.75rem 0;
