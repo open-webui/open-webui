@@ -232,6 +232,45 @@ def get_session_pool_batches():
     return [list(SESSION_POOL.items())]
 
 
+async def publish_chat_presence(chat_id: str):
+    # Room maps only contain this worker's sockets; the session pool spans workers.
+    lock = (
+        REDIS.lock(f'{REDIS_KEY_PREFIX}:chat:{chat_id}:presence:lock',
+            timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+            blocking_timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT)
+        if REDIS is not None
+        else SOCKET_EVENT_LOCKS.setdefault(('chat', chat_id), asyncio.Lock())
+    )
+    try:
+        async with lock, asyncio.timeout(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2):
+            now = time.time()
+            people = {}
+            for batch in get_session_pool_batches():
+                for _, session in batch:
+                    if (
+                        session
+                        and chat_id in (session.get('chat_ids') or [])
+                        and now - session.get('last_seen_at', 0) <= SESSION_POOL_TIMEOUT
+                    ):
+                        people[session['id']] = {'id': session['id'], 'name': session.get('name', '')}
+            if REDIS is not None and not await lock.owned():
+                return
+            await sio.emit(
+                'events',
+                {
+                    'chat_id': chat_id,
+                    'shared': True,
+                    'data': {
+                        'type': 'chat:presence',
+                        'data': {'users': sorted(people.values(), key=lambda person: person['id'])},
+                    },
+                },
+                room=f'chat:{chat_id}',
+            )
+    except Exception:
+        log.exception('Failed to publish presence for chat %s', chat_id)
+
+
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
@@ -258,11 +297,20 @@ async def periodic_session_pool_cleanup():
                         ]
                         if expired:
                             log.warning('Reaping %d orphaned session(s) from the session pool', len(expired))
+                            chat_ids = {
+                                chat_id for sid, entry in batch if sid in expired for chat_id in entry.get('chat_ids', [])
+                            }
                             if WEBSOCKET_MANAGER == 'redis':
                                 SESSION_POOL.delete_many(*expired)
                             else:
                                 for sid in expired:
                                     SESSION_POOL.pop(sid, None)
+                            for sid, entry in batch:
+                                if sid in expired:
+                                    for chat_id in entry.get('chat_ids', []):
+                                        await sio.leave_room(sid, f'chat:{chat_id}')
+                            for chat_id in chat_ids:
+                                await publish_chat_presence(chat_id)
                         await asyncio.sleep(0)  # don't hold the loop for the whole sweep
 
                     next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
@@ -567,12 +615,12 @@ async def user_join(sid, data):
 async def refresh_chat_access(chat_id=None):
     # The pool includes sessions on other workers; Socket.IO routes room changes via Redis.
     access = {}
+    chat_ids = set()
     for batch in get_session_pool_batches():
         for sid, session in batch:
             if not session:
                 continue
-            chat_ids = set(session.get('chat_ids') or [])
-            for cid in list(chat_ids):
+            for cid in session.get('chat_ids') or []:
                 if chat_id and cid != chat_id:
                     continue
                 key = (cid, session['id'])
@@ -581,12 +629,18 @@ async def refresh_chat_access(chat_id=None):
                     access[key] = bool(user and await Chats.get_accessible_chat_by_id(cid, user))
                 if not access[key]:
                     await sio.leave_room(sid, f'chat:{cid}')
-                    chat_ids.discard(cid)
+                    chat_ids.add(cid)
+                    # Preserve joins/leaves and heartbeats that happened during access checks.
+                    current = SESSION_POOL.get(sid)
+                    if current:
+                        SESSION_POOL[sid] = {
+                            **current, 'chat_ids': [id for id in current.get('chat_ids', []) if id != cid]
+                        }
                 await sio.emit(
                     'events', {'chat_id': cid, 'shared': True, 'data': {'type': 'chat:access', 'data': {}}}, to=sid
                 )
-            if chat_ids != set(session.get('chat_ids') or []):
-                SESSION_POOL[sid] = {**session, 'chat_ids': list(chat_ids)}
+    for cid in chat_ids:
+        await publish_chat_presence(cid)
 
 
 @sio.on('heartbeat')
@@ -750,18 +804,25 @@ async def chat_events(sid, data):
         chat_id = data.get('chat_id')
         if not isinstance(chat_id, str) or not is_saved_chat_id(chat_id):
             return False
-        session = SESSION_POOL.get(sid) or user
-        chat_ids = set(session.get('chat_ids') or [])
-        if event_type == 'leave':
-            await sio.leave_room(sid, f'chat:{chat_id}')
-            chat_ids.discard(chat_id)
-        else:
-            reader = await Users.get_user_by_id(user['id'])
-            if not reader or not await Chats.get_accessible_chat_by_id(chat_id, reader):
+        async with SOCKET_EVENT_LOCKS.setdefault(('session', sid), asyncio.Lock()):
+            if event_type == 'leave':
+                await sio.leave_room(sid, f'chat:{chat_id}')
+            else:
+                reader = await Users.get_user_by_id(user['id'])
+                if not reader or not await Chats.get_accessible_chat_by_id(chat_id, reader):
+                    return False
+                await sio.enter_room(sid, f'chat:{chat_id}')
+            session = SESSION_POOL.get(sid)
+            if not session:
+                await sio.leave_room(sid, f'chat:{chat_id}')
                 return False
-            await sio.enter_room(sid, f'chat:{chat_id}')
-            chat_ids.add(chat_id)
-        SESSION_POOL[sid] = {**session, 'chat_ids': list(chat_ids)}
+            chat_ids = set(session.get('chat_ids') or [])
+            if event_type == 'leave':
+                chat_ids.discard(chat_id)
+            else:
+                chat_ids.add(chat_id)
+            SESSION_POOL[sid] = {**session, 'chat_ids': list(chat_ids)}
+        await publish_chat_presence(chat_id)
         return True
 
     if event_type == 'last_read_at':
@@ -1136,7 +1197,11 @@ async def disconnect(sid, reason=None):
     await encryption.disconnect(sid)
     LOCAL_AUTHENTICATED_SIDS.discard(sid)
     if sid in SESSION_POOL:
+        chat_ids = (SESSION_POOL.get(sid) or {}).get('chat_ids', [])
         del SESSION_POOL[sid]
+        for chat_id in chat_ids:
+            await sio.leave_room(sid, f'chat:{chat_id}')
+            await publish_chat_presence(chat_id)
 
         # Clean up USAGE_POOL entries for this session
         for model_id, connections in list(USAGE_POOL.items()):

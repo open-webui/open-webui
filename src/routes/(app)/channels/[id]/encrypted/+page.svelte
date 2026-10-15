@@ -11,6 +11,7 @@
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import type { Editor } from '@tiptap/core';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
+	import Skeleton from '$lib/components/chat/Messages/Skeleton.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -33,7 +34,10 @@
 		is_private: true
 	};
 	let conversation: Conversation | undefined;
-	let state: State = { status: 'ended', messages: [], members: [], self: '', host: '' };
+	let state: State = { status: 'ended', messages: [], members: [], typing: [], self: '', host: '' };
+	$: typingMembers = state.members.filter((member) =>
+		state.typing.includes(member.identity.participation)
+	);
 	let draft = '';
 	let inputEditor: Editor | null = null;
 	let verified = new Set<string>();
@@ -58,7 +62,7 @@
 	});
 	function startSession(channel: string) {
 		stopSession();
-		state = { status: 'ended', messages: [], members: [], self: '', host: '' };
+		state = { status: 'ended', messages: [], members: [], typing: [], self: '', host: '' };
 		const intent = consumeEntry(channel);
 		const connection = get(socket);
 		const account = get(user);
@@ -71,15 +75,17 @@
 			return;
 		}
 		const unsubscribe = conversation.state.subscribe((next) => {
+			const messagesChanged = state.messages !== next.messages;
 			state = next;
 			if (next.status === 'ended') {
 				showParticipants = false;
 				draft = '';
 				verified = new Set();
 			}
-			void tick().then(() => {
-				if (list) list.scrollTop = list.scrollHeight;
-			});
+			if (messagesChanged)
+				void tick().then(() => {
+					if (list) list.scrollTop = list.scrollHeight;
+				});
 		});
 		const logout = user.subscribe((current) => {
 			if (current?.id !== account.id || !canUseEncryption(current, get(config)?.features)) close();
@@ -220,7 +226,25 @@
 				{/each}
 			</div>
 		</div>
-		<form class="shrink-0 pb-3 px-3" on:submit|preventDefault={send}>
+		<form
+			class="shrink-0 pb-3 px-3"
+			on:submit|preventDefault={send}
+			on:focusout={() => conversation?.sendTyping(false)}
+		>
+			{#if typingMembers.length > 0}
+				<div
+					class="flex items-center gap-1.5 px-1 pb-2 text-xs text-gray-500 dark:text-gray-400"
+					role="status"
+				>
+					<Skeleton size="xs" />
+					<div>
+						<span class="font-normal text-black dark:text-white"
+							>{typingMembers.map((member) => member.name).join(', ')}</span
+						>
+						{typingMembers.length === 1 ? $i18n.t('is typing...') : $i18n.t('are typing...')}
+					</div>
+				</div>
+			{/if}
 			<div
 				id="message-input-container"
 				class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-gray-100/60 dark:border-gray-800/50 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition bg-white dark:bg-gray-400/5 dark:text-gray-100"
@@ -248,6 +272,7 @@
 							floatingMenuPlacement="top-start"
 							onChange={({ md }) => {
 								draft = state.status === 'active' ? md : '';
+								void conversation?.sendTyping(Boolean(draft.trim()));
 							}}
 							on:keydown={({ detail: { event } }) => {
 								if (event.isComposing || event.defaultPrevented || event.key !== 'Enter') return;

@@ -29,6 +29,7 @@ export type State = {
 	status: 'joining' | 'active' | 'ended';
 	messages: Message[];
 	members: Member[];
+	typing: string[];
 	self: string;
 	host: string;
 };
@@ -73,8 +74,22 @@ export function request(socket: Socket, action: string, data: object): Promise<a
 }
 
 export class Conversation {
-	state = writable<State>({ status: 'joining', messages: [], members: [], self: '', host: '' });
-	private current: State = { status: 'joining', messages: [], members: [], self: '', host: '' };
+	state = writable<State>({
+		status: 'joining',
+		messages: [],
+		members: [],
+		typing: [],
+		self: '',
+		host: ''
+	});
+	private current: State = {
+		status: 'joining',
+		messages: [],
+		members: [],
+		typing: [],
+		self: '',
+		host: ''
+	};
 	private worker: Worker;
 	private pending = new Map<
 		number,
@@ -89,6 +104,8 @@ export class Conversation {
 	private timer?: ReturnType<typeof setInterval>;
 	private joinTimer?: ReturnType<typeof setTimeout>;
 	private messageIds = new Set<string>();
+	private lastTyping?: number;
+	private typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 	private disposers: (() => void)[] = [];
 
 	constructor(
@@ -232,6 +249,9 @@ export class Conversation {
 		const members: Member[] = JSON.parse(await this.crypto('members'));
 		if (this.stopped) return;
 		const previous = new Set(this.current.members.map((m) => m.identity.participation));
+		for (const id of this.current.typing) {
+			if (!members.some((m) => m.identity.participation === id)) this.removeTyping(id);
+		}
 		this.update({
 			members: members.map((m) => ({
 				...m,
@@ -280,6 +300,7 @@ export class Conversation {
 			await this.crypto('join', event.packet, bindings);
 			await this.activate();
 		} else if (event.kind === 'departed') {
+			this.removeTyping(event.participation);
 			if (event.admitted && this.participation === event.host) {
 				const packet = await this.crypto('remove', event.participation, bindings);
 				await this.send('packet', { kind: 'mls', packet });
@@ -319,7 +340,24 @@ export class Conversation {
 			!/^[a-f0-9-]{36}$/.test(data.id)
 		)
 			throw new Error();
-		if (data.type === 'receipt') {
+		if (data.type === 'typing') {
+			if (typeof data.typing !== 'boolean') throw new Error();
+			const id = sender.participation;
+			if (
+				id === this.participation ||
+				!this.current.members.some((m) => m.identity.participation === id)
+			)
+				return;
+			if (data.typing) {
+				clearTimeout(this.typingTimers.get(id));
+				this.typingTimers.set(
+					id,
+					setTimeout(() => this.removeTyping(id), 5000)
+				);
+				if (!this.current.typing.includes(id))
+					this.update({ typing: [...this.current.typing, id] });
+			} else this.removeTyping(id);
+		} else if (data.type === 'receipt') {
 			const messages = this.current.messages.map((m) =>
 				m.id === data.id &&
 				m.sender === this.participation &&
@@ -336,6 +374,7 @@ export class Conversation {
 			)
 				throw new Error();
 			this.messageIds.add(data.id);
+			this.removeTyping(sender.participation);
 			// MLS rejects replay; the bounded ID set additionally rejects repeated app envelopes.
 			if (this.messageIds.size > 1000)
 				this.messageIds.delete(this.messageIds.values().next().value!);
@@ -359,6 +398,36 @@ export class Conversation {
 			await this.send('packet', { kind: 'mls', packet });
 		} else throw new Error();
 	}
+	private removeTyping(id: string) {
+		clearTimeout(this.typingTimers.get(id));
+		this.typingTimers.delete(id);
+		if (this.current.typing.includes(id))
+			this.update({ typing: this.current.typing.filter((participant) => participant !== id) });
+	}
+	sendTyping(typing: boolean) {
+		if (this.current.status !== 'active') return;
+		const now = Date.now();
+		if (
+			typing
+				? this.lastTyping !== undefined && now - this.lastTyping < 2000
+				: this.lastTyping === undefined
+		)
+			return;
+		this.lastTyping = typing ? now : undefined;
+		return this.enqueue(async () => {
+			const packet = await this.crypto(
+				'encrypt',
+				JSON.stringify({
+					type: 'typing',
+					id: crypto.randomUUID(),
+					typing,
+					channel: this.channel,
+					session: this.view!.session
+				})
+			);
+			await this.send('packet', { kind: 'mls', packet });
+		});
+	}
 	sendText(text: string) {
 		if (
 			this.current.status !== 'active' ||
@@ -366,6 +435,7 @@ export class Conversation {
 			new TextEncoder().encode(text).length > 16384
 		)
 			return;
+		this.sendTyping(false);
 		return this.enqueue(async () => {
 			const id = crypto.randomUUID();
 			const expected = this.current.members
@@ -407,6 +477,9 @@ export class Conversation {
 		}
 		this.pending.clear();
 		this.messageIds.clear();
+		for (const timer of this.typingTimers.values()) clearTimeout(timer);
+		this.typingTimers.clear();
+		this.lastTyping = undefined;
 		if (this.view && this.participation && connected(this.socket)) {
 			void request(this.socket, 'leave', {
 				channel: this.channel,
@@ -415,7 +488,7 @@ export class Conversation {
 			}).catch(() => {});
 		}
 		this.view = undefined;
-		this.current = { status: 'ended', messages: [], members: [], self: '', host: '' };
+		this.current = { status: 'ended', messages: [], members: [], typing: [], self: '', host: '' };
 		this.state.set(this.current);
 	}
 }
