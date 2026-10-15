@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔖 **Tags of archived chats.** Searching the sidebar for a tag whose chats are all archived no longer deletes the tag, which lost its original name when the chats were unarchived. [#32452](https://github.com/open-webui/open-webui/pull/32452), [Commit](https://github.com/open-webui/open-webui/commit/58b821a4642480b2202320b45146bace72962f3b), [#32451](https://github.com/open-webui/open-webui/issues/32451)
 - ⌨️ **Input methods in channels.** Pressing Enter to confirm a word while typing with an input method, such as for Japanese, Chinese or Korean, no longer sends and clears a channel message before the word is in. [Commit](https://github.com/open-webui/open-webui/commit/9d0aa791ad70ef2a7771c74955e2c9304021609e)
 - 🖱️ **Scroll error after leaving a chat.** Scrolling a chat right before opening Notes no longer logs a TypeError in the browser console. [#32458](https://github.com/open-webui/open-webui/pull/32458), [Commit](https://github.com/open-webui/open-webui/commit/9245e31ccba8e464054297b1f3660ab3e7f77969), [#32457](https://github.com/open-webui/open-webui/issues/32457)
+- 📐 **Steady first turn in new chats.** The latest message and reply in a new chat now keep their real height when the chat gets saved and the message list reloads, so the view no longer jumps on the first turn. [Commit](https://github.com/open-webui/open-webui/commit/bbccff89c1cf318c21cd9eeb4228f98882a33736)
 
 ## [0.12.2] - 2026-10-14
 
