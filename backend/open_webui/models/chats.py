@@ -292,6 +292,7 @@ class ChatResponse(BaseModel):
     summary: str | None = None
     current_message_id: str | None = None
     context_usage: dict | None = None
+    stream_positions: dict | None = None
 
     @field_validator('variables', mode='before')
     @classmethod

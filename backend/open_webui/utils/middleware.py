@@ -625,6 +625,12 @@ def get_response_completion_event_data(event: dict) -> dict:
     }
 
 
+def get_response_stream_length(event_data: dict) -> int:
+    """How many positions an event takes in a live reply: a text delta's length, otherwise 1."""
+    delta = event_data.get('delta')
+    return len(delta) if isinstance(delta, str) else 1
+
+
 def get_response_delta_key(delta_data: dict) -> tuple | None:
     event_type = delta_data.get('type', '')
     if not event_type.startswith('response.') or not event_type.endswith('.delta'):
@@ -636,6 +642,11 @@ def get_response_delta_key(delta_data: dict) -> tuple | None:
         delta_data.get('content_index'),
         delta_data.get('summary_index'),
     )
+
+
+def get_text_delta_key(event_data: dict) -> tuple | None:
+    """Consecutive text deltas with the same key can be joined into one."""
+    return get_response_delta_key(event_data) if isinstance(event_data.get('delta'), str) else None
 
 
 def handle_responses_streaming_event(
@@ -4915,10 +4926,16 @@ async def streaming_chat_response_handler(response, ctx):
             response_stream_lines: list[str] = []
             response_stream_saved = False
             appended_size = 0
+            response_stream_position = 0
 
             def set_response_stream_base(response_output: list):
                 nonlocal response_stream_lines, response_stream_saved, appended_size
-                base = {'chat_id': chat_id, 'message_id': metadata.get('message_id'), 'output': response_output}
+                base = {
+                    'chat_id': chat_id,
+                    'message_id': metadata.get('message_id'),
+                    'position': response_stream_position,
+                    'output': response_output,
+                }
                 response_stream_lines = [JSONCodec.dumps(base) + '\n']
                 response_stream_saved = False
                 appended_size = 0
@@ -4936,7 +4953,9 @@ async def streaming_chat_response_handler(response, ctx):
 
             async def emit_stream_event(event: dict):
                 """Emit an event that changes the output, logging it first for reloads to replay."""
-                nonlocal response_stream_saved, appended_size
+                nonlocal response_stream_saved, appended_size, response_stream_position
+                position = response_stream_position
+                response_stream_position += get_response_stream_length(event['data'])
                 if has_response_stream:
                     if event['type'] == 'chat:completion':
                         set_response_stream_base(event['data']['output'])
@@ -4952,7 +4971,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 request.app.state.redis, response_stream_task_id, line
                             )
                     await ensure_response_stream_saved()
-                await event_emitter(event)
+                await event_emitter({**event, 'position': position})
 
             def get_message_error_content(error):
                 if isinstance(error, HTTPException):

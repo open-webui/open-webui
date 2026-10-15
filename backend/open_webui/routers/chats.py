@@ -73,6 +73,8 @@ def overlay_response_streams(chat_data: dict, response_streams: list[dict]) -> d
     if not response_streams:
         return chat_data
 
+    stream_positions = {}
+    chat_data['stream_positions'] = stream_positions
     messages = chat_data.get('chat', {}).get('history', {}).get('messages')
     if isinstance(messages, dict):
         for stream in response_streams:
@@ -82,6 +84,7 @@ def overlay_response_streams(chat_data: dict, response_streams: list[dict]) -> d
                 message['content'] = stream.get('content', '')
                 message['output'] = stream.get('output') or []
                 message['done'] = False
+                stream_positions[message_id] = stream['position']
 
     legacy_messages = chat_data.get('chat', {}).get('messages')
     if isinstance(legacy_messages, list):
@@ -91,6 +94,7 @@ def overlay_response_streams(chat_data: dict, response_streams: list[dict]) -> d
                 message['content'] = stream.get('content', '')
                 message['output'] = stream.get('output') or []
                 message['done'] = False
+                stream_positions[message['id']] = stream['position']
 
     return chat_data
 

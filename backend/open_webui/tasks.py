@@ -235,10 +235,11 @@ async def append_response_stream(redis: Redis | None, task_id: str, line: str) -
 
 def replay_response_stream(stream_data: str) -> dict:
     """Apply the logged events to the base line's output."""
-    from open_webui.utils.middleware import get_response_delta_key, handle_responses_streaming_event
-
-    def get_text_delta_key(event: dict) -> tuple | None:
-        return get_response_delta_key(event) if isinstance(event.get('delta'), str) else None
+    from open_webui.utils.middleware import (
+        get_response_stream_length,
+        get_text_delta_key,
+        handle_responses_streaming_event,
+    )
 
     base, *events = (JSONCodec.loads(line) for line in stream_data.split('\n') if line)
     output = base['output']
@@ -251,7 +252,8 @@ def replay_response_stream(stream_data: str) -> dict:
         else:
             for event in run:
                 output, _ = handle_responses_streaming_event(event, output)
-    return {**base, 'output': output}
+    position = base['position'] + sum(get_response_stream_length(event) for event in events)
+    return {**base, 'position': position, 'output': output}
 
 
 async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:

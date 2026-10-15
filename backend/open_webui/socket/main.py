@@ -1333,10 +1333,11 @@ async def get_event_emitter(request_info, update_db=True):
         return await _make_channel_emitter(request_info)
 
     last_shared_emit = 0.0
-    output = None
+    pending_events: list[dict] = []
 
     async def __event_emitter__(event_data):
-        nonlocal last_shared_emit, output
+        nonlocal last_shared_emit, pending_events
+        position = event_data.pop('position', None)
         user_id = request_info['user_id']
         chat_id = request_info['chat_id']
         message_id = request_info['message_id']
@@ -1377,23 +1378,33 @@ async def get_event_emitter(request_info, update_db=True):
                 shared_event = event_data
             elif event_type in {'chat:completion', 'response:completion'}:
                 data = event_data.get('data') or {}
-                if isinstance(data.get('output'), list):
-                    output = copy.deepcopy(data['output'])
-                elif event_type == 'response:completion':
-                    from open_webui.utils.middleware import handle_responses_streaming_event
-
-                    output, _ = handle_responses_streaming_event(data, output or [])
-                now = time.monotonic()
-                if not (data.get('type') or '').endswith('.delta') or now - last_shared_emit >= 0.15:
-                    last_shared_emit = now
+                if position is None:
                     payload = {
                         key: value
                         for key, value in data.items()
                         if key in {'done', 'error', 'usage', 'finish_reason', 'content', 'selected_model_id', 'sources'}
                     }
-                    if output is not None:
-                        payload['output'] = output
+                    if 'output' in data:
+                        payload['output'] = data['output']
+                        # The full output already holds the held changes, which would otherwise show twice
+                        pending_events = []
                     shared_event = {'type': 'chat:completion', 'data': payload}
+                else:
+                    from open_webui.utils.middleware import append_to_text_field, get_text_delta_key
+
+                    stream_event = {**data, 'position': position}
+                    delta_key = get_text_delta_key(data)
+                    if isinstance(data.get('output'), list):
+                        pending_events = [stream_event]
+                    elif delta_key and pending_events and get_text_delta_key(pending_events[-1]) == delta_key:
+                        append_to_text_field(pending_events[-1], 'delta', data['delta'])
+                    else:
+                        pending_events.append(stream_event)
+                    now = time.monotonic()
+                    if not (data.get('type') or '').endswith('.delta') or now - last_shared_emit >= 0.15:
+                        last_shared_emit = now
+                        shared_event = {'type': 'response:completion', 'data': {'events': pending_events}}
+                        pending_events = []
             if shared_event:
                 await sio.emit(
                     'events',

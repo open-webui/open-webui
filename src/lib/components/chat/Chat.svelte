@@ -1300,6 +1300,8 @@
 
 	let joinedChatId = '';
 	let chatRefresh: { id: string; promise: Promise<void> } | null = null;
+	// Kept out of history so it is never saved
+	let streamPositions: Record<string, number> = {};
 	let typingUsers: { id: string; name: string }[] = [];
 	let typingUsersTimeout: Record<string, ReturnType<typeof setTimeout>> = {};
 	let lastTypingEmit = 0;
@@ -1333,7 +1335,8 @@
 
 	const mergeChatMessages = (
 		incoming: typeof history,
-		baseline: Record<string, any> | null = null
+		baseline: Record<string, any> | null = null,
+		positions: Record<string, number> = {}
 	) => {
 		const currentId = history.currentId;
 		const next = incoming?.messages ?? {};
@@ -1357,6 +1360,8 @@
 				(taskIds?.length || generating);
 			if (!local || (!ownActive && (!baseline || baseline[id] === local))) {
 				history.messages[id] = { ...local, ...message };
+				if (positions[id] === undefined) delete streamPositions[id];
+				else streamPositions[id] = positions[id];
 			}
 			if (local) {
 				history.messages[id].childrenIds = [
@@ -1381,7 +1386,7 @@
 				const fresh = await getChatById(localStorage.token, id);
 				if ($chatId !== id || joinedChatId !== id) return;
 				chat = fresh;
-				mergeChatMessages(fresh.chat.history, baseline);
+				mergeChatMessages(fresh.chat.history, baseline, fresh.stream_positions ?? {});
 			} catch (error) {
 				if ($chatId === id && joinedChatId === id) {
 					chat = null;
@@ -1501,6 +1506,12 @@
 					return;
 				}
 				if (!history.messages[event.message_id]) await refreshChat();
+				if (
+					type === 'response:completion' &&
+					isStreamGap(event.message_id, event.data.data.events[0])
+				) {
+					await refreshChat();
+				}
 				if ($chatId !== event.chat_id) return;
 			}
 			if (type === 'chat:reload') {
@@ -1540,7 +1551,9 @@
 						}
 					}
 				} else if (type === 'response:completion' || type === 'chat:completion') {
-					if (type === 'response:completion') {
+					if (type === 'response:completion' && event.shared) {
+						await applySharedStreamEvents(data.events, message, event.chat_id);
+					} else if (type === 'response:completion') {
 						responseCompletionEventHandler(data, message);
 					} else {
 						await chatCompletionEventHandler(data, message, event.chat_id, event.shared);
@@ -1553,6 +1566,7 @@
 						}
 					}
 					message.bridgeCancelled = true;
+					delete streamPositions[event.message_id];
 					bridgeCancellations.get(event.message_id)?.();
 					if (!event.shared) dismissContextCompactionToast();
 					if (data?.output) {
@@ -1597,6 +1611,7 @@
 					if (event.shared) {
 						message.error = data.error;
 						message.done = true;
+						delete streamPositions[event.message_id];
 					} else handleOpenAIError(data.error, message);
 					if (!event.shared && !responseCompleted) {
 						dismissContextCompactionToast();
@@ -2687,6 +2702,7 @@
 			messages: {},
 			currentId: null
 		};
+		streamPositions = {};
 
 		chatFiles = [];
 		params = {};
@@ -2865,6 +2881,7 @@
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
+				streamPositions = chat?.stream_positions ?? {};
 				if (chat?.current_message_id && history?.messages?.[chat.current_message_id]) {
 					history.currentId = chat.current_message_id;
 				}
@@ -3322,7 +3339,7 @@
 		}
 	};
 
-	const responseCompletionEventHandler = (data, message) => {
+	const responseCompletionEventHandler = (data, message, shared = false) => {
 		message.output = applyResponseStreamEvent(message.output ?? [], data);
 
 		if (data?.type === 'response.output_text.delta') {
@@ -3330,10 +3347,10 @@
 			if (!(message.content == '' && value == '\n')) {
 				message.content += value;
 
-				if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+				if (!shared && navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 					navigator.vibrate(5);
 				}
-				dispatchCallOverlayAudio(message);
+				if (!shared) dispatchCallOverlayAudio(message);
 			}
 		} else if (data?.type === 'response.completed' || data?.type?.endsWith('.done')) {
 			message.content = getOutputText(message.output) || message.content;
@@ -3341,6 +3358,47 @@
 
 		history.messages[message.id] = message;
 		history = history;
+	};
+
+	// A reply that starts while the tab watches has no loaded position yet and begins at 0
+	type SharedStreamEvent = { position: number; delta?: unknown; output?: unknown };
+
+	const getStreamPosition = (messageId: string, event: SharedStreamEvent): number | undefined =>
+		streamPositions[messageId] ?? (event.position === 0 ? 0 : undefined);
+
+	const isStreamGap = (messageId: string, event: SharedStreamEvent) => {
+		const loadedPosition = getStreamPosition(messageId, event);
+		return (
+			!Array.isArray(event.output) &&
+			(loadedPosition === undefined || event.position > loadedPosition)
+		);
+	};
+
+	const applySharedStreamEvents = async (
+		events: SharedStreamEvent[],
+		message: { id: string },
+		chatId: string
+	) => {
+		for (const event of events) {
+			if (Array.isArray(event.output)) {
+				await chatCompletionEventHandler(event, message, chatId, true);
+				streamPositions[message.id] = event.position + 1;
+				continue;
+			}
+			if (isStreamGap(message.id, event)) return;
+			const loadedPosition = getStreamPosition(message.id, event) as number;
+			const codePoints = typeof event.delta === 'string' ? [...event.delta] : null;
+			const endPosition = event.position + (codePoints?.length ?? 1);
+			if (endPosition <= loadedPosition) continue;
+			responseCompletionEventHandler(
+				codePoints
+					? { ...event, delta: codePoints.slice(loadedPosition - event.position).join('') }
+					: event,
+				message,
+				true
+			);
+			streamPositions[message.id] = endPosition;
+		}
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId, shared = false) => {
@@ -3415,6 +3473,7 @@
 
 		if (done) {
 			message.done = true;
+			delete streamPositions[message.id];
 			if (shared) return;
 			if (message.error) {
 				dismissContextCompactionToast();
