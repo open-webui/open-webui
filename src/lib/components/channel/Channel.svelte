@@ -111,7 +111,8 @@
 
 	const scrollToBottom = () => {
 		if (messagesContainerElement) {
-			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+			// The channel uses flex-col-reverse, whose bottom is scrollTop = 0.
+			messagesContainerElement.scrollTop = 0;
 		}
 	};
 
@@ -202,18 +203,29 @@
 
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === null) {
-					const tempId = data?.temp_id ?? null;
-					messages = [
-						{ ...data, temp_id: null },
-						...messages.filter((m) => !tempId || m?.temp_id !== tempId)
-					];
+					const idx = (messages ?? []).findIndex(
+						(message) =>
+							message.id === data.id || (data.temp_id && message.temp_id === data.temp_id)
+					);
+					if (idx === -1) {
+						messages = [{ ...data, temp_id: null }, ...(messages ?? [])];
+					} else {
+						// Confirm the existing row without changing its position or render key.
+						const previous = messages[idx];
+						messages[idx] = {
+							...previous,
+							...data,
+							temp_id: null,
+							client_id: previous.client_id ?? previous.id
+						};
+					}
 
 					if (typingUsers.find((user) => user.id === event.user.id)) {
 						typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
 					}
 
 					await tick();
-					if (scrollEnd) {
+					if (idx === -1 && scrollEnd) {
 						scrollToBottom();
 					}
 				}
@@ -221,7 +233,7 @@
 				const idx = messages.findIndex((message) => message.id === data.id);
 
 				if (idx !== -1) {
-					messages[idx] = data;
+					messages[idx] = { ...messages[idx], ...data };
 				}
 			} else if (type === 'message:delete') {
 				messages = messages
@@ -243,12 +255,12 @@
 				const idx = messages.findIndex((message) => message.id === data.id);
 
 				if (idx !== -1) {
-					messages[idx] = data;
+					messages[idx] = { ...messages[idx], ...data };
 				}
 			} else if (type.includes('message:reaction')) {
 				const idx = messages.findIndex((message) => message.id === data.id);
 				if (idx !== -1) {
-					messages[idx] = data;
+					messages[idx] = { ...messages[idx], ...data };
 				}
 			} else if (type === 'typing' && event.message_id === null) {
 				if (event.user.id === $user?.id) {
@@ -309,6 +321,7 @@
 			{
 				...message,
 				id: tempId,
+				client_id: tempId,
 				user_id: $user?.id,
 				user: $user,
 				reply_to_message: reply_to_message ?? null,
@@ -318,14 +331,13 @@
 			...messages
 		];
 
-		const res = await sendMessage(localStorage.token, channel_id, message).catch((error) => {
+		await tick();
+		if (id === channel_id) scrollToBottom();
+
+		await sendMessage(localStorage.token, channel_id, message).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
-
-		if (res && id === channel_id && messagesContainerElement) {
-			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-		}
 	};
 
 	const onChange = async () => {
