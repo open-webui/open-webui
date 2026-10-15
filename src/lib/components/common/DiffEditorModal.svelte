@@ -432,6 +432,8 @@
 							const resized = alignmentDocuments && geometry !== alignmentGeometry;
 							alignmentDocuments = documents;
 							alignmentGeometry = geometry;
+							const previousSpacersA = view.a.state.field(lineAlignment);
+							const previousSpacersB = view.b.state.field(lineAlignment);
 							if (!reset || !clearLineAlignment(view.a, view.b))
 								alignChangedLines(view.a, view.b, view.chunks);
 							if (resized) {
@@ -455,7 +457,13 @@
 									effects: EditorView.scrollIntoView(other, { y: 'start', yMargin: 0 })
 								});
 							}
-							view.reconfigure({});
+							// Remeasuring unchanged spacers feeds CodeMirror's own layout updates back into itself.
+							if (
+								resized ||
+								previousSpacersA !== view.a.state.field(lineAlignment) ||
+								previousSpacersB !== view.b.state.field(lineAlignment)
+							)
+								view.reconfigure({});
 						}
 					});
 				}
