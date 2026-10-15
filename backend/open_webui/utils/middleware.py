@@ -6337,9 +6337,26 @@ async def streaming_chat_response_handler(response, ctx):
                                 )
 
                             try:
-                                messages, context_summary, compacted = await compact_messages_for_request(
-                                    request, user, messages, metadata, model_id, request.app.state.MODELS
-                                )
+                                user_messages = [
+                                    (message, message.get('content'))
+                                    for message in messages
+                                    if user_prompt
+                                    and message.get('role') == 'user'
+                                    and message.get('content') == user_prompt.get('content')
+                                ]
+                                try:
+                                    # Summarize the user's text, then restore source context for the model.
+                                    for message, _ in user_messages:
+                                        message['content'] = copy.deepcopy(message.get('content'))
+                                        set_last_user_message_content(
+                                            metadata.get('base_user_prompt') or user_message, [message]
+                                        )
+                                    messages, context_summary, compacted = await compact_messages_for_request(
+                                        request, user, messages, metadata, model_id, request.app.state.MODELS
+                                    )
+                                finally:
+                                    for message, content in user_messages:
+                                        message['content'] = content
                                 if compacted:
                                     if user_prompt is not None:
                                         messages = [message for message in messages if message != user_prompt]
