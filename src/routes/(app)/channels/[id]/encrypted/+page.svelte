@@ -163,7 +163,7 @@
 						<p class="mt-1 text-xs">{$i18n.t('Leaving or reloading clears this device’s chat.')}</p>
 					</div>
 				{/if}
-				{#each state.messages as message (message.id)}
+				{#each state.messages as message, messageIdx (message.id)}
 					{#if message.type === 'joined'}
 						<p class="px-4 py-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400">
 							{$i18n.t('{{NAME}} joined', { NAME: message.user.name })}
@@ -172,6 +172,9 @@
 						<Message
 							channel={channelInfo}
 							disabled
+							showUserProfile={messageIdx === 0 ||
+								state.messages[messageIdx - 1].type === 'joined' ||
+								state.messages[messageIdx - 1].sender !== message.sender}
 							message={{
 								id: message.id,
 								content: message.text,
