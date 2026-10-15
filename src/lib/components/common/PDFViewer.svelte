@@ -687,4 +687,9 @@
 	:global(.textLayer.selecting .endOfContent) {
 		top: 0;
 	}
+
+	/* pdfjs leaves its text-measuring canvas in <body> at 300x150 for PDFs without text */
+	:global(.hiddenCanvasElement) {
+		display: none;
+	}
 </style>
