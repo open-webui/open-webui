@@ -3,8 +3,8 @@
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { get } from 'svelte/store';
-	import { socket, user, showSidebar, channels, settings, mobile } from '$lib/stores';
-	import { consumeEntry, Conversation, type State } from '$lib/encryption/client';
+	import { socket, user, config, showSidebar, channels, settings, mobile } from '$lib/stores';
+	import { canUseEncryption, consumeEntry, Conversation, type State } from '$lib/encryption/client';
 
 	import Navbar from '$lib/components/channel/Navbar.svelte';
 	import Message from '$lib/components/channel/Messages/Message.svelte';
@@ -62,7 +62,8 @@
 		const intent = consumeEntry(channel);
 		const connection = get(socket);
 		const account = get(user);
-		if (!intent || !connection || !account) return;
+		if (!intent || !connection || !account || !canUseEncryption(account, get(config)?.features))
+			return;
 		try {
 			conversation = new Conversation(connection, channel, account.id, intent);
 		} catch {
@@ -81,12 +82,16 @@
 			});
 		});
 		const logout = user.subscribe((current) => {
-			if (current?.id !== account.id) close();
+			if (current?.id !== account.id || !canUseEncryption(current, get(config)?.features)) close();
+		});
+		const settingsChanged = config.subscribe((current) => {
+			if (!canUseEncryption(get(user), current?.features)) close();
 		});
 		stopSession = () => {
 			close();
 			unsubscribe();
 			logout();
+			settingsChanged();
 			conversation = undefined;
 		};
 	}

@@ -7,8 +7,10 @@ import json
 import time
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
+from copy import deepcopy
 from uuid import uuid4
 
+from open_webui.config import DEFAULT_USER_PERMISSIONS
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     ENV,
@@ -18,8 +20,9 @@ from open_webui.env import (
 )
 from open_webui.models.channels import Channels
 from open_webui.models.config import Config
+from open_webui.models.groups import Groups
 from open_webui.models.users import Users
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import combine_permissions, fill_missing_permissions
 
 MAX_PACKET = 1024 * 1024
 TTL = 90
@@ -112,7 +115,6 @@ class Relay:
             sio.on(f'encryption:{action}', handler)
 
     async def authorize(self, sid, channel):
-        require(await Config.get('channels.encryption.enable'))
         require(ENABLE_WEBSOCKET_SUPPORT and self.sio.transport(sid) == 'websocket')
         require(not WEBSOCKET_SERVER_LOGGING and not WEBSOCKET_SERVER_ENGINEIO_LOGGING)
         scope = (self.sio.get_environ(sid) or {}).get('asgi.scope', {})
@@ -121,11 +123,6 @@ class Relay:
         require(auth and auth.get('id'))
         user = await Users.get_user_by_id(auth['id'])
         require(user and user.role in ('user', 'admin'))
-        require(await Config.get('channels.enable'))
-        require(
-            user.role == 'admin'
-            or await has_permission(user.id, 'features.channels', await Config.get('user.permissions'))
-        )
         record = await Channels.get_channel_by_id(channel)
         require(record and (record.type == 'dm' or (record.type == 'group' and record.is_private is True)))
         require(await Channels.is_user_channel_member(channel, user.id))
@@ -185,38 +182,65 @@ class Relay:
                 )
         await self.invite(None, channel)
 
-    async def prune(self, state):
+    async def eligible_users(self, user_ids):
+        config = await Config.get_many('channels.enable', 'channels.encryption.enable', 'user.permissions')
+        if not config['channels.enable'] or not config['channels.encryption.enable']:
+            return {}
+        defaults = fill_missing_permissions(deepcopy(config['user.permissions'] or {}), DEFAULT_USER_PERMISSIONS)
+        users = await Users.get_users_by_user_ids(list(set(user_ids)))
+        groups = await Groups.get_groups_by_member_ids(
+            [u.id for u in users if u.role == 'user'], include_inherited=True
+        )
+        eligible = {}
+        for user in users:
+            if user.role == 'admin':
+                eligible[user.id] = user
+            elif user.role == 'user':
+                permissions = deepcopy(defaults)
+                for group in groups[user.id]:
+                    combine_permissions(permissions, group.permissions or {})
+                features = permissions.get('features', {})
+                if features.get('channels') and features.get('encrypted_channels'):
+                    eligible[user.id] = user
+        return eligible
+
+    async def prune(self, state, eligible=None):
         if not state:
             return None
+        if eligible is None:
+            eligible = await self.eligible_users([p['user'] for p in state['members'].values()])
         members = await Channels.get_members_by_channel_id(state['channel'])
         active = {m.user_id for m in members if m.is_active}
-        users = await Users.get_users_by_user_ids([p['user'] for p in state['members'].values()])
-        humans = {u.id for u in users if u.role in ('user', 'admin')}
-        stale = []
-        for pid, p in state['members'].items():
-            if p['seen'] < time.time() - 45 or p['user'] not in active or p['user'] not in humans:
-                stale.append(pid)
+        stale = [
+            pid
+            for pid, p in state['members'].items()
+            if p['seen'] < time.time() - 45 or p['user'] not in active or p['user'] not in eligible
+        ]
         if state['host'] in stale:
             await self.close(state['channel'], state)
             return None
-        for pid in stale:
-            await self.remove(state, pid)
+        if stale:
+            await self.remove(state, *stale)
         return state
 
-    async def remove(self, state, pid):
-        if pid == state['host']:
+    async def remove(self, state, *pids):
+        if state['host'] in pids:
             await self.close(state['channel'], state)
             return
-        p = state['members'].pop(pid)
-        self.local.pop(p['sid'], None)
-        await self.sio.emit(
-            'encryption:event', {'kind': 'ended', 'channel': state['channel'], 'session': state['session']}, to=p['sid']
-        )
-        await self.deliver(
-            state,
-            [i for i, m in state['members'].items() if m['admitted']],
-            {'kind': 'departed', 'participation': pid, 'admitted': p['admitted']},
-        )
+        # Exclude every revoked recipient before any departure event is forwarded.
+        removed = [(pid, state['members'].pop(pid)) for pid in pids]
+        for pid, p in removed:
+            self.local.pop(p['sid'], None)
+            await self.sio.emit(
+                'encryption:event',
+                {'kind': 'ended', 'channel': state['channel'], 'session': state['session']},
+                to=p['sid'],
+            )
+            await self.deliver(
+                state,
+                [i for i, m in state['members'].items() if m['admitted']],
+                {'kind': 'departed', 'participation': pid, 'admitted': p['admitted']},
+            )
 
     async def limit(self, user, action, size):
         now = time.monotonic()
@@ -321,7 +345,14 @@ class Relay:
             authorized = True
             await self.limit(user.id, action, size)
             async with self.registry.transaction(channel) as state:
-                state = await self.prune(state)
+                # Read current policy after waiting for the channel's coordination lock.
+                eligible = await self.eligible_users(
+                    [user.id, *([p['user'] for p in state['members'].values()] if state else [])]
+                )
+                state = await self.prune(state, eligible)
+                require(user.id in eligible)
+                user = eligible[user.id]
+                require(await Channels.is_user_channel_member(channel, user.id))
                 if action == 'status':
                     return {
                         'ok': True,

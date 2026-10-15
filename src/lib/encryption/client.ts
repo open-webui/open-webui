@@ -1,4 +1,5 @@
 import type { Socket } from 'socket.io-client';
+import type { SessionUser } from '$lib/stores';
 import { writable } from 'svelte/store';
 import CryptoWorker from './worker?worker';
 
@@ -40,6 +41,19 @@ export function consumeEntry(channel: string) {
 	const result = entry?.channel === channel ? entry.intent : undefined;
 	entry = undefined;
 	return result;
+}
+export function canUseEncryption(
+	account: SessionUser | undefined,
+	features: { enable_channels?: boolean; enable_encrypted_channels?: boolean } | undefined
+): boolean {
+	return !!(
+		features?.enable_channels &&
+		features?.enable_encrypted_channels &&
+		(account?.role === 'admin' ||
+			(account?.role === 'user' &&
+				account.permissions?.features?.channels === true &&
+				account.permissions?.features?.encrypted_channels === true))
+	);
 }
 export function connected(socket: Socket | null): socket is Socket {
 	return !!socket?.connected && socket.io.engine?.transport?.name === 'websocket';

@@ -21,7 +21,7 @@
 	import Messages from './Messages.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import Navbar from './Navbar.svelte';
-	import { connected, enter, request } from '$lib/encryption/client';
+	import { canUseEncryption, connected, enter, request } from '$lib/encryption/client';
 	import Drawer from '../common/Drawer.svelte';
 	import ResizableSidePanel from '../common/ResizableSidePanel.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
@@ -37,7 +37,7 @@
 	$: watchInvitation(
 		$socket,
 		channel?.id === id ? id : null,
-		mounted && $config?.features?.enable_encrypted_channels
+		mounted && canUseEncryption($user, $config?.features)
 	);
 
 	function watchInvitation(
@@ -428,7 +428,7 @@
 								aria-label={$i18n.t('Join encrypted chat')}
 								class="text-[0.6875rem] font-normal text-gray-700 underline-offset-2 hover:underline dark:text-gray-200"
 								on:click={() => {
-									if (!invitationSession) return;
+									if (!invitationSession || !canUseEncryption($user, $config?.features)) return;
 									enter(id, { action: 'join', session: invitationSession });
 									void goto(`/channels/${encodeURIComponent(id)}/encrypted`);
 								}}

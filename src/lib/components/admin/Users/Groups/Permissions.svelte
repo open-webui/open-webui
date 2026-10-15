@@ -8,8 +8,8 @@
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
 	import { config } from '$lib/stores';
 
-	export let permissions = {};
-	export let defaultPermissions = {};
+	export let permissions: Record<string, any> = {};
+	export let defaultPermissions: Record<string, any> = {};
 
 	// Reactive statement to ensure all fields are present in `permissions`
 	$: {
@@ -999,6 +999,25 @@
 				<Switch bind:state={permissions.features.channels} ariaLabel={$i18n.t('Channels')} />
 			</div>
 			{#if defaultPermissions?.features?.channels && !permissions.features.channels}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-normal">
+					{$i18n.t('Encrypted Channels')}
+				</div>
+				<Switch
+					bind:state={permissions.features.encrypted_channels}
+					ariaLabel={$i18n.t('Encrypted Channels')}
+				/>
+			</div>
+			{#if defaultPermissions?.features?.encrypted_channels && !permissions.features.encrypted_channels}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}

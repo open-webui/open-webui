@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { channels, config } from '$lib/stores';
+	import { channels, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import { enter } from '$lib/encryption/client';
+	import { canUseEncryption, enter } from '$lib/encryption/client';
 	import { updateChannelMemberMuteStatusById } from '$lib/apis/channels';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -73,11 +73,12 @@
 		</button>
 		<div slot="content">
 			<DropdownMenu className="w-44 border-gray-200/30! dark:border-gray-700/30!">
-				{#if $config?.features?.enable_encrypted_channels && (channel.type === 'dm' || (channel.type === 'group' && channel.is_private === true))}
+				{#if canUseEncryption($user, $config?.features) && (channel.type === 'dm' || (channel.type === 'group' && channel.is_private === true))}
 					<button
 						type="button"
 						role="menuitem"
 						on:click={() => {
+							if (!canUseEncryption($user, $config?.features)) return;
 							show = false;
 							enter(channel.id, { action: 'start' });
 							void goto(`/channels/${encodeURIComponent(channel.id)}/encrypted`);
