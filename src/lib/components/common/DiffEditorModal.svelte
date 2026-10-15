@@ -223,7 +223,7 @@
 			const position = Math.min(start, view.state.doc.length);
 			view.dispatch({
 				selection: { anchor: position },
-				effects: EditorView.scrollIntoView(position, { y: 'center' })
+				effects: EditorView.scrollIntoView(position, { y: 'start', yMargin: 0 })
 			});
 		}
 		refresh();
