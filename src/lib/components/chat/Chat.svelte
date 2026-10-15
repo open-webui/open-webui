@@ -1225,7 +1225,7 @@
 	};
 
 	let revealedSearchMessage = '';
-	$: if (!embedded && !loading && messagesRef && chat?.id === $page.params.id) {
+	$: if (!embedded && !loading && messagesRef && chat && chat.id === $page.params.id) {
 		const target = $page.url.searchParams.get('message');
 		const key = `${chat.id}:${target}`;
 		if (target && history.messages[target] && key !== revealedSearchMessage) {
