@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, Query
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrant, AccessGrants
-from open_webui.models.channels import Channels
+from open_webui.models.channels import ChannelMember, Channels
 from open_webui.models.chats import Chat
 from open_webui.models.config import Config
 from open_webui.models.folders import Folder
@@ -163,8 +163,24 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
     folder_map = {f.id: f for f in folder_rows}
     channels = await Channels.get_channels_by_user_id(user.id, db=db) if 'message' in enabled else []
     channel_map = {c.id: c for c in channels}
+    channel_names = {c.id: c.name for c in channels}
+    direct_message_ids = [c.id for c in channels if c.type == 'dm' and not c.name]
+    if direct_message_ids:
+        members = (
+            await db.execute(
+                select(ChannelMember.channel_id, User.name)
+                .join(User, User.id == ChannelMember.user_id)
+                .where(ChannelMember.channel_id.in_(direct_message_ids), User.id != user.id)
+                .order_by(User.name, User.id)
+            )
+        ).all()
+        participants = {channel_id: [] for channel_id in direct_message_ids}
+        for channel_id, name in members:
+            participants[channel_id].append(name)
+        for channel_id, names in participants.items():
+            channel_names[channel_id] = ', '.join(names) or user.name
     scopes = [SearchScope(id='folder:' + f.id, name=f.name, kind='folder') for f in folder_rows]
-    scopes += [SearchScope(id='channel:' + c.id, name=c.name, kind='channel') for c in channels]
+    scopes += [SearchScope(id='channel:' + c.id, name=channel_names[c.id], kind='channel') for c in channels]
     scopes.sort(key=lambda s: (s.kind, s.name.lower(), s.id))
     shared_folder_ids = set(
         (
@@ -204,11 +220,11 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
     results = []
     dialect = db.bind.dialect.name
 
-    def sharing_filter(owner, shared):
+    def sharing_filter(owner):
         if sharing == 'mine':
             return owner == user.id
         if sharing == 'shared':
-            return shared
+            return owner != user.id
         return True
 
     def apply_match(stmt, model, body=None):
@@ -250,7 +266,6 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
             Chat.user_id == user.id, Chat.folder_id.in_(select(folders.c.id)), Chat.id.in_(continue_shared)
         )
         live_ids = select(Chat.id).where(live_access)
-        shared = or_(Chat.user_id != user.id, Chat.share_id.is_not(None), Chat.folder_id.in_(shared_folder_ids))
         rank = (
             title_rank(Chat.title, query)
             if query
@@ -260,7 +275,7 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
             live_access,
             Chat.archived.is_(False),
             func.coalesce(Chat.meta['internal'].as_boolean(), False).is_(False),
-            sharing_filter(Chat.user_id, shared),
+            sharing_filter(Chat.user_id),
         )
         if scope:
             stmt = stmt.where(Chat.folder_id.in_(scoped_folders))
@@ -269,6 +284,8 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
             stmt = select(SharedChat).where(
                 granted('shared_chat', SharedChat.chat_id), ~SharedChat.chat_id.in_(live_ids)
             )
+            if sharing == 'shared':
+                stmt = stmt.where(SharedChat.user_id != user.id)
             sources['shared'] = (
                 SharedChat,
                 apply_match(stmt, SharedChat),
@@ -290,7 +307,7 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
         stmt = AccessGrants.has_permission_filter(
             db, select(Note, pinned, note_shared), Note, {'user_id': user.id, 'group_ids': groups}, 'note', 'read'
         )
-        stmt = stmt.where(sharing_filter(Note.user_id, or_(Note.user_id != user.id, note_shared)))
+        stmt = stmt.where(sharing_filter(Note.user_id))
         stmt = apply_match(stmt, Note, Note.data['content']['md'].as_string())
         rank = title_rank(Note.title, query) if query else case((pinned, 0), else_=3)
         sources['note'] = (Note, stmt, rank, cast(Note.updated_at.op('/')(literal(1_000_000_000)), BigInteger))
@@ -298,8 +315,7 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
     if 'message' in enabled and kind in ('all', 'message') and not scope.startswith('folder:'):
         ids = [scope.removeprefix('channel:')] if scope else list(channel_map)
         stmt = select(Message, User.name).outerjoin(User, User.id == Message.user_id).where(Message.channel_id.in_(ids))
-        if sharing == 'mine':
-            stmt = stmt.where(Message.user_id == user.id)
+        stmt = stmt.where(sharing_filter(Message.user_id))
         for term in terms:
             stmt = stmt.where(Message.content.ilike(pattern(term), escape='\\'))
         sources['message'] = (
@@ -395,7 +411,7 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
                 'message:' + item.id,
                 'message',
                 row[1] or 'Message',
-                '#' + channel.name,
+                channel_names[channel.id] if channel.type == 'dm' else '#' + channel_names[channel.id],
                 item.content,
                 url,
                 match.updated_at,

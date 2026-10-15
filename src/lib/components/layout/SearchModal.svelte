@@ -277,7 +277,7 @@
 						class="{quietButton} !h-[1.375rem] bg-gray-50/60 dark:bg-gray-800/40"
 						on:click={() => (sharing = 'all')}
 						aria-label={$i18n.t('Remove sharing filter')}
-						>{$i18n.t(sharing === 'mine' ? 'Mine' : 'Shared')}<XMark className="size-2.5" /></button
+						>{$i18n.t(sharing === 'mine' ? 'Created by you' : 'Shared with you')}<XMark className="size-2.5" /></button
 					>{/if}
 				{#if scope}<button
 						class="{quietButton} !h-[1.375rem] max-w-48 bg-gray-50/60 dark:bg-gray-800/40"
@@ -316,11 +316,11 @@
 				<DropdownMenu
 					><div class="px-2 py-1">
 						<div class="flex items-center justify-between gap-3 py-1">
-							<span class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('Visibility')}</span
-							><SettingsSelect bind:value={sharing} ariaLabel={$i18n.t('Visibility')}
-								><option value="all">{$i18n.t('All accessible content')}</option><option
-									value="mine">{$i18n.t('Mine')}</option
-								><option value="shared">{$i18n.t('Shared')}</option></SettingsSelect
+							<span class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('View')}</span
+							><SettingsSelect bind:value={sharing} ariaLabel={$i18n.t('View')}
+								><option value="all">{$i18n.t('All')}</option><option
+									value="mine">{$i18n.t('Created by you')}</option
+								><option value="shared">{$i18n.t('Shared with you')}</option></SettingsSelect
 							>
 						</div>
 						<div class="flex items-center justify-between gap-3 py-1">
