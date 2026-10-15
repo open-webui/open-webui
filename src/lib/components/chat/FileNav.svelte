@@ -58,6 +58,8 @@
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
+	import CommentFilePreview from './FileNav/CommentFilePreview.svelte';
+	import { supportsComments } from '$lib/utils/comments/types';
 	import FileComparisonModal from './FileNav/FileComparisonModal.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import Icon from './FileNav/Icon.svelte';
@@ -339,6 +341,7 @@
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
+	let commentGeneration = 0;
 	let fileSearchTarget: FileSearchTarget | null = null;
 	let documentTargetPage: number | null = null;
 
@@ -358,7 +361,7 @@
 	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
 	const CSV_EXTS = new Set(['csv', 'tsv']);
 	const HTML_EXTS = new Set(['html', 'htm']);
-	const OFFICE_EXTS = new Set(['docx', 'xlsx', 'pptx']);
+	const OFFICE_EXTS = new Set(['docx', 'xlsx', 'xls', 'pptx']);
 	const getFileExt = (path: string | null) => path?.split('.').pop()?.toLowerCase() ?? '';
 
 	$: isMarkdown = MD_EXTS.has(getFileExt(selectedFile));
@@ -733,6 +736,7 @@
 
 	// ── File preview management ──────────────────────────────────────────
 	const clearFilePreview = () => {
+		commentGeneration++;
 		fileSearchTarget = null;
 		documentTargetPage = null;
 		fileContent = null;
@@ -878,6 +882,10 @@
 		fileLoading = true;
 		clearFilePreview();
 		documentTargetPage = normalizeDocumentTargetPage(options.page);
+		if (supportsComments(filePath)) {
+			fileLoading = false;
+			return;
+		}
 
 		if (isImage(filePath)) {
 			const result = await downloadFileBlob(
@@ -1940,58 +1948,70 @@
 					}}
 				/>
 			{:else if selectedFile !== null}
-				<FilePreview
-					bind:this={filePreviewRef}
-					bind:editing
-					bind:showRaw
-					bind:saving
-					bind:currentSlide
-					{selectedFile}
-					readOnly={!selectedFileWritable}
-					{fileLoading}
-					{fileImageUrl}
-					{fileVideoUrl}
-					{fileAudioUrl}
-					{filePdfData}
-					{fileSqliteData}
-					{fileDocxData}
-					{fileContent}
-					{fileOfficeHtml}
-					{fileOfficeSlides}
-					targetPage={documentTargetPage}
-					{excelSheetNames}
-					{selectedExcelSheet}
-					searchTarget={fileSearchTarget}
-					onSheetChange={async (sheet) => {
-						if (!excelWorkbook) return;
-						selectedExcelSheet = sheet;
-						const { excelToTable } = await import('$lib/utils/excelToTable');
-						const result = await excelToTable(excelWorkbook.Sheets[sheet]);
-						const DOMPurify = (await import('dompurify')).default;
-						fileOfficeHtml = DOMPurify.sanitize(result.html);
-					}}
-					baseUrl={previewBaseUrl}
-					apiKey={selectedTerminal?.key ?? ''}
-					overlay={overlay || isDraggingHandle}
-					onSave={async (content) => {
-						const terminal = selectedTerminal;
-						if (!terminal || !selectedFile || !selectedFileWritable) return;
-						const fileName = selectedFile.split('/').pop() ?? 'file';
-						const dir = selectedFile.substring(0, selectedFile.lastIndexOf('/') + 1) || '/';
-						const file = new File([content], fileName, { type: 'text/plain' });
-						const result = await uploadToTerminal(
-							terminal.url,
-							terminal.key,
-							dir,
-							file,
-							chatId ?? undefined
-						);
-						toast[result ? 'success' : 'error'](
-							result ? $i18n.t('File saved') : $i18n.t('Failed to save file')
-						);
-						if (result) fileContent = content;
-					}}
-				/>
+				{#if supportsComments(selectedFile) && selectedTerminal}
+					{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
+						<CommentFilePreview
+							path={selectedFile}
+							baseUrl={selectedTerminal.url}
+							apiKey={selectedTerminal.key}
+							{chatId}
+							targetPage={documentTargetPage}
+						/>
+					{/key}
+				{:else}
+					<FilePreview
+						bind:this={filePreviewRef}
+						bind:editing
+						bind:showRaw
+						bind:saving
+						bind:currentSlide
+						{selectedFile}
+						readOnly={!selectedFileWritable}
+						{fileLoading}
+						{fileImageUrl}
+						{fileVideoUrl}
+						{fileAudioUrl}
+						{filePdfData}
+						{fileSqliteData}
+						{fileDocxData}
+						{fileContent}
+						{fileOfficeHtml}
+						{fileOfficeSlides}
+						targetPage={documentTargetPage}
+						{excelSheetNames}
+						{selectedExcelSheet}
+						searchTarget={fileSearchTarget}
+						onSheetChange={async (sheet) => {
+							if (!excelWorkbook) return;
+							selectedExcelSheet = sheet;
+							const { excelToTable } = await import('$lib/utils/excelToTable');
+							const result = await excelToTable(excelWorkbook.Sheets[sheet]);
+							const DOMPurify = (await import('dompurify')).default;
+							fileOfficeHtml = DOMPurify.sanitize(result.html);
+						}}
+						baseUrl={previewBaseUrl}
+						apiKey={selectedTerminal?.key ?? ''}
+						overlay={overlay || isDraggingHandle}
+						onSave={async (content) => {
+							const terminal = selectedTerminal;
+							if (!terminal || !selectedFile || !selectedFileWritable) return;
+							const fileName = selectedFile.split('/').pop() ?? 'file';
+							const dir = selectedFile.substring(0, selectedFile.lastIndexOf('/') + 1) || '/';
+							const file = new File([content], fileName, { type: 'text/plain' });
+							const result = await uploadToTerminal(
+								terminal.url,
+								terminal.key,
+								dir,
+								file,
+								chatId ?? undefined
+							);
+							toast[result ? 'success' : 'error'](
+								result ? $i18n.t('File saved') : $i18n.t('Failed to save file')
+							);
+							if (result) fileContent = content;
+						}}
+					/>
+				{/if}
 			{:else}
 				{#if isSearching}
 					{#if matchLoading}

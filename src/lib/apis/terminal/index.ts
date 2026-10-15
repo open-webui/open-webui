@@ -396,12 +396,13 @@ export const downloadFileBlob = async (
 	baseUrl: string,
 	apiKey: string,
 	path: string,
-	sessionId?: string
+	sessionId?: string,
+	signal?: AbortSignal
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`;
 	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
-	const res = await fetch(url, { headers }).catch(() => null);
+	const res = await fetch(url, { headers, signal }).catch(() => null);
 
 	if (!res || !res.ok) return null;
 
@@ -415,12 +416,13 @@ export const downloadFilePreview = async (
 	baseUrl: string,
 	apiKey: string,
 	path: string,
-	sessionId?: string
+	sessionId?: string,
+	signal?: AbortSignal
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}&preview=true`;
 	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
-	const res = await fetch(url, { headers }).catch(() => null);
+	const res = await fetch(url, { headers, signal }).catch(() => null);
 
 	if (!res) return null;
 	if (!res.ok) return null;
