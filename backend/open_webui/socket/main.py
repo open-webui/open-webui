@@ -431,7 +431,12 @@ async def crew_mcp_query(sid, data):
             return
 
         log.info(
-            f"CrewMCP WebSocket query from user {user_session. get('id')}: {query[: 100]}"
+            "CrewMCP WebSocket query: user=%s chat_id=%s model=%s query_len=%d tools=%d",
+            user_session.get("id"),
+            chat_id,
+            model,
+            len(query),
+            len(selected_tools or []),
         )
 
         # Emit processing status
@@ -468,25 +473,9 @@ async def crew_mcp_query(sid, data):
         # Get the Graph access token from session (stored during websocket connect)
         user_access_token = user_session.get("graph_access_token")
 
-        # **ENHANCED LOGGING**
-        log.info(f"crew-mcp-query:  Checking for graph_access_token in session")
         log.info(
-            f"crew-mcp-query: 'graph_access_token' in user_session = {('graph_access_token' in user_session)}"
+            "crew-mcp-query: graph_access_token present=%s", bool(user_access_token)
         )
-        log.info(f"crew-mcp-query:  user_access_token type = {type(user_access_token)}")
-        log.info(f"crew-mcp-query: user_access_token bool = {bool(user_access_token)}")
-
-        if user_access_token:
-            log.info(
-                f"crew-mcp-query: Token found!  Length={len(user_access_token)}, First 50 chars={user_access_token[:50]}"
-            )
-        else:
-            log.warning(
-                f"crew-mcp-query: NO TOKEN FOUND in session.  Session has keys: {list(user_session. keys())}"
-            )
-            log.warning(
-                f"crew-mcp-query: user_access_token value = {repr(user_access_token)}"
-            )
 
         use_delegated_access = os.getenv(
             "SHP_USE_DELEGATED_ACCESS", "false"
@@ -590,7 +579,8 @@ async def crew_mcp_query(sid, data):
         log.info(f"CrewMCP WebSocket query completed successfully")
 
     except Exception as e:
-        log.error(f"CrewMCP WebSocket error: {e}", exc_info=True)
+        # Exception text can echo the prompt or provider payload; log the type only.
+        log.error("CrewMCP WebSocket error: %s", type(e).__name__)
         await sio.emit("crew-mcp-error", {"error": str(e), "code": 500}, room=sid)
 
 

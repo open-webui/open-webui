@@ -11,7 +11,7 @@ log.setLevel(SRC_LOG_LEVELS["WEBHOOK"])
 
 def post_webhook(url: str, message: str, event_data: dict) -> bool:
     try:
-        log.debug(f"post_webhook: {url}, {message}, {event_data}")
+        log.debug("post_webhook: action=%s", event_data.get("action"))
         payload = {}
 
         # Slack and Google Chat Webhooks
@@ -50,11 +50,10 @@ def post_webhook(url: str, message: str, event_data: dict) -> bool:
         else:
             payload = {**event_data}
 
-        log.debug(f"payload: {payload}")
         r = requests.post(url, json=payload)
         r.raise_for_status()
-        log.debug(f"r.text: {r.text}")
         return True
     except Exception as e:
-        log.exception(e)
+        # Webhook URLs embed secrets and requests errors include the URL.
+        log.error("post_webhook failed: %s", type(e).__name__)
         return False

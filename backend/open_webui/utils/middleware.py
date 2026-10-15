@@ -365,7 +365,7 @@ async def chat_completion_tools_handler(
             "__files__": metadata.get("files", []),
         },
     )
-    log.info(f"{tools=}")
+    log.info("Tools loaded: %s", sorted(tools.keys()))
 
     specs = [tool["spec"] for tool in tools.values()]
     tools_specs = json.dumps(specs)
@@ -378,24 +378,14 @@ async def chat_completion_tools_handler(
     tools_function_calling_prompt = tools_function_calling_generation_template(
         template, tools_specs
     )
-    log.info(f"{tools_function_calling_prompt=}")
     payload = get_tools_function_calling_payload(
         body["messages"], task_model_id, tools_function_calling_prompt
     )
 
-    # Debug: Log the user query
-    user_message = get_last_user_message(body["messages"])
-    log.info("=== USER QUERY FOR FUNCTION CALLING ===")
-    log.info(f"User query: {user_message}")
-    log.info("======================================")
-
     try:
         response = await generate_chat_completion(request, form_data=payload, user=user)
-        log.debug(f"{response=}")
         content = await get_content_from_response(response)
-        log.info("=== FUNCTION CALLING RESPONSE ===")
-        log.info(f"Model response for tool calling: {content}")
-        log.info("==================================")
+        log.debug("Function calling response received (length=%d)", len(content or ""))
 
         if not content:
             return body, {}
@@ -414,15 +404,10 @@ async def chat_completion_tools_handler(
             # Parse multiple JSON objects from the response
             tool_calls = []
 
-            log.info("=== PARSING TOOL CALLS ===")
-            log.info(f"Raw content to parse: {repr(content)}")
-            log.info("==========================")
-
             # First, try to parse as a single JSON array
             try:
                 if content.strip().startswith("[") and content.strip().endswith("]"):
                     parsed_array = json.loads(content.strip())
-                    log.debug(f"Parsed tool calls as JSON array: {parsed_array}")
 
                     # Handle case where array elements are JSON strings that need to be parsed again
                     tool_calls = []
@@ -432,18 +417,13 @@ async def chat_completion_tools_handler(
                             try:
                                 parsed_item = json.loads(item)
                                 tool_calls.append(parsed_item)
-                                log.debug(f"Parsed JSON string in array: {parsed_item}")
                             except json.JSONDecodeError:
-                                log.warning(
-                                    f"Failed to parse array item as JSON: {item}"
-                                )
+                                log.warning("Failed to parse array item as JSON")
                         elif isinstance(item, dict):
                             # Already a dictionary, use as-is
                             tool_calls.append(item)
                         else:
-                            log.warning(
-                                f"Unexpected array item type: {type(item)}, value: {item}"
-                            )
+                            log.warning(f"Unexpected array item type: {type(item)}")
                 else:
                     raise json.JSONDecodeError("Not a JSON array", content, 0)
             except json.JSONDecodeError:
@@ -455,11 +435,8 @@ async def chat_completion_tools_handler(
                         try:
                             tool_call = json.loads(line)
                             tool_calls.append(tool_call)
-                            log.debug(f"Parsed individual tool call: {tool_call}")
                         except json.JSONDecodeError as e:
-                            log.warning(
-                                f"Failed to parse line as JSON: {line}, error: {e}"
-                            )
+                            log.warning(f"Failed to parse line as JSON: {e.msg}")
                             continue
 
                 # If no valid tool calls found, try to find all JSON objects in the content
@@ -475,7 +452,6 @@ async def chat_completion_tools_handler(
                             tool_call = json.loads(match)
                             if "name" in tool_call:  # Ensure it looks like a tool call
                                 tool_calls.append(tool_call)
-                                log.debug(f"Parsed tool call from regex: {tool_call}")
                         except json.JSONDecodeError:
                             continue
 
@@ -491,15 +467,15 @@ async def chat_completion_tools_handler(
                         return body, {}
 
                     json_content = content[json_start:json_end]
-                    log.debug(f"Extracted JSON content: {json_content}")
 
                     try:
                         result = json.loads(json_content)
                         tool_calls = [result]
                     except json.JSONDecodeError as json_error:
-                        log.error(f"JSON parsing failed for content: {json_content}")
-                        log.error(f"JSON error: {json_error}")
-                        log.error(f"Full response content: {repr(content)}")
+                        log.error(
+                            f"JSON parsing failed for tool call response: {json_error.msg} "
+                            f"(response length={len(content)})"
+                        )
                         # Try to find a more complete JSON object by looking for balanced braces
                         brace_count = 0
                         json_end_corrected = json_start
@@ -514,7 +490,6 @@ async def chat_completion_tools_handler(
 
                         if json_end_corrected > json_start:
                             json_content = content[json_start:json_end_corrected]
-                            log.debug(f"Trying corrected JSON content: {json_content}")
                             try:
                                 result = json.loads(json_content)
                                 tool_calls = [result]
@@ -529,11 +504,10 @@ async def chat_completion_tools_handler(
                             )
                             return body, {}
 
-            log.info("=== PARSED TOOL CALLS ===")
-            log.info(f"Total tool calls extracted: {len(tool_calls)}")
-            for i, call in enumerate(tool_calls):
-                log.info(f"Tool call {i}: {call}")
-            log.info("=========================")
+            log.info(
+                "Tool calls extracted: %s",
+                [call.get("name") for call in tool_calls if isinstance(call, dict)],
+            )
 
             # Process all tool calls
             for tool_call in tool_calls:
@@ -545,10 +519,15 @@ async def chat_completion_tools_handler(
                     continue
 
                 tool_function_params = tool_call.get("parameters", {})
-                log.info("=== TOOL CALL DEBUG ===")
-                log.info(f"Tool: {tool_function_name}")
-                log.info(f"Raw parameters from model: {tool_function_params}")
-                log.info("=======================)")
+                log.info(
+                    "Tool call: %s params=%s",
+                    tool_function_name,
+                    (
+                        sorted(tool_function_params)
+                        if isinstance(tool_function_params, dict)
+                        else type(tool_function_params).__name__
+                    ),
+                )
 
                 try:
                     # Get all parameters from the tool spec, not just required ones
@@ -566,7 +545,6 @@ async def chat_completion_tools_handler(
                         for k, v in tool_function_params.items()
                         if k in all_params and v is not None and v != "null" and v != ""
                     }
-                    log.info(f"Filtered parameters to pass to tool: {filtered_params}")
                     tool_output = await tool_function(**filtered_params)
 
                 except Exception as e:
@@ -574,8 +552,8 @@ async def chat_completion_tools_handler(
 
                 if isinstance(tool_output, str):
                     log.info(
-                        f"Tool {tool_function_name} output: {tool_output[:200]}..."
-                    )  # Log first 200 chars
+                        f"Tool {tool_function_name} output length: {len(tool_output)}"
+                    )
                     if tools[tool_function_name]["citation"]:
                         source_entry = {
                             "source": {
@@ -615,7 +593,11 @@ async def chat_completion_tools_handler(
         log.exception(f"Error: {e}")
         content = None
 
-    log.debug(f"tool_contexts: {sources}")
+    log.debug(
+        "tool_contexts: %d sources, document lengths=%s",
+        len(sources),
+        [len(doc) for source in sources for doc in source.get("document", [])],
+    )
 
     if skip_files and "files" in body.get("metadata", {}):
         del body["metadata"]["files"]
@@ -855,7 +837,7 @@ async def chat_wiki_grounding_handler(
         log.info("🔍 No user message found, skipping grounding")
         return form_data
 
-    log.info(f"🔍 Processing user message for grounding: {user_message}")
+    log.info("🔍 Processing user message for grounding (length=%d)", len(user_message))
 
     try:
         # Get temporal context to prioritize current information
@@ -894,7 +876,6 @@ async def chat_wiki_grounding_handler(
             log.debug(
                 f"🔍 Generated grounding context length: {len(grounding_context)}"
             )
-            log.debug(f"🔍 Grounding context preview: {grounding_context[:200]}...")
 
             # Add the grounding context to the system message or create one
             system_message_found = False
@@ -1242,7 +1223,9 @@ async def chat_completion_files_handler(
         except Exception as e:
             log.exception(e)
 
-        log.debug(f"[chat_completion_file_handler] rag contexts sources: {sources}")
+        log.debug(
+            "[chat_completion_file_handler] rag contexts: %d sources", len(sources)
+        )
 
     return body, {"sources": sources}
 
@@ -1281,7 +1264,6 @@ def apply_params_to_form_data(form_data, model):
 
 async def process_chat_payload(request, form_data, metadata, user, model):
     form_data = apply_params_to_form_data(form_data, model)
-    log.debug(f"form_data: {form_data}")
 
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)
@@ -1485,7 +1467,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         context_string = context_string.strip()
         log.debug(f"Generated context string length: {len(context_string)}")
-        log.debug(f"Context string preview: {context_string[:500]}...")
 
         # Truncate context if it exceeds token limit to prevent blowing context window
         fallback_max_tokens = RAG_CONTEXT_FALLBACK_MAX_TOKENS.value
@@ -1547,18 +1528,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 }
             )
 
-        if (
-            log.isEnabledFor(logging.DEBUG)
-            and sources
-            and any(
-                "TOOL:" in source.get("source", {}).get("name", "")
-                for source in sources
-            )
-        ):
-            log.debug("=== COMPLETE TOOL CONTEXT DEBUG ===")
-            log.debug(f"Full context string: {context_string}")
-            log.debug("=== END COMPLETE TOOL CONTEXT DEBUG ===")
-
         prompt = get_last_user_message(form_data["messages"])
 
         if prompt is None:
@@ -1577,7 +1546,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             request.app.state.config.RAG_TEMPLATE, context_string, prompt
         )
         log.debug(f"RAG template content length: {len(rag_content)}")
-        log.debug(f"RAG template preview: {rag_content[:500]}...")
 
         if model["owned_by"] == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
@@ -1590,14 +1558,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 form_data["messages"],
             )
 
-        # if log level is debug, log the messages being sent to the model
-        if log.isEnabledFor(logging.DEBUG):
-            # Log the final messages to see what gets sent to the model
-            log.debug(f"Final messages count: {len(form_data['messages'])}")
-            for idx, msg in enumerate(form_data["messages"]):
-                log.debug(
-                    f"Message {idx} ({msg['role']}): {msg['content'][:300]}..."
-                )  # Log first 300 chars
+        log.debug(f"Final messages count: {len(form_data['messages'])}")
 
     # If there are citations, add them to the data_items
     sources = [source for source in sources if source.get("source", {}).get("name", "")]

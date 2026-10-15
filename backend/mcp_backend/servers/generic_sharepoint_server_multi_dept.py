@@ -757,7 +757,7 @@ async def _list_folder_contents_impl(
                                 break
                             else:
                                 logger.warning(
-                                    f"Found folder but failed to retrieve contents: {items_data}"
+                                    "Found folder but failed to retrieve contents"
                                 )
 
                     if not folder_found:

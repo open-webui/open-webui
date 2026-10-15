@@ -152,9 +152,7 @@ async def generate_title(
         models,
     )
 
-    log.debug(
-        f"generating chat title using model {task_model_id} for user {user.email}"
-    )
+    log.debug(f"generating chat title using model {task_model_id} for user {user.id}")
 
     if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
@@ -244,9 +242,7 @@ async def generate_chat_tags(
         models,
     )
 
-    log.debug(
-        f"generating chat tags using model {task_model_id} for user {user.email} "
-    )
+    log.debug(f"generating chat tags using model {task_model_id} for user {user.id} ")
 
     if request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE
@@ -301,7 +297,7 @@ async def generate_image_prompt(
     )
 
     log.debug(
-        f"generating image prompt using model {task_model_id} for user {user.email} "
+        f"generating image prompt using model {task_model_id} for user {user.id} "
     )
 
     if request.app.state.config.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE != "":
@@ -375,7 +371,7 @@ async def generate_queries(
     )
 
     log.debug(
-        f"generating {type} queries using model {task_model_id} for user {user.email}"
+        f"generating {type} queries using model {task_model_id} for user {user.id}"
     )
 
     if (request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE).strip() != "":
@@ -448,7 +444,7 @@ async def generate_autocompletion(
     )
 
     log.debug(
-        f"generating autocompletion using model {task_model_id} for user {user.email}"
+        f"generating autocompletion using model {task_model_id} for user {user.id}"
     )
 
     if (request.app.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE).strip() != "":
@@ -503,7 +499,7 @@ async def generate_emoji(
         models,
     )
 
-    log.debug(f"generating emoji using model {task_model_id} for user {user.email} ")
+    log.debug(f"generating emoji using model {task_model_id} for user {user.id} ")
 
     template = DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE
 
@@ -562,7 +558,7 @@ async def generate_moa_response(
         models,
     )
 
-    log.debug(f"generating MOA model {task_model_id} for user {user.email} ")
+    log.debug(f"generating MOA model {task_model_id} for user {user.id} ")
 
     template = DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE
 

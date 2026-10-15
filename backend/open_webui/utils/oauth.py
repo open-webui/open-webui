@@ -44,6 +44,42 @@ from open_webui.utils.webhook import post_webhook
 
 log = logging.getLogger(__name__)
 
+# `error` can come straight from the callback query string, so only log known codes.
+OAUTH_LOGGABLE_ERROR_CODES = frozenset(
+    {
+        # RFC 6749 authorization and token endpoint errors
+        "invalid_request",
+        "unauthorized_client",
+        "access_denied",
+        "unsupported_response_type",
+        "invalid_scope",
+        "server_error",
+        "temporarily_unavailable",
+        "invalid_client",
+        "invalid_grant",
+        "unsupported_grant_type",
+        # OpenID Connect Core errors
+        "interaction_required",
+        "login_required",
+        "account_selection_required",
+        "consent_required",
+        "invalid_request_uri",
+        "invalid_request_object",
+        "request_not_supported",
+        "request_uri_not_supported",
+        "registration_not_supported",
+        # Authlib client-side errors
+        "mismatching_state",
+        "missing_code",
+        "missing_token",
+        "missing_token_type",
+        "token_expired",
+        "token_invalid",
+        "unsupported_token_type",
+        "insecure_transport",
+    }
+)
+
 auth_manager_config = AppConfig()
 auth_manager_config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 auth_manager_config.ENABLE_OAUTH_SIGNUP = ENABLE_OAUTH_SIGNUP
@@ -190,32 +226,44 @@ class OAuthManager:
         try:
             token = await client.authorize_access_token(request)
         except Exception as e:
-            log.warning(f"OAuth callback error: {e}")
+            error_code = getattr(e, "error", None)
+            log.warning(
+                "OAuth callback error: %s %s",
+                type(e).__name__,
+                error_code if error_code in OAUTH_LOGGABLE_ERROR_CODES else "other",
+            )
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         user_data: UserInfo = token.get("userinfo")
         if not user_data:
             user_data: UserInfo = await client.userinfo(token=token)
         if not user_data:
-            log.warning(f"OAuth callback failed, user data is missing: {token}")
+            log.warning("OAuth callback failed, user data is missing")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
         sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
         if not sub:
-            log.warning(f"OAuth callback failed, sub is missing: {user_data}")
+            log.warning(
+                "OAuth callback failed, sub is missing; claims present: %s",
+                sorted(user_data.keys()),
+            )
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         provider_sub = f"{provider}@{sub}"
         email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
         email = user_data.get(email_claim, "").lower()
         # We currently mandate that email addresses are provided
         if not email:
-            log.warning(f"OAuth callback failed, email is missing: {user_data}")
+            log.warning(
+                "OAuth callback failed, email claim '%s' is missing; claims present: %s",
+                email_claim,
+                sorted(user_data.keys()),
+            )
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         if (
             "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
             and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
         ):
             log.warning(
-                f"OAuth callback failed, e-mail domain is not in the list of allowed domains: {user_data}"
+                "OAuth callback failed, e-mail domain is not in the list of allowed domains"
             )
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 

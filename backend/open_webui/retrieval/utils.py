@@ -90,7 +90,7 @@ async def query_doc(
         )
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.info("query_doc: %d results", len(result.ids[0]) if result.ids else 0)
 
         return result
     except Exception as e:
@@ -103,7 +103,7 @@ async def get_doc(collection_name: str, user: UserModel = None):
         result = await VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.info("get_doc: %d results", len(result.ids[0]) if result.ids else 0)
 
         return result
     except Exception as e:
@@ -167,8 +167,7 @@ async def query_doc_with_hybrid_search(
         }
 
         log.info(
-            "query_doc_with_hybrid_search:result "
-            + f"{result['metadatas']} {result['distances']}"
+            "query_doc_with_hybrid_search: %d results", len(result["documents"][0])
         )
         return result
     except Exception as e:
@@ -385,7 +384,7 @@ async def get_sources_from_files(
     full_context=False,
 ):
     log.debug(
-        f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
+        f"get_sources_from_files: files={len(files)} queries={len(queries)} full_context={full_context}"
     )
 
     extracted_collections = []
@@ -480,9 +479,7 @@ async def get_sources_from_files(
             if full_context:
                 try:
                     context = await get_all_items_from_collections(collection_names)
-                    log.debug(
-                        f"[get_sources_from_files] Full context retrieved: {context}"
-                    )
+                    log.debug("[get_sources_from_files] Full context retrieved")
                 except Exception as e:
                     log.exception(e)
 

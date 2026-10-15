@@ -47,12 +47,14 @@ def request_json_with_timeout(
         log.error("%s timeout after %ss", provider_name, timeout)
         raise
     except requests.exceptions.RequestException as e:
-        log.error("%s request failed: %s", provider_name, e)
-        try:
-            if e.response is not None:
-                log.error("%s error details: %s", provider_name, e.response.json())
-        except Exception:
-            pass
+        # Exception text and error bodies can echo the request URL (query, API key).
+        status_code = e.response.status_code if e.response is not None else None
+        log.error(
+            "%s request failed: %s (status=%s)",
+            provider_name,
+            type(e).__name__,
+            status_code,
+        )
         raise
     except ValueError as e:
         status_code = response.status_code if "response" in locals() else "unknown"

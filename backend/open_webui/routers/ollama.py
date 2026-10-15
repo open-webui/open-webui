@@ -801,7 +801,7 @@ async def embed(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    log.info(f"generate_ollama_batch_embeddings {form_data}")
+    log.info("generate_ollama_batch_embeddings model=%s", form_data.model)
 
     if url_idx is None:
         await get_all_models(request)
@@ -870,7 +870,7 @@ async def embeddings(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    log.info(f"generate_ollama_embeddings {form_data}")
+    log.info("generate_ollama_embeddings model=%s", form_data.model)
 
     if url_idx is None:
         await get_all_models(request)

@@ -477,7 +477,6 @@ def transcribe(request: Request, file_path):
         with open(transcript_file, "w") as f:
             json.dump(data, f)
 
-        log.debug(data)
         return data
     elif request.app.state.config.STT_ENGINE == "openai":
         if is_mp4_audio(file_path):

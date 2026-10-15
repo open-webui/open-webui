@@ -153,14 +153,10 @@ class WikiSearchGrounder:
                 # Create a new lock for this query
                 query_lock = asyncio.Lock()
                 cls._query_locks[query_hash] = query_lock
-                log.debug(
-                    f"🔐 Created new query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
-                )
+                log.debug(f"🔐 Created new query lock (hash: {query_hash[:8]})")
             else:
                 query_lock = cls._query_locks[query_hash]
-                log.debug(
-                    f"🔐 Reusing existing query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
-                )
+                log.debug(f"🔐 Reusing existing query lock (hash: {query_hash[:8]})")
 
             return query_lock
 
@@ -173,7 +169,7 @@ class WikiSearchGrounder:
 
         # Log attempt to acquire query lock
         log.debug(
-            f"🚦 [{operation_name}] Requesting query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
+            f"🚦 [{operation_name}] Requesting query lock (hash: {query_hash[:8]})"
         )
 
         start_time = time.time()
@@ -182,11 +178,11 @@ class WikiSearchGrounder:
         wait_time = time.time() - start_time
         if wait_time > 0.1:  # Log if we waited more than 100ms
             log.info(
-                f"🔐 [{operation_name}] Acquired query lock after {wait_time:.2f}s wait for: '{query[:50]}...'"
+                f"🔐 [{operation_name}] Acquired query lock after {wait_time:.2f}s wait (hash: {query_hash[:8]})"
             )
         else:
             log.debug(
-                f"🔐 [{operation_name}] Acquired query lock immediately for: '{query[:50]}...'"
+                f"🔐 [{operation_name}] Acquired query lock immediately (hash: {query_hash[:8]})"
             )
 
         return query_lock, query_hash, start_time
@@ -203,7 +199,7 @@ class WikiSearchGrounder:
         total_time = time.time() - start_time
         query_lock.release()
         log.debug(
-            f"🔐 [{operation_name}] Released query lock after {total_time:.2f}s for: '{query[:50]}...' (hash: {query_hash[:8]})"
+            f"🔐 [{operation_name}] Released query lock after {total_time:.2f}s (hash: {query_hash[:8]})"
         )
 
     @classmethod
@@ -387,7 +383,7 @@ class WikiSearchGrounder:
             detected_lang = self._detect_language(text)
             if detected_lang == "fr":
                 translated_text = self.translator(text)
-                log.info(f"Translated query: '{text}' -> '{translated_text}'")
+                log.info("Translated query from French")
                 return translated_text
             return text
         except Exception as e:
@@ -491,9 +487,7 @@ class WikiSearchGrounder:
             )
 
             if temporal_enhanced_query != search_query:
-                log.info(
-                    f"🕒 Applied temporal enhancement after translation: '{search_query}' -> '{temporal_enhanced_query}'"
-                )
+                log.info("🕒 Applied temporal enhancement after translation")
                 search_query = temporal_enhanced_query
 
             # Use basic search with translated query - get more results for reranking
@@ -722,14 +716,12 @@ class WikiSearchGrounder:
                 enhancement_desc = (
                     " + ".join(enhancement_type) if enhancement_type else "unknown"
                 )
-                log.info(
-                    f"🔍 Using enhanced query ({enhancement_desc}): '{query}' -> '{enhanced_query}'"
-                )
+                log.info(f"🔍 Using enhanced query ({enhancement_desc})")
                 query = enhanced_query
         # Note: Temporal enhancement is now applied after translation in the search() method
 
         log.info("🔍 Wiki grounding enabled, proceeding with search")
-        log.info(f"🔍 Ground query starting for: '{query[:50]}...'")
+        log.info(f"🔍 Ground query starting (length={len(query)})")
 
         # Acquire query-specific lock to prevent concurrent processing of identical queries
         query_lock, query_hash, query_start_time = await self._acquire_query_lock(

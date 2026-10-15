@@ -1013,7 +1013,7 @@ async def process_file(
                 ]
             text_content = " ".join([doc.page_content for doc in docs])
 
-        log.debug(f"text_content: {text_content}")
+        log.debug(f"text_content length: {len(text_content)}")
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
@@ -1088,7 +1088,7 @@ async def process_text(
         )
     ]
     text_content = form_data.content
-    log.debug(f"text_content: {text_content}")
+    log.debug(f"text_content length: {len(text_content)}")
 
     result = await save_docs_to_vector_db(request, docs, collection_name)
     if result:
@@ -1121,7 +1121,7 @@ async def process_youtube_video(
 
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {content}")
+        log.debug(f"text_content length: {len(content)}")
 
         await save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
@@ -1163,7 +1163,7 @@ async def process_web(
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
 
-        log.debug(f"text_content: {content}")
+        log.debug(f"text_content length: {len(content)}")
 
         await save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
@@ -1404,7 +1404,7 @@ async def process_web_search(
             try:
                 request_timeout = get_capped_request_timeout()
                 log.debug(
-                    f"[process_web_search] query: '{form_data.query}', engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
+                    f"[process_web_search] engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
                 )
                 web_results = await asyncio.to_thread(
                     search_web,
@@ -1425,7 +1425,9 @@ async def process_web_search(
                     detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
                 )
 
-            log.debug(f"[process_web_search] web_results: {web_results}")
+            log.debug(
+                f"[process_web_search] web_results: {len(web_results) if web_results else 0}"
+            )
 
             urls = []
             content_load_start = time.monotonic()
@@ -1563,9 +1565,7 @@ async def process_web_search(
                 "filenames": loaded_urls,
                 "loaded_count": len(loaded_docs),
             }
-        log.error(
-            f"[process_web_search] exceeded total timeout of {total_timeout}s for query: '{form_data.query}'"
-        )
+        log.error(f"[process_web_search] exceeded total timeout of {total_timeout}s")
         raise HTTPException(
             status_code=status.HTTP_408_REQUEST_TIMEOUT,
             detail=f"Web search timed out after {total_timeout} seconds",

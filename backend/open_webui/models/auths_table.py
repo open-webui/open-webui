@@ -68,7 +68,7 @@ class AuthsTable:
                 return None
 
     def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
-        log.info(f"authenticate_user: {email}")
+        log.info("authenticate_user")
         try:
             with get_db() as db:
                 auth = db.query(Auth).filter_by(email=email, active=True).first()
@@ -84,7 +84,7 @@ class AuthsTable:
             return None
 
     def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_api_key: {api_key}")
+        log.info("authenticate_user_by_api_key")
         # if no api_key, return None
         if not api_key:
             return None
@@ -96,7 +96,7 @@ class AuthsTable:
             return False
 
     def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_trusted_header: {email}")
+        log.info("authenticate_user_by_trusted_header")
         try:
             with get_db() as db:
                 auth = db.query(Auth).filter_by(email=email, active=True).first()
