@@ -1383,7 +1383,7 @@
 													? 'visible'
 													: 'hover-reveal'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 												on:click={() => {
-													continueResponse();
+													continueResponse(message);
 												}}
 											>
 												<svg
