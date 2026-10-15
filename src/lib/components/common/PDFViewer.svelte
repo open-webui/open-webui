@@ -687,4 +687,13 @@
 	:global(.textLayer.selecting .endOfContent) {
 		top: 0;
 	}
+
+	:global(.hiddenCanvasElement) {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 0;
+		height: 0;
+		display: none;
+	}
 </style>
