@@ -2734,6 +2734,8 @@
 	"settings.admin.general.calendar.label": "Calendar",
 	"settings.admin.general.channels.description": "Allow users to use channels for shared conversations.",
 	"settings.admin.general.channels.label": "Channels",
+	"settings.admin.general.encryptedChannels.description": "Allow temporary end-to-end encrypted chats in direct messages and private groups. Messages are not saved.",
+	"settings.admin.general.encryptedChannels.label": "Encrypted channels",
 	"settings.admin.general.checkForUpdates.label": "Check for updates",
 	"settings.admin.general.communitySharing.description": "Allow users to share chats with the Open WebUI community.",
 	"settings.admin.general.communitySharing.label": "Community Sharing",

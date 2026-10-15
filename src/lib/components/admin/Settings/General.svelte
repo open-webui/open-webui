@@ -353,6 +353,14 @@
 				</AdminSettingRow>
 				{#if adminConfig.ENABLE_CHANNELS}
 					<AdminSettingRow
+						label={$i18n.t('settings.admin.general.encryptedChannels.label')}
+						description={$i18n.t('settings.admin.general.encryptedChannels.description')}
+						labelClassName="text-gray-500 dark:text-gray-500"
+						let:labelId
+					>
+						<Switch bind:state={adminConfig.ENABLE_ENCRYPTED_CHANNELS} ariaLabelledbyId={labelId} />
+					</AdminSettingRow>
+					<AdminSettingRow
 						label={$i18n.t('settings.admin.general.modelResponseMode.label')}
 						description={$i18n.t('settings.admin.general.modelResponseMode.description')}
 						labelClassName="text-gray-500 dark:text-gray-500"

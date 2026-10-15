@@ -5,8 +5,10 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { v4 as uuidv4 } from 'uuid';
+	import type { Socket } from 'socket.io-client';
 
 	import {
+		config,
 		chatId,
 		channels,
 		channelId as _channelId,
@@ -19,6 +21,7 @@
 	import Messages from './Messages.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import Navbar from './Navbar.svelte';
+	import { connected, enter, request } from '$lib/encryption/client';
 	import Drawer from '../common/Drawer.svelte';
 	import ResizableSidePanel from '../common/ResizableSidePanel.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
@@ -27,6 +30,58 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	export let id = '';
+
+	let mounted = false;
+	let invitationSession: string | null = null;
+	let stopInvitation = () => {};
+	$: watchInvitation(
+		$socket,
+		channel?.id === id ? id : null,
+		mounted && $config?.features?.enable_encrypted_channels
+	);
+
+	function watchInvitation(
+		connection: Socket | null,
+		channelId: string | null,
+		enabled: boolean | undefined
+	) {
+		stopInvitation();
+		stopInvitation = () => {};
+		invitationSession = null;
+		if (!enabled || !connection || !channelId) return;
+		let alive = true;
+		let revision = 0;
+		const receive = (event: { channel: string; session: string | null }) => {
+			if (event.channel === channelId) {
+				revision++;
+				invitationSession = event.session;
+			}
+		};
+		const clear = () => {
+			revision++;
+			invitationSession = null;
+		};
+		const query = () => {
+			if (!connected(connection)) return;
+			const issued = revision;
+			void request(connection, 'status', { channel: channelId })
+				.then((result) => {
+					if (alive && revision === issued)
+						invitationSession = result.available ? result.session : null;
+				})
+				.catch(() => {});
+		};
+		connection.on('encryption:available', receive);
+		connection.on('disconnect', clear);
+		connection.on('connect', query);
+		query();
+		stopInvitation = () => {
+			alive = false;
+			connection.off('encryption:available', receive);
+			connection.off('disconnect', clear);
+			connection.off('connect', query);
+		};
+	}
 
 	let currentId = null;
 
@@ -297,6 +352,7 @@
 	};
 
 	onMount(() => {
+		mounted = true;
 		if ($chatId) {
 			chatId.set('');
 		}
@@ -310,6 +366,7 @@
 	});
 
 	onDestroy(() => {
+		stopInvitation();
 		// last read at
 		updateLastReadAt(id);
 		_channelId.set(null);
@@ -358,7 +415,30 @@
 						return null;
 					});
 				}}
-			/>
+			>
+				<svelte:fragment slot="subtitle">
+					{#if invitationSession}
+						<div
+							class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
+						>
+							<span>{$i18n.t('Encrypted chat in progress')}</span>
+							<span aria-hidden="true">·</span>
+							<button
+								type="button"
+								aria-label={$i18n.t('Join encrypted chat')}
+								class="text-[0.6875rem] font-normal text-gray-700 underline-offset-2 hover:underline dark:text-gray-200"
+								on:click={() => {
+									if (!invitationSession) return;
+									enter(id, { action: 'join', session: invitationSession });
+									void goto(`/channels/${encodeURIComponent(id)}/encrypted`);
+								}}
+							>
+								{$i18n.t('Join')}
+							</button>
+						</div>
+					{/if}
+				</svelte:fragment>
+			</Navbar>
 
 			{#if channel && messages !== null}
 				<div class="flex-1 overflow-y-auto">

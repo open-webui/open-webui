@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
+	const markdown = getContext<{ allowRemoteContent: boolean } | undefined>('markdown');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { skills, terminalSkills } from '$lib/stores';
@@ -90,7 +91,7 @@
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'link'}
 		{@const linkToken = getLinkToken(token)}
-		{#if linkToken.noteId}
+		{#if linkToken.noteId && markdown?.allowRemoteContent !== false}
 			<NoteLinkToken noteId={linkToken.noteId} href={linkToken.href} />
 		{:else if token.tokens && !linkToken.isAutolink}
 			<a

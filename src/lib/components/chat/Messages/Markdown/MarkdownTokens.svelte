@@ -137,8 +137,6 @@
 		(displayTokens[0]?.type === 'paragraph' || displayTokens[0]?.type === 'text');
 
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
-		console.log('Exporting table to CSV');
-
 		// Extract header row text, decode HTML entities, and escape for CSV.
 		const header = token.header.map(
 			(headerCell) => `"${decode(headerCell.text).replace(/"/g, '""')}"`
@@ -159,10 +157,6 @@
 
 		// Join the rows using commas (,) as the separator and rows using newline (\n).
 		const csvContent = csvData.map((row) => row.join(',')).join('\n');
-
-		// Log rows and CSV content to ensure everything is correct.
-		console.log(csvData);
-		console.log(csvContent);
 
 		// To handle Unicode characters, you need to prefix the data with a BOM:
 		const bom = '\uFEFF'; // BOM for UTF-8

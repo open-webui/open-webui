@@ -46,13 +46,16 @@
 	};
 
 	export let channel;
+	export let readOnly = false;
 
 	export let onPin = (messageId, pinned) => {};
 	export let onUpdate = () => {};
 </script>
 
-<PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} {onPin} />
-<ChannelInfoModal bind:show={showChannelInfoModal} {channel} {onUpdate} />
+{#if !readOnly}
+	<PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} {onPin} />
+	<ChannelInfoModal bind:show={showChannelInfoModal} {channel} {onUpdate} />
+{/if}
 <nav class="sticky top-0 z-30 w-full px-3 py-1 -mb-8 flex items-center drag-region flex-col">
 	<div
 		id="navbar-bg-gradient-to-b"
@@ -60,12 +63,12 @@
 	></div>
 
 	<div class=" flex max-w-full w-full mx-auto pt-0.5 bg-transparent">
-		<div class="flex items-center w-full max-w-full">
+		<div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center w-full max-w-full">
 			{#if $mobile}
 				<div
 					class="{$showSidebar
 						? 'md:hidden'
-						: ''} mr-1.5 mt-0.5 self-center flex flex-none items-center text-gray-600 dark:text-gray-400"
+						: ''} col-start-1 row-start-1 mr-1.5 mt-0.5 self-center flex flex-none items-center text-gray-600 dark:text-gray-400"
 				>
 					<Tooltip
 						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
@@ -87,7 +90,7 @@
 			{/if}
 
 			<div
-				class="min-w-0 flex-1 overflow-hidden max-w-full py-0.5 flex items-center
+				class="col-start-2 row-start-1 min-w-0 overflow-hidden max-w-full py-0.5 flex items-center
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
@@ -148,50 +151,58 @@
 						</div>
 					</div>
 				{/if}
+				<slot name="status" />
 			</div>
 
 			<div
-				class="self-center flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1 shrink-0"
+				class="col-start-3 row-start-1 self-center flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1 shrink-0"
 			>
-				{#if channel}
-					<Tooltip content={$i18n.t('Pinned Messages')}>
-						<button
-							class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
-							aria-label={$i18n.t('Pinned Messages')}
-							type="button"
-							on:click={() => {
-								showChannelPinnedMessagesModal = true;
-							}}
-						>
-							<div class=" flex items-center gap-1 m-auto self-center shrink-0">
-								<Pin className=" size-4" strokeWidth="1.5" />
-							</div>
-						</button>
-					</Tooltip>
-
-					{#if channel?.user_count !== undefined}
-						<Tooltip content={$i18n.t('Users')}>
+				<slot name="actions">
+					{#if channel}
+						<Tooltip content={$i18n.t('Pinned Messages')}>
 							<button
-								class=" flex h-7 items-center cursor-pointer shrink-0 px-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
-								aria-label={$i18n.t('User Count')}
+								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+								aria-label={$i18n.t('Pinned Messages')}
 								type="button"
 								on:click={() => {
-									showChannelInfoModal = true;
+									showChannelPinnedMessagesModal = true;
 								}}
 							>
 								<div class=" flex items-center gap-1 m-auto self-center shrink-0">
-									<UserAlt className=" size-4" strokeWidth="1.5" />
-
-									<div class="text-xs tabular-nums shrink-0">
-										{channel.user_count}
-									</div>
+									<Pin className=" size-4" strokeWidth="1.5" />
 								</div>
 							</button>
 						</Tooltip>
+
+						{#if channel?.user_count !== undefined}
+							<Tooltip content={$i18n.t('Users')}>
+								<button
+									class=" flex h-7 items-center cursor-pointer shrink-0 px-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+									aria-label={$i18n.t('User Count')}
+									type="button"
+									on:click={() => {
+										showChannelInfoModal = true;
+									}}
+								>
+									<div class=" flex items-center gap-1 m-auto self-center shrink-0">
+										<UserAlt className=" size-4" strokeWidth="1.5" />
+
+										<div class="text-xs tabular-nums shrink-0">
+											{channel.user_count}
+										</div>
+									</div>
+								</button>
+							</Tooltip>
+						{/if}
+						<ChannelMenu {channel} />
 					{/if}
-					<ChannelMenu {channel} />
-				{/if}
+				</slot>
 			</div>
+			{#if $$slots.subtitle}
+				<div class="col-start-2 row-start-2 min-w-0 {$showSidebar ? 'ml-1' : ''}">
+					<slot name="subtitle" />
+				</div>
+			{/if}
 		</div>
 	</div>
 </nav>

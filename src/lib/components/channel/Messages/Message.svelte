@@ -511,6 +511,7 @@
 									</Tooltip>
 								</div>
 							{/if}
+							<slot name="status" />
 						</div>
 					{/if}
 
@@ -599,28 +600,30 @@
 								? 'opacity-50'
 								: ''}"
 						>
-							{#if hasStructuredOutput}
-								<StructuredOutputRenderer
-									id={renderedMessageId}
-									output={messageOutput}
-									done={message?.meta?.done ?? false}
-									allowEmbeds={false}
-								/>
-							{:else if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
-								<Skeleton />
-							{:else}
-								<span class="markdown-prose">
-									<Markdown
+							<slot name="content">
+								{#if hasStructuredOutput}
+									<StructuredOutputRenderer
 										id={renderedMessageId}
-										content={message.content}
-										paragraphTag={message.app_id ? 'p' : 'span'}
+										output={messageOutput}
+										done={message?.meta?.done ?? false}
 										allowEmbeds={false}
 									/>
-								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-										class="text-gray-500 text-[0.625rem] pl-1 self-center"
-										>({$i18n.t('edited')})</span
-									>{/if}
-							{/if}
+								{:else if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
+									<Skeleton />
+								{:else}
+									<span class="markdown-prose">
+										<Markdown
+											id={renderedMessageId}
+											content={message.content}
+											paragraphTag={message.app_id ? 'p' : 'span'}
+											allowEmbeds={false}
+										/>
+									</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
+											class="text-gray-500 text-[0.625rem] pl-1 self-center"
+											>({$i18n.t('edited')})</span
+										>{/if}
+								{/if}
+							</slot>
 						</div>
 
 						{#if message.app_id && (message?.data?.app?.embeds?.length || message?.data?.app?.actions?.length)}

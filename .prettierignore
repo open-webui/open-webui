@@ -312,3 +312,6 @@ cypress/screenshots
 
 
 /static/*
+# Generated and checksum-verified crypto distribution
+src/lib/encryption/vendor/
+crypto/encryption/target/

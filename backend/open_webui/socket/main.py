@@ -42,6 +42,7 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
+from open_webui.socket.encryption import Relay
 from open_webui.socket.redis_room_channels import AsyncRedisRoomChannelManager
 from open_webui.socket.utils import SOCKET_EVENT_LOCKS, CachedRedisDict, RedisDict, RedisLock, YdocManager
 from open_webui.tasks import (
@@ -355,6 +356,7 @@ LOCAL_AUTHENTICATED_SIDS: set[str] = set()
 async def periodic_socket_authentication():
     while True:
         await asyncio.sleep(30)
+        await encryption.sweep()
         for sid in tuple(LOCAL_AUTHENTICATED_SIDS):
             await get_socket_session_user(sid)
 
@@ -374,6 +376,9 @@ async def get_socket_session_user(sid: str, *, wait_for_disconnect: bool = True)
         # Document handlers hold a lock that disconnect cleanup also needs.
         sio.start_background_task(sio.disconnect, sid)
     return None
+
+
+encryption = Relay(sio, get_socket_session_user, REDIS)
 
 
 def get_session_ids_from_room(room):
@@ -1128,6 +1133,7 @@ async def yjs_awareness_update(sid, data):
 
 @sio.event
 async def disconnect(sid, reason=None):
+    await encryption.disconnect(sid)
     LOCAL_AUTHENTICATED_SIDS.discard(sid)
     if sid in SESSION_POOL:
         del SESSION_POOL[sid]

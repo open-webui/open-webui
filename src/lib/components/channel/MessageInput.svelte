@@ -945,7 +945,11 @@
 						<div
 							id="message-input-container"
 							class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-gray-100/60 dark:border-gray-800/50 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition bg-white dark:bg-gray-400/5 dark:text-gray-100"
-							dir={$settings?.chatDirection ?? 'auto'}
+							dir={$settings?.chatDirection === 'RTL'
+								? 'rtl'
+								: $settings?.chatDirection === 'LTR'
+									? 'ltr'
+									: 'auto'}
 						>
 							{#if replyToMessage !== null}
 								<div class="px-3 pt-2 text-left w-full flex flex-col z-10">
