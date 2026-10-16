@@ -16,12 +16,82 @@
 </script>
 
 <script lang="ts">
-	import { setContext } from 'svelte';
+	import { setContext, onDestroy } from 'svelte';
+	import { downloadFileBlob } from '$lib/apis/terminal';
 	import MarkdownTokens from '../Messages/Markdown/MarkdownTokens.svelte';
 	import type { Token } from 'marked';
 
 	export let content: string;
 	export let id: string;
+	export let path = '';
+	export let baseUrl = '';
+	export let apiKey = '';
+	export let chatId: string | null = null;
+	export let resourceVersion = 0;
+	export let onLocalLink: (path: string) => void = () => {};
+	/** Local document resources never become arbitrary network requests. */
+	function resolveDocumentPath(documentPath: string, reference: string): string | null {
+		if (!reference || reference.startsWith('#') || reference.startsWith('//')) return null;
+		if (/^[a-z][a-z\d+.-]*:/i.test(reference) && !/^[a-z]:[\\/]/i.test(reference)) return null;
+		let path: string;
+		try {
+			path = decodeURIComponent(reference.split(/[?#]/)[0]).replace(/\\/g, '/');
+		} catch {
+			return null;
+		}
+		if (/[\x00-\x1f]/.test(path)) return null;
+		const base = documentPath.replace(/\\/g, '/');
+		if (!path.startsWith('/') && !/^[a-z]:\//i.test(path))
+			path = base.slice(0, base.lastIndexOf('/') + 1) + path;
+		const prefix = /^[a-z]:\//i.test(path) ? path.slice(0, 3) : '/';
+		const parts: string[] = [];
+		for (const part of path.slice(prefix.length).split('/')) {
+			if (part === '..') parts.pop();
+			else if (part && part !== '.') parts.push(part);
+		}
+		return prefix + parts.join('/');
+	}
+
+	let generation = 0;
+	let urls = new Map<string, Promise<string | null>>();
+	let objectUrls: string[] = [];
+	const release = () => {
+		generation++;
+		objectUrls.forEach((url) => URL.revokeObjectURL(url));
+		objectUrls = [];
+		urls.clear();
+	};
+	onDestroy(release);
+	const resolveImage = (reference: string): Promise<string | null> => {
+		const file = resolveDocumentPath(path, reference);
+		if (!file || !baseUrl) return Promise.resolve(null);
+		if (!urls.has(file)) {
+			const current = generation;
+			urls.set(
+				file,
+				downloadFileBlob(baseUrl, apiKey, file, chatId ?? undefined).then((result) => {
+					if (!result || current !== generation) return null;
+					const url = URL.createObjectURL(result.blob);
+					objectUrls.push(url);
+					return url;
+				})
+			);
+		}
+		return urls.get(file)!;
+	};
+	const resources = {
+		resolveImage,
+		localPath: (ref: string) => (baseUrl ? resolveDocumentPath(path, ref) : null),
+		open: (ref: string) => {
+			const file = resolveDocumentPath(path, ref);
+			if (file) onLocalLink(file);
+		}
+	};
+	setContext('terminal-document', resources);
+	$: {
+		(resourceVersion, path, baseUrl, chatId);
+		release();
+	}
 
 	setContext('markdown', {
 		document: true,
@@ -31,11 +101,52 @@
 			documentMarkdown.Parser.parseInline(tokens, documentMarkdown.defaults)
 	});
 	$: tokens = documentMarkdown.lexer(content);
+	const resolveHtmlImages = (node: HTMLElement) => {
+		let alive = true;
+		const update = () => {
+			for (const img of node.querySelectorAll<HTMLImageElement>(
+				'img:not([data-terminal-resolved])'
+			)) {
+				const src = img.getAttribute('src') ?? '';
+				if (!resources.localPath(src)) continue;
+				img.dataset.terminalResolved = 'true';
+				img.removeAttribute('src');
+				void resolveImage(src).then((url) => {
+					if (alive && url) img.src = url;
+				});
+			}
+		};
+		const observer = new MutationObserver(update);
+		observer.observe(node, { childList: true, subtree: true });
+		update();
+		return {
+			destroy: () => {
+				alive = false;
+				observer.disconnect();
+			}
+		};
+	};
+	const openLink = (event: MouseEvent) => {
+		const anchor = (event.target as Element)?.closest('a');
+		const href = anchor?.getAttribute('href');
+		if (href && resources.localPath(href)) {
+			event.preventDefault();
+			event.stopPropagation();
+			resources.open(href);
+		}
+	};
 </script>
 
-<div class="document-markdown prose prose-sm dark:prose-invert min-w-0 max-w-none p-3">
-	<MarkdownTokens {id} {tokens} editCodeBlock={false} />
-</div>
+{#key resourceVersion}
+	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<div
+		use:resolveHtmlImages
+		on:click|capture={openLink}
+		class="document-markdown prose prose-sm dark:prose-invert min-w-0 max-w-none p-3"
+	>
+		<MarkdownTokens {id} {tokens} editCodeBlock={false} />
+	</div>
+{/key}
 
 <style>
 	.document-markdown {

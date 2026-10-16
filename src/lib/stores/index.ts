@@ -130,7 +130,7 @@ export const visiblePinnedModels = derived([pinnedModels, models], ([$pinnedMode
 
 export const audioQueue = writable<AudioQueue | null>(null);
 export const chatRequestQueues: Writable<
-	Record<string, { id: string; prompt: string; files: any[] }[]>
+	Record<string, { id: string; prompt: string; files: any[]; error?: string }[]>
 > = writable({});
 
 export type ChannelQueuedMessage = {

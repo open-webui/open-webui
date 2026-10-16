@@ -13,6 +13,9 @@
 
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
+	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
+	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
+	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
 	import { toast } from 'svelte-sonner';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
@@ -74,6 +77,186 @@
 	export let overlay = false;
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
+	export let onAskFile: ((instruction: string, file: FilesystemFile) => Promise<void>) | null =
+		null;
+	let viewerRoot: HTMLDivElement;
+	let fileAsk: {
+		text: string;
+		location?: string;
+		anchor: Range | HTMLElement;
+	} | null = null;
+	// Keep typing from invalidating the keyed selection and remounting the input.
+	let fileAskInput = '';
+	let asking = false;
+	const positionFileAsk = (node: HTMLFormElement, anchor: Range | HTMLElement) => {
+		document.body.appendChild(node);
+		const reference = {
+			getBoundingClientRect: () => anchor.getBoundingClientRect(),
+			contextElement: viewerRoot
+		};
+		const cleanup = autoUpdate(reference, node, () => {
+			computePosition(reference, node, {
+				strategy: 'fixed',
+				placement: anchor instanceof Range ? 'bottom-start' : 'bottom-end',
+				middleware: [offset(6), flip(), shift({ padding: 8 })]
+			}).then(({ x, y }) => {
+				node.style.left = `${x}px`;
+				node.style.top = `${y}px`;
+			});
+		});
+		return {
+			destroy() {
+				cleanup();
+				node.remove();
+			}
+		};
+	};
+	const submitFileAsk = async () => {
+		const request = fileAsk;
+		const instruction = fileAskInput.trim();
+		if (!request || !instruction || asking || !onAskFile) return;
+		asking = true;
+		try {
+			const file = await prepareFile();
+			if (fileAsk !== request) return;
+			const quote = [request.location, request.text]
+				.filter(Boolean)
+				.join('\n')
+				.split('\n')
+				.map((line) => `> ${line}`)
+				.join('\n');
+			await onAskFile(
+				request.text || request.location ? `${quote}\n\n${instruction}` : instruction,
+				file
+			);
+			if (fileAsk === request) fileAsk = null;
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : String(error));
+		} finally {
+			asking = false;
+		}
+	};
+	let openedFile: FilesystemFile | null = null;
+	let pendingFile: FilesystemFile | null = null;
+	let viewerLabel = '';
+	let loadGeneration = 0;
+	let dirty = false;
+	let diskChanged = false;
+	let saveConnection: { url: string; key: string; chatId: string | null; path: string } | null =
+		null;
+	let dirtyChoice: {
+		sending: boolean;
+		resolve: (choice: 'save' | 'discard' | 'cancel') => void;
+	} | null = null;
+	const protectBuffer = async (sending = false) => {
+		if (!dirty && !saving) return true;
+		if (saving || dirtyChoice) return false;
+		const choice = await new Promise<'save' | 'discard' | 'cancel'>((resolve) => {
+			dirtyChoice = { sending, resolve };
+		});
+		dirtyChoice = null;
+		if (choice === 'cancel') return false;
+		if (choice === 'save') {
+			try {
+				await filePreviewRef.save();
+			} catch (error) {
+				toast.error(String(error));
+				return false;
+			}
+			if (dirty) return false;
+		}
+		if (choice === 'discard') {
+			filePreviewRef?.discard();
+			dirty = false;
+		}
+		return true;
+	};
+	const publishFile = () => {
+		if (!openedFile) return;
+		terminalContext = {
+			terminalId: openedFile.terminal_id!,
+			currentDirectory: currentPath,
+			file: openedFile
+		};
+	};
+	const captureSelection = () => {
+		const selection = window.getSelection();
+		if (!onAskFile || !openedFile || !selection?.rangeCount || selection.isCollapsed) return;
+		const range = selection.getRangeAt(0);
+		if (!viewerRoot?.contains(range.startContainer) || !viewerRoot.contains(range.endContainer))
+			return;
+		if (
+			range.startContainer.parentElement?.closest(
+				'button, select, .excel-row-num, .excel-col-hdr, .csv-row-num'
+			)
+		)
+			return;
+		const source = filePreviewRef?.getSelection();
+		const text = source?.text ?? selection.toString();
+		if (!text.trim()) return;
+		if (new TextEncoder().encode(text).length > 16384) {
+			toast.error('Select less text (maximum 16 KiB).');
+			return;
+		}
+		const page =
+			range.startContainer.parentElement?.closest<HTMLElement>('[data-page-number]')?.dataset
+				.pageNumber;
+		const location = source?.location ?? (page ? `Page ${page}` : viewerLabel);
+		fileAskInput = '';
+		fileAsk = {
+			text,
+			location,
+			anchor: range.cloneRange()
+		};
+	};
+	const prepareFile = async (): Promise<FilesystemFile> => {
+		const target = openedFile;
+		if (!target) throw new Error('Wait for the file to load.');
+		if (!(await protectBuffer(true))) throw new Error('File request cancelled.');
+		if (
+			!openedFile ||
+			openedFile.path !== target.path ||
+			openedFile.terminal_id !== $selectedTerminalId ||
+			openedFile.session_id !== chatId
+		)
+			throw new Error('The file or terminal changed. Open it again before sending.');
+		if (diskChanged)
+			throw new Error('The file changed on disk. Reload and select the content again.');
+		return structuredClone(openedFile);
+	};
+
+	$: if (previewPort !== null && openedFile) {
+		openedFile = null;
+		if (terminalContext) terminalContext = { ...terminalContext, file: null };
+	}
+	$: {
+		(selectedFile, $selectedTerminalId, chatId);
+		fileAsk = null;
+	}
+	$: viewerLabel = selectedExcelSheet
+		? `Sheet ${selectedExcelSheet}`
+		: /\.(pdf|docx|pptx)$/i.test(selectedFile ?? '')
+			? `Page ${currentSlide + 1}`
+			: '';
+	const saveFile = async (content: string) => {
+		const target = saveConnection;
+		if (!target || !selectedFileWritable) throw new Error('File is not writable.');
+		const name = target.path.split('/').pop()!;
+		const dir = target.path.slice(0, target.path.lastIndexOf('/') + 1) || '/';
+		const result = await uploadToTerminal(
+			target.url,
+			target.key,
+			dir,
+			new File([content], name, { type: 'text/plain' }),
+			target.chatId ?? undefined
+		);
+		if (!result) throw new Error('Failed to save file. Your changes are still in the editor.');
+		if (saveConnection === target) {
+			fileContent = content;
+			diskChanged = false;
+		}
+		await tick();
+	};
 
 	// ── Terminal panel state ────────────────────────────────────────────
 	let terminalExpanded = false;
@@ -459,10 +642,17 @@
 
 		if (mounted && terminal) {
 			if (chatChanged && chatId && !oldChatId) {
+				if (openedFile) {
+					openedFile = { ...openedFile, session_id: chatId };
+					publishFile();
+				}
 				// Chat just got created (null → real ID): persist the current
 				// browsed path as the new session's cwd — don't re-fetch.
 				setCwd(terminal.url, terminal.key, savedPath, chatId);
 			} else if (terminalChanged || chatChanged) {
+				++loadGeneration;
+				openedFile = null;
+				if (terminalContext) terminalContext = { ...terminalContext, file: null };
 				// Terminal switched, new chat started, or switched between
 				// existing chats — re-fetch the session cwd.
 				loading = true;
@@ -768,6 +958,10 @@
 		path: string,
 		options: { preserveTree?: boolean; restoreTree?: boolean } = {}
 	) => {
+		if (!(await protectBuffer())) return;
+		const generation = ++loadGeneration;
+		const selector = $selectedTerminalId,
+			session = chatId;
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 		const directory = clampToFileRoot(path);
@@ -777,6 +971,9 @@
 			resetTreeState();
 		}
 
+		openedFile = null;
+		saveConnection = null;
+		dirty = false;
 		loading = true;
 		error = null;
 		selectedFile = null;
@@ -790,6 +987,8 @@
 		pushNavHistory(directory);
 
 		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
+		if (generation !== loadGeneration || selector !== $selectedTerminalId || session !== chatId)
+			return;
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
@@ -859,7 +1058,10 @@
 		}
 	};
 
-	const openEntry = async (entry: FileEntry, options: { page?: unknown } = {}) => {
+	const openEntry = async (
+		entry: FileEntry,
+		options: { page?: unknown; refresh?: boolean } = {}
+	) => {
 		const fullPath =
 			'fullPath' in entry ? (entry as BrowserRow).fullPath : entryPath(currentPath, entry);
 		const parentPath = 'parentPath' in entry ? (entry as BrowserRow).parentPath : currentPath;
@@ -868,6 +1070,11 @@
 			return;
 		}
 
+		if (options.refresh && (dirty || saving)) {
+			diskChanged = true;
+			return;
+		}
+		if (!(await protectBuffer())) return;
 		const filePath = fullPath;
 		if (parentPath !== currentPath) {
 			await loadDir(parentPath);
@@ -878,15 +1085,55 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
+		const generation = ++loadGeneration;
+		const selector = $selectedTerminalId!,
+			session = chatId;
+		const previousView =
+			openedFile?.path === filePath
+				? { showRaw, currentSlide, selectedExcelSheet, scroll: viewerRoot?.scrollTop ?? 0 }
+				: null;
+		const current = () =>
+			generation === loadGeneration && selector === $selectedTerminalId && session === chatId;
+		openedFile = null;
+		if (terminalContext) terminalContext = { ...terminalContext, file: null };
+		dirty = false;
+		diskChanged = false;
+		saveConnection = { ...terminal, path: filePath, chatId: session };
+		pendingFile = filesystemFile(
+			{ path: filePath, name: entry.name, size: entry.size, modified: entry.modified },
+			selector,
+			session
+		);
 		selectedFile = filePath;
 		fileLoading = true;
 		clearFilePreview();
-		documentTargetPage = normalizeDocumentTargetPage(options.page);
+		documentTargetPage = normalizeDocumentTargetPage(
+			options.page ?? (previousView ? previousView.currentSlide + 1 : null)
+		);
 		if (supportsComments(filePath)) {
+			if (previousView) {
+				currentSlide = previousView.currentSlide;
+				selectedExcelSheet = previousView.selectedExcelSheet;
+			}
 			fileLoading = false;
 			return;
 		}
 
+		const next = {
+			fileImageUrl: null,
+			fileVideoUrl: null,
+			fileAudioUrl: null,
+			filePdfData: null,
+			fileSqliteData: null,
+			fileDocxData: null,
+			fileOfficeHtml: null,
+			fileOfficeSlides: null,
+			excelWorkbook: null,
+			excelSheetNames: [],
+			selectedExcelSheet: '',
+			currentSlide: 0,
+			fileContent: null
+		} as any;
 		if (isImage(filePath)) {
 			const result = await downloadFileBlob(
 				terminal.url,
@@ -894,7 +1141,7 @@
 				filePath,
 				chatId ?? undefined
 			);
-			if (result) fileImageUrl = URL.createObjectURL(result.blob);
+			if (result) next.fileImageUrl = URL.createObjectURL(result.blob);
 		} else if (isVideo(filePath)) {
 			const result = await downloadFileBlob(
 				terminal.url,
@@ -902,7 +1149,7 @@
 				filePath,
 				chatId ?? undefined
 			);
-			if (result) fileVideoUrl = URL.createObjectURL(result.blob);
+			if (result) next.fileVideoUrl = URL.createObjectURL(result.blob);
 		} else if (isAudio(filePath)) {
 			const result = await downloadFileBlob(
 				terminal.url,
@@ -910,7 +1157,7 @@
 				filePath,
 				chatId ?? undefined
 			);
-			if (result) fileAudioUrl = URL.createObjectURL(result.blob);
+			if (result) next.fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
 			const result = await downloadFileBlob(
 				terminal.url,
@@ -918,7 +1165,7 @@
 				filePath,
 				chatId ?? undefined
 			);
-			if (result) filePdfData = await result.blob.arrayBuffer();
+			if (result) next.filePdfData = await result.blob.arrayBuffer();
 		} else if (isSqlite(filePath)) {
 			const result = await downloadFileBlob(
 				terminal.url,
@@ -926,7 +1173,7 @@
 				filePath,
 				chatId ?? undefined
 			);
-			if (result) fileSqliteData = await result.blob.arrayBuffer();
+			if (result) next.fileSqliteData = await result.blob.arrayBuffer();
 		} else if (isOffice(filePath)) {
 			const ext = getFileExt(filePath);
 			try {
@@ -938,7 +1185,7 @@
 						chatId ?? undefined
 					);
 					if (preview) {
-						filePdfData = await preview.blob.arrayBuffer();
+						next.filePdfData = await preview.blob.arrayBuffer();
 					} else {
 						const result = await downloadFileBlob(
 							terminal.url,
@@ -948,7 +1195,7 @@
 						);
 						if (!result) throw new Error('Preview failed');
 						const arrayBuffer = await result.blob.arrayBuffer();
-						fileDocxData = arrayBuffer;
+						next.fileDocxData = arrayBuffer;
 					}
 				} else if (ext === 'xlsx') {
 					const result = await downloadFileBlob(
@@ -961,14 +1208,14 @@
 						const arrayBuffer = await result.blob.arrayBuffer();
 						const XLSX = await import('xlsx');
 						const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
-						excelWorkbook = wb;
-						excelSheetNames = wb.SheetNames;
-						if (excelSheetNames.length > 0) {
-							selectedExcelSheet = excelSheetNames[0];
+						next.excelWorkbook = wb;
+						next.excelSheetNames = wb.SheetNames;
+						if (next.excelSheetNames.length > 0) {
+							next.selectedExcelSheet = next.excelSheetNames[0];
 							const { excelToTable } = await import('$lib/utils/excelToTable');
-							const result = await excelToTable(wb.Sheets[selectedExcelSheet]);
+							const result = await excelToTable(wb.Sheets[next.selectedExcelSheet]);
 							const DOMPurify = (await import('dompurify')).default;
-							fileOfficeHtml = DOMPurify.sanitize(result.html);
+							next.fileOfficeHtml = DOMPurify.sanitize(result.html);
 						}
 					}
 				} else if (ext === 'pptx') {
@@ -979,7 +1226,7 @@
 						chatId ?? undefined
 					);
 					if (preview) {
-						filePdfData = await preview.blob.arrayBuffer();
+						next.filePdfData = await preview.blob.arrayBuffer();
 					} else {
 						const result = await downloadFileBlob(
 							terminal.url,
@@ -991,20 +1238,62 @@
 						const arrayBuffer = await result.blob.arrayBuffer();
 						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
 						const fallback = await pptxToImages(arrayBuffer);
-						fileOfficeSlides = fallback.images;
-						currentSlide = 0;
+						next.fileOfficeSlides = fallback.images;
+						next.currentSlide = 0;
 					}
 				}
 			} catch (e) {
 				console.error('Failed to render Office file:', e);
-				fileContent = $i18n.t('Error previewing file: {{error}}', {
+				next.fileContent = $i18n.t('Error previewing file: {{error}}', {
 					error: e instanceof Error ? e.message : $i18n.t('Unknown error')
 				});
 			}
 		} else {
-			fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);
+			next.fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);
 		}
+		if (!current()) {
+			[next.fileImageUrl, next.fileVideoUrl, next.fileAudioUrl]
+				.filter(Boolean)
+				.forEach((url) => URL.revokeObjectURL(url));
+			return;
+		}
+		fileImageUrl = next.fileImageUrl;
+		fileVideoUrl = next.fileVideoUrl;
+		fileAudioUrl = next.fileAudioUrl;
+		filePdfData = next.filePdfData;
+		fileSqliteData = next.fileSqliteData;
+		fileDocxData = next.fileDocxData;
+		fileOfficeHtml = next.fileOfficeHtml;
+		fileOfficeSlides = next.fileOfficeSlides;
+		excelWorkbook = next.excelWorkbook;
+		excelSheetNames = next.excelSheetNames;
+		selectedExcelSheet = next.selectedExcelSheet;
+		currentSlide = next.currentSlide;
+		fileContent = next.fileContent;
 		fileLoading = false;
+		if (
+			next.fileContent !== null ||
+			[
+				next.fileImageUrl,
+				next.fileVideoUrl,
+				next.fileAudioUrl,
+				next.filePdfData,
+				next.fileSqliteData,
+				next.fileDocxData,
+				next.fileOfficeHtml,
+				next.fileOfficeSlides
+			].some(Boolean)
+		) {
+			openedFile = pendingFile;
+
+			publishFile();
+		}
+		if (previousView) {
+			showRaw = previousView.showRaw;
+			currentSlide = previousView.currentSlide;
+			await tick();
+			if (viewerRoot) viewerRoot.scrollTop = previousView.scroll;
+		}
 	};
 
 	const openFileMatch = async (match: TerminalFileMatch) => {
@@ -1517,7 +1806,12 @@
 			const fileName = filePath.substring(lastSlash + 1);
 
 			// Always reload directory to ensure entries are fresh
+			if (!(await protectBuffer())) return;
+			const selector = $selectedTerminalId,
+				session = chatId;
 			await loadDir(dir);
+			if (selector !== $selectedTerminalId || session !== chatId || currentPath !== dir || dirty)
+				return;
 			await tick();
 
 			const entry = entries.find((e) => e.name === fileName);
@@ -1543,9 +1837,9 @@
 			if (comparison) return;
 
 			if (selectedFile) {
-				if (selectedFile === filePath || currentPath.startsWith(dir)) {
+				if (selectedFile === filePath) {
 					const fileName = selectedFile.split('/').pop() ?? '';
-					await openEntry({ name: fileName, type: 'file', size: 0 });
+					await openEntry({ name: fileName, type: 'file', size: 0 }, { refresh: true });
 				}
 			} else {
 				if (currentPath.startsWith(dir) || dir.startsWith(currentPath)) {
@@ -1612,6 +1906,8 @@
 	});
 
 	onDestroy(() => {
+		++loadGeneration;
+		dirtyChoice?.resolve('cancel');
 		clearMatchRequest();
 		if (fileImageUrl) URL.revokeObjectURL(fileImageUrl);
 		if (fileVideoUrl) URL.revokeObjectURL(fileVideoUrl);
@@ -1633,7 +1929,19 @@
 	}}
 />
 
-<svelte:window on:keydown={handleKeydown} on:click={handleWindowClick} />
+<svelte:window
+	on:keydown={(event) => {
+		if (event.key === 'Escape' && fileAsk) {
+			fileAsk = null;
+			event.preventDefault();
+		} else handleKeydown(event);
+	}}
+	on:click={handleWindowClick}
+	on:pointerdown={(event) => {
+		if (fileAsk && !dirtyChoice && !(event.target as Element)?.closest('[data-file-ask]'))
+			fileAsk = null;
+	}}
+/>
 
 {#if comparison}
 	{#key comparison}
@@ -1733,7 +2041,8 @@
 					<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 						<button
 							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-							on:click={() => {
+							on:click={async () => {
+								if (!(await protectBuffer())) return;
 								if (editing) filePreviewRef?.cancelEdit();
 								showRaw = !showRaw;
 							}}
@@ -1752,7 +2061,8 @@
 						<Tooltip content={$i18n.t('Save')}>
 							<button
 								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() => filePreviewRef?.saveCodeFile()}
+								on:click={() =>
+									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
 							>
@@ -1769,7 +2079,8 @@
 						<Tooltip content={$i18n.t('Save')}>
 							<button
 								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() => filePreviewRef?.saveCodeFile()}
+								on:click={() =>
+									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
 							>
@@ -1786,7 +2097,8 @@
 						<Tooltip content={$i18n.t('Save')}>
 							<button
 								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() => filePreviewRef?.saveCodeFile()}
+								on:click={() =>
+									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
 							>
@@ -1810,7 +2122,8 @@
 						<Tooltip content={$i18n.t('Save')}>
 							<button
 								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() => filePreviewRef?.saveEdit()}
+								on:click={() =>
+									filePreviewRef?.saveEdit().catch((error) => toast.error(String(error)))}
 								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
 							>
@@ -1924,8 +2237,26 @@
 			{/if}
 		{/if}
 
+		{#if diskChanged}<div
+				role="status"
+				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
+			>
+				File updated on disk. Your local changes are preserved. <button
+					class="underline"
+					on:click={() => openEntry({ name: selectedFile!.split('/').pop()!, type: 'file' })}
+					>Reload</button
+				>
+				<button
+					class="underline"
+					on:click={() => filePreviewRef.save().catch((e) => toast.error(String(e)))}
+					>Save local changes</button
+				>
+			</div>{/if}
 		<!-- Content -->
 		<div
+			bind:this={viewerRoot}
+			on:mouseup={captureSelection}
+			on:keyup={captureSelection}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
 				closeDirectoryMenu();
@@ -1956,6 +2287,13 @@
 							apiKey={selectedTerminal.key}
 							{chatId}
 							targetPage={documentTargetPage}
+							initialSheet={selectedExcelSheet}
+							onReady={() => {
+								openedFile = pendingFile;
+								publishFile();
+							}}
+							bind:currentSlide
+							bind:sheet={selectedExcelSheet}
 						/>
 					{/key}
 				{:else}
@@ -1964,6 +2302,10 @@
 						bind:editing
 						bind:showRaw
 						bind:saving
+						bind:dirty
+						{chatId}
+						resourceVersion={commentGeneration}
+						onLocalLink={(path) => showFileNavPath.set({ path })}
 						bind:currentSlide
 						{selectedFile}
 						readOnly={!selectedFileWritable}
@@ -1992,24 +2334,7 @@
 						baseUrl={previewBaseUrl}
 						apiKey={selectedTerminal?.key ?? ''}
 						overlay={overlay || isDraggingHandle}
-						onSave={async (content) => {
-							const terminal = selectedTerminal;
-							if (!terminal || !selectedFile || !selectedFileWritable) return;
-							const fileName = selectedFile.split('/').pop() ?? 'file';
-							const dir = selectedFile.substring(0, selectedFile.lastIndexOf('/') + 1) || '/';
-							const file = new File([content], fileName, { type: 'text/plain' });
-							const result = await uploadToTerminal(
-								terminal.url,
-								terminal.key,
-								dir,
-								file,
-								chatId ?? undefined
-							);
-							toast[result ? 'success' : 'error'](
-								result ? $i18n.t('File saved') : $i18n.t('Failed to save file')
-							);
-							if (result) fileContent = content;
-						}}
+						onSave={saveFile}
 					/>
 				{/if}
 			{:else}
@@ -2388,3 +2713,69 @@
 		{/if}
 	</div>
 {/if}
+
+{#if fileAsk}
+	{#key fileAsk.anchor}
+		<form
+			use:positionFileAsk={fileAsk.anchor}
+			data-file-ask
+			class="fixed z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white pt-3 pl-3 pr-2 pb-2 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 dark:bg-gray-850 dark:text-white dark:ring-white/10"
+			aria-label={$i18n.t('Ask about this file')}
+			on:submit|preventDefault={submitFileAsk}
+		>
+			{#if fileAsk.text}
+				<blockquote
+					class="mb-2 border-l-2 border-gray-200 pl-2 text-xs leading-4 text-gray-500 dark:border-gray-700 dark:text-gray-400"
+				>
+					<span class="line-clamp-3 whitespace-pre-wrap break-words">{fileAsk.text}</span>
+				</blockquote>
+			{/if}
+			<div class="flex items-center gap-1.5">
+				<textarea
+					id="file-ask-input"
+					rows="1"
+					class="min-w-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm leading-5 text-gray-700 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-gray-300 dark:placeholder:text-gray-500"
+					placeholder={$i18n.t('Ask or edit…')}
+					aria-label={$i18n.t('Ask or edit…')}
+					bind:value={fileAskInput}
+					on:input={(event) => {
+						event.currentTarget.style.height = 'auto';
+						event.currentTarget.style.height = `${Math.min(96, event.currentTarget.scrollHeight)}px`;
+					}}
+					on:keydown={(event) => {
+						if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+							event.preventDefault();
+							submitFileAsk();
+						}
+					}}
+				/>
+				<button
+					type="submit"
+					disabled={asking || !fileAskInput.trim()}
+					aria-label={$i18n.t('Send')}
+					class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full transition-colors {fileAskInput.trim()
+						? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'
+						: 'bg-gray-200 text-white dark:bg-gray-700 dark:text-gray-900'}"
+				>
+					{#if asking}<Spinner className="size-3.5" />{:else}<ArrowRight
+							className="size-3.5 -rotate-90"
+						/>{/if}
+				</button>
+			</div>
+		</form>
+	{/key}
+{/if}
+<ConfirmDialog
+	show={dirtyChoice !== null}
+	title={$i18n.t('Unsaved changes')}
+	confirmLabel={dirtyChoice?.sending ? $i18n.t('Save and send') : $i18n.t('Save')}
+	on:confirm={() => dirtyChoice?.resolve('save')}
+	on:cancel={() => dirtyChoice?.resolve('cancel')}
+>
+	<p class="text-sm text-gray-500">{$i18n.t('Save your changes before continuing?')}</p>
+	{#if dirtyChoice && !dirtyChoice.sending}<button
+			type="button"
+			class="mt-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+			on:click={() => dirtyChoice?.resolve('discard')}>{$i18n.t('Discard changes')}</button
+		>{/if}
+</ConfirmDialog>

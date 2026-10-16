@@ -45,6 +45,9 @@
 	export let callMode = 'current';
 	export let eventTarget: EventTarget;
 	export let submitPrompt: Function;
+	export let onAskFile:
+		| ((instruction: string, file: import('$lib/apis/terminal').FilesystemFile) => Promise<void>)
+		| null = null;
 	export let stopResponse: Function;
 	export let showMessage: Function;
 	export let files;
@@ -300,7 +303,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav {chatId} bind:terminalContext />
+								<FileNav {onAskFile} {chatId} bind:terminalContext />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
@@ -430,7 +433,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav overlay={dragged} {chatId} bind:terminalContext />
+								<FileNav {onAskFile} overlay={dragged} {chatId} bind:terminalContext />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav overlay={dragged} />
 							{:else}

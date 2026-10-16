@@ -33,6 +33,28 @@
 	// Terminal connection for notebook execution
 	export let baseUrl: string = '';
 	export let apiKey: string = '';
+	export let chatId: string | null = null;
+	export let resourceVersion = 0;
+	export let onLocalLink: (path: string) => void = () => {};
+	export let dirty = false;
+	let codeValue = '';
+	let lastLoaded: string | null = null;
+	let bufferPath: string | null = null;
+	const syncContent = (content: string | null, path: string | null) => {
+		if (bufferPath !== path || codeValue === (lastLoaded ?? '')) codeValue = content ?? '';
+		bufferPath = path;
+		lastLoaded = content;
+	};
+	$: syncContent(fileContent, selectedFile);
+	$: dirty = editing ? editContent !== (fileContent ?? '') : codeValue !== (fileContent ?? '');
+	export const getSelection = () =>
+		editing && editTextarea?.selectionStart !== editTextarea?.selectionEnd
+			? {
+					text: editContent.slice(editTextarea.selectionStart, editTextarea.selectionEnd),
+					location: ''
+				}
+			: fileCodeEditorRef?.getSelection();
+	export const save = () => (editing ? saveEdit() : saveCodeFile());
 
 	// Office preview props
 	export let fileOfficeHtml: string | null = null;
@@ -67,6 +89,7 @@
 		editing = false;
 		editContent = '';
 		saving = false;
+		codeValue = fileContent ?? '';
 	};
 
 	export const startEdit = async () => {
@@ -81,11 +104,22 @@
 	export const saveEdit = async () => {
 		if (!onSave || readOnly) return;
 		saving = true;
-		await onSave(editContent);
-		saving = false;
-		editing = false;
+		const target = selectedFile,
+			content = editContent;
+		try {
+			await onSave(content);
+			if (selectedFile === target && editContent === content) editing = false;
+		} finally {
+			saving = false;
+		}
 	};
 
+	export const discard = () => {
+		codeValue = fileContent ?? '';
+		editContent = fileContent ?? '';
+		fileCodeEditorRef?.setValue(codeValue);
+		dirty = false;
+	};
 	export const cancelEdit = () => {
 		editing = false;
 		editContent = '';
@@ -95,9 +129,12 @@
 	export const saveCodeFile = async () => {
 		if (!onSave || readOnly) return;
 		saving = true;
-		const content = fileCodeEditorRef?.getValue() ?? '';
-		await onSave(content);
-		saving = false;
+		const content = fileCodeEditorRef?.getValue() ?? codeValue;
+		try {
+			await onSave(content);
+		} finally {
+			saving = false;
+		}
 	};
 
 	$: isTextFile = fileContent !== null && fileImageUrl === null && filePdfData === null;
@@ -334,9 +371,9 @@
 				<FileCodeEditor
 					{readOnly}
 					bind:this={fileCodeEditorRef}
-					value={fileContent ?? ''}
+					bind:value={codeValue}
 					filePath={selectedFile}
-					onSave={readOnly ? null : onSave}
+					onSave={readOnly ? null : saveCodeFile}
 					{searchTarget}
 				/>
 			</div>
@@ -377,23 +414,32 @@
 				<FileCodeEditor
 					{readOnly}
 					bind:this={fileCodeEditorRef}
-					value={fileContent ?? ''}
+					bind:value={codeValue}
 					filePath={selectedFile}
-					onSave={readOnly ? null : onSave}
+					onSave={readOnly ? null : saveCodeFile}
 				/>
 			</div>
 		{:else if isMarkdown && !showRaw}
 			{#key selectedFile}
-				<MarkdownDocument content={fileContent} id={`file-${selectedFile}`} />
+				<MarkdownDocument
+					content={fileContent}
+					id={`file-${selectedFile}`}
+					path={selectedFile ?? ''}
+					{baseUrl}
+					{apiKey}
+					{chatId}
+					{resourceVersion}
+					{onLocalLink}
+				/>
 			{/key}
 		{:else if isMarkdown && showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
 					{readOnly}
 					bind:this={fileCodeEditorRef}
-					value={fileContent ?? ''}
+					bind:value={codeValue}
 					filePath={selectedFile}
-					onSave={readOnly ? null : onSave}
+					onSave={readOnly ? null : saveCodeFile}
 				/>
 			</div>
 		{:else if isCsv && !showRaw && csvRows.length > 0}
@@ -454,9 +500,9 @@
 				<FileCodeEditor
 					{readOnly}
 					bind:this={fileCodeEditorRef}
-					value={fileContent ?? ''}
+					bind:value={codeValue}
 					filePath={selectedFile}
-					onSave={readOnly ? null : onSave}
+					onSave={readOnly ? null : saveCodeFile}
 				/>
 			</div>
 		{:else if isSvg && highlightedHtml && !showRaw}

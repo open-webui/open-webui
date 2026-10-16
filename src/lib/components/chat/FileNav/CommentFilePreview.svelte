@@ -1,6 +1,18 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import type { WorkBook } from 'xlsx';
+	export let onReady = () => {};
+	export let currentSlide = 0;
+	let reportedReady = false;
+	export let initialSheet = '';
+	const reportReady = () => {
+		if (!loading && !previewError && !reportedReady) {
+			reportedReady = true;
+			onReady();
+		}
+	};
+	$: (loading, previewError, reportReady());
+
 	import { downloadFileBlob, downloadFilePreview } from '$lib/apis/terminal';
 	import { readOfficeComments } from '$lib/utils/comments/office';
 	import {
@@ -36,7 +48,7 @@
 	let previewError = false;
 	let slides: string[] = [];
 	let workbook: WorkBook | null = null;
-	let sheet = '';
+	export let sheet = '';
 	let table: string | null = null;
 	let root: HTMLDivElement;
 	let popover: HTMLDivElement;
@@ -162,7 +174,7 @@
 				const XLSX = await import('xlsx');
 				if (!alive) return;
 				workbook = XLSX.read(bytes, { type: 'array' });
-				await setSheet(workbook.SheetNames[0]);
+				await setSheet(workbook.Sheets[initialSheet] ? initialSheet : workbook.SheetNames[0]);
 				loading = false;
 			}
 			void readOfficeComments(bytes, ext, workbook ?? undefined)
@@ -235,6 +247,7 @@
 	{#if loading}<div class="flex h-full items-center justify-center"><Spinner /></div>
 	{:else if pdf}
 		<PdfPagesPreview
+			bind:currentSlide
 			data={pdf}
 			{targetPage}
 			singlePage={ext === 'pptx'}
@@ -253,7 +266,7 @@
 			onAnchors={receiveAnchors}
 		/>
 	{:else if ext === 'pptx' && slides.length}
-		<PptxPreview {slides} {targetPage} className="h-full" {comments} />
+		<PptxPreview bind:currentSlide {slides} {targetPage} className="h-full" {comments} />
 	{:else if table !== null}
 		<FilePreview
 			selectedFile={path}

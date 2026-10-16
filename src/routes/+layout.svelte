@@ -554,7 +554,7 @@
 						: terminalFileResult(result, params, toolServer.url, chatId)
 					: res;
 
-			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile) {
+			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile && !chatId) {
 				if (result?.exists !== false) {
 					displayFileHandler(
 						result?.path ?? params.path,

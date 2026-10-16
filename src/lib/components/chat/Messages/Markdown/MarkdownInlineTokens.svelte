@@ -7,6 +7,13 @@
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
+	const terminalDocument = getContext<
+		| {
+				localPath: (ref: string) => string | null;
+				resolveImage: (ref: string) => Promise<string | null>;
+		  }
+		| undefined
+	>('terminal-document');
 	const markdown = getContext<
 		| { allowRemoteContent: boolean; document?: boolean; parseInline?: (tokens: Token[]) => string }
 		| undefined
@@ -124,7 +131,15 @@
 			>
 		{/if}
 	{:else if token.type === 'image'}
-		<Image src={token.href} alt={token.text} allowExternal={true} />
+		{#if terminalDocument?.localPath(token.href)}
+			{#await terminalDocument.resolveImage(token.href)}
+				<span class="text-xs text-gray-400">{token.text}</span>
+			{:then url}
+				{#if url}<img src={url} alt={token.text} data-terminal-resolved="true" />{:else}<span
+						class="text-xs text-gray-400">Image unavailable: {token.text}</span
+					>{/if}
+			{/await}
+		{:else}<Image src={token.href} alt={token.text} allowExternal={true} />{/if}
 	{:else if token.type === 'strong'}
 		<strong
 			><svelte:self id={`${id}-strong`} tokens={token.tokens} {sourceIds} {onSourceClick} /></strong

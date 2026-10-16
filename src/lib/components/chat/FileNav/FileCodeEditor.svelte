@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '$lib/utils/codemirror';
+	import { toast } from 'svelte-sonner';
 	import { basicSetup, EditorView } from 'codemirror';
 	import { keymap, placeholder as editorPlaceholder } from '@codemirror/view';
 	import { Compartment, EditorState } from '@codemirror/state';
@@ -29,6 +30,15 @@
 	let editorReadOnly = new Compartment();
 	let internalValue = '';
 	let lastSearchTargetRequestId = 0;
+
+	export const getSelection = () => {
+		if (!editor || editor.state.selection.main.empty) return undefined;
+		const { from, to } = editor.state.selection.main;
+		return {
+			text: editor.state.sliceDoc(from, to),
+			location: `Lines ${editor.state.doc.lineAt(from).number}–${editor.state.doc.lineAt(to).number}`
+		};
+	};
 
 	/** Return the current editor content */
 	export const getValue = (): string => {
@@ -112,7 +122,7 @@
 					key: 'Mod-s',
 					run: () => {
 						if (onSave && !readOnly) {
-							onSave(editor?.state.doc.toString() ?? '');
+							void onSave(editor?.state.doc.toString() ?? '').catch((e) => toast.error(String(e)));
 						}
 						return true;
 					}
