@@ -1421,7 +1421,9 @@
 											</button>
 										</Tooltip>
 									{/if}
+								{/if}
 
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || shareMode === 'continue'}
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}
 											<button
@@ -1569,7 +1571,9 @@
 											</Tooltip>
 										{/if}
 									{/if}
+								{/if}
 
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (shareMode === 'continue' && message.user_id === $user?.id)}
 									{#each (!readOnly && model?.actions) || [] as action}
 										<Tooltip
 											content={resolveLocalizedFunction(
