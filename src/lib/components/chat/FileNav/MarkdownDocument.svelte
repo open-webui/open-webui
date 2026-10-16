@@ -100,7 +100,40 @@
 		parseInline: (tokens: Token[]) =>
 			documentMarkdown.Parser.parseInline(tokens, documentMarkdown.defaults)
 	});
-	$: tokens = documentMarkdown.lexer(content);
+	const voidTags = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
+	const countTags = (text: string, pattern: string) =>
+		text.match(new RegExp(pattern, 'gi'))?.length ?? 0;
+	const groupHtmlBlocks = (tokens: Token[]) => {
+		const grouped: Token[] = [];
+		for (let start = 0; start < tokens.length; start++) {
+			const tag =
+				tokens[start].type === 'html' ? tokens[start].raw.match(/^\s*<([a-z][\w-]*)/i)?.[1] : null;
+			let end = start;
+			if (tag && !voidTags.test(tag)) {
+				let depth = 0;
+				for (; end < tokens.length; end++) {
+					depth +=
+						countTags(tokens[end].raw, `<${tag}[\\s>]`) - countTags(tokens[end].raw, `</${tag}>`);
+					if (depth <= 0) break;
+				}
+			}
+			if (end > start && end < tokens.length) {
+				const run = tokens.slice(start, end + 1);
+				grouped.push({
+					type: 'html',
+					block: true,
+					pre: false,
+					raw: run.map((token) => token.raw).join(''),
+					text: documentMarkdown.parser(run)
+				});
+				start = end;
+			} else {
+				grouped.push(tokens[start]);
+			}
+		}
+		return grouped;
+	};
+	$: tokens = groupHtmlBlocks(documentMarkdown.lexer(content));
 	const resolveHtmlImages = (node: HTMLElement) => {
 		let alive = true;
 		const update = () => {
