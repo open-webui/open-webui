@@ -35,7 +35,11 @@
 	let typingUsersTimeout = {};
 
 	$: if (threadId) {
-		initHandler($page.url.searchParams.get('message') ?? '');
+		initHandler(
+			$page.url.searchParams.get('thread') === threadId
+				? ($page.url.searchParams.get('message') ?? '')
+				: ''
+		);
 	}
 
 	const scrollToBottom = () => {
