@@ -4288,8 +4288,8 @@
 			}
 		}
 
-		// Menu-selected skills are sent as IDs; inline <$skillId|label> mentions stay
-		// in the message so the backend can inject their full content.
+		// Menu-selected skills and inline <$skillId|label> mentions both load instructions.
+		// Keep mentions in the message so the backend can resolve them.
 		const skillIds = [...selectedSkillIds];
 
 		// Only send terminal_id if the model has terminal capability enabled
