@@ -238,6 +238,8 @@
 		: /\.(pdf|docx|pptx)$/i.test(selectedFile ?? '')
 			? `Page ${currentSlide + 1}`
 			: '';
+	// Preserve translations for the former save notifications during extraction.
+	// $i18n.t('File saved'); $i18n.t('Failed to save file');
 	const saveFile = async (content: string) => {
 		const target = saveConnection;
 		if (!target || !selectedFileWritable) throw new Error('File is not writable.');

@@ -42,7 +42,8 @@
 			const rect =
 				range.getClientRects()[0] ?? range.startContainer.parentElement?.getBoundingClientRect();
 			if (!rect) continue;
-			if (highlightRange(containerEl, layer, range, `word:${id}`, `${$i18n.t('Comment')} ${id}`)) continue;
+			if (highlightRange(containerEl, layer, range, `word:${id}`, `${$i18n.t('Comment')} ${id}`))
+				continue;
 			const button = commentPin(`word:${id}`, `${$i18n.t('Comment')} ${id}`);
 			button.dataset.wordComment = id;
 			button.style.top = `${rect.top - base.top}px`;

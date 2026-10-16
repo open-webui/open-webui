@@ -191,7 +191,9 @@
 							<div class="w-full mb-2.5">
 								{#if item.length === 1 && item[0].type === 'group'}
 									<!-- Render group header -->
-									<div class="px-0.25 text-[0.6875rem] font-normal -mb-1 text-gray-500 dark:text-gray-400">
+									<div
+										class="px-0.25 text-[0.6875rem] font-normal -mb-1 text-gray-500 dark:text-gray-400"
+									>
 										{item[0].label}
 									</div>
 								{:else}

@@ -32,6 +32,8 @@
 	import PreviewMarkdown from './Search/PreviewMarkdown.svelte';
 
 	const i18n: any = getContext('i18n');
+	// Preserve translations from the former chat search and preview during extraction.
+	// $i18n.t('Failed to load chat'); $i18n.t('Select a conversation to preview');
 	export let show = false;
 	export let onClose = () => {};
 	let query = '';

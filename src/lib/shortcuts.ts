@@ -308,6 +308,8 @@ export const shortcuts: ShortcutRegistry = {
 		keys: ['Escape'],
 		category: 'Input',
 		configurable: true,
+		// Tooltips are translated dynamically; keep this key visible to the extractor.
+		// t('settings.personal.shortcuts.clearInputSelections.description');
 		tooltip: 'settings.personal.shortcuts.clearInputSelections.description'
 	},
 	[Shortcut.ACCEPT_AUTOCOMPLETE]: {

@@ -122,22 +122,58 @@
 				const source = sourceComments?.find((c) => c.id === comment.id);
 				if (source?.location?.kind === 'word' && source.location.quote) {
 					const range = findTextRange(sceneElement, source.location.quote);
-					if (range && highlightRange(wrapper, layer, range, comment.id, `${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`)) continue;
+					if (
+						range &&
+						highlightRange(
+							wrapper,
+							layer,
+							range,
+							comment.id,
+							`${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`
+						)
+					)
+						continue;
 				}
-				const regions = loc.quads?.length ? Array.from({length: Math.floor(loc.quads.length / 8)}, (_, i) => {
-					const q = loc.quads!.slice(i * 8, i * 8 + 8);
-					return [Math.min(q[0],q[2],q[4],q[6]),Math.min(q[1],q[3],q[5],q[7]),Math.max(q[0],q[2],q[4],q[6]),Math.max(q[1],q[3],q[5],q[7])];
-				}) : [];
+				const regions = loc.quads?.length
+					? Array.from({ length: Math.floor(loc.quads.length / 8) }, (_, i) => {
+							const q = loc.quads!.slice(i * 8, i * 8 + 8);
+							return [
+								Math.min(q[0], q[2], q[4], q[6]),
+								Math.min(q[1], q[3], q[5], q[7]),
+								Math.max(q[0], q[2], q[4], q[6]),
+								Math.max(q[1], q[3], q[5], q[7])
+							];
+						})
+					: [];
 				for (const region of regions) {
 					const r = viewport.convertToViewportRectangle(region);
-					const target = document.createElement('button'); target.type = 'button';
-					target.dataset.fileCommentId = comment.id; target.dataset.commentHighlight = comment.id;
-					target.setAttribute('aria-label', `${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`);
-					Object.assign(target.style, {position:'absolute',left:`${Math.min(r[0],r[2])}px`,top:`${Math.min(r[1],r[3])}px`,width:`${Math.abs(r[2]-r[0])}px`,height:`${Math.abs(r[3]-r[1])}px`,pointerEvents:'none',background:'transparent',border:'0',borderBottom:'1px solid rgba(180,130,30,.6)',cursor:'help'});
+					const target = document.createElement('button');
+					target.type = 'button';
+					target.dataset.fileCommentId = comment.id;
+					target.dataset.commentHighlight = comment.id;
+					target.setAttribute(
+						'aria-label',
+						`${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`
+					);
+					Object.assign(target.style, {
+						position: 'absolute',
+						left: `${Math.min(r[0], r[2])}px`,
+						top: `${Math.min(r[1], r[3])}px`,
+						width: `${Math.abs(r[2] - r[0])}px`,
+						height: `${Math.abs(r[3] - r[1])}px`,
+						pointerEvents: 'none',
+						background: 'transparent',
+						border: '0',
+						borderBottom: '1px solid rgba(180,130,30,.6)',
+						cursor: 'help'
+					});
 					layer.appendChild(target);
 				}
 				if (regions.length) continue;
-				const button = commentPin(comment.id, `${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`);
+				const button = commentPin(
+					comment.id,
+					`${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`
+				);
 				button.dataset.commentId = comment.id;
 				button.style.left = `${Math.max(0, Math.min(viewport.width - 20, left - 22))}px`;
 				button.style.top = `${Math.max(0, Math.min(viewport.height - 20, top))}px`;
