@@ -1356,7 +1356,7 @@ async def _make_channel_emitter(request_info):
                 await _emit_channel_update(content, done, output if isinstance(output, list) else None)
 
         elif event_type == 'response:completion':
-            from open_webui.utils.middleware import handle_responses_streaming_event
+            from open_webui.utils.response import handle_responses_streaming_event
 
             data = event_data.get('data', {})
             state['output'], _ = handle_responses_streaming_event(data, state['output'])
@@ -1451,7 +1451,7 @@ async def get_event_emitter(request_info, update_db=True):
                 if isinstance(data.get('output'), list):
                     output = copy.deepcopy(data['output'])
                 elif event_type == 'response:completion':
-                    from open_webui.utils.middleware import handle_responses_streaming_event
+                    from open_webui.utils.response import handle_responses_streaming_event
 
                     output, _ = handle_responses_streaming_event(data, output or [])
                 now = time.monotonic()
