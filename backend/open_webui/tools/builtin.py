@@ -3550,7 +3550,7 @@ async def view_skill(
             {
                 'id': skill.id,
                 'name': snapshot['name'],
-                **skill_overview(snapshot['content'], file_summaries(snapshot['data']['files'])),
+                **await skill_overview(snapshot['content'], file_summaries(snapshot['data']['files'])),
             },
             ensure_ascii=False,
         )
@@ -3573,7 +3573,7 @@ async def read_skill_file(
     :param id: Skill ID.
     :param path: Relative path within the skill.
     :param offset: Character offset for paging text.
-    :param max_chars: Maximum characters to return, up to 20000 (default 10000).
+    :param max_chars: Maximum characters to return, capped by the admin skill content limit (default 10000).
     """
     try:
         from types import SimpleNamespace
@@ -3627,7 +3627,7 @@ async def read_skill_file(
         return JSONCodec.dumps(
             {
                 'path': path,
-                **skill_content_page(file['content'], offset, max_chars),
+                **await skill_content_page(file['content'], offset, max_chars),
             },
             ensure_ascii=False,
         )

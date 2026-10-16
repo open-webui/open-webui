@@ -2531,7 +2531,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     continue
                 skill_versions[skill.id] = version_id
                 skill_tools_enabled = use_builtin_tools and model_builtin_tools.get('skills', True)
-                overview = skill_overview(
+                overview = await skill_overview(
                     snapshot['content'],
                     [f['path'] for f in snapshot['data']['files'] if f['path'] != 'SKILL.md'],
                     tools_enabled=skill_tools_enabled,
