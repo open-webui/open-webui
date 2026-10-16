@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[Vào] dddd [tuần trước lúc] h:mm A",
 	"[Today at] h:mm A": "[Hôm nay lúc] h:mm A",
 	"[Yesterday at] h:mm A": "[Hôm qua lúc] h:mm A",
-	"{{ models }}": "{{ mô hình }}",
+	"{{ models }}": "{{ models }}",
 	"{{count}} added lines_other": "{{count}} dòng được thêm",
 	"{{COUNT}} Available Skills": "{{COUNT}} kỹ năng khả dụng",
 	"{{COUNT}} Available Tools": "{{COUNT}} Công cụ có sẵn",

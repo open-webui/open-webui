@@ -2270,7 +2270,7 @@
 	"Searching \"{{searchQuery}}\"": "Hľadanie \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Vyhľadávanie znalostí pre \"{{searchQuery}}\"",
 	"Searching the web": "Prehľadávanie webu",
-	"See readme.md for instructions": "Pozrite si {{readme.md}} pre pokyny.",
+	"See readme.md for instructions": "Pozrite si readme.md pre pokyny.",
 	"Select": "Vybrať",
 	"Select {{modelName}} model": "Vybrať model {{modelName}}",
 	"Select {{name}}": "Vybrať {{name}}",

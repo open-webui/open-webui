@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[গত] dddd h:mm A",
 	"[Today at] h:mm A": "[আজ] h:mm A",
 	"[Yesterday at] h:mm A": "[গতকাল] h:mm A",
-	"{{ models }}": "{{ মডেল}}",
+	"{{ models }}": "{{ models}}",
 	"{{count}} added lines_one": "{{count}}টি লাইন যোগ হয়েছে",
 	"{{count}} added lines_other": "{{count}}টি লাইন যোগ হয়েছে",
 	"{{COUNT}} Available Skills": "{{COUNT}}টি স্কিল উপলব্ধ",

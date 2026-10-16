@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[يوم] dddd [الماضي الساعة] h:mm A",
 	"[Today at] h:mm A": "[اليوم الساعة] h:mm A",
 	"[Yesterday at] h:mm A": "[أمس الساعة] h:mm A",
-	"{{ models }}": "{{ نماذج }}",
+	"{{ models }}": "{{ models }}",
 	"{{count}} added lines_zero": "لا أسطر مضافة ({{count}})",
 	"{{count}} added lines_one": "سطر واحد مضاف ({{count}})",
 	"{{count}} added lines_two": "سطران مضافان ({{count}})",

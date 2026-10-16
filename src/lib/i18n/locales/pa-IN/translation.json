@@ -5,7 +5,7 @@
 	"[Last] dddd [at] h:mm A": "[ਪਿਛਲੇ] dddd h:mm A",
 	"[Today at] h:mm A": "[ਅੱਜ] h:mm A",
 	"[Yesterday at] h:mm A": "[ਕੱਲ੍ਹ] h:mm A",
-	"{{ models }}": "{{ ਮਾਡਲ }}",
+	"{{ models }}": "{{ models }}",
 	"{{count}} added lines_one": "{{count}} ਜੋੜੀ ਗਈ ਲਾਈਨ",
 	"{{count}} added lines_other": "{{count}} ਜੋੜੀਆਂ ਗਈਆਂ ਲਾਈਨਾਂ",
 	"{{COUNT}} Available Skills": "{{COUNT}} ਉਪਲਬਧ ਹੁਨਰ",
