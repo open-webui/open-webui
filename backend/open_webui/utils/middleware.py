@@ -2073,10 +2073,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     pending_assistant_message = None
     chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
     is_note_chat = bool(chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
+    model_capabilities = (model.get('info', {}).get('meta', {}).get('capabilities') or {})
+    model_supports_tools = model_capabilities.get('tools', True)
     use_builtin_tools = is_note_chat or (
         bool(metadata.get('session_id'))
         and metadata.get('params', {}).get('function_calling') != 'legacy'
         and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
+        and model_supports_tools
     )
     metadata['include_file_context'] = bool(
         chat and chat.user_id == user.id and payload_tools is None and use_builtin_tools
