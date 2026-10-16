@@ -470,6 +470,7 @@
 	};
 
 	let taskIds = null;
+	let pendingChatEvents: [any, any][] = [];
 
 	// Chat Input
 	let prompt = '';
@@ -987,6 +988,7 @@
 		prompt = '';
 		messageInput?.setText('');
 		await chatId.set('');
+		pendingChatEvents = [];
 		await chatTitle.set('');
 
 		await setDefaults();
@@ -1493,6 +1495,11 @@
 			);
 			return;
 		}
+		// A new chat's events can arrive before its id
+		if (!$chatId && history.messages[event.message_id]) {
+			pendingChatEvents.push([event, cb]);
+			return;
+		}
 		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
 		const interactionType = event?.data?.type;
 		const interactionData = event?.data?.data;
@@ -1533,11 +1540,7 @@
 			return;
 		}
 
-		// A new chat's title can arrive before its id; the response message already exists.
-		if (
-			event.chat_id === $chatId ||
-			(!$chatId && event?.data?.type === 'chat:title' && history.messages[event.message_id])
-		) {
+		if (event.chat_id === $chatId) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			if (type === 'typing') {
@@ -2757,6 +2760,7 @@
 		// A chat opened in the meantime keeps its id
 		if ($chatId !== previousChatId) return;
 		await chatId.set('');
+		pendingChatEvents = [];
 		await chatTitle.set('');
 
 		history = {
@@ -4444,6 +4448,7 @@
 						if (file.type === 'filesystem' && file.session_id == null)
 							file.session_id = res.chat_id;
 					await chatId.set(res.chat_id);
+					for (const [event, cb] of pendingChatEvents.splice(0)) void chatEventHandler(event, cb);
 					if (!$temporaryChatEnabled && !embedded) {
 						// Carry the picks made on the new-chat page over to this chat
 						saveDraft(getChatInputDraft(), res.chat_id, false);
