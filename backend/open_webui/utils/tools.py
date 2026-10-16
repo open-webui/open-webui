@@ -1325,7 +1325,13 @@ async def get_tool_servers(request: Request):
                 data = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers')
                 if data is not None:
                     tool_servers = JSONCodec.loads(data)
-                    request.app.state.TOOL_SERVERS = tool_servers
+                    if tool_servers or not any(
+                        connection.get('config', {}).get('enable') and connection.get('type', 'openapi') == 'openapi'
+                        for connection in await Config.get('tool_server.connections', []) or []
+                    ):
+                        request.app.state.TOOL_SERVERS = tool_servers
+                    else:
+                        tool_servers = None
             except Exception as e:
                 log.error(f'Error fetching tool_servers from Redis: {e}')
 
