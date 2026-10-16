@@ -1464,8 +1464,9 @@
 		if (next && socket)
 			socket.emit('events:chat', { chat_id: next, data: { type: 'join' } }, (accepted: boolean) => {
 				if (!socket.connected || socket.id !== connectionId || $chatId !== next) return;
-				if (accepted) void refreshChat();
-				else clearPresence();
+				if (!accepted) clearPresence();
+				// A refused join can mean access was lost; the refresh then sends the reader home.
+				void refreshChat();
 			});
 	};
 	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
