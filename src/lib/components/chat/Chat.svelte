@@ -836,7 +836,7 @@
 		try {
 			const input = JSON.parse(storageChatInput);
 			prompt = input.prompt ?? '';
-			messageInput?.setText(prompt);
+			messageInput?.setText(prompt, undefined, false);
 			files = input.files ?? [];
 			selectedToolIds = input.selectedToolIds ?? [];
 			selectedSkillIds = input.selectedSkillIds ?? [];
@@ -3185,7 +3185,7 @@
 			[$chatId]: queue.filter((m) => m.id !== id)
 		}));
 		files = item.files;
-		messageInput?.setText(item.prompt);
+		messageInput?.setText(item.prompt, undefined, false);
 
 		await processNextInQueue($chatId);
 	};
