@@ -229,9 +229,7 @@
 		margin-block: 0.125rem;
 	}
 	.document-markdown :global(blockquote) {
-		margin: 0.75rem 0;
-		font-style: normal;
-		font-weight: 400;
+		font-size: 0.75rem;
 	}
 	.document-markdown :global(strong) {
 		font-weight: 600;
