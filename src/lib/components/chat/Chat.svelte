@@ -2751,7 +2751,10 @@
 
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
 		await restoreChatInput(sessionStorage.getItem('chat-input'));
+		const previousChatId = $chatId;
 		await resetInput();
+		// A chat opened in the meantime keeps its id
+		if ($chatId !== previousChatId) return;
 		await chatId.set('');
 		await chatTitle.set('');
 
