@@ -2,7 +2,8 @@ import JSZip from 'jszip';
 
 export const elements = (node: Document | Element, name: string): Element[] =>
 	Array.from(node.getElementsByTagNameNS('*', name));
-export const children = (node: Node): Element[] => Array.from(node.childNodes).filter((n) => n.nodeType === 1) as Element[];
+export const children = (node: Node): Element[] =>
+	Array.from(node.childNodes).filter((n) => n.nodeType === 1) as Element[];
 export const attr = (node: Element, name: string) =>
 	Array.from(node.attributes).find((a) => a.localName === name)?.value ?? '';
 export const text = (node: Element, paragraph = 'p') => {

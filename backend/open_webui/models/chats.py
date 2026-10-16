@@ -1318,9 +1318,7 @@ class ChatTable:
             chat.current_message_id = history['currentId']
             chat.updated_at = int(time.time())
             for mid, message in turn.items():
-                await ChatMessages.upsert_message(
-                    mid, chat_id, message.get('user_id') or chat.user_id, message, db=db
-                )
+                await ChatMessages.upsert_message(mid, chat_id, message.get('user_id') or chat.user_id, message, db=db)
             if parent_id:
                 turn[parent_id] = history['messages'][parent_id]
             return {'messages': turn, 'currentId': history['currentId']}

@@ -422,20 +422,38 @@ class MessageTable:
             stmt = select(Message).filter_by(channel_id=channel_id, parent_id=parent_id)
             if around or before:
                 anchor = await db.get(Message, before or around)
-                if not anchor or anchor.channel_id != channel_id or (anchor.id != parent_id and anchor.parent_id != parent_id):
+                if (
+                    not anchor
+                    or anchor.channel_id != channel_id
+                    or (anchor.id != parent_id and anchor.parent_id != parent_id)
+                ):
                     return []
                 if before:
-                    stmt = stmt.where(or_(Message.created_at < anchor.created_at,
-                        and_(Message.created_at == anchor.created_at, Message.id < anchor.id)))
+                    stmt = stmt.where(
+                        or_(
+                            Message.created_at < anchor.created_at,
+                            and_(Message.created_at == anchor.created_at, Message.id < anchor.id),
+                        )
+                    )
                     skip = 0
                 else:
                     # A bounded window starts just above the match, even in very old threads.
-                    newer = select(func.count()).select_from(Message).where(
-                        Message.channel_id == channel_id, Message.parent_id == parent_id,
-                        or_(Message.created_at > anchor.created_at,
-                            and_(Message.created_at == anchor.created_at, Message.id > anchor.id)))
+                    newer = (
+                        select(func.count())
+                        .select_from(Message)
+                        .where(
+                            Message.channel_id == channel_id,
+                            Message.parent_id == parent_id,
+                            or_(
+                                Message.created_at > anchor.created_at,
+                                and_(Message.created_at == anchor.created_at, Message.id > anchor.id),
+                            ),
+                        )
+                    )
                     skip = max(0, (await db.scalar(newer)) - 10)
-            result = await db.execute(stmt.order_by(Message.created_at.desc(), Message.id.desc()).offset(skip).limit(limit))
+            result = await db.execute(
+                stmt.order_by(Message.created_at.desc(), Message.id.desc()).offset(skip).limit(limit)
+            )
             all_messages = list(result.scalars().all())
 
             # If length of all_messages is less than limit, then add the parent message

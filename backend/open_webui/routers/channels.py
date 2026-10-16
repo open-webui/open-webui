@@ -1702,7 +1702,9 @@ async def get_channel_thread_messages(
         if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    message_list = await Messages.get_messages_by_parent_id(id, message_id, skip, min(max(limit, 1), 100), db=db, around=around, before=before)
+    message_list = await Messages.get_messages_by_parent_id(
+        id, message_id, skip, min(max(limit, 1), 100), db=db, around=around, before=before
+    )
 
     if not message_list:
         return []

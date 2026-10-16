@@ -122,7 +122,9 @@ for package in sorted(metadata['packages'], key=lambda p: (p['name'], p['version
         f'Source: https://crates.io/api/v1/crates/{package["name"]}/{package["version"]}/download\n'
         + '\n'.join(references)
     )
-notices.extend(f'\nLicense and notice text [{number}]\n--------------------------------\n{text}' for text, number in texts.items())
+notices.extend(
+    f'\nLicense and notice text [{number}]\n--------------------------------\n{text}' for text, number in texts.items()
+)
 (OUTPUT / 'THIRD_PARTY_LICENSES.txt').write_text('\n'.join(notices) + '\n')
 with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as temp:
     json.dump(metadata, temp)
