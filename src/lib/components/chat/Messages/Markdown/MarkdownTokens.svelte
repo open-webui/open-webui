@@ -372,7 +372,7 @@
 							{chatId}
 							{messageId}
 							tokens={item.tokens}
-							top={token.loose}
+							top={item.task || token.loose}
 							{done}
 							{allowEmbeds}
 							{save}
@@ -415,7 +415,7 @@
 									{chatId}
 									{messageId}
 									tokens={item.tokens}
-									top={token.loose}
+									top={item.task || token.loose}
 									{done}
 									{allowEmbeds}
 									{save}
@@ -433,7 +433,7 @@
 								{chatId}
 								{messageId}
 								tokens={item.tokens}
-								top={token.loose}
+								top={item.task || token.loose}
 								{done}
 								{allowEmbeds}
 								{save}
@@ -692,6 +692,12 @@
 		width: auto;
 		height: auto;
 		background-size: 100% 100%;
+	}
+
+	input.task-checkbox:checked ~ :global(p),
+	input.task-checkbox:checked ~ .task-content > :global(p) {
+		opacity: 0.55;
+		text-decoration-line: line-through;
 	}
 
 	.task-content > :global(p:first-child) {
