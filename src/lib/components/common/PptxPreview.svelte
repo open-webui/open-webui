@@ -294,10 +294,12 @@
 		{/each}
 	</aside>
 
+	<!-- svelte-ignore a11y_no_static_element_interactions (Preserve native double-click behavior without changing touch zoom.) -->
 	<section
 		bind:this={stageEl}
 		class="min-w-0 min-h-0 overflow-hidden flex items-center justify-center overscroll-contain"
 		on:wheel|nonpassive={handleStageWheel}
+		on:dblclick|capture|stopPropagation={() => {}}
 	>
 		{#if selectedSlide}
 			<div

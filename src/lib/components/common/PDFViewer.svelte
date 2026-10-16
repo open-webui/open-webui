@@ -687,6 +687,7 @@
 		tabindex="0"
 		on:scroll={handleScroll}
 		on:wheel|nonpassive={handleWheel}
+		on:dblclick|capture|stopPropagation={() => {}}
 		on:pointerdown={focusViewer}
 		on:keydown={handleKeyDown}
 	>
