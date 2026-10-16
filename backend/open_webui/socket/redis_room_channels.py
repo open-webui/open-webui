@@ -63,7 +63,6 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
 
     async def _subscribe_local_room_channels(self, pubsub: PubSub):
         """Keep a pubsub connection subscribed to exactly the local room channels."""
-        _, error = self._get_redis_module_and_error()
         subscribed_room_channels = set()
         while True:
             self._local_room_channels_changed.clear()
@@ -73,8 +72,8 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
                     await pubsub.subscribe(*new_room_channels)
                 if removed_room_channels := subscribed_room_channels - local_room_channels:
                     await pubsub.unsubscribe(*removed_room_channels)
-            except (error, RuntimeError):
-                # RuntimeError: redis-py reconnected this connection from here and from the listener at once
+            except Exception:
+                # the listener reconnecting this same connection can break these calls in several ways
                 await asyncio.sleep(1)
                 continue
             subscribed_room_channels = local_room_channels
