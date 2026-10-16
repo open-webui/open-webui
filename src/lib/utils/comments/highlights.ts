@@ -22,7 +22,8 @@ export function highlightRange(
 			top: `${(rect.top - bounds.top) / scale}px`,
 			width: `${rect.width / scale}px`,
 			height: `${rect.height / scale}px`,
-			pointerEvents: 'auto',
+			// Let the text underneath receive native selection gestures.
+			pointerEvents: 'none',
 			padding: '0',
 			margin: '0',
 			border: '0',
@@ -31,8 +32,6 @@ export function highlightRange(
 			background: 'rgba(250,204,21,.20)',
 			cursor: 'help'
 		});
-		target.onmouseenter = () => (target.style.background = 'rgba(250,204,21,.36)');
-		target.onmouseleave = () => (target.style.background = 'rgba(250,204,21,.20)');
 		layer.appendChild(target);
 	}
 	return rects.length > 0;

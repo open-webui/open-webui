@@ -39,6 +39,7 @@
 	let hoveredId: string | null = null;
 	let pinned = false;
 	let touchInteraction = false;
+	let overHighlight = false;
 	let popoverX = 0;
 	let popoverY = 0;
 	let closeTimer: ReturnType<typeof setTimeout>;
@@ -99,10 +100,38 @@
 		if (!pinned) closeTimer = setTimeout(() => (hoveredId = null), 100);
 	};
 	const reveal = (event: MouseEvent | FocusEvent, pin = false) => {
-		const element = (event.target as HTMLElement).closest<HTMLElement>(
+		overHighlight = false;
+		if (event instanceof MouseEvent && (event.buttons || window.getSelection()?.type === 'Range')) {
+			if (!pinned) {
+				keepOpen();
+				hoveredId = null;
+			}
+			return;
+		}
+		let element = (event.target as HTMLElement).closest<HTMLElement>(
 			'[data-file-comment-id],[data-cell]'
 		);
-		if (!element) return;
+		// Highlights are pointer-transparent so dragging selects the document text.
+		if (!element && event instanceof MouseEvent) {
+			const page = (event.target as HTMLElement).closest('.pdf-page-wrapper');
+			element =
+				Array.from((page ?? root).querySelectorAll<HTMLElement>('[data-comment-highlight]')).find(
+					(highlight) => {
+						const rect = highlight.getBoundingClientRect();
+						return (
+							event.clientX >= rect.left &&
+							event.clientX <= rect.right &&
+							event.clientY >= rect.top &&
+							event.clientY <= rect.bottom
+						);
+					}
+				) ?? null;
+		}
+		if (!element) {
+			closeLater();
+			return;
+		}
+		overHighlight = event instanceof MouseEvent && !!element.dataset.commentHighlight;
 		const id =
 			element.dataset.fileCommentId ??
 			comments.find(
@@ -236,12 +265,20 @@
 <div
 	bind:this={root}
 	class="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden"
+	class:comment-hover={overHighlight}
 	on:mouseover={reveal}
 	on:mousemove={reveal}
 	on:focusin={reveal}
 	on:mouseout={closeLater}
 	on:focusout={closeLater}
-	on:pointerdown={(e) => (touchInteraction = e.pointerType === 'touch')}
+	on:pointerdown={(e) => {
+		touchInteraction = e.pointerType === 'touch';
+		if (!(e.target as HTMLElement).closest('[data-file-comment-id],[data-cell]')) {
+			keepOpen();
+			pinned = false;
+			hoveredId = null;
+		}
+	}}
 	on:click={(e) => reveal(e, touchInteraction || e.detail === 0)}
 >
 	{#if loading}<div class="flex h-full items-center justify-center"><Spinner /></div>
@@ -347,6 +384,10 @@
 {/if}
 
 <style>
+	.comment-hover,
+	.comment-hover :global(:hover) {
+		cursor: help;
+	}
 	.comment-message {
 		overflow-wrap: anywhere;
 	}

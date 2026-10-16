@@ -133,7 +133,7 @@
 					const target = document.createElement('button'); target.type = 'button';
 					target.dataset.fileCommentId = comment.id; target.dataset.commentHighlight = comment.id;
 					target.setAttribute('aria-label', `${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`);
-					Object.assign(target.style, {position:'absolute',left:`${Math.min(r[0],r[2])}px`,top:`${Math.min(r[1],r[3])}px`,width:`${Math.abs(r[2]-r[0])}px`,height:`${Math.abs(r[3]-r[1])}px`,pointerEvents:'auto',background:'transparent',border:'0',borderBottom:'1px solid rgba(180,130,30,.6)',cursor:'help'});
+					Object.assign(target.style, {position:'absolute',left:`${Math.min(r[0],r[2])}px`,top:`${Math.min(r[1],r[3])}px`,width:`${Math.abs(r[2]-r[0])}px`,height:`${Math.abs(r[3]-r[1])}px`,pointerEvents:'none',background:'transparent',border:'0',borderBottom:'1px solid rgba(180,130,30,.6)',cursor:'help'});
 					layer.appendChild(target);
 				}
 				if (regions.length) continue;
