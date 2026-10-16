@@ -2058,6 +2058,8 @@ ENABLE_FOLDERS = os.getenv('ENABLE_FOLDERS', 'True').lower() == 'true'
 
 FOLDER_MAX_FILE_COUNT = os.getenv('FOLDER_MAX_FILE_COUNT', '')
 
+ENABLE_SKILL_LAZY_LOADING = os.getenv('ENABLE_SKILL_LAZY_LOADING', 'False').lower() == 'true'
+
 SKILL_CONTENT_MAX_CHARS = int(os.environ['SKILL_CONTENT_MAX_CHARS']) if os.getenv('SKILL_CONTENT_MAX_CHARS') else None
 if SKILL_CONTENT_MAX_CHARS is not None and SKILL_CONTENT_MAX_CHARS <= 0:
     raise ValueError('SKILL_CONTENT_MAX_CHARS must be a positive integer or unset')
@@ -2900,6 +2902,7 @@ ENABLE_LDAP_GROUP_CREATION = os.getenv('ENABLE_LDAP_GROUP_CREATION', 'False').lo
 LDAP_ATTRIBUTE_FOR_GROUPS = os.getenv('LDAP_ATTRIBUTE_FOR_GROUPS', 'memberOf')
 
 DEFAULT_CONFIG = {
+    'skills.lazy_loading.enable': ENABLE_SKILL_LAZY_LOADING,
     'skills.content_max_chars': SKILL_CONTENT_MAX_CHARS,
     'skills.preview_max_chars': SKILL_PREVIEW_MAX_CHARS,
     'direct.enable': ENABLE_DIRECT_CONNECTIONS,

@@ -4288,7 +4288,7 @@
 			}
 		}
 
-		// Menu-selected skills and inline <$skillId|label> mentions both load instructions.
+		// The backend applies the skill loading setting to menu-selected skills.
 		// Keep mentions in the message so the backend can resolve them.
 		const skillIds = [...selectedSkillIds];
 

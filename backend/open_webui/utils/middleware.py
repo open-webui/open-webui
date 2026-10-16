@@ -2453,7 +2453,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Otherwise, save any tools that filter inlets added for merging later.
     inlet_filter_tools = None if payload_tools is not None else form_data.get('tools', None)
 
-    # Selected and mentioned skills get bounded content; other skills remain available through view_skill.
+    # Mentions always load instructions; selected skills can optionally load through view_skill.
     chat_context = metadata.get('chat_context') or {}
     metadata['chat_context'] = chat_context
     skill_versions = chat_context.setdefault('skill_versions', {})
@@ -2462,6 +2462,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     activated_skill_ids = set(form_data.pop('skill_ids', None) or []) | mentioned_skill_ids
     skill_ids = sorted(activated_skill_ids | set(model.get('info', {}).get('meta', {}).get('skillIds', [])))
+    if payload_tools is None and await Config.get('skills.lazy_loading.enable', False):
+        activated_skill_ids = mentioned_skill_ids
     available_skills = []
     terminal_skills = []
     if is_note_chat:

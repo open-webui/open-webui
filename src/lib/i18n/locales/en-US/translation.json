@@ -2828,6 +2828,8 @@
 	"settings.admin.general.seeWhatSNew.label": "See what's new",
 	"settings.admin.general.skillContentMaxChars.description": "Maximum characters per skill read. Longer instructions open as a preview. Leave empty to use the default.",
 	"settings.admin.general.skillContentMaxChars.label": "Skill Read Limit",
+	"settings.admin.general.skillLazyLoading.description": "Load selected and model-attached skills when needed instead of including instructions upfront. Explicit skill mentions still load immediately. Requires built-in skill tools; otherwise instructions load upfront.",
+	"settings.admin.general.skillLazyLoading.label": "Load selected skills on demand",
 	"settings.admin.general.skillPreviewMaxChars.description": "Characters shown when instructions exceed the read limit. Cannot exceed that limit. Leave empty to use the default.",
 	"settings.admin.general.skillPreviewMaxChars.label": "Skill Preview Length",
 	"settings.admin.general.title": "General",

@@ -134,6 +134,7 @@ ADMIN_CONFIG_KEYS = {
     'ENABLE_CALENDAR': 'calendar.enable',
     'ENABLE_MEMORIES': 'memories.enable',
     'ENABLE_MEMORY_SYSTEM_CONTEXT': 'memories.system_context.enable',
+    'ENABLE_SKILL_LAZY_LOADING': 'skills.lazy_loading.enable',
     'SKILL_CONTENT_MAX_CHARS': 'skills.content_max_chars',
     'SKILL_PREVIEW_MAX_CHARS': 'skills.preview_max_chars',
     'ENABLE_NOTES': 'notes.enable',
@@ -1187,6 +1188,7 @@ class AdminConfig(MfaConfigForm):
     ENABLE_CALENDAR: bool
     ENABLE_MEMORIES: bool
     ENABLE_MEMORY_SYSTEM_CONTEXT: bool
+    ENABLE_SKILL_LAZY_LOADING: bool = False
     SKILL_CONTENT_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     SKILL_PREVIEW_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     ENABLE_NOTES: bool
@@ -1237,6 +1239,8 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
         updates.pop('apps.enable', None)
     if 'I18N' not in form_data.model_fields_set:
         updates.pop('ui.i18n', None)
+    if 'ENABLE_SKILL_LAZY_LOADING' not in form_data.model_fields_set:
+        updates.pop('skills.lazy_loading.enable', None)
     if 'SKILL_CONTENT_MAX_CHARS' not in form_data.model_fields_set:
         updates.pop('skills.content_max_chars', None)
     if 'SKILL_PREVIEW_MAX_CHARS' not in form_data.model_fields_set:
