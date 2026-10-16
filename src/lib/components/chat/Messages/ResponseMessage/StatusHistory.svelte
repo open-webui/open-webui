@@ -39,7 +39,7 @@
 				}}
 			>
 				<div class="flex items-start gap-2">
-					<StatusItem {status} />
+					<StatusItem {status} clamp={!showHistory || history.length > 1} />
 				</div>
 			</button>
 
@@ -64,7 +64,7 @@
 										{/if}
 									</div>
 
-									<StatusItem {status} done={true} />
+									<StatusItem {status} done={true} clamp={false} />
 								</div>
 							{/each}
 						</div>
