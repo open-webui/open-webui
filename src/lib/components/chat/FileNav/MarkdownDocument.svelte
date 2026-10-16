@@ -16,7 +16,9 @@
 </script>
 
 <script lang="ts">
-	import { setContext, onDestroy } from 'svelte';
+	import { getAllContexts, mount, unmount, setContext, onDestroy } from 'svelte';
+	import DOMPurify from 'dompurify';
+	import { v4 as uuidv4 } from 'uuid';
 	import { downloadFileBlob } from '$lib/apis/terminal';
 	import MarkdownTokens from '../Messages/Markdown/MarkdownTokens.svelte';
 	import type { Token } from 'marked';
@@ -98,8 +100,48 @@
 		allowRemoteContent: true,
 		lexer: (source: string) => documentMarkdown.lexer(source),
 		parseInline: (tokens: Token[]) =>
-			documentMarkdown.Parser.parseInline(tokens, documentMarkdown.defaults)
+			documentMarkdown.Parser.parseInline(tokens, documentMarkdown.defaults),
+		renderHtml
 	});
+	const context = getAllContexts();
+	function renderHtml(node: HTMLElement, props: { id: string; tokens: Token[]; top: boolean }) {
+		let components: ReturnType<typeof mount>[] = [];
+		const destroy = () => {
+			components.forEach((component) => unmount(component));
+			components = [];
+		};
+		const update = ({ id, tokens, top }: typeof props) => {
+			destroy();
+			const prefix = `markdown-${uuidv4()}`;
+			// Parse HTML together; keep Markdown components in slots the document cannot forge.
+			node.replaceChildren(
+				DOMPurify.sanitize(
+					tokens
+						.map((token, index) =>
+							token.type === 'html'
+								? token.text
+								: `<div id="${prefix}-${index}" style="display: contents"></div>`
+						)
+						.join(''),
+					{ RETURN_DOM_FRAGMENT: true }
+				)
+			);
+			tokens.forEach((token, index) => {
+				const target = node.querySelector(`#${prefix}-${index}`);
+				if (target) {
+					components.push(
+						mount(MarkdownTokens, {
+							target,
+							context,
+							props: { id: `${id}-${index}`, tokens: [token], top, editCodeBlock: false }
+						})
+					);
+				}
+			});
+		};
+		update(props);
+		return { update, destroy };
+	}
 	$: tokens = documentMarkdown.lexer(content);
 	const resolveHtmlImages = (node: HTMLElement) => {
 		let alive = true;

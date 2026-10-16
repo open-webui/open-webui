@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
 	import { onMount, getContext } from 'svelte';
+	import type { Action } from 'svelte/action';
 	const i18n = getContext('i18n');
 	const markdown = getContext<
-		{ document?: boolean; lexer?: (source: string) => Token[] } | undefined
+		| {
+				document?: boolean;
+				lexer?: (source: string) => Token[];
+				renderHtml?: Action<HTMLElement, { id: string; tokens: Token[]; top: boolean }>;
+		  }
+		| undefined
 	>('markdown');
 
 	import fileSaver from 'file-saver';
@@ -135,6 +141,7 @@
 	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
 
 	$: displayTokens = getDisplayTokens(tokens);
+	$: renderHtml = tokens.some((token) => token.type === 'html') ? markdown?.renderHtml : undefined;
 	$: singlePlainBlock =
 		displayTokens.length === 1 &&
 		(displayTokens[0]?.type === 'paragraph' || displayTokens[0]?.type === 'text');
@@ -173,7 +180,10 @@
 </script>
 
 <!-- {JSON.stringify(tokens)} -->
-{#each displayTokens as token, tokenIdx (tokenIdx)}
+{#if renderHtml}
+	<div class="contents" use:renderHtml={{ id, tokens, top }}></div>
+{/if}
+{#each renderHtml ? [] : displayTokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'hr'}
 		<hr class="border-gray-50 dark:border-gray-850/30" />
 	{:else if token.type === 'heading'}
