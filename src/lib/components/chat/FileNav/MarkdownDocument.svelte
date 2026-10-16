@@ -17,13 +17,17 @@
 
 <script lang="ts">
 	import { getAllContexts, mount, unmount, setContext, onDestroy } from 'svelte';
+	import { writable } from 'svelte/store';
 	import DOMPurify from 'dompurify';
 	import { v4 as uuidv4 } from 'uuid';
 	import { downloadFileBlob } from '$lib/apis/terminal';
 	import MarkdownTokens from '../Messages/Markdown/MarkdownTokens.svelte';
-	import type { Token } from 'marked';
+	import type { Token, Tokens } from 'marked';
+	import { toast } from 'svelte-sonner';
 
 	export let content: string;
+	export let onSave: ((content: string) => Promise<void>) | null = null;
+	export let saving = false;
 	export let id: string;
 	export let path = '';
 	export let baseUrl = '';
@@ -95,8 +99,69 @@
 		release();
 	}
 
+	function markdownTasks(tokens: Token[]) {
+		const tasks: Tokens.ListItem[] = [];
+		documentMarkdown.walkTokens(tokens, (token) => {
+			if (token.type === 'list_item' && token.task) tasks.push(token as Tokens.ListItem);
+		});
+		return tasks;
+	}
+
+	function toggleMarkdownTask(content: string, index: number, checked: boolean) {
+		const tasks = markdownTasks(documentMarkdown.lexer(content));
+		if (!tasks[index]) throw new Error('Task no longer exists. Reload the file and try again.');
+		if (tasks[index].checked === checked) return content;
+
+		// Confirm the marker with the renderer's parser, so duplicates and code examples stay untouched.
+		for (const match of content.matchAll(/\[[ xX]\]/g)) {
+			const offset = match.index! + 1;
+			if ((content[offset].toLowerCase() === 'x') === checked) continue;
+			const updated = content.slice(0, offset) + (checked ? 'x' : ' ') + content.slice(offset + 1);
+			const next = markdownTasks(documentMarkdown.lexer(updated));
+			if (
+				next.length === tasks.length &&
+				next.every((task, i) => task.checked === (i === index ? checked : tasks[i].checked))
+			) {
+				return updated;
+			}
+		}
+		throw new Error('Could not locate the task in the file. Reload the file and try again.');
+	}
+
+	const taskEnabled = writable(false);
+	$: taskEnabled.set(!!onSave);
 	setContext('markdown', {
 		document: true,
+		taskEnabled,
+		onTaskClick: async ({
+			item,
+			checked,
+			input
+		}: {
+			item: Tokens.ListItem;
+			checked: boolean;
+			input: HTMLInputElement;
+		}) => {
+			input.checked = !!item.checked;
+			if (!onSave || saving) return;
+			const previous = content;
+			const wasChecked = !!item.checked;
+			saving = true;
+			try {
+				const index = markdownTasks(tokens).indexOf(item);
+				const updated = toggleMarkdownTask(content, index, checked);
+				// Keep the rendered document in place while saving this single marker.
+				parsedContent = content = updated;
+				item.checked = input.checked = checked;
+				await onSave(updated);
+			} catch (error) {
+				parsedContent = content = previous;
+				item.checked = input.checked = wasChecked;
+				toast.error(String(error));
+			} finally {
+				saving = false;
+			}
+		},
 		allowRemoteContent: true,
 		lexer: (source: string) => documentMarkdown.lexer(source),
 		parseInline: (tokens: Token[]) =>
@@ -142,7 +207,12 @@
 		update(props);
 		return { update, destroy };
 	}
-	$: tokens = documentMarkdown.lexer(content);
+	let parsedContent: string | undefined;
+	let tokens: Token[] = [];
+	$: if (content !== parsedContent) {
+		tokens = documentMarkdown.lexer(content);
+		parsedContent = content;
+	}
 	const resolveHtmlImages = (node: HTMLElement) => {
 		let alive = true;
 		const update = () => {
@@ -261,7 +331,7 @@
 	.document-markdown :global(.codespan) {
 		font-size: 0.95em;
 	}
-	.document-markdown :global(input[type='checkbox']) {
+	.document-markdown :global(input[type='checkbox']:disabled) {
 		cursor: default;
 	}
 	.document-markdown :global(.document-code-block) {

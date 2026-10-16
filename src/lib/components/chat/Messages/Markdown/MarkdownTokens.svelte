@@ -1,21 +1,30 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
 	import { onMount, getContext } from 'svelte';
+	import type { Readable } from 'svelte/store';
 	import type { Action } from 'svelte/action';
 	const i18n = getContext('i18n');
 	const markdown = getContext<
 		| {
 				document?: boolean;
+				taskEnabled?: Readable<boolean>;
+				onTaskClick?: (event: {
+					item: Tokens.ListItem;
+					checked: boolean;
+					input: HTMLInputElement;
+				}) => void;
 				lexer?: (source: string) => Token[];
 				renderHtml?: Action<HTMLElement, { id: string; tokens: Token[]; top: boolean }>;
 		  }
 		| undefined
 	>('markdown');
 
+	const taskEnabled = markdown?.taskEnabled;
+
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { type Token } from 'marked';
+	import { type Token, type Tokens } from 'marked';
 	import { copyToClipboard, unescapeHtml } from '$lib/utils';
 	import { resolveChatMessageToolCall } from '$lib/apis/chats';
 
@@ -340,18 +349,19 @@
 					<li dir="auto" class="text-start">
 						{#if item?.task}
 							<input
-								class=" translate-y-[1px] -translate-x-1 [&:dir(rtl)]:translate-x-1 flex-shrink-0"
+								class="task-checkbox translate-y-[1px] -translate-x-1 [&:dir(rtl)]:translate-x-1 flex-shrink-0"
 								type="checkbox"
-								disabled={markdown?.document ?? false}
+								disabled={markdown?.document && !$taskEnabled}
 								checked={item.checked}
 								on:change={(e) => {
-									onTaskClick({
+									(markdown?.onTaskClick ?? onTaskClick)({
 										id: id,
 										token: token,
 										tokenIdx: tokenIdx,
 										item: item,
 										itemIdx: itemIdx,
-										checked: e.target.checked
+										input: e.currentTarget,
+										checked: e.currentTarget.checked
 									});
 								}}
 							/>
@@ -379,31 +389,27 @@
 		{:else}
 			<ul dir="auto" class="">
 				{#each token.items as item, itemIdx}
-					<li
-						dir="auto"
-						class="text-start {item?.task
-							? 'flex -translate-x-6.5 [&:dir(rtl)]:translate-x-6.5 gap-3 '
-							: ''}"
-					>
+					<li dir="auto" class="text-start {item?.task ? 'relative list-none' : ''}">
 						{#if item?.task}
 							<input
-								class="flex-shrink-0"
+								class="task-checkbox"
 								type="checkbox"
-								disabled={markdown?.document ?? false}
+								disabled={markdown?.document && !$taskEnabled}
 								checked={item.checked}
 								on:change={(e) => {
-									onTaskClick({
+									(markdown?.onTaskClick ?? onTaskClick)({
 										id: id,
 										token: token,
 										tokenIdx: tokenIdx,
 										item: item,
 										itemIdx: itemIdx,
-										checked: e.target.checked
+										input: e.currentTarget,
+										checked: e.currentTarget.checked
 									});
 								}}
 							/>
 
-							<div>
+							<div class="task-content">
 								<svelte:self
 									id={`${id}-${tokenIdx}-${itemIdx}`}
 									{chatId}
@@ -672,5 +678,23 @@
 
 	li {
 		margin-inline-start: 1.5em;
+	}
+
+	ul > li > input.task-checkbox {
+		position: absolute;
+		inset-inline-start: -1.5em;
+		top: calc((1lh - 0.875rem) / 2);
+		margin: 0;
+	}
+
+	input.task-checkbox::after {
+		inset: 0;
+		width: auto;
+		height: auto;
+		background-size: 100% 100%;
+	}
+
+	.task-content > :global(p:first-child) {
+		margin-top: 0;
 	}
 </style>

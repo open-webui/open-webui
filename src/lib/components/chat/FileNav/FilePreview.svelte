@@ -423,6 +423,8 @@
 			{#key selectedFile}
 				<MarkdownDocument
 					content={fileContent}
+					onSave={readOnly ? null : onSave}
+					bind:saving
 					id={`file-${selectedFile}`}
 					path={selectedFile ?? ''}
 					{baseUrl}
