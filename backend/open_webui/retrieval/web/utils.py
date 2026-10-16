@@ -1031,6 +1031,17 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                         raise e
 
 
+WEB_LOADER_HEADERS = {
+    'User-Agent': USER_AGENT or 'DefaultLangchainUserAgent',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Referer': 'https://www.google.com/',
+    'DNT': '1',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+}
+
+
 class SafeWebBaseLoader(BaseLoader):
     """Fetch pages with connect-time address checks and bounded concurrency."""
 
@@ -1059,15 +1070,7 @@ class SafeWebBaseLoader(BaseLoader):
         # Preserve the synchronous loader's environment-proxy behavior.
         self.session = get_ssrf_safe_requests_session()
         self.session.verify = verify_ssl
-        self.session.headers = {
-            'User-Agent': USER_AGENT or 'DefaultLangchainUserAgent',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Referer': 'https://www.google.com/',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-        }
+        self.session.headers = WEB_LOADER_HEADERS
 
     async def fetch_all(self, urls):
         semaphore = asyncio.Semaphore(self.requests_per_second)
