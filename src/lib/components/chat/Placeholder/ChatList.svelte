@@ -10,6 +10,7 @@
 	const i18n: Writable<ChatListI18n> = getContext('i18n');
 
 	import dayjs from 'dayjs';
+	import calendar from 'dayjs/plugin/calendar';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import { getTimeRange } from '$lib/utils';
 	import type { ChatParticipant } from '$lib/apis/folders';
@@ -21,6 +22,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { chatId, socket } from '$lib/stores';
 
+	dayjs.extend(calendar);
 	dayjs.extend(localizedFormat);
 
 	type ChatListItem = {
