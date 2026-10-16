@@ -225,20 +225,20 @@
 		{:else if entry.type === 'directory'}
 			<button
 				type="button"
-				class="mr-1.5 flex w-5 shrink-0 items-center self-stretch justify-center text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400"
+				class="mr-1.5 flex w-3 shrink-0 items-center self-stretch justify-center text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400"
 				style="margin-left: {rowIndent};"
 				on:click|stopPropagation={() => onToggleExpand(directoryPath)}
 				aria-label={expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}
 			>
 				<Icon
 					name={expanded ? 'chevron-down' : 'chevron-right'}
-					size={9}
+					size={12}
 					strokeWidth={1.5}
 					class={loadingChildren ? 'animate-pulse' : ''}
 				/>
 			</button>
 		{:else}
-			<span class="mr-1.5 w-5 shrink-0 self-stretch" style="margin-left: {rowIndent};"></span>
+			<span class="mr-1.5 w-3 shrink-0 self-stretch" style="margin-left: {rowIndent};"></span>
 		{/if}
 
 		{#if selectionMode || selected}
@@ -258,9 +258,7 @@
 
 		<button
 			type="button"
-			class="flex min-w-0 flex-1 items-center py-1.5 pr-2 text-left {variant === 'workspace'
-				? 'gap-1.5'
-				: 'gap-2'}"
+			class="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pr-2 text-left"
 			draggable={canMutate}
 			on:dragstart={(e) => {
 				if (!canMutate) {
@@ -314,7 +312,7 @@
 					<Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={12} strokeWidth={1.5} />
 				{:else}<span class="w-3 shrink-0"></span>{/if}
 			{/if}
-			<FileTypeIcon name={entry.name} type={entry.type} size={variant === 'workspace' ? 14 : 12} />
+			<FileTypeIcon name={entry.name} type={entry.type} size={14} />
 			{#if renaming}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<input

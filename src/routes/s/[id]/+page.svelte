@@ -7,7 +7,7 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	import { settings, chatId, WEBUI_NAME, models, config, user as sessionUser } from '$lib/stores';
-	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
+	import { convertMessagesToHistory, createMessagesList, getDeepestChildId } from '$lib/utils';
 
 	import { getChatByShareId, cloneSharedChatById, forkChatById } from '$lib/apis/chats';
 
@@ -53,7 +53,13 @@
 			if (await loadSharedChat()) {
 				loaded = true;
 				await tick();
-				messagesComponent?.scrollToBottom();
+				const target = $page.url.searchParams.get('message');
+				if (target && history.messages[target]) {
+					autoScroll = false;
+					history.currentId = getDeepestChildId(history, target);
+					await tick();
+					await messagesComponent?.scrollToMessage(target);
+				} else messagesComponent?.scrollToBottom();
 			} else if (localStorage.token) {
 				await goto('/');
 			} else {
@@ -109,7 +115,7 @@
 		chat = await getChatByShareId(token, shareId).catch(() => null);
 
 		if (chat?.chat?.share_mode === 'continue' && chat.id !== shareId) {
-			await goto(`/c/${chat.id}`, { replaceState: true });
+			await goto(`/c/${chat.id}${$page.url.search}`, { replaceState: true });
 			return true;
 		}
 

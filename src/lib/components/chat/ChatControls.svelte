@@ -3,6 +3,7 @@
 </script>
 
 <script lang="ts">
+	import type { TerminalContext } from '$lib/types';
 	import { onMount, tick, getContext } from 'svelte';
 	import {
 		config,
@@ -34,6 +35,7 @@
 	export let models = [];
 
 	export let chatId = null;
+	export let terminalContext: TerminalContext | null = null;
 	export let chatUser = null;
 
 	export let chatFiles = [];
@@ -43,6 +45,9 @@
 	export let callMode = 'current';
 	export let eventTarget: EventTarget;
 	export let submitPrompt: Function;
+	export let onAskFile:
+		| ((instruction: string, file: import('$lib/apis/terminal').FilesystemFile) => Promise<void>)
+		| null = null;
 	export let stopResponse: Function;
 	export let showMessage: Function;
 	export let files;
@@ -231,7 +236,7 @@
 							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showControlsTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'controls'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
@@ -242,7 +247,7 @@
 								{/if}
 								{#if showFilesTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'files'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
@@ -253,7 +258,7 @@
 								{/if}
 								{#if showOverviewTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'overview'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
@@ -298,7 +303,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav {chatId} />
+								<FileNav {onAskFile} {chatId} bind:terminalContext />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
@@ -356,7 +361,7 @@
 							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showControlsTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'controls'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
@@ -367,7 +372,7 @@
 								{/if}
 								{#if showFilesTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'files'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
@@ -378,7 +383,7 @@
 								{/if}
 								{#if showOverviewTab}
 									<button
-										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'overview'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
@@ -428,7 +433,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav overlay={dragged} {chatId} />
+								<FileNav {onAskFile} overlay={dragged} {chatId} bind:terminalContext />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav overlay={dragged} />
 							{:else}

@@ -1,6 +1,36 @@
 import { get } from 'svelte/store';
 import { config } from '$lib/stores';
 import { checkSourceSize, readSourceResponse } from './sourceText';
+// The same attachment is used by @mentions, terminal uploads, and Files-pane requests.
+export type FilesystemFile = {
+	type: 'filesystem';
+	id: string;
+	path: string;
+	url: string;
+	name: string;
+	status: string;
+	size?: number;
+	modified?: number;
+	terminal_id?: string;
+	session_id?: string | null;
+};
+export const filesystemFile = (
+	entry: { path: string; name: string; size?: number; modified?: number },
+	terminalId: string,
+	sessionId: string | null
+): FilesystemFile => ({
+	type: 'filesystem',
+	id: entry.path,
+	path: entry.path,
+	url: entry.path,
+	name: entry.name,
+	size: entry.size,
+	modified: entry.modified,
+	status: 'processed',
+	terminal_id: terminalId,
+	session_id: sessionId
+});
+
 export type FileEntry = {
 	name: string;
 	type: 'file' | 'directory';
@@ -396,12 +426,13 @@ export const downloadFileBlob = async (
 	baseUrl: string,
 	apiKey: string,
 	path: string,
-	sessionId?: string
+	sessionId?: string,
+	signal?: AbortSignal
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`;
 	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
-	const res = await fetch(url, { headers }).catch(() => null);
+	const res = await fetch(url, { headers, signal }).catch(() => null);
 
 	if (!res || !res.ok) return null;
 
@@ -415,12 +446,13 @@ export const downloadFilePreview = async (
 	baseUrl: string,
 	apiKey: string,
 	path: string,
-	sessionId?: string
+	sessionId?: string,
+	signal?: AbortSignal
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}&preview=true`;
 	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
-	const res = await fetch(url, { headers }).catch(() => null);
+	const res = await fetch(url, { headers, signal }).catch(() => null);
 
 	if (!res) return null;
 	if (!res.ok) return null;

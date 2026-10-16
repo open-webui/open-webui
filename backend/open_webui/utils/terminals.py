@@ -287,10 +287,10 @@ async def get_terminal_skill(
         'description': skill.get('description'),
         'directory': directory,
         **(
-            skill_overview(skill['content'], resources, 'resources', tools_enabled)
+            await skill_overview(skill['content'], resources, 'resources', tools_enabled)
             if overview
             else {
-                **skill_content_page(skill['content'], offset, max_chars),
+                **await skill_content_page(skill['content'], offset, max_chars),
                 **bounded_skill_manifest(resources, 'resources'),
             }
         ),

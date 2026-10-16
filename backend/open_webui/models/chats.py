@@ -1270,10 +1270,8 @@ class ChatTable:
             parent_id = None
             if user_message:
                 existing = messages.get(user_message_id)
-                if existing and (
-                    existing.get('role') != 'user' or (existing.get('user_id') or chat.user_id) != user.id
-                ):
-                    raise HTTPException(403, 'You can only regenerate your own messages.')
+                if existing and existing.get('role') != 'user':
+                    raise HTTPException(403, 'You can only regenerate replies to user messages.')
                 parent_id = existing.get('parentId') if existing else user_message.get('parentId')
                 if parent_id is not None and parent_id not in messages:
                     raise HTTPException(409, 'Parent message no longer exists.')
@@ -1292,7 +1290,7 @@ class ChatTable:
                         user_id=user.id,
                         user={'id': user.id, 'name': user.name},
                     )
-                elif 'models' in user_message:
+                elif 'models' in user_message and (existing.get('user_id') or chat.user_id) == user.id:
                     message = {**existing, 'models': user_message['models']}
                 turn[user_message_id] = self.upsert_message_to_history(
                     history, user_message_id, self._clean_null_bytes(message)
@@ -1320,7 +1318,7 @@ class ChatTable:
             chat.current_message_id = history['currentId']
             chat.updated_at = int(time.time())
             for mid, message in turn.items():
-                await ChatMessages.upsert_message(mid, chat_id, user.id, message, db=db)
+                await ChatMessages.upsert_message(mid, chat_id, message.get('user_id') or chat.user_id, message, db=db)
             if parent_id:
                 turn[parent_id] = history['messages'][parent_id]
             return {'messages': turn, 'currentId': history['currentId']}

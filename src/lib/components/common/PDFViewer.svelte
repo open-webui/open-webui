@@ -4,6 +4,10 @@
 	import panzoom, { type PanZoom } from 'panzoom';
 	import { clampDocumentTargetPage } from '$lib/utils/documentPreview';
 	import Spinner from './Spinner.svelte';
+	import { readPdfComments } from '$lib/utils/comments/pdf';
+	import { mapWordComments, type PdfTextRun } from '$lib/utils/comments/pdfAnchors';
+	import { findTextRange, highlightRange, commentPin } from '$lib/utils/comments/highlights';
+	import type { FileComment, CommentResult } from '$lib/utils/comments/types';
 
 	const i18n: any = getContext('i18n');
 
@@ -14,6 +18,202 @@
 	export let singlePage = false;
 	export let itemLabel = 'Page';
 	export let onPageChange: ((page: number) => void) | null = null;
+	export let onComments: ((result: CommentResult) => void) | null = null;
+	export let onCommentsError: (() => void) | null = null;
+	export let onCommentSelect: ((comment: FileComment) => void) | null = null;
+	export let selectedComment: FileComment | null = null;
+	export let sourceComments: FileComment[] | null = null;
+	export let onAnchors: ((ids: string[]) => void) | null = null;
+	let mappedSource: FileComment[] | null = null;
+	let mappedDoc: PdfDocument | null = null;
+	let textRuns: Promise<PdfTextRun[]> | null = null;
+	const mapSourceComments = async () => {
+		if (!sourceComments || !pdfDoc || (mappedSource === sourceComments && mappedDoc === pdfDoc))
+			return;
+		const doc = pdfDoc;
+		const source = sourceComments;
+		mappedDoc = doc;
+		mappedSource = source;
+		if (!textRuns)
+			textRuns = (async () => {
+				const runs: PdfTextRun[] = [];
+				for (let number = 1; number <= doc.numPages; number++) {
+					const page = await doc.getPage(number);
+					const content = await page.getTextContent();
+					for (const item of content.items)
+						if ('str' in item) {
+							const [a, b, c, d, x, y] = item.transform;
+							const height = item.height || Math.hypot(c, d);
+							runs.push({ text: item.str, page: number, rect: [x, y, x + item.width, y + height] });
+						}
+				}
+				return runs;
+			})();
+		try {
+			const word = source.some((c) => c.location?.kind === 'word');
+			const mapped = word ? mapWordComments(source, await textRuns) : [];
+			if (!word)
+				for (const c of source) {
+					const loc = c.location;
+					if (
+						loc?.kind !== 'slide' ||
+						loc.hidden ||
+						!loc.pdfPage ||
+						loc.pdfPage > doc.numPages ||
+						loc.x === undefined ||
+						loc.y === undefined ||
+						!loc.width ||
+						!loc.height
+					)
+						continue;
+					const page = await doc.getPage(loc.pdfPage);
+					const [left, bottom, right, top] = page.view;
+					const x = left + (loc.x / loc.width) * (right - left);
+					const y = top - (loc.y / loc.height) * (top - bottom);
+					mapped.push({
+						...c,
+						location: { kind: 'pdf', page: loc.pdfPage, rect: [x, y - 18, x + 18, y] }
+					});
+				}
+			if (mappedDoc !== doc || mappedSource !== source || pdfDoc !== doc) return;
+			comments = mapped;
+			onAnchors?.(comments.map((c) => c.id));
+			void renderCommentMarkers();
+		} catch {
+			if (pdfDoc === doc) onAnchors?.([]);
+		}
+	};
+	let comments: FileComment[] = [];
+	let markerToken = 0;
+	let resizeObserver: ResizeObserver | null = null;
+	let lastWidth = 0;
+	let lastHeight = 0;
+	let resizeTimer: ReturnType<typeof setTimeout>;
+	const renderCommentMarkers = async () => {
+		const token = ++markerToken;
+		if (!sceneElement || !pdfDoc || (!onComments && !sourceComments)) return;
+		const doc = pdfDoc;
+		for (const wrapper of Array.from(
+			sceneElement.querySelectorAll<HTMLElement>('.pdf-page-wrapper')
+		)) {
+			wrapper.querySelector('.file-comment-layer')?.remove();
+			const pageNumber = Number(wrapper.dataset.pageNumber);
+			const page = await doc.getPage(pageNumber);
+			if (token !== markerToken) return;
+			const unit = page.getViewport({ scale: 1 });
+			const viewport = page.getViewport({ scale: parseFloat(wrapper.style.width) / unit.width });
+			const layer = document.createElement('div');
+			layer.className = 'file-comment-layer';
+			Object.assign(layer.style, {
+				position: 'absolute',
+				inset: '0',
+				pointerEvents: 'none',
+				zIndex: '4'
+			});
+			for (const comment of comments.filter(
+				(c) => c.location?.kind === 'pdf' && c.location.page === pageNumber && !c.parentId
+			)) {
+				const loc = comment.location;
+				if (loc?.kind !== 'pdf' || loc.rect.length !== 4 || !loc.rect.every(Number.isFinite))
+					continue;
+				const rect = viewport.convertToViewportRectangle(loc.rect);
+				const left = Math.min(rect[0], rect[2]);
+				const top = Math.min(rect[1], rect[3]);
+				const source = sourceComments?.find((c) => c.id === comment.id);
+				if (source?.location?.kind === 'word' && source.location.quote) {
+					const range = findTextRange(sceneElement, source.location.quote);
+					if (
+						range &&
+						highlightRange(
+							wrapper,
+							layer,
+							range,
+							comment.id,
+							`${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`
+						)
+					)
+						continue;
+				}
+				const regions = loc.quads?.length
+					? Array.from({ length: Math.floor(loc.quads.length / 8) }, (_, i) => {
+							const q = loc.quads!.slice(i * 8, i * 8 + 8);
+							return [
+								Math.min(q[0], q[2], q[4], q[6]),
+								Math.min(q[1], q[3], q[5], q[7]),
+								Math.max(q[0], q[2], q[4], q[6]),
+								Math.max(q[1], q[3], q[5], q[7])
+							];
+						})
+					: [];
+				for (const region of regions) {
+					const r = viewport.convertToViewportRectangle(region);
+					const target = document.createElement('button');
+					target.type = 'button';
+					target.dataset.fileCommentId = comment.id;
+					target.dataset.commentHighlight = comment.id;
+					target.setAttribute(
+						'aria-label',
+						`${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`
+					);
+					Object.assign(target.style, {
+						position: 'absolute',
+						left: `${Math.min(r[0], r[2])}px`,
+						top: `${Math.min(r[1], r[3])}px`,
+						width: `${Math.abs(r[2] - r[0])}px`,
+						height: `${Math.abs(r[3] - r[1])}px`,
+						pointerEvents: 'none',
+						background: 'transparent',
+						border: '0',
+						borderBottom: '1px solid rgba(180,130,30,.6)',
+						cursor: 'help'
+					});
+					layer.appendChild(target);
+				}
+				if (regions.length) continue;
+				const button = commentPin(
+					comment.id,
+					`${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`
+				);
+				button.dataset.commentId = comment.id;
+				button.style.left = `${Math.max(0, Math.min(viewport.width - 20, left - 22))}px`;
+				button.style.top = `${Math.max(0, Math.min(viewport.height - 20, top))}px`;
+				button.onclick = () => onCommentSelect?.(comment);
+				layer.appendChild(button);
+			}
+			const selected = selectedComment?.location;
+			if (selected?.kind === 'pdf' && selected.page === pageNumber) {
+				const regions: number[][] = [];
+				if (selected.quads?.length)
+					for (let i = 0; i + 7 < selected.quads.length; i += 8) {
+						const q = selected.quads.slice(i, i + 8);
+						regions.push([
+							Math.min(q[0], q[2], q[4], q[6]),
+							Math.min(q[1], q[3], q[5], q[7]),
+							Math.max(q[0], q[2], q[4], q[6]),
+							Math.max(q[1], q[3], q[5], q[7])
+						]);
+					}
+				else regions.push(selected.rect);
+				for (const region of regions) {
+					if (region.length !== 4 || !region.every(Number.isFinite)) continue;
+					const r = viewport.convertToViewportRectangle(region);
+					const highlight = document.createElement('div');
+					highlight.dataset.selectedAnnotation = selectedComment!.id;
+					Object.assign(highlight.style, {
+						position: 'absolute',
+						left: `${Math.min(r[0], r[2])}px`,
+						top: `${Math.min(r[1], r[3])}px`,
+						width: `${Math.max(3, Math.abs(r[2] - r[0]))}px`,
+						height: `${Math.max(3, Math.abs(r[3] - r[1]))}px`,
+						outline: '2px solid #2563eb',
+						background: 'rgba(250,204,21,.15)'
+					});
+					layer.appendChild(highlight);
+				}
+			}
+			wrapper.appendChild(layer);
+		}
+	};
 
 	type PdfDocument = import('pdfjs-dist').PDFDocumentProxy;
 	type PdfTextLayer = InstanceType<typeof import('pdfjs-dist').TextLayer>;
@@ -78,7 +278,7 @@
 				},
 				beforeMouseDown: (e) => {
 					// Only allow drag-to-pan when zoomed in (not at default scale)
-					if ((e?.target as HTMLElement | null)?.closest?.('.textLayer')) {
+					if ((e?.target as HTMLElement | null)?.closest?.('.textLayer, .file-comment-layer')) {
 						return true;
 					}
 					const transform = pzInstance?.getTransform();
@@ -256,9 +456,6 @@
 		if (!pdfDoc || !sceneElement) return;
 		const token = ++renderToken;
 
-		// Clear previous content
-		sceneElement.innerHTML = '';
-
 		cancelTextLayers();
 
 		const pdfjs = await import('pdfjs-dist');
@@ -333,6 +530,7 @@
 		}
 
 		sceneElement.replaceChildren(...wrappers);
+		void renderCommentMarkers();
 		lastRenderedZoom = 1;
 		renderedPage = singlePage ? selectedPage : 0;
 		initPanzoom();
@@ -396,7 +594,7 @@
 		if (!url && !data) return;
 
 		const source = data ?? url;
-		if (source === loadedSource && pdfDoc) return;
+		if (source === loadedSource) return;
 		const token = ++loadToken;
 		loadedSource = source;
 		loading = true;
@@ -407,6 +605,10 @@
 		cancelTextLayers();
 		pdfDoc?.destroy();
 		pdfDoc = null;
+		textRuns = null;
+		mappedDoc = null;
+		mappedSource = null;
+		comments = [];
 
 		try {
 			const pdfjs = await import('pdfjs-dist');
@@ -424,6 +626,20 @@
 			pdfDoc = await pdfjs.getDocument({ data: pdfData }).promise;
 			if (token !== loadToken) return;
 			pageCount = pdfDoc.numPages;
+			if (onComments) {
+				const doc = pdfDoc;
+				void readPdfComments(doc, () => token !== loadToken)
+					.then((result) => {
+						if (token !== loadToken) return;
+						comments = result.comments;
+						onComments?.(result);
+						onAnchors?.(comments.filter((c) => !c.parentId).map((c) => c.id));
+						void renderCommentMarkers();
+					})
+					.catch(() => {
+						if (token === loadToken) onCommentsError?.();
+					});
+			}
 			activePage = clampDocumentTargetPage(targetPage, pageCount) ?? 1;
 			targetPage = clampDocumentTargetPage(targetPage, pageCount) ?? 1;
 			await renderAllPages();
@@ -431,6 +647,7 @@
 			if (token === loadToken) {
 				console.error('PDF render error:', e);
 				error = 'Failed to load PDF.';
+				onCommentsError?.();
 			}
 		} finally {
 			if (token === loadToken) loading = false;
@@ -439,7 +656,17 @@
 
 	onMount(() => {
 		mounted = true;
-		loadPdf();
+		resizeObserver = new ResizeObserver(([entry]) => {
+			const { width, height } = entry.contentRect;
+			if (width <= 0 || height <= 0 || (width === lastWidth && height === lastHeight)) return;
+			lastWidth = width;
+			lastHeight = height;
+			clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(() => {
+				if (!loading && pdfDoc) void renderAllPages();
+			}, 100);
+		});
+		resizeObserver.observe(outerContainer.parentElement!);
 	});
 
 	$: if (mounted && (data || url)) {
@@ -454,7 +681,14 @@
 		void scrollToTargetPage();
 	}
 
+	$: if (sourceComments && pdfDoc) void mapSourceComments();
+
+	$: if (selectedComment && !loading) void renderCommentMarkers();
+
 	onDestroy(() => {
+		markerToken++;
+		resizeObserver?.disconnect();
+		clearTimeout(resizeTimer);
 		loadToken++;
 		renderToken++;
 		if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
@@ -489,6 +723,7 @@
 		tabindex="0"
 		on:scroll={handleScroll}
 		on:wheel|nonpassive={handleWheel}
+		on:dblclick|capture|stopPropagation={() => {}}
 		on:pointerdown={focusViewer}
 		on:keydown={handleKeyDown}
 	>
@@ -686,5 +921,10 @@
 
 	:global(.textLayer.selecting .endOfContent) {
 		top: 0;
+	}
+
+	/* pdfjs leaves its text-measuring canvas in <body> at 300x150 for PDFs without text */
+	:global(.hiddenCanvasElement) {
+		display: none;
 	}
 </style>

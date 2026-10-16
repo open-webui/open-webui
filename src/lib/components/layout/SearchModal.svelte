@@ -1,916 +1,617 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { getContext, onDestroy, onMount, tick } from 'svelte';
-	const i18n: any = getContext('i18n');
-
-	import Modal from '$lib/components/common/Modal.svelte';
-	import SearchInput from './Sidebar/SearchInput.svelte';
-	import {
-		getChatById,
-		getChatList,
-		getChatListBySearchText,
-		cloneChatById,
-		deleteChatById,
-		archiveChatById,
-		updateChatById,
-		updateChatFolderIdById,
-		markChatUnreadById,
-		getAllTags
-	} from '$lib/apis/chats';
-	import Spinner from '../common/Spinner.svelte';
-
-	import dayjs from '$lib/dayjs';
-	import localizedFormat from 'dayjs/plugin/localizedFormat';
-	import calendar from 'dayjs/plugin/calendar';
-	import Loader from '../common/Loader.svelte';
-	import { createMessagesList } from '$lib/utils';
-	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
-	import { config, user, chatId as currentChatId, tags } from '$lib/stores';
-	import { refreshSidebar } from '$lib/stores/chatList';
-	import Messages from '../chat/Messages.svelte';
+	import { getContext, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import EditPencilIcon from './Sidebar/icons/EditPencil.svelte';
-	import NotesIcon from './Sidebar/icons/Notes.svelte';
+	import { toast } from 'svelte-sonner';
+	import { settings } from '$lib/stores';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Loader from '$lib/components/common/Loader.svelte';
+	import {
+		searchWorkspace,
+		type SearchResult,
+		type SearchScope,
+		type SearchKind
+	} from '$lib/apis/search';
+	import Modal from '$lib/components/common/Modal.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
+	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import Hashtag from '$lib/components/icons/Hashtag.svelte';
+	import Document from '$lib/components/icons/Document.svelte';
+	import Adjustments from '$lib/components/icons/AdjustmentsHorizontal.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Eye from '$lib/components/icons/Eye.svelte';
+	import ArrowLeft from '$lib/components/icons/ArrowLeft.svelte';
+	import Pin from '$lib/components/icons/Pin.svelte';
+	import HighlightedText from './Search/HighlightedText.svelte';
+	import ChatPreview from './Sidebar/ChatPreview.svelte';
+	import NotePreview from './Search/NotePreview.svelte';
+	import PreviewMarkdown from './Search/PreviewMarkdown.svelte';
 
-	import ChatMenu from './Sidebar/ChatMenu.svelte';
-	import ShareChatModal from '../chat/ShareChatModal.svelte';
-	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
-	import Sparkles from '../icons/Sparkles.svelte';
-	import ArchiveBox from '../icons/ArchiveBox.svelte';
-	import GarbageBin from '../icons/GarbageBin.svelte';
-	import { generateTitle } from '$lib/apis';
-	dayjs.extend(calendar);
-	dayjs.extend(localizedFormat);
-
+	const i18n: any = getContext('i18n');
+	// Preserve translations from the former chat search and preview during extraction.
+	// $i18n.t('Failed to load chat'); $i18n.t('Select a conversation to preview');
 	export let show = false;
 	export let onClose = () => {};
-
-	let showShareChatModal = false;
-	let showDeleteConfirm = false;
-	let menuChatId = '';
-	let menuChatTitle = '';
-
-	let editingChatId = null;
-	let editingChatTitle = '';
-
-	let shiftKey = false;
-
-	const onShiftKeyDown = (e) => {
-		if (e.key === 'Shift') shiftKey = true;
-	};
-
-	const onShiftKeyUp = (e) => {
-		if (e.key === 'Shift') shiftKey = false;
-	};
-	let generating = false;
-
-	const cloneChatHandler = async (id) => {
-		const chat = chatList?.find((c) => c.id === id);
-		const res = await cloneChatById(
-			localStorage.token,
-			id,
-			$i18n.t('Clone of {{TITLE}}', {
-				TITLE: chat?.title ?? 'Chat'
-			})
-		).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			await refreshSidebar(localStorage.token);
-			await searchHandler();
-		}
-	};
-
-	const markUnreadHandler = async (id) => {
-		const res = await markChatUnreadById(localStorage.token, id).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			await refreshSidebar(localStorage.token);
-		}
-	};
-
-	const archiveChatHandler = async (id) => {
-		try {
-			const res = await archiveChatById(localStorage.token, id);
-
-			chatList = chatList?.filter((c) => c.id !== id) ?? null;
-
-			if ($currentChatId === id) {
-				await goto('/');
-				currentChatId.set('');
-			}
-
-			await refreshSidebar(localStorage.token);
-			toast.success(res?.archived ? $i18n.t('Chat archived.') : $i18n.t('Chat unarchived.'));
-		} catch (error) {
-			toast.error($i18n.t('Failed to archive chat.'));
-		}
-	};
-
-	const deleteChatHandler = async (id) => {
-		const res = await deleteChatById(localStorage.token, id).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			chatList = chatList?.filter((c) => c.id !== id) ?? null;
-			tags.set(await getAllTags(localStorage.token));
-
-			if ($currentChatId === id) {
-				await goto('/');
-				currentChatId.set('');
-			}
-
-			await refreshSidebar(localStorage.token);
-		}
-	};
-
-	const moveChatHandler = async (chatId, folderId) => {
-		if (chatId && folderId) {
-			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
-				(error) => {
-					toast.error(`${error}`);
-					return null;
-				}
-			);
-
-			if (res) {
-				chatList = chatList?.filter((c) => c.id !== chatId) ?? null;
-				await refreshSidebar(localStorage.token);
-				toast.success($i18n.t('Chat moved successfully'));
-			}
-		}
-	};
-
-	const renameHandler = async (id) => {
-		editingChatId = id;
-		editingChatTitle = chatList?.find((c) => c.id === id)?.title ?? '';
-
-		await tick();
-		const input = document.getElementById(`search-chat-title-input-${id}`);
-		if (input) {
-			input.focus();
-			input.select();
-		}
-	};
-
-	const confirmRename = async () => {
-		if (!editingChatId) return;
-
-		const trimmed = editingChatTitle.trim();
-		if (trimmed === '') {
-			toast.error($i18n.t('Title cannot be an empty string.'));
-			return;
-		}
-
-		await updateChatById(localStorage.token, editingChatId, { title: trimmed });
-
-		if (chatList) {
-			chatList = chatList.map((c) => (c.id === editingChatId ? { ...c, title: trimmed } : c));
-		}
-
-		editingChatId = null;
-		editingChatTitle = '';
-		await refreshSidebar(localStorage.token);
-	};
-
-	const cancelRename = () => {
-		editingChatId = null;
-		editingChatTitle = '';
-	};
-
-	const generateTitleHandler = async () => {
-		if (!editingChatId || generating) return;
-
-		generating = true;
-		const chat = await getChatById(localStorage.token, editingChatId).catch(() => null);
-
-		if (!chat) {
-			toast.error($i18n.t('Failed to load chat'));
-			generating = false;
-			return;
-		}
-
-		const chatContent = chat.chat;
-		const history = chatContent?.history;
-		let msgList = [];
-
-		if (history?.messages && history?.currentId) {
-			msgList = createMessagesList(history, history.currentId).map((m: any) => ({
-				role: m.role,
-				content: getOutputText(m.output) || m.content || ''
-			}));
-		} else {
-			msgList = (chatContent?.messages ?? []).map((m: any) => ({
-				role: m.role,
-				content: getOutputText(m.output) || m.content || ''
-			}));
-		}
-
-		let model = '';
-		if (history?.messages && history?.currentId) {
-			let currentId = history.currentId;
-			while (currentId) {
-				const msg = history.messages[currentId];
-				if (!msg) break;
-				if (msg.role === 'assistant' && msg.model) {
-					model = msg.model;
-					break;
-				}
-				currentId = msg.parentId;
-			}
-		}
-		if (!model) {
-			model = chatContent?.models?.at(0) ?? '';
-		}
-
-		editingChatTitle = '';
-
-		const generatedTitle = await generateTitle(localStorage.token, model, msgList).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
-
-		if (generatedTitle) {
-			editingChatTitle = generatedTitle;
-		}
-
-		generating = false;
-
-		if (generatedTitle) {
-			await confirmRename();
-		}
-	};
-
-	$: actions = [
-		{
-			label: $i18n.t('Start a new conversation'),
-			onClick: async () => {
-				await goto(`/${query ? `?q=${encodeURIComponent(query)}` : ''}`);
-				show = false;
-				onClose();
-			},
-			icon: EditPencilIcon
-		},
-		...(($config?.features?.enable_notes ?? false) &&
-		($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
-			? [
-					{
-						label: $i18n.t('Create a new note'),
-						onClick: async () => {
-							await goto(`/notes/new?content=${encodeURIComponent(query)}`);
-							show = false;
-							onClose();
-						},
-						icon: NotesIcon
-					}
-				]
-			: [])
-	];
-
 	let query = '';
+	let kind: 'all' | SearchKind = 'all';
+	let sharing = 'all';
+	let scope = '';
+	let kinds: SearchKind[] = ['chat'];
+	let scopes: SearchScope[] = [];
+	let results: SearchResult[] = [];
+	let selectedIndex = 0;
+	let loading = false;
+	let error = '';
 	let page = 1;
+	let hasMore = false;
+	let preview = false;
+	let panel: 'filters' | 'actions' | 'types' | null = null;
+	let input: HTMLInputElement;
+	let list: HTMLDivElement;
+	let request: AbortController | undefined;
+	let timer: ReturnType<typeof setTimeout>;
+	let generation = 0;
+	const icons = { chat: ChatBubble, message: Hashtag, note: Document };
+	const labels = { chat: 'Chats', message: 'Messages', note: 'Notes' };
+	$: selected = results[selectedIndex];
+	$: scopeName = scopes.find((item) => item.id === scope)?.name ?? '';
+	$: canCreateNote = kinds.includes('note');
+	$: selectionClass = $settings?.highContrastMode
+		? 'bg-gray-200 dark:bg-gray-800'
+		: 'bg-gray-50/70 dark:bg-gray-800/60';
+	const quietButton =
+		'focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center gap-1 rounded-lg px-1.5 text-[0.6875rem] font-normal text-gray-500 hover:bg-gray-50/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-200';
+	$: if (show && typeof window !== 'undefined') {
+		preview =
+			window.matchMedia('(min-width: 1024px)').matches &&
+			localStorage.getItem('searchPreview') !== 'false';
+	}
+	$: schedule(show, query, kind, sharing, scope);
 
-	let chatList = null;
-
-	let chatListLoading = false;
-	let allChatsLoaded = false;
-
-	let searchDebounceTimeout;
-
-	let selectedIdx = null;
-	let selectedChat = null;
-
-	let selectedModels = [''];
-	let history = null;
-	let messages = null;
-	let messagesContainerElement: HTMLElement | null = null;
-	const messagesContainerId = 'chat-preview';
-
-	const searchFilterPrefixes = ['tag:', 'folder:', 'pinned:', 'archived:', 'shared:'];
-
-	const getSnippetQuery = (query: string) => {
-		return query
-			.trim()
-			.split(/\s+/)
-			.filter(
-				(word) => !searchFilterPrefixes.some((prefix) => word.toLowerCase().startsWith(prefix))
-			)
-			.join(' ')
-			.trim();
-	};
-
-	const getHighlightedSnippet = (snippet: string, query: string) => {
-		const match = getSnippetQuery(query).toLowerCase();
-		const matchIndex = match ? snippet.toLowerCase().indexOf(match) : -1;
-
-		if (matchIndex === -1) {
-			return [{ text: snippet, highlight: false }];
-		}
-
-		const start = Math.max(matchIndex - 60, 0);
-		const end = Math.min(matchIndex + match.length + 80, snippet.length);
-		const visibleSnippet = `${start > 0 ? '...' : ''}${snippet.slice(start, end)}${
-			end < snippet.length ? '...' : ''
-		}`;
-		const index = visibleSnippet.toLowerCase().indexOf(match);
-
-		return [
-			{ text: visibleSnippet.slice(0, index), highlight: false },
-			{ text: visibleSnippet.slice(index, index + match.length), highlight: true },
-			{ text: visibleSnippet.slice(index + match.length), highlight: false }
-		].filter((part) => part.text);
-	};
-
-	$: if (!chatListLoading && chatList) {
-		loadChatPreview(selectedIdx);
+	function setPreview(value: boolean) {
+		preview = value;
+		localStorage.setItem('searchPreview', String(value));
 	}
 
-	const scrollPreviewToBottom = async () => {
-		await tick();
-		requestAnimationFrame(() => {
-			if (messagesContainerElement) {
-				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-
-				requestAnimationFrame(() => {
-					if (messagesContainerElement) {
-						messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-					}
-				});
-			}
-		});
-		setTimeout(() => {
-			if (messagesContainerElement) {
-				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-			}
-		}, 80);
-	};
-
-	const loadChatPreview = async (selectedIdx) => {
-		if (!chatList || chatList.length === 0 || selectedIdx === null) {
-			selectedChat = null;
-			messages = null;
-			history = null;
-			selectedModels = [''];
-			return;
-		}
-
-		const selectedChatIdx = selectedIdx - actions.length;
-		if (selectedChatIdx < 0 || selectedChatIdx >= chatList.length) {
-			selectedChat = null;
-			messages = null;
-			history = null;
-			selectedModels = [''];
-			return;
-		}
-
-		const chatId = chatList[selectedChatIdx].id;
-
-		const chat = await getChatById(localStorage.token, chatId).catch(async (error) => {
-			return null;
-		});
-
-		if (chat) {
-			selectedChat = chat;
-
-			if (chat?.chat?.history) {
-				selectedModels =
-					(chat?.chat?.models ?? undefined) !== undefined
-						? chat?.chat?.models
-						: [chat?.chat?.models ?? ''];
-
-				history = chat?.chat?.history;
-				messages = [];
-				await scrollPreviewToBottom();
-			} else {
-				messages = [];
-			}
-		} else {
-			toast.error($i18n.t('Failed to load chat preview'));
-			selectedChat = null;
-			messages = null;
-			history = null;
-			selectedModels = [''];
-			return;
-		}
-	};
-
-	const searchHandler = async () => {
-		if (!show) {
-			return;
-		}
-
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-
+	function schedule(visible: boolean, q: string, type: string, share: string, location: string) {
+		clearTimeout(timer);
+		request?.abort();
+		generation += 1;
+		if (!visible) return;
+		loading = true;
+		error = '';
+		results = [];
+		selectedIndex = 0;
+		hasMore = false;
 		page = 1;
-		chatList = null;
-		if (query === '') {
-			chatList = await getChatList(localStorage.token, page);
-		} else {
-			searchDebounceTimeout = setTimeout(async () => {
-				chatList = await getChatListBySearchText(localStorage.token, query, page);
-
-				if ((chatList ?? []).length === 0) {
-					allChatsLoaded = true;
-				} else {
-					allChatsLoaded = false;
-				}
-			}, 500);
-		}
-
-		selectedChat = null;
-		messages = null;
-		history = null;
-		selectedModels = [''];
-
-		if ((chatList ?? []).length === 0) {
-			allChatsLoaded = true;
-		} else {
-			allChatsLoaded = false;
-		}
-	};
-
-	const loadMoreChats = async () => {
-		chatListLoading = true;
-		page += 1;
-
-		let newChatList = [];
-
-		if (query) {
-			newChatList = await getChatListBySearchText(localStorage.token, query, page);
-		} else {
-			newChatList = await getChatList(localStorage.token, page);
-		}
-
-		// once the bottom of the list has been reached (no results) there is no need to continue querying
-		allChatsLoaded = newChatList.length === 0;
-
-		if (newChatList.length > 0) {
-			const existingIds = new Set(chatList.map((c) => c.id));
-			const uniqueNewChats = newChatList.filter((c) => !existingIds.has(c.id));
-			chatList = [...chatList, ...uniqueNewChats];
-		}
-
-		chatListLoading = false;
-	};
-
-	$: if (show) {
-		searchHandler();
-	} else {
-		editingChatId = null;
-		editingChatTitle = '';
-		generating = false;
+		timer = setTimeout(() => fetchResults(1), q.trim() ? 180 : 0);
 	}
 
-	const onKeyDown = (e) => {
-		// Ignore keydown fired while confirming an IME composition (e.g. Japanese/Chinese/Korean)
-		// so confirming the composition with Enter doesn't trigger search actions (#26172).
-		if (e.isComposing || e.keyCode === 229) {
+	async function fetchResults(nextPage: number) {
+		request?.abort();
+		const controller = new AbortController();
+		request = controller;
+		const version = ++generation;
+		loading = true;
+		error = '';
+		try {
+			const response = await searchWorkspace(
+				localStorage.token,
+				{ q: query, kind, sharing, scope, page: nextPage },
+				controller.signal
+			);
+			if (version !== generation || !show) return;
+			const existingIds = new Set(results.map((item) => item.id));
+			results =
+				nextPage === 1
+					? response.items
+					: [...results, ...response.items.filter((item) => !existingIds.has(item.id))];
+			scopes = response.scopes;
+			kinds = response.kinds;
+			hasMore = response.has_more;
+			page = nextPage;
+		} catch (cause) {
+			if (version === generation && !controller.signal.aborted)
+				error = $i18n.t('Search is unavailable. Please try again.');
+		} finally {
+			if (version === generation) loading = false;
+		}
+	}
+
+	function close() {
+		show = false;
+		panel = null;
+		preview = false;
+		onClose();
+	}
+
+	async function open(result = selected) {
+		if (!result) return;
+		await goto(result.url);
+		close();
+	}
+
+	async function select(index: number) {
+		selectedIndex = Math.max(0, Math.min(results.length - 1, index));
+		await tick();
+		list?.querySelector(`[data-index="${selectedIndex}"]`)?.scrollIntoView({ block: 'nearest' });
+	}
+
+	function keydown(event: KeyboardEvent) {
+		if (!show || event.isComposing || event.key === 'Escape') return;
+		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+			event.preventDefault();
+			event.stopPropagation();
+			panel = panel === 'actions' ? null : 'actions';
 			return;
 		}
-
-		const searchOptions = document.getElementById('search-options-container');
-		if (searchOptions || !show) {
-			return;
+		if (panel || (event.target !== input && event.target !== list)) return;
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			event.preventDefault();
+			select(selectedIndex + (event.key === 'ArrowDown' ? 1 : -1));
+		} else if (event.key === 'Enter' && selected) {
+			event.preventDefault();
+			if (event.metaKey || event.ctrlKey) setPreview(!preview);
+			else open();
 		}
+	}
 
-		// Don't handle navigation/activation keys while editing a chat title
-		if (editingChatId) {
-			return;
+	function formatSearchDate(seconds: number) {
+		if (!Number.isFinite(seconds) || seconds <= 0) return '';
+		const date = new Date(seconds * 1000);
+		return Number.isFinite(date.getTime())
+			? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+			: '';
+	}
+
+	async function copyLink() {
+		if (!selected) return;
+		try {
+			await navigator.clipboard.writeText(new URL(selected.url, location.origin).href);
+			toast.success($i18n.t('Link copied to clipboard'));
+			panel = null;
+		} catch {
+			toast.error($i18n.t('Unable to copy link'));
 		}
+	}
 
-		if (e.code === 'Escape') {
-			show = false;
-			onClose();
-		} else if (e.code === 'Enter') {
-			const item = document.querySelector(`[data-arrow-selected="true"]`);
-			if (item) {
-				(item.querySelector('a') ?? item).click();
-				show = false;
-			}
+	async function create(type: 'chat' | 'note') {
+		await goto(
+			type === 'chat'
+				? `/?q=${encodeURIComponent(query)}`
+				: `/notes/new?content=${encodeURIComponent(query)}`
+		);
+		close();
+	}
 
-			return;
-		} else if (e.code === 'ArrowDown') {
-			const searchInput = document.getElementById('search-input');
-
-			if (searchInput) {
-				// check if focused on the search input
-				if (document.activeElement === searchInput) {
-					searchInput.blur();
-					selectedIdx = 0;
-					return;
-				}
-			}
-
-			selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1 + actions.length);
-		} else if (e.code === 'ArrowUp') {
-			if (selectedIdx === 0) {
-				const searchInput = document.getElementById('search-input');
-
-				if (searchInput) {
-					// check if focused on the search input
-					if (document.activeElement !== searchInput) {
-						searchInput.focus();
-						selectedIdx = 0;
-						return;
-					}
-				}
-			}
-
-			selectedIdx = Math.max(selectedIdx - 1, 0);
-		}
-
-		const item = document.querySelector(`[data-arrow-selected="true"]`);
-		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
-	};
-
-	onMount(() => {
-		document.addEventListener('keydown', onKeyDown);
-		document.addEventListener('keydown', onShiftKeyDown);
-		document.addEventListener('keyup', onShiftKeyUp);
-	});
-
+	function resetFilters() {
+		kind = 'all';
+		sharing = 'all';
+		scope = '';
+		panel = null;
+		input?.focus();
+	}
 	onDestroy(() => {
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-		document.removeEventListener('keydown', onKeyDown);
-		document.removeEventListener('keydown', onShiftKeyDown);
-		document.removeEventListener('keyup', onShiftKeyUp);
+		clearTimeout(timer);
+		request?.abort();
+		generation += 1;
 	});
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} chatId={menuChatId} />
-
-<DeleteConfirmDialog
-	bind:show={showDeleteConfirm}
-	title={$i18n.t('Delete chat?')}
-	on:confirm={() => {
-		deleteChatHandler(menuChatId);
+<svelte:window
+	on:click={(event) => {
+		if (panel && event.target instanceof Element && !event.target.closest('[data-search-panel]'))
+			panel = null;
 	}}
+/>
+
+<Modal
+	bind:show
+	size={preview ? 'xl' : 'lg'}
+	ariaLabel={$i18n.t('Search workspace')}
+	onRequestClose={close}
+	className="bg-white dark:bg-gray-850 rounded-2xl !border-gray-100 dark:!border-gray-800"
 >
-	<div class="text-sm text-gray-500 flex-1 line-clamp-3">
-		{$i18n.t('This will delete')} <span class="font-normal">{menuChatTitle}</span>.
-	</div>
-</DeleteConfirmDialog>
-
-<Modal size="xl" bind:show>
-	<div class="py-2.5 dark:text-gray-300 text-gray-700">
-		<div class="px-3.5 pb-1">
-			<SearchInput
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<div
+		class="relative flex max-h-[85dvh] flex-col font-normal text-[0.8125rem] text-gray-700 dark:text-gray-100"
+		on:keydown={keydown}
+	>
+		<div class="flex h-11 shrink-0 items-center gap-2 px-3">
+			<Search className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400" strokeWidth="2" />
+			<input
+				bind:this={input}
 				bind:value={query}
-				on:input={searchHandler}
-				placeholder={$i18n.t('Search')}
-				showClearButton={true}
-				onFocus={() => {
-					selectedIdx = null;
-					messages = null;
-				}}
-				onKeydown={(e) => {
-					if (e.code === 'Enter' && (chatList ?? []).length > 0) {
-						const item = document.querySelector(`[data-arrow-selected="true"]`);
-						if (item) {
-							(item.querySelector('a') ?? item).click();
-						}
-
-						show = false;
-						return;
-					} else if (e.code === 'ArrowDown') {
-						selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1 + actions.length);
-					} else if (e.code === 'ArrowUp') {
-						selectedIdx = Math.max(selectedIdx - 1, 0);
-					} else {
-						selectedIdx = 0;
-					}
-
-					const item = document.querySelector(`[data-arrow-selected="true"]`);
-					item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
-				}}
+				class="h-8 min-w-0 flex-1 bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+				placeholder={$i18n.t('Search workspace…')}
+				aria-label={$i18n.t('Search your workspace')}
+				role="combobox"
+				aria-autocomplete="list"
+				aria-expanded={results.length > 0}
+				aria-controls="workspace-search-results"
+				aria-activedescendant={selected ? `search-result-${selectedIndex}` : undefined}
+				autocomplete="off"
+				spellcheck="false"
+				maxlength="500"
 			/>
-		</div>
-
-		<div class="flex px-3.5 pb-0.5">
-			<div
-				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
+			{#if query}<button
+					class={quietButton}
+					aria-label={$i18n.t('Clear search')}
+					on:click={() => {
+						query = '';
+						input.focus();
+					}}><XMark className="size-3" /></button
+				>{/if}
+			<button
+				class={quietButton}
+				aria-label={$i18n.t('Content type')}
+				data-search-panel
+				aria-expanded={panel === 'types'}
+				on:click={() => (panel = panel === 'types' ? null : 'types')}
+				>{$i18n.t(kind === 'all' ? 'Everything' : labels[kind])}<ChevronDown
+					className="size-2.5"
+				/></button
 			>
-				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal pb-2 px-2">
-					{$i18n.t('Actions')}
-				</div>
-
-				{#each actions as action, idx (action.label)}
-					<button
-						class="w-full flex items-center rounded-lg text-sm py-1.5 px-2.5 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 {selectedIdx ===
-						idx
-							? 'bg-gray-50/70 dark:bg-gray-850/50'
-							: ''}"
-						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
-						draggable="false"
-						on:mouseenter={() => {
-							selectedIdx = idx;
-						}}
-						on:click={async () => {
-							await action.onClick();
-						}}
-					>
-						<div class="pr-2">
-							<svelte:component this={action.icon} />
-						</div>
-						<div class=" flex-1 text-left">
-							<div class="text-ellipsis line-clamp-1 w-full">
-								{$i18n.t(action.label)}
-							</div>
-						</div>
-					</button>
-				{/each}
-
-				{#if chatList}
-					<div aria-hidden="true" class="h-px my-3" />
-
-					{#if chatList.length === 0}
-						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
-							{$i18n.t('No results found')}
-						</div>
-					{/if}
-
-					{#each chatList as chat, idx (chat.id)}
-						{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
-							<div
-								class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
-									? ''
-									: 'pt-4'} pb-1.5 px-2"
+			<button
+				class={quietButton}
+				aria-label={$i18n.t('Filters')}
+				data-search-panel
+				aria-expanded={panel === 'filters'}
+				on:click={() => (panel = panel === 'filters' ? null : 'filters')}
+				><Adjustments className="size-3.5" /></button
+			>
+			<button class={quietButton} aria-label={$i18n.t('Close search')} on:click={close}
+				><XMark className="size-3.5" /></button
+			>
+		</div>
+		{#if sharing !== 'all' || scope}
+			<div class="flex flex-wrap items-center gap-1 px-3 pb-1.5">
+				{#if sharing !== 'all'}<button
+						class="{quietButton} !h-[1.375rem] bg-gray-50/60 dark:bg-gray-800/40"
+						on:click={() => (sharing = 'all')}
+						aria-label={$i18n.t('Remove sharing filter')}
+						>{$i18n.t(sharing === 'mine' ? 'Created by you' : 'Shared with you')}<XMark
+							className="size-2.5"
+						/></button
+					>{/if}
+				{#if scope}<button
+						class="{quietButton} !h-[1.375rem] max-w-48 bg-gray-50/60 dark:bg-gray-800/40"
+						on:click={() => (scope = '')}
+						aria-label={$i18n.t('Remove location filter')}
+						><span class="truncate">{scopeName}</span><XMark
+							className="size-2.5 shrink-0"
+						/></button
+					>{/if}
+			</div>
+		{/if}
+		{#if panel === 'types'}
+			<div class="absolute top-10 right-12 z-10" data-search-panel>
+				<DropdownMenu className="min-w-32 font-normal"
+					><button
+						on:click={() => {
+							kind = 'all';
+							panel = null;
+							input.focus();
+						}}>{$i18n.t('Everything')}</button
+					>{#each kinds as type}<button
+							on:click={() => {
+								kind = type;
+								panel = null;
+								input.focus();
+							}}
+							><svelte:component this={icons[type]} className="size-3.5" />{$i18n.t(
+								labels[type]
+							)}</button
+						>{/each}</DropdownMenu
+				>
+			</div>
+		{/if}
+		{#if panel === 'filters'}
+			<div class="absolute right-2 top-10 z-10 w-52 max-w-[calc(100%-1rem)]" data-search-panel>
+				<DropdownMenu>
+					<DropdownSub maxWidth={208} contentClass="w-52 font-normal">
+						<button
+							slot="trigger"
+							class="focus-ring flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] font-normal"
+						>
+							<span>{$i18n.t('View')}</span>
+							<span class="ml-auto truncate text-gray-500 dark:text-gray-400"
+								>{$i18n.t(
+									sharing === 'all'
+										? 'All'
+										: sharing === 'mine'
+											? 'Created by you'
+											: 'Shared with you'
+								)}</span
 							>
-								{$i18n.t(chat.time_range)}
-								<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
-							{$i18n.t('Today')}
-							{$i18n.t('Yesterday')}
-							{$i18n.t('Previous 7 days')}
-							{$i18n.t('Previous 30 days')}
-							{$i18n.t('January')}
-							{$i18n.t('February')}
-							{$i18n.t('March')}
-							{$i18n.t('April')}
-							{$i18n.t('May')}
-							{$i18n.t('June')}
-							{$i18n.t('July')}
-							{$i18n.t('August')}
-							{$i18n.t('September')}
-							{$i18n.t('October')}
-							{$i18n.t('November')}
-							{$i18n.t('December')}
-							-->
-							</div>
-						{/if}
-
-						<!-- svelte-ignore a11y-no-static-element-interactions -->
-						<div
-							class="w-full flex justify-between items-center rounded-lg text-sm py-1.5 pl-2.5 pr-32 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 group/item relative {selectedIdx ===
-							idx + actions.length
-								? 'bg-gray-50/70 dark:bg-gray-850/50'
-								: ''}"
-							data-arrow-selected={selectedIdx === idx + actions.length ? 'true' : undefined}
-							on:mouseenter={() => {
-								selectedIdx = idx + actions.length;
+							<ChevronRight className="size-3.5 shrink-0 text-gray-400" />
+						</button>
+						{#each [{ value: 'all', label: 'All' }, { value: 'mine', label: 'Created by you' }, { value: 'shared', label: 'Shared with you' }] as option}
+							<button
+								data-search-panel
+								aria-pressed={sharing === option.value}
+								on:click={() => {
+									sharing = option.value;
+									panel = null;
+									input.focus();
+								}}
+							>
+								{$i18n.t(option.label)}
+								{#if sharing === option.value}<Check className="ml-auto size-3.5" />{/if}
+							</button>
+						{/each}
+					</DropdownSub>
+					<DropdownSub
+						maxWidth={208}
+						contentClass="w-52 max-h-64 overflow-y-auto scrollbar-hover font-normal"
+					>
+						<button
+							slot="trigger"
+							class="focus-ring flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] font-normal"
+						>
+							<span>{$i18n.t('Location')}</span>
+							<span class="ml-auto truncate text-gray-500 dark:text-gray-400"
+								>{scopeName || $i18n.t('Everywhere')}</span
+							>
+							<ChevronRight className="size-3.5 shrink-0 text-gray-400" />
+						</button>
+						<button
+							data-search-panel
+							aria-pressed={!scope}
+							on:click={() => {
+								scope = '';
+								panel = null;
+								input.focus();
 							}}
 						>
-							{#if editingChatId === chat.id}
-								<div class="flex-1 min-w-0">
-									<input
-										id="search-chat-title-input-{chat.id}"
-										bind:value={editingChatTitle}
-										class="bg-transparent w-full outline-none"
-										placeholder={generating ? $i18n.t('Generating...') : ''}
-										disabled={generating}
-										on:keydown={(e) => {
-											e.stopPropagation();
-											if (e.key === 'Enter') {
-												e.preventDefault();
-												confirmRename();
-											} else if (e.key === 'Escape') {
-												e.preventDefault();
-												cancelRename();
-											}
-										}}
-										on:blur={() => {
-											if (!generating) {
-												confirmRename();
-											}
-										}}
-									/>
-								</div>
-
-								<div class="flex items-center shrink-0 pl-1">
-									<Tooltip content={$i18n.t('Generate')}>
-										<button
-											class="self-center dark:hover:text-white transition disabled:cursor-not-allowed"
-											disabled={generating}
-											on:mousedown|preventDefault={() => {}}
-											on:click|preventDefault|stopPropagation={() => {
-												generateTitleHandler();
-											}}
-										>
-											{#if generating}
-												<Spinner className="size-4" />
-											{:else}
-												<Sparkles strokeWidth="2" />
-											{/if}
-										</button>
-									</Tooltip>
-								</div>
-							{:else}
-								<a
-									class="flex-1 min-w-0"
-									href="/c/{chat.id}"
-									draggable="false"
-									on:click={async () => {
-										await goto(`/c/${chat.id}`);
-										show = false;
-										onClose();
-									}}
+							{$i18n.t('Everywhere')}{#if !scope}<Check className="ml-auto size-3.5" />{/if}
+						</button>
+						{#each [{ kind: 'folder', label: 'Folders' }, { kind: 'channel', label: 'Channels' }] as group}
+							{#if scopes.some((item) => item.kind === group.kind)}
+								<div
+									data-search-panel
+									class="px-2 pb-1 pt-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
 								>
-									<div class="text-ellipsis line-clamp-1 w-full">
-										{chat?.title}
-									</div>
-									{#if chat?.snippet}
-										<div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
-											{#each getHighlightedSnippet(chat.snippet, query) as part}
-												{#if part.highlight}
-													<mark
-														class="rounded bg-yellow-200/70 px-0.5 text-inherit dark:bg-yellow-500/30"
-													>
-														{part.text}
-													</mark>
-												{:else}
-													{part.text}
-												{/if}
-											{/each}
-										</div>
-									{/if}
-								</a>
-							{/if}
-
-							<div
-								class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3 pl-6 shrink-0"
-							>
-								<div class="text-gray-500 dark:text-gray-400 text-xs">
-									{$i18n.t(
-										dayjs(chat?.updated_at * 1000)
-											.locale($i18n.language)
-											.calendar(null, {
-												sameDay: '[Today]',
-												nextDay: '[Tomorrow]',
-												nextWeek: 'dddd',
-												lastDay: '[Yesterday]',
-												lastWeek: '[Last] dddd',
-												sameElse: 'L'
-											})
-									)}
+									{$i18n.t(group.label)}
 								</div>
-
-								{#if editingChatId !== chat.id}
-									{#if shiftKey}
-										<div class="flex items-center space-x-1.5">
-											<Tooltip content={$i18n.t('Archive')} className="flex items-center">
-												<button
-													class="self-center dark:hover:text-white transition"
-													on:click|stopPropagation={() => {
-														archiveChatHandler(chat.id);
-													}}
-													type="button"
-												>
-													<ArchiveBox className="size-4 translate-y-[0.5px]" strokeWidth="2" />
-												</button>
-											</Tooltip>
-
-											{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
-												<Tooltip content={$i18n.t('Delete')}>
-													<button
-														class="self-center dark:hover:text-white transition"
-														on:click|stopPropagation={() => {
-															deleteChatHandler(chat.id);
-														}}
-														type="button"
-													>
-														<GarbageBin strokeWidth="2" />
-													</button>
-												</Tooltip>
-											{/if}
-										</div>
-									{:else}
-										<div class="flex items-center">
-											<ChatMenu
-												chatId={chat.id}
-												archived={chat.archived ?? false}
-												shareHandler={() => {
-													menuChatId = chat.id;
-													showShareChatModal = true;
-												}}
-												{moveChatHandler}
-												cloneChatHandler={() => {
-													cloneChatHandler(chat.id);
-												}}
-												archiveChatHandler={() => {
-													archiveChatHandler(chat.id);
-												}}
-												renameHandler={() => {
-													renameHandler(chat.id);
-												}}
-												markUnreadHandler={() => {
-													markUnreadHandler(chat.id);
-												}}
-												deleteHandler={() => {
-													menuChatId = chat.id;
-													menuChatTitle = chat.title;
-													showDeleteConfirm = true;
-												}}
-												onClose={() => {}}
-												onPinChange={async () => {
-													await refreshSidebar(localStorage.token);
-													await searchHandler();
-												}}
-											>
-												<button
-													aria-label={$i18n.t('Chat Menu')}
-													class="self-center dark:hover:text-white transition"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-														/>
-													</svg>
-												</button>
-											</ChatMenu>
-										</div>
-									{/if}
-								{/if}
+								{#each scopes.filter((item) => item.kind === group.kind) as item}
+									<button
+										data-search-panel
+										aria-pressed={scope === item.id}
+										on:click={() => {
+											scope = item.id;
+											panel = null;
+											input.focus();
+										}}
+									>
+										<span class="min-w-0 truncate">{item.name}</span>{#if scope === item.id}<Check
+												className="ml-auto size-3.5 shrink-0"
+											/>{/if}
+									</button>
+								{/each}
+							{/if}
+						{/each}
+					</DropdownSub>
+					{#if kind !== 'all' || sharing !== 'all' || scope}
+						<hr class="border-gray-100 dark:border-gray-800" />
+						<button on:click={resetFilters}>{$i18n.t('Reset')}</button>
+					{/if}
+				</DropdownMenu>
+			</div>
+		{/if}
+		<div
+			class="flex h-[min(36rem,70dvh)] min-h-40 border-t border-gray-100/60 dark:border-gray-800/40"
+			aria-busy={loading}
+		>
+			<div
+				class="min-w-0 flex-1 flex-col overflow-y-auto p-1 scrollbar-hidden {preview && selected
+					? 'hidden sm:flex'
+					: 'flex'}"
+			>
+				<div
+					class="flex h-6 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+				>
+					<span>{$i18n.t(query.trim() ? 'Results' : 'Pinned & recent')}</span><span
+						aria-live="polite"
+						>{loading
+							? $i18n.t('Searching…')
+							: results.length
+								? `${results.length}${hasMore ? '+' : ''}`
+								: ''}</span
+					>
+				</div>
+				<div
+					bind:this={list}
+					id="workspace-search-results"
+					role="listbox"
+					aria-label={$i18n.t('Search results')}
+					tabindex="-1"
+					class="outline-hidden"
+				>
+					{#each results as result, index (result.id)}
+						<!-- svelte-ignore a11y-click-events-have-key-events -->
+						<div
+							id="search-result-{index}"
+							role="option"
+							aria-selected={selectedIndex === index}
+							tabindex="-1"
+							data-index={index}
+							class="flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-left font-normal transition-colors duration-75 {selectedIndex ===
+							index
+								? selectionClass
+								: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
+							on:mouseenter={() => (selectedIndex = index)}
+							on:click={() => {
+								selectedIndex = index;
+								if (preview) input?.focus();
+								else open(result);
+							}}
+							on:dblclick={() => open(result)}
+						>
+							<svelte:component
+								this={icons[result.kind]}
+								className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+							/>
+							<div class="min-w-0 flex-1">
+								<div class="flex items-center gap-2 leading-5">
+									<span class="min-w-0 flex-1 truncate"
+										><HighlightedText text={result.title} {query} /></span
+									><span
+										class="hidden max-w-[35%] truncate text-[0.6875rem] text-gray-500 dark:text-gray-400 sm:block"
+										>{result.context}</span
+									>{#if result.pinned}<Pin className="size-2.5 shrink-0 text-gray-400" />{/if}
+								</div>
+								{#if query.trim() && result.snippet}<div
+										class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400"
+									>
+										<HighlightedText text={result.snippet} {query} />
+									</div>{/if}
 							</div>
 						</div>
 					{/each}
-
-					{#if !allChatsLoaded}
-						<Loader
-							on:visible={(e) => {
-								if (!chatListLoading) {
-									loadMoreChats();
-								}
-							}}
+				</div>
+				{#if loading && !results.length}<div
+						class="flex flex-1 items-center justify-center text-gray-400"
+						aria-label={$i18n.t('Searching')}
+					>
+						<Spinner className="size-4" />
+					</div>{/if}
+				{#if error}<div
+						class="m-auto px-5 py-6 text-center text-xs text-gray-500 dark:text-gray-400"
+						role="alert"
+					>
+						<p>{error}</p>
+						<button
+							class="mt-2 underline underline-offset-2"
+							on:click={() => fetchResults(results.length ? page + 1 : 1)}
+							>{$i18n.t('Try again')}</button
 						>
-							<div class="w-full flex justify-center py-4 text-xs animate-pulse items-center gap-2">
-								<Spinner className=" size-4" />
-								<div class=" ">{$i18n.t('Loading...')}</div>
-							</div>
-						</Loader>
-					{/if}
-				{:else}
-					<div class="w-full h-full flex justify-center items-center">
-						<Spinner className="size-5" />
 					</div>
+				{:else if !loading && !results.length}<div
+						class="m-auto px-5 py-6 text-center text-xs text-gray-500 dark:text-gray-400"
+					>
+						<p>{$i18n.t(query ? 'No matches found' : 'Nothing here yet')}</p>
+						<p class="mt-1 text-[0.6875rem]">
+							{$i18n.t('Try another word or broaden your filters.')}
+						</p>
+						{#if kind !== 'all' || sharing !== 'all' || scope}<button
+								class="mt-2 underline underline-offset-2"
+								on:click={resetFilters}>{$i18n.t('Clear filters')}</button
+							>{/if}
+					</div>{/if}
+				{#if hasMore && !error}
+					<Loader
+						on:visible={() => {
+							if (!loading) fetchResults(page + 1);
+						}}
+					>
+						<div
+							class="flex h-7 items-center justify-center text-gray-400"
+							role="status"
+							aria-label={$i18n.t('Loading more results')}
+						>
+							<Spinner className="size-3" />
+						</div>
+					</Loader>
 				{/if}
 			</div>
-			<div
-				id={messagesContainerId}
-				bind:this={messagesContainerElement}
-				class="hidden md:flex md:flex-1 w-full overflow-y-auto h-96 md:h-[40rem] scrollbar-hidden @container"
-			>
-				{#if messages === null}
+			{#if preview && selected}
+				<section
+					class="flex w-full min-w-0 flex-col border-gray-100/60 sm:w-[45%] sm:border-l dark:border-gray-800/40"
+					aria-label={$i18n.t('Result preview')}
+				>
 					<div
-						class="w-full h-full flex justify-center items-center text-gray-500 dark:text-gray-400 text-sm"
+						class="flex h-8 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
 					>
-						{$i18n.t('Select a conversation to preview')}
+						<button
+							class={quietButton}
+							on:click={() => {
+								preview = false;
+								input.focus();
+							}}><ArrowLeft className="size-3" /><span>{$i18n.t('Back')}</span></button
+						><span>{$i18n.t(labels[selected.kind])}</span>
 					</div>
-				{:else}
-					<div class="w-full h-full flex flex-col">
-						<Messages
-							className="h-full flex pt-4 pb-8 w-full"
-							chatId={`chat-preview-${selectedChat?.id ?? ''}`}
-							user={$user}
-							readOnly={true}
-							{selectedModels}
-							bind:history
-							autoScroll={true}
-							{messagesContainerId}
-							messagesCount={8}
-							sendMessage={() => {}}
-							continueResponse={() => {}}
-							regenerateResponse={() => {}}
-						/>
-					</div>
-				{/if}
+					{#if selected.kind === 'chat'}
+						<div class="truncate px-3 pb-1 text-[0.8125rem] font-normal">{selected.title}</div>
+						<div class="min-h-0 flex-1">
+							<ChatPreview
+								chatId={selected.id.startsWith('chat:') ? selected.id.slice(5) : ''}
+								shareId={selected.id.startsWith('shared:') ? selected.id.slice(7) : ''}
+								messageId={new URL(selected.url, 'http://localhost').searchParams.get('message') ??
+									''}
+							/>
+						</div>
+					{:else}
+						<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3 scrollbar-hidden">
+							<h2 class="text-[0.8125rem] font-normal leading-5 break-words">{selected.title}</h2>
+							<div class="mt-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+								{selected.context} · {formatSearchDate(selected.updated_at)}
+							</div>
+							<div class="mt-3 break-words text-xs leading-snug text-gray-600 dark:text-gray-300">
+								{#if selected.kind === 'note'}
+									<NotePreview id={selected.id.slice(5)} {query} />
+								{:else}
+									<PreviewMarkdown
+										id={`message-preview-${selected.id}`}
+										content={selected.preview}
+									/>
+								{/if}
+							</div>
+						</div>
+					{/if}
+				</section>
+			{/if}
+		</div>
+		{#if panel === 'actions'}<div class="absolute bottom-9 right-1 z-10" data-search-panel>
+				<DropdownMenu className="min-w-56 font-normal"
+					>{#if selected}<button
+							on:click={() => {
+								panel = null;
+								open();
+							}}
+							>{$i18n.t('Open result')}<span class="ml-auto text-xs text-gray-400">↵</span></button
+						><button
+							on:click={() => {
+								setPreview(!preview);
+								panel = null;
+								input.focus();
+							}}>{$i18n.t(preview ? 'Hide preview' : 'Show preview')}</button
+						><button on:click={copyLink}>{$i18n.t('Copy link')}</button>
+						<hr class="border-gray-100 dark:border-gray-800" />{/if}<button
+						on:click={() => create('chat')}>{$i18n.t('Start a new conversation')}</button
+					>{#if canCreateNote}<button on:click={() => create('note')}
+							>{$i18n.t('Create a new note')}</button
+						>{/if}</DropdownMenu
+				>
+			</div>{/if}
+		<div
+			class="flex h-8 shrink-0 items-center justify-between gap-2 border-t border-gray-100/60 px-2 dark:border-gray-800/40"
+		>
+			<span class="min-w-0 truncate pl-1 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+				>{selected ? selected.context : $i18n.t('Workspace search')}</span
+			>
+			<div class="flex shrink-0 items-center gap-0.5">
+				<button class={quietButton} disabled={!selected} on:click={() => open()}
+					>{$i18n.t('Open')}<span class="text-gray-400">↵</span></button
+				><button
+					class={quietButton}
+					disabled={!selected}
+					on:click={() => setPreview(!preview)}
+					aria-pressed={preview}
+					title={$i18n.t('Preview (Ctrl/Cmd + Enter)')}
+					><Eye className="size-3" /><span class="hidden sm:inline">{$i18n.t('Preview')}</span
+					></button
+				><button
+					class={quietButton}
+					data-search-panel
+					aria-expanded={panel === 'actions'}
+					on:click={() => (panel = panel === 'actions' ? null : 'actions')}
+					>{$i18n.t('Actions')}<span class="text-[0.625rem] text-gray-400">⌘K</span></button
+				>
 			</div>
 		</div>
 	</div>

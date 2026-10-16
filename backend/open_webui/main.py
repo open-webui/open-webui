@@ -177,6 +177,7 @@ from open_webui.routers import (
     prompts,
     retrieval,
     scim,
+    search,
     skills,
     tasks,
     terminals,
@@ -894,6 +895,7 @@ app.include_router(apps.router, prefix='/api/v1/apps', tags=['apps'])
 app.include_router(channels.router, prefix='/api/v1/channels', tags=['channels'])
 app.include_router(chats.router, prefix='/api/v1/chats', tags=['chats'])
 app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
+app.include_router(search.router, prefix='/api/v1/search', tags=['search'])
 
 
 app.include_router(models.router, prefix='/api/v1/models', tags=['models'])
@@ -2338,6 +2340,7 @@ async def get_app_config(request: Request):
         'folders.enable',
         'folders.max_file_count',
         'channels.enable',
+        'channels.encryption.enable',
         'apps.enable',
         'calendar.enable',
         'automations.enable',
@@ -2434,6 +2437,7 @@ async def get_app_config(request: Request):
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),
+                    'enable_encrypted_channels': config.get('channels.encryption.enable'),
                     'enable_apps': config.get('apps.enable'),
                     'enable_calendar': config.get('calendar.enable'),
                     'enable_automations': config.get('automations.enable'),

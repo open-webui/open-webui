@@ -5,6 +5,8 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Icon from './Icon.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import Folder from '$lib/components/icons/Folder.svelte';
 
 	export let dragType = 'application/x-terminal-file-move';
 	const i18n: any = getContext('i18n');
@@ -245,27 +247,27 @@
 				<DropdownMenu className="min-w-[9.375rem] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
-						on:click={() => {
-							onNewFolder();
-							actionsMenuOpen = false;
-						}}
-						disabled={!writable}
-					>
-						<Icon name="folder" size={12} strokeWidth={1.4} />
-						<span>{$i18n.t('New Folder')}</span>
-					</button>
-					<button
-						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
 						on:click={() => {
 							onNewFile();
 							actionsMenuOpen = false;
 						}}
 						disabled={!writable}
 					>
-						<Icon name="empty-page" size={12} strokeWidth={1.4} />
+						<Plus className="size-3.5" />
 						<span>{$i18n.t('New File')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+						on:click={() => {
+							onNewFolder();
+							actionsMenuOpen = false;
+						}}
+						disabled={!writable}
+					>
+						<Folder className="size-3.5" />
+						<span>{$i18n.t('New Folder')}</span>
 					</button>
 					<button
 						type="button"

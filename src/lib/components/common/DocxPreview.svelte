@@ -5,6 +5,9 @@
 	import { clampDocumentTargetPage } from '$lib/utils/documentPreview';
 
 	import Spinner from './Spinner.svelte';
+	import { wordAnchors } from '$lib/utils/comments/wordAnchors';
+	import { highlightRange, commentPin } from '$lib/utils/comments/highlights';
+	import type { FileComment } from '$lib/utils/comments/types';
 
 	type I18n = {
 		t: (key: string, values?: Record<string, unknown>) => string;
@@ -15,6 +18,69 @@
 	export let data: ArrayBuffer | null = null;
 	export let className = '';
 	export let targetPage: number | null = null;
+	export let reviewComments: FileComment[] | null = null;
+	export let selectedComment: FileComment | null = null;
+	export let onCommentSelect: ((id: string) => void) | null = null;
+	export let onLocationResult: ((found: boolean) => void) | null = null;
+	let anchors = new Map<string, Range>();
+	let lastSelected: FileComment | null = null;
+	let renderedData: ArrayBuffer | null = null;
+	export let onAnchors: ((ids: string[]) => void) | null = null;
+	const updateCommentMarkers = () => {
+		if (!containerEl || !reviewComments) return;
+		containerEl.querySelector('.word-comment-layer')?.remove();
+		const layer = document.createElement('div');
+		layer.className = 'word-comment-layer';
+		Object.assign(layer.style, {
+			position: 'absolute',
+			inset: '0',
+			pointerEvents: 'none',
+			zIndex: '2'
+		});
+		const base = containerEl.getBoundingClientRect();
+		for (const [id, range] of anchors) {
+			const rect =
+				range.getClientRects()[0] ?? range.startContainer.parentElement?.getBoundingClientRect();
+			if (!rect) continue;
+			if (highlightRange(containerEl, layer, range, `word:${id}`, `${$i18n.t('Comment')} ${id}`))
+				continue;
+			const button = commentPin(`word:${id}`, `${$i18n.t('Comment')} ${id}`);
+			button.dataset.wordComment = id;
+			button.style.top = `${rect.top - base.top}px`;
+			button.style.left = `${Math.max(0, rect.left - base.left - 24)}px`;
+			button.onclick = () => onCommentSelect?.(id);
+			layer.appendChild(button);
+		}
+		const location = selectedComment?.location;
+		if (location?.kind === 'word') {
+			const range = anchors.get(location.anchor);
+			onLocationResult?.(!!range);
+			if (range) {
+				const rects = Array.from(range.getClientRects());
+				if (!rects.length && range.startContainer.parentElement)
+					rects.push(range.startContainer.parentElement.getBoundingClientRect());
+				for (const rect of rects) {
+					const highlight = document.createElement('div');
+					highlight.dataset.wordSelection = location.anchor;
+					Object.assign(highlight.style, {
+						position: 'absolute',
+						top: `${rect.top - base.top}px`,
+						left: `${rect.left - base.left}px`,
+						width: `${Math.max(2, rect.width)}px`,
+						height: `${rect.height}px`,
+						background: 'rgba(250,204,21,.3)',
+						outline: '1px solid #2563eb'
+					});
+					layer.appendChild(highlight);
+				}
+			}
+		}
+		containerEl.appendChild(layer);
+		if (selectedComment !== lastSelected) {
+			lastSelected = selectedComment;
+			layer.querySelector('[data-word-selection]')?.scrollIntoView({ block: 'center' });
+		}
+	};
 
 	let outerContainer: HTMLDivElement;
 	let containerEl: HTMLDivElement;
@@ -34,6 +100,7 @@
 
 	const clearPreview = () => {
 		if (containerEl) containerEl.innerHTML = '';
+		anchors.clear();
 		if (styleEl) styleEl.innerHTML = '';
 		fallbackHtml = '';
 		error = false;
@@ -117,6 +184,7 @@
 	};
 
 	const renderDocx = async (arrayBuffer: ArrayBuffer | null) => {
+		renderedData = arrayBuffer;
 		const currentRender = ++renderId;
 		clearPreview();
 		zoomLevel = 1;
@@ -128,10 +196,13 @@
 
 		try {
 			const { renderAsync } = await import('docx-preview');
+			const body = document.createElement('div');
+			const styles = document.createElement('div');
 
 			if (currentRender !== renderId) return;
 
-			await renderAsync(arrayBuffer.slice(0), containerEl, styleEl, {
+			await renderAsync(arrayBuffer.slice(0), body, styles, {
+				renderComments: reviewComments !== null,
 				breakPages: true,
 				className: 'docx',
 				ignoreLastRenderedPageBreak: false,
@@ -144,12 +215,28 @@
 				renderHeaders: true,
 				useBase64URL: true
 			});
+			if (currentRender !== renderId) return;
+			containerEl.replaceChildren(...Array.from(body.childNodes));
+			styleEl.replaceChildren(...Array.from(styles.childNodes));
+			// The shared panel replaces the renderer's hover popovers and global highlight.
+			if (reviewComments) {
+				containerEl
+					.querySelectorAll('.docx-comment-ref,.docx-comment-popover')
+					.forEach((el) => el.remove());
+				anchors = wordAnchors(containerEl);
+				onAnchors?.([...anchors.keys()].map((id) => `word:${id}`));
+				(globalThis.CSS as typeof CSS & { highlights?: Map<string, unknown> }).highlights?.delete(
+					'docx-comments'
+				);
+			}
 			stripUnsafeLinkTargets();
 			await tick();
 			updateFitScale();
 			await scrollToTargetPage();
+			updateCommentMarkers();
 		} catch (e) {
 			console.error('Error rendering DOCX preview:', e);
+			onLocationResult?.(false);
 
 			try {
 				const { docxToHtml } = await import('$lib/utils/docxToHtml');
@@ -164,7 +251,7 @@
 		}
 	};
 
-	$: if (mounted) renderDocx(data);
+	$: if (mounted && data !== renderedData) void renderDocx(data);
 
 	$: if (!loading && targetPage && !fallbackHtml) {
 		void scrollToTargetPage();
@@ -174,11 +261,17 @@
 		mounted = true;
 		void tick().then(() => {
 			if (!outerContainer) return;
-			resizeObserver = new ResizeObserver(updateFitScale);
+			resizeObserver = new ResizeObserver(() => {
+				updateFitScale();
+				void tick().then(updateCommentMarkers);
+			});
 			resizeObserver.observe(outerContainer);
 			updateFitScale();
 		});
 	});
+
+	$: if (!loading && selectedComment) void tick().then(updateCommentMarkers);
+	$: if (docxScale && !loading) void tick().then(updateCommentMarkers);
 
 	onDestroy(() => {
 		renderId += 1;
@@ -218,7 +311,7 @@
 			class="h-full overflow-auto overscroll-contain"
 			on:wheel|nonpassive={handleWheel}
 		>
-			<div bind:this={containerEl}></div>
+			<div bind:this={containerEl} style="position: relative;"></div>
 		</div>
 	{/if}
 

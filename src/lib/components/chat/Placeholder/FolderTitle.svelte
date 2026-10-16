@@ -9,7 +9,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder, user } from '$lib/stores';
+	import { selectedFolder } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -20,7 +20,6 @@
 	import { getChatsByFolderId } from '$lib/apis/chats';
 
 	import FolderModal from '$lib/components/layout/Sidebar/Folders/FolderModal.svelte';
-	import FolderShareModal from '$lib/components/layout/Sidebar/Folders/FolderShareModal.svelte';
 
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -38,7 +37,6 @@
 
 	let showFolderModal = false;
 	let showCreateSubFolderModal = false;
-	let showShareModal = false;
 	let showDeleteConfirm = false;
 	let deleteFolderContents = true;
 
@@ -177,8 +175,6 @@
 		onSubmit={createSubFolderHandler}
 	/>
 
-	<FolderShareModal bind:show={showShareModal} {folder} />
-
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
 		title={$i18n.t('Delete folder?')}
@@ -247,13 +243,9 @@
 		{#if !readOnly}
 			<div class="flex items-center translate-x-2.5">
 				<FolderMenu
-					canShare={$user?.role === 'admin' || folder.user_id === $user?.id}
 					align="end"
 					onEdit={() => {
 						showFolderModal = true;
-					}}
-					onShare={() => {
-						showShareModal = true;
 					}}
 					onDelete={() => {
 						showDeleteConfirm = true;

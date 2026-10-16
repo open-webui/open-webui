@@ -7,6 +7,17 @@
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
+	const terminalDocument = getContext<
+		| {
+				localPath: (ref: string) => string | null;
+				resolveImage: (ref: string) => Promise<string | null>;
+		  }
+		| undefined
+	>('terminal-document');
+	const markdown = getContext<
+		| { allowRemoteContent: boolean; document?: boolean; parseInline?: (tokens: Token[]) => string }
+		| undefined
+	>('markdown');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { skills, terminalSkills } from '$lib/stores';
@@ -81,16 +92,24 @@
 			// Invalid URL, let browser handle it
 		}
 	};
+	$: inlineHtml =
+		markdown?.document && tokens.some((token) => token.type === 'html')
+			? DOMPurify.sanitize(markdown.parseInline?.(tokens) ?? '')
+			: null;
 </script>
 
-{#each tokens as token, tokenIdx (tokenIdx)}
+<!-- Keep paired inline HTML tags together; sanitizing individual tags loses their contents. -->
+{#if inlineHtml !== null}
+	{@html inlineHtml}
+{/if}
+{#each inlineHtml === null ? tokens : [] as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'link'}
 		{@const linkToken = getLinkToken(token)}
-		{#if linkToken.noteId}
+		{#if linkToken.noteId && !markdown?.document && markdown?.allowRemoteContent !== false}
 			<NoteLinkToken noteId={linkToken.noteId} href={linkToken.href} />
 		{:else if token.tokens && !linkToken.isAutolink}
 			<a
@@ -112,7 +131,15 @@
 			>
 		{/if}
 	{:else if token.type === 'image'}
-		<Image src={token.href} alt={token.text} allowExternal={true} />
+		{#if terminalDocument?.localPath(token.href)}
+			{#await terminalDocument.resolveImage(token.href)}
+				<span class="text-xs text-gray-400">{token.text}</span>
+			{:then url}
+				{#if url}<img src={url} alt={token.text} data-terminal-resolved="true" />{:else}<span
+						class="text-xs text-gray-400">Image unavailable: {token.text}</span
+					>{/if}
+			{/await}
+		{:else}<Image src={token.href} alt={token.text} allowExternal={true} />{/if}
 	{:else if token.type === 'strong'}
 		<strong
 			><svelte:self id={`${id}-strong`} tokens={token.tokens} {sourceIds} {onSourceClick} /></strong
@@ -161,6 +188,10 @@
 			<TextToken {token} {done} />
 		{/if}
 	{:else if token.type === 'text'}
-		<TextToken {token} {done} />
+		{#if markdown?.document}
+			{unescapeHtml(token.text)}
+		{:else}
+			<TextToken {token} {done} />
+		{/if}
 	{/if}
 {/each}

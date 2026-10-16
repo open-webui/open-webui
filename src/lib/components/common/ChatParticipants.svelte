@@ -12,10 +12,15 @@
 	export let avatarClass = 'size-4';
 	export let activeProfileId: string | null = null;
 	export let overflowOpen = false;
+	export let mode: 'contributors' | 'presence' = 'contributors';
 
 	// Preserve the base overflow label alongside its generated plural forms.
 	// $i18n.t('Show all {{count}} contributors');
-	$: people = participants.length ? participants : owner?.id ? [owner] : [];
+	$: people = participants.length
+		? participants
+		: mode === 'contributors' && owner?.id
+			? [owner]
+			: [];
 	$: if (activeProfileId && !people.some((person) => person.id === activeProfileId)) {
 		activeProfileId = null;
 	}
@@ -43,10 +48,16 @@
 {/snippet}
 
 <div class="flex shrink-0 items-center gap-1" data-chat-participants draggable="false">
-	<div class="flex items-center -space-x-1 rtl:space-x-reverse">
+	<div
+		class="flex items-center {mode === 'presence'
+			? '-space-x-2'
+			: '-space-x-1'} rtl:space-x-reverse"
+	>
 		{#each people.slice(0, 3) as person (person.id)}
 			<div class="relative rounded-full hover:z-10 focus-within:z-10">
 				<ProfilePreview
+					side={mode === 'presence' ? 'bottom' : 'right'}
+					align={mode === 'presence' ? 'end' : 'center'}
 					user={{ id: person.id, name: person.name || $i18n.t('Unknown User') }}
 					bind:openPreview={
 						() => !overflowOpen && activeProfileId === person.id,
@@ -55,7 +66,11 @@
 				>
 					{@render avatar(
 						person,
-						`${avatarClass} bg-white ring-1 ring-white dark:bg-gray-900 dark:ring-gray-900`
+						`${avatarClass} bg-white dark:bg-gray-900 ${
+							mode === 'presence'
+								? `ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
+								: 'ring-1 ring-white dark:ring-gray-900'
+						}`
 					)}
 				</ProfilePreview>
 			</div>
@@ -65,8 +80,12 @@
 	{#if people.length > 3}
 		<Popover.Root bind:open={overflowOpen} onOpenChange={() => (activeProfileId = null)}>
 			<Popover.Trigger
-				class="shrink-0 rounded px-0.5 text-[0.625rem] text-gray-500 hover:bg-gray-100 focus-visible:outline dark:text-gray-400 dark:hover:bg-gray-800"
-				aria-label={$i18n.t('Show all {{count}} contributors', { count: people.length })}
+				class="shrink-0 rounded px-0.5 {mode === 'presence'
+					? 'h-6 text-xs'
+					: 'text-[0.625rem]'} text-gray-500 hover:bg-gray-100 focus-visible:outline dark:text-gray-400 dark:hover:bg-gray-800"
+				aria-label={mode === 'presence'
+					? $i18n.t('Collaborators')
+					: $i18n.t('Show all {{count}} contributors', { count: people.length })}
 			>
 				+{people.length - 3}
 			</Popover.Trigger>
@@ -75,15 +94,24 @@
 					role="dialog"
 					trapFocus={false}
 					side="bottom"
-					align="start"
+					align={mode === 'presence' ? 'end' : 'start'}
 					sideOffset={6}
 					class="z-[9999] w-60 max-w-[calc(100vw-1.5rem)] max-h-80 overflow-y-auto rounded-xl bg-white p-2 text-gray-900 shadow-lg ring-1 ring-black/5 dark:bg-gray-850 dark:text-gray-100 dark:ring-white/10"
-					aria-label={$i18n.t('Contributors')}
+					aria-label={mode === 'presence' ? $i18n.t('Collaborators') : $i18n.t('Contributors')}
 				>
+					{#if mode === 'presence'}
+						<div class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t('Collaborators')}
+						</div>
+					{/if}
 					<ul class="space-y-1">
 						{#each people as person (person.id)}
-							<li class="rounded-lg p-1 hover:bg-gray-50 dark:hover:bg-gray-800">
+							<li
+								class="rounded-lg p-1 hover:bg-gray-50 dark:hover:bg-gray-800 [&>button]:max-w-full"
+							>
 								<ProfilePreview
+									side={mode === 'presence' ? 'bottom' : 'right'}
+									align={mode === 'presence' ? 'end' : 'center'}
 									user={{ id: person.id, name: person.name || $i18n.t('Unknown User') }}
 									bind:openPreview={
 										() => overflowOpen && activeProfileId === person.id,

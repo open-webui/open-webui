@@ -50,6 +50,10 @@
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
 
+	// Keep the latest turn's real height when assigning a chat ID remounts the message list.
+	$: isCurrentTurn =
+		messageId === history.currentId || messageId === history.messages[history.currentId]?.parentId;
+
 	// WebKit's content-visibility implementation has paint bugs that leave
 	// on-screen messages blank (#26712), so skip virtualization there
 	// iOS WebViews and home screen apps carry no Safari token, hence the vendor check
@@ -63,7 +67,7 @@
 	class="flex flex-col justify-between px-3.5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
 		: 'max-w-[58rem]'} mx-auto rounded-lg group message-listitem"
-	class:message-virtualized={!isWebKit}
+	class:message-virtualized={!isWebKit && !isCurrentTurn}
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
@@ -85,6 +89,7 @@
 				{deleteMessage}
 				{allowDelete}
 				{readOnly}
+				{shareMode}
 				{compactPreview}
 				{editCodeBlock}
 				{topPadding}

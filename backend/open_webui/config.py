@@ -1949,6 +1949,10 @@ USER_PERMISSIONS_FEATURES_NOTES = os.getenv('USER_PERMISSIONS_FEATURES_NOTES', '
 
 USER_PERMISSIONS_FEATURES_CHANNELS = os.getenv('USER_PERMISSIONS_FEATURES_CHANNELS', 'True').lower() == 'true'
 
+USER_PERMISSIONS_FEATURES_ENCRYPTED_CHANNELS = (
+    os.getenv('USER_PERMISSIONS_FEATURES_ENCRYPTED_CHANNELS', 'False').lower() == 'true'
+)
+
 USER_PERMISSIONS_FEATURES_API_KEYS = os.getenv('USER_PERMISSIONS_FEATURES_API_KEYS', 'False').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_MEMORIES = os.getenv('USER_PERMISSIONS_FEATURES_MEMORIES', 'True').lower() == 'true'
@@ -2032,6 +2036,7 @@ DEFAULT_USER_PERMISSIONS = {
         'notes': USER_PERMISSIONS_FEATURES_NOTES,
         'folders': USER_PERMISSIONS_FEATURES_FOLDERS,
         'channels': USER_PERMISSIONS_FEATURES_CHANNELS,
+        'encrypted_channels': USER_PERMISSIONS_FEATURES_ENCRYPTED_CHANNELS,
         'direct_tool_servers': USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS,
         # Chat features
         'web_search': USER_PERMISSIONS_FEATURES_WEB_SEARCH,
@@ -2053,7 +2058,17 @@ ENABLE_FOLDERS = os.getenv('ENABLE_FOLDERS', 'True').lower() == 'true'
 
 FOLDER_MAX_FILE_COUNT = os.getenv('FOLDER_MAX_FILE_COUNT', '')
 
+SKILL_CONTENT_MAX_CHARS = int(os.environ['SKILL_CONTENT_MAX_CHARS']) if os.getenv('SKILL_CONTENT_MAX_CHARS') else None
+if SKILL_CONTENT_MAX_CHARS is not None and SKILL_CONTENT_MAX_CHARS <= 0:
+    raise ValueError('SKILL_CONTENT_MAX_CHARS must be a positive integer or unset')
+
+SKILL_PREVIEW_MAX_CHARS = int(os.environ['SKILL_PREVIEW_MAX_CHARS']) if os.getenv('SKILL_PREVIEW_MAX_CHARS') else None
+if SKILL_PREVIEW_MAX_CHARS is not None and SKILL_PREVIEW_MAX_CHARS <= 0:
+    raise ValueError('SKILL_PREVIEW_MAX_CHARS must be a positive integer or unset')
+
 ENABLE_CHANNELS = os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true'
+
+ENABLE_ENCRYPTED_CHANNELS = os.getenv('ENABLE_ENCRYPTED_CHANNELS', 'False').lower() == 'true'
 
 ENABLE_APPS = os.getenv('ENABLE_APPS', 'False').lower() == 'true'
 
@@ -2885,6 +2900,8 @@ ENABLE_LDAP_GROUP_CREATION = os.getenv('ENABLE_LDAP_GROUP_CREATION', 'False').lo
 LDAP_ATTRIBUTE_FOR_GROUPS = os.getenv('LDAP_ATTRIBUTE_FOR_GROUPS', 'memberOf')
 
 DEFAULT_CONFIG = {
+    'skills.content_max_chars': SKILL_CONTENT_MAX_CHARS,
+    'skills.preview_max_chars': SKILL_PREVIEW_MAX_CHARS,
     'direct.enable': ENABLE_DIRECT_CONNECTIONS,
     'direct.integrations.enable': ENABLE_DIRECT_INTEGRATIONS,
     'ollama.enable': ENABLE_OLLAMA_API,
@@ -3179,6 +3196,7 @@ DEFAULT_CONFIG = {
     'folders.enable': ENABLE_FOLDERS,
     'folders.max_file_count': FOLDER_MAX_FILE_COUNT,
     'channels.enable': ENABLE_CHANNELS,
+    'channels.encryption.enable': ENABLE_ENCRYPTED_CHANNELS,
     'apps.enable': ENABLE_APPS,
     'channels.model_response_mode': CHANNEL_MODEL_RESPONSE_MODE,
     'calendar.enable': ENABLE_CALENDAR,

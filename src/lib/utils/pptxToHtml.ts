@@ -1,3 +1,4 @@
+import { OfficePackage, presentationSlides } from './comments/package';
 /**
  * Lightweight PPTX → Image renderer.
  *
@@ -967,13 +968,7 @@ export async function pptxToImages(
 	);
 
 	// ── Discover slide files ─────────────────────────────────────────
-	const slideFiles = Object.keys(zip.files)
-		.filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))
-		.sort((a, b) => {
-			const na = parseInt(a.match(/slide(\d+)/)?.[1] ?? '0');
-			const nb = parseInt(b.match(/slide(\d+)/)?.[1] ?? '0');
-			return na - nb;
-		});
+	const slideFiles = await presentationSlides(new OfficePackage(zip as import('jszip')));
 
 	const images: string[] = [];
 

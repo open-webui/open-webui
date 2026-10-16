@@ -82,7 +82,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.mfa import MFA_CONFIG_KEYS, MfaConfigForm, get_mfa_config, limit_account, update_mfa_config
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
-from pydantic import BaseModel, StrictStr, field_validator
+from pydantic import BaseModel, Field, StrictStr, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -128,11 +128,14 @@ ADMIN_CONFIG_KEYS = {
     'AUTOMATION_MIN_INTERVAL': 'automations.min_interval',
     'ENABLE_AUTOMATIONS': 'automations.enable',
     'ENABLE_CHANNELS': 'channels.enable',
+    'ENABLE_ENCRYPTED_CHANNELS': 'channels.encryption.enable',
     'ENABLE_APPS': 'apps.enable',
     'CHANNEL_MODEL_RESPONSE_MODE': 'channels.model_response_mode',
     'ENABLE_CALENDAR': 'calendar.enable',
     'ENABLE_MEMORIES': 'memories.enable',
     'ENABLE_MEMORY_SYSTEM_CONTEXT': 'memories.system_context.enable',
+    'SKILL_CONTENT_MAX_CHARS': 'skills.content_max_chars',
+    'SKILL_PREVIEW_MAX_CHARS': 'skills.preview_max_chars',
     'ENABLE_NOTES': 'notes.enable',
     'ENABLE_USER_WEBHOOKS': 'ui.enable_user_webhooks',
     'ENABLE_USER_STATUS': 'users.enable_status',
@@ -1178,11 +1181,14 @@ class AdminConfig(MfaConfigForm):
     AUTOMATION_MIN_INTERVAL: int | str | None = None
     ENABLE_AUTOMATIONS: bool
     ENABLE_CHANNELS: bool
+    ENABLE_ENCRYPTED_CHANNELS: bool = False
     ENABLE_APPS: bool = False
     CHANNEL_MODEL_RESPONSE_MODE: str = 'thread'
     ENABLE_CALENDAR: bool
     ENABLE_MEMORIES: bool
     ENABLE_MEMORY_SYSTEM_CONTEXT: bool
+    SKILL_CONTENT_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
+    SKILL_PREVIEW_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
     ENABLE_USER_STATUS: bool
@@ -1225,10 +1231,16 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
             updates.pop(key, None)
     if 'ENABLE_LOGIN_FORM' not in form_data.model_fields_set:
         updates.pop('ui.enable_login_form', None)
+    if 'ENABLE_ENCRYPTED_CHANNELS' not in form_data.model_fields_set:
+        updates.pop('channels.encryption.enable', None)
     if 'ENABLE_APPS' not in form_data.model_fields_set:
         updates.pop('apps.enable', None)
     if 'I18N' not in form_data.model_fields_set:
         updates.pop('ui.i18n', None)
+    if 'SKILL_CONTENT_MAX_CHARS' not in form_data.model_fields_set:
+        updates.pop('skills.content_max_chars', None)
+    if 'SKILL_PREVIEW_MAX_CHARS' not in form_data.model_fields_set:
+        updates.pop('skills.preview_max_chars', None)
     updates['ui.default_interface_settings'] = form_data.DEFAULT_INTERFACE_SETTINGS or {}
     updates['folders.max_file_count'] = int(form_data.FOLDER_MAX_FILE_COUNT) if form_data.FOLDER_MAX_FILE_COUNT else ''
     updates['automations.max_count'] = int(form_data.AUTOMATION_MAX_COUNT) if form_data.AUTOMATION_MAX_COUNT else ''

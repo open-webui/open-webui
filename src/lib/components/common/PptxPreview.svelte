@@ -2,6 +2,8 @@
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
 	import { clampDocumentTargetPage } from '$lib/utils/documentPreview';
+	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
+	import type { FileComment } from '$lib/utils/comments/types';
 
 	const i18n: any = getContext('i18n');
 
@@ -11,6 +13,17 @@
 	export let targetPage: number | null = null;
 	export let itemLabel = 'Slide';
 	export let listLabel = 'Slides';
+	export let comments: FileComment[] = [];
+	export let selectedComment: FileComment | null = null;
+	export let onCommentSelect: ((comment: FileComment) => void) | null = null;
+	$: slideComments = comments.filter(
+		(c) =>
+			c.location?.kind === 'slide' &&
+			c.location.slide === safeSlide + 1 &&
+			c.location.x !== undefined &&
+			c.location.y !== undefined &&
+			!c.parentId
+	);
 
 	let rootEl: HTMLDivElement;
 	let stageEl: HTMLElement;
@@ -79,7 +92,8 @@
 			pinchSpeed: 3.5,
 			filterKey: (e?: KeyboardEvent) => !!e && slideShortcutKeys.includes(e.key),
 			beforeWheel: () => true,
-			beforeMouseDown: () => {
+			beforeMouseDown: (event?: MouseEvent) => {
+				if ((event?.target as HTMLElement)?.closest('[data-slide-comment]')) return true;
 				const transform = pzInstance?.getTransform();
 				return !!transform && Math.abs(transform.scale - 1) < 0.01;
 			}
@@ -280,15 +294,17 @@
 		{/each}
 	</aside>
 
+	<!-- svelte-ignore a11y_no_static_element_interactions (Preserve native double-click behavior without changing touch zoom.) -->
 	<section
 		bind:this={stageEl}
 		class="min-w-0 min-h-0 overflow-hidden flex items-center justify-center overscroll-contain"
 		on:wheel|nonpassive={handleStageWheel}
+		on:dblclick|capture|stopPropagation={() => {}}
 	>
 		{#if selectedSlide}
 			<div
 				bind:this={sceneEl}
-				class="shrink-0"
+				class="shrink-0 relative"
 				style="width: {slideWidth}px; height: {slideHeight}px;"
 			>
 				<img
@@ -299,6 +315,23 @@
 					draggable="false"
 					on:load={onSlideLoad}
 				/>
+				{#each slideComments as comment, index (comment.id)}
+					{#if comment.location?.kind === 'slide'}
+						<button
+							type="button"
+							data-slide-comment={comment.id}
+							data-file-comment-id={comment.id}
+							class="absolute flex size-5 items-center justify-center rounded bg-white/95 text-gray-400 hover:text-gray-600 dark:bg-gray-850/95 dark:text-gray-500 dark:hover:text-gray-300 focus-visible:outline focus-visible:outline-2"
+							class:ring-2={selectedComment?.id === comment.id ||
+								selectedComment?.parentId === comment.id}
+							style:left={`${comment.location.x !== undefined ? Math.max(0, Math.min(slideWidth - 24, comment.location.x * fitScale)) : 8}px`}
+							style:top={`${comment.location.y !== undefined ? Math.max(0, Math.min(slideHeight - 24, comment.location.y * fitScale)) : 8 + index * 28}px`}
+							aria-label={`${$i18n.t('Comment')}: ${comment.author || $i18n.t('Unknown author')}`}
+							on:click={() => onCommentSelect?.(comment)}
+							><Icon name="chat-bubble" size={12} strokeWidth={1.5} /></button
+						>
+					{/if}
+				{/each}
 			</div>
 		{/if}
 	</section>

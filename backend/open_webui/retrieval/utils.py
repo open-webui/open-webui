@@ -120,6 +120,9 @@ def _extract_text_from_binary_response(
     if not filename or '.' not in filename:
         ext = mimetypes.guess_extension(content_type) or ''
         filename = f'download{ext}'
+    elif not mimetypes.guess_type(filename)[0] and content_type != 'application/octet-stream':
+        # The dot in names like arXiv's 1706.03762 is not an extension.
+        filename += mimetypes.guess_extension(content_type) or ''
 
     suffix = '.' + filename.split('.')[-1].lower() if '.' in filename else ''
 
@@ -236,7 +239,7 @@ async def get_content_from_url(request, url: str, *, config: dict | None = None)
 
 
 def _get_content_from_url_sync(request, url: str, config: dict):
-    from open_webui.retrieval.web.utils import validate_url, get_ssrf_safe_requests_session
+    from open_webui.retrieval.web.utils import WEB_LOADER_HEADERS, validate_url, get_ssrf_safe_requests_session
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
@@ -261,6 +264,9 @@ def _get_content_from_url_sync(request, url: str, config: dict):
     try:
         # Probe through the connect-time SSRF guard; bare requests.get re-resolves (DNS-rebinding gap).
         session = get_ssrf_safe_requests_session()
+        # Match the web loader's request, or sites that block unknown clients make a file look like a web page.
+        session.headers = WEB_LOADER_HEADERS
+        session.verify = config['web.loader.ssl_verification']
         response = session.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
         response.raise_for_status()
         content_type = response.headers.get('Content-Type', '')

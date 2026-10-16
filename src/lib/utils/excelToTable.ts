@@ -39,6 +39,7 @@ export interface ExcelTableResult {
  */
 export async function excelToTable(worksheet: WorkSheet): Promise<ExcelTableResult> {
 	const XLSX = await import('xlsx');
+	const range = XLSX.utils.decode_range(worksheet['!ref'] ?? 'A1');
 	const rows: unknown[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
 	if (rows.length === 0) {
@@ -60,7 +61,7 @@ export async function excelToTable(worksheet: WorkSheet): Promise<ExcelTableResu
 	parts.push('<thead><tr>');
 	parts.push('<th class="excel-row-num"></th>'); // corner cell
 	for (let c = 0; c < colCount; c++) {
-		parts.push(`<th class="excel-col-hdr">${colLetter(c)}</th>`);
+		parts.push(`<th class="excel-col-hdr">${colLetter(c + range.s.c)}</th>`);
 	}
 	parts.push('</tr></thead>');
 
@@ -69,11 +70,15 @@ export async function excelToTable(worksheet: WorkSheet): Promise<ExcelTableResu
 	for (let r = 0; r < rowCount; r++) {
 		const row = rows[r];
 		parts.push('<tr>');
-		parts.push(`<td class="excel-row-num">${r + 1}</td>`);
+		parts.push(`<td class="excel-row-num">${r + range.s.r + 1}</td>`);
 		for (let c = 0; c < colCount; c++) {
+			const address = XLSX.utils.encode_cell({ r: r + range.s.r, c: c + range.s.c });
 			const val = c < row.length ? row[c] : '';
+			const hasComment = !!worksheet[address]?.c?.length;
 			const isNum = typeof val === 'number';
-			parts.push(`<td${isNum ? ' class="excel-num"' : ''}>${esc(val)}</td>`);
+			parts.push(
+				`<td data-cell="${address}" tabindex="0"${isNum ? ' class="excel-num"' : ''}>${esc(val)}${hasComment ? '<span aria-hidden="true"> ◥</span>' : ''}</td>`
+			);
 		}
 		parts.push('</tr>');
 	}

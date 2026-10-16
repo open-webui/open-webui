@@ -76,7 +76,8 @@
 	};
 
 	const getConflict = (id: Shortcut, chord: string): Shortcut | null => {
-		if (!isConfigurableShortcut(id) || !chord) return null;
+		// Modals always close on Esc on their own, so sharing it is not a conflict
+		if (!isConfigurableShortcut(id) || !chord || chord === 'Escape') return null;
 		for (const [otherId, otherChord] of Object.entries($keybindings)) {
 			if (otherId !== id && otherChord === chord) return otherId as Shortcut;
 		}

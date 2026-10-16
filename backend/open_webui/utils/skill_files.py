@@ -31,9 +31,15 @@ SKILL_GREP_EXCERPT_MAX_CHARS = 1_200
 SKILL_GREP_LOCATIONS_MAX_CHARS = 2_000
 
 
-def skill_content_page(content: str, offset: int = 0, max_chars: int = SKILL_CONTENT_MAX_CHARS) -> dict:
+async def skill_content_page(
+    content: str, offset: int = 0, max_chars: int = SKILL_CONTENT_MAX_CHARS, *, limit: int | None = None
+) -> dict:
+    if limit is None:
+        from open_webui.models.config import Config
+
+        limit = await Config.get('skills.content_max_chars') or SKILL_CONTENT_MAX_CHARS
     offset = max(0, offset)
-    end = offset + min(SKILL_CONTENT_MAX_CHARS, max(1, max_chars))
+    end = offset + min(limit, max(1, max_chars))
     return {'content': content[offset:end], 'next_offset': end if end < len(content) else None}
 
 
@@ -196,16 +202,21 @@ def grep_skill_content(files: list[dict], pattern: str, case_insensitive: bool =
     return serialized
 
 
-def skill_overview(content: str, files: list, field: str = 'files', tools_enabled: bool = True) -> dict:
+async def skill_overview(content: str, files: list, field: str = 'files', tools_enabled: bool = True) -> dict:
     if not tools_enabled:
         return {
             'content': content[:SKILL_INJECTION_MAX_CHARS],
             'next_offset': SKILL_INJECTION_MAX_CHARS if len(content) > SKILL_INJECTION_MAX_CHARS else None,
             **bounded_skill_manifest(files, field),
         }
-    large = len(content) > SKILL_CONTENT_MAX_CHARS
+    from open_webui.models.config import Config
+
+    limits = await Config.get_many('skills.content_max_chars', 'skills.preview_max_chars')
+    content_limit = limits.get('skills.content_max_chars') or SKILL_CONTENT_MAX_CHARS
+    preview_limit = limits.get('skills.preview_max_chars') or SKILL_PREVIEW_MAX_CHARS
+    large = len(content) > content_limit
     return {
-        **skill_content_page(content, max_chars=SKILL_PREVIEW_MAX_CHARS if large else SKILL_CONTENT_MAX_CHARS),
+        **await skill_content_page(content, max_chars=preview_limit if large else content_limit, limit=content_limit),
         **bounded_skill_manifest(files, field, SKILL_OVERVIEW_LIST_MAX_CHARS),
     }
 

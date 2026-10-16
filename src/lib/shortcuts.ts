@@ -36,6 +36,7 @@ export enum Shortcut {
 
 	//Input
 	FOCUS_INPUT = 'focusInput',
+	CLEAR_INPUT_SELECTIONS = 'clearInputSelections',
 	ACCEPT_AUTOCOMPLETE = 'acceptAutocomplete',
 	PREVENT_FILE_CREATION = 'preventFileCreation',
 	NAVIGATE_PROMPT_HISTORY_UP = 'navigatePromptHistoryUp',
@@ -71,6 +72,7 @@ export const CONFIGURABLE_SHORTCUTS = [
 	Shortcut.TOGGLE_CONTROLS,
 	Shortcut.CLOSE_MODAL,
 	Shortcut.FOCUS_INPUT,
+	Shortcut.CLEAR_INPUT_SELECTIONS,
 	Shortcut.GENERATE_MESSAGE_PAIR,
 	Shortcut.REGENERATE_RESPONSE,
 	Shortcut.ALLOW_TOOL_CALL,
@@ -97,6 +99,7 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
 	[Shortcut.TOGGLE_CONTROLS]: '',
 	[Shortcut.CLOSE_MODAL]: 'Escape',
 	[Shortcut.FOCUS_INPUT]: 'Shift+Escape',
+	[Shortcut.CLEAR_INPUT_SELECTIONS]: 'Escape',
 	[Shortcut.GENERATE_MESSAGE_PAIR]: 'Cmd+Shift+Enter',
 	[Shortcut.REGENERATE_RESPONSE]: 'Cmd+R',
 	[Shortcut.ALLOW_TOOL_CALL]: 'Cmd+Alt+Enter',
@@ -299,6 +302,15 @@ export const shortcuts: ShortcutRegistry = {
 		keys: ['shift', 'Escape'],
 		category: 'Input',
 		configurable: true
+	},
+	[Shortcut.CLEAR_INPUT_SELECTIONS]: {
+		name: (t) => t('settings.personal.shortcuts.clearInputSelections.label'),
+		keys: ['Escape'],
+		category: 'Input',
+		configurable: true,
+		// Tooltips are translated dynamically; keep this key visible to the extractor.
+		// t('settings.personal.shortcuts.clearInputSelections.description');
+		tooltip: 'settings.personal.shortcuts.clearInputSelections.description'
 	},
 	[Shortcut.ACCEPT_AUTOCOMPLETE]: {
 		name: (t) => t('settings.personal.shortcuts.acceptAutocomplete.label'),

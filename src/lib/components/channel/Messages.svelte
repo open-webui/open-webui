@@ -148,7 +148,7 @@
 			</div>
 		{/if}
 
-		{#each messageList as message, messageIdx (id ? `${id}-${message.id}` : message.id)}
+		{#each messageList as message, messageIdx (id ? `${id}-${message.client_id ?? message.id}` : (message.client_id ?? message.id))}
 			<Message
 				on:reply={(event) =>
 					receiveAppChannelReply({ ...event.detail, parent_id: thread ? id : null })}

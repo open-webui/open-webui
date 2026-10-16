@@ -241,12 +241,7 @@
 								<Visibility
 									state={isPrivate ? 'private' : 'public'}
 									onChange={(value: string) => {
-										if (value === 'private') {
-											isPrivate = true;
-										} else {
-											isPrivate = false;
-										}
-										console.log(value, isPrivate);
+										isPrivate = value === 'private';
 									}}
 								/>
 							{/if}

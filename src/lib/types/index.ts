@@ -14,3 +14,9 @@ export enum TTS_RESPONSE_SPLIT {
 	PARAGRAPHS = 'paragraphs',
 	NONE = 'none'
 }
+
+export type TerminalContext = {
+	terminalId: string | null;
+	currentDirectory: string;
+	file?: import('$lib/apis/terminal').FilesystemFile | null;
+};

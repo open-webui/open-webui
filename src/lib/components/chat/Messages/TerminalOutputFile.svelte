@@ -58,6 +58,13 @@
 	$: terminal = resolveTerminal();
 	$: unavailable = !terminal;
 	$: previewKey = terminal ? `${terminal.url}|${terminal.key}|${path}|${chatId}` : '';
+	$: isPerChatTerminal =
+		($terminalServers ?? []).find((server: any) => server.id === selector)?.contexts?.chat
+			?.context_id === 'chat_id';
+	$: previewBaseUrl =
+		terminal && isPerChatTerminal && chatId
+			? `${terminal.url}/chats/${encodeURIComponent(chatId)}`
+			: (terminal?.url ?? '');
 	$: previewClass = isImage(path)
 		? 'h-[22rem]'
 		: isPdf(path) ||
@@ -299,7 +306,7 @@
 					{fileSqliteData}
 					{fileDocxData}
 					{fileContent}
-					baseUrl={terminal?.url ?? ''}
+					baseUrl={previewBaseUrl}
 					apiKey={terminal?.key ?? ''}
 					{fileOfficeHtml}
 					{fileOfficeSlides}

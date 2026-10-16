@@ -267,19 +267,22 @@ async def get_shared_folders(
     ]
 
     # Also include child folders of shared folders (inheritance)
-    seen_ids = {folder.id for folder in shared_folders}
+    result_by_id = {folder['id']: folder for folder in results}
     for folder in shared_folders:
         children = await Folders.get_children_folders_by_id_and_user_id(folder.id, folder.user_id, db=db)
         for child in children or []:
-            if child.id not in seen_ids:
-                seen_ids.add(child.id)
-                results.append(
-                    {
-                        **child.model_dump(),
-                        'owner_name': owner_names.get(child.user_id, 'Unknown'),
-                        'permission': 'write' if child.user_id == user.id else folder_perms[folder.id],
-                    }
-                )
+            permission = 'write' if folder.user_id == user.id or child.user_id == user.id else folder_perms[folder.id]
+            if child.id in result_by_id:
+                # A weaker direct grant must not hide inherited write access.
+                if permission == 'write':
+                    result_by_id[child.id]['permission'] = 'write'
+            else:
+                result_by_id[child.id] = {
+                    **child.model_dump(),
+                    'owner_name': owner_names.get(child.user_id, 'Unknown'),
+                    'permission': permission,
+                }
+                results.append(result_by_id[child.id])
 
     return results
 

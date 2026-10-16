@@ -84,6 +84,8 @@
 			const cleaned = entriesToI18n(uiI18nEntries);
 			const res = await updateAdminConfig(localStorage.token, {
 				...adminConfig,
+				SKILL_CONTENT_MAX_CHARS: adminConfig.SKILL_CONTENT_MAX_CHARS ?? null,
+				SKILL_PREVIEW_MAX_CHARS: adminConfig.SKILL_PREVIEW_MAX_CHARS ?? null,
 				DEFAULT_INTERFACE_SETTINGS: defaultInterfaceSettings,
 				I18N: cleaned
 			});
@@ -337,6 +339,36 @@
 						/>
 					</AdminSettingRow>
 				{/if}
+				<AdminSettingField
+					forId="skill-content-max-chars"
+					label={$i18n.t('settings.admin.general.skillContentMaxChars.label')}
+					description={$i18n.t('settings.admin.general.skillContentMaxChars.description')}
+				>
+					<input
+						id="skill-content-max-chars"
+						class={inputClass}
+						type="number"
+						min="1"
+						step="1"
+						placeholder={$i18n.t('Default')}
+						bind:value={adminConfig.SKILL_CONTENT_MAX_CHARS}
+					/>
+				</AdminSettingField>
+				<AdminSettingField
+					forId="skill-preview-max-chars"
+					label={$i18n.t('settings.admin.general.skillPreviewMaxChars.label')}
+					description={$i18n.t('settings.admin.general.skillPreviewMaxChars.description')}
+				>
+					<input
+						id="skill-preview-max-chars"
+						class={inputClass}
+						type="number"
+						min="1"
+						step="1"
+						placeholder={$i18n.t('Default')}
+						bind:value={adminConfig.SKILL_PREVIEW_MAX_CHARS}
+					/>
+				</AdminSettingField>
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.notes.label')}
 					description={$i18n.t('settings.admin.general.notes.description')}
@@ -352,6 +384,14 @@
 					<Switch bind:state={adminConfig.ENABLE_CHANNELS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				{#if adminConfig.ENABLE_CHANNELS}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.general.encryptedChannels.label')}
+						description={$i18n.t('settings.admin.general.encryptedChannels.description')}
+						labelClassName="text-gray-500 dark:text-gray-500"
+						let:labelId
+					>
+						<Switch bind:state={adminConfig.ENABLE_ENCRYPTED_CHANNELS} ariaLabelledbyId={labelId} />
+					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.general.modelResponseMode.label')}
 						description={$i18n.t('settings.admin.general.modelResponseMode.description')}

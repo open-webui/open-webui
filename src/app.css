@@ -117,7 +117,19 @@ textarea::-webkit-scrollbar-corner {
 }
 
 .markdown-prose {
-	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.9375rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-medium prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:my-3 prose-blockquote:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
+	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.9375rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-medium prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:text-[0.8125rem] prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
+}
+
+.markdown-prose,
+.document-markdown {
+	@apply prose-blockquote:my-2 prose-blockquote:border-s-2 prose-blockquote:border-gray-200 prose-blockquote:dark:border-gray-700 prose-blockquote:ps-3 prose-blockquote:pe-0 prose-blockquote:leading-relaxed prose-blockquote:not-italic prose-blockquote:font-normal prose-blockquote:text-gray-600 prose-blockquote:dark:text-gray-400 prose-blockquote:[&>:first-child]:mt-0 prose-blockquote:[&>:last-child]:mb-0;
+}
+
+.markdown-prose :where(blockquote p:first-of-type)::before,
+.markdown-prose :where(blockquote p:last-of-type)::after,
+.document-markdown :where(blockquote p:first-of-type)::before,
+.document-markdown :where(blockquote p:last-of-type)::after {
+	content: none;
 }
 
 .markdown-prose-sm {
@@ -1022,4 +1034,103 @@ html.high-contrast:not(.dark) .shimmer {
 	background: none;
 	color: var(--color-gray-800);
 	-webkit-text-fill-color: var(--color-gray-800);
+}
+
+/* Shared by file previews and the attachment modal. */
+.office-preview {
+	font-size: 0.875rem;
+	line-height: 1.6;
+	color: var(--color-gray-800);
+	background: #fff;
+	border-radius: 0.25rem;
+}
+.dark .office-preview {
+	color: var(--color-gray-200);
+	background: var(--color-gray-900);
+}
+.office-preview table {
+	border-collapse: collapse;
+	font-size: 0.75rem;
+	font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+	line-height: 1.3;
+}
+.office-preview table td,
+.office-preview table th {
+	border: 1px solid var(--color-gray-200);
+	padding: 0.25rem 0.625rem;
+	text-align: left;
+	white-space: nowrap;
+	user-select: text;
+	cursor: cell;
+	max-width: 18.75rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.dark .office-preview table td,
+.dark .office-preview table th {
+	border-color: var(--color-gray-800);
+}
+/* Column letter headers */
+.office-preview table th.excel-col-hdr {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background: var(--color-gray-100);
+	color: var(--color-gray-600);
+	font-weight: 500;
+	font-size: 0.65rem;
+	text-align: center;
+	padding: 0.1875rem 0.625rem;
+	border-bottom: 2px solid var(--color-gray-300);
+}
+.dark .office-preview table th.excel-col-hdr {
+	background: var(--color-gray-850);
+	color: var(--color-gray-400);
+	border-bottom-color: var(--color-gray-700);
+}
+/* Row number cells */
+.office-preview .excel-row-num {
+	position: sticky;
+	left: 0;
+	z-index: 1;
+	background: var(--color-gray-100);
+	color: var(--color-gray-600);
+	font-size: 0.6rem;
+	text-align: right !important;
+	padding: 0.25rem 0.5rem 0.25rem 0.25rem !important;
+	user-select: none;
+	width: 1px;
+	white-space: nowrap;
+	border-right: 2px solid var(--color-gray-300) !important;
+}
+.dark .office-preview .excel-row-num {
+	background: var(--color-gray-850);
+	color: var(--color-gray-400);
+	border-right-color: var(--color-gray-700) !important;
+}
+/* Corner cell (intersection of row nums and col headers) */
+.office-preview thead .excel-row-num {
+	z-index: 3;
+}
+/* Number cells right-aligned */
+.office-preview .excel-num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+/* Row hover and selection */
+.office-preview table tbody tr:nth-child(even) td:not(.excel-row-num) {
+	background: rgba(0, 0, 0, 0.015);
+}
+.dark .office-preview table tbody tr:nth-child(even) td:not(.excel-row-num) {
+	background: rgba(255, 255, 255, 0.02);
+}
+.office-preview table tbody tr:hover td:not(.excel-row-num) {
+	background: rgba(59, 130, 246, 0.06);
+}
+.dark .office-preview table tbody tr:hover td:not(.excel-row-num) {
+	background: rgba(59, 130, 246, 0.1);
+}
+.office-preview table td:focus {
+	outline: 2px solid rgba(59, 130, 246, 0.5);
+	outline-offset: -2px;
 }

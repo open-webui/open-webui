@@ -74,6 +74,11 @@
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
 	$: renderedMessageId = message ? (id ? `${id}-${message.id}` : message.id) : null;
+	$: contentId = message?.client_id
+		? id
+			? `${id}-${message.client_id}`
+			: message.client_id
+		: renderedMessageId;
 	$: replyToMessageId = message?.reply_to_message
 		? id
 			? `${id}-${message.reply_to_message.id}`
@@ -392,7 +397,7 @@
 							class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 min-w-0 flex-1 [&_.markdown-prose]:text-xs!"
 						>
 							<Markdown
-								id={`${renderedMessageId}-reply-to`}
+								id={`${contentId}-reply-to`}
 								content={getAppMessageText(message?.reply_to_message)}
 								allowHtml={!message?.reply_to_message?.app_id}
 								allowEmbeds={false}
@@ -511,6 +516,7 @@
 									</Tooltip>
 								</div>
 							{/if}
+							<slot name="status" />
 						</div>
 					{/if}
 
@@ -599,28 +605,26 @@
 								? 'opacity-50'
 								: ''}"
 						>
-							{#if hasStructuredOutput}
-								<StructuredOutputRenderer
-									id={renderedMessageId}
-									output={messageOutput}
-									done={message?.meta?.done ?? false}
-									allowEmbeds={false}
-								/>
-							{:else if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
-								<Skeleton />
-							{:else}
-								<span class="markdown-prose">
-									<Markdown
+							<slot name="content">
+								{#if hasStructuredOutput}
+									<StructuredOutputRenderer
 										id={renderedMessageId}
-										content={message.content}
-										paragraphTag={message.app_id ? 'p' : 'span'}
+										output={messageOutput}
+										done={message?.meta?.done ?? false}
 										allowEmbeds={false}
 									/>
-								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-										class="text-gray-500 text-[0.625rem] pl-1 self-center"
-										>({$i18n.t('edited')})</span
-									>{/if}
-							{/if}
+								{:else if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
+									<Skeleton />
+								{:else}
+									<div class="markdown-prose">
+										<Markdown id={contentId} content={message.content} allowEmbeds={false} />
+									</div>
+									{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
+											class="text-gray-500 text-[0.625rem] pl-1 self-center"
+											>({$i18n.t('edited')})</span
+										>{/if}
+								{/if}
+							</slot>
 						</div>
 
 						{#if message.app_id && (message?.data?.app?.embeds?.length || message?.data?.app?.actions?.length)}

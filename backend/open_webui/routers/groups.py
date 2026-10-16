@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
-from open_webui.config import CACHE_DIR
+from open_webui.config import CACHE_DIR, DEFAULT_USER_PERMISSIONS
 from open_webui.models.config import Config
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
@@ -33,7 +33,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from pydantic import BaseModel
-from open_webui.utils.access_control import combine_permissions
+from open_webui.utils.access_control import combine_permissions, fill_missing_permissions
 from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
@@ -418,7 +418,9 @@ async def preview_group_access(
     active_models = [m for m in all_models if m.is_active]
 
     ancestors = (await db.execute(select(Group).where(Group.id.in_(group_ids - {id})))).scalars().all()
-    inherited_permissions = JSONCodec.loads(JSONCodec.dumps(await Config.get('user.permissions') or {}))
+    inherited_permissions = fill_missing_permissions(
+        JSONCodec.loads(JSONCodec.dumps(await Config.get('user.permissions') or {})), DEFAULT_USER_PERMISSIONS
+    )
     for ancestor in ancestors:
         inherited_permissions = combine_permissions(inherited_permissions, ancestor.permissions or {})
     effective_permissions = combine_permissions(

@@ -16,6 +16,10 @@ export default defineConfig({
 		viteStaticCopy({
 			targets: [
 				{
+					src: 'src/lib/encryption/vendor/THIRD_PARTY_LICENSES.txt',
+					dest: 'licenses/encryption'
+				},
+				{
 					src: 'node_modules/onnxruntime-web/dist/*.jsep.*',
 
 					dest: 'wasm'

@@ -1,8 +1,13 @@
 {
 	"name": "open-webui",
-	"version": "0.12.2",
+	"version": "0.12.3",
 	"private": true,
 	"scripts": {
+		"crypto:verify": "node scripts/encryption/artifact.mjs",
+		"predev": "npm run crypto:verify",
+		"predev:5050": "npm run crypto:verify",
+		"prebuild": "npm run crypto:verify",
+		"prebuild:watch": "npm run crypto:verify",
 		"dev": "npm run pyodide:fetch && vite dev --host",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
 		"build": "npm run pyodide:fetch && vite build",
@@ -100,7 +105,7 @@
 		"codemirror-lang-hcl": "^0.1.0",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
-		"docx-preview": "^0.4.0",
+		"docx-preview": "0.4.0",
 		"dompurify": "^3.2.6",
 		"eventsource-parser": "^1.1.2",
 		"fast-deep-equal": "^3.1.3",

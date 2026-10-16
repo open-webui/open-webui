@@ -7,16 +7,19 @@ import {
 	type DecorationSet
 } from '@codemirror/view';
 import type { Chunk } from '@codemirror/merge';
+import { changedLinePairs } from './diffEditor';
 
 export function pairedLinePosition(a: Text, b: Text, chunks: readonly Chunk[], position: number) {
 	let offset = 0;
 	for (const chunk of chunks) {
 		if (position < chunk.fromA) break;
 		if (position < chunk.toA) {
-			const row = a.lineAt(position).number - a.lineAt(chunk.fromA).number;
-			const start = b.lineAt(Math.min(chunk.fromB, b.length)).number;
-			const end = b.lineAt(Math.min(Math.max(chunk.fromB, chunk.toB - 1), b.length)).number;
-			return b.line(Math.min(start + row, end)).from;
+			const pairs = changedLinePairs(a, b, chunk);
+			const line = a.lineAt(position).from;
+			return (
+				(pairs.find(([from]) => from >= line) ?? pairs.at(-1))?.[1] ??
+				Math.min(chunk.fromB, b.length)
+			);
 		}
 		offset = chunk.toB - chunk.toA;
 	}
@@ -128,23 +131,7 @@ export function alignChangedLines(a: EditorView, b: EditorView, chunks: readonly
 			align(posA, posB);
 		}
 		if (!chunk) break;
-		if (chunk.fromA < chunk.toA && chunk.fromB < chunk.toB) {
-			const lineA = a.state.doc.lineAt(chunk.fromA).number,
-				lineB = b.state.doc.lineAt(chunk.fromB).number;
-			let row = Math.max(
-				0,
-				a.state.doc.lineAt(a.viewport.from).number - lineA,
-				b.state.doc.lineAt(b.viewport.from).number - lineB
-			);
-			while (lineA + row <= a.state.doc.lines && lineB + row <= b.state.doc.lines) {
-				const posA = a.state.doc.line(lineA + row).from,
-					posB = b.state.doc.line(lineB + row).from;
-				if (posA >= chunk.toA || posB >= chunk.toB || posA > a.viewport.to || posB > b.viewport.to)
-					break;
-				align(posA, posB);
-				row++;
-			}
-		}
+		for (const [posA, posB] of changedLinePairs(a.state.doc, b.state.doc, chunk)) align(posA, posB);
 		fromA = chunk.toA;
 		fromB = chunk.toB;
 	}

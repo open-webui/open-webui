@@ -864,6 +864,9 @@ async def import_chats(
 
     try:
         chats = await Chats.import_chats(user.id, form_data.chats, db=db)
+        await Tags.ensure_tags_exist(
+            list({tag_id for chat in chats for tag_id in (chat.meta or {}).get('tags', [])}), user.id, db=db
+        )
         await publish_event(
             request,
             EVENTS.CHAT_IMPORTED,
@@ -957,7 +960,7 @@ async def search_user_chats(
     words = text.strip().split(' ')
     if page == 1 and len(words) == 1 and words[0].startswith('tag:'):
         tag_id = words[0].replace('tag:', '')
-        if len(chat_list) == 0:
+        if len(chat_list) == 0 and await Chats.count_chats_by_tag_name_and_user_id(tag_id, user.id, db=db) == 0:
             if await Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db):
                 log.debug('deleting tag: %s', tag_id)
                 await Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
@@ -1837,6 +1840,13 @@ async def fork_chat_by_id(
     )
     if not is_owner:
         updated_chat = (await shared_chat_response(chat.model_copy(update={'chat': updated_chat}), user, db=db))['chat']
+        messages = list((updated_chat.get('history', {}).get('messages') or {}).values())
+        messages.extend(updated_chat.get('messages') or [])
+        for message in messages:
+            if (message.get('user_id') or chat.user_id) == chat.user_id:
+                message['user_id'] = user.id
+                if message.get('role') == 'user':
+                    message['user'] = {'id': user.id, 'name': user.name}
     meta = {
         **((chat.meta or {}) if is_owner else {}),
         'forked_from': chat.id,
@@ -1979,6 +1989,13 @@ async def clone_shared_chat_by_id(
         'branchPointMessageId': chat.chat['history']['currentId'],
         'title': f'Clone of {chat.title}',
     }
+    messages = list((updated_chat.get('history', {}).get('messages') or {}).values())
+    messages.extend(updated_chat.get('messages') or [])
+    for message in messages:
+        if (message.get('user_id') or chat.user_id) == chat.user_id:
+            message['user_id'] = user.id
+            if message.get('role') == 'user':
+                message['user'] = {'id': user.id, 'name': user.name}
 
     chats = await Chats.import_chats(
         user.id,
