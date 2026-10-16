@@ -18,6 +18,7 @@ LEGACY_EVENTS = {'chat.finished', 'chat.failed'}
 VALID_DELIVERY = {'away', 'always'}
 CHAT_FINISHED_EVENT = 'chat.finished'
 CHAT_FAILED_EVENT = 'chat.failed'
+CHAT_ASK_USER_EVENT = 'chat.ask_user'
 CHANNEL_MESSAGE_EVENT = 'channel.message'
 CALENDAR_ALERT_EVENT = 'calendar.alert'
 
@@ -291,6 +292,23 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
             body,
             {
                 'action': 'chat_failed',
+                'message': content,
+                'title': title,
+                'url': url,
+            },
+            body,
+        )
+
+    if event.event == CHAT_ASK_USER_EVENT:
+        title = str(data.get('title') or event.message or 'Question waiting')
+        content = str(data.get('message') or '')
+        url = str(data.get('url') or '')
+        body = '\n'.join(part for part in (content, url) if part)
+        return (
+            f'**{title}**',
+            body,
+            {
+                'action': 'chat_ask_user',
                 'message': content,
                 'title': title,
                 'url': url,

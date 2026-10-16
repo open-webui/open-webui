@@ -776,11 +776,14 @@
 			((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground)
 		) {
 			if (type === 'chat:completion') {
-				const { done, content, output, title } = data;
+				const { done, content, output, title, question } = data;
 				const displayTitle = title || $i18n.t('New Chat');
-				const contentPreview = cleanText(removeAllDetails(getOutputText(output) || content || ''));
+				// A paused ask_user run sends its question; notify like a finished run.
+				const contentPreview = cleanText(
+					removeAllDetails(question || getOutputText(output) || content || '')
+				);
 
-				if (done) {
+				if (done || question) {
 					if (
 						($settings?.notificationSound ?? true) &&
 						($settings?.notificationSoundAlways ?? false)

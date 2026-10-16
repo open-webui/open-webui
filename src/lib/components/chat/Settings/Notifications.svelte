@@ -29,6 +29,7 @@
 	// Keep dynamically translated event keys visible to i18next-parser.
 	// $i18n.t('Chat finished'); $i18n.t('A chat run finished successfully.');
 	// $i18n.t('Chat failed'); $i18n.t('A chat run failed.');
+	// $i18n.t('Question waiting'); $i18n.t('A chat is waiting for your answer to a question.');
 	let events: { event: string; label: string; description?: string }[] = [
 		{
 			event: 'chat.finished',
@@ -39,6 +40,11 @@
 			event: 'chat.failed',
 			label: 'Chat failed',
 			description: 'A chat run failed.'
+		},
+		{
+			event: 'chat.ask_user',
+			label: 'Question waiting',
+			description: 'A chat is waiting for your answer to a question.'
 		}
 	];
 	let loadingTargets = false;

@@ -200,6 +200,11 @@ class EventDefinitions(BaseModel):
     CHAT_FAILED: EventDefinition = EventDefinition(
         name='chat.failed', description='A chat response failed.', message='Chat failed'
     )
+    CHAT_ASK_USER: EventDefinition = EventDefinition(
+        name='chat.ask_user',
+        description='A chat is waiting for your answer to a question.',
+        message='Question waiting',
+    )
     CHAT_IMPORTED: EventDefinition = EventDefinition(
         name='chat.imported', description='A chat was imported.', message='Chat imported'
     )
@@ -702,6 +707,7 @@ EVENT_CATALOG_SET = set(EVENT_CATALOG)
 NOTIFICATION_EVENTS = (
     EVENTS.CHAT_FINISHED.name,
     EVENTS.CHAT_FAILED.name,
+    EVENTS.CHAT_ASK_USER.name,
     EVENTS.CHANNEL_MESSAGE.name,
     EVENTS.CALENDAR_ALERT.name,
     EVENTS.RETRIEVAL_CONTENT_PROCESS_FAILED.name,

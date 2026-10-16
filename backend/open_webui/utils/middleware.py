@@ -269,6 +269,31 @@ async def publish_chat_failed_event(request: Request, user: UserModel, metadata:
     )
 
 
+async def publish_chat_ask_user_event(request: Request, user: UserModel, metadata: dict, title: str, question: str):
+    chat_id = metadata.get('chat_id')
+    if getattr(request.state, 'internal', False) is True or not is_saved_chat_id(chat_id):
+        return
+
+    webui_url = await Config.get('webui.url')
+    await publish_event(
+        request,
+        EVENTS.CHAT_ASK_USER,
+        actor=user,
+        subject_id=chat_id,
+        subject_type='chat',
+        data={
+            'user_id': user.id,
+            'chat_id': chat_id,
+            'message_id': metadata.get('message_id'),
+            'model_id': metadata.get('model_id'),
+            'title': title,
+            'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
+            'message': question,
+        },
+        message=title or 'Question waiting',
+    )
+
+
 # We believe in one maker of all models, seen and unseen,
 # and in the reasoning which proceeds from the architect.
 # We look for the resurrection of dead processes and the
@@ -5662,15 +5687,26 @@ async def streaming_chat_response_handler(response, ctx):
                             if tool_call.get('function', {}).get('name') != 'ask_user'
                         ]
                     elif ask_user_staged and save_to_chat:
+                        data = {'output': full_output()}
                         if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
+                            data['title'] = await Chats.get_chat_title_by_id(metadata['chat_id'])
+                            data['question'] = next(
+                                (
+                                    JSONCodec.loads(item['arguments'])['questions'][0]['question']
+                                    for item in output
+                                    if item.get('name') == 'ask_user' and item.get('status') == 'pending'
+                                ),
+                                '',
+                            )
                             await pause_for_tool_approval(
                                 metadata['chat_id'],
                                 metadata['message_id'],
-                                full_output(),
+                                data['output'],
                                 form_data,
                                 metadata,
                             )
-                        await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
+                            await publish_chat_ask_user_event(request, user, metadata, data['title'], data['question'])
+                        await event_emitter({'type': 'chat:completion', 'data': data})
                         return
                     elif ask_user_staged:
                         # Live questions await the socket callback, not the saved-chat resolver.
