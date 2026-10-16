@@ -2,6 +2,7 @@
 
 import asyncio
 
+from redis.asyncio.client import PubSub
 from redis.exceptions import NoPermissionError
 from socketio import AsyncRedisManager
 
@@ -12,6 +13,7 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._local_room_channels = set()
+        self._local_room_channels_changed: asyncio.Event = asyncio.Event()
 
     # collision-free while namespaces contain no '#' (socket.io default '/'); rooms may contain '#'
     def _room_channel(self, namespace, room):
@@ -21,11 +23,13 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
         super().basic_enter_room(sid, namespace, room, eio_sid=eio_sid)
         if room is not None:
             self._local_room_channels.add(self._room_channel(namespace, room))
+            self._local_room_channels_changed.set()
 
     def basic_leave_room(self, sid, namespace, room):
         super().basic_leave_room(sid, namespace, room)
         if room is not None and room not in self.rooms.get(namespace, {}):
             self._local_room_channels.discard(self._room_channel(namespace, room))
+            self._local_room_channels_changed.set()
 
     async def _publish(self, data):
         if data.get('method') == 'emit' and isinstance(data.get('room'), str):
@@ -57,6 +61,25 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
                     )
                     break
 
+    async def _subscribe_local_room_channels(self, pubsub: PubSub):
+        """Keep a pubsub connection subscribed to exactly the local room channels."""
+        _, error = self._get_redis_module_and_error()
+        subscribed_room_channels = set()
+        while True:
+            self._local_room_channels_changed.clear()
+            local_room_channels = set(self._local_room_channels)
+            try:
+                if new_room_channels := local_room_channels - subscribed_room_channels:
+                    await pubsub.subscribe(*new_room_channels)
+                if removed_room_channels := subscribed_room_channels - local_room_channels:
+                    await pubsub.unsubscribe(*removed_room_channels)
+            except (error, RuntimeError):
+                # RuntimeError: redis-py reconnected this connection from here and from the listener at once
+                await asyncio.sleep(1)
+                continue
+            subscribed_room_channels = local_room_channels
+            await self._local_room_channels_changed.wait()
+
     async def _redis_listen_with_retries(self):
         _, error = self._get_redis_module_and_error()
         retry_sleep = 1
@@ -66,14 +89,17 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
                 if not subscribed:
                     self._redis_connect()
                     await self.pubsub.subscribe(self.channel)
-                    await self.pubsub.psubscribe(f'{self.channel}#*')
                     retry_sleep = 1
-                async for message in self.pubsub.listen():
-                    yield message
+                subscription_task = asyncio.create_task(self._subscribe_local_room_channels(self.pubsub))
+                try:
+                    async for message in self.pubsub.listen():
+                        yield message
+                finally:
+                    subscription_task.cancel()
             except error as exc:
                 if isinstance(exc, NoPermissionError):
                     self._get_logger().error(
-                        'Redis denied subscribing: %s. Check SUBSCRIBE/PSUBSCRIBE permissions and channel ACLs '
+                        'Redis denied subscribing: %s. Check SUBSCRIBE/UNSUBSCRIBE permissions and channel ACLs '
                         '(&%s and &%s#*). To disable room channels, set '
                         'WEBSOCKET_REDIS_ROOM_CHANNELS=False on every instance and fully restart the fleet.',
                         exc,
@@ -95,7 +121,7 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
         async for message in self._redis_listen_with_retries():
             if 'data' not in message:
                 continue
-            if (message['type'] == 'message' and message['channel'] == main_channel) or (
-                message['type'] == 'pmessage' and message['channel'] in self._local_room_channels
+            if message['type'] == 'message' and (
+                message['channel'] == main_channel or message['channel'] in self._local_room_channels
             ):
                 yield message['data']
