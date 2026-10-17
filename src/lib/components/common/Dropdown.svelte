@@ -37,6 +37,7 @@
 	export let visualViewportAware = false;
 
 	let triggerEl: HTMLElement | null = null;
+	let triggerControl: HTMLElement | null = null;
 	let contentEl: HTMLElement | null = null;
 	let previouslyFocused: HTMLElement | null = null;
 	let shouldFocusContent = false;
@@ -72,8 +73,13 @@
 	}
 
 	/** Svelte action: captures the first child element as the trigger reference */
-	function trigger(node: HTMLElement) {
+	function trigger(node: HTMLElement, expanded: boolean) {
 		triggerEl = (node.firstElementChild as HTMLElement | null) || node;
+		triggerControl = node.querySelector<HTMLElement>(
+			'button, a[href], [tabindex]:not([tabindex="-1"])'
+		);
+		triggerControl?.setAttribute('aria-haspopup', 'true');
+		triggerControl?.setAttribute('aria-expanded', String(expanded));
 		function handleClick(e: MouseEvent) {
 			e.preventDefault();
 			toggleOpen();
@@ -87,6 +93,9 @@
 		node.addEventListener('click', handleClick);
 		node.addEventListener('keydown', handleKeydown);
 		return {
+			update(expanded: boolean) {
+				triggerControl?.setAttribute('aria-expanded', String(expanded));
+			},
 			destroy() {
 				node.removeEventListener('click', handleClick);
 				node.removeEventListener('keydown', handleKeydown);
@@ -248,7 +257,9 @@
 
 		if (shouldFocusContent) {
 			shouldFocusContent = false;
-			contentEl?.focus();
+			(
+				contentEl?.querySelector<HTMLElement>('button:not([disabled]), a[href], input') ?? contentEl
+			)?.focus();
 		}
 	}
 
@@ -347,11 +358,11 @@
 />
 
 <span
-	use:trigger
+	use:trigger={show}
 	style="display: contents; cursor: pointer;"
-	role="button"
-	aria-haspopup="true"
-	aria-expanded={show}
+	role={triggerControl ? undefined : 'button'}
+	aria-haspopup={triggerControl ? undefined : 'true'}
+	aria-expanded={triggerControl ? undefined : show}
 >
 	<slot />
 </span>
