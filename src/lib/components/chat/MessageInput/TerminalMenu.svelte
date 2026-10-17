@@ -132,7 +132,13 @@
 <div class="flex items-center translate-x-0.5">
 	{#if disabled}
 		<Tooltip content={$i18n.t('Terminal')} placement="top">
-			<button type="button" disabled aria-disabled="true" class={triggerClass}>
+			<button
+				type="button"
+				disabled
+				aria-disabled="true"
+				aria-label={$selectedTerminalId && selectedLabel ? undefined : $i18n.t('Terminal')}
+				class={triggerClass}
+			>
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
@@ -145,7 +151,11 @@
 	{:else}
 		<Dropdown bind:show align="start">
 			<Tooltip content={$i18n.t('Terminal')} placement="top">
-				<button type="button" class={triggerClass}>
+				<button
+					type="button"
+					aria-label={$selectedTerminalId && selectedLabel ? undefined : $i18n.t('Terminal')}
+					class={triggerClass}
+				>
 					<Cloud className="size-3.5" strokeWidth="2" />
 
 					{#if $selectedTerminalId && selectedLabel}

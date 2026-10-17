@@ -417,6 +417,7 @@
 										<div class=" shrink-0">
 											<Tooltip content={$i18n.t('Valves')}>
 												<button
+													aria-label={$i18n.t('Valves')}
 													class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
 													type="button"
 													on:click={(e) => {
@@ -598,6 +599,7 @@
 											<div class="shrink-0">
 												<Tooltip content={$i18n.t('Disconnect OAuth')}>
 													<button
+														aria-label={$i18n.t('Disconnect OAuth')}
 														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
 														type="button"
 														on:click={async (e) => {
@@ -631,6 +633,7 @@
 											<div class=" shrink-0">
 												<Tooltip content={$i18n.t('Valves')}>
 													<button
+														aria-label={$i18n.t('Valves')}
 														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
 														type="button"
 														on:click={(e) => {
