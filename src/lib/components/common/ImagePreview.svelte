@@ -62,6 +62,7 @@
 		<div class=" absolute left-0 w-full flex justify-between select-none z-20">
 			<div>
 				<button
+					aria-label={$i18n.t('Close')}
 					class=" p-5"
 					on:pointerdown={(e) => {
 						e.stopImmediatePropagation();
