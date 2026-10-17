@@ -1484,6 +1484,18 @@
 
 <a
 	href="#main-content"
+	on:click={(e) => {
+		const target = [
+			...document.querySelectorAll(
+				'#main-content :is(a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"])'
+			)
+		].find((el) => el.checkVisibility());
+
+		if (target) {
+			e.preventDefault();
+			target.focus();
+		}
+	}}
 	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-gray-800 dark:focus:text-gray-100"
 >
 	{$i18n.t('Skip to main content')}
