@@ -1404,7 +1404,9 @@
 								{shiftKey}
 								onFolderUnreadCounts={applyFolderUnreadCounts}
 								onDelete={(folderId) => {
-									selectedFolder.set(null);
+									let id = $selectedFolder?.id;
+									while (id && id !== folderId) id = folders[id]?.parent_id;
+									if (id) selectedFolder.set(null);
 									initChatList();
 								}}
 								on:update={() => {
