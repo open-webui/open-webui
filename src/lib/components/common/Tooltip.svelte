@@ -58,10 +58,29 @@
 					placement,
 					allowHTML,
 					touch,
+					trigger: 'mouseenter focusin',
 					...(theme !== '' ? { theme } : { theme: 'dark' }),
 					arrow: false,
 					offset,
 					...(interactive ? { interactive: true } : {}),
+					plugins: [
+						{
+							fn: (instance) => {
+								const onKeyDown = (e: KeyboardEvent) => {
+									if (e.key === 'Escape') {
+										e.stopPropagation();
+										instance.hide();
+									}
+								};
+
+								return {
+									onShow: () => document.addEventListener('keydown', onKeyDown),
+									onHide: () => document.removeEventListener('keydown', onKeyDown),
+									onDestroy: () => document.removeEventListener('keydown', onKeyDown)
+								};
+							}
+						}
+					],
 					...tippyOptions
 				});
 			}
