@@ -1139,16 +1139,15 @@
 		</div>
 
 		<div class="flex flex-col items-center gap-4 pb-4 w-full">
-			<button
-				type="button"
-				class="z-10"
-				on:click={() => {
-					if (assistantSpeaking) {
-						stopAllAudio();
-					}
-				}}
-			>
-				<div class="line-clamp-1 text-sm font-normal" role="status" aria-live="polite">
+			<div class="z-10 line-clamp-1 text-sm font-normal" role="status" aria-live="polite">
+				<button
+					type="button"
+					on:click={() => {
+						if (assistantSpeaking) {
+							stopAllAudio();
+						}
+					}}
+				>
 					{#if bridge?.connecting}
 						{$i18n.t('Connecting')}
 					{:else if bridge?.approval}
@@ -1162,8 +1161,8 @@
 					{:else}
 						{$i18n.t('Listening...')}
 					{/if}
-				</div>
-			</button>
+				</button>
+			</div>
 
 			<div class="flex items-center justify-center gap-4 z-10">
 				{#if camera}
