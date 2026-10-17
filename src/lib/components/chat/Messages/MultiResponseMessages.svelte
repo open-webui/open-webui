@@ -286,7 +286,7 @@
 									{history}
 									messageId={message?.id}
 									{selectedModels}
-									isLastMessage={true}
+									{isLastMessage}
 									siblings={groupedMessageIds[selectedModelIdx].messageIds}
 									gotoMessage={(message, messageIdx) => gotoMessage(selectedModelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(selectedModelIdx)}
@@ -350,7 +350,7 @@
 										{history}
 										messageId={_messageId}
 										{selectedModels}
-										isLastMessage={true}
+										{isLastMessage}
 										siblings={groupedMessageIds[modelIdx].messageIds}
 										gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
 										showPreviousMessage={() => showPreviousMessage(modelIdx)}
