@@ -1040,7 +1040,12 @@
 			editorProps: {
 				// the tiptap placeholder never becomes the field's accessible name;
 				// function form so a placeholder change is picked up after mount
-				attributes: () => ({ id, 'aria-label': _placeholder }),
+				attributes: () => ({
+					id,
+					role: 'textbox',
+					'aria-multiline': 'true',
+					'aria-label': _placeholder
+				}),
 				transformPasted: (slice) => {
 					const stripMentionLinks = (fragment: Fragment): Fragment => {
 						const nodes: Node[] = [];
