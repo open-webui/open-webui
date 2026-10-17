@@ -2013,6 +2013,7 @@ async def delete_message_by_id(
 
     try:
         await Messages.delete_message_by_id(message_id, db=db)
+        await Messages.delete_replies_by_id(message_id, db=db)
         await sio.emit(
             'events:channel',
             {
