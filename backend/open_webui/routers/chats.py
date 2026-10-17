@@ -39,7 +39,7 @@ from open_webui.models.shared_chats import ChatShareMode, ShareChatForm, SharedC
 from open_webui.models.tags import TagModel, Tags
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control import filter_new_access_grants, has_permission
 from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
 from open_webui.utils.chat_fork import build_fork_history
@@ -2166,11 +2166,15 @@ async def update_shared_chat_access_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    existing_access_grants = (
+        await AccessGrants.get_grants_by_resource('shared_chat', chat.share_id, db=db) if chat.share_id else []
+    )
+    form_data.access_grants = await filter_new_access_grants(
+        existing_access_grants,
+        form_data.access_grants,
         await Config.get('user.permissions'),
         user.id,
         user.role,
-        form_data.access_grants,
         'sharing.public_chats',
         'sharing.open_chats',
         db=db,

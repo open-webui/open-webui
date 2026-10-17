@@ -45,7 +45,12 @@ from open_webui.models.models import (
     Models,
 )
 from open_webui.storage.provider import Storage
-from open_webui.utils.access_control import filter_allowed_access_grants, has_access, has_permission
+from open_webui.utils.access_control import (
+    filter_allowed_access_grants,
+    filter_new_access_grants,
+    has_access,
+    has_permission,
+)
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
@@ -1306,11 +1311,12 @@ async def update_model_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await filter_new_access_grants(
+        model.access_grants,
+        form_data.access_grants,
         await Config.get('user.permissions'),
         user.id,
         user.role,
-        form_data.access_grants,
         'sharing.public_models',
     )
 

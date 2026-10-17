@@ -8,6 +8,7 @@ from open_webui.models.access_grants import (
     has_public_read_access_grant,
     has_public_write_access_grant,
     has_user_access_grant,
+    normalize_access_grants,
     strip_anyone_access_grants,
     strip_user_access_grants,
 )
@@ -297,6 +298,44 @@ async def filter_allowed_access_grants(
         ]
 
     return access_grants
+
+
+async def filter_new_access_grants(
+    existing_access_grants: list,
+    submitted_access_grants: list,
+    default_permissions: dict[str, Any],
+    user_id: str,
+    user_role: str,
+    public_permission_key: str,
+    anyone_permission_key: str | None = None,
+    db: AsyncSession | None = None,
+) -> list:
+    """
+    Filter grants submitted by endpoints that resend the resource's full stored
+    grant list (e.g. the Access dialog). Only newly added grants are checked
+    against the user's sharing permissions; grants that are already stored are
+    preserved as-is, since re-checking them would strip sharing the user cannot
+    re-create.
+    """
+    existing_keys = {
+        (grant.principal_type, grant.principal_id, grant.permission) for grant in existing_access_grants
+    }
+    submitted = {
+        (grant['principal_type'], grant['principal_id'], grant['permission']): grant
+        for grant in normalize_access_grants(submitted_access_grants)
+    }
+    preserved = [grant for key, grant in submitted.items() if key in existing_keys]
+    new_grants = [grant for key, grant in submitted.items() if key not in existing_keys]
+
+    return preserved + await filter_allowed_access_grants(
+        default_permissions,
+        user_id,
+        user_role,
+        new_grants,
+        public_permission_key,
+        anyone_permission_key,
+        db=db,
+    )
 
 
 async def has_base_model_access(

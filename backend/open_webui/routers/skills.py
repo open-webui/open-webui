@@ -28,7 +28,7 @@ from open_webui.models.skills import (
     SkillUserResponse,
     get_skill_snapshot,
 )
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control import filter_allowed_access_grants, filter_new_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.skill_files import (
     MAX_IMPORT_BYTES,
@@ -456,11 +456,12 @@ async def update_skill_access_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await filter_new_access_grants(
+        skill.access_grants,
+        form_data.access_grants,
         await Config.get('user.permissions'),
         user.id,
         user.role,
-        form_data.access_grants,
         'sharing.public_skills',
     )
 

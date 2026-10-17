@@ -26,6 +26,7 @@ from open_webui.models.users import UserModel, UserResponse, Users
 from open_webui.socket.main import leave_room_for_users, sio
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
+    filter_new_access_grants,
     has_permission,
     has_public_read_access_grant,
     has_public_write_access_grant,
@@ -613,11 +614,12 @@ async def update_note_access_by_id(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await filter_new_access_grants(
+        note.access_grants,
+        form_data.access_grants,
         await Config.get('user.permissions'),
         user.id,
         user.role,
-        form_data.access_grants,
         'sharing.public_notes',
     )
 
