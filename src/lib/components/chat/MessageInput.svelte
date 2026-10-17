@@ -432,11 +432,15 @@
 		chatInputElement?.focus(options);
 	};
 
-	export const setText = async (text?: string, cb?: (text: string) => void) => {
+	export const setText = async (
+		text?: string,
+		cb?: (text: string) => void,
+		expandVariables = true
+	) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
-			if (text !== '') {
+			if (expandVariables && text !== '') {
 				text = await textVariableHandler(text || '');
 			}
 
@@ -445,7 +449,7 @@
 				focus();
 			}
 
-			if (text !== '') {
+			if (expandVariables && text !== '') {
 				text = await inputVariableHandler(text);
 			}
 
