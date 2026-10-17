@@ -69,6 +69,7 @@
 		getUsageTokenCount,
 		isRasterImageContentType
 	} from '$lib/utils';
+	import { getStopTokens as resolveStopTokens } from '$lib/utils/stopSequence';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
@@ -4128,16 +4129,7 @@
 		return features;
 	};
 
-	const getStopTokens = () => {
-		const stop = params?.stop ?? $settings?.params?.stop;
-		if (!stop) return undefined;
-
-		const tokens = Array.isArray(stop) ? stop : stop.split(',').map((s) => s.trim());
-
-		return tokens
-			.filter(Boolean)
-			.map((token) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
-	};
+	const getStopTokens = () => resolveStopTokens(params?.stop ?? $settings?.params?.stop);
 
 	const sendMessageSocket = async (
 		model,
