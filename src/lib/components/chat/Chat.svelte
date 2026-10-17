@@ -837,7 +837,9 @@
 		try {
 			const input = JSON.parse(storageChatInput);
 			prompt = input.prompt ?? '';
-			messageInput?.setText(prompt);
+			// A draft must come back exactly as typed — variable processing is
+			// for inserted prompts, not restored input (#32650).
+			messageInput?.setText(prompt, undefined, { skipVariableProcessing: true });
 			files = input.files ?? [];
 			selectedToolIds = input.selectedToolIds ?? [];
 			selectedSkillIds = input.selectedSkillIds ?? [];
@@ -3186,7 +3188,9 @@
 			[$chatId]: queue.filter((m) => m.id !== id)
 		}));
 		files = item.files;
-		messageInput?.setText(item.prompt);
+		// Editing a queued message restores the text as sent — no variable
+		// processing (#32650).
+		messageInput?.setText(item.prompt, undefined, { skipVariableProcessing: true });
 
 		await processNextInQueue($chatId);
 	};

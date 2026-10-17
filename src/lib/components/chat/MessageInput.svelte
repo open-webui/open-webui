@@ -432,25 +432,30 @@
 		chatInputElement?.focus(options);
 	};
 
-	export const setText = async (text?: string, cb?: (text: string) => void) => {
+	export const setText = async (
+		text?: string,
+		cb?: (text: string) => void,
+		{ skipVariableProcessing = false }: { skipVariableProcessing?: boolean } = {}
+	) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
-			if (text !== '') {
-				text = await textVariableHandler(text || '');
+			let value = text ?? '';
+			if (!skipVariableProcessing && value !== '') {
+				value = await textVariableHandler(value);
 			}
 
-			chatInputElement?.setText(text);
+			chatInputElement?.setText(value);
 			if (!$showCallOverlay) {
 				focus();
 			}
 
-			if (text !== '') {
-				text = await inputVariableHandler(text);
+			if (!skipVariableProcessing && value !== '') {
+				value = await inputVariableHandler(value);
 			}
 
 			await tick();
-			if (cb) await cb(text);
+			if (cb) await cb(value);
 		}
 	};
 
