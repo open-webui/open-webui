@@ -74,8 +74,8 @@
 	$: webUploadEnabled = $user?.role === 'admin' || ($user?.permissions?.chat?.web_upload ?? true);
 	$: toolPermissionsEnabled = $config?.features?.enable_tool_permissions ?? false;
 
-	$: if (!fileUploadEnabled && files.length > 0) {
-		files = [];
+	$: if (!fileUploadEnabled && files.some((file) => file.type !== 'text')) {
+		files = files.filter((file) => file.type === 'text');
 	}
 
 	const detectMobile = () => {
