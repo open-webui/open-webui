@@ -203,6 +203,7 @@
 
 						<Tooltip content={$i18n.t('Download')}>
 							<button
+								aria-label={$i18n.t('Download')}
 								class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
 								on:click={downloadArtifact}
 							>
@@ -213,6 +214,7 @@
 						{#if contents[selectedContentIdx].type === 'iframe'}
 							<Tooltip content={$i18n.t('Open in full screen')}>
 								<button
+									aria-label={$i18n.t('Open in full screen')}
 									class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
 									on:click={showFullScreen}
 								>
@@ -224,6 +226,7 @@
 				</div>
 
 				<button
+					aria-label={$i18n.t('Close')}
 					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
 					on:click={() => {
 						dispatch('close');
