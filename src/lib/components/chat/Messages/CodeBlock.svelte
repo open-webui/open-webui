@@ -145,6 +145,7 @@
 		result = null;
 		stdout = null;
 		stderr = null;
+		files = null;
 
 		executing = true;
 
