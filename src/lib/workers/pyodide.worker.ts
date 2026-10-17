@@ -346,7 +346,10 @@ function processResult(result: any): any {
 		}
 		if (typeof result.toJs === 'function') {
 			// If it's a Pyodide proxy object (e.g., Pandas DF, Numpy Array), convert to JS and process recursively
-			return processResult(result.toJs());
+			const converted = result.toJs();
+			return typeof converted?.toJs === 'function'
+				? converted.toString()
+				: processResult(converted);
 		}
 		if (typeof result === 'object') {
 			// Convert JS objects to a recursively serialized representation
