@@ -161,6 +161,7 @@
 							<div class="self-center pl-1.5 pr-1 translate-y-[0.5px] rounded-l-xl bg-transparent">
 								<button
 									class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+									aria-label={$i18n.t('Clear search')}
 									on:click={() => {
 										query = '';
 										selectedIdx = 0;
