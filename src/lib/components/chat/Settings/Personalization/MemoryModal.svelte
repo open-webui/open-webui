@@ -61,7 +61,7 @@
 					{$i18n.t('Add Memory')}
 				{/if}
 			</div>
-			<button class="self-center" on:click={() => (show = false)}>
+			<button aria-label={$i18n.t('Close')} class="self-center" on:click={() => (show = false)}>
 				<XMark className={'size-5'} />
 			</button>
 		</div>
