@@ -208,6 +208,10 @@ dev = [
     "ruff>=0.15.5",
 ]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["backend/test"]
+
 [tool.black]
 line-length = 120
 skip-string-normalization = true

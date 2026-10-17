@@ -23,7 +23,7 @@ from open_webui.models.prompts import (
     Prompts,
     PromptUserResponse,
 )
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control import filter_allowed_access_grants, filter_new_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -484,11 +484,12 @@ async def update_prompt_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await filter_new_access_grants(
+        prompt.access_grants,
+        form_data.access_grants,
         await Config.get('user.permissions'),
         user.id,
         user.role,
-        form_data.access_grants,
         'sharing.public_prompts',
     )
 

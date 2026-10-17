@@ -34,6 +34,7 @@ from open_webui.models.tools import (
 )
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
+    filter_new_access_grants,
     has_connection_access,
     has_permission,
 )
@@ -677,11 +678,12 @@ async def update_tool_access_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await filter_new_access_grants(
+        tools.access_grants,
+        form_data.access_grants,
         await Config.get('user.permissions'),
         user.id,
         user.role,
-        form_data.access_grants,
         'sharing.public_tools',
     )
 

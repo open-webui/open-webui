@@ -69,6 +69,7 @@
 		getUsageTokenCount,
 		isRasterImageContentType
 	} from '$lib/utils';
+	import { getStopTokens as resolveStopTokens } from '$lib/utils/stopSequence';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
@@ -836,7 +837,9 @@
 		try {
 			const input = JSON.parse(storageChatInput);
 			prompt = input.prompt ?? '';
-			messageInput?.setText(prompt);
+			// A draft must come back exactly as typed — variable processing is
+			// for inserted prompts, not restored input (#32650).
+			messageInput?.setText(prompt, undefined, { skipVariableProcessing: true });
 			files = input.files ?? [];
 			selectedToolIds = input.selectedToolIds ?? [];
 			selectedSkillIds = input.selectedSkillIds ?? [];
@@ -3185,7 +3188,9 @@
 			[$chatId]: queue.filter((m) => m.id !== id)
 		}));
 		files = item.files;
-		messageInput?.setText(item.prompt);
+		// Editing a queued message restores the text as sent — no variable
+		// processing (#32650).
+		messageInput?.setText(item.prompt, undefined, { skipVariableProcessing: true });
 
 		await processNextInQueue($chatId);
 	};
@@ -4128,16 +4133,7 @@
 		return features;
 	};
 
-	const getStopTokens = () => {
-		const stop = params?.stop ?? $settings?.params?.stop;
-		if (!stop) return undefined;
-
-		const tokens = Array.isArray(stop) ? stop : stop.split(',').map((s) => s.trim());
-
-		return tokens
-			.filter(Boolean)
-			.map((token) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
-	};
+	const getStopTokens = () => resolveStopTokens(params?.stop ?? $settings?.params?.stop);
 
 	const sendMessageSocket = async (
 		model,

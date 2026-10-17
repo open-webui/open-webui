@@ -583,7 +583,11 @@
 			}
 		};
 
-		await upsertModelHandler(updatedModel, { meta: updatedModel.meta }, false);
+		const success = await upsertModelHandler(updatedModel, { meta: updatedModel.meta }, false);
+		if (!success) {
+			toast.error($i18n.t('Failed to save model'));
+			return;
+		}
 		models = models.map((model) => (model.id === updatedModel.id ? updatedModel : model));
 		_models.set(
 			await getModels(
@@ -623,6 +627,12 @@
 		).catch(() => null);
 
 		if (res) {
+			// Making a base model public persists it server-side; track it as
+			// saved so the next change updates it instead of failing to create
+			// it again (#32654).
+			if (!savedModels.some((m: ModelListItem) => m.id === model.id)) {
+				savedModels = [...savedModels, res];
+			}
 			models = models.map((m) =>
 				m.id === model.id ? { ...m, access_grants: res.access_grants ?? nextAccessGrants } : m
 			);

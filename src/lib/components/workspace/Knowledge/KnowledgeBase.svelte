@@ -29,6 +29,7 @@
 
 	import { blobToFile, copyToClipboard } from '$lib/utils';
 	import { computeFileHash } from '$lib/utils/hash';
+	import { captureDroppedRoots, collectDroppedEntryFiles } from '$lib/utils/droppedFiles';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -641,58 +642,6 @@
 		}, 1000);
 	};
 
-	const readDirectoryEntries = async (reader: any) => {
-		const entries: any[] = [];
-
-		while (true) {
-			const batch = await new Promise<any[]>((resolve, reject) => {
-				reader.readEntries(resolve, reject);
-			});
-
-			if (batch.length === 0) {
-				break;
-			}
-
-			entries.push(...batch);
-		}
-
-		return entries;
-	};
-
-	const collectDroppedEntryFiles = async (
-		entry: any,
-		entryPath = entry.name
-	): Promise<DirectoryFileEntry[]> => {
-		if (entry.name.startsWith('.') || hasHiddenFolder(entryPath)) {
-			return [];
-		}
-
-		if (entry.isFile) {
-			let file: File;
-			try {
-				file = await new Promise<File>((resolve, reject) => {
-					entry.file(resolve, reject);
-				});
-			} catch (error) {
-				throw new Error(`"${entryPath}": ${error}`);
-			}
-			const parts = entryPath.split('/');
-			const filename = parts.pop() || file.name;
-			return [{ path: parts.join('/'), filename, file }];
-		}
-
-		if (entry.isDirectory) {
-			const reader = entry.createReader();
-			const entries = await readDirectoryEntries(reader);
-			const nested = await Promise.all(
-				entries.map((child) => collectDroppedEntryFiles(child, `${entryPath}/${child.name}`))
-			);
-			return nested.flat();
-		}
-
-		return [];
-	};
-
 	const onDragOver = (e) => {
 		e.preventDefault();
 
@@ -721,40 +670,32 @@
 			currentDirectoryId = null;
 			breadcrumbs = [];
 			if (e.dataTransfer?.files) {
-				const inputItems = e.dataTransfer?.items;
+				// Read every dropped item before the first await — the browser
+				// releases the items once the drop handler yields (#32652).
+				const { entries, files } = captureDroppedRoots(e.dataTransfer);
 
-				if (inputItems && inputItems.length > 0) {
-					const directoryEntries: DirectoryFileEntry[] = [];
-					const looseFiles: File[] = [];
-
-					for (const rawItem of Array.from(inputItems)) {
-						const item = rawItem as DataTransferItem & { webkitGetAsEntry?: () => any };
-						const entry = item.webkitGetAsEntry?.();
-
-						if (entry?.isDirectory) {
-							try {
-								directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
-							} catch (error) {
-								handleUploadError(error);
-								return;
-							}
-						} else {
-							const file = item.getAsFile();
-							if (file) {
-								looseFiles.push(file);
-							}
-						}
-					}
-
-					for (const file of looseFiles) {
-						await uploadFileHandler(file);
-					}
-
-					if (directoryEntries.length > 0) {
-						await uploadDirectoryEntries(directoryEntries);
-					}
-				} else {
+				if (entries.length === 0 && files.length === 0) {
 					toast.error($i18n.t(`File not found.`));
+					return;
+				}
+
+				const directoryEntries: DirectoryFileEntry[] = [];
+
+				for (const entry of entries) {
+					try {
+						directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
+					} catch (error) {
+						handleUploadError(error);
+						return;
+					}
+				}
+
+				for (const file of files) {
+					await uploadFileHandler(file);
+				}
+
+				if (directoryEntries.length > 0) {
+					await uploadDirectoryEntries(directoryEntries);
 				}
 			}
 		}
