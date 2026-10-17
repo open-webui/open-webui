@@ -8,7 +8,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { copyToClipboard, sanitizeResponseContent } from '$lib/utils';
+	import { copyToClipboard, removeFormattings, sanitizeResponseContent } from '$lib/utils';
 	import { resolveLocalizedModelDescription } from '$lib/utils/localizedContent';
 	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -58,6 +58,7 @@
 	role="option"
 	aria-selected={isSelected}
 	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}
+	aria-describedby={localizedDescription ? `model-description-${index}` : undefined}
 	class="focus-ring group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {($settings?.highContrastMode ??
 	false)
 		? 'hover:bg-gray-200 dark:hover:bg-gray-800'
@@ -254,6 +255,9 @@
 				{/if}
 
 				{#if localizedDescription}
+					<span id={`model-description-${index}`} class="sr-only"
+						>{removeFormattings(localizedDescription)}</span
+					>
 					<Tooltip
 						content={`${marked.parse(
 							sanitizeResponseContent(localizedDescription).replaceAll('\n', '<br>')
