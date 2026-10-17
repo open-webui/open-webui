@@ -1317,6 +1317,9 @@
 		}
 
 		if (status?.done) {
+			if (history.messages[status.checkpoint_message_id]) {
+				history.messages[status.checkpoint_message_id].contextSummary = status.context_summary;
+			}
 			if (contextCompactionToastId !== null) {
 				if (status?.error) {
 					toast.error($i18n.t('Context compaction failed'), {
@@ -4242,7 +4245,9 @@
 
 					if (message.role === 'user' && imageFiles.length > 0) {
 						return {
+							id: message.id,
 							role: message.role,
+							contextSummary: message.contextSummary,
 							content: [
 								{
 									type: 'text',
@@ -4259,7 +4264,9 @@
 					}
 
 					return {
+						id: message.id,
 						role: message.role,
+						contextSummary: message.contextSummary,
 						content: message?.merged?.content ?? message.content,
 						model: message.model,
 						meta: message.meta
