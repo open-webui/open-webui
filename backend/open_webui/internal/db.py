@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -476,6 +477,12 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
     @event.listens_for(async_engine.sync_engine, 'connect')
     def _set_sqlite_pragmas(dbapi_connection, connection_record):
         _apply_sqlite_pragmas(dbapi_connection)
+
+    @event.listens_for(async_engine.sync_engine, 'handle_error')
+    def _keep_connection_on_cancel(context):
+        # invalidating here would close the connection inside the cancelled task, and that close is lost
+        if isinstance(context.original_exception, asyncio.CancelledError):
+            context.is_disconnect = False
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:
@@ -514,20 +521,14 @@ AsyncSessionLocal = async_sessionmaker(
 async def get_async_session():
     """Async session generator for FastAPI Depends()."""
     async with AsyncSessionLocal() as db:
-        try:
-            yield db
-        finally:
-            await db.close()
+        yield db
 
 
 @asynccontextmanager
 async def get_async_db():
     """Async context manager for use outside of FastAPI dependency injection."""
     async with AsyncSessionLocal() as db:
-        try:
-            yield db
-        finally:
-            await db.close()
+        yield db
 
 
 @asynccontextmanager
