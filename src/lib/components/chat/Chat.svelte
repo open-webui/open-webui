@@ -3210,6 +3210,7 @@
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
 		const messages = createMessagesList(history, responseMessageId);
+		const historyBeforeAction = JSON.stringify(history);
 
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
@@ -3248,7 +3249,7 @@
 			}
 		}
 
-		if ($chatId == _chatId) {
+		if ($chatId == _chatId && JSON.stringify(history) !== historyBeforeAction) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
