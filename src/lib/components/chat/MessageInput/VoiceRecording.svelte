@@ -265,6 +265,11 @@
 			loading = false;
 			startDurationCounter();
 
+			if (document.activeElement === document.body || !document.activeElement?.checkVisibility()) {
+				await tick();
+				document.getElementById('confirm-recording-button')?.focus();
+			}
+
 			await requestWakeLock();
 
 			audioChunks = [];
