@@ -105,6 +105,8 @@
 					? 'opacity-40 cursor-not-allowed'
 					: 'hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'}"
 				disabled={sendDisabled}
+				data-action="send-now"
+				data-message-id={id}
 				on:click={() => {
 					if (!sendDisabled) onSendNow(id);
 				}}
