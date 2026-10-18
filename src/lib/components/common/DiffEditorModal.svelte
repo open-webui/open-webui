@@ -10,7 +10,7 @@
 	import { LanguageDescription, indentUnit } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 	import { oneDark } from '@codemirror/theme-one-dark';
-	import type { Chunk, MergeView } from '@codemirror/merge';
+	import type { Chunk } from '@codemirror/merge';
 	import Dropdown from './Dropdown.svelte';
 	import DropdownMenu from './DropdownMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
@@ -42,7 +42,7 @@
 		chunkOverview,
 		changedLineCounts,
 		nearestOverviewChunk,
-		diffEditorConfig,
+		DiffEditorView,
 		type MergeDirection
 	} from './diffEditor';
 
@@ -78,7 +78,7 @@
 	let working = '';
 	let proposal = '';
 	let comparing = false;
-	let merge: MergeView | null = null;
+	let merge: DiffEditorView | null = null;
 	let visibleChunks: readonly Chunk[] = [];
 	let showOptions = false;
 	let optionsDropdown: Dropdown;
@@ -323,7 +323,6 @@
 		activeChunk = 0;
 		if (merge) {
 			clearLineAlignment(merge.a, merge.b);
-			merge.reconfigure({ gutter: !ignoreWhitespace && !ignoreEmphasis });
 		}
 		updatePresentation?.(true);
 		refresh();
@@ -331,10 +330,21 @@
 
 	const mountMerge = (node: HTMLElement) => {
 		let disposed = false;
-		let view: MergeView | null = null;
+		let view: DiffEditorView | null = null;
 		let observer: MutationObserver | undefined;
 		let alignmentFrame = 0;
 		let presentationFrame = 0;
+		let scrollAnchor: { editor: EditorView; position: number; top: number } | null = null;
+		const cancelScrollAnchor = () => {
+			scrollAnchor = null;
+		};
+		for (const event of ['touchmove', 'pointerdown'])
+			node.addEventListener(event, cancelScrollAnchor, { passive: true });
+		const advanceScrollAnchor = (event: WheelEvent) => {
+			if (scrollAnchor && event.deltaMode === 0) scrollAnchor.top -= event.deltaY;
+			else cancelScrollAnchor();
+		};
+		node.addEventListener('wheel', advanceScrollAnchor, { passive: true });
 		let expanded: CollapsedPair[] = [];
 		const schedulePresentation = (reset = false) => {
 			if (reset) expanded = [];
@@ -396,6 +406,7 @@
 			themes[index].of(document.documentElement.classList.contains('dark') ? oneDark : []),
 			language[index].of([]),
 			EditorView.updateListener.of((update) => {
+				if (update.docChanged || update.selectionSet) scrollAnchor = null;
 				for (const transaction of update.transactions) {
 					if (transaction.docChanged) {
 						for (const pair of expanded) {
@@ -417,6 +428,14 @@
 					alignmentFrame = requestAnimationFrame(() => {
 						alignmentFrame = 0;
 						if (!disposed && view) {
+							// Restore a visual row after both panes measure new spacers. Anchoring
+							// to the paragraph start jumps backwards inside long wrapped lines.
+							if (scrollAnchor) {
+								const { editor, position, top } = scrollAnchor;
+								scrollAnchor = null;
+								const coords = editor.coordsAtPos(position);
+								if (coords) view.dom.scrollTop += coords.top - top;
+							}
 							const documents = [view.a.state.doc, view.b.state.doc] as const;
 							const geometry = [
 								view.a.contentDOM.clientWidth,
@@ -433,28 +452,39 @@
 									resized);
 							alignmentDocuments = documents;
 							if (!alignmentGeometry || resized) alignmentGeometry = geometry;
+							const top = view.dom.getBoundingClientRect().top + 1;
+							for (const editor of [view.a, view.b]) {
+								const position = editor.posAtCoords({
+									x: editor.contentDOM.getBoundingClientRect().left + 4,
+									y: top
+								});
+								const coords = position === null ? null : editor.coordsAtPos(position);
+								if (position !== null && coords) {
+									scrollAnchor = { editor, position, top: coords.top };
+									break;
+								}
+							}
 							if (!reset || !clearLineAlignment(view.a, view.b))
 								alignChangedLines(view.a, view.b, view.chunks);
+							if (!alignmentFrame) scrollAnchor = null;
 						}
 					});
 				}
 			}),
 			EditorView.theme({
 				'&': { fontSize: '0.75rem' },
+				'&, .cm-scroller': { height: 'auto', overflowY: 'visible' },
 				'.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
 				'&.cm-focused': { outline: 'none' }
 			})
 		];
 		void (async () => {
 			try {
-				const { MergeView } = await import('@codemirror/merge');
 				if (disposed) return;
-				view = new MergeView({
+				view = new DiffEditorView({
 					a: { doc: working, extensions: extensions('a', 0) },
 					b: { doc: proposal, extensions: extensions('b', 1) },
-					parent: node,
-					gutter: !ignoreWhitespace && !ignoreEmphasis,
-					diffConfig: diffEditorConfig
+					parent: node
 				});
 				merge = view;
 				refresh();
@@ -489,6 +519,9 @@
 		return {
 			destroy: () => {
 				disposed = true;
+				for (const event of ['touchmove', 'pointerdown'])
+					node.removeEventListener(event, cancelScrollAnchor);
+				node.removeEventListener('wheel', advanceScrollAnchor);
 				cancelAnimationFrame(alignmentFrame);
 				cancelAnimationFrame(presentationFrame);
 				if (updatePresentation === schedulePresentation) updatePresentation = null;
@@ -962,6 +995,8 @@
 		overflow: auto;
 	}
 	.merge-container :global(.cm-mergeViewEditor) {
+		flex: 1 1 0;
+		overflow: hidden;
 		min-width: 0;
 	}
 	.merge-container :global(.cm-merge-a .cm-changedLine),
@@ -1022,6 +1057,8 @@
 		background: #101413 !important;
 	}
 	.merge-container :global(.cm-mergeViewEditors) {
+		display: flex;
+		align-items: stretch;
 		gap: 1rem;
 	}
 	.diff-editor :global(.cm-gutters) {

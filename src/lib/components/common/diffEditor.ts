@@ -1,9 +1,81 @@
-import { StateEffect, StateField, type ChangeSpec, type Text } from '@codemirror/state';
-import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
+import {
+	StateEffect,
+	StateField,
+	RangeSet,
+	ChangeSet,
+	EditorState,
+	type EditorStateConfig,
+	type Transaction,
+	type ChangeSpec,
+	type Text
+} from '@codemirror/state';
+import {
+	Decoration,
+	EditorView,
+	GutterMarker,
+	gutter,
+	WidgetType,
+	type DecorationSet
+} from '@codemirror/view';
 import { Chunk, type DiffConfig } from '@codemirror/merge';
 
 // A scanLimit also gives up based on document length, even for sparse, tiny edits.
 export const diffEditorConfig: DiffConfig = { timeout: 100 };
+
+// The existing row alignment owns spacing; MergeView's second spacer pass would fight it.
+export class DiffEditorView {
+	readonly a: EditorView;
+	readonly b: EditorView;
+	readonly dom: HTMLDivElement;
+	chunks: readonly Chunk[];
+	constructor(config: { a: EditorStateConfig; b: EditorStateConfig; parent: HTMLElement }) {
+		const states = (['a', 'b'] as const).map((side) =>
+			EditorState.create({
+				...config[side],
+				extensions: [
+					config[side].extensions ?? [],
+					EditorView.editorAttributes.of({ class: `cm-merge-${side}` })
+				]
+			})
+		);
+		this.chunks = Chunk.build(states[0].doc, states[1].doc, diffEditorConfig);
+		this.dom = document.createElement('div');
+		this.dom.className = 'cm-mergeView';
+		const editors = this.dom.appendChild(document.createElement('div'));
+		editors.className = 'cm-mergeViewEditors';
+		const create = (side: 'a' | 'b', index: number) => {
+			const wrapper = editors.appendChild(document.createElement('div'));
+			wrapper.className = 'cm-mergeViewEditor';
+			return new EditorView({
+				state: states[index],
+				parent: wrapper,
+				dispatchTransactions: (transactions) => this.dispatch(transactions, side)
+			});
+		};
+		this.a = create('a', 0);
+		this.b = create('b', 1);
+		config.parent.appendChild(this.dom);
+	}
+	private dispatch(transactions: readonly Transaction[], side: 'a' | 'b') {
+		if (transactions.some((transaction) => transaction.docChanged)) {
+			const document = transactions[transactions.length - 1].newDoc;
+			const changes = transactions.reduce(
+				(changes, transaction) => changes.compose(transaction.changes),
+				ChangeSet.empty(transactions[0].startState.doc.length)
+			);
+			this.chunks =
+				side === 'a'
+					? Chunk.updateA(this.chunks, document, this.b.state.doc, changes, diffEditorConfig)
+					: Chunk.updateB(this.chunks, this.a.state.doc, document, changes, diffEditorConfig);
+		}
+		this[side].update(transactions);
+	}
+	destroy() {
+		this.a.destroy();
+		this.b.destroy();
+		this.dom.remove();
+	}
+}
 
 export type MergeDirection = 'to-working' | 'to-proposal';
 
@@ -217,8 +289,29 @@ const presentation = StateField.define<DecorationSet>({
 	},
 	provide: (field) => EditorView.decorations.from(field)
 });
+class ChangedLineMarker extends GutterMarker {
+	elementClass = 'cm-changedLineGutter';
+}
+const changedLineMarker = new ChangedLineMarker();
+
 export const diffPresentation = [
 	presentation,
+	gutter({
+		class: 'cm-changeGutter',
+		renderEmptyElements: true,
+		markers: (view) => {
+			const markers = [];
+			for (let cursor = view.state.field(presentation).iter(); cursor.value; cursor.next())
+				if (cursor.value.spec.class === 'cm-visibleChangedLine')
+					markers.push(changedLineMarker.range(cursor.from));
+			return RangeSet.of(markers, true);
+		}
+	}),
+	EditorView.baseTheme({
+		'.cm-changeGutter': { width: '3px' },
+		'&.cm-merge-a .cm-changedLineGutter': { backgroundColor: '#f0a394' },
+		'&.cm-merge-b .cm-changedLineGutter': { backgroundColor: '#7dd3c5' }
+	}),
 	EditorView.atomicRanges.of((view) =>
 		view.state
 			.field(presentation)
@@ -237,34 +330,41 @@ export function presentationDecorations(
 	expand: (pair: CollapsedPair) => void
 ) {
 	const decorations = [];
-	if (ignoreWhitespace || ignoreEmphasis) {
-		const visible = ignoreWhitespace ? (ignoreEmphasis ? /[^\s_*]+/g : /\S+/g) : /[^_*]+/g;
-		const rows = new Set<number>();
-		for (const chunk of chunks) {
-			const offset = side === 'a' ? chunk.fromA : chunk.fromB;
-			for (const change of chunk.changes) {
-				const from = offset + (side === 'a' ? change.fromA : change.fromB);
-				const to = offset + (side === 'a' ? change.toA : change.toB);
-				for (const match of doc.sliceString(from, to).matchAll(visible)) {
-					const start = from + match.index;
-					decorations.push(
-						Decoration.mark({ class: 'cm-visibleChangedText' }).range(
-							start,
-							start + match[0].length
-						)
-					);
-					for (
-						let line = doc.lineAt(start).number;
-						line <= doc.lineAt(start + match[0].length - 1).number;
-						line++
-					)
-						rows.add(doc.line(line).from);
-				}
+	const visible = ignoreWhitespace
+		? ignoreEmphasis
+			? /[^\s_*]+/g
+			: /\S+/g
+		: ignoreEmphasis
+			? /[^_*]+/g
+			: /[\s\S]+/g;
+	const rows = new Set<number>();
+	for (const chunk of chunks) {
+		const offset = side === 'a' ? chunk.fromA : chunk.fromB;
+		if (!ignoreWhitespace && !ignoreEmphasis) {
+			const end = side === 'a' ? chunk.toA : chunk.toB;
+			for (let from = offset; from < end && from <= doc.length; from = doc.lineAt(from).to + 1)
+				rows.add(from);
+		}
+		for (const change of chunk.changes) {
+			const from = offset + (side === 'a' ? change.fromA : change.fromB);
+			const to = offset + (side === 'a' ? change.toA : change.toB);
+			for (const match of doc.sliceString(from, to).matchAll(visible)) {
+				const start = from + match.index;
+				decorations.push(
+					Decoration.mark({ class: 'cm-visibleChangedText' }).range(start, start + match[0].length)
+				);
+				for (
+					let line = doc.lineAt(start).number;
+					line <= doc.lineAt(start + match[0].length - 1).number;
+					line++
+				)
+					rows.add(doc.line(line).from);
 			}
 		}
-		for (const from of rows)
-			decorations.push(Decoration.line({ class: 'cm-visibleChangedLine' }).range(from));
 	}
+	for (const from of rows)
+		decorations.push(Decoration.line({ class: 'cm-visibleChangedLine' }).range(from));
+
 	for (const pair of folds) {
 		const range = pair[side];
 		decorations.push(

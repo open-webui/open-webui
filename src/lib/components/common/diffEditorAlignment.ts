@@ -9,8 +9,8 @@ import {
 import type { Chunk } from '@codemirror/merge';
 import { changedLinePairs } from './diffEditor';
 
+// Font measurements can differ by fractions of a pixel between virtualized lines.
 export function alignmentGeometryChanged(previous: readonly number[], next: readonly number[]) {
-	// DOM line-height measurements can vary by a fraction of a pixel while scrolling.
 	return next.some((value, index) => Math.abs(value - previous[index]) > (index < 2 ? 0 : 0.5));
 }
 
@@ -52,8 +52,8 @@ export function clearLineAlignment(a: EditorView, b: EditorView) {
 	return changed;
 }
 
-// MergeView owns alignment between chunks. Only align rows inside each changed
-// chunk, using local heights so its spacers cannot feed back into ours.
+// Keep spacers outside both viewports fixed. Include pairs visible on either side
+// so resizing or a large insertion cannot leave the two viewports disconnected.
 export function alignChangedLines(a: EditorView, b: EditorView, chunks: readonly Chunk[]) {
 	const previous = (view: EditorView) => {
 		const result = new Map<number, number>();
@@ -65,6 +65,8 @@ export function alignChangedLines(a: EditorView, b: EditorView, chunks: readonly
 		oldB = previous(b);
 	const nextA = new Map(oldA),
 		nextB = new Map(oldB);
+	let offsetA = 0,
+		offsetB = 0;
 	const textTop = (view: EditorView, pos: number) => {
 		const block = view.lineBlockAt(pos);
 		const text = Array.isArray(block.type)
@@ -74,43 +76,53 @@ export function alignChangedLines(a: EditorView, b: EditorView, chunks: readonly
 				: null;
 		return text?.from === pos ? text.top : null;
 	};
-	for (const chunk of chunks) {
+	const align = (posA: number, posB: number) => {
 		if (
-			chunk.toA < a.viewport.from ||
-			chunk.toB < b.viewport.from ||
-			chunk.fromA > a.viewport.to ||
-			chunk.fromB > b.viewport.to
+			(posA < a.viewport.from || posA > a.viewport.to) &&
+			(posB < b.viewport.from || posB > b.viewport.to)
 		)
-			continue;
-		let previousA = chunk.fromA,
-			previousB = chunk.fromB,
-			first = true;
-		for (const [posA, posB] of changedLinePairs(a.state.doc, b.state.doc, chunk)) {
-			// Both ends of the interval must be rendered; offscreen estimates are not row heights.
-			if (
-				previousA >= a.viewport.from &&
-				previousB >= b.viewport.from &&
-				posA <= a.viewport.to &&
-				posB <= b.viewport.to
-			) {
-				const topA = textTop(a, posA),
-					topB = textTop(b, posB);
-				const startA = first ? a.lineBlockAt(previousA).top : textTop(a, previousA);
-				const startB = first ? b.lineBlockAt(previousB).top : textTop(b, previousB);
-				if (topA !== null && topB !== null && startA !== null && startB !== null) {
-					const heightA = topA - startA - (oldA.get(posA) ?? 0);
-					const heightB = topB - startB - (oldB.get(posB) ?? 0);
-					const difference = heightA - heightB;
-					nextA.delete(posA);
-					nextB.delete(posB);
-					if (difference < -1) nextA.set(posA, -difference);
-					if (difference > 1) nextB.set(posB, difference);
-				}
-			}
-			previousA = posA;
-			previousB = posB;
-			first = false;
+			return;
+		const topA = textTop(a, posA),
+			topB = textTop(b, posB);
+		if (topA === null || topB === null) return;
+		const previousA = oldA.get(posA) ?? 0,
+			previousB = oldB.get(posB) ?? 0;
+		const difference = topA - previousA + offsetA - topB + previousB - offsetB;
+		const sizeA = difference < -1 ? -difference : 0,
+			sizeB = difference > 1 ? difference : 0;
+		nextA.delete(posA);
+		nextB.delete(posB);
+		if (sizeA) nextA.set(posA, sizeA);
+		if (sizeB) nextB.set(posB, sizeB);
+		offsetA += sizeA - previousA;
+		offsetB += sizeB - previousB;
+	};
+	let fromA = 0,
+		fromB = 0;
+	for (let index = 0; index <= chunks.length; index++) {
+		const chunk = chunks[index];
+		const endA = chunk ? chunk.fromA : a.state.doc.length + 1;
+		let posA = Math.max(
+			fromA,
+			a.state.doc.lineAt(
+				Math.min(
+					a.state.doc.length,
+					Math.max(fromA, Math.min(a.viewport.from, fromA + b.viewport.from - fromB))
+				)
+			).from
+		);
+		for (
+			;
+			posA < endA && posA <= Math.max(a.viewport.to, fromA + b.viewport.to - fromB);
+			posA = a.state.doc.lineAt(posA).to + 1
+		) {
+			const posB = fromB + posA - fromA;
+			align(posA, posB);
 		}
+		if (!chunk) break;
+		for (const [posA, posB] of changedLinePairs(a.state.doc, b.state.doc, chunk)) align(posA, posB);
+		fromA = chunk.toA;
+		fromB = chunk.toB;
 	}
 	const apply = (view: EditorView, old: Map<number, number>, next: Map<number, number>) => {
 		if (
