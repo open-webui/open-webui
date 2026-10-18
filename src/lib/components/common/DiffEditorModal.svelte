@@ -335,14 +335,29 @@
 		let alignmentFrame = 0;
 		let presentationFrame = 0;
 		let scrollAnchor: { editor: EditorView; position: number; top: number } | null = null;
+		const captureScrollAnchor = () => {
+			if (!view) return null;
+			const y = view.dom.getBoundingClientRect().top + 1;
+			for (const editor of [view.a, view.b]) {
+				const position = editor.posAtCoords({
+					x: editor.contentDOM.getBoundingClientRect().left + 4,
+					y
+				});
+				const coords = position === null ? null : editor.coordsAtPos(position);
+				if (position !== null && coords) return { editor, position, top: coords.top };
+			}
+			return null;
+		};
 		const cancelScrollAnchor = () => {
 			scrollAnchor = null;
 		};
 		for (const event of ['touchmove', 'pointerdown'])
 			node.addEventListener(event, cancelScrollAnchor, { passive: true });
 		const advanceScrollAnchor = (event: WheelEvent) => {
-			if (scrollAnchor && event.deltaMode === 0) scrollAnchor.top -= event.deltaY;
-			else cancelScrollAnchor();
+			if (event.deltaMode !== 0) return cancelScrollAnchor();
+			scrollAnchor ??= captureScrollAnchor();
+			if (scrollAnchor) scrollAnchor.top -= event.deltaY;
+			scheduleAlignment();
 		};
 		node.addEventListener('wheel', advanceScrollAnchor, { passive: true });
 		let expanded: CollapsedPair[] = [];
@@ -382,6 +397,43 @@
 		updatePresentation = schedulePresentation;
 		let alignmentDocuments: readonly [Text, Text] | null = null;
 		let alignmentGeometry: readonly number[] | null = null;
+		const scheduleAlignment = () => {
+			if (alignmentFrame || disposed) return;
+			// Align after both virtualized editors have measured their visible lines.
+			alignmentFrame = requestAnimationFrame(() => {
+				alignmentFrame = 0;
+				if (!disposed && view) {
+					// Restore a visual row after both panes measure new spacers. Anchoring
+					// to the paragraph start jumps backwards inside long wrapped lines.
+					if (scrollAnchor) {
+						const { editor, position, top } = scrollAnchor;
+						scrollAnchor = null;
+						const coords = editor.coordsAtPos(position);
+						if (coords) view.dom.scrollTop += coords.top - top;
+					}
+					const documents = [view.a.state.doc, view.b.state.doc] as const;
+					const geometry = [
+						view.a.contentDOM.clientWidth,
+						view.b.contentDOM.clientWidth,
+						view.a.defaultLineHeight,
+						view.b.defaultLineHeight
+					];
+					const resized =
+						alignmentGeometry && alignmentGeometryChanged(alignmentGeometry, geometry);
+					const reset =
+						alignmentDocuments &&
+						(alignmentDocuments[0] !== documents[0] ||
+							alignmentDocuments[1] !== documents[1] ||
+							resized);
+					alignmentDocuments = documents;
+					if (!alignmentGeometry || resized) alignmentGeometry = geometry;
+					scrollAnchor = captureScrollAnchor();
+					if (!reset || !clearLineAlignment(view.a, view.b))
+						alignChangedLines(view.a, view.b, view.chunks);
+					if (!alignmentFrame) scrollAnchor = null;
+				}
+			});
+		};
 		const themes = [new Compartment(), new Compartment()];
 		const language = [new Compartment(), new Compartment()];
 		const paths = ['a', 'b'].map((side) => paneFile(side)?.path ?? session?.path);
@@ -424,51 +476,7 @@
 						update.transactions.some((tr) => tr.effects.length)) &&
 					!alignmentFrame
 				) {
-					// Align after both virtualized editors have measured their visible lines.
-					alignmentFrame = requestAnimationFrame(() => {
-						alignmentFrame = 0;
-						if (!disposed && view) {
-							// Restore a visual row after both panes measure new spacers. Anchoring
-							// to the paragraph start jumps backwards inside long wrapped lines.
-							if (scrollAnchor) {
-								const { editor, position, top } = scrollAnchor;
-								scrollAnchor = null;
-								const coords = editor.coordsAtPos(position);
-								if (coords) view.dom.scrollTop += coords.top - top;
-							}
-							const documents = [view.a.state.doc, view.b.state.doc] as const;
-							const geometry = [
-								view.a.contentDOM.clientWidth,
-								view.b.contentDOM.clientWidth,
-								view.a.defaultLineHeight,
-								view.b.defaultLineHeight
-							];
-							const resized =
-								alignmentGeometry && alignmentGeometryChanged(alignmentGeometry, geometry);
-							const reset =
-								alignmentDocuments &&
-								(alignmentDocuments[0] !== documents[0] ||
-									alignmentDocuments[1] !== documents[1] ||
-									resized);
-							alignmentDocuments = documents;
-							if (!alignmentGeometry || resized) alignmentGeometry = geometry;
-							const top = view.dom.getBoundingClientRect().top + 1;
-							for (const editor of [view.a, view.b]) {
-								const position = editor.posAtCoords({
-									x: editor.contentDOM.getBoundingClientRect().left + 4,
-									y: top
-								});
-								const coords = position === null ? null : editor.coordsAtPos(position);
-								if (position !== null && coords) {
-									scrollAnchor = { editor, position, top: coords.top };
-									break;
-								}
-							}
-							if (!reset || !clearLineAlignment(view.a, view.b))
-								alignChangedLines(view.a, view.b, view.chunks);
-							if (!alignmentFrame) scrollAnchor = null;
-						}
-					});
+					scheduleAlignment();
 				}
 			}),
 			EditorView.theme({
