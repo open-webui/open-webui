@@ -245,6 +245,7 @@
 		if (!merge || !chunkCount) return;
 		activeChunk = Math.max(0, Math.min(index, chunkCount - 1));
 		const chunk = visibleChunks[activeChunk];
+		merge.scrollSource = chunk.toB > chunk.fromB ? merge.b : merge.a;
 		for (const [view, start] of [
 			[merge.a, chunk.fromA],
 			[merge.b, chunk.fromB]
@@ -334,32 +335,6 @@
 		let observer: MutationObserver | undefined;
 		let alignmentFrame = 0;
 		let presentationFrame = 0;
-		let scrollAnchor: { editor: EditorView; position: number; top: number } | null = null;
-		const captureScrollAnchor = () => {
-			if (!view) return null;
-			const y = view.dom.getBoundingClientRect().top + 1;
-			for (const editor of [view.a, view.b]) {
-				const position = editor.posAtCoords({
-					x: editor.contentDOM.getBoundingClientRect().left + 4,
-					y
-				});
-				const coords = position === null ? null : editor.coordsAtPos(position);
-				if (position !== null && coords) return { editor, position, top: coords.top };
-			}
-			return null;
-		};
-		const cancelScrollAnchor = () => {
-			scrollAnchor = null;
-		};
-		for (const event of ['touchmove', 'pointerdown'])
-			node.addEventListener(event, cancelScrollAnchor, { passive: true });
-		const advanceScrollAnchor = (event: WheelEvent) => {
-			if (event.deltaMode !== 0) return cancelScrollAnchor();
-			scrollAnchor ??= captureScrollAnchor();
-			if (scrollAnchor) scrollAnchor.top -= event.deltaY;
-			scheduleAlignment();
-		};
-		node.addEventListener('wheel', advanceScrollAnchor, { passive: true });
 		let expanded: CollapsedPair[] = [];
 		const schedulePresentation = (reset = false) => {
 			if (reset) expanded = [];
@@ -403,14 +378,6 @@
 			alignmentFrame = requestAnimationFrame(() => {
 				alignmentFrame = 0;
 				if (!disposed && view) {
-					// Restore a visual row after both panes measure new spacers. Anchoring
-					// to the paragraph start jumps backwards inside long wrapped lines.
-					if (scrollAnchor) {
-						const { editor, position, top } = scrollAnchor;
-						scrollAnchor = null;
-						const coords = editor.coordsAtPos(position);
-						if (coords) view.dom.scrollTop += coords.top - top;
-					}
 					const documents = [view.a.state.doc, view.b.state.doc] as const;
 					const geometry = [
 						view.a.contentDOM.clientWidth,
@@ -427,10 +394,9 @@
 							resized);
 					alignmentDocuments = documents;
 					if (!alignmentGeometry || resized) alignmentGeometry = geometry;
-					scrollAnchor = captureScrollAnchor();
 					if (!reset || !clearLineAlignment(view.a, view.b))
-						alignChangedLines(view.a, view.b, view.chunks);
-					if (!alignmentFrame) scrollAnchor = null;
+						alignChangedLines(view.a, view.b, view.linePairs);
+					view.syncScroll();
 				}
 			});
 		};
@@ -458,7 +424,6 @@
 			themes[index].of(document.documentElement.classList.contains('dark') ? oneDark : []),
 			language[index].of([]),
 			EditorView.updateListener.of((update) => {
-				if (update.docChanged || update.selectionSet) scrollAnchor = null;
 				for (const transaction of update.transactions) {
 					if (transaction.docChanged) {
 						for (const pair of expanded) {
@@ -480,8 +445,8 @@
 				}
 			}),
 			EditorView.theme({
-				'&': { fontSize: '0.75rem' },
-				'&, .cm-scroller': { height: 'auto', overflowY: 'visible' },
+				'&': { fontSize: '0.75rem', height: '100%' },
+				'.cm-scroller': { overflowY: 'auto' },
 				'.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
 				'&.cm-focused': { outline: 'none' }
 			})
@@ -527,9 +492,6 @@
 		return {
 			destroy: () => {
 				disposed = true;
-				for (const event of ['touchmove', 'pointerdown'])
-					node.removeEventListener(event, cancelScrollAnchor);
-				node.removeEventListener('wheel', advanceScrollAnchor);
 				cancelAnimationFrame(alignmentFrame);
 				cancelAnimationFrame(presentationFrame);
 				if (updatePresentation === schedulePresentation) updatePresentation = null;
@@ -1000,7 +962,7 @@
 	}
 	.merge-container :global(.cm-mergeView) {
 		height: 100%;
-		overflow: auto;
+		overflow: hidden;
 	}
 	.merge-container :global(.cm-mergeViewEditor) {
 		flex: 1 1 0;
@@ -1065,6 +1027,7 @@
 		background: #101413 !important;
 	}
 	.merge-container :global(.cm-mergeViewEditors) {
+		height: 100%;
 		display: flex;
 		align-items: stretch;
 		gap: 1rem;

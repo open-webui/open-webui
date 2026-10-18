@@ -11,6 +11,7 @@ import {
 } from '@codemirror/state';
 import {
 	Decoration,
+	BlockType,
 	EditorView,
 	GutterMarker,
 	gutter,
@@ -18,6 +19,7 @@ import {
 	type DecorationSet
 } from '@codemirror/view';
 import { Chunk, type DiffConfig } from '@codemirror/merge';
+import { lineTextTop } from './diffEditorAlignment';
 
 // A scanLimit also gives up based on document length, even for sparse, tiny edits.
 export const diffEditorConfig: DiffConfig = { timeout: 100 };
@@ -28,6 +30,9 @@ export class DiffEditorView {
 	readonly b: EditorView;
 	readonly dom: HTMLDivElement;
 	chunks: readonly Chunk[];
+	linePairs: [number, number][];
+	scrollSource: EditorView;
+	private scrollFrame = 0;
 	constructor(config: { a: EditorStateConfig; b: EditorStateConfig; parent: HTMLElement }) {
 		const states = (['a', 'b'] as const).map((side) =>
 			EditorState.create({
@@ -39,6 +44,7 @@ export class DiffEditorView {
 			})
 		);
 		this.chunks = Chunk.build(states[0].doc, states[1].doc, diffEditorConfig);
+		this.linePairs = matchingLinePairs(states[0].doc, states[1].doc, this.chunks);
 		this.dom = document.createElement('div');
 		this.dom.className = 'cm-mergeView';
 		const editors = this.dom.appendChild(document.createElement('div'));
@@ -55,6 +61,51 @@ export class DiffEditorView {
 		this.a = create('a', 0);
 		this.b = create('b', 1);
 		config.parent.appendChild(this.dom);
+		// Only the pane receiving input drives scrolling; the other pane's height corrections must not feed back.
+		this.scrollSource = this.a;
+		for (const editor of [this.a, this.b]) {
+			for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown', 'focusin'])
+				editor.dom.addEventListener(event, () => (this.scrollSource = editor), { passive: true });
+			editor.scrollDOM.addEventListener('scroll', () => this.syncScroll());
+		}
+	}
+	syncScroll() {
+		if (this.scrollFrame) return;
+		this.scrollFrame = requestAnimationFrame(() => {
+			this.scrollFrame = 0;
+			const index = this.scrollSource === this.a ? 0 : 1;
+			const other = index === 0 ? this.b : this.a;
+			const block = this.scrollSource.lineBlockAtHeight(this.scrollSource.scrollDOM.scrollTop);
+			const line = block.from;
+			const text = Array.isArray(block.type)
+				? block.type.find((part) => part.type === BlockType.Text)
+				: block.type === BlockType.Text
+					? block
+					: null;
+			let pair = this.linePairs[0];
+			for (const candidate of this.linePairs) {
+				if (candidate[index] > line) break;
+				pair = candidate;
+			}
+			if (
+				pair &&
+				text &&
+				pair[index] === text.from &&
+				this.scrollSource.scrollDOM.scrollTop < text.bottom &&
+				(pair[1 - index] < other.viewport.from || pair[1 - index] > other.viewport.to)
+			)
+				other.dispatch({
+					effects: EditorView.scrollIntoView(pair[1 - index], { y: 'nearest', yMargin: 0 })
+				});
+			const sourceTop = pair
+				? (lineTextTop(this.scrollSource, pair[index]) ??
+					this.scrollSource.lineBlockAt(pair[index]).top)
+				: 0;
+			const targetTop = pair
+				? (lineTextTop(other, pair[1 - index]) ?? other.lineBlockAt(pair[1 - index]).top)
+				: 0;
+			other.scrollDOM.scrollTop = targetTop + this.scrollSource.scrollDOM.scrollTop - sourceTop;
+		});
 	}
 	private dispatch(transactions: readonly Transaction[], side: 'a' | 'b') {
 		if (transactions.some((transaction) => transaction.docChanged)) {
@@ -67,14 +118,38 @@ export class DiffEditorView {
 				side === 'a'
 					? Chunk.updateA(this.chunks, document, this.b.state.doc, changes, diffEditorConfig)
 					: Chunk.updateB(this.chunks, this.a.state.doc, document, changes, diffEditorConfig);
+			this.linePairs = matchingLinePairs(
+				side === 'a' ? document : this.a.state.doc,
+				side === 'b' ? document : this.b.state.doc,
+				this.chunks
+			);
 		}
 		this[side].update(transactions);
 	}
 	destroy() {
+		cancelAnimationFrame(this.scrollFrame);
 		this.a.destroy();
 		this.b.destroy();
 		this.dom.remove();
 	}
+}
+
+// Pair unchanged rows and the rows whose text survives within changed chunks.
+function matchingLinePairs(a: Text, b: Text, chunks: readonly Chunk[]): [number, number][] {
+	const pairs: [number, number][] = [];
+	let fromA = 0,
+		fromB = 0;
+	for (let index = 0; index <= chunks.length; index++) {
+		const chunk = chunks[index];
+		const end = chunk ? chunk.fromA : a.length + 1;
+		for (let pos = fromA; pos < end; pos = a.lineAt(pos).to + 1)
+			pairs.push([pos, fromB + pos - fromA]);
+		if (!chunk) break;
+		for (const pair of changedLinePairs(a, b, chunk)) pairs.push(pair);
+		fromA = chunk.toA;
+		fromB = chunk.toB;
+	}
+	return pairs;
 }
 
 export type MergeDirection = 'to-working' | 'to-proposal';
