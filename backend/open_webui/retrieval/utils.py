@@ -1288,6 +1288,37 @@ def _is_safe_collection_name(name: str) -> bool:
     return isinstance(name, str) and bool(_SAFE_COLLECTION_NAME_RE.match(name))
 
 
+def _collection_identities(name: str) -> set[str]:
+    """Every collection a vector store could resolve this name to."""
+    canonical = name.lower().replace('_', '-').strip('-')
+    identities = {canonical}
+    # Stores needing a leading letter prefix one to digit-leading names, so 'c<digits>' and '<digits>' meet there.
+    if canonical[:1] == 'c' and canonical[1:2].isdigit():
+        identities.add(canonical[1:])
+    elif canonical[:1].isdigit():
+        identities.add('c' + canonical)
+    return identities
+
+
+async def _collection_access(collection: str, user: UserModel, access_type: str) -> Optional[bool]:
+    """Whether the user may reach this collection, or None when no such collection exists."""
+    if collection == 'knowledge-bases':
+        # System meta-collection — never exposed to non-admins.
+        return False
+    if collection.startswith('file-'):
+        file_id = collection[len('file-') :]
+        return await has_access_to_file(file_id=file_id, access_type=access_type, user=user)
+    if collection.startswith('user-memory-'):
+        return collection == f'user-memory-{user.id}'
+    if collection.startswith('web-search-'):
+        # Ephemeral per-query collections, owner-bound: process_web_search mints
+        # them as web-search-{user.id}-<hash>, so only the creator may read/write.
+        return collection.startswith(f'web-search-{user.id}-')
+    if await Knowledges.get_knowledge_by_id(collection):
+        return await Knowledges.check_access_by_user_id(collection, user.id, permission=access_type)
+    return None
+
+
 async def filter_accessible_collections(
     collection_names: set[str],
     user: UserModel,
@@ -1324,35 +1355,14 @@ async def filter_accessible_collections(
 
     validated = set()
     for name in safe_names:
-        # Some vector stores fold case and _/- together, so authorize a name as the collection it can resolve to.
-        canonical = name.lower().replace('_', '-')
-        if canonical == 'knowledge-bases':
-            # System meta-collection — never exposed to non-admins.
+        access = [
+            await _collection_access(collection, user, access_type) for collection in _collection_identities(name)
+        ]
+        if any(granted is False for granted in access):
             continue
-        elif canonical.startswith('file-'):
-            file_id = canonical[len('file-') :]
-            if await has_access_to_file(file_id=file_id, access_type=access_type, user=user):
-                validated.add(name)
-        elif canonical.startswith('user-memory-'):
-            if canonical == f'user-memory-{user.id}':
-                validated.add(name)
-        elif canonical.startswith('web-search-'):
-            # Ephemeral per-query collections, owner-bound: process_web_search mints
-            # them as web-search-{user.id}-<hash>, so only the creator may read/write.
-            if canonical.startswith(f'web-search-{user.id}-'):
-                validated.add(name)
-        else:
-            # May be a knowledge-base ID or a legacy/ephemeral collection.
-            # If it IS a KB, enforce access control.  If no such KB
-            # exists, the behaviour depends on
-            # ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS:
-            #   False (default) — deny (closes the unscoped namespace)
-            #   True  — allow (preserves legacy behaviour)
-            if await Knowledges.check_access_by_user_id(canonical, user.id, permission=access_type):
-                validated.add(name)
-            elif ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS and not await Knowledges.get_knowledge_by_id(canonical):
-                # Not a KB at all — legacy/ephemeral collection, allow
-                validated.add(name)
+        # No spelling names an existing collection, so it is legacy/ephemeral: allowed only when unscoped names are.
+        if any(granted is True for granted in access) or ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS:
+            validated.add(name)
     return validated
 
 
