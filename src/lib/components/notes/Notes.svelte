@@ -694,7 +694,7 @@
 																selectedNote = note;
 																showDeleteConfirm = true;
 															}}
-															isPinned={note.is_pinned ?? false}
+															isPinned={$pinnedNotes.some((n) => n.id === note.id)}
 															onPin={async () => {
 																await toggleNotePinnedStatusById(localStorage.token, note.id);
 																pinnedNotes.set(
@@ -784,7 +784,7 @@
 																selectedNote = note;
 																showDeleteConfirm = true;
 															}}
-															isPinned={note.is_pinned ?? false}
+															isPinned={$pinnedNotes.some((n) => n.id === note.id)}
 															onPin={async () => {
 																await toggleNotePinnedStatusById(localStorage.token, note.id);
 																pinnedNotes.set(
