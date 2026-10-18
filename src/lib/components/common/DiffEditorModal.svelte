@@ -27,7 +27,7 @@
 		lineAlignment,
 		alignChangedLines,
 		clearLineAlignment,
-		pairedLinePosition
+		alignmentGeometryChanged
 	} from './diffEditorAlignment';
 	import {
 		diffPresentation,
@@ -371,7 +371,7 @@
 		};
 		updatePresentation = schedulePresentation;
 		let alignmentDocuments: readonly [Text, Text] | null = null;
-		let alignmentGeometry = '';
+		let alignmentGeometry: readonly number[] | null = null;
 		const themes = [new Compartment(), new Compartment()];
 		const language = [new Compartment(), new Compartment()];
 		const paths = ['a', 'b'].map((side) => paneFile(side)?.path ?? session?.path);
@@ -423,47 +423,18 @@
 								view.b.contentDOM.clientWidth,
 								view.a.defaultLineHeight,
 								view.b.defaultLineHeight
-							].join(':');
+							];
+							const resized =
+								alignmentGeometry && alignmentGeometryChanged(alignmentGeometry, geometry);
 							const reset =
 								alignmentDocuments &&
 								(alignmentDocuments[0] !== documents[0] ||
 									alignmentDocuments[1] !== documents[1] ||
-									geometry !== alignmentGeometry);
-							const resized = alignmentDocuments && geometry !== alignmentGeometry;
+									resized);
 							alignmentDocuments = documents;
-							alignmentGeometry = geometry;
-							const previousSpacersA = view.a.state.field(lineAlignment);
-							const previousSpacersB = view.b.state.field(lineAlignment);
+							if (!alignmentGeometry || resized) alignmentGeometry = geometry;
 							if (!reset || !clearLineAlignment(view.a, view.b))
 								alignChangedLines(view.a, view.b, view.chunks);
-							if (resized) {
-								// Reflow can leave one viewport entirely inside an old EOF spacer.
-								// Measure both panes around the row the reader was looking at.
-								const top = Math.max(0, node.getBoundingClientRect().top - view.a.documentTop);
-								const position = Math.min(
-									view.a.lineBlockAtHeight(top).from,
-									view.a.state.doc.length
-								);
-								const other = pairedLinePosition(
-									view.a.state.doc,
-									view.b.state.doc,
-									view.chunks,
-									position
-								);
-								view.a.dispatch({
-									effects: EditorView.scrollIntoView(position, { y: 'start', yMargin: 0 })
-								});
-								view.b.dispatch({
-									effects: EditorView.scrollIntoView(other, { y: 'start', yMargin: 0 })
-								});
-							}
-							// Remeasuring unchanged spacers feeds CodeMirror's own layout updates back into itself.
-							if (
-								resized ||
-								previousSpacersA !== view.a.state.field(lineAlignment) ||
-								previousSpacersB !== view.b.state.field(lineAlignment)
-							)
-								view.reconfigure({});
 						}
 					});
 				}
