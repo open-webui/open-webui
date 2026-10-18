@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- 🔍 **Compare view alignment while scrolling.** Matching rows in the two panes of the Compare view now stay lined up and in place while scrolling, resizing or editing, and changed lines are marked with a colored bar even when whitespace or emphasis markers are ignored. [Commit](https://github.com/open-webui/open-webui/commit/32170b96fc5edc8c324c5de188be36e9d32059a2), [Commit](https://github.com/open-webui/open-webui/commit/596cdbb6caf6022947285722949de1f52272b673), [Commit](https://github.com/open-webui/open-webui/commit/5c9865a1f119d33ab11d77e79d8c8c8fb93704ec)
+- 🔍 **Compare view alignment while scrolling.** Matching rows in the two panes of the Compare view now stay lined up and in place while scrolling, resizing or editing, and changed lines are marked with a colored bar even when whitespace or emphasis markers are ignored. [Commit](https://github.com/open-webui/open-webui/commit/32170b96fc5edc8c324c5de188be36e9d32059a2), [Commit](https://github.com/open-webui/open-webui/commit/596cdbb6caf6022947285722949de1f52272b673), [Commit](https://github.com/open-webui/open-webui/commit/5c9865a1f119d33ab11d77e79d8c8c8fb93704ec), [Commit](https://github.com/open-webui/open-webui/commit/aa8ce52c7a3afbb164bc16a3b7c20e40ba6390ed)
 - 📱 **Sign-in page on small screens.** The sign-in page can now be scrolled when it is taller than the screen, such as on phones with the keyboard open, where parts of the form could be out of reach. [Commit](https://github.com/open-webui/open-webui/commit/ffbe0ac12da8ca5af9da12f8f00c43e382300b4f)
 
 ## [0.12.3] - 2026-10-16
