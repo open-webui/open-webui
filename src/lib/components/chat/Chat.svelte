@@ -170,6 +170,7 @@
 
 	let autoScroll = true;
 	let isNearTop = true;
+	let lastScrollHeight: number = Infinity;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
@@ -1246,6 +1247,7 @@
 		if (target && history.messages[target] && key !== revealedSearchMessage) {
 			revealedSearchMessage = key;
 			autoScroll = false;
+			lastScrollHeight = Infinity;
 			history.currentId = getDeepestChildId(history, target);
 			tick().then(() => messagesRef?.scrollToMessage(target));
 		} else if (!target) revealedSearchMessage = '';
@@ -3047,6 +3049,7 @@
 				top: messagesContainerElement.scrollHeight,
 				behavior
 			});
+			lastScrollHeight = messagesContainerElement.scrollHeight;
 
 			// content-visibility: auto causes the initial scrollHeight to be based on
 			// estimated sizes (contain-intrinsic-size). After we scroll, previously
@@ -3055,13 +3058,13 @@
 			// (new sizes reveal more content, triggering further size resolution), so
 			// we re-scroll across two animation frames to land at the true bottom.
 			requestAnimationFrame(() => {
-				if (messagesContainerElement) {
+				if (messagesContainerElement && autoScroll) {
 					messagesContainerElement.scrollTo({
 						top: messagesContainerElement.scrollHeight,
 						behavior
 					});
 					requestAnimationFrame(() => {
-						if (messagesContainerElement) {
+						if (messagesContainerElement && autoScroll) {
 							messagesContainerElement.scrollTo({
 								top: messagesContainerElement.scrollHeight,
 								behavior
@@ -3088,7 +3091,7 @@
 		if (!scrollRAF) {
 			scrollRAF = requestAnimationFrame(async () => {
 				scrollRAF = null;
-				await scrollToBottom();
+				if (shouldAutoScrollResponse()) await scrollToBottom();
 			});
 		}
 	};
@@ -5191,9 +5194,12 @@
 								bind:this={messagesContainerElement}
 								on:scroll={(e) => {
 									if (!messagesContainerElement) return;
+									// Text that lands before our own scroll is reported is not the reader leaving the bottom
 									autoScroll =
-										messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+										Math.min(messagesContainerElement.scrollHeight, lastScrollHeight) -
+											messagesContainerElement.scrollTop <=
 										messagesContainerElement.clientHeight + 5;
+									lastScrollHeight = messagesContainerElement.scrollHeight;
 									isNearTop = messagesContainerElement.scrollTop <= 100;
 								}}
 							>
