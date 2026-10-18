@@ -1695,8 +1695,6 @@ async def embeddings(request: Request, form_data: dict, user):
         dict: OpenAI-compatible embeddings response.
     """
     idx = 0
-    # Prepare payload/body
-    body = JSONCodec.dumps(form_data)
     # Find correct backend url/key based on model
     model_id = form_data.get('model')
     # Check if model is already in app state cache to avoid expensive get_all_models() call
@@ -1708,6 +1706,10 @@ async def embeddings(request: Request, form_data: dict, user):
         idx = models[model_id]['urlIdx']
 
     url, key, api_config = await get_openai_connection(idx)
+
+    form_data['model'] = strip_provider_model_prefix(form_data['model'], api_config.get('prefix_id'))
+    # Prepare payload/body
+    body = JSONCodec.dumps(form_data)
 
     r = None
     streaming = False
