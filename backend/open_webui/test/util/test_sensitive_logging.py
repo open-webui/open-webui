@@ -141,6 +141,38 @@ def test_invalid_tool_parameters_do_not_abort_later_tool_calls(monkeypatch):
 
 
 @pytest.mark.parametrize(
+    "invalid_call",
+    [
+        {"name": CANARY_PROMPT},
+        {"name": [CANARY_PROMPT]},
+        json.dumps(CANARY_PROMPT),
+    ],
+)
+def test_invalid_tool_calls_not_logged_or_abort_later_calls(monkeypatch, invalid_call):
+    calls, flags, output = _run_tools_handler(
+        monkeypatch,
+        [invalid_call, {"name": "echo", "parameters": {"text": "hello"}}],
+    )
+
+    assert calls == ["hello"]
+    assert len(flags["sources"]) == 1
+    assert "Tool calls extracted: 2" in output
+    _assert_absent(output, CANARY_PROMPT)
+
+
+def test_undeclared_tool_parameter_keys_not_logged(monkeypatch):
+    calls, flags, output = _run_tools_handler(
+        monkeypatch,
+        [{"name": "echo", "parameters": {CANARY_PROMPT: "secret", "text": "hello"}}],
+    )
+
+    assert calls == ["hello"]
+    assert flags["sources"][0]["document"] == [CANARY_TOOL_RESULT]
+    assert "Tool call: echo params=['text']" in output
+    _assert_absent(output, CANARY_PROMPT)
+
+
+@pytest.mark.parametrize(
     "error_code, expected",
     [(CANARY_OAUTH_ERROR, "other"), ("access_denied", "access_denied")],
 )

@@ -228,6 +228,16 @@ Compose demonstrates local integration only. Define production capacity, HA, bac
 - Common DoD.
 - List of fixed locations recorded in the PR description.
 
+**PR #606 review decisions**
+| Feedback | Decision |
+| --- | --- |
+| Changelog release timing | Keep entries unpublished until release preparation, not merely PR merge; contributor guidance records the convention. |
+| Model-supplied tool names and parameter keys | Fix in OBS-10: log the extracted call count, only log names found in the registered tools and keys declared in their schema, and skip malformed calls without stopping later valid calls. Canary regression tests cover each case. |
+| `chat_web_search_handler` query-generation exception logging | Confirmed exception-text leak; tracked in OBS-18 with the other middleware exception paths. Changing only the message while retaining `log.exception` would still leak through the traceback. |
+| Four `print(e)` calls in `retrieval/utils.py` | Confirmed unfiltered exception output; explicitly assigned to OBS-18, not the safe-print conversion in OBS-80. |
+| Wikipedia query-lock hashes | OBS-19: prefer removing hashes from logs; a public or fixed salt does not prevent dictionary recovery of common queries. Keep internal lock identity unchanged. |
+| Wikipedia article titles | Confirmed query-topic metadata; already assigned to OBS-19 for replacement with counts, ranks or scores. |
+
 ---
 
 ### OBS-11: Fix the process-global `set_user_token` defect in CrewAI
@@ -411,11 +421,14 @@ The OBS-10 scan fixed direct logging of prompts, responses and credentials, but 
 
 Also, when a logging handler fails, `logging.Handler.handleError` prints the record and the active (chained) exception to stderr, bypassing the filters.
 
+PR #606 review confirmed `utils/middleware.py` `chat_web_search_handler` logs the query-generation exception with `log.exception(e)`. It also identified four unfiltered `print(e)` calls in `retrieval/utils.py`: `query_doc`, `get_doc`, `generate_openai_batch_embeddings` and `generate_ollama_batch_embeddings`. These can expose provider URLs, credentials, query text or bound parameters. They belong here rather than in OBS-80, which handles remaining safe prints.
+
 OBS-10 already handled the exception paths in `socket/main.py` (`crew-mcp-query`), `retrieval/web/utils.py` (`request_json_with_timeout`), `utils/webhook.py` and `utils/oauth.py`. Use those as the pattern: log the exception type and safe fields (status code, provider name, error code) instead of the message.
 
 **Acceptance criteria**
 - [ ] Shared redaction filter (from OBS-15) applied to the formatted message, `args`, `exc_text` and the formatted traceback for stdout and OTLP handlers. It masks URL query strings, `Authorization`/`Bearer` values, JWT-shaped strings and known secret config values.
 - [ ] Exception logging in the chat path (`utils/middleware.py`, `routers/openai.py`, `routers/ollama.py`, `main.py` `chat_completion`), CrewAI/MCP path (`mcp_backend/routers/*`, `mcp_backend/integration/*`, `mcp_backend/management/mcp_manager.py`) and web search/RAG path (`routers/retrieval.py`, `retrieval/*`) reviewed; each call either logs type plus safe fields or relies on the filter, with the decision recorded.
+- [ ] The four retrieval `print(e)` calls above are removed or replaced with safe structured logging, preserving their existing re-raise/`None` behavior. Query-generation failures are covered too; neither raw exception text nor an unfiltered traceback reaches a sink.
 - [ ] Tracebacks keep frame locations (file, line, function) so debugging still works.
 - [ ] Handler failures (`handleError`) do not print record content or chained exception messages to stderr.
 - [ ] SQLAlchemy errors logged without bound parameters (`hide_parameters=True` on the engine, or equivalent).
@@ -424,6 +437,7 @@ OBS-10 already handled the exception paths in `socket/main.py` (`crew-mcp-query`
 - Canary harness (OBS-17): stub a provider, an outbound HTTP call, an MCP tool and a DB write to raise exceptions whose message contains a canary prompt, API key, token and URL query string; assert no canary reaches any sink, with exception frames still present.
 - Unit tests for the redaction filter (URL query, bearer token, JWT, configured secret, nested chained exception).
 - Test that a failing handler does not print the canary to stderr.
+- Exercise query-generation failures and all four retrieval exception-print paths with canary exception messages; assert no canary reaches captured logs, stdout or stderr, and fallback/exception behavior is unchanged.
 
 **Definition of done**
 - Common DoD.
@@ -441,6 +455,8 @@ The OBS-10 scan found these smaller items that were left out of scope:
 - `grounding/wiki_search_utils.py` logs an 8-character prefix of an unsalted MD5 hash of the query at DEBUG (~lines 149–205). Short or common queries can be recovered by dictionary lookup.
 - `mcp_backend/servers/sharepoint_oauth_client.py` logs the raw Entra ID / Graph error body (`error_text`) at ERROR/WARNING (~lines 126, 166, 271, 492, 541, 609). These bodies usually hold error codes and correlation IDs, but Graph errors can include item paths or names.
 - `backend/scripts/generate_test_chats.py` prints user email and name. It is a standalone developer script, so this is accepted as intentional output; confirm it is never run in shared environments or redact it.
+
+PR #606 review reconfirmed the title and hash risks. Prefer removing the logged hash rather than introducing a salt: a public or fixed salt still permits dictionary recovery of common queries. If lock correlation is required, use the keyed HMAC option below with a secret configuration key; do not change the internal query-lock key just to sanitize logs.
 
 **Acceptance criteria**
 - [ ] Wikipedia titles replaced with counts, ranks or scores only.

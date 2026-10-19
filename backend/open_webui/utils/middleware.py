@@ -504,30 +504,23 @@ async def chat_completion_tools_handler(
                             )
                             return body, {}
 
-            log.info(
-                "Tool calls extracted: %s",
-                [call.get("name") for call in tool_calls if isinstance(call, dict)],
-            )
+            log.info("Tool calls extracted: %d", len(tool_calls))
 
             # Process all tool calls
             for tool_call in tool_calls:
+                if not isinstance(tool_call, dict):
+                    log.debug("Skipping malformed tool call")
+                    continue
+
                 tool_function_name = tool_call.get("name", None)
-                if not tool_function_name or tool_function_name not in tools:
-                    log.debug(
-                        f"Tool function '{tool_function_name}' not found in available tools"
-                    )
+                if (
+                    not isinstance(tool_function_name, str)
+                    or tool_function_name not in tools
+                ):
+                    log.debug("Skipping unregistered or invalid tool name")
                     continue
 
                 tool_function_params = tool_call.get("parameters", {})
-                log.info(
-                    "Tool call: %s params=%s",
-                    tool_function_name,
-                    (
-                        sorted(tool_function_params)
-                        if isinstance(tool_function_params, dict)
-                        else type(tool_function_params).__name__
-                    ),
-                )
 
                 try:
                     # Get all parameters from the tool spec, not just required ones
@@ -538,6 +531,17 @@ async def chat_completion_tools_handler(
                         .get("properties", {})
                     )
                     tool_function = tools[tool_function_name]["callable"]
+                    log.info(
+                        "Tool call: %s params=%s",
+                        tool_function_name,
+                        (
+                            sorted(
+                                key for key in tool_function_params if key in all_params
+                            )
+                            if isinstance(tool_function_params, dict)
+                            else type(tool_function_params).__name__
+                        ),
+                    )
 
                     # Filter to only include parameters that exist in the tool spec and are not None/null
                     filtered_params = {
