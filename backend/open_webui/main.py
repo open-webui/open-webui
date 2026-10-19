@@ -144,6 +144,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
+from open_webui.models.files import Files
 from open_webui.models.functions import Functions
 from open_webui.models.messages import Messages
 from open_webui.models.models import Models, normalize_model_tags
@@ -391,6 +392,11 @@ async def lifespan(app: FastAPI):
     await validate_mfa_configuration()
     await initialize_runtime_config(app)
     await migrate_legacy_webhook_config()
+
+    # Uploads whose processing task died with the previous process would show as in progress forever.
+    stale_files = await Files.fail_stale_processing_files()
+    if stale_files:
+        log.info(f'Marked {stale_files} stale processing file(s) as failed')
     await publish_event(app, EVENTS.SYSTEM_STARTUP_STARTED, source='system')
 
     license_task = None

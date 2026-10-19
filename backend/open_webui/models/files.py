@@ -367,6 +367,39 @@ class FilesTable:
             except Exception:
                 return None
 
+    async def fail_stale_processing_files(self, max_age: int = 3600, db: AsyncSession | None = None) -> int:
+        """
+        Mark files stuck in ``pending`` or ``processing`` as ``failed``.
+
+        A restart drops the background task that processes an upload, so the
+        file would otherwise keep its in-flight status forever.  Only files not
+        updated for ``max_age`` seconds are touched, so uploads still being
+        processed by another instance are left alone.  Returns the number of
+        files updated.
+        """
+        async with get_async_db_context(db) as db:
+            try:
+                now = int(time.time())
+                result = await db.execute(
+                    select(File).filter(
+                        File.data['status'].as_string().in_(['pending', 'processing']),
+                        File.updated_at < now - max_age,
+                    )
+                )
+                files = result.scalars().all()
+                for file in files:
+                    file.data = {
+                        **(file.data or {}),
+                        'status': 'failed',
+                        'error': 'Processing was interrupted by a server restart.',
+                    }
+                    file.updated_at = now
+                await db.commit()
+                return len(files)
+            except Exception as e:
+                log.warning(f'Failed to reset stale processing files: {e}')
+                return 0
+
     async def update_file_data_by_id(self, id: str, data: dict, db: AsyncSession | None = None) -> FileModel | None:
         async with get_async_db_context(db) as db:
             try:
