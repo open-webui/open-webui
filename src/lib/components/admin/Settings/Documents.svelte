@@ -185,7 +185,10 @@
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
 		}
-		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' && RAGConfig.DOCLING_SERVER_URL === '') {
+		if (
+			['docling', 'docling_chunks'].includes(RAGConfig.CONTENT_EXTRACTION_ENGINE) &&
+			RAGConfig.DOCLING_SERVER_URL === ''
+		) {
 			toast.error($i18n.t('Docling Server URL required.'));
 			return;
 		}
@@ -448,6 +451,7 @@
 						<option value="external">{$i18n.t('External')}</option>
 						<option value="tika">{$i18n.t('Tika')}</option>
 						<option value="docling">{$i18n.t('Docling')}</option>
+						<option value="docling_chunks">{$i18n.t('Docling (Chunks)')}</option>
 						<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 						<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 						<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
@@ -684,7 +688,7 @@
 							</SettingsSelect>
 						</AdminSettingField>
 					</div>
-				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
+				{:else if ['docling', 'docling_chunks'].includes(RAGConfig.CONTENT_EXTRACTION_ENGINE)}
 					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.doclingServerUrl.label')}

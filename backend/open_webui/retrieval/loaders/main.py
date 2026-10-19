@@ -631,7 +631,7 @@ class Loader:
                 format_lines=self.config['rag.datalab_marker_format_lines'],
                 output_format=self.config['rag.datalab_marker_output_format'],
             )
-        elif self.engine == 'docling' and self.config['rag.docling_server_url']:
+        elif self.engine in ('docling', 'docling_chunks') and self.config['rag.docling_server_url']:
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             else:
@@ -644,13 +644,29 @@ class Loader:
                         log.error('Invalid DOCLING_PARAMS format, expected JSON object')
                         params = {}
 
-                loader = DoclingLoader(
-                    url=self.config['rag.docling_server_url'],
-                    api_key=self.config['rag.docling_api_key'],
-                    file_path=file_path,
-                    mime_type=file_content_type,
-                    params=params,
-                )
+                if self.engine == 'docling_chunks':
+                    from open_webui.retrieval.loaders.docling_chunks import DoclingChunksLoader
+
+                    loader = DoclingChunksLoader(
+                        url=self.config['rag.docling_server_url'],
+                        api_key=self.config['rag.docling_api_key'],
+                        file_path=file_path,
+                        mime_type=file_content_type,
+                        params=params,
+                        chunk_size=self.config.get('rag.chunk_size'),
+                        chunk_overlap=self.config.get('rag.chunk_overlap'),
+                        chunk_min_size_target=self.config.get('rag.chunk_min_size_target'),
+                        text_splitter=self.config.get('rag.text_splitter'),
+                        tiktoken_encoding_name=self.config.get('rag.tiktoken_encoding_name'),
+                    )
+                else:
+                    loader = DoclingLoader(
+                        url=self.config['rag.docling_server_url'],
+                        api_key=self.config['rag.docling_api_key'],
+                        file_path=file_path,
+                        mime_type=file_content_type,
+                        params=params,
+                    )
         elif (
             self.engine == 'document_intelligence'
             and self.config['rag.document_intelligence_endpoint'] != ''

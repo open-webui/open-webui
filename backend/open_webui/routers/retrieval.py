@@ -84,6 +84,7 @@ from open_webui.retrieval.utils import (
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.factory import get_vector_db_client
 from open_webui.retrieval.vector.utils import filter_metadata
+from open_webui.retrieval.loaders.docling_chunks import DOCLING_CHUNK_KEY, DOCLING_SEGMENT_KEY
 from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.bocha import search_bocha
@@ -1704,6 +1705,9 @@ async def process_file(
                         )
                     ]
                 text_content = ' '.join([doc.page_content for doc in docs])
+                if docs and all(DOCLING_SEGMENT_KEY in doc.metadata for doc in docs):
+                    # Chunk text repeats headings and overlap; the file content takes each part once.
+                    text_content = '\n\n'.join(doc.metadata.pop(DOCLING_SEGMENT_KEY) for doc in docs)
 
             log.debug('text_content: %s', text_content)
             await Files.update_file_data_by_id(
@@ -1742,6 +1746,9 @@ async def process_file(
                     # calls asyncio.run_coroutine_threadsafe(..., main_loop).result()
                     # which blocks the calling thread.  We MUST run it in a
                     # worker thread to avoid deadlocking the event loop.
+                    # Chunks from the docling_chunks engine are final; splitting them again
+                    # would cut through the sections they follow.
+                    split = not (docs and all(doc.metadata.get(DOCLING_CHUNK_KEY) for doc in docs))
                     result = True
                     for name in collection_names:
                         result = await run_in_threadpool(
@@ -1755,6 +1762,7 @@ async def process_file(
                                 'name': file.filename,
                                 'hash': hash,
                             },
+                            split=split,
                             add=(True if form_data.collection_name else False),
                             user=user,
                         )
