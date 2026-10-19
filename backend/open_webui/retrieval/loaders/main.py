@@ -310,12 +310,16 @@ class DoclingLoader:
                 pages = md_content.split(page_break_marker)
                 json_content = document_data.get('json_content') or {}
                 # Docling only marks page changes, so blank pages leave no break; take page numbers from its JSON
+                # Items without a layer count as body, and provenance without a page number is skipped,
+                # so partial JSON from other Docling versions falls back instead of failing the upload
                 page_indices = sorted(
                     {
-                        item['prov'][0]['page_no'] - 1
+                        prov[0]['page_no'] - 1
                         for key in ('texts', 'tables', 'pictures', 'key_value_items', 'form_items')
                         for item in json_content.get(key, [])
-                        if item.get('content_layer') == 'body' and item.get('prov')
+                        if item.get('content_layer', 'body') == 'body'
+                        and (prov := item.get('prov'))
+                        and isinstance(prov[0].get('page_no'), int)
                     }
                 )
                 if len(page_indices) != len(pages):
