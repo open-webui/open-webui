@@ -270,6 +270,8 @@
 		try {
 			if (deletion.file) {
 				await removeFileFromKnowledgeById(localStorage.token, knowledge.id, deletion.file.id!);
+				// Drop the row right away; the poll would only notice after its next tick.
+				pending = pending.filter((file) => file.id !== deletion?.file?.id);
 				toast.success($i18n.t('File removed successfully.'));
 				onChanged(undefined, [deletion.file.id!]);
 			} else if (deletion.directory) {
@@ -437,7 +439,9 @@
 				item={file}
 				{depth}
 				active={selectedFileId === file.id}
+				writeAccess={!!knowledge.write_access}
 				onOpen={() => onSelect(file)}
+				onDelete={() => askDelete({ file })}
 			/>
 		{/each}
 	{/if}

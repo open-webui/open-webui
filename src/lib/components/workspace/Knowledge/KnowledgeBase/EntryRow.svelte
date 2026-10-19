@@ -166,7 +166,13 @@
 							: ''}</span
 			>{/if}
 	</button>
-	{#if item.id && !pending}<Dropdown closeOnSelect align="end"
+	{#if item.id && pending && writeAccess}<button
+			type="button"
+			aria-label={$i18n.t('Stop and remove')}
+			title={$i18n.t('Stop and remove')}
+			class="mr-1 flex size-5 shrink-0 items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+			on:click={onDelete}><Icon name="xmark" size={12} /></button
+		>{:else if item.id && !pending}<Dropdown closeOnSelect align="end"
 			><button
 				type="button"
 				aria-label={$i18n.t('More')}
