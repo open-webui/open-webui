@@ -35,7 +35,10 @@ def search_searchapi(
         url,
         provider_name="SearchAPI search",
     )
-    log.info(f"results from searchapi search: {json_response}")
+    log.info(
+        "results from searchapi search: %d",
+        len(json_response.get("organic_results", []) or []),
+    )
 
     results = sorted(
         json_response.get("organic_results", []), key=lambda x: x.get("position", 0)

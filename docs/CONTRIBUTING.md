@@ -106,6 +106,12 @@ We welcome pull requests. Before submitting one, please:
 4. Write clear, descriptive commit messages.
 5. It's essential to complete your pull request in a timely manner. We move fast, and having PRs hang around too long is not feasible. If you can't get it done within a reasonable time frame, we may have to close it to keep the project moving forward.
 
+#### Changelog Entries
+
+Add user-facing changes to `CHANGELOG.md` under `## [Unreleased] - TBD` and to the corresponding unpublished section in `CHANGELOG-FR.md`. Reuse an existing section rather than adding one per PR, and keep both languages in sync.
+
+Leave these entries unpublished when a PR is merged. As part of preparing a production release, the release owner replaces the unpublished heading with the actual version and release date in both files. Keep the English heading in `## [version] - date` format, including `## [Unreleased] - TBD`: the backend parses it when loading release notes.
+
 ### 📚 Documentation & Tutorials
 
 Help us make CANChat more accessible by improving documentation, writing tutorials, or creating guides on setting up and optimizing the web UI.

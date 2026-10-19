@@ -348,7 +348,11 @@ async def run_crew_query(
         # Get the Graph API access token directly from OAuth2 proxy headers
         user_access_token = await get_graph_access_token_for_user(request_data)
 
-        log.info(f"Running CrewAI query for user {user.id}: {request.query}")
+        log.info(
+            "Running CrewAI query for user %s (query_len=%d)",
+            user.id,
+            len(request.query),
+        )
         log.info(f"Selected tools: {request.selected_tools}")
         log.info(f"User access token available: {bool(user_access_token)}")
 
@@ -438,7 +442,6 @@ async def run_crew_query(
         used_tools = [tool["name"] for tool in tools]  # All tools potentially available
 
         log.info(f"Crew execution completed. Result length: {len(result)} characters")
-        log.info(f"Crew result preview: {result[:200]}...")
 
         # Generate proper title and tags if chat_id is provided (like standard chat flow)
         if request.chat_id:
@@ -518,7 +521,9 @@ async def run_multi_server_crew_query(
         user_access_token = await get_graph_access_token_for_user(request_data)
 
         log.info(
-            f"Running CrewAI multi-server query for user {user.id}: {request.query}"
+            "Running CrewAI multi-server query for user %s (query_len=%d)",
+            user.id,
+            len(request.query),
         )
         log.info(f"User access token available: {bool(user_access_token)}")
 

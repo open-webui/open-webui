@@ -37,7 +37,7 @@ def search_google_pse(
         "num": count,
     }
 
-    log.info(f"Google PSE query: {query}")
+    log.info("Google PSE query (length=%d)", len(query))
     json_response = get_json_with_timeout(
         url,
         provider_name="Google PSE",

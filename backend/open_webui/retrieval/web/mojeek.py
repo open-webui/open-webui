@@ -31,7 +31,6 @@ def search_mojeek(
         params=params,
     )
     results = json_response.get("response", {}).get("results", [])
-    print(results)
     if filter_list:
         results = get_filtered_results(results, filter_list)
 

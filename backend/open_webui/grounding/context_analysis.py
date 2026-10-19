@@ -221,9 +221,7 @@ class ConversationContextAnalyzer:
         if not re.search(r"\b(19|20)\d{2}s?\b|\b\d{2}s\b", query):
             enhanced_query = f"{enhanced_query} {self.current_year}"
 
-        log.info(
-            f"🕒 Enhanced query with temporal context: '{query}' -> '{enhanced_query}'"
-        )
+        log.info("🕒 Enhanced query with temporal context")
         return enhanced_query
 
         return "\n".join(context_parts[-5:])  # Last 5 context entries
@@ -463,7 +461,7 @@ class ConversationContextAnalyzer:
         context_entities = self.extract_key_entities_from_context(conversation_context)
 
         # Debug: Log what entities were extracted
-        log.info(f"🔍 Extracted context entities: {context_entities}")
+        log.info(f"🔍 Extracted {len(context_entities)} context entities")
 
         if not context_entities:
             return current_query
@@ -538,14 +536,16 @@ class ConversationContextAnalyzer:
                 if new_context:
                     context_str = " ".join(new_context)
                     enhanced_query = f"{context_str} {enhanced_query}"
-                    log.info(
-                        f"🔍 Added conversation context for disambiguation: '{context_str}'"
-                    )
+                    log.info("🔍 Added conversation context for disambiguation")
 
         # Clean up the query - remove any duplicate spaces and trailing issues
         enhanced_query = " ".join(enhanced_query.split())
 
-        log.info(f"🔍 Enhanced query: '{current_query}' -> '{enhanced_query}'")
+        log.info(
+            "🔍 Enhanced query (length %d -> %d)",
+            len(current_query),
+            len(enhanced_query),
+        )
         return enhanced_query
 
     def should_use_context_aware_search(

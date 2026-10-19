@@ -54,7 +54,9 @@ def search_serply(
         provider_name="Serply search",
         headers=headers,
     )
-    log.info(f"results from serply search: {json_response}")
+    log.info(
+        "results from serply search: %d", len(json_response.get("results", []) or [])
+    )
 
     results = sorted(
         json_response.get("results", []), key=lambda x: x.get("realPosition", 0)

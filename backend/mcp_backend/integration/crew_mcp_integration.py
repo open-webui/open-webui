@@ -286,7 +286,7 @@ class CrewMCPManager:
                 "Time server adapter not initialized. Call initialize_mcp_adapters() first."
             )
 
-        logger.info(f"Starting CrewAI MCP integration for query: {query}")
+        logger.info("Starting CrewAI MCP integration (query_len=%d)", len(query))
 
         try:
             # Use the pre-initialized time server adapter (already contains tools from __enter__())
@@ -355,7 +355,7 @@ class CrewMCPManager:
                 "News server adapter not initialized. Call initialize_mcp_adapters() first."
             )
 
-        logger.info(f"Starting CrewAI MCP news integration for query: {query}")
+        logger.info("Starting CrewAI MCP news integration (query_len=%d)", len(query))
 
         try:
             # Use the pre-initialized news server adapter (already contains tools from __enter__())
@@ -427,7 +427,9 @@ class CrewMCPManager:
                 f"{dept_key} SharePoint server not found at {server_path}"
             )
 
-        logger.info(f"Starting CrewAI MCP SharePoint integration for query: {query}")
+        logger.info(
+            "Starting CrewAI MCP SharePoint integration (query_len=%d)", len(query)
+        )
         logger.info(f"Using {dept_key} SharePoint server: {server_path}")
         logger.info(
             "🔄 Initializing fresh SharePoint adapter with user token from environment"
@@ -619,7 +621,7 @@ class CrewMCPManager:
         Returns:
             A 3-tuple of (result_str, token_usage_dict, mcp_process_name).
         """
-        logger.info(f"Starting intelligent router for query: {query}")
+        logger.info("Starting intelligent router (query_len=%d)", len(query))
         logger.info(f"Selected tools: {selected_tools}")
 
         try:

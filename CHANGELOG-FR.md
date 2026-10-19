@@ -5,6 +5,12 @@ Tous les changements notables apportés à ce projet seront documentés dans ce 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Versionnage sémantique](https://semver.org/lang/fr/spec/v2.0.0.html).
 
+## [Non publié] - À déterminer
+
+### Corrigé
+
+- **🔒 Données sensibles dans les journaux** : Les invites des utilisateurs, les réponses des modèles, les fragments de jetons d'accès Graph, les clés d'API, les jetons et revendications OAuth, les adresses courriel, les URL de webhooks et le texte des documents ne sont plus écrits dans les journaux du serveur. Des longueurs, des décomptes et des identifiants sont journalisés à la place.
+
 ## [0.5.7-ccv2-1.16.0] - 2026-08-12
 
 ### Ajouté
