@@ -101,8 +101,7 @@
 <!-- Keep paired inline HTML tags together; sanitizing individual tags loses their contents. -->
 {#if inlineHtml !== null}
 	{@html inlineHtml}
-{/if}
-{#each inlineHtml === null ? tokens : [] as token, tokenIdx (tokenIdx)}
+{/if}{#each inlineHtml === null ? tokens : [] as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
