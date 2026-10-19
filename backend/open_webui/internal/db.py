@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import sys
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager, contextmanager, suppress
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -31,11 +31,12 @@ from open_webui.env import (
 )
 from open_webui.utils.json_codec import JSONCodec
 from sqlalchemy import Dialect, MetaData, create_engine, event, types
+from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
-from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.pool import ConnectionPoolEntry, NullPool, QueuePool
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
@@ -476,6 +477,16 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
     @event.listens_for(async_engine.sync_engine, 'connect')
     def _set_sqlite_pragmas(dbapi_connection, connection_record):
         _apply_sqlite_pragmas(dbapi_connection)
+
+    @event.listens_for(async_engine.sync_engine, 'invalidate')
+    def _rollback_invalidated_sqlite(
+        dbapi_connection: DBAPIConnection,
+        connection_record: ConnectionPoolEntry,
+        exception: Optional[BaseException],
+    ):
+        # After a cancelled query, closing alone keeps the write lock until garbage collection.
+        with suppress(Exception):
+            dbapi_connection.rollback()
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:
