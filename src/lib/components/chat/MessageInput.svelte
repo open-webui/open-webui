@@ -17,6 +17,7 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import { writable } from 'svelte/store';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -155,9 +156,12 @@
 	export let terminalContext: TerminalContext | null = null;
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
+	export let passThroughSlashCommands = false;
 	export let embedded = false;
 	export let callActive = false;
 	export let callEnabled = true;
+	const passThroughSlashCommandsStore = writable(false);
+	$: passThroughSlashCommandsStore.set(passThroughSlashCommands);
 
 	export let autoScroll = false;
 	export let generating = false;
@@ -1529,6 +1533,7 @@
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
+					passThroughSlashCommands: passThroughSlashCommandsStore,
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,

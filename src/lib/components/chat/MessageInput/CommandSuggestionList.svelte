@@ -5,6 +5,7 @@
 	import Skills from './Commands/Skills.svelte';
 	import Emojis from './Commands/Emojis.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import { readable, type Readable } from 'svelte/store';
 
 	export let char = '';
 	export let query = '';
@@ -35,6 +36,7 @@
 	export let temporaryEnabled: boolean | (() => boolean) = false;
 	export let hasChatContent = false;
 	export let contextUsage = null;
+	export let passThroughSlashCommands: Readable<boolean> = readable(false);
 
 	$: compactAvailable = typeof canCompact === 'function' ? canCompact() : canCompact;
 	$: isCompactDisabled =
@@ -46,6 +48,8 @@
 	$: isTemporaryEnabled =
 		typeof temporaryEnabled === 'function' ? temporaryEnabled() : temporaryEnabled;
 	$: resolvedContextUsage = typeof contextUsage === 'function' ? contextUsage() : contextUsage;
+	$: slashCommandsAreNative = $passThroughSlashCommands;
+	$: if (char === '/' && slashCommandsAreNative) filteredItems = [];
 	$: contextHasThreshold = Number(resolvedContextUsage?.threshold) > 0;
 	$: contextPercent = contextHasThreshold
 		? Math.max(0, Math.round(resolvedContextUsage?.percent ?? 0))
@@ -97,7 +101,7 @@
 >
 	<DropdownMenu className="w-72 max-w-[calc(100vw-1rem)] overflow-x-hidden font-sans text-xs">
 		<div class="max-h-60 overflow-y-auto overflow-x-hidden scrollbar-thin">
-			{#if char === '/'}
+			{#if char === '/' && !slashCommandsAreNative}
 				<SlashCommands
 					bind:this={suggestionElement}
 					{query}

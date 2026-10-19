@@ -60,6 +60,7 @@
 	export let pendingOAuthTools = [];
 
 	export let showCommands = false;
+	export let passThroughSlashCommands = false;
 
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
@@ -263,6 +264,7 @@
 						bind:atSelectedModel
 						bind:showCommands
 						bind:dragged
+						{passThroughSlashCommands}
 						{pendingOAuthTools}
 						{oauthRedirectHandler}
 						{toolApprovalMode}

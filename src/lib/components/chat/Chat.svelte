@@ -75,6 +75,10 @@
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import {
+		resolveSlashCommandSubmission,
+		shouldPassThroughSlashCommands
+	} from '$lib/utils/slashCommandSubmission';
+	import {
 		applyResponseStreamEvent,
 		getOutputText,
 		setOutputText
@@ -228,6 +232,7 @@
 	} else {
 		selectedModelIds = selectedModels;
 	}
+	$: passThroughSlashCommands = shouldPassThroughSlashCommands($models, selectedModelIds);
 	let serverContextUsage = null;
 	let contextUsage = null;
 
@@ -3780,28 +3785,27 @@
 			selectedModels = _selectedModels;
 		}
 
-		if (String(userPrompt).trim() === '/compact') {
+		const submission = resolveSlashCommandSubmission(userPrompt, passThroughSlashCommands);
+		if (submission.type === 'compact') {
 			clearCommandInput();
 			await handleManualCompact();
 			return { status: 'rejected' };
 		}
-		if (String(userPrompt).trim() === '/status') {
+		if (submission.type === 'status') {
 			clearCommandInput();
 			handleStatusCommand();
 			return { status: 'rejected' };
 		}
-		if (String(userPrompt).trim() === '/fork') {
+		if (submission.type === 'fork') {
 			clearCommandInput();
 			await handleForkChat();
 			return { status: 'rejected' };
 		}
-		const modelCommandMatch = String(userPrompt)
-			.trim()
-			.match(/^\/model(?:\s+([\s\S]+))?$/);
-		if (modelCommandMatch) {
-			handleModelCommand(modelCommandMatch[1]?.trim() ?? '');
+		if (submission.type === 'model') {
+			handleModelCommand(submission.modelId);
 			return { status: 'rejected' };
 		}
+		userPrompt = submission.content;
 
 		if (pendingOAuthTools.length > 0) {
 			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
@@ -5279,6 +5283,7 @@
 										chatId={$chatId}
 										{contextUsage}
 										{contextCompactionEnabled}
+										{passThroughSlashCommands}
 										{embedded}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
@@ -5376,6 +5381,7 @@
 										chatId={$chatId}
 										{contextUsage}
 										{contextCompactionEnabled}
+										{passThroughSlashCommands}
 										{embedded}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
@@ -5434,6 +5440,7 @@
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged
+									{passThroughSlashCommands}
 									{toolApprovalMode}
 									onToolApprovalModeChange={handleToolApprovalModeChange}
 									{pendingOAuthTools}
