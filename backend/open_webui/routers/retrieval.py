@@ -279,6 +279,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'DATALAB_MARKER_USE_LLM': 'rag.datalab_marker_use_llm',
     'DDGS_BACKEND': 'web.search.ddgs_backend',
     'DOCLING_API_KEY': 'rag.docling_api_key',
+    'DOCLING_API_TIMEOUT': 'rag.docling_api_timeout',
     'DOCLING_PARAMS': 'rag.docling_params',
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
     'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',
@@ -639,6 +640,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'DOCLING_SERVER_URL': config['rag.docling_server_url'],
         'DOCLING_API_KEY': config['rag.docling_api_key'],
         'DOCLING_PARAMS': config['rag.docling_params'],
+        'DOCLING_API_TIMEOUT': config['rag.docling_api_timeout'],
         'DOCUMENT_INTELLIGENCE_ENDPOINT': config['rag.document_intelligence_endpoint'],
         'DOCUMENT_INTELLIGENCE_KEY': config['rag.document_intelligence_key'],
         'DOCUMENT_INTELLIGENCE_MODEL': config['rag.document_intelligence_model'],
@@ -885,6 +887,7 @@ class ConfigForm(BaseModel):
     DOCLING_SERVER_URL: str | None = None
     DOCLING_API_KEY: str | None = None
     DOCLING_PARAMS: dict | None = None
+    DOCLING_API_TIMEOUT: int | None = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: str | None = None
     DOCUMENT_INTELLIGENCE_KEY: str | None = None
     DOCUMENT_INTELLIGENCE_MODEL: str | None = None
@@ -1071,6 +1074,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'DOCLING_SERVER_URL': config['rag.docling_server_url'],
         'DOCLING_API_KEY': config['rag.docling_api_key'],
         'DOCLING_PARAMS': config['rag.docling_params'],
+        'DOCLING_API_TIMEOUT': config['rag.docling_api_timeout'],
         'DOCUMENT_INTELLIGENCE_ENDPOINT': config['rag.document_intelligence_endpoint'],
         'DOCUMENT_INTELLIGENCE_KEY': config['rag.document_intelligence_key'],
         'DOCUMENT_INTELLIGENCE_MODEL': config['rag.document_intelligence_model'],

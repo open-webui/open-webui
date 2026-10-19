@@ -3,6 +3,7 @@ import csv
 import logging
 import os
 import sys
+import time
 import zipfile
 
 import ftfy
@@ -254,23 +255,46 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None):
+    """
+    Converts a file with docling-serve's async API: submit the file, long-poll the
+    task status, then fetch the result.  Unlike the synchronous endpoint this is not
+    cut off by docling-serve's DOCLING_SERVE_MAX_SYNC_WAIT (120 s by default), and
+    ``timeout`` bounds the total wait on our side.
+    """
+
+    # Seconds docling-serve may hold one status request open before answering.
+    POLL_WAIT = 30
+    PAGE_BREAK_MARKER = '\f'
+
+    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None, timeout=None):
         self.url = url.rstrip('/')
         self.api_key = api_key
         self.file_path = file_path
         self.mime_type = mime_type
+        self.timeout = timeout
 
         self.params = params or {}
 
-    def load(self) -> list[Document]:
-        page_break_marker = '\f'
-        with open(self.file_path, 'rb') as f:
-            headers = {}
-            if self.api_key:
-                headers['X-Api-Key'] = f'{self.api_key}'
+    def _headers(self) -> dict:
+        return {'X-Api-Key': f'{self.api_key}'} if self.api_key else {}
 
+    def _raise_for_response(self, r: requests.Response, action: str) -> None:
+        if r.ok:
+            return
+        error_msg = f'Error calling Docling API: {r.reason}'
+        if r.text:
+            try:
+                error_data = r.json()
+                if 'detail' in error_data:
+                    error_msg += f' - {error_data["detail"]}'
+            except Exception:
+                error_msg += f' - {r.text}'
+        raise Exception(f'Error calling Docling ({action}): {error_msg}')
+
+    def _submit(self) -> str:
+        with open(self.file_path, 'rb') as f:
             r = requests.post(
-                f'{self.url}/v1/convert/file',
+                f'{self.url}/v1/convert/file/async',
                 files={
                     'files': (
                         os.path.basename(self.file_path),
@@ -280,67 +304,105 @@ class DoclingLoader:
                 },
                 data={
                     'image_export_mode': 'placeholder',
-                    'md_page_break_placeholder': page_break_marker,
+                    'md_page_break_placeholder': self.PAGE_BREAK_MARKER,
                     'to_formats': ['md', 'json'],
                     # Keep Docling params as user-provided form values. Encoding nested
                     # values here would make Open WebUI responsible for Docling's API
                     # quirks and could break when Docling changes its form contract.
                     **self.params,
                 },
-                headers=headers,
+                headers=self._headers(),
                 verify=AIOHTTP_CLIENT_SESSION_SSL,
             )
-        if r.ok:
-            result = r.json()
-            # Docling reports failed and skipped conversions inside HTTP 200 responses.
-            conversion_status = result.get('status')
-            if conversion_status in ['failure', 'skipped']:
-                error_details = (
-                    '; '.join(filter(None, (error.get('error_message') for error in result.get('errors', []))))
-                    or 'no error message provided'
+        self._raise_for_response(r, 'submit')
+        task_id = r.json().get('task_id')
+        if not task_id:
+            raise Exception('Error calling Docling: no task id returned')
+        log.info('Docling task %s submitted for %s', task_id, os.path.basename(self.file_path))
+        return task_id
+
+    def _wait(self, task_id: str) -> None:
+        deadline = time.monotonic() + self.timeout if self.timeout else None
+        while True:
+            wait = self.POLL_WAIT
+            if deadline:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise Exception(f'Error calling Docling: conversion timed out after {self.timeout} seconds')
+                wait = max(1, min(wait, int(remaining)))
+
+            try:
+                r = requests.get(
+                    f'{self.url}/v1/status/poll/{task_id}',
+                    params={'wait': wait},
+                    headers=self._headers(),
+                    verify=AIOHTTP_CLIENT_SESSION_SSL,
+                    timeout=wait + 30,
                 )
-                raise Exception(f'Error calling Docling: conversion status {conversion_status} - {error_details}')
+            except requests.Timeout:
+                log.warning('Docling status request for task %s timed out, retrying', task_id)
+                continue
+            self._raise_for_response(r, 'status')
 
-            document_data = result.get('document', {})
-            md_content = document_data.get('md_content') or ''
-            text = md_content or '<No text content found>'
+            task = r.json()
+            task_status = task.get('task_status')
+            if task_status == 'success':
+                return
+            if task_status == 'failure':
+                raise Exception(f'Error calling Docling: conversion failed (task {task_id})')
+            log.debug('Docling task %s: %s, queue position %s', task_id, task_status, task.get('task_position'))
 
-            metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
-            if page_break_marker in md_content:
-                pages = md_content.split(page_break_marker)
-                json_content = document_data.get('json_content') or {}
-                # Docling only marks page changes, so blank pages leave no break; take page numbers from its JSON
-                page_indices = sorted(
-                    {
-                        item['prov'][0]['page_no'] - 1
-                        for key in ('texts', 'tables', 'pictures', 'key_value_items', 'form_items')
-                        for item in json_content.get(key, [])
-                        if item.get('content_layer') == 'body' and item.get('prov')
-                    }
-                )
-                if len(page_indices) != len(pages):
-                    page_indices = range(len(pages))
-                documents = [
-                    Document(page_content=page.strip(), metadata={**metadata, 'page': page_idx})
-                    for page_idx, page in zip(page_indices, pages)
-                    if page.strip()
-                ]
-                if documents:
-                    log.debug('Docling extracted text: %s', text)
-                    return documents
+    def _parse(self, result: dict) -> list[Document]:
+        # Docling reports failed and skipped conversions inside HTTP 200 responses.
+        conversion_status = result.get('status')
+        if conversion_status in ['failure', 'skipped']:
+            error_details = (
+                '; '.join(filter(None, (error.get('error_message') for error in result.get('errors', []))))
+                or 'no error message provided'
+            )
+            raise Exception(f'Error calling Docling: conversion status {conversion_status} - {error_details}')
 
-            log.debug('Docling extracted text: %s', text)
-            return [Document(page_content=text, metadata=metadata)]
-        else:
-            error_msg = f'Error calling Docling API: {r.reason}'
-            if r.text:
-                try:
-                    error_data = r.json()
-                    if 'detail' in error_data:
-                        error_msg += f' - {error_data["detail"]}'
-                except Exception:
-                    error_msg += f' - {r.text}'
-            raise Exception(f'Error calling Docling: {error_msg}')
+        document_data = result.get('document', {})
+        md_content = document_data.get('md_content') or ''
+        text = md_content or '<No text content found>'
+
+        metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
+        if self.PAGE_BREAK_MARKER in md_content:
+            pages = md_content.split(self.PAGE_BREAK_MARKER)
+            json_content = document_data.get('json_content') or {}
+            # Docling only marks page changes, so blank pages leave no break; take page numbers from its JSON
+            page_indices = sorted(
+                {
+                    item['prov'][0]['page_no'] - 1
+                    for key in ('texts', 'tables', 'pictures', 'key_value_items', 'form_items')
+                    for item in json_content.get(key, [])
+                    if item.get('content_layer') == 'body' and item.get('prov')
+                }
+            )
+            if len(page_indices) != len(pages):
+                page_indices = range(len(pages))
+            documents = [
+                Document(page_content=page.strip(), metadata={**metadata, 'page': page_idx})
+                for page_idx, page in zip(page_indices, pages)
+                if page.strip()
+            ]
+            if documents:
+                log.debug('Docling extracted text: %s', text)
+                return documents
+
+        log.debug('Docling extracted text: %s', text)
+        return [Document(page_content=text, metadata=metadata)]
+
+    def load(self) -> list[Document]:
+        task_id = self._submit()
+        self._wait(task_id)
+        r = requests.get(
+            f'{self.url}/v1/result/{task_id}',
+            headers=self._headers(),
+            verify=AIOHTTP_CLIENT_SESSION_SSL,
+        )
+        self._raise_for_response(r, 'result')
+        return self._parse(r.json())
 
 
 class Loader:
@@ -644,12 +706,20 @@ class Loader:
                         log.error('Invalid DOCLING_PARAMS format, expected JSON object')
                         params = {}
 
+                docling_timeout = self.config['rag.docling_api_timeout']
+                try:
+                    docling_timeout = int(docling_timeout) if docling_timeout else None
+                except ValueError:
+                    log.warning('Invalid DOCLING_API_TIMEOUT %r, waiting without limit', docling_timeout)
+                    docling_timeout = None
+
                 loader = DoclingLoader(
                     url=self.config['rag.docling_server_url'],
                     api_key=self.config['rag.docling_api_key'],
                     file_path=file_path,
                     mime_type=file_content_type,
                     params=params,
+                    timeout=docling_timeout,
                 )
         elif (
             self.engine == 'document_intelligence'

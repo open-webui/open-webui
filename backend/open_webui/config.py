@@ -945,6 +945,9 @@ DOCLING_SERVER_URL = os.getenv('DOCLING_SERVER_URL', 'http://docling:5001')
 
 DOCLING_API_KEY = os.getenv('DOCLING_API_KEY', '')
 
+# Total seconds to wait for a Docling conversion; empty waits without limit.
+DOCLING_API_TIMEOUT = os.getenv('DOCLING_API_TIMEOUT', '')
+
 docling_params = os.getenv('DOCLING_PARAMS', '')
 try:
     docling_params = JSONCodec.loads(docling_params)
@@ -2972,6 +2975,7 @@ DEFAULT_CONFIG = {
     'rag.docling_server_url': DOCLING_SERVER_URL,
     'rag.docling_api_key': DOCLING_API_KEY,
     'rag.docling_params': DOCLING_PARAMS,
+    'rag.docling_api_timeout': DOCLING_API_TIMEOUT,
     'rag.document_intelligence_endpoint': DOCUMENT_INTELLIGENCE_ENDPOINT,
     'rag.document_intelligence_key': DOCUMENT_INTELLIGENCE_KEY,
     'rag.document_intelligence_model': DOCUMENT_INTELLIGENCE_MODEL,
