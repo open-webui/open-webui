@@ -491,6 +491,8 @@
 	};
 
 	let params = {};
+	// Params as this tab last loaded or saved them, to tell its own edits apart
+	let loadedParams = {};
 	let chatVariables = {};
 	let showChatVariablesModal = false;
 	let loadedChatIdProp = '';
@@ -524,11 +526,8 @@
 		);
 
 		if (!isShared && $chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
-			const res = await updateChatById(localStorage.token, $chatId, { params }).catch((err) => {
-				console.error('[tool permissions chat]', err);
-				return null;
-			});
-			if (res) chat = res;
+			clearTimeout(saveControlsTimer);
+			await saveControls();
 		}
 
 		if (tool_approval_mode === 'full') {
@@ -975,6 +974,7 @@
 			currentId: null
 		};
 		params = {};
+		loadedParams = {};
 		chatVariables = {};
 		chatFiles = [];
 		files = [];
@@ -2766,6 +2766,7 @@
 
 		chatFiles = [];
 		params = {};
+		loadedParams = {};
 		chatVariables = {};
 		taskIds = null;
 		chatTasks = [];
@@ -2954,6 +2955,7 @@
 
 				params = structuredClone(chatContent?.params ?? {});
 				delete params.note_id;
+				loadedParams = structuredClone(params);
 				chatFiles = structuredClone(chatContent?.files ?? []);
 
 				// Load tasks from chat-level DB field
@@ -3254,7 +3256,6 @@
 					models: selectedModels,
 					messages: messages,
 					history: history,
-					params: params,
 					files: chatFiles
 				});
 
@@ -4021,6 +4022,7 @@
 
 				params = structuredClone(createdChat?.chat?.params ?? {});
 				delete params.note_id;
+				loadedParams = structuredClone(params);
 				chatFiles = mergeFiles(chatFiles, createdChat?.chat?.files ?? []);
 				await onSelectEmbeddedChat?.(_chatId);
 			} else if ($temporaryChatEnabled) {
@@ -4458,6 +4460,7 @@
 							await updateChatById(localStorage.token, res.chat_id, {
 								params: params
 							});
+							loadedParams = structuredClone(params);
 						}
 					}
 				}
@@ -4704,6 +4707,7 @@
 				$selectedFolder?.id,
 				chatVariables
 			);
+			loadedParams = structuredClone(params);
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
@@ -4741,7 +4745,6 @@
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
-					params: params,
 					files: chatFiles
 				});
 			}
@@ -4752,17 +4755,34 @@
 		if (isShared) return;
 		if (!$chatId || $temporaryChatEnabled) return;
 		const loaded = chat?.chat ?? {};
-		if (equal(params, loaded.params ?? {}) && equal(chatFiles, loaded.files ?? [])) return;
+		if (equal(params, loadedParams) && equal(chatFiles, loaded.files ?? [])) return;
+
+		const savedParams = structuredClone(params);
+		const fresh = await getChatById(localStorage.token, $chatId).catch((err) => {
+			console.error('[controls autosave]', err);
+			return null;
+		});
+		if (!fresh) return;
+
+		const mergedParams = { ...(fresh.chat?.params ?? {}) };
+		for (const key of new Set([...Object.keys(savedParams), ...Object.keys(loadedParams)])) {
+			if (equal(savedParams[key], loadedParams[key])) continue;
+			if (key in savedParams) mergedParams[key] = savedParams[key];
+			else delete mergedParams[key];
+		}
 
 		const res = await updateChatById(localStorage.token, $chatId, {
-			params,
+			params: mergedParams,
 			files: chatFiles
 		}).catch((err) => {
 			console.error('[controls autosave]', err);
 			return null;
 		});
 		// Refresh the dedupe baseline so a later revert still saves.
-		if (res) chat = res;
+		if (res) {
+			chat = res;
+			loadedParams = savedParams;
+		}
 	};
 
 	const MAX_DRAFT_LENGTH = 5000;
