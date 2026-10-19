@@ -1345,6 +1345,7 @@
 	let liveParticipants: { id: string; name: string }[] = [];
 	const clearPresence = () => (liveParticipants = []);
 	let chatRefresh: { id: string; promise: Promise<void> } | null = null;
+	let chatMessagesEventCount: number = 0;
 	let typingUsers: { id: string; name: string }[] = [];
 	let typingUsersTimeout: Record<string, ReturnType<typeof setTimeout>> = {};
 	let lastTypingEmit = 0;
@@ -1562,6 +1563,7 @@
 				if (type === 'chat:messages') {
 					removeTypingUser(event.user_id);
 					mergeChatMessages(event.data.data);
+					chatMessagesEventCount++;
 					return;
 				}
 				if (type === 'chat:access' || type === 'chat:active') {
@@ -2868,6 +2870,7 @@
 		// chatIdProp is empty for chats started from the home page (URL set via replaceState)
 		chatId.set(chatIdProp || $chatId);
 		noteChatDebug('loadChat set active chat id');
+		const chatMessagesEventCountBeforeLoad = chatMessagesEventCount;
 
 		if ($temporaryChatEnabled) {
 			noteChatDebug('loadChat disabling temporary chat');
@@ -2962,6 +2965,12 @@
 
 				autoScroll = true;
 				await tick();
+
+				// A live message merged mid-load was overwritten; an in-flight refresh may predate it.
+				if (chatMessagesEventCount !== chatMessagesEventCountBeforeLoad) {
+					await chatRefresh?.promise;
+					await refreshChat();
+				}
 
 				// Mark all non-current assistant messages as done
 				if (history.currentId) {
