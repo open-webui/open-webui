@@ -672,8 +672,12 @@
 			</div>
 		</div>
 
-		{#if !$config?.metadata?.auth_logo_position}
-			<div class="fixed m-10 z-50">
+		{#if !$config?.metadata?.auth_logo_position || $config?.metadata?.auth_logo_position === 'top-right'}
+			<div
+				class="fixed top-0 m-10 z-50"
+				class:left-0={!$config?.metadata?.auth_logo_position}
+				class:right-0={$config?.metadata?.auth_logo_position === 'top-right'}
+			>
 				<div class="flex space-x-2">
 					<div class=" self-center">
 						<!-- LICENSE covers this Open WebUI sign-in logo.
