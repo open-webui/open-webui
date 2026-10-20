@@ -252,17 +252,19 @@
 						</div>
 					</button>
 
-					<button
-						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
-						disabled={loading || chatCount === 0}
-						type="button"
-						on:click={exportChatsHandler}
-					>
-						<Download className="size-3.5 shrink-0" strokeWidth="1.5" />
-						<div class="min-w-0 flex-1 truncate text-left">
-							{$i18n.t('settings.personal.archivedChats.exportArchivedChats.label')}
-						</div>
-					</button>
+					{#if $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true)}
+						<button
+							class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+							disabled={loading || chatCount === 0}
+							type="button"
+							on:click={exportChatsHandler}
+						>
+							<Download className="size-3.5 shrink-0" strokeWidth="1.5" />
+							<div class="min-w-0 flex-1 truncate text-left">
+								{$i18n.t('settings.personal.archivedChats.exportArchivedChats.label')}
+							</div>
+						</button>
+					{/if}
 				</DropdownMenu>
 			</div>
 		</Dropdown>
