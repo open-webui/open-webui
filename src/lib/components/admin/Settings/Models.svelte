@@ -623,6 +623,9 @@
 		).catch(() => null);
 
 		if (res) {
+			if (!savedModels.find((m: ModelListItem) => m.id === model.id)) {
+				savedModels = [...savedModels, res];
+			}
 			models = models.map((m) =>
 				m.id === model.id ? { ...m, access_grants: res.access_grants ?? nextAccessGrants } : m
 			);
