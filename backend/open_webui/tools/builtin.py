@@ -539,7 +539,9 @@ async def ask_user(
     :return: JSON with status and answers keyed by question id
     """
     try:
-        if not isinstance(questions, list) or not 1 <= len(questions) <= 3:
+        if not isinstance(questions, list):
+            raise ValueError('ask_user questions must be an array of question objects.')
+        if not 1 <= len(questions) <= 3:
             raise ValueError('ask_user requires 1-3 questions.')
 
         normalized_questions = []
