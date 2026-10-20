@@ -578,7 +578,10 @@
 							const display = (label || slashSkillLabel)?.length
 								? label || slashSkillLabel
 								: mentionId;
-							return `<span class="mention" data-type="mention" data-id="${mentionId}" data-label="${display}" data-mention-suggestion-char="${mentionChar}">${mentionChar}${display}</span>`;
+							const dataId = (label || slashSkillLabel)?.length
+								? `${mentionId}|${display}`
+								: mentionId;
+							return `<span class="mention" data-type="mention" data-id="${dataId}" data-label="${display}" data-mention-suggestion-char="${mentionChar}">${mentionChar}${display}</span>`;
 						}
 					);
 					return `<p>${withMentions}</p>`;
