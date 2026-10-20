@@ -727,10 +727,12 @@
 					const directoryEntries: DirectoryFileEntry[] = [];
 					const looseFiles: File[] = [];
 
-					for (const rawItem of Array.from(inputItems)) {
+					const droppedItems = Array.from(inputItems).map((rawItem) => {
 						const item = rawItem as DataTransferItem & { webkitGetAsEntry?: () => any };
-						const entry = item.webkitGetAsEntry?.();
+						return { entry: item.webkitGetAsEntry?.(), file: item.getAsFile() };
+					});
 
+					for (const { entry, file } of droppedItems) {
 						if (entry?.isDirectory) {
 							try {
 								directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
@@ -738,11 +740,8 @@
 								handleUploadError(error);
 								return;
 							}
-						} else {
-							const file = item.getAsFile();
-							if (file) {
-								looseFiles.push(file);
-							}
+						} else if (file) {
+							looseFiles.push(file);
 						}
 					}
 
