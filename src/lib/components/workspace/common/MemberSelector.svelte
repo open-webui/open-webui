@@ -287,9 +287,7 @@
 									<div
 										class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
 									>
-										<div
-											class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1 min-w-0"
-										>
+										<div class="px-3 py-1 font-normal text-gray-900 dark:text-white flex-1 min-w-0">
 											<div class="flex items-center gap-2">
 												<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 													<img
