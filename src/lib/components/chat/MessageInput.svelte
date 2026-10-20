@@ -2029,6 +2029,7 @@
 										<div>
 											<button
 												class="flex items-center dark:text-gray-500"
+												aria-label={$i18n.t('Remove Selected Model')}
 												on:click={() => {
 													atSelectedModel = undefined;
 												}}
@@ -2487,6 +2488,7 @@
 												<button
 													type="button"
 													id="model-valves-button"
+													aria-label={$i18n.t('Valves')}
 													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden"
 													on:click={() => {
 														selectedValvesType = 'function';
@@ -2621,6 +2623,8 @@
 										{#if webSearchEnabled && showWebSearchButton}
 											<Tooltip content={$i18n.t('Web Search')} placement="top">
 												<button
+													aria-label={$i18n.t('Web Search')}
+													aria-pressed={webSearchEnabled}
 													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 													type="button"
 													class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
@@ -2639,6 +2643,8 @@
 										{#if imageGenerationEnabled && showImageGenerationButton}
 											<Tooltip content={$i18n.t('Image')} placement="top">
 												<button
+													aria-label={$i18n.t('Image')}
+													aria-pressed={imageGenerationEnabled}
 													on:click|preventDefault={() =>
 														(imageGenerationEnabled = !imageGenerationEnabled)}
 													type="button"
@@ -2877,6 +2883,9 @@
 												>
 													<button
 														id="send-message-button"
+														aria-label={uploadPending
+															? $i18n.t('Waiting for upload...')
+															: $i18n.t('Send message')}
 														class="{!(prompt === '' && files.length === 0) || uploadPending
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
