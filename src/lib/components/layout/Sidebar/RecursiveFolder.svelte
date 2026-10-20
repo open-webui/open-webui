@@ -910,6 +910,7 @@
 						on:pointerdown={() => (openPreview = false)}
 					>
 						<FolderMenu
+							onNewChat={openFolderHandler}
 							onEdit={() => {
 								showFolderModal = true;
 							}}

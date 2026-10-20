@@ -16,6 +16,7 @@
 	import CheckIcon from '$lib/components/icons/Check.svelte';
 
 	export let align: 'start' | 'end' = 'start';
+	export let onNewChat = () => {};
 	export let onEdit = () => {};
 	export let onExport = () => {};
 	export let onDelete = () => {};
@@ -48,6 +49,14 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
+			<button
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+				on:click={onNewChat}
+			>
+				<EditPencil className="size-3.5" />
+				<div class="flex items-center">{$i18n.t('New Chat')}</div>
+			</button>
+
 			<button
 				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
 				on:click={() => {
