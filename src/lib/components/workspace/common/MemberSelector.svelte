@@ -289,31 +289,27 @@
 
 							<div>
 								{#each filteredUsers as user (user.id)}
-									<button
+									<div
 										class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
-										type="button"
-										on:click={() => {
-											if ((userIds ?? []).includes(user.id)) {
-												userIds = userIds.filter((id) => id !== user.id);
-												delete selectedUsers[user.id];
-											} else {
-												userIds = [...userIds, user.id];
-												selectedUsers[user.id] = user;
-											}
-										}}
 									>
-										<div class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1">
+										<div
+											class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1 min-w-0"
+										>
 											<div class="flex items-center gap-2">
-												<ProfilePreview {user} side="right" align="center" sideOffset={6}>
+												<ProfilePreview
+													{user}
+													className="min-w-0 max-w-full"
+													side="right"
+													align="center"
+													sideOffset={6}
+												>
 													<img
 														class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
 														src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-														alt="user"
+														alt=""
 													/>
+													<span class="ml-2 font-normal truncate">{user.name}</span>
 												</ProfilePreview>
-												<Tooltip content={user.email} placement="top-start">
-													<div class="font-normal truncate">{user.name}</div>
-												</Tooltip>
 
 												{#if user?.is_active}
 													<div>
@@ -332,11 +328,21 @@
 										<div class="px-3 py-1">
 											<div class=" translate-y-0.5">
 												<Checkbox
+													ariaLabel={user.name || user.email || user.id}
+													on:change={() => {
+														if ((userIds ?? []).includes(user.id)) {
+															userIds = userIds.filter((id) => id !== user.id);
+															delete selectedUsers[user.id];
+														} else {
+															userIds = [...userIds, user.id];
+															selectedUsers[user.id] = user;
+														}
+													}}
 													state={(userIds ?? []).includes(user.id) ? 'checked' : 'unchecked'}
 												/>
 											</div>
 										</div>
-									</button>
+									</div>
 								{/each}
 							</div>
 						{/if}
