@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "sourceFingerprint": "60cb75c89a0fb81f3cbe6722422f5ca3f39de3bf157d0bc62e53b36488da99d7",
+  "sourceFingerprint": "35f3a2fef83c5a91672abc5338064324eff04bc27efee93a49c8d0a7fcd8334a",
   "sourceRevision": "613eac51c5c9cc67065998282af16e8016d5a2cb",
   "toolchain": "1.95.0",
   "wasmBindgen": "0.2.126",

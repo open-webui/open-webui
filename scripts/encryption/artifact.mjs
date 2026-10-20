@@ -1,8 +1,9 @@
 // Normal builds only read committed files. No Rust or network required.
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-const root = new URL('../../', import.meta.url).pathname;
+import { join, posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = fileURLToPath(new URL('../../', import.meta.url));
 const source = 'crypto/encryption';
 const artifact = 'src/lib/encryption/vendor';
 const hash = (data) => createHash('sha256').update(data).digest('hex');
@@ -10,7 +11,7 @@ function files(dir) {
 	return readdirSync(join(root, dir), { withFileTypes: true })
 		.flatMap((e) => {
 			if (e.name === 'target' || e.name.startsWith('.')) return [];
-			const path = join(dir, e.name);
+			const path = posix.join(dir, e.name);
 			return e.isDirectory() ? files(path) : [path];
 		})
 		.sort();
@@ -21,7 +22,9 @@ const inputs = [
 	'scripts/encryption/artifact.mjs'
 ].sort();
 const sourceFingerprint = hash(
-	inputs.map((p) => `${p}\0${hash(readFileSync(join(root, p)))}`).join('\n')
+	inputs
+		.map((p) => `${p}\0${hash(readFileSync(join(root, p), 'utf8').replaceAll('\r\n', '\n'))}`)
+		.join('\n')
 );
 const manifestPath = join(root, artifact, 'manifest.json');
 if (process.argv.includes('--write')) {
@@ -31,7 +34,7 @@ if (process.argv.includes('--write')) {
 	const checksums = Object.fromEntries(
 		files(artifact)
 			.filter((p) => !p.endsWith('/manifest.json'))
-			.map((p) => [relative(artifact, p), hash(readFileSync(join(root, p)))])
+			.map((p) => [posix.relative(artifact, p), hash(readFileSync(join(root, p)))])
 	);
 	writeFileSync(
 		manifestPath,
@@ -59,7 +62,7 @@ if (process.argv.includes('--write')) {
 		throw Error('Encryption source changed: rebuild and review the artifact.');
 	const actual = files(artifact)
 		.filter((p) => !p.endsWith('/manifest.json'))
-		.map((p) => relative(artifact, p))
+		.map((p) => posix.relative(artifact, p))
 		.sort();
 	if (JSON.stringify(actual) !== JSON.stringify(Object.keys(manifest.checksums).sort()))
 		throw Error('Unexpected crypto artifact files');
