@@ -694,8 +694,20 @@ ${content}
 
 		input.onchange = async () => {
 			const inputFiles = Array.from(input.files ?? []);
-			if (inputFiles.length > 0) {
-				await inputFilesHandler(inputFiles);
+			for (const file of inputFiles) {
+				const fileItem = await inputFileHandler(file);
+				if (fileItem?.type === 'image' && editor) {
+					editor
+						.chain()
+						.insertContentAt(editor.state.selection.$anchor.pos, {
+							type: 'image',
+							attrs: {
+								src: `data://${fileItem.id}`
+							}
+						})
+						.focus()
+						.run();
+				}
 			}
 		};
 	};
