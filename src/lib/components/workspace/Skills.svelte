@@ -33,6 +33,7 @@
 	import TagInput from '$lib/components/common/Tags/TagInput.svelte';
 
 	import Tooltip from '../common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
@@ -565,17 +566,13 @@
 							<div
 								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
-								<Tooltip
-									content={skill?.user?.email ?? $i18n.t('Deleted User')}
-									className="min-w-0"
-									placement="top-start"
-								>
-									<div class="truncate">
+								<ProfilePreview user={skill?.user ?? null} side="left">
+									<span class="max-w-44 truncate">
 										{capitalizeFirstLetter(
 											skill?.user?.name ?? skill?.user?.email ?? $i18n.t('Deleted User')
 										)}
-									</div>
-								</Tooltip>
+									</span>
+								</ProfilePreview>
 							</div>
 
 							{#if skill.write_access}

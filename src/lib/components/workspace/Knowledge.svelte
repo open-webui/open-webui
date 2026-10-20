@@ -32,6 +32,7 @@
 	import Search from '../icons/Search.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
@@ -512,17 +513,13 @@
 								<div
 									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 								>
-									<Tooltip
-										content={item?.user?.email ?? $i18n.t('Deleted User')}
-										className="min-w-0"
-										placement="top-start"
-									>
-										<div class="truncate">
+									<ProfilePreview user={item?.user ?? null} side="left">
+										<span class="max-w-44 truncate">
 											{capitalizeFirstLetter(
 												item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
 											)}
-										</div>
-									</Tooltip>
+										</span>
+									</ProfilePreview>
 								</div>
 
 								{#if item?.write_access || $user?.role === 'admin'}
