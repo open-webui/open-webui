@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Generic, Optional, TypeVar
 from urllib.parse import urlparse
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import JSON, Column, DateTime, Integer, func
 
 from open_webui.env import (
@@ -23,6 +23,7 @@ from open_webui.env import (
     log,
 )
 from open_webui.internal.db import get_db
+from open_webui.metrics.service import MetricsDefinition
 from open_webui.models.base import Base
 
 ####################################
@@ -818,32 +819,71 @@ OLLAMA_API_CONFIGS = PersistentConfig(
     "ollama.api_configs",
     {},
 )
+
+
 ####################################
 # Metrics
 ####################################
-METRIC_DEFINITIONS = os.environ.get(
-    "METRIC_DEFINITIONS",
-    [
-        {
-            "name": "http_requests_total",
-            "type": "counter",
-            "description": "Total HTTP requests",
-            "unit": "",
-        },
-        {
-            "name": "http_request_duration_ms",
-            "type": "histogram",
-            "description": "Duration of HTTP requests in milliseconds",
-            "unit": "ms",
-        },
-        {
-            "name": "task_queue_size",
-            "type": "gauge",
-            "description": "Number of tasks in background queue",
-            "unit": "",
-        },
-    ],
-)
+def _load_metric_definitions():
+    raw_definitions = os.environ.get("METRIC_DEFINITIONS")
+    if raw_definitions is None:
+        return DEFAULT_METRIC_DEFINITIONS
+
+    try:
+        definitions = json.loads(raw_definitions)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"METRIC_DEFINITIONS must be valid JSON: {exc.msg}") from exc
+
+    if not isinstance(definitions, list):
+        raise ValueError(
+            "METRIC_DEFINITIONS must be a JSON array of metric definitions"
+        )
+
+    for index, raw_definition in enumerate(definitions):
+        try:
+            definition = MetricsDefinition.model_validate(raw_definition, strict=True)
+        except ValidationError as exc:
+            fields = ", ".join(
+                ".".join(map(str, error["loc"])) or "definition"
+                for error in exc.errors(include_input=False, include_url=False)
+            )
+            raise ValueError(
+                f"Invalid METRIC_DEFINITIONS[{index}]: "
+                f"expected an object with string fields name, type, description, unit "
+                f"(invalid: {fields})"
+            ) from None
+
+        if definition.type.lower() not in {"counter", "histogram", "gauge"}:
+            raise ValueError(
+                f"Invalid METRIC_DEFINITIONS[{index}].type: "
+                "expected counter, histogram, or gauge"
+            )
+
+    return definitions
+
+
+DEFAULT_METRIC_DEFINITIONS = [
+    {
+        "name": "http_requests_total",
+        "type": "counter",
+        "description": "Total HTTP requests",
+        "unit": "",
+    },
+    {
+        "name": "http_request_duration_ms",
+        "type": "histogram",
+        "description": "Duration of HTTP requests in milliseconds",
+        "unit": "ms",
+    },
+    {
+        "name": "task_queue_size",
+        "type": "gauge",
+        "description": "Number of tasks in background queue",
+        "unit": "",
+    },
+]
+
+METRIC_DEFINITIONS = _load_metric_definitions()
 
 ####################################
 # MCP (Model Context Protocol)
