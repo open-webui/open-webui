@@ -411,7 +411,7 @@
 		const compressImageHandler = async (imageUrl: string, settings: any = {}, config: any = {}) => {
 			// Quick shortcut so we don’t do unnecessary work.
 			const settingsCompression =
-				(settings?.imageCompression && settings?.imageCompressionInChannels) ?? false;
+				(settings?.imageCompression ?? false) && (settings?.imageCompressionInChannels ?? true);
 			const configWidth = config?.file?.image_compression?.width ?? null;
 			const configHeight = config?.file?.image_compression?.height ?? null;
 
