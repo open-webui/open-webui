@@ -210,7 +210,8 @@
 	let chatTitle = title;
 
 	const editChatTitle = async (id, title) => {
-		if (title === '') {
+		title = title?.trim();
+		if (!title) {
 			toast.error($i18n.t('Title cannot be an empty string.'));
 		} else {
 			await updateChatById(localStorage.token, id, {
