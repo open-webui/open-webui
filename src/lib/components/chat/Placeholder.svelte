@@ -157,6 +157,7 @@
 								>
 									<button
 										aria-hidden={models.length <= 1}
+										tabindex={models.length > 1 ? 0 : -1}
 										aria-label={$i18n.t('Get information on {{name}} in the UI', {
 											name: models[modelIdx]?.name
 										})}
