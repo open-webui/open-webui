@@ -153,7 +153,7 @@ if frontend_loader.exists():
 
 # --- Storage Provider ---
 
-STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'local')  # defaults to local, s3
+STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'local')  # local (default), s3, gcs, azure or neon
 STORAGE_LOCAL_CACHE = os.getenv('STORAGE_LOCAL_CACHE', 'true').lower() == 'true'
 
 S3_ACCESS_KEY_ID = os.getenv('S3_ACCESS_KEY_ID', None)

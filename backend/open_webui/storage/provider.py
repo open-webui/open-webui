@@ -104,11 +104,19 @@ class LocalStorageProvider(StorageProvider):
 
 
 class S3StorageProvider(StorageProvider):
-    def __init__(self):
+    def __init__(
+        self,
+        endpoint_url: str | None = S3_ENDPOINT_URL,
+        region_name: str | None = S3_REGION_NAME,
+        access_key_id: str | None = S3_ACCESS_KEY_ID,
+        secret_access_key: str | None = S3_SECRET_ACCESS_KEY,
+        addressing_style: str | None = S3_ADDRESSING_STYLE,
+        use_accelerate_endpoint: bool = S3_USE_ACCELERATE_ENDPOINT,
+    ):
         config = Config(
             s3={
-                'use_accelerate_endpoint': S3_USE_ACCELERATE_ENDPOINT,
-                'addressing_style': S3_ADDRESSING_STYLE,
+                'use_accelerate_endpoint': use_accelerate_endpoint,
+                'addressing_style': addressing_style,
             },
             # KIT change - see https://github.com/boto/boto3/issues/4400#issuecomment-2600742103∆
             request_checksum_calculation='when_required',
@@ -116,13 +124,13 @@ class S3StorageProvider(StorageProvider):
         )
 
         # If access key and secret are provided, use them for authentication
-        if S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY:
+        if access_key_id and secret_access_key:
             self.s3_client = boto3.client(
                 's3',
-                region_name=S3_REGION_NAME,
-                endpoint_url=S3_ENDPOINT_URL,
-                aws_access_key_id=S3_ACCESS_KEY_ID,
-                aws_secret_access_key=S3_SECRET_ACCESS_KEY,
+                region_name=region_name,
+                endpoint_url=endpoint_url,
+                aws_access_key_id=access_key_id,
+                aws_secret_access_key=secret_access_key,
                 config=config,
             )
         else:
@@ -130,8 +138,8 @@ class S3StorageProvider(StorageProvider):
             # This supports workload identity (IAM roles for EC2, EKS, etc.)
             self.s3_client = boto3.client(
                 's3',
-                region_name=S3_REGION_NAME,
-                endpoint_url=S3_ENDPOINT_URL,
+                region_name=region_name,
+                endpoint_url=endpoint_url,
                 config=config,
             )
 
@@ -210,6 +218,46 @@ class S3StorageProvider(StorageProvider):
 
     def _get_local_file_path(self, s3_key: str) -> str:
         return os.path.join(UPLOAD_DIR, s3_key.split('/')[-1])
+
+
+class NeonStorageProvider(S3StorageProvider):
+    """Neon Object Storage: S3-compatible buckets that branch with your Neon Postgres database.
+
+    `neon env pull` (and `neon deploy`) write the branch's storage credentials as the
+    AWS-standard variables, so those are used wherever the S3_* variables are not set.
+    Objects keep the s3:// file paths, so a bucket can move between the s3 and neon providers.
+    """
+
+    def __init__(self):
+        endpoint_url = S3_ENDPOINT_URL or os.getenv('AWS_ENDPOINT_URL_S3')
+        access_key_id = S3_ACCESS_KEY_ID or os.getenv('AWS_ACCESS_KEY_ID')
+        secret_access_key = S3_SECRET_ACCESS_KEY or os.getenv('AWS_SECRET_ACCESS_KEY')
+
+        missing = [
+            name
+            for name, value in (
+                ('S3_BUCKET_NAME', S3_BUCKET_NAME),
+                ('S3_ENDPOINT_URL or AWS_ENDPOINT_URL_S3', endpoint_url),
+                ('S3_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID', access_key_id),
+                ('S3_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY', secret_access_key),
+            )
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(
+                f'Neon Object Storage is missing {", ".join(missing)}. '
+                'Run `neon env pull` to write the branch storage credentials.'
+            )
+
+        super().__init__(
+            endpoint_url=endpoint_url,
+            region_name=S3_REGION_NAME or os.getenv('AWS_REGION'),
+            access_key_id=access_key_id,
+            secret_access_key=secret_access_key,
+            # Neon serves path-style requests only and has no transfer acceleration
+            addressing_style='path',
+            use_accelerate_endpoint=False,
+        )
 
 
 class GCSStorageProvider(StorageProvider):
@@ -339,15 +387,17 @@ class AzureStorageProvider(StorageProvider):
 
 
 def get_storage_provider(storage_provider: str):
-    if USE_SLIM and storage_provider not in ('local', 's3'):
+    if USE_SLIM and storage_provider not in ('local', 's3', 'neon'):
         raise RuntimeError(
-            'Slim supports local and S3 file storage. Set STORAGE_PROVIDER=local or s3, '
+            'Slim supports local, S3 and Neon file storage. Set STORAGE_PROVIDER=local, s3 or neon, '
             'or use the standard image for other storage providers.'
         )
     if storage_provider == 'local':
         Storage = LocalStorageProvider()
     elif storage_provider == 's3':
         Storage = S3StorageProvider()
+    elif storage_provider == 'neon':
+        Storage = NeonStorageProvider()
     elif storage_provider == 'gcs':
         Storage = GCSStorageProvider()
     elif storage_provider == 'azure':
