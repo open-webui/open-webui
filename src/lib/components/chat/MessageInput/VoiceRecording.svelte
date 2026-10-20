@@ -495,6 +495,7 @@
 
 
              rounded-full"
+			aria-label={$i18n.t('Cancel')}
 			on:click={async () => {
 				cancelRecording();
 				onCancel();
