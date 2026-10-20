@@ -92,7 +92,10 @@ const sandboxScript = String.raw`
 			if (['string', 'number', 'boolean'].includes(typeof value)) return value;
 			if (typeof value === 'bigint') return value.toString();
 			if (Array.isArray(value)) return value.map(clean);
-			if (typeof value.toJs === 'function') return clean(value.toJs());
+			if (typeof value.toJs === 'function') {
+				const converted = value.toJs();
+				return typeof converted?.toJs === 'function' ? converted.toString() : clean(converted);
+			}
 			if (typeof value === 'object') {
 				const out = {};
 				for (const key in value) {
