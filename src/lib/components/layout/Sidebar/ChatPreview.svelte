@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy, tick } from 'svelte';
 	import { getChatById, getChatByShareId } from '$lib/apis/chats';
-	import { convertMessagesToHistory, getDeepestChildId } from '$lib/utils';
+	import { convertMessagesToHistory, createMessagesList, getDeepestChildId } from '$lib/utils';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { user } from '$lib/stores';
@@ -11,6 +11,7 @@
 	export let shareId = '';
 	export let messageId = '';
 	export let className = 'h-full';
+	export let turnCount: number | null = null;
 	let container: HTMLDivElement;
 	let messagesComponent: Messages;
 	let history: any = null;
@@ -20,6 +21,11 @@
 	let generation = 0;
 	$: containerId = `chat-preview-${shareId || chatId}`;
 	$: load(chatId, shareId, messageId);
+	$: turnCount = history
+		? createMessagesList(history, history.currentId).filter(
+				(message) => message.role === 'user' || message.role === 'assistant'
+			).length
+		: null;
 
 	async function load(id: string, shared: string, target: string) {
 		const version = ++generation;
