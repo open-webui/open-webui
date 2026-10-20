@@ -52,16 +52,12 @@
 
 		if (query === '') {
 			chatList = await getSharedChatList(localStorage.token, page, filter);
+			allChatsLoaded = (chatList ?? []).length === 0;
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
 				chatList = await getSharedChatList(localStorage.token, page, filter);
+				allChatsLoaded = (chatList ?? []).length === 0;
 			}, 500);
-		}
-
-		if ((chatList ?? []).length === 0) {
-			allChatsLoaded = true;
-		} else {
-			allChatsLoaded = false;
 		}
 	};
 
