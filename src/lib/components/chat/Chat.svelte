@@ -1000,7 +1000,7 @@
 
 		if (type === 'prompt') {
 			// Handle prompt selection
-			messageInput?.setText(data, async () => {
+			messageInput?.setTextHandler(data, async () => {
 				if (!($settings?.insertSuggestionPrompt ?? false)) {
 					await tick();
 					submitHandler(prompt);
@@ -1849,7 +1849,7 @@
 			const inputElement = document.getElementById('chat-input');
 
 			if (inputElement) {
-				messageInput?.setText(event.data.text);
+				messageInput?.setTextHandler(event.data.text);
 				messageInput?.focus({ preventScroll: true });
 			}
 		}
@@ -2844,7 +2844,7 @@
 				}
 
 				if (query) {
-					messageInput?.setText(query, () => submitHandler(prompt));
+					messageInput?.setTextHandler(query, () => submitHandler(prompt));
 				} else if (eventFiles?.length) {
 					await tick();
 					submitHandler('');
@@ -2853,7 +2853,7 @@
 		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 
-			messageInput?.setText(q);
+			messageInput?.setTextHandler(q);
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
@@ -5215,7 +5215,7 @@
 										bind:autoScroll
 										bind:prompt
 										setInputText={(text) => {
-											messageInput?.setText(text);
+											messageInput?.setTextHandler(text);
 										}}
 										bind:selectedModels
 										{atSelectedModel}

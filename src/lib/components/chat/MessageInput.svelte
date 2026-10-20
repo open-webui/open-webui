@@ -432,7 +432,14 @@
 		chatInputElement?.focus(options);
 	};
 
-	export const setText = async (text?: string, cb?: (text: string) => void) => {
+	export const setText = (text: string = '') => {
+		chatInputElement?.setText(text);
+		if (!$showCallOverlay) {
+			focus();
+		}
+	};
+
+	export const setTextHandler = async (text?: string, cb?: (text: string) => void) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
@@ -440,10 +447,7 @@
 				text = await textVariableHandler(text || '');
 			}
 
-			chatInputElement?.setText(text);
-			if (!$showCallOverlay) {
-				focus();
-			}
+			setText(text);
 
 			if (text !== '') {
 				text = await inputVariableHandler(text);
