@@ -434,11 +434,7 @@ class PromptsTable:
                 current_access_grants = await self._get_access_grants(prompt.id, db=session)
 
                 # Check if content changed to decide on history creation
-                content_changed = (
-                    prompt.name != form_data.name
-                    or prompt.content != form_data.content
-                    or form_data.access_grants is not None
-                )
+                content_changed = prompt.name != form_data.name or prompt.content != form_data.content
 
                 # Update prompt fields
                 prompt.name = form_data.name
@@ -447,8 +443,15 @@ class PromptsTable:
                 prompt.meta = form_data.meta or prompt.meta
                 prompt.updated_at = int(time.time())
                 if form_data.access_grants is not None:
+                    previous_access_grants = {
+                        (grant.principal_type, grant.principal_id, grant.permission) for grant in current_access_grants
+                    }
                     await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
                     current_access_grants = await self._get_access_grants(prompt.id, db=session)
+                    if previous_access_grants != {
+                        (grant.principal_type, grant.principal_id, grant.permission) for grant in current_access_grants
+                    }:
+                        content_changed = True
 
                 await session.commit()
 
@@ -504,7 +507,6 @@ class PromptsTable:
                     prompt.name != form_data.name
                     or prompt.command != form_data.command
                     or prompt.content != form_data.content
-                    or form_data.access_grants is not None
                     or (form_data.tags is not None and prompt.tags != form_data.tags)
                 )
 
@@ -521,8 +523,15 @@ class PromptsTable:
                         prompt.tags = form_data.tags
 
                 if form_data.access_grants is not None:
+                    previous_access_grants = {
+                        (grant.principal_type, grant.principal_id, grant.permission) for grant in current_access_grants
+                    }
                     await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
                     current_access_grants = await self._get_access_grants(prompt.id, db=session)
+                    if previous_access_grants != {
+                        (grant.principal_type, grant.principal_id, grant.permission) for grant in current_access_grants
+                    }:
+                        content_changed = True
 
                 prompt.updated_at = int(time.time())
 
