@@ -302,6 +302,18 @@ _UNWRAP_EXTRA_MAINS = (
     'if (mains.length > 1) mains.forEach(main => main.replaceWith(...main.childNodes)); }'
 )
 
+# page.content() serializes only the light DOM - the spec deliberately excludes shadow trees,
+# so a web component's real content never reaches unstructured even though a real browser
+# renders it fine. Splice each OPEN shadow root's children into the light DOM first; closed
+# shadow roots stay inaccessible by design (nothing outside the component can reach them, by
+# browser security, not by a gap in this loader).
+_INLINE_SHADOW_ROOTS = (
+    '() => { const inline = node => { '
+    'if (node.shadowRoot) { while (node.shadowRoot.firstChild) node.appendChild(node.shadowRoot.firstChild); } '
+    'for (const child of Array.from(node.children)) inline(child); }; '
+    'inline(document.body || document.documentElement); }'
+)
+
 
 def _forwardable_request_headers(headers: Dict[str, str]) -> Dict[str, str]:
     return {name: value for name, value in headers.items() if name.lower() not in _DROPPED_REQUEST_HEADERS}
@@ -813,7 +825,18 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     def _extract_html(html):
         from unstructured.partition.html import partition_html
 
-        return '\n\n'.join(str(element) for element in partition_html(text=html))
+        text = '\n\n'.join(str(element) for element in partition_html(text=html))
+        if text.strip():
+            return text
+
+        # unstructured's HTML partitioner only recognizes standard tag names - it silently
+        # drops text sitting directly inside a custom element (any tag name containing a
+        # hyphen, as required by the Web Components spec), even with _INLINE_SHADOW_ROOTS
+        # already having moved real content there. Fall back to a tag-agnostic extractor
+        # rather than returning nothing when that happens.
+        from bs4 import BeautifulSoup
+
+        return BeautifulSoup(html, 'html.parser').get_text('\n', strip=True)
 
     def _request_timeout(self) -> float:
         # per-hop budget, since page.goto's timeout cannot reach into our own fetch and 0 disables
@@ -978,6 +1001,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                 for element in page.locator(selector).all():
                                     if element.is_visible():
                                         element.evaluate('element => element.remove()')
+                            page.evaluate(_INLINE_SHADOW_ROOTS)
                             page.evaluate(_UNWRAP_EXTRA_MAINS)
                             text = self._extract_html(page.content())
                             page.unroute_all(behavior='ignoreErrors')
@@ -1019,6 +1043,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                 for element in await page.locator(selector).all():
                                     if await element.is_visible():
                                         await element.evaluate('element => element.remove()')
+                            await page.evaluate(_INLINE_SHADOW_ROOTS)
                             await page.evaluate(_UNWRAP_EXTRA_MAINS)
                             text = await asyncio.to_thread(self._extract_html, await page.content())
                             await page.unroute_all(behavior='ignoreErrors')
