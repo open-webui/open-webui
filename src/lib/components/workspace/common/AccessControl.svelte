@@ -648,14 +648,14 @@
 						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50/50 dark:border-gray-850/50 pb-1.5 last:border-0"
 					>
 						<div class="flex items-center gap-2 min-w-0 flex-1">
-							<ProfilePreview {user} className="min-w-0 max-w-full">
+							<ProfilePreview {user}>
 								<img
 									class="rounded-full size-5 object-cover shrink-0"
 									src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 									alt=""
 								/>
-								<span class="ml-2 truncate text-sm">{user.name ?? user.id}</span>
 							</ProfilePreview>
+							<span class="min-w-0 truncate text-sm">{user.name ?? user.id}</span>
 						</div>
 
 						<div class="flex justify-end items-center gap-1.5 shrink-0">
