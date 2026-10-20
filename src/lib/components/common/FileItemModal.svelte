@@ -246,11 +246,10 @@
 		loadContent();
 	}
 
+	$: enableFullContent = item?.context === 'full';
+
 	onMount(() => {
 		console.log(item);
-		if (item?.context === 'full') {
-			enableFullContent = true;
-		}
 	});
 </script>
 
