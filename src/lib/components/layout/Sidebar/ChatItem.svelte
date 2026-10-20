@@ -16,6 +16,8 @@
 
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import dayjs, { getDayjsLocale } from '$lib/dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
 	import type { ChatParticipant } from '$lib/apis/folders';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
@@ -61,6 +63,8 @@
 	import { generateTitle } from '$lib/apis';
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
+
+	dayjs.extend(relativeTime);
 
 	const i18n = getContext('i18n');
 
@@ -575,9 +579,20 @@
 		</div>
 	</div>
 
+	{#if updatedAt ?? createdAt}
+		<span class="sr-only">
+			{dayjs(((updatedAt ?? createdAt) as number) * 1000)
+				.locale(getDayjsLocale($i18n.language))
+				.fromNow()}
+		</span>
+	{/if}
+
 	<!-- Time ago indicator -->
 	{#if (updatedAt ?? createdAt) && !showInlineActions && !($mobile && !readonly)}
-		<div class="shrink-0 self-center text-[0.625rem] text-gray-400 dark:text-gray-500 pl-2">
+		<div
+			class="shrink-0 self-center text-[0.625rem] text-gray-400 dark:text-gray-500 pl-2"
+			aria-hidden="true"
+		>
 			{formatTimeAgo((updatedAt ?? createdAt) as number)}
 		</div>
 	{/if}
