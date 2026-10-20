@@ -248,7 +248,7 @@
 				>{/if}
 			<button
 				class={quietButton}
-				aria-label={$i18n.t('Content type')}
+				aria-label={`${$i18n.t('Content type')}: ${$i18n.t(kind === 'all' ? 'Everything' : labels[kind])}`}
 				data-search-panel
 				aria-expanded={panel === 'types'}
 				on:click={() => (panel = panel === 'types' ? null : 'types')}
