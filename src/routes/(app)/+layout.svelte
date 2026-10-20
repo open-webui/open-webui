@@ -490,7 +490,8 @@
 				<Sidebar />
 
 				{#if loaded}
-					<main id="main-content" class="contents">
+					<main class="contents">
+						<div id="main-content" tabindex="-1" class="sr-only"></div>
 						<slot />
 					</main>
 				{:else}
