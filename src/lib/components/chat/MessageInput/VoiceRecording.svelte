@@ -471,6 +471,7 @@
 	onDestroy(() => {
 		window.removeEventListener('keydown', handleKeyDown);
 		document.removeEventListener('visibilitychange', handleVisibilityChange);
+		stopRecording();
 		releaseWakeLock();
 		closeAudioContext();
 		// remove resize observer
