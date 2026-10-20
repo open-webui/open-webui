@@ -144,6 +144,11 @@
 	let wordCount = 0;
 	let charCount = 0;
 
+	$: if (editor) {
+		wordCount = editor.storage.characterCount.words();
+		charCount = editor.storage.characterCount.characters();
+	}
+
 	let versionIdx = null;
 	let selectedModelId = null;
 
@@ -1421,11 +1426,6 @@ ${content}
 									lastLocalContentChangeAt = Date.now();
 									note.data.content.html = content.html;
 									note.data.content.md = content.md;
-
-									if (editor) {
-										wordCount = editor.storage.characterCount.words();
-										charCount = editor.storage.characterCount.characters();
-									}
 								}}
 								fileHandler={true}
 								onFileDrop={(currentEditor, files, pos) => {
