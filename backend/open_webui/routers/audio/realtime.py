@@ -549,6 +549,9 @@ async def realtime_call(ws: WebSocket):
         detail = (
             str(exc)
             if type(exc) is ValueError
+            # A send can still fail on the provider connection that just closed.
+            else 'Voice provider connection closed'
+            if isinstance(exc, aiohttp.ClientConnectionResetError)
             else ('Voice connection timed out' if isinstance(exc, TimeoutError) else 'Voice connection failed')
         )
         log.info('Bridge closed: user_id=%s error_type=%s', user.id if user else None, type(exc).__name__)
