@@ -1156,6 +1156,7 @@
 						class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 						href="/"
 						draggable="false"
+						aria-label={$i18n.t('New Chat')}
 						on:click={newChatHandler}
 					>
 						<!-- LICENSE covers this Open WebUI sidebar logo.
