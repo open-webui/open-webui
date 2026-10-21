@@ -1061,7 +1061,7 @@
 						{:else}
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<div
-								class="min-h-0 flex-1 overflow-y-auto"
+								class="relative min-h-0 flex-1 overflow-y-auto"
 								style="max-height: 18rem;"
 								role="listbox"
 								aria-label={$i18n.t('Available models')}

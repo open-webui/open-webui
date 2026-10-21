@@ -315,8 +315,11 @@
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
 		// Submenus and listboxes can be portaled outside contentEl.
-		if (event.target instanceof Element && event.target.closest('[role="menu"], [role="listbox"]'))
-			return;
+		const portaled =
+			event.target instanceof Element
+				? event.target.closest('[role="menu"], [role="listbox"]')
+				: null;
+		if (portaled && !portaled.contains(triggerEl)) return;
 		event.preventDefault();
 		event.stopPropagation();
 		closeDropdown(false);
