@@ -25,6 +25,7 @@
 
 	export let onOpen: (entry: FileEntry) => void = () => {};
 	export let onNewFolder: ((path: string) => void) | undefined = undefined;
+	export let onNewFile: ((path: string) => void) | undefined = undefined;
 	export let onSelectForComparison: (() => void) | undefined = undefined;
 	export let onCompareWithSelected: (() => void) | undefined = undefined;
 	export let comparisonPath: string | null = null;
@@ -404,6 +405,21 @@
 						>
 							<Icon name="folder" size={12} strokeWidth={1.4} />
 							<div class="flex items-center">{$i18n.t('New Folder')}</div>
+						</button>
+					{/if}
+					{#if entry.type === 'directory' && onNewFile}
+						<button
+							type="button"
+							class="{menuItemClass} disabled:opacity-40 disabled:hover:bg-transparent"
+							disabled={!writable}
+							on:click|stopPropagation={() => {
+								if (!writable) return;
+								menuOpen = false;
+								onNewFile?.(directoryPath);
+							}}
+						>
+							<Icon name="plus" size={12} strokeWidth={1.4} />
+							<div class="flex items-center">{$i18n.t('New File')}</div>
 						</button>
 					{/if}
 					{#if entry.type === 'file' && onSelectForComparison}

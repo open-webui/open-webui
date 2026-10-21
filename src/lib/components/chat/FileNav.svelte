@@ -1514,6 +1514,10 @@
 	};
 
 	// ── File creation ────────────────────────────────────────────────────
+	const startNewFileIn = async (path: string) => {
+		if (await loadDir(path)) await startNewFile();
+	};
+
 	const startNewFile = async () => {
 		if (!currentWritable) return;
 		creatingFile = true;
@@ -2556,6 +2560,7 @@
 										: undefined}
 									onDownload={downloadFile}
 									onNewFolder={startNewFolderIn}
+									onNewFile={startNewFileIn}
 									onDelete={requestDelete}
 									onMove={handleMovePaths}
 									onRename={handleRename}
