@@ -1489,6 +1489,10 @@
 			return;
 		}
 		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
+		// The first event can identify a new chat before the HTTP response arrives.
+		if (!$chatId && event.chat_id && history.messages[event.message_id]) {
+			chatId.set(event.chat_id);
+		}
 		const interactionType = event?.data?.type;
 		const interactionData = event?.data?.data;
 		if (interactionType === 'request:interaction:done') {
@@ -1528,11 +1532,7 @@
 			return;
 		}
 
-		// A new chat's title can arrive before its id; the response message already exists.
-		if (
-			event.chat_id === $chatId ||
-			(!$chatId && event?.data?.type === 'chat:title' && history.messages[event.message_id])
-		) {
+		if (event.chat_id === $chatId) {
 			await tick();
 			const type = event?.data?.type ?? null;
 			if (type === 'typing') {
@@ -4429,14 +4429,24 @@
 			if (res.error) {
 				await handleOpenAIError(res.error, responseMessage);
 			} else {
-				// Backend returns task_ids (multi-model) or task_id (single model)
-				onToolCallResolved(res);
+				// An early completion event may have already finished these replies.
+				if (
+					(messageIdsList ?? [{ message_id: responseMessageId }]).some(({ message_id }) =>
+						hasPendingAssistantLeaf(message_id)
+					)
+				) {
+					onToolCallResolved(res);
+				}
 
-				// Backend returns chat_id for new chats — set store + URL.
+				// Finish new-chat setup even if an event already supplied the chat id.
 				// Only update if the user hasn't navigated to a different chat
 				// while the request was in flight (prevents overwriting $chatId
 				// and causing spurious toast notifications / state duplication).
-				if (res.chat_id && $chatId !== res.chat_id && $chatId === _chatId) {
+				if (
+					res.chat_id &&
+					res.chat_id !== _chatId &&
+					($chatId === _chatId || $chatId === res.chat_id)
+				) {
 					chatRequestQueues.update((q) => {
 						if (!q[_chatId]?.length) return q;
 
@@ -4477,6 +4487,7 @@
 							await updateChatParams(localStorage.token, res.chat_id, params);
 						}
 					}
+					await processNextInQueue(res.chat_id);
 				}
 			}
 		}
