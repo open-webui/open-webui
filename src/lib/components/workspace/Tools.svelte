@@ -36,6 +36,7 @@
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ToolMenu from './Tools/ToolMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
@@ -509,10 +510,18 @@
 								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
 								<ProfilePreview user={tool?.user ?? null} side="left">
-									<span class="max-w-44 truncate">
-										{capitalizeFirstLetter(
-											tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
-										)}
+									<span class="flex max-w-44 items-center gap-1.75">
+										<ProfileImage
+											src={tool?.user?.id
+												? `/api/v1/users/${tool.user.id}/profile/image`
+												: '/user.png'}
+											className="size-4 shrink-0 rounded-full!"
+										/>
+										<span class="min-w-0 max-w-24 truncate">
+											{capitalizeFirstLetter(
+												tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
+											)}
+										</span>
 									</span>
 								</ProfilePreview>
 							</div>
