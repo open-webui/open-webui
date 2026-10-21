@@ -41,7 +41,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.users import Users
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.audio import transcribe
-from open_webui.routers.retrieval import ProcessFileForm, process_file
+from open_webui.routers.retrieval import ProcessFileForm, process_file, process_file_handler
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
@@ -135,6 +135,7 @@ async def process_uploaded_file(
     db: Optional[AsyncSession] = None,
 ):
     async def _process_handler(db_session):
+        knowledge_id = file_metadata.get('knowledge_id')
         try:
             content_type = file.content_type
 
@@ -158,11 +159,12 @@ async def process_uploaded_file(
                     file_metadata,
                     user,
                 )
-                await process_file(
+                await process_file_handler(
                     request,
                     ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
                     user=user,
                     db=db_session,
+                    mark_completed=not knowledge_id,
                 )
 
             elif (
@@ -178,11 +180,12 @@ async def process_uploaded_file(
                     # extraction causes "Timeout reached while detecting
                     # encoding" errors.
                     log.info('Video file detected (%s), skipping text extraction', content_type)
-                    await Files.update_file_data_by_id(
-                        file_item.id,
-                        {'status': 'completed'},
-                        db=db_session,
-                    )
+                    if not knowledge_id:
+                        await Files.update_file_data_by_id(
+                            file_item.id,
+                            {'status': 'completed'},
+                            db=db_session,
+                        )
                 else:
                     raise Exception(f'File type {content_type} is not supported for processing')
 
@@ -191,17 +194,17 @@ async def process_uploaded_file(
                 # configured content extraction engine.
                 if not content_type:
                     log.info('File type %s is not provided, but trying to process anyway', file.content_type)
-                await process_file(
+                await process_file_handler(
                     request,
                     ProcessFileForm(file_id=file_item.id),
                     user=user,
                     db=db_session,
+                    mark_completed=not knowledge_id,
                 )
 
             # Auto-link to Knowledge Collection when uploaded from one (#24807).
             # Mirrors POST /knowledge/{id}/file/add so linking doesn't depend
             # on the frontend staying connected after upload.
-            knowledge_id = file_metadata.get('knowledge_id')
             if knowledge_id:
                 try:
                     # Gate like POST /knowledge/{id}/file/add: a client-supplied
@@ -223,6 +226,7 @@ async def process_uploaded_file(
                             f'Refusing to auto-link file {file_item.id} to knowledge '
                             f'{knowledge_id}: user {user.id} lacks write access'
                         )
+                        await Files.update_file_data_by_id(file_item.id, {'status': 'completed'}, db=db_session)
                     else:
                         directory_id = file_metadata.get('directory_id') or None
                         if directory_id:
@@ -236,11 +240,12 @@ async def process_uploaded_file(
                         # Keep the generic file status stream open until the
                         # KB-specific vector write and durable link both finish.
                         await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
-                        await process_file(
+                        await process_file_handler(
                             request,
                             ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
                             user=user,
                             db=db_session,
+                            mark_completed=False,
                         )
                         knowledge_file = await Knowledges.add_file_to_knowledge_by_id(
                             knowledge_id=knowledge_id,
@@ -252,6 +257,7 @@ async def process_uploaded_file(
                         if not knowledge_file:
                             raise Exception(f'Failed to link file {file_item.id} to knowledge {knowledge_id}')
                         log.info('Linked file %s to knowledge %s', file_item.id, knowledge_id)
+                        await Files.update_file_data_by_id(file_item.id, {'status': 'completed'}, db=db_session)
                 except Exception as e:
                     log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
                     raise

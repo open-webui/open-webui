@@ -65,6 +65,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db, get_async_session
 from open_webui.models.files import FileModel, Files, FileUpdateForm
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.users import UserModel
 
 # Document loaders
 from open_webui.retrieval.loaders.youtube import YoutubeLoader, YoutubeTranscriptError
@@ -1580,6 +1581,18 @@ async def process_file(
     Note: granular session management is used to prevent connection pool exhaustion.
     The session is committed before external API calls, and updates use a fresh session.
     """
+    return await process_file_handler(request, form_data, user, db)
+
+
+async def process_file_handler(
+    request: Request,
+    form_data: ProcessFileForm,
+    user: UserModel,
+    db: AsyncSession,
+    mark_completed: bool = True,
+):
+    # A knowledge upload is only done once linked, so its caller sets completed itself.
+    finished_data = {'status': 'completed', 'error': None} if mark_completed else {'error': None}
     config = await Config.get_many(*RETRIEVAL_CONFIG_KEYS.values())
     file = await Files.get_file_by_id(form_data.file_id, db=db)
     if file and file.user_id != user.id and user.role != 'admin':
@@ -1714,7 +1727,7 @@ async def process_file(
             hash = calculate_sha256_string(text_content)
 
             if config['rag.bypass_embedding_and_retrieval']:
-                await Files.update_file_data_by_id(file.id, {'status': 'completed', 'error': None}, db=db)
+                await Files.update_file_data_by_id(file.id, finished_data, db=db)
                 await Files.update_file_hash_by_id(file.id, hash, db=db)
                 await publish_event(
                     request,
@@ -1773,7 +1786,7 @@ async def process_file(
 
                             await Files.update_file_data_by_id(
                                 file.id,
-                                {'status': 'completed', 'error': None},
+                                finished_data,
                                 db=session,
                             )
                             await Files.update_file_hash_by_id(file.id, hash, db=session)
