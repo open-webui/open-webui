@@ -31,12 +31,14 @@
 		allLoaded,
 		loadNextChatListPage,
 		refreshChatList,
+		refreshSidebar,
 		registerFolderRefreshHandler,
 		setAllChatsRead,
 		setChatActive,
 		setChatReadAt
 	} from '$lib/stores/chatList';
-	import { onMount, getContext, tick, onDestroy } from 'svelte';
+	import { onMount, getContext, setContext, tick, onDestroy } from 'svelte';
+	import { writable } from 'svelte/store';
 
 	const i18n: any = getContext('i18n');
 
@@ -49,6 +51,8 @@
 		updateChatFolderIdById,
 		importChats,
 		deleteAllChats,
+		archiveChatById,
+		deleteChatById,
 		getChatListBySearchText,
 		markChatsRead
 	} from '$lib/apis/chats';
@@ -91,6 +95,10 @@
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import CheckIcon from '../icons/Check.svelte';
+	import ArchiveBoxIcon from '../icons/ArchiveBox.svelte';
+	import GarbageBinIcon from '../icons/GarbageBin.svelte';
+	import XMarkIcon from '../icons/XMark.svelte';
+	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import MoreHorizontalIcon from './Sidebar/icons/MoreHorizontal.svelte';
 	import MobileSwipePanel from '../common/MobileSwipePanel.svelte';
 
@@ -99,10 +107,111 @@
 
 	let scrollTop = 0;
 
-	let navElement;
+	let navElement: HTMLDivElement;
 	let shiftKey = false;
 
 	let selectedChatId = null;
+	const selectedChatIds = writable(new Set<string>());
+	const selectionBusy = writable(false);
+	let selectionAnchor: string | null = null;
+	const chatSelection = {
+		ids: selectedChatIds,
+		busy: selectionBusy,
+		setAnchor(id: string) {
+			if (!$selectionBusy) selectionAnchor = id;
+		},
+		clear() {
+			if ($selectionBusy) return;
+			selectedChatIds.set(new Set());
+			selectionAnchor = null;
+		},
+		select(id: string, shift = false) {
+			if ($selectionBusy) return;
+			const visible = [
+				...new Set(
+					Array.from(navElement?.querySelectorAll<HTMLElement>('[data-sidebar-chat-id]') ?? [])
+						.filter(
+							(element) =>
+								element.getClientRects().length > 0 &&
+								element.dataset.sidebarChatReadonly !== 'true'
+						)
+						.map((element) => element.dataset.sidebarChatId!)
+				)
+			];
+			const index = visible.indexOf(id);
+			if (index < 0) return;
+			const next = new Set([...$selectedChatIds].filter((id) => visible.includes(id)));
+			const remove = next.has(id);
+			const start = selectionAnchor === null ? -1 : visible.indexOf(selectionAnchor);
+			if (shift && !remove && start >= 0) {
+				for (const id of visible.slice(Math.min(start, index), Math.max(start, index) + 1)) {
+					next.add(id);
+				}
+			} else if (remove) {
+				next.delete(id);
+			} else {
+				next.add(id);
+			}
+			if (!shift || start < 0) selectionAnchor = id;
+			selectedChatIds.set(next);
+		}
+	};
+	let showDeleteSelectedConfirm = false;
+	let deleteSelectedIds: string[] = [];
+	$: canDeleteChats = $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true);
+	setContext('sidebar-chat-selection', chatSelection);
+
+	const applySelectedChatAction = async (action: 'archive' | 'delete', ids: string[]) => {
+		if ($selectionBusy || ids.length === 0 || (action === 'delete' && !canDeleteChats)) return;
+		selectionBusy.set(true);
+		const succeeded = new Set<string>();
+		try {
+			for (const id of ids) {
+				try {
+					const result = await (action === 'archive' ? archiveChatById : deleteChatById)(
+						localStorage.token,
+						id
+					);
+					if (!result) throw new Error('Chat action failed');
+					succeeded.add(id);
+				} catch (error) {
+					console.error(`Failed to ${action} chat:`, error);
+				}
+			}
+			selectedChatIds.update(
+				(selected) => new Set([...selected].filter((id) => !succeeded.has(id)))
+			);
+			if (succeeded.size > 0) {
+				toast.success(
+					$i18n.t(action === 'archive' ? '{{count}} chats archived.' : '{{count}} chats deleted.', {
+						count: succeeded.size
+					})
+				);
+				if (succeeded.has($chatId)) {
+					await goto('/');
+					chatId.set('');
+				}
+				await Promise.all([
+					refreshSidebar(localStorage.token),
+					...(action === 'delete'
+						? [getAllTags(localStorage.token).then((value) => tags.set(value))]
+						: [])
+				]);
+			}
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			if (succeeded.size < ids.length) {
+				toast.error(
+					$i18n.t('Could not update {{count}} chats. They remain selected so you can try again.', {
+						count: ids.length - succeeded.size
+					})
+				);
+			}
+			selectionBusy.set(false);
+			if ($selectedChatIds.size === 0) chatSelection.clear();
+		}
+	};
 
 	// Keep the optimistic sidebar highlight in sync with the active chat. Leaving the
 	// chat view (e.g. navigating to an admin page) clears chatId, and programmatic
@@ -574,6 +683,10 @@
 	};
 
 	const onKeyDown = (e) => {
+		if (e.key === 'Escape' && $selectedChatIds.size > 0 && !showDeleteSelectedConfirm) {
+			e.preventDefault();
+			chatSelection.clear();
+		}
 		if (e.key === 'Shift') {
 			shiftKey = true;
 		}
@@ -840,6 +953,13 @@
 
 	const isWindows = /Windows/i.test(navigator.userAgent);
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteSelectedConfirm}
+	title={$i18n.t('Delete {{count}} chats?', { count: deleteSelectedIds.length })}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={() => applySelectedChatAction('delete', deleteSelectedIds)}
+/>
 
 <ChannelModal
 	bind:show={showCreateChannel}
@@ -1720,6 +1840,56 @@
 				</div>
 
 				<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
+					{#if $selectedChatIds.size > 0}
+						<div
+							class="flex items-center justify-between gap-1 px-2 py-0.5 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+							aria-busy={$selectionBusy}
+						>
+							<span role="status"
+								>{$i18n.t('{{count}} selected', { count: $selectedChatIds.size })}</span
+							>
+							<div class="flex items-center gap-0.5">
+								<Tooltip content={$i18n.t('Archive')}>
+									<button
+										type="button"
+										aria-label={$i18n.t('Archive selected chats')}
+										disabled={$selectionBusy}
+										class="flex size-6 items-center justify-center rounded-md hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+										on:click={() => applySelectedChatAction('archive', [...$selectedChatIds])}
+									>
+										<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
+									</button>
+								</Tooltip>
+								{#if canDeleteChats}
+									<Tooltip content={$i18n.t('Delete')}>
+										<button
+											type="button"
+											aria-label={$i18n.t('Delete selected chats')}
+											disabled={$selectionBusy}
+											class="flex size-6 items-center justify-center rounded-md hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+											on:click={() => {
+												deleteSelectedIds = [...$selectedChatIds];
+												showDeleteSelectedConfirm = true;
+											}}
+										>
+											<GarbageBinIcon className="size-3.5" strokeWidth="1.7" />
+										</button>
+									</Tooltip>
+								{/if}
+								<Tooltip content={$i18n.t('Clear selection')}>
+									<button
+										type="button"
+										disabled={$selectionBusy}
+										class="flex size-6 items-center justify-center rounded-md hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+										aria-label={$i18n.t('Clear selection')}
+										on:click={chatSelection.clear}
+									>
+										<XMarkIcon className="size-3.5" strokeWidth="1.7" />
+									</button>
+								</Tooltip>
+							</div>
+						</div>
+					{/if}
 					<div
 						class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 					></div>

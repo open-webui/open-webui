@@ -20,6 +20,8 @@
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
+	import { readable, type Readable } from 'svelte/store';
+	import CheckIcon from '$lib/components/icons/Check.svelte';
 	import {
 		archiveChatById,
 		cloneChatById,
@@ -63,6 +65,20 @@
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
+	const chatSelection = getContext<
+		| {
+				ids: Readable<Set<string>>;
+				busy: Readable<boolean>;
+				setAnchor: (id: string) => void;
+				select: (id: string, shift?: boolean) => void;
+		  }
+		| undefined
+	>('sidebar-chat-selection');
+	const selectedChatIds = chatSelection?.ids ?? readable(new Set<string>());
+	const selectionBusy = chatSelection?.busy ?? readable(false);
+	$: selecting = $selectedChatIds.size > 0;
+	$: multiSelected = $selectedChatIds.has(id);
+	$: if (selecting) openPreview = false;
 
 	export let className = '';
 
@@ -141,13 +157,19 @@
 		!active &&
 		(effectiveReadAt === null || (updatedAt !== null && updatedAt > effectiveReadAt));
 	$: showInlineActions =
-		id === $chatId || confirmEdit || mouseOver || focusWithin || menuOpen || selected;
+		id === $chatId ||
+		confirmEdit ||
+		mouseOver ||
+		focusWithin ||
+		menuOpen ||
+		selected ||
+		multiSelected;
 	$: chatItemClass = ` w-full flex justify-between rounded-xl px-2 py-1.5 ${
 		id === $chatId || confirmEdit
 			? ($settings?.highContrastMode ?? false)
 				? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
 				: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-			: selected
+			: selected || multiSelected
 				? ($settings?.highContrastMode ?? false)
 					? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
 					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
@@ -158,6 +180,15 @@
 
 	const selectChatHandler = (event?: MouseEvent) => {
 		openPreview = false;
+		if (event && chatSelection && !event.metaKey && !event.ctrlKey && !event.altKey) {
+			if (event.shiftKey || selecting) {
+				event.preventDefault();
+				event.stopPropagation();
+				if (!readonly) chatSelection.select(id, event.shiftKey);
+				return;
+			}
+			chatSelection.setAnchor(id);
+		}
 		dispatch('select');
 
 		if ($selectedFolder) {
@@ -176,7 +207,7 @@
 	};
 
 	const renameChatFromDoubleClick = async (e: MouseEvent) => {
-		if (readonly) return;
+		if (readonly || selecting || e.shiftKey) return;
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -538,7 +569,7 @@
 			dir="auto"
 			class="text-left self-center overflow-hidden w-full h-5 truncate {unread
 				? 'font-normal text-gray-800 dark:text-gray-200'
-				: ''} {($mobile || showInlineActions) && !readonly ? 'pr-12' : ''}"
+				: ''} {($mobile || showInlineActions) && !readonly && !selecting ? 'pr-12' : ''}"
 		>
 			{title}
 		</div>
@@ -582,9 +613,11 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
 	id="sidebar-chat-group"
+	data-sidebar-chat-id={id}
+	data-sidebar-chat-readonly={readonly}
 	bind:this={itemElement}
 	class=" w-full {className} relative group"
-	draggable={!confirmEdit && !readonly}
+	draggable={!confirmEdit && !readonly && !selecting}
 	on:mouseenter={() => {
 		mouseOver = true;
 	}}
@@ -605,7 +638,7 @@
 				? ($settings?.highContrastMode ?? false)
 					? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
 					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-				: selected
+				: selected || multiSelected
 					? ($settings?.highContrastMode ?? false)
 						? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
 						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
@@ -639,6 +672,21 @@
 		</div>
 	{:else}
 		<div id="sidebar-chat-item" class={chatItemClass}>
+			{#if selecting}
+				<button
+					type="button"
+					role="checkbox"
+					aria-checked={multiSelected}
+					disabled={readonly || $selectionBusy}
+					aria-label={$i18n.t('Select {{name}}', { name: title })}
+					class="mr-2 flex size-3.5 shrink-0 self-center items-center justify-center rounded border disabled:opacity-40 {multiSelected
+						? 'border-gray-900 bg-gray-900 text-white dark:border-gray-200 dark:bg-gray-200 dark:text-gray-900'
+						: 'border-gray-300 dark:border-gray-600'}"
+					on:click|stopPropagation={(event) => chatSelection?.select(id, event.shiftKey)}
+				>
+					{#if multiSelected}<CheckIcon className="size-2.5" strokeWidth="2" />{/if}
+				</button>
+			{/if}
 			{#if ownerUserId || participants.length > 1}
 				<div class="flex items-center self-center shrink-0 mr-2">
 					<ChatParticipants
@@ -664,7 +712,11 @@
 				<LinkPreview.Root
 					openDelay={300}
 					closeDelay={0}
-					disabled={confirmEdit || dragged || !($settings?.chatHoverPreview ?? true)}
+					disabled={confirmEdit ||
+						dragged ||
+						selecting ||
+						shiftKey ||
+						!($settings?.chatHoverPreview ?? true)}
 					bind:open={openPreview}
 					onOpenChange={(open) => {
 						if (open) {
@@ -696,7 +748,7 @@
 		</div>
 	{/if}
 
-	{#if !readonly}
+	{#if !readonly && !selecting}
 		<div
 			id="sidebar-chat-item-menu"
 			class="{$mobile
@@ -724,7 +776,7 @@
 						</button>
 					</Tooltip>
 				</div>
-			{:else if shiftKey && mouseOver}
+			{:else if shiftKey && mouseOver && !chatSelection}
 				<div class=" flex items-center self-center space-x-1.5">
 					<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 						<button
