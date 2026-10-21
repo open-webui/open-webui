@@ -1588,6 +1588,9 @@
 						message.statusHistory = [data];
 					}
 				} else if (type === 'context_compaction') {
+					if (data?.checkpoint_message_id && history.messages[data.checkpoint_message_id]) {
+						history.messages[data.checkpoint_message_id].contextSummary = data.context_summary;
+					}
 					handleContextCompactionStatus(data);
 				} else if (type === 'chat:active') {
 					if (!data?.active) {
@@ -4254,7 +4257,9 @@
 
 					if (message.role === 'user' && imageFiles.length > 0) {
 						return {
+							id: message.id,
 							role: message.role,
+							contextSummary: message?.contextSummary,
 							content: [
 								{
 									type: 'text',
@@ -4271,7 +4276,9 @@
 					}
 
 					return {
+						id: message.id,
 						role: message.role,
+						contextSummary: message?.contextSummary,
 						content: message?.merged?.content ?? message.content,
 						model: message.model,
 						meta: message.meta
