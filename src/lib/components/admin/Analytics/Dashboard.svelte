@@ -15,6 +15,7 @@
 	import ChartLine from './ChartLine.svelte';
 	import AnalyticsModelModal from './AnalyticsModelModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { formatNumber } from '$lib/utils';
 	import { goto } from '$app/navigation';
@@ -676,14 +677,21 @@
 									<td class="px-3 py-1 text-gray-400">{idx + 1}</td>
 									<td class="px-3 py-1 font-normal text-gray-900 dark:text-white">
 										<div class="flex items-center gap-2">
-											<img
-												src="{WEBUI_API_BASE_URL}/users/{user.user_id}/profile/image"
-												alt={user.name || 'User'}
-												class="size-5 rounded-full object-cover shrink-0"
-												on:error={(e) => {
-													e.target.src = '/user.png';
-												}}
-											/>
+											<ProfilePreview
+												user={{ id: user.user_id, name: user.name || user.email }}
+												side="right"
+												align="center"
+												sideOffset={6}
+											>
+												<img
+													src="{WEBUI_API_BASE_URL}/users/{user.user_id}/profile/image"
+													alt={user.name || 'User'}
+													class="size-5 rounded-full object-cover shrink-0"
+													on:error={(e) => {
+														e.target.src = '/user.png';
+													}}
+												/>
+											</ProfilePreview>
 											<span class="truncate max-w-[9.375rem]"
 												>{user.name || user.email || user.user_id.substring(0, 8)}</span
 											>
