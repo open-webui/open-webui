@@ -545,7 +545,7 @@
 							</div>
 						{/if}
 					{/if}
-					{#if !compactPreview && (!readOnly || (shareMode === 'continue' && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.edit ?? true))))}
+					{#if !compactPreview && (!readOnly || shareMode === 'continue') && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.edit ?? true))}
 						<Tooltip content={$i18n.t('Edit')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)
