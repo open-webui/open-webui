@@ -17,7 +17,7 @@
 		usageShare,
 		modelColor,
 		defaultInterval,
-		aggregateUsage,
+		type UsageBucket,
 		type UsageInterval
 	} from './UsageChart.svelte';
 	import AnalyticsModelModal from './AnalyticsModelModal.svelte';
@@ -35,7 +35,12 @@
 	let selectedMetric: 'messages' | 'tokens' = 'tokens';
 	let chartModel: string | null = null;
 	let chartView: 'volume' | 'activity' = 'volume';
-	$: modelNames = Object.fromEntries(modelStats.map((model) => [model.model_id, model.name]));
+	let compare = false;
+	$: comparing = compare && chartView === 'volume' && selectedPeriod !== 'all' && validRange;
+	$: modelNames = Object.fromEntries([
+		...$models.map((model) => [model.id, model.name || model.id]),
+		...modelStats.map((model) => [model.model_id, model.name])
+	]);
 
 	// Custom date range (YYYY-MM-DD) - persist in localStorage
 	let customStart =
@@ -118,7 +123,7 @@
 	let userStats: Array<
 		{ user_id: string; name?: string; email?: string; count: number } & Partial<TokenUsage>
 	> = [];
-	let dailyStats: Array<{ date: string; models: Record<string, number> }> = [];
+	let dailyStats: UsageBucket[] = [];
 	let tokenStats: Record<string, TokenUsage> = {};
 	let totalTokens = { input: 0, output: 0, total: 0 };
 	$: metricTotal = selectedMetric === 'tokens' ? totalTokens.total : summary.total_messages;
@@ -172,9 +177,10 @@
 					localStorage.token,
 					start,
 					end,
-					granularity === '3h' || granularity === '6h' ? 'hourly' : granularity,
+					granularity,
 					selectedGroupId,
-					selectedMetric
+					selectedMetric,
+					comparing
 				),
 				getTokenUsage(localStorage.token, start, end, selectedGroupId)
 			]);
@@ -182,6 +188,9 @@
 			if (id !== loadId) return;
 			if (!summaryRes || !modelsRes || !usersRes || !dailyRes || !tokensRes) {
 				throw new Error('Incomplete analytics response');
+			}
+			if (comparing && dailyRes.data.some((bucket: UsageBucket) => !bucket.previous)) {
+				throw new Error('Incomplete comparison response');
 			}
 			summary = summaryRes;
 
@@ -194,7 +203,7 @@
 			);
 
 			userStats = usersRes?.users ?? [];
-			dailyStats = aggregateUsage(dailyRes?.data ?? [], granularity);
+			dailyStats = dailyRes?.data ?? [];
 
 			// Process token data
 			if (tokensRes) {
@@ -227,6 +236,7 @@
 		selectedGroupId;
 		selectedMetric;
 		granularity;
+		comparing;
 		if (validRange) loadDashboard();
 		else {
 			++loadId;
@@ -403,6 +413,19 @@
 				{/each}
 			</div>
 			<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+				{#if chartView === 'volume'}
+					<button
+						type="button"
+						class="analytics-tab disabled:opacity-40 disabled:cursor-default"
+						class:tab-selected={comparing}
+						aria-pressed={comparing}
+						disabled={selectedPeriod === 'all'}
+						title={selectedPeriod === 'all'
+							? $i18n.t('Choose a date range to compare')
+							: $i18n.t('Compare to previous period')}
+						on:click={() => (compare = !compare)}>{$i18n.t('Compare')}</button
+					>
+				{/if}
 				<div class="flex items-center gap-3" aria-label={$i18n.t('Chart view')}>
 					{#each [{ key: 'volume', label: $i18n.t('Volume') }, { key: 'activity', label: $i18n.t('Activity') }] as view}
 						<button
@@ -431,9 +454,10 @@
 				</select>
 			</div>
 		</div>
-		{#if dailyStats.length && summary.total_messages > 0}
+		{#if dailyStats.length && (summary.total_messages > 0 || comparing)}
 			<UsageChart
 				data={dailyStats}
+				compare={comparing}
 				{granularity}
 				{metricLabel}
 				{modelNames}

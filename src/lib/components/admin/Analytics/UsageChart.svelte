@@ -1,5 +1,14 @@
 <script context="module" lang="ts">
-	export type UsageBucket = { date: string; models: Record<string, number> };
+	export type UsageBucket = {
+		date: string;
+		models: Record<string, number>;
+		start?: string;
+		end?: string;
+		previous?: { models: Record<string, number>; start: string; end: string };
+	};
+
+	export const comparisonChange = (current: number, previous: number) =>
+		previous === 0 ? (current === 0 ? 0 : null) : ((current - previous) / previous) * 100;
 
 	export const usageShare = (value: number, total: number) => {
 		if (total <= 0 || value <= 0) return '0%';
@@ -10,7 +19,7 @@
 	export const chartSeries = (data: UsageBucket[], modelId: string | null = null) =>
 		data
 			.map((bucket) => ({
-				date: bucket.date,
+				...bucket,
 				models: modelId ? { [modelId]: bucket.models[modelId] ?? 0 } : bucket.models,
 				// Calendar keys have no timezone. UTC is only a plotting coordinate, not a query timestamp.
 				time: Date.parse(
@@ -56,24 +65,6 @@
 	export const defaultInterval = (period: string): UsageInterval =>
 		period === '24h' ? '10m' : period === '7d' ? 'hourly' : period === '30d' ? '6h' : 'daily';
 
-	export const aggregateUsage = (data: UsageBucket[], interval: UsageInterval): UsageBucket[] => {
-		if (interval !== '3h' && interval !== '6h') return data;
-		const hours = intervalMinutes[interval] / 60;
-		const buckets = new Map<string, Record<string, number>>();
-		for (const point of data) {
-			// Aggregate the server's calendar keys without converting their timezone.
-			const hour = Math.floor(Number(point.date.slice(11, 13)) / hours) * hours;
-			const date = `${point.date.slice(0, 10)} ${String(hour).padStart(2, '0')}:00`;
-			const models = buckets.get(date) ?? Object.create(null);
-			for (const [id, value] of Object.entries(point.models))
-				models[id] = (models[id] ?? 0) + value;
-			buckets.set(date, models);
-		}
-		return [...buckets]
-			.sort(([a], [b]) => a.localeCompare(b))
-			.map(([date, models]) => ({ date, models }));
-	};
-
 	export const intervalBreakdown = (
 		models: Record<string, number>,
 		modelIds: string[],
@@ -87,6 +78,7 @@
 	import dayjs from 'dayjs';
 
 	export let data: UsageBucket[] = [];
+	export let compare = false;
 	export let granularity: UsageInterval = 'daily';
 	export let metricLabel = '';
 	export let modelNames: Record<string, string> = {};
@@ -106,21 +98,44 @@
 		data;
 		selectedModel;
 		view;
+		compare;
 		tooltip?.hide();
 		active = null;
 		activeModel = null;
 		keyboardIndex = 0;
 	}
 	$: totals = modelTotals(data);
-	$: ids = Object.keys(totals).sort((a, b) => totals[b] - totals[a] || a.localeCompare(b));
+	$: comparing = compare && view === 'volume';
+	$: previousData = comparing
+		? data.map((bucket) => ({ ...bucket, models: bucket.previous?.models ?? {} }))
+		: [];
+	$: previousTotals = modelTotals(previousData);
+	$: ids = [...new Set([...Object.keys(totals), ...Object.keys(previousTotals)])].sort(
+		(a, b) => (totals[b] ?? 0) - (totals[a] ?? 0) || a.localeCompare(b)
+	);
 	$: visibleIds = selectedModel ? [selectedModel] : ids;
 	$: series = chartSeries(data, selectedModel);
-	$: ceiling = chartCeiling(series.reduce((max, point) => Math.max(max, point.value), 0));
+	$: previousSeries = chartSeries(previousData, selectedModel);
+	$: ceiling = chartCeiling(
+		[...series, ...previousSeries].reduce((max, point) => Math.max(max, point.value), 0)
+	);
 	$: step = intervalMinutes[granularity] * 60000;
 	$: start = series[0]?.time ?? 0;
 	$: span = Math.max(step, (series[series.length - 1]?.time ?? start) - start + step);
 	$: barWidth = Math.min((100 * step) / span, 12);
 	$: hovered = active !== null ? series[active] : null;
+	$: previousHovered = active !== null ? previousSeries[active] : null;
+	$: change =
+		hovered && previousHovered ? comparisonChange(hovered.value, previousHovered.value) : null;
+	$: lineColor = selectedModel ? modelColor(selectedModel) : 'currentColor';
+	$: linePaths = [series, previousSeries].map((points) =>
+		points
+			.map(
+				(point) =>
+					`${((point.time - start + step / 2) / span) * 100},${100 - (point.value / ceiling) * 100}`
+			)
+			.join(' ')
+	);
 	$: tooltipRows = hovered ? intervalBreakdown(hovered.models, visibleIds, activeModel) : [];
 	$: hoveredModels = hovered ? data.find((bucket) => bucket.date === hovered.date)?.models : null;
 	$: labels = [
@@ -232,6 +247,11 @@
 		const end = start.add(intervalMinutes[granularity], 'minute');
 		return `${start.format('MMM D, YYYY · HH:mm')}–${end.format(start.isSame(end, 'day') ? 'HH:mm' : 'MMM D, HH:mm')}`;
 	};
+	const comparisonInterval = (start: string, end: string) => {
+		const from = dayjs(start).locale($i18n.language);
+		const to = dayjs(end).locale($i18n.language);
+		return `${from.format('MMM D, YYYY · HH:mm')}–${to.format(from.isSame(to, 'day') ? 'HH:mm' : 'MMM D, HH:mm')}`;
+	};
 
 	function isolate(id: string | null) {
 		selectedModel = selectedModel === id ? null : id;
@@ -267,11 +287,28 @@
 					? name(selectedModel)
 					: $i18n.t('All models')}</span
 		>
-		<span class="shrink-0 whitespace-nowrap"
-			>{hovered
-				? `${hovered.value.toLocaleString($i18n.language)} ${metricLabel.toLocaleLowerCase($i18n.language)}`
-				: metricLabel}</span
-		>
+		{#if comparing}
+			<span class="flex shrink-0 items-center gap-3 text-[0.625rem]">
+				<span class="flex items-center gap-1.5"
+					><svg width="16" height="8" aria-hidden="true" class="text-gray-900 dark:text-gray-200"
+						><path d="M0 4H16" stroke={lineColor} stroke-width="1.5" /></svg
+					>{$i18n.t('Current')}</span
+				>
+				<span class="flex items-center gap-1.5"
+					><svg
+						width="16"
+						height="8"
+						aria-hidden="true"
+						class="text-gray-900 dark:text-gray-200 opacity-50"
+						><path d="M0 4H16" stroke={lineColor} stroke-width="1.5" stroke-dasharray="4 3" /></svg
+					>{$i18n.t('Previous')}</span
+				>
+			</span>
+		{:else}<span class="shrink-0 whitespace-nowrap"
+				>{hovered
+					? `${hovered.value.toLocaleString($i18n.language)} ${metricLabel.toLocaleLowerCase($i18n.language)}`
+					: metricLabel}</span
+			>{/if}
 	</div>
 	<div
 		bind:this={plot}
@@ -293,17 +330,45 @@
 					</div>
 				{/each}
 				<div class="relative h-full">
+					{#if comparing}
+						<svg
+							class="pointer-events-none absolute inset-0 h-full w-full overflow-visible text-gray-900 dark:text-gray-200"
+							viewBox="0 0 100 100"
+							preserveAspectRatio="none"
+							aria-hidden="true"
+						>
+							<polyline
+								points={linePaths[1]}
+								fill="none"
+								stroke={lineColor}
+								stroke-width="1.5"
+								stroke-dasharray="4 4"
+								opacity="0.5"
+								vector-effect="non-scaling-stroke"
+							/>
+							<polyline
+								points={linePaths[0]}
+								fill="none"
+								stroke={lineColor}
+								stroke-width="1.5"
+								stroke-linejoin="round"
+								vector-effect="non-scaling-stroke"
+							/>
+						</svg>
+					{/if}
 					{#each series as point, index (point.date)}
 						<button
 							type="button"
 							data-point
 							class="absolute bottom-0 top-0 flex justify-center items-end focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
 							style:left={`${position(point.time)}%`}
-							style:width={`${barWidth}%`}
+							style:width={`${comparing ? (100 * step) / span : barWidth}%`}
 							style:transform="translateX(-50%)"
 							tabindex={keyboardIndex === index ? 0 : -1}
 							aria-describedby={active === index && activeModel === null ? tooltipId : undefined}
-							aria-label={`${dateLabel(point.date)}: ${point.value.toLocaleString($i18n.language)} ${metricLabel}. ${stacks[index].map((id) => `${name(id)}: ${point.models[id].toLocaleString($i18n.language)}`).join(', ')}`}
+							aria-label={comparing && point.previous && point.start && point.end
+								? `${$i18n.t('Current')}: ${comparisonInterval(point.start, point.end)}, ${point.value.toLocaleString($i18n.language)} ${metricLabel}. ${$i18n.t('Previous')}: ${comparisonInterval(point.previous.start, point.previous.end)}, ${previousSeries[index].value.toLocaleString($i18n.language)} ${metricLabel}`
+								: `${dateLabel(point.date)}: ${point.value.toLocaleString($i18n.language)} ${metricLabel}. ${stacks[index].map((id) => `${name(id)}: ${point.models[id].toLocaleString($i18n.language)}`).join(', ')}`}
 							on:mouseenter={(event) => showTooltip(event, index)}
 							on:mouseleave={leaveTooltip}
 							on:focus={(event) => {
@@ -314,18 +379,30 @@
 							on:click={(event) => showTooltip(event, index)}
 							on:keydown={(event) => navigate(event, index)}
 						>
-							<span
-								class="w-3/4 max-w-12 h-full flex flex-col-reverse justify-start"
-								style:opacity={active === null || active === index ? 1 : 0.45}
-							>
-								{#each stacks[index] as id}
-									<span
-										class="block shrink-0 w-full"
-										style:height={`${(point.models[id] / ceiling) * 100}%`}
-										style:background-color={modelColor(id)}
-									></span>
-								{/each}
-							</span>
+							{#if comparing}
+								{#if active === index || series.length === 1}
+									{#each [point.value, previousSeries[index].value] as value, period}
+										<span
+											class="absolute left-1/2 size-1.5 rounded-full bg-current text-gray-900 dark:text-gray-200"
+											style:bottom={`${(value / ceiling) * 100}%`}
+											style:transform="translate(-50%, 50%)"
+											style:background-color={lineColor}
+											style:opacity={period === 0 ? 1 : 0.5}
+										></span>
+									{/each}
+								{/if}
+							{:else}<span
+									class="w-3/4 max-w-12 h-full flex flex-col-reverse justify-start"
+									style:opacity={active === null || active === index ? 1 : 0.45}
+								>
+									{#each stacks[index] as id}
+										<span
+											class="block shrink-0 w-full"
+											style:height={`${(point.models[id] / ceiling) * 100}%`}
+											style:background-color={modelColor(id)}
+										></span>
+									{/each}
+								</span>{/if}
 						</button>
 					{/each}
 				</div>
@@ -434,8 +511,9 @@
 				<span class="max-w-40 truncate" title={name(id)}>{name(id)}</span>
 				<span
 					class="w-14 shrink-0 text-right tabular-nums text-gray-400 dark:text-gray-500"
-					title={(hovered ? (hoveredModels?.[id] ?? 0) : totals[id]).toLocaleString($i18n.language)}
-					>{number(hovered ? (hoveredModels?.[id] ?? 0) : totals[id])}</span
+					title={(hovered ? (hoveredModels?.[id] ?? 0) : (totals[id] ?? 0)).toLocaleString(
+						$i18n.language
+					)}>{number(hovered ? (hoveredModels?.[id] ?? 0) : (totals[id] ?? 0))}</span
 				>
 			</button>
 		{/each}
@@ -453,27 +531,66 @@
 		class="w-64 max-w-full py-0.5 text-[0.625rem] leading-4 font-normal text-gray-100"
 	>
 		{#if hovered}
-			<div class="truncate text-gray-400" title={intervalLabel(hovered.date)}>
-				{intervalLabel(hovered.date)}
-			</div>
-			<div class="mt-1 max-h-48 overflow-y-auto scrollbar-hidden space-y-0.5">
-				{#each tooltipRows as row (row.id)}
-					<div
-						class="flex h-4 items-center justify-between gap-3"
-						class:text-gray-500={row.value === 0}
-					>
-						<span class="flex min-w-0 items-center gap-1.5"
-							><span class="size-1.5 shrink-0" style:background-color={modelColor(row.id)}
-							></span><span class="min-w-0 truncate" title={name(row.id)}>{name(row.id)}</span
-							></span
-						>
-						<span class="shrink-0 whitespace-nowrap tabular-nums"
-							>{row.value.toLocaleString($i18n.language)}
-							<span class="text-gray-400">({usageShare(row.value, hovered.value)})</span></span
+			{#if comparing && hovered.previous && previousHovered && hovered.start && hovered.end}
+				<div class="truncate text-gray-400">
+					{selectedModel ? name(selectedModel) : $i18n.t('All models')} · {metricLabel}
+				</div>
+				<div class="mt-1 space-y-0.5">
+					{#each [{ label: $i18n.t('Current'), start: hovered.start, end: hovered.end, value: hovered.value }, { label: $i18n.t('Previous'), start: hovered.previous.start, end: hovered.previous.end, value: previousHovered.value }] as period, index}
+						<div class="flex h-4 items-center justify-between gap-3">
+							<span
+								class="flex min-w-0 items-center gap-1.5"
+								title={`${period.label}: ${period.start} – ${period.end}`}
+							>
+								<svg width="12" height="8" class="shrink-0" aria-hidden="true"
+									><path
+										d="M0 4H12"
+										stroke={selectedModel ? modelColor(selectedModel) : 'currentColor'}
+										stroke-width="1.5"
+										stroke-dasharray={index === 1 ? '3 2' : undefined}
+										opacity={index === 1 ? 0.5 : 1}
+									/></svg
+								>
+								<span class="truncate text-gray-400"
+									>{comparisonInterval(period.start, period.end)}</span
+								>
+							</span>
+							<span class="shrink-0 tabular-nums"
+								>{period.value.toLocaleString($i18n.language)}</span
+							>
+						</div>
+					{/each}
+					<div class="flex h-4 items-center justify-between gap-3 text-gray-400">
+						<span>{$i18n.t('Change')}</span><span class="tabular-nums"
+							>{change === null
+								? $i18n.t('No previous usage')
+								: `${change > 0 ? '+' : ''}${change.toLocaleString($i18n.language, { maximumFractionDigits: 1 })}%`}</span
 						>
 					</div>
-				{:else}<div class="text-gray-400">{$i18n.t('No activity in this period')}</div>{/each}
-			</div>
+				</div>
+			{:else}
+				<div class="truncate text-gray-400" title={intervalLabel(hovered.date)}>
+					{intervalLabel(hovered.date)}
+				</div>
+				<div class="mt-1 max-h-48 overflow-y-auto scrollbar-hidden space-y-0.5">
+					{#each tooltipRows as row (row.id)}
+						<div
+							class="flex h-4 items-center justify-between gap-3"
+							class:text-gray-500={row.value === 0}
+						>
+							<span class="flex min-w-0 items-center gap-1.5"
+								><span class="size-1.5 shrink-0" style:background-color={modelColor(row.id)}
+								></span><span class="min-w-0 truncate" title={name(row.id)}>{name(row.id)}</span
+								></span
+							>
+							<span class="shrink-0 whitespace-nowrap tabular-nums"
+								>{row.value.toLocaleString($i18n.language)}
+								<span class="text-gray-400">({usageShare(row.value, hovered.value)})</span></span
+							>
+						</div>
+					{:else}<div class="text-gray-400">{$i18n.t('No activity in this period')}</div>{/each}
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>

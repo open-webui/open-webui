@@ -168,9 +168,10 @@ export const getDailyStats = async (
 	token: string = '',
 	startDate: number | null = null,
 	endDate: number | null = null,
-	granularity: '10m' | 'hourly' | 'daily' = 'daily',
+	granularity: '10m' | 'hourly' | '3h' | '6h' | 'daily' = 'daily',
 	groupId: string | null = null,
-	metric: 'messages' | 'tokens' = 'messages'
+	metric: 'messages' | 'tokens' = 'messages',
+	compare = false
 ) => {
 	let error = null;
 
@@ -179,6 +180,7 @@ export const getDailyStats = async (
 	if (endDate) searchParams.append('end_date', endDate.toString());
 	searchParams.append('granularity', granularity);
 	searchParams.append('metric', metric);
+	if (compare) searchParams.append('compare', 'true');
 	if (groupId) searchParams.append('group_id', groupId);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/daily?${searchParams.toString()}`, {

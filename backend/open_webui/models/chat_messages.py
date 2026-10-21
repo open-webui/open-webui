@@ -970,14 +970,16 @@ class ChatMessageTable:
         db: Optional[AsyncSession] = None,
         granularity: str = 'daily',
         metric: str = 'messages',
+        bucket_offset: int = 0,
     ) -> dict[str, dict[str, int]]:
         """Get message counts or total tokens grouped by time bucket and model."""
-        bucket_minutes = {'10m': 10, 'hourly': 60, 'daily': 1440}[granularity]
+        bucket_minutes = {'10m': 10, 'hourly': 60, '3h': 180, '6h': 360, 'daily': 1440}[granularity]
         date_format = '%Y-%m-%d' if granularity == 'daily' else '%Y-%m-%d %H:%M'
         step = timedelta(minutes=bucket_minutes)
 
         def bucket_start(timestamp):
-            date = datetime.fromtimestamp(_normalize_timestamp(timestamp))
+            # Shift comparison events before bucketing so partial intervals align exactly.
+            date = datetime.fromtimestamp(_normalize_timestamp(timestamp) + bucket_offset)
             minutes = date.hour * 60 + date.minute
             minutes = minutes // bucket_minutes * bucket_minutes
             return date.replace(hour=minutes // 60, minute=minutes % 60, second=0, microsecond=0)
@@ -1013,7 +1015,7 @@ class ChatMessageTable:
 
             if start_date and end_date:
                 current = bucket_start(start_date)
-                end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date))
+                end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date) + bucket_offset)
                 while current <= end_dt:
                     counts.setdefault(current.strftime(date_format), {})
                     current += step
