@@ -1136,8 +1136,11 @@ class SocketSessionEventSink:
             EVENTS.CHAT_UNSHARED.name,
             EVENTS.CHAT_FOLDER_UPDATED.name,
             EVENTS.CHAT_DELETED.name,
+            EVENTS.CHAT_ARCHIVED.name,
         }:
-            await refresh_chat_access((event.subject or {}).get('id'))
+            subject = event.subject or {}
+            # User-scoped events (archive all, unshare all) recheck every chat.
+            await refresh_chat_access(subject.get('id') if subject.get('type') == 'chat' else None)
 
         if event.event not in {EVENTS.USER_DELETED.name, EVENTS.USER_ROLE_UPDATED.name}:
             return
