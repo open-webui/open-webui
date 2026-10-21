@@ -9,7 +9,7 @@
 	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, mobile, models, settings, user } from '$lib/stores';
 	import type { SettingsModalRequest } from '$lib/stores';
 	import { getUserSettings, updateUserSettings } from '$lib/apis/users';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
@@ -101,6 +101,7 @@
 	$: if (show !== lastShow) {
 		lastShow = show;
 		search = '';
+		showSearch = false;
 		if (show && typeof show === 'object') {
 			selectedTab = show.tab;
 			tabState = show.state ?? null;
@@ -129,6 +130,7 @@
 	$: if (!modalShow && show !== false) {
 		show = false;
 		search = '';
+		showSearch = false;
 		lastShow = false;
 		selectedTab = 'general';
 		tabState = null;
@@ -377,6 +379,9 @@
 	let filteredAdminSettings: string[] = [];
 
 	let search = '';
+	let showSearch = false;
+	let searchInput: HTMLInputElement;
+	let searchButton: HTMLButtonElement;
 	let englishRequested = false;
 	$: if (modalShow && !englishRequested) {
 		englishRequested = true;
@@ -435,11 +440,19 @@
 		selectedTab = id;
 	};
 
+	const toggleSearch = async () => {
+		showSearch = !(showSearch || search);
+		if (!showSearch) search = '';
+		await tick();
+		(showSearch ? searchInput : searchButton)?.focus();
+	};
+
 	const searchKeydown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape' && search) {
+		if (event.key === 'Escape' && (search || $mobile)) {
 			event.preventDefault();
 			event.stopPropagation();
-			search = '';
+			if (search) search = '';
+			else toggleSearch();
 		} else if (event.key === 'Enter') {
 			event.preventDefault();
 			if (filteredSettings.length) selectTab(filteredSettings[0]);
@@ -526,33 +539,49 @@
 		id="settings-tabs-container"
 		class="shrink-0 min-w-0 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
 	>
-		<button
-			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-600 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
-			type="button"
-			on:click={() => {
-				show = false;
-			}}
-		>
-			<ChevronLeft className="size-3" strokeWidth="2" />
-			<span>{$i18n.t('Back')}</span>
-		</button>
-
-		<div
-			class="flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
-		>
-			<div class="self-center rounded-l-xl bg-transparent">
+		<div class="flex items-center gap-1 m-1 md:mb-0 shrink-0">
+			<button
+				class="flex flex-1 items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-gray-600 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+				type="button"
+				on:click={() => {
+					show = false;
+				}}
+			>
+				<ChevronLeft className="size-3" strokeWidth="2" />
+				<span>{$i18n.t('Back')}</span>
+			</button>
+			<button
+				bind:this={searchButton}
+				type="button"
+				class="flex md:hidden size-7 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/[0.04] dark:hover:text-gray-300"
+				aria-label={$i18n.t('Search')}
+				aria-expanded={showSearch || !!search}
+				aria-controls="search-input-settings-modal"
+				on:click={toggleSearch}
+			>
 				<Search className="size-3.5" strokeWidth="1.5" />
-			</div>
-			<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
-			<input
-				data-settings-search
-				class="w-full text-xs bg-transparent py-1 outline-hidden placeholder:text-gray-600 dark:text-gray-300 dark:placeholder:text-gray-500"
-				bind:value={search}
-				id="search-input-settings-modal"
-				on:keydown={searchKeydown}
-				placeholder={$i18n.t('Search')}
-			/>
+			</button>
 		</div>
+
+		{#if !$mobile || showSearch || search}
+			<div
+				class="flex items-center gap-1.5 h-7 px-2 mx-1 md:mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
+			>
+				<div class="self-center rounded-l-xl bg-transparent">
+					<Search className="size-3.5" strokeWidth="1.5" />
+				</div>
+				<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
+				<input
+					bind:this={searchInput}
+					data-settings-search
+					class="w-full text-xs bg-transparent py-1 outline-hidden placeholder:text-gray-600 dark:text-gray-300 dark:placeholder:text-gray-500"
+					bind:value={search}
+					id="search-input-settings-modal"
+					on:keydown={searchKeydown}
+					placeholder={$i18n.t('Search')}
+				/>
+			</div>
+		{/if}
 
 		<div class="sr-only" role="status" aria-live="polite">
 			{search

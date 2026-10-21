@@ -119,8 +119,9 @@
 	let fontFamilyInput = '';
 	let showTextScaleSlider = false;
 	let showFontFamilyInput = false;
-	const settingRowClass = 'flex items-center justify-between gap-2.5';
-	const settingLabelClass = 'min-w-0 text-xs text-gray-600 dark:text-gray-400';
+	const settingRowClass = 'group/setting-row flex items-center justify-between gap-2.5';
+	const settingLabelClass =
+		'min-w-0 text-xs text-gray-600 group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:text-gray-400 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white';
 	const settingControlClass = 'flex shrink-0 items-center justify-end gap-1.5';
 	const sectionHeadingClass = 'mt-4 text-xs text-gray-600 dark:text-gray-500';
 	const firstSectionHeadingClass = 'text-xs text-gray-600 dark:text-gray-500';
@@ -460,12 +461,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<label id="ui-scale-label" class={settingLabelClass} for="ui-scale-slider">
+			<label id="ui-scale-label" class={settingLabelClass} for="ui-scale-label-control">
 				{$i18n.t('settings.personal.interface.uiScale.label')}
 			</label>
 
 			<div class={settingControlClass}>
 				<button
+					id="ui-scale-label-control"
 					class={actionButtonClass}
 					aria-live="polite"
 					type="button"
@@ -548,12 +550,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<label id="font-family-label" class={settingLabelClass} for="font-family-input">
+			<label id="font-family-label" class={settingLabelClass} for="font-family-label-control">
 				{$i18n.t('settings.personal.interface.fontFamily.label')}
 			</label>
 
 			<div class={settingControlClass}>
 				<button
+					id="font-family-label-control"
 					class={actionButtonClass}
 					aria-labelledby="font-family-label font-family-state"
 					type="button"
@@ -588,9 +591,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="accessibility-mode-label" class={settingLabelClass}>
+			<label
+				id="accessibility-mode-label"
+				class={settingLabelClass}
+				for="accessibility-mode-label-control"
+			>
 				{$i18n.t('settings.personal.interface.accessibilityMode.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -611,9 +618,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="use-chat-title-as-tab-title-label" class={settingLabelClass}>
+			<label
+				id="use-chat-title-as-tab-title-label"
+				class={settingLabelClass}
+				for="use-chat-title-as-tab-title-label-control"
+			>
 				{$i18n.t('settings.personal.interface.displayChatTitleInTab.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -633,10 +644,14 @@
 	</div>
 
 	<div>
-		<div id="allow-user-location-label" class={settingRowClass}>
-			<div class={settingLabelClass}>
+		<div class={settingRowClass}>
+			<label
+				id="allow-user-location-label"
+				class={settingLabelClass}
+				for="allow-user-location-label-control"
+			>
 				{$i18n.t('settings.personal.interface.allowUserLocation.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -657,11 +672,15 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="haptic-feedback-label" class={settingLabelClass}>
+			<label
+				id="haptic-feedback-label"
+				class={settingLabelClass}
+				for="haptic-feedback-label-control"
+			>
 				{$i18n.t('settings.personal.interface.hapticFeedback.label')} ({$i18n.t(
 					'settings.personal.interface.android.label'
 				)})
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -682,9 +701,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="copy-formatted-label" class={settingLabelClass}>
+			<label id="copy-formatted-label" class={settingLabelClass} for="copy-formatted-label-control">
 				{$i18n.t('settings.personal.interface.copyFormattedText.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -706,9 +725,13 @@
 	{#if isSettingsAdmin({ user: $user, config: $config })}
 		<div>
 			<div class={settingRowClass}>
-				<div id="toast-notifications-label" class={settingLabelClass}>
+				<label
+					id="toast-notifications-label"
+					class={settingLabelClass}
+					for="toast-notifications-label-control"
+				>
 					{$i18n.t('settings.personal.interface.toastNotificationsForNewUpdates.label')}
-				</div>
+				</label>
 
 				<div class={settingControlClass}>
 					<Switch
@@ -729,9 +752,9 @@
 
 		<div>
 			<div class={settingRowClass}>
-				<div id="whats-new-label" class={settingLabelClass}>
+				<label id="whats-new-label" class={settingLabelClass} for="whats-new-label-control">
 					{$i18n.t(`Show "What's New" Modal on Login`)}
-				</div>
+				</label>
 
 				<div class={settingControlClass}>
 					<Switch
@@ -757,9 +780,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="enable-message-queue-label" class={settingLabelClass}>
+			<label
+				id="enable-message-queue-label"
+				class={settingLabelClass}
+				for="enable-message-queue-label-control"
+			>
 				{$i18n.t('settings.personal.interface.enableMessageQueue.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -780,11 +807,12 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="chat-direction-label" class={settingLabelClass}>
+			<label id="chat-direction-label" class={settingLabelClass} for="chat-direction-label-control">
 				{$i18n.t('settings.personal.interface.chatDirection.label')}
-			</div>
+			</label>
 
 			<button
+				id="chat-direction-label-control"
 				aria-labelledby="chat-direction-label chat-direction-mode"
 				class={actionButtonClass}
 				on:click={toggleChangeChatDirection}
@@ -806,11 +834,16 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="landing-page-mode-label" class={settingLabelClass}>
+			<label
+				id="landing-page-mode-label"
+				class={settingLabelClass}
+				for="landing-page-mode-label-control"
+			>
 				{$i18n.t('settings.personal.interface.landingPageMode.label')}
-			</div>
+			</label>
 
 			<button
+				id="landing-page-mode-label-control"
 				aria-labelledby="landing-page-mode-label notification-sound-state"
 				class={actionButtonClass}
 				on:click={() => {
@@ -832,11 +865,16 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="chat-background-label" class={settingLabelClass}>
+			<label
+				id="chat-background-label"
+				class={settingLabelClass}
+				for="chat-background-label-control"
+			>
 				{$i18n.t('settings.personal.interface.chatBackgroundImage.label')}
-			</div>
+			</label>
 
 			<button
+				id="chat-background-label-control"
 				aria-labelledby="chat-background-label background-image-url-state"
 				class={actionButtonClass}
 				on:click={() => {
@@ -861,9 +899,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="chat-bubble-ui-label" class={settingLabelClass}>
+			<label id="chat-bubble-ui-label" class={settingLabelClass} for="chat-bubble-ui-label-control">
 				{$i18n.t('settings.personal.interface.chatBubbleUi.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -885,9 +923,13 @@
 	{#if !chatBubble}
 		<div>
 			<div class={settingRowClass}>
-				<div id="chat-bubble-username-label" class={settingLabelClass}>
+				<label
+					id="chat-bubble-username-label"
+					class={settingLabelClass}
+					for="chat-bubble-username-label-control"
+				>
 					{$i18n.t('settings.personal.interface.displayTheUsernameInsteadOfYouInTheChat.label')}
-				</div>
+				</label>
 
 				<div class={settingControlClass}>
 					<Switch
@@ -909,9 +951,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="widescreen-mode-label" class={settingLabelClass}>
+			<label
+				id="widescreen-mode-label"
+				class={settingLabelClass}
+				for="widescreen-mode-label-control"
+			>
 				{$i18n.t('settings.personal.interface.widescreenMode.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -933,9 +979,13 @@
 	{#if canUseTemporaryChats({ user: $user, config: $config })}
 		<div>
 			<div class={settingRowClass}>
-				<div id="temp-chat-default-label" class={settingLabelClass}>
+				<label
+					id="temp-chat-default-label"
+					class={settingLabelClass}
+					for="temp-chat-default-label-control"
+				>
 					{$i18n.t('settings.personal.interface.temporaryChatByDefault.label')}
-				</div>
+				</label>
 
 				<div class={settingControlClass}>
 					<Switch
@@ -957,9 +1007,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="fade-streaming-label" class={settingLabelClass}>
+			<label id="fade-streaming-label" class={settingLabelClass} for="fade-streaming-label-control">
 				{$i18n.t('settings.personal.interface.fadeEffectForStreamingText.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -980,9 +1030,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="render-markdown-user-label" class={settingLabelClass}>
+			<label
+				id="render-markdown-user-label"
+				class={settingLabelClass}
+				for="render-markdown-user-label-control"
+			>
 				{$i18n.t('settings.personal.interface.renderMarkdownInUserMessages.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1003,9 +1057,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="render-markdown-assistant-label" class={settingLabelClass}>
+			<label
+				id="render-markdown-assistant-label"
+				class={settingLabelClass}
+				for="render-markdown-assistant-label-control"
+			>
 				{$i18n.t('settings.personal.interface.renderMarkdownInAssistantMessages.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1026,9 +1084,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="render-markdown-in-previews-label" class={settingLabelClass}>
+			<label
+				id="render-markdown-in-previews-label"
+				class={settingLabelClass}
+				for="render-markdown-in-previews-label-control"
+			>
 				{$i18n.t('settings.personal.interface.renderMarkdownInPreviews.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1049,9 +1111,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="auto-generation-label" class={settingLabelClass}>
+			<label
+				id="auto-generation-label"
+				class={settingLabelClass}
+				for="auto-generation-label-control"
+			>
 				{$i18n.t('settings.personal.interface.titleAutoGeneration.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1072,9 +1138,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div class={settingLabelClass} id="follow-up-auto-generation-label">
+			<label
+				class={settingLabelClass}
+				id="follow-up-auto-generation-label"
+				for="follow-up-auto-generation-label-control"
+			>
 				{$i18n.t('settings.personal.interface.followUpAutoGeneration.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1095,9 +1165,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="chat-tags-label" class={settingLabelClass}>
+			<label id="chat-tags-label" class={settingLabelClass} for="chat-tags-label-control">
 				{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1118,9 +1188,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="auto-copy-label" class={settingLabelClass}>
+			<label id="auto-copy-label" class={settingLabelClass} for="auto-copy-label-control">
 				{$i18n.t('settings.personal.interface.autoCopyResponseToClipboard.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1141,9 +1211,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="response-auto-scroll-label" class={settingLabelClass}>
+			<label
+				id="response-auto-scroll-label"
+				class={settingLabelClass}
+				for="response-auto-scroll-label-control"
+			>
 				{$i18n.t('settings.personal.interface.responseAutoScroll.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1164,9 +1238,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="scroll-on-branch-change-label" class={settingLabelClass}>
+			<label
+				id="scroll-on-branch-change-label"
+				class={settingLabelClass}
+				for="scroll-on-branch-change-label-control"
+			>
 				{$i18n.t('settings.personal.interface.scrollOnBranchChange.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1187,9 +1265,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="insert-suggestion-prompt-label" class={settingLabelClass}>
+			<label
+				id="insert-suggestion-prompt-label"
+				class={settingLabelClass}
+				for="insert-suggestion-prompt-label-control"
+			>
 				{$i18n.t('settings.personal.interface.insertSuggestionPromptToInput.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1210,9 +1292,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="keep-follow-up-prompts-label" class={settingLabelClass}>
+			<label
+				id="keep-follow-up-prompts-label"
+				class={settingLabelClass}
+				for="keep-follow-up-prompts-label-control"
+			>
 				{$i18n.t('settings.personal.interface.keepFollowUpPromptsInChat.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1233,9 +1319,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="insert-follow-up-prompt-label" class={settingLabelClass}>
+			<label
+				id="insert-follow-up-prompt-label"
+				class={settingLabelClass}
+				for="insert-follow-up-prompt-label-control"
+			>
 				{$i18n.t('settings.personal.interface.insertFollowUpPromptToInput.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1256,9 +1346,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="regenerate-menu-label" class={settingLabelClass}>
+			<label
+				id="regenerate-menu-label"
+				class={settingLabelClass}
+				for="regenerate-menu-label-control"
+			>
 				{$i18n.t('settings.personal.interface.regenerateMenu.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1279,9 +1373,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="always-collapse-label" class={settingLabelClass}>
+			<label
+				id="always-collapse-label"
+				class={settingLabelClass}
+				for="always-collapse-label-control"
+			>
 				{$i18n.t('settings.personal.interface.alwaysCollapseCodeBlocks.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1302,9 +1400,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="always-expand-label" class={settingLabelClass}>
+			<label id="always-expand-label" class={settingLabelClass} for="always-expand-label-control">
 				{$i18n.t('settings.personal.interface.alwaysExpandDetails.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1325,9 +1423,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="chat-hover-preview-label" class={settingLabelClass}>
+			<label
+				id="chat-hover-preview-label"
+				class={settingLabelClass}
+				for="chat-hover-preview-label-control"
+			>
 				{$i18n.t('settings.personal.interface.chatHoverPreviews.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1348,9 +1450,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="keep-followup-prompts-label" class={settingLabelClass}>
+			<label
+				id="keep-followup-prompts-label"
+				class={settingLabelClass}
+				for="keep-followup-prompts-label-control"
+			>
 				{$i18n.t('settings.personal.interface.displayMultiModelResponsesInTabs.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1371,11 +1477,16 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="terminal-file-display-label" class={settingLabelClass}>
+			<label
+				id="terminal-file-display-label"
+				class={settingLabelClass}
+				for="terminal-file-display-label-control"
+			>
 				{$i18n.t('settings.personal.interface.terminalFileDisplay.label')}
-			</div>
+			</label>
 
 			<button
+				id="terminal-file-display-label-control"
 				aria-labelledby="terminal-file-display-label terminal-file-display-state"
 				class={actionButtonClass}
 				on:click={() => {
@@ -1396,9 +1507,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="show-files-on-terminal-select-label" class={settingLabelClass}>
+			<label
+				id="show-files-on-terminal-select-label"
+				class={settingLabelClass}
+				for="show-files-on-terminal-select-label-control"
+			>
 				{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1419,9 +1534,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="terminal-preview-allow-same-origin-label" class={settingLabelClass}>
+			<label
+				id="terminal-preview-allow-same-origin-label"
+				class={settingLabelClass}
+				for="terminal-preview-allow-same-origin-label-control"
+			>
 				{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1442,9 +1561,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="stylized-pdf-export-label" class={settingLabelClass}>
+			<label
+				id="stylized-pdf-export-label"
+				class={settingLabelClass}
+				for="stylized-pdf-export-label-control"
+			>
 				{$i18n.t('settings.personal.interface.stylizedPdfExport.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1465,9 +1588,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="floating-action-buttons-label" class={settingLabelClass}>
+			<label
+				id="floating-action-buttons-label"
+				class={settingLabelClass}
+				for="floating-action-buttons-label-control"
+			>
 				{$i18n.t('settings.personal.interface.floatingQuickActions.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				{#if showFloatingActionButtons}
@@ -1503,11 +1630,16 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="web-search-in-chat-label" class={settingLabelClass}>
+			<label
+				id="web-search-in-chat-label"
+				class={settingLabelClass}
+				for="web-search-in-chat-label-control"
+			>
 				{$i18n.t('settings.personal.interface.webSearchInChat.label')}
-			</div>
+			</label>
 
 			<button
+				id="web-search-in-chat-label-control"
 				aria-labelledby="web-search-in-chat-label web-search-state"
 				class={actionButtonClass}
 				on:click={() => {
@@ -1531,11 +1663,16 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="enter-key-behavior-label ctrl-enter-to-send-state" class={settingLabelClass}>
+			<label
+				id="enter-key-behavior-label"
+				class={settingLabelClass}
+				for="enter-key-behavior-label-control"
+			>
 				{$i18n.t('settings.personal.interface.enterKeyBehavior.label')}
-			</div>
+			</label>
 
 			<button
+				id="enter-key-behavior-label-control"
 				aria-labelledby="enter-key-behavior-label"
 				class={actionButtonClass}
 				on:click={() => {
@@ -1557,9 +1694,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="rich-input-label" class={settingLabelClass}>
+			<label id="rich-input-label" class={settingLabelClass} for="rich-input-label-control">
 				{$i18n.t('settings.personal.interface.richTextInputForChat.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1581,9 +1718,13 @@
 	{#if $config?.features?.enable_autocomplete_generation}
 		<div>
 			<div class={settingRowClass}>
-				<div id="prompt-autocompletion-label" class={settingLabelClass}>
+				<label
+					id="prompt-autocompletion-label"
+					class={settingLabelClass}
+					for="prompt-autocompletion-label-control"
+				>
 					{$i18n.t('settings.personal.interface.promptAutocompletion.label')}
-				</div>
+				</label>
 
 				<div class={settingControlClass}>
 					<Switch
@@ -1606,9 +1747,13 @@
 	{#if richTextInput}
 		<div>
 			<div class={settingRowClass}>
-				<div id="show-formatting-toolbar-label" class={settingLabelClass}>
+				<label
+					id="show-formatting-toolbar-label"
+					class={settingLabelClass}
+					for="show-formatting-toolbar-label-control"
+				>
 					{$i18n.t('settings.personal.interface.showFormattingToolbar.label')}
-				</div>
+				</label>
 
 				<div class={settingControlClass}>
 					<Switch
@@ -1629,9 +1774,13 @@
 
 		<div>
 			<div class={settingRowClass}>
-				<div id="insert-prompt-as-rich-text-label" class={settingLabelClass}>
+				<label
+					id="insert-prompt-as-rich-text-label"
+					class={settingLabelClass}
+					for="insert-prompt-as-rich-text-label-control"
+				>
 					{$i18n.t('settings.personal.interface.insertPromptAsRichText.label')}
-				</div>
+				</label>
 
 				<div class={settingControlClass}>
 					<Switch
@@ -1653,9 +1802,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="paste-large-label" class={settingLabelClass}>
+			<label id="paste-large-label" class={settingLabelClass} for="paste-large-label-control">
 				{$i18n.t('settings.personal.interface.pasteLargeTextAsFile.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1680,9 +1829,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="detect-artifacts-label" class={settingLabelClass}>
+			<label
+				id="detect-artifacts-label"
+				class={settingLabelClass}
+				for="detect-artifacts-label-control"
+			>
 				{$i18n.t('settings.personal.interface.detectArtifactsAutomatically.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1703,9 +1856,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="iframe-sandbox-allow-scripts-label" class={settingLabelClass}>
+			<label
+				id="iframe-sandbox-allow-scripts-label"
+				class={settingLabelClass}
+				for="iframe-sandbox-allow-scripts-label-control"
+			>
 				{$i18n.t('settings.personal.interface.iframeSandboxAllowScripts.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1726,9 +1883,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="iframe-sandbox-allow-same-origin-label" class={settingLabelClass}>
+			<label
+				id="iframe-sandbox-allow-same-origin-label"
+				class={settingLabelClass}
+				for="iframe-sandbox-allow-same-origin-label-control"
+			>
 				{$i18n.t('settings.personal.interface.iframeSandboxAllowSameOrigin.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1749,9 +1910,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="iframe-sandbox-allow-forms-label" class={settingLabelClass}>
+			<label
+				id="iframe-sandbox-allow-forms-label"
+				class={settingLabelClass}
+				for="iframe-sandbox-allow-forms-label-control"
+			>
 				{$i18n.t('settings.personal.interface.iframeSandboxAllowForms.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1772,9 +1937,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="iframe-sandbox-allow-downloads-label" class={settingLabelClass}>
+			<label
+				id="iframe-sandbox-allow-downloads-label"
+				class={settingLabelClass}
+				for="iframe-sandbox-allow-downloads-label-control"
+			>
 				{$i18n.t('settings.personal.interface.iframeSandboxAllowDownloads.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1799,9 +1968,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div class={settingLabelClass} id="allow-voice-interruption-in-call-label">
+			<label
+				class={settingLabelClass}
+				id="allow-voice-interruption-in-call-label"
+				for="allow-voice-interruption-in-call-label-control"
+			>
 				{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1822,9 +1995,9 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="display-emoji-label" class={settingLabelClass}>
+			<label id="display-emoji-label" class={settingLabelClass} for="display-emoji-label-control">
 				{$i18n.t('settings.personal.interface.displayEmojiInCall.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				<Switch
@@ -1849,11 +2022,16 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="default-upload-mode-label" class={settingLabelClass}>
+			<label
+				id="default-upload-mode-label"
+				class={settingLabelClass}
+				for="default-upload-mode-label-control"
+			>
 				{$i18n.t('settings.personal.interface.defaultUploadMode.label')}
-			</div>
+			</label>
 
 			<button
+				id="default-upload-mode-label-control"
 				aria-labelledby="default-upload-mode-label default-upload-mode-state"
 				class={actionButtonClass}
 				on:click={() => {
@@ -1876,9 +2054,13 @@
 
 	<div>
 		<div class={settingRowClass}>
-			<div id="image-compression-label" class={settingLabelClass}>
+			<label
+				id="image-compression-label"
+				class={settingLabelClass}
+				for="image-compression-label-control"
+			>
 				{$i18n.t('settings.personal.interface.imageCompression.label')}
-			</div>
+			</label>
 
 			<div class={settingControlClass}>
 				{#if imageCompression}
@@ -1915,9 +2097,13 @@
 	{#if imageCompression}
 		<div>
 			<div class={settingRowClass}>
-				<div id="image-compression-in-channels-label" class={settingLabelClass}>
+				<label
+					id="image-compression-in-channels-label"
+					class={settingLabelClass}
+					for="image-compression-in-channels-label-control"
+				>
 					{$i18n.t('settings.personal.interface.compressImagesInChannels.label')}
-				</div>
+				</label>
 
 				<div class={settingControlClass}>
 					<Switch

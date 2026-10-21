@@ -401,10 +401,12 @@
 									{#each Object.keys(valves_spec.properties) as property}
 										<div>
 											<AdminSettingRow
+												let:labelId
 												label={valves_spec.properties[property].title}
 												description={valves_spec.properties[property]?.description ?? ''}
 											>
 												<button
+													id={`${labelId}-control`}
 													class={actionButtonClass}
 													type="button"
 													on:click={() => {

@@ -25,6 +25,10 @@
 	// Time period - persist in localStorage
 	let selectedPeriod =
 		(typeof localStorage !== 'undefined' && localStorage.getItem('analyticsPeriod')) || '7d';
+	let granularity: '10m' | 'hourly' | 'daily';
+	$: granularity =
+		selectedPeriod === '24h' ? '10m' : ['7d', '30d'].includes(selectedPeriod) ? 'hourly' : 'daily';
+	let selectedMetric: 'messages' | 'tokens' = 'messages';
 
 	// Custom date range (YYYY-MM-DD) - persist in localStorage
 	let customStart =
@@ -130,12 +134,11 @@
 		loading = true;
 		try {
 			const { start, end } = getDateRange(selectedPeriod);
-			const granularity = selectedPeriod === '24h' ? 'hourly' : 'daily';
 			const [summaryRes, modelsRes, usersRes, dailyRes, tokensRes] = await Promise.all([
 				getSummary(localStorage.token, start, end, selectedGroupId),
 				getModelAnalytics(localStorage.token, start, end, selectedGroupId),
 				getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId),
-				getDailyStats(localStorage.token, start, end, granularity, selectedGroupId),
+				getDailyStats(localStorage.token, start, end, granularity, selectedGroupId, selectedMetric),
 				getTokenUsage(localStorage.token, start, end, selectedGroupId)
 			]);
 
@@ -181,6 +184,7 @@
 		customStart;
 		customEnd;
 		selectedGroupId;
+		selectedMetric;
 		loadDashboard();
 	}
 
@@ -354,7 +358,7 @@
 		>
 	</div>
 
-	<!-- Daily usage chart -->
+	<!-- Usage chart -->
 	{#if dailyStats.length > 1}
 		{@const allModels = [...new Set(dailyStats.flatMap((d) => Object.keys(d.models || {})))]}
 		{@const topModels = allModels.slice(0, 8)}
@@ -370,9 +374,26 @@
 		]}
 		{@const periodMap = { '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', all: 'all' }}
 		<div class="mb-4">
-			<div class="text-xs font-normal text-gray-600 dark:text-gray-400 mb-2 px-0.5">
-				{selectedPeriod === '24h' ? $i18n.t('Hourly Messages') : $i18n.t('Daily Messages')}
-			</div>
+			<select
+				bind:value={selectedMetric}
+				aria-label={$i18n.t('Chart metric')}
+				class="text-xs font-normal text-gray-600 dark:text-gray-400 mb-2 pl-0.5 pr-8 rounded-sm bg-transparent"
+			>
+				<option value="messages">
+					{granularity === '10m'
+						? $i18n.t('10-Minute Messages')
+						: granularity === 'hourly'
+							? $i18n.t('Hourly Messages')
+							: $i18n.t('Daily Messages')}
+				</option>
+				<option value="tokens">
+					{granularity === '10m'
+						? $i18n.t('10-Minute Tokens')
+						: granularity === 'hourly'
+							? $i18n.t('Hourly Tokens')
+							: $i18n.t('Daily Tokens')}
+				</option>
+			</select>
 			<ChartLine
 				data={dailyStats}
 				models={topModels}

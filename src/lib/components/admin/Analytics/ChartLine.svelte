@@ -86,7 +86,9 @@
 		{@const step = labelCount > 1 ? Math.floor((data.length - 1) / (labelCount - 1)) || 1 : 1}
 		{@const isHourly = data[0]?.date?.includes(':')}
 		{@const dateFormat = isHourly
-			? 'h A'
+			? period === 'hour'
+				? 'h:mm A'
+				: 'M/D h A'
 			: period === 'year' || period === 'all'
 				? 'M/D/YY'
 				: 'M/D'}
@@ -106,15 +108,17 @@
 	{#if hovered}
 		{@const total = Object.values(hovered.models || {}).reduce((a, b) => a + b, 0)}
 		<div
-			class="pointer-events-none absolute top-1 text-[0.6875rem]"
-			style="left:{Math.min(Math.max((mouseX / w) * 100, 8), 92)}%"
+			class="pointer-events-none absolute top-1 w-56 max-w-full text-[0.6875rem]"
+			style="left:clamp(0px, calc({(mouseX / w) * 100}% - 7rem), max(0px, calc(100% - 14rem)))"
 		>
 			<div
-				class="min-w-[8.75rem] -translate-x-1/2 rounded border border-gray-100 bg-white px-2.5 py-1.5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+				class="rounded border border-gray-100 bg-white px-2.5 py-1.5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
 			>
 				<div class="mb-1.5 text-[0.625rem] text-gray-400">
 					{#if hovered.date?.includes(':')}
-						{dayjs(hovered.date).locale($i18n.language).format('MMM D, h A')}
+						{dayjs(hovered.date)
+							.locale($i18n.language)
+							.format(period === 'hour' ? 'MMM D, h:mm A' : 'MMM D, h A')}
 					{:else}
 						{dayjs(hovered.date).locale($i18n.language).format('MMM D, YYYY')}
 					{/if}

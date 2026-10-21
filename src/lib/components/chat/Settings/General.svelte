@@ -300,10 +300,12 @@
 				title={$i18n.t('settings.personal.general.sections.advancedParameters.title')}
 			>
 				<UserSettingRow
+					let:labelId
 					description={$i18n.t('settings.personal.general.modelParameters.description')}
 				>
 					<span slot="label">{$i18n.t('settings.personal.general.modelParameters.label')}</span>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						type="button"
 						aria-expanded={showAdvanced}

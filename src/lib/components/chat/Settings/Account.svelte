@@ -389,9 +389,13 @@
 
 		{#if canUseApiKeys({ user: $user, config: $config })}
 			<UserSettingSection title={$i18n.t('settings.personal.account.sections.apiKeys.title')}>
-				<UserSettingRow description={$i18n.t('settings.personal.account.secrets.description')}>
+				<UserSettingRow
+					let:labelId
+					description={$i18n.t('settings.personal.account.secrets.description')}
+				>
 					<span slot="label">{$i18n.t('settings.personal.account.secrets.label')}</span>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						type="button"
 						on:click={() => {

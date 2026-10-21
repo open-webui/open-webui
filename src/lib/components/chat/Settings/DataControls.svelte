@@ -162,10 +162,12 @@
 		>
 			{#if canManageChats({ user: $user, config: null }, 'import')}
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.dataControls.importChats.label')}
 					description={$i18n.t('settings.personal.dataControls.importChats.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						on:click={() => {
 							chatImportInputElement.click();
@@ -179,10 +181,12 @@
 
 			{#if canManageChats({ user: $user, config: null }, 'export')}
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.dataControls.exportChats.label')}
 					description={$i18n.t('settings.personal.dataControls.exportChats.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						on:click={() => {
 							exportChats();
@@ -195,10 +199,12 @@
 			{/if}
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.dataControls.sharedChats.label')}
 				description={$i18n.t('settings.personal.dataControls.sharedChats.description')}
 			>
 				<button
+					id={`${labelId}-control`}
 					class={actionButtonClass}
 					on:click={() => {
 						showSharedChatsModal = true;
@@ -210,10 +216,12 @@
 			</UserSettingRow>
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.dataControls.archiveAllChats.label')}
 				description={$i18n.t('settings.personal.dataControls.archiveAllChats.description')}
 			>
 				<button
+					id={`${labelId}-control`}
 					class={actionButtonClass}
 					on:click={() => {
 						showArchiveConfirmDialog = true;
@@ -226,10 +234,12 @@
 
 			{#if canManageChats({ user: $user, config: null }, 'delete')}
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.dataControls.deleteAllChats.label')}
 					description={$i18n.t('settings.personal.dataControls.deleteAllChats.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						on:click={() => {
 							showDeleteConfirmDialog = true;
@@ -244,10 +254,12 @@
 
 		<UserSettingSection title={$i18n.t('settings.personal.dataControls.sections.files.title')}>
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.dataControls.manageFiles.label')}
 				description={$i18n.t('settings.personal.dataControls.manageFiles.description')}
 			>
 				<button
+					id={`${labelId}-control`}
 					class={actionButtonClass}
 					on:click={() => {
 						showFilesModal = true;

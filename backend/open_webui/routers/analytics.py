@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Query
 from open_webui.internal.db import get_async_session
@@ -201,19 +201,20 @@ async def get_daily_stats(
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    granularity: str = Query('daily', description="Granularity: 'hourly' or 'daily'"),
+    granularity: Literal['10m', 'hourly', 'daily'] = Query('daily'),
+    metric: Literal['messages', 'tokens'] = Query('messages'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Get message counts grouped by model for time-series chart."""
-    if granularity == 'hourly':
-        counts = await ChatMessages.get_hourly_message_counts_by_model(
-            start_date=start_date, end_date=end_date, group_id=group_id, db=db
-        )
-    else:
-        counts = await ChatMessages.get_daily_message_counts_by_model(
-            start_date=start_date, end_date=end_date, group_id=group_id, db=db
-        )
+    """Get message counts or total tokens grouped by model for the time-series chart."""
+    counts = await ChatMessages.get_usage_over_time_by_model(
+        start_date=start_date,
+        end_date=end_date,
+        group_id=group_id,
+        db=db,
+        granularity=granularity,
+        metric=metric,
+    )
     return DailyStatsResponse(
         data=[DailyStatsEntry(date=date, models=models) for date, models in sorted(counts.items())]
     )
