@@ -3210,29 +3210,8 @@
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
 		const messages = createMessagesList(history, responseMessageId);
-		let changed = false;
-		const actionSocket = $socket;
-		const onEvent = (event) => {
-			if (event.chat_id !== _chatId || event.message_id !== responseMessageId) return;
-			const { type, data } = event.data ?? {};
-			// These events are UI-only or already persisted by get_event_emitter.
-			if (
-				[
-					'notification',
-					'confirmation',
-					'input',
-					'status',
-					'message',
-					'replace',
-					'files',
-					'embeds'
-				].includes(type) ||
-				(['source', 'citation'].includes(type) && data?.type == null)
-			)
-				return;
-			changed = true;
-		};
-		actionSocket?.on('events', onEvent);
+		// Actions can also update this message through events.
+		const original = structuredClone(history.messages[responseMessageId]);
 
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
@@ -3249,19 +3228,17 @@
 			chat_id: _chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
-		})
-			.catch((error) => {
-				toast.error(`${error}`);
-				if ($chatId === _chatId && history.messages[responseMessageId]) {
-					history.messages[responseMessageId].error = { content: error };
-					changed = true;
-				}
-				return null;
-			})
-			.finally(() => actionSocket?.off('events', onEvent));
+		}).catch((error) => {
+			toast.error(`${error}`);
+			if ($chatId === _chatId && history.messages[responseMessageId]) {
+				history.messages[responseMessageId].error = { content: error };
+			}
+			return null;
+		});
 
 		if ($chatId !== _chatId) return;
 
+		let changed = !equal(original, history.messages[responseMessageId]);
 		if (res?.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
@@ -3282,17 +3259,15 @@
 			}
 		}
 
-		if (changed) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
-					models: selectedModels,
-					messages: createMessagesList(history, responseMessageId),
-					history: history,
-					files: chatFiles
-				});
+		if (changed && !$temporaryChatEnabled) {
+			chat = await updateChatById(localStorage.token, _chatId, {
+				models: selectedModels,
+				messages: createMessagesList(history, responseMessageId),
+				history: history,
+				files: chatFiles
+			});
 
-				await refreshChatList(localStorage.token);
-			}
+			await refreshChatList(localStorage.token);
 		}
 	};
 

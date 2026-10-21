@@ -318,10 +318,10 @@
 				<input
 					bind:this={renameInput}
 					bind:value={renameValue}
-					class="flex-1 text-xs bg-transparent outline-none text-gray-800 dark:text-gray-200 min-w-0 {variant ===
+					class="flex-1 text-xs bg-transparent outline-hidden text-gray-800 dark:text-gray-200 min-w-0 {variant ===
 					'workspace'
 						? 'h-4 p-0 leading-4'
-						: 'border border-gray-100 dark:border-white/[0.06] rounded px-1.5 py-0.5 focus:border-blue-400 dark:focus:border-blue-500'}"
+						: 'py-0.5'}"
 					on:keydown={(e) => {
 						if (e.key === 'Enter') {
 							e.preventDefault();
