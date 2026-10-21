@@ -1128,10 +1128,6 @@ class SocketSessionEventSink:
             EVENTS.FOLDER_UPDATED.name,
             EVENTS.FOLDER_PARENT_UPDATED.name,
             EVENTS.FOLDER_DELETED.name,
-            EVENTS.GROUP_MEMBER_REMOVED.name,
-            EVENTS.GROUP_MEMBER_ADDED.name,
-            EVENTS.GROUP_UPDATED.name,
-            EVENTS.GROUP_DELETED.name,
             EVENTS.CHAT_DELETED_ALL.name,
         }:
             await refresh_chat_access()
