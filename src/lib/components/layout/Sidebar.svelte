@@ -108,6 +108,8 @@
 	let scrollTop = 0;
 
 	let navElement: HTMLDivElement;
+	let openSidebarButton: HTMLButtonElement;
+	let closeSidebarButton: HTMLButtonElement;
 	let shiftKey = false;
 
 	let selectedChatId = null;
@@ -1075,6 +1077,8 @@
 				class="flex flex-col flex-1 {isWindows ? 'cursor-pointer' : 'cursor-[e-resize]'}"
 				on:click={async () => {
 					showSidebar.set(!$showSidebar);
+					await tick();
+					closeSidebarButton?.focus();
 				}}
 			>
 				<div class="pb-1">
@@ -1083,6 +1087,7 @@
 						placement="right"
 					>
 						<button
+							bind:this={openSidebarButton}
 							class="flex size-8.5 items-center justify-center transition group {isWindows
 								? 'cursor-pointer'
 								: 'cursor-[e-resize]'}"
@@ -1305,11 +1310,14 @@
 						placement="bottom"
 					>
 						<button
+							bind:this={closeSidebarButton}
 							class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {isWindows
 								? 'cursor-pointer'
 								: 'cursor-[w-resize]'}"
-							on:click={() => {
+							on:click={async () => {
 								showSidebar.set(!$showSidebar);
+								await tick();
+								openSidebarButton?.focus();
 							}}
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 						>
