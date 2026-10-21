@@ -728,18 +728,18 @@
 								{:else if displayOption === 'grid'}
 									<div
 										class="{groupedNotes.length - 1 !== idx
-											? 'mb-5'
-											: ''} gap-2.5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+											? 'mb-3'
+											: ''} grid grid-cols-[repeat(auto-fill,minmax(min(160px,100%),1fr))] gap-2.5 p-3"
 									>
 										{#each notesList as note, idx (note.id)}
 											<div
-												class="group flex min-h-32 w-full flex-col rounded-lg bg-gray-50/40 p-2.5 text-left transition hover:bg-gray-100/60 focus-within:bg-gray-100/60 dark:bg-gray-900/30 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
+												class="group relative flex h-28 min-w-0 w-full flex-col rounded-md border border-black/[0.06] bg-gray-50/40 p-2 text-left transition-colors duration-75 hover:bg-gray-50/40 focus-within:bg-gray-50/40 dark:border-white/[0.06] dark:bg-gray-900 dark:hover:bg-white/4 dark:focus-within:bg-white/4"
 											>
-												<div class="flex items-start gap-2">
-													<a href={`/notes/${note.id}`} class="min-w-0 flex-1">
+												<div class="flex min-w-0 items-start">
+													<a href={`/notes/${note.id}`} class="min-w-0 flex-1 pr-5">
 														<Tooltip content={note.title} placement="top-start">
 															<div
-																class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+																class="line-clamp-2 break-words text-xs text-gray-800 dark:text-gray-200"
 															>
 																{note.title}
 															</div>
@@ -749,7 +749,7 @@
 													{#if shiftKey}
 														<Tooltip content={$i18n.t('Delete')}>
 															<button
-																class="flex size-5 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+																class="absolute right-1 top-1 flex size-5 shrink-0 items-center justify-center rounded text-gray-400 transition hover:bg-gray-50/40 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-white/4 dark:hover:text-gray-400"
 																type="button"
 																aria-label={$i18n.t('Delete')}
 																on:click={(e) => {
@@ -795,29 +795,29 @@
 															}}
 														>
 															<button
-																class="flex size-5 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+																class="absolute right-1 top-1 flex size-5 shrink-0 items-center justify-center rounded text-gray-400 transition hover:bg-gray-50/40 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-white/4 dark:hover:text-gray-400"
 																type="button"
 																aria-label={$i18n.t('Note Menu')}
 															>
-																<EllipsisHorizontal className="size-3.5" />
+																<EllipsisHorizontal className="size-3" />
 															</button>
 														</NoteMenu>
 													{/if}
 												</div>
 
-												<a href={`/notes/${note.id}`} class="mt-1 flex min-h-0 flex-1 flex-col">
-													<div
-														class="line-clamp-3 text-xs leading-5 text-gray-500 dark:text-gray-500"
-													>
-														{#if note.data?.content?.md}
-															{note.data?.content?.md}
-														{:else}
-															{$i18n.t('No content')}
-														{/if}
+												<a
+													href={`/notes/${note.id}`}
+													class="mt-2 min-h-0 flex-1 overflow-hidden text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400"
+													style="mask-image: linear-gradient(to bottom, black 65%, transparent 100%);"
+												>
+													<div class="line-clamp-4 whitespace-pre-line break-words">
+														{note.data?.content?.md || $i18n.t('No content')}
 													</div>
+												</a>
 
+												<a href={`/notes/${note.id}`} class="mt-2 block min-w-0">
 													<div
-														class="mt-auto flex w-full items-center justify-between gap-2 pt-3 text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-500"
+														class="flex min-w-0 w-full items-center justify-between gap-1 text-[0.5625rem] leading-3 text-gray-500 dark:text-gray-400"
 													>
 														<Tooltip
 															content={note?.user?.email ?? $i18n.t('Deleted User')}
@@ -836,7 +836,7 @@
 																.locale($i18n.language)
 																.format('LLLL')}
 														>
-															<div class="shrink-0">
+															<div class="max-w-full shrink-0 truncate">
 																{dayjs(note.updated_at / 1000000)
 																	.locale($i18n.language)
 																	.fromNow()}

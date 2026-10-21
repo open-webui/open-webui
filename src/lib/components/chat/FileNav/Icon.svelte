@@ -22,7 +22,7 @@
 	stroke-width={strokeWidth}
 	stroke-linecap="round"
 	stroke-linejoin="round"
-	class={className}
+	class={`shrink-0 ${className}`}
 >
 	{#if name === 'folder'}
 		<path
@@ -427,6 +427,11 @@
 		<path
 			d="M21.1667 18.5H21.4C21.7314 18.5 22 18.7686 22 19.1V21.4C22 21.7314 21.7314 22 21.4 22H17.6C17.2686 22 17 21.7314 17 21.4V19.1C17 18.7686 17.2686 18.5 17.6 18.5H17.8333M21.1667 18.5V16.75C21.1667 16.1667 20.8333 15 19.5 15C18.1667 15 17.8333 16.1667 17.8333 16.75V18.5M21.1667 18.5H17.8333"
 		/>
+	{:else if name === 'grid'}
+		<rect x="3" y="3" width="6" height="6" rx="1" />
+		<rect x="15" y="3" width="6" height="6" rx="1" />
+		<rect x="3" y="15" width="6" height="6" rx="1" />
+		<rect x="15" y="15" width="6" height="6" rx="1" />
 	{:else if name === 'list'}
 		<path d="M8 6H20" />
 		<path d="M4 6.01L4.01 5.99889" />
@@ -487,6 +492,27 @@
 		<path d="M15 6L9 12L15 18" />
 	{:else if name === 'check'}
 		<path d="M5 13L9 17L19 7" />
+	{:else if name === 'file-plus'}
+		<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z" />
+		<path d="M14 3v6h6M9 15h6M12 12v6" />
+	{:else if name === 'folder-plus' || name === 'folder-upload'}
+		<path d="M3 7V5a2 2 0 0 1 2-2h5l3 4h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+		{#if name === 'folder-plus'}
+			<path d="M9 14h6M12 11v6" />
+		{:else}
+			<path d="M12 18v-7m-3 3 3-3 3 3" />
+		{/if}
+	{:else if name === 'upload-tray' || name === 'download-tray'}
+		<path d="M4 16v4h16v-4M12 3v12" />
+		{#if name === 'upload-tray'}
+			<path d="m8 7 4-4 4 4" />
+		{:else}
+			<path d="m8 11 4 4 4-4" />
+		{/if}
+	{:else if name === 'eye-off'}
+		<path
+			d="m3 3 18 18M10.6 6.1A8 8 0 0 1 12 6c4 0 7 3 9 6a18 18 0 0 1-3 3.5M6.4 6.4A21 21 0 0 0 3 12c2 3 5 6 9 6a9 9 0 0 0 5.6-2.1M10 10a3 3 0 0 0 4 4"
+		/>
 	{:else if name === 'upload'}
 		<path d="M6 20H18" />
 		<path d="M12 16V4M12 4L15.5 7.5M12 4L8.5 7.5" />
