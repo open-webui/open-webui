@@ -110,6 +110,13 @@
 	};
 
 	let folderItemCount: number | null = null;
+
+	$: folderCountLabel =
+		folderItemCount === null
+			? '—'
+			: folderItemCount === 1
+				? $i18n.t('1 item')
+				: $i18n.t('{{count}} items', { count: folderItemCount });
 	const observeFolderContents = (node: Element) => {
 		folderItemCount = null;
 		if (!terminalUrl) return;
@@ -284,40 +291,37 @@
 		}}
 	>
 		{#if folderCard}
-			{#key JSON.stringify( [terminalUrl, terminalKey, terminalSessionId, directoryPath, entry.modified, folderContentsVersion] )}
-				<svg
-					use:observeFolderContents
-					class="pointer-events-none absolute inset-0 h-full w-full {dragOverFolder
-						? 'text-black/25 dark:text-white/25'
-						: 'text-black/10 dark:text-white/10'}"
-					viewBox="0 0 200 68"
-					preserveAspectRatio="none"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1"
-					aria-hidden="true"
-				>
-					<!-- The back, sloped tab, and front are one folder silhouette. -->
+			<svg
+				class="pointer-events-none absolute inset-0 h-full w-full {dragOverFolder
+					? 'text-black/25 dark:text-white/25'
+					: 'text-black/10 dark:text-white/10'}"
+				viewBox="0 0 200 68"
+				preserveAspectRatio="none"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1"
+				aria-hidden="true"
+			>
+				<!-- The back, sloped tab, and front are one folder silhouette. -->
+				<path
+					d="M1 19V8Q1 1 9 1H54Q58 1 61 4L65 7Q67 9 71 9H191Q199 9 199 15V19"
+					vector-effect="non-scaling-stroke"
+				/>
+				{#if folderItemCount !== null && folderItemCount > 0}
 					<path
-						d="M1 19V8Q1 1 9 1H54Q58 1 61 4L65 7Q67 9 71 9H191Q199 9 199 15V19"
+						d="M7 13V12Q7 9 12 9H188Q193 9 193 12V13Z"
 						vector-effect="non-scaling-stroke"
+						class="fill-gray-50 text-black/10 dark:fill-[color-mix(in_srgb,var(--color-gray-900),white_4%)] dark:text-white/10"
 					/>
-					{#if folderItemCount !== null && folderItemCount > 0}
-						<path
-							d="M7 13V12Q7 9 12 9H188Q193 9 193 12V13Z"
-							vector-effect="non-scaling-stroke"
-							class="fill-gray-50 text-black/10 dark:fill-[color-mix(in_srgb,var(--color-gray-900),white_4%)] dark:text-white/10"
-						/>
-					{/if}
-					<path
-						d="M1 20Q1 13 9 13H191Q199 13 199 20V60Q199 67 191 67H9Q1 67 1 60Z"
-						vector-effect="non-scaling-stroke"
-						class={selected || active || dragOverFolder
-							? 'fill-black/5 dark:fill-white/8'
-							: 'fill-transparent group-hover:fill-black/[0.02] dark:group-hover:fill-white/4'}
-					/>
-				</svg>
-			{/key}
+				{/if}
+				<path
+					d="M1 20Q1 13 9 13H191Q199 13 199 20V60Q199 67 191 67H9Q1 67 1 60Z"
+					vector-effect="non-scaling-stroke"
+					class={selected || active || dragOverFolder
+						? 'fill-black/5 dark:fill-white/8'
+						: 'fill-transparent group-hover:fill-black/[0.02] dark:group-hover:fill-white/4'}
+				/>
+			</svg>
 		{/if}
 		{#if viewMode === 'list' && variant === 'workspace'}
 			<span class="shrink-0" style:width={rowIndent}></span>
@@ -481,13 +485,11 @@
 									: ''}"
 							>
 								{#if entry.type === 'directory'}
-									<span class="min-w-0 flex-1 truncate">
-										{folderItemCount === null
-											? '—'
-											: folderItemCount === 1
-												? $i18n.t('1 item')
-												: $i18n.t('{{count}} items', { count: folderItemCount })}
-									</span>
+									{#key folderContentsVersion}
+										<span use:observeFolderContents class="min-w-0 flex-1 truncate"
+											>{folderCountLabel}</span
+										>
+									{/key}
 								{:else}
 									<span class="min-w-0 truncate rounded bg-black/5 px-1 uppercase dark:bg-white/5">
 										{entry.name.includes('.')
@@ -511,10 +513,19 @@
 								>
 							{/if}
 							<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
-						{:else if entry.type === 'directory' && showDate && entry.modified && !renaming}
-							<span class="text-[0.625rem] text-gray-400 shrink-0"
-								>{formatRelativeTime(entry.modified)}</span
-							>
+						{:else if entry.type === 'directory' && !renaming}
+							{#if showDate && entry.modified}
+								<span class="text-[0.625rem] text-gray-400 shrink-0"
+									>{formatRelativeTime(entry.modified)}</span
+								>
+							{/if}
+							{#if terminalUrl}
+								{#key folderContentsVersion}
+									<span use:observeFolderContents class="text-xs text-gray-400 shrink-0"
+										>{folderCountLabel}</span
+									>
+								{/key}
+							{/if}
 						{/if}
 					</button>
 				{/snippet}
