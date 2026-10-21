@@ -2545,7 +2545,7 @@
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
 							class={viewMode === 'grid'
-								? 'grid grid-cols-[repeat(auto-fill,minmax(min(100px,calc((100%_-_0.625rem)/2)),1fr))] gap-2.5 p-3'
+								? 'grid grid-cols-[repeat(auto-fill,minmax(min(94px,calc((100%_-_0.5rem)/2)),1fr))] gap-2 p-2.5'
 								: ''}
 						>
 							{#each visibleEntries as entry (entry.fullPath)}

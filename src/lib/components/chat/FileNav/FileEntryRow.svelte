@@ -231,8 +231,8 @@
 	<div
 		class="w-full flex items-center transition-colors duration-75 {viewMode === 'grid'
 			? folderCard
-				? 'relative h-18'
-				: 'relative h-[4.125rem] rounded-md border border-black/[0.06] bg-gray-50/40 dark:border-white/[0.06] dark:bg-gray-900'
+				? 'relative h-17'
+				: 'relative h-[3.875rem] rounded-md border border-black/[0.06] bg-gray-50/40 dark:border-white/[0.06] dark:bg-gray-900'
 			: ''} {variant === 'workspace' ? 'rounded-xl' : ''}
 			{folderCard
 			? ''
@@ -290,7 +290,7 @@
 					class="pointer-events-none absolute inset-0 h-full w-full {dragOverFolder
 						? 'text-black/25 dark:text-white/25'
 						: 'text-black/10 dark:text-white/10'}"
-					viewBox="0 0 200 72"
+					viewBox="0 0 200 68"
 					preserveAspectRatio="none"
 					fill="none"
 					stroke="currentColor"
@@ -310,7 +310,7 @@
 						/>
 					{/if}
 					<path
-						d="M1 20Q1 13 9 13H191Q199 13 199 20V64Q199 71 191 71H9Q1 71 1 64Z"
+						d="M1 20Q1 13 9 13H191Q199 13 199 20V60Q199 67 191 67H9Q1 67 1 60Z"
 						vector-effect="non-scaling-stroke"
 						class={selected || active || dragOverFolder
 							? 'fill-black/5 dark:fill-white/8'
@@ -370,8 +370,8 @@
 						type="button"
 						class="flex min-w-0 flex-1 items-center {viewMode === 'grid'
 							? folderCard
-								? 'h-18 flex-col !items-start justify-start gap-0.5 px-1.5 pt-4 pb-1.5 text-left'
-								: 'h-16 flex-col !items-start justify-start gap-0.5 p-1.5 text-left'
+								? 'h-17 flex-col !items-start justify-start gap-0.5 px-1.5 pt-4 pb-1.5 text-left'
+								: 'h-15 flex-col !items-start justify-start gap-0.5 p-1.5 text-left'
 							: 'gap-1.5 py-1.5 pr-2 text-left'}"
 						title={hoverDisabled ? entry.name : undefined}
 						draggable={canMutate}
