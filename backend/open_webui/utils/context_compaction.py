@@ -7,9 +7,10 @@ from typing import Any
 from fastapi.responses import JSONResponse
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
+from open_webui.models.models import Models
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
+from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list, merge_model_params
 from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
     prompt_template,
@@ -281,8 +282,20 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
         return None
 
     params = ((chat.chat or {}).get('params') or {}).copy()
+    model_id = model_id or next((message.get('model') for message in reversed(messages) if message.get('model')), None)
+    if not model_id:
+        chat_models = chat_data.get('models') or []
+        model_id = chat_models[0] if chat_models else None
     if model_id:
         params['model'] = model_id
+        model_info = await Models.get_model_by_id(model_id)
+        model_params = merge_model_params(
+            await Config.get('models.default_params', {}) or {},
+            model_info.params.model_dump() if model_info and model_info.params else {},
+        )
+        # Same precedence as a chat request: the model's own threshold wins over the chat's.
+        if model_params.get('compact_token_threshold') is not None:
+            params['compact_token_threshold'] = model_params['compact_token_threshold']
     threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], {'params': params})
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
 
