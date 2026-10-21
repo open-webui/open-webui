@@ -125,6 +125,11 @@
 	let showPinnedModels = true;
 	let showPinnedNotes = false;
 	let showChannels = false;
+	$: channelGroups = [
+		$channels.filter((channel) => channel.type !== 'group' && channel.type !== 'dm'),
+		$channels.filter((channel) => channel.type === 'group'),
+		$channels.filter((channel) => channel.type === 'dm')
+	].filter((group) => group.length > 0);
 	let showFolders = false;
 	let showSharedFolders = false;
 	let showChatsMenu = false;
@@ -363,18 +368,12 @@
 	};
 
 	const initChannels = async () => {
-		// default (none), group, dm type
 		const res = await getChannels(localStorage.token).catch((error) => {
 			return null;
 		});
 
 		if (res) {
-			await channels.set(
-				res.sort(
-					(a, b) =>
-						['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
-				)
-			);
+			channels.set(res);
 		}
 	};
 
@@ -1353,18 +1352,18 @@
 								: null}
 							onAddLabel={$i18n.t('Create Channel')}
 						>
-							{#each $channels as channel, channelIdx (`${channel?.id}`)}
-								<ChannelItem
-									{channel}
-									onUpdate={async () => {
-										await initChannels();
-									}}
-								/>
-
-								{#if channelIdx < $channels.length - 1 && channel.type !== $channels[channelIdx + 1]?.type}<hr
-										class=" border-gray-100/40 dark:border-gray-800/10 my-1.5 w-full"
-									/>
+							{#each channelGroups as group, groupIdx}
+								{#if groupIdx > 0}
+									<hr class=" border-gray-100/40 dark:border-gray-800/10 my-1.5 w-full" />
 								{/if}
+								{#each group as channel (channel.id)}
+									<ChannelItem
+										{channel}
+										onUpdate={async () => {
+											await initChannels();
+										}}
+									/>
+								{/each}
 							{/each}
 						</SidebarSection>
 					{/if}
