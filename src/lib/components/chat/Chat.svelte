@@ -290,14 +290,11 @@
 	$: contextCompactionEnabled = Boolean($config?.features?.enable_context_compaction);
 
 	const getContextThreshold = () => {
-		const chatThreshold = Number(params?.compact_token_threshold);
-		if (Number.isFinite(chatThreshold) && chatThreshold > 0) {
-			return chatThreshold;
-		}
-
 		const modelId = atSelectedModel?.id ?? selectedModels.find((id) => id);
 		const model = $models.find((item) => item.id === modelId);
-		const threshold = Number(model?.info?.params?.compact_token_threshold);
+		const threshold = Number(
+			model?.info?.params?.compact_token_threshold ?? params?.compact_token_threshold
+		);
 		return Number.isFinite(threshold) && threshold > 0 ? threshold : null;
 	};
 
