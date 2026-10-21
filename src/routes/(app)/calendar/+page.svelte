@@ -2,7 +2,7 @@
 	import { onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, mobile, showSidebar, user } from '$lib/stores';
+	import { WEBUI_NAME, config, mobile, showSidebar, user } from '$lib/stores';
 	import {
 		getCalendars,
 		getCalendarEvents,
@@ -202,6 +202,14 @@
 			: `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
 	onMount(async () => {
+		if (
+			!$config?.features?.enable_calendar ||
+			($user?.role !== 'admin' && !$user?.permissions?.features?.calendar)
+		) {
+			goto('/');
+			return;
+		}
+
 		await loadCalendars();
 		await refresh();
 		loaded = true;
