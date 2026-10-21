@@ -1006,6 +1006,7 @@
 			treeCache = new Map(treeCache).set(directory, entries);
 			saveTreeState();
 		}
+		return result !== null;
 	};
 
 	const fetchExpandedDir = async (path: string) => {
@@ -1478,6 +1479,10 @@
 	};
 
 	// ── Folder creation ──────────────────────────────────────────────────
+	const startNewFolderIn = async (path: string) => {
+		if (await loadDir(path)) await startNewFolder();
+	};
+
 	const startNewFolder = async () => {
 		if (!currentWritable) return;
 		creatingFolder = true;
@@ -2550,6 +2555,7 @@
 											}
 										: undefined}
 									onDownload={downloadFile}
+									onNewFolder={startNewFolderIn}
 									onDelete={requestDelete}
 									onMove={handleMovePaths}
 									onRename={handleRename}
