@@ -443,11 +443,6 @@ p[dir='auto'] {
 	outline-offset: -2px;
 }
 
-[data-arrow-selected='true'][aria-selected='false'] {
-	outline: 2px solid theme(--color-blue-500);
-	outline-offset: -2px;
-}
-
 html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):focus-visible {
 	outline: 2px solid theme(--color-blue-500);
 	outline-offset: -2px;

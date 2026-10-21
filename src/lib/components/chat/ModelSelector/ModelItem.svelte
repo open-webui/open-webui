@@ -337,3 +337,10 @@
 		{/if}
 	</div>
 </button>
+
+<style>
+	[data-arrow-selected='true'][aria-selected='false'] {
+		outline: 2px solid var(--color-blue-500);
+		outline-offset: -2px;
+	}
+</style>
