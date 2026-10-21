@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	import { models, user, mobile, settings, type Model } from '$lib/stores';
+	import { models, mobile, settings, type Model } from '$lib/stores';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
@@ -40,9 +40,6 @@
 				!('pipe' in model && model.pipe) &&
 				Object.keys(model.info?.params?.model_controls ?? {}).length > 0
 		);
-	$: permitted =
-		$user?.role === 'admin' ||
-		(($user?.permissions?.chat?.controls ?? true) && ($user?.permissions?.chat?.params ?? true));
 	$: rowClass = `focus-ring flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 ${$settings?.highContrastMode ? 'hover:bg-gray-200! dark:hover:bg-gray-800!' : 'hover:bg-gray-50/40! dark:hover:bg-gray-800/40!'}`;
 	$: selectedClass = $settings?.highContrastMode
 		? 'bg-gray-200 dark:bg-gray-800'
@@ -117,7 +114,7 @@
 	{/each}
 {/snippet}
 
-{#if permitted && available.length}
+{#if available.length}
 	<Dropdown align="end" visualViewportAware onOpenChange={() => (active = null)}>
 		<Tooltip content={$i18n.t('Model controls')} placement="top">
 			<button

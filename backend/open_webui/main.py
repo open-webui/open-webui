@@ -1217,12 +1217,6 @@ async def chat_completion(
         if not isinstance(model_controls, dict):
             raise HTTPException(400, 'Model control options must be keyed by model.')
         model_controls = {} if form_data.get('automation_id') else model_controls
-        if any(model_controls.values()) and user.role != 'admin':
-            permissions = await Config.get('user.permissions')
-            for permission in ('chat.controls', 'chat.params'):
-                if not await has_permission(user.id, permission, permissions):
-                    model_controls = {}
-                    break
         if missing_base_model and model_controls.get(model_id):
             raise HTTPException(400, 'Model control options cannot be applied to the fallback model.')
         if model_info_params or request_params:
