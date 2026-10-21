@@ -109,9 +109,9 @@
 		expandTimer = null;
 	};
 
-	let folderHasContents: boolean | null = null;
+	let folderItemCount: number | null = null;
 	const observeFolderContents = (node: Element) => {
-		folderHasContents = null;
+		folderItemCount = null;
 		if (!terminalUrl) return;
 		let disposed = false;
 		const url = terminalUrl;
@@ -123,7 +123,7 @@
 			observer.disconnect();
 			// Only inspect visible folders; failed reads leave their contents unknown.
 			void listFiles(url, key, path, session).then((result) => {
-				if (!disposed && result) folderHasContents = result.entries.length > 0;
+				if (!disposed && result) folderItemCount = result.entries.length;
 			});
 		});
 		observer.observe(node);
@@ -302,7 +302,7 @@
 						d="M1 19V8Q1 1 9 1H54Q58 1 61 4L65 7Q67 9 71 9H191Q199 9 199 15V19"
 						vector-effect="non-scaling-stroke"
 					/>
-					{#if folderHasContents}
+					{#if folderItemCount !== null && folderItemCount > 0}
 						<path
 							d="M7 13V12Q7 9 12 9H188Q193 9 193 12V13Z"
 							vector-effect="non-scaling-stroke"
@@ -470,16 +470,39 @@
 								{entry.name}
 							</span>
 						{/if}
-						{#if !writable && !renaming && variant !== 'workspace'}
+						{#if !writable && !renaming && variant !== 'workspace' && viewMode !== 'grid'}
 							<span class="text-[0.625rem] text-gray-400 shrink-0">{$i18n.t('Read-only')}</span>
 						{/if}
-						{#if entry.type === 'file' && viewMode === 'grid' && !renaming}
+						{#if viewMode === 'grid' && !renaming}
 							<span
-								class="mt-auto shrink-0 max-w-full truncate rounded bg-black/5 px-1 text-[0.5625rem] leading-3 uppercase text-gray-500 dark:bg-white/5 dark:text-gray-400"
+								class="mt-auto flex w-full min-w-0 shrink-0 items-center gap-1 text-[0.5625rem] leading-3 text-gray-500 dark:text-gray-400 {selectionMode ||
+								selected
+									? 'pl-5'
+									: ''}"
 							>
-								{entry.name.includes('.')
-									? entry.name.split('.').pop() || $i18n.t('File')
-									: $i18n.t('File')}
+								{#if entry.type === 'directory'}
+									<span class="min-w-0 flex-1 truncate">
+										{folderItemCount === null
+											? '—'
+											: folderItemCount === 1
+												? $i18n.t('1 item')
+												: $i18n.t('{{count}} items', { count: folderItemCount })}
+									</span>
+								{:else}
+									<span class="min-w-0 truncate rounded bg-black/5 px-1 uppercase dark:bg-white/5">
+										{entry.name.includes('.')
+											? entry.name.split('.').pop() || $i18n.t('File')
+											: $i18n.t('File')}
+									</span>
+									{#if entry.size !== undefined}
+										<span class="ml-auto shrink-0">{formatFileSize(entry.size)}</span>
+									{/if}
+								{/if}
+								{#if !writable && variant !== 'workspace'}
+									<span title={$i18n.t('Read-only')} aria-label={$i18n.t('Read-only')}
+										><Icon name="lock" size={10} strokeWidth={1.5} /></span
+									>
+								{/if}
 							</span>
 						{:else if entry.type === 'file' && entry.size !== undefined && !renaming}
 							{#if showDate && entry.modified}
