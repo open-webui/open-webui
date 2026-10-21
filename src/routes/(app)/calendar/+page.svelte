@@ -1,8 +1,8 @@
-<script lang="ts">
+4<script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, mobile, showSidebar, user } from '$lib/stores';
+	import { WEBUI_NAME, mobile, showSidebar, user, config } from '$lib/stores';
 	import {
 		getCalendars,
 		getCalendarEvents,
@@ -202,6 +202,10 @@
 			: `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
 	onMount(async () => {
+		 if ($config?.features?.enable_calendar === false) {
+                          goto('/', { replaceState: true });
+                          return;
+                  }
 		await loadCalendars();
 		await refresh();
 		loaded = true;
