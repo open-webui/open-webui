@@ -263,8 +263,9 @@
 			</AdminSettingSection>
 
 			<AdminSettingSection title={$i18n.t('Multi-factor authentication')}>
-				<AdminSettingRow label={$i18n.t('Require an authenticator for all users')}>
+				<AdminSettingRow let:labelId label={$i18n.t('Require an authenticator for all users')}>
 					<Switch
+						ariaLabelledbyId={labelId}
 						bind:state={adminConfig.ENABLE_MFA}
 						ariaLabel={$i18n.t('Require an authenticator for all users')}
 					/>
@@ -273,14 +274,20 @@
 					{$i18n.t('Changes sign out all devices. Users enroll on their next sign-in.')}
 				</p>
 				{#if adminConfig.ENABLE_MFA}
-					<AdminSettingRow label={$i18n.t('Allow OAuth sign-in without an authenticator')}
+					<AdminSettingRow
+						let:labelId
+						label={$i18n.t('Allow OAuth sign-in without an authenticator')}
 						><Switch
+							ariaLabelledbyId={labelId}
 							bind:state={adminConfig.MFA_ALLOW_OAUTH_BYPASS}
 							ariaLabel={$i18n.t('Allow OAuth sign-in without an authenticator')}
 						/></AdminSettingRow
 					>
-					<AdminSettingRow label={$i18n.t('Allow trusted-header sign-in without an authenticator')}
+					<AdminSettingRow
+						let:labelId
+						label={$i18n.t('Allow trusted-header sign-in without an authenticator')}
 						><Switch
+							ariaLabelledbyId={labelId}
 							bind:state={adminConfig.MFA_ALLOW_TRUSTED_HEADER_BYPASS}
 							ariaLabel={$i18n.t('Allow trusted-header sign-in without an authenticator')}
 						/></AdminSettingRow

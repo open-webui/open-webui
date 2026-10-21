@@ -224,12 +224,14 @@
 			{/if}
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.audio.instantAutoSendAfterVoiceTranscription.label')}
 				description={$i18n.t(
 					'settings.personal.audio.instantAutoSendAfterVoiceTranscription.description'
 				)}
 			>
 				<Switch
+					ariaLabelledbyId={labelId}
 					state={speechAutoSend}
 					ariaLabel={$i18n.t(
 						'settings.personal.audio.instantAutoSendAfterVoiceTranscription.label'
@@ -276,10 +278,12 @@
 			{/if}
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.audio.autoPlaybackResponse.label')}
 				description={$i18n.t('settings.personal.audio.autoPlaybackResponse.description')}
 			>
 				<Switch
+					ariaLabelledbyId={labelId}
 					state={responseAutoPlayback}
 					ariaLabel={$i18n.t('settings.personal.audio.autoPlaybackResponse.label')}
 					on:change={(event) => {
@@ -368,10 +372,11 @@
 					</SettingsSelect>
 				</UserSettingField>
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.audio.allowNonLocalVoices.label')}
 					description={$i18n.t('settings.personal.audio.allowNonLocalVoices.description')}
 				>
-					<Switch bind:state={nonLocalVoices} />
+					<Switch ariaLabelledbyId={labelId} bind:state={nonLocalVoices} />
 				</UserSettingRow>
 			</UserSettingSection>
 		{:else if $config.audio.tts.engine !== ''}
