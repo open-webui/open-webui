@@ -88,6 +88,7 @@ async def get_user_analytics(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     limit: int = Query(50, description='Max users to return'),
+    metric: Literal['messages', 'tokens'] = Query('messages'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -99,8 +100,14 @@ async def get_user_analytics(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
 
-    # Get user info for top users
-    top_user_ids = [uid for uid, _ in sorted(counts.items(), key=lambda x: -x[1])[:limit]]
+    # Rank by the selected metric before limiting the leaderboard.
+    top_user_ids = sorted(
+        counts,
+        key=lambda uid: (
+            -token_usage.get(uid, {}).get('total_tokens', 0) if metric == 'tokens' else -counts[uid],
+            -counts[uid],
+        ),
+    )[:limit]
     user_info = {u.id: u for u in await Users.get_users_by_user_ids(top_user_ids, db=db)}
 
     users = []

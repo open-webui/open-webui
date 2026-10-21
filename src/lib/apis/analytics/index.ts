@@ -43,7 +43,8 @@ export const getUserAnalytics = async (
 	startDate: number | null = null,
 	endDate: number | null = null,
 	limit: number = 50,
-	groupId: string | null = null
+	groupId: string | null = null,
+	metric: 'messages' | 'tokens' = 'messages'
 ) => {
 	let error = null;
 
@@ -52,6 +53,7 @@ export const getUserAnalytics = async (
 	if (endDate) searchParams.append('end_date', endDate.toString());
 	if (limit) searchParams.append('limit', limit.toString());
 	if (groupId) searchParams.append('group_id', groupId);
+	searchParams.append('metric', metric);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/users?${searchParams.toString()}`, {
 		method: 'GET',

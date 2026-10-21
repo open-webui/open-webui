@@ -167,7 +167,7 @@
 			const [summaryRes, modelsRes, usersRes, dailyRes, tokensRes] = await Promise.all([
 				getSummary(localStorage.token, start, end, selectedGroupId),
 				getModelAnalytics(localStorage.token, start, end, selectedGroupId),
-				getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId),
+				getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId, selectedMetric),
 				getDailyStats(
 					localStorage.token,
 					start,
