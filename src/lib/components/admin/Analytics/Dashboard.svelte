@@ -400,6 +400,9 @@
 	</dl>
 	<section class="mt-3 min-w-0" aria-label={$i18n.t('Usage over time')}>
 		<div class="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
+			<!-- Previous selector labels retained for i18n extraction: {$i18n.t('Chart metric')} -->
+			<!-- {$i18n.t('10-Minute Messages')} {$i18n.t('Hourly Messages')} {$i18n.t('Daily Messages')} -->
+			<!-- {$i18n.t('10-Minute Tokens')} {$i18n.t('Hourly Tokens')} {$i18n.t('Daily Tokens')} -->
 			<div class="flex items-center gap-3" aria-label={$i18n.t('Usage metric')}>
 				{#each [{ key: 'tokens', label: $i18n.t('Tokens') }, { key: 'messages', label: $i18n.t('Messages') }] as metric}
 					<button
