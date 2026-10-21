@@ -514,16 +514,6 @@ async def update_user_settings_by_session_user(
         ):
             ui_settings.pop('system', None)
 
-        if (
-            user.role != 'admin'
-            and 'params' in ui_settings
-            and (
-                not await has_permission(user.id, 'chat.controls', await Config.get('user.permissions'), db=db)
-                or not await has_permission(user.id, 'chat.params', await Config.get('user.permissions'), db=db)
-            )
-        ):
-            ui_settings.pop('params', None)
-
     if (
         user.role != 'admin'
         and ui_settings is not None
