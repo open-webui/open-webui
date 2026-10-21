@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import time
 import uuid
 import weakref
 from contextlib import asynccontextmanager
@@ -248,6 +249,7 @@ class YdocManager:
     COMPACTION_THRESHOLD = 500
     MAX_DOCUMENTS_PER_SESSION = 20
     MAX_DOCUMENT_SIZE = 2 * 1024 * 1024
+    INITIAL_CONTENT_CLAIM_TIMEOUT = 10
 
     def __init__(
         self,
@@ -256,6 +258,7 @@ class YdocManager:
     ):
         self._updates = {}
         self._users = {}
+        self._content_claims = {}
         self._redis = redis
         self._redis_key_prefix = redis_key_prefix
 
@@ -304,6 +307,17 @@ class YdocManager:
             self._updates[document_id].append(update_bytes)
             if len(self._updates[document_id]) >= self.COMPACTION_THRESHOLD:
                 self._compact_updates_memory(document_id)
+        return True
+
+    async def claim_initial_content(self, document_id: str) -> bool:
+        """Grant loading the saved content into the empty document to one session at a time."""
+        # Expires so a session that crashed or left before sending the content cannot keep the note blank.
+        if self._redis:
+            claim_key = f'{self._redis_key_prefix}:{document_id}:content_claim'
+            return bool(await self._redis.set(claim_key, 1, nx=True, ex=self.INITIAL_CONTENT_CLAIM_TIMEOUT))
+        if self._content_claims.get(document_id, 0) > time.monotonic():
+            return False
+        self._content_claims[document_id] = time.monotonic() + self.INITIAL_CONTENT_CLAIM_TIMEOUT
         return True
 
     async def count_documents_for_user(self, user_id: str) -> int:
@@ -413,7 +427,9 @@ class YdocManager:
             redis_users_key = f'{self._redis_key_prefix}:{document_id}:users'
             await self._redis.delete(redis_users_key)
             await self._redis.delete(f'{self._redis_key_prefix}:{document_id}:size')
+            await self._redis.delete(f'{self._redis_key_prefix}:{document_id}:content_claim')
         else:
+            self._content_claims.pop(document_id, None)
             if document_id in self._updates:
                 del self._updates[document_id]
             if document_id in self._users:
