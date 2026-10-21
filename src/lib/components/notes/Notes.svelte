@@ -39,6 +39,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import DropdownOptions from '../common/DropdownOptions.svelte';
@@ -647,11 +648,19 @@
 															className="min-w-0"
 															placement="top-start"
 														>
-															<div class="truncate">
-																{capitalizeFirstLetter(
-																	note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
-																)}
-															</div>
+															<span class="flex min-w-0 max-w-44 items-center gap-1.75">
+																<ProfileImage
+																	src={note?.user?.id
+																		? `/api/v1/users/${note.user.id}/profile/image`
+																		: '/user.png'}
+																	className="size-4 shrink-0 rounded-full!"
+																/>
+																<span class="min-w-0 max-w-24 truncate">
+																	{capitalizeFirstLetter(
+																		note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+																	)}
+																</span>
+															</span>
 														</Tooltip>
 													</div>
 
@@ -733,7 +742,7 @@
 									>
 										{#each notesList as note, idx (note.id)}
 											<div
-												class="group relative flex h-28 min-w-0 w-full flex-col rounded-md border border-black/[0.06] bg-gray-50/40 p-2 text-left transition-colors duration-75 hover:bg-gray-50/40 focus-within:bg-gray-50/40 dark:border-white/[0.06] dark:bg-gray-900 dark:hover:bg-white/4 dark:focus-within:bg-white/4"
+												class="group relative flex h-26 min-w-0 w-full flex-col rounded-md border border-black/[0.06] bg-gray-50/40 p-2 text-left transition-colors duration-75 hover:bg-gray-50/40 focus-within:bg-gray-50/40 dark:border-white/[0.06] dark:bg-gray-900 dark:hover:bg-white/4 dark:focus-within:bg-white/4"
 											>
 												<div class="flex min-w-0 items-start">
 													<a href={`/notes/${note.id}`} class="min-w-0 flex-1 pr-5">
@@ -824,11 +833,19 @@
 															className="min-w-0"
 															placement="top-start"
 														>
-															<div class="truncate">
-																{capitalizeFirstLetter(
-																	note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
-																)}
-															</div>
+															<span class="flex min-w-0 max-w-44 items-center gap-1.75">
+																<ProfileImage
+																	src={note?.user?.id
+																		? `/api/v1/users/${note.user.id}/profile/image`
+																		: '/user.png'}
+																	className="size-4 shrink-0 rounded-full!"
+																/>
+																<span class="min-w-0 max-w-24 truncate">
+																	{capitalizeFirstLetter(
+																		note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+																	)}
+																</span>
+															</span>
 														</Tooltip>
 
 														<Tooltip
