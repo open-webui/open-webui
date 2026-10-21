@@ -1409,9 +1409,10 @@
 				history.messages[id] = { ...local, ...message };
 			}
 			if (local) {
-				history.messages[id].childrenIds = [
-					...new Set([...(local.childrenIds ?? []), ...(message.childrenIds ?? [])])
-				];
+				history.messages[id] = {
+					...history.messages[id],
+					childrenIds: [...new Set([...(local.childrenIds ?? []), ...(message.childrenIds ?? [])])]
+				};
 			}
 		}
 		if ((!currentId || follow) && incoming.currentId && next[incoming.currentId]) {
@@ -2863,7 +2864,11 @@
 	};
 
 	const loadChat = async () => {
-		if (chatIdProp && chatIdProp !== $chatId) terminalContext = null;
+		if (chatIdProp && chatIdProp !== $chatId) {
+			terminalContext = null;
+			history = { messages: {}, currentId: null };
+		}
+		const initialHistory = { ...history, messages: { ...history.messages } };
 		noteChatDebug('loadChat start');
 		// chatIdProp is empty for chats started from the home page (URL set via replaceState)
 		chatId.set(chatIdProp || $chatId);
@@ -2938,10 +2943,13 @@
 
 				oldSelectedModelIds = structuredClone(selectedModels);
 
-				history =
-					(chatContent?.history ?? undefined) !== undefined
-						? chatContent.history
-						: convertMessagesToHistory(chatContent.messages);
+				chatContent.history ??= convertMessagesToHistory(chatContent.messages);
+				// Keep live updates received while the chat and tags were loading.
+				for (const [id, message] of Object.entries(history.messages)) {
+					if (initialHistory.messages[id] !== message) chatContent.history.messages[id] = message;
+				}
+				if (history.currentId !== initialHistory.currentId) chat.current_message_id = history.currentId;
+				history = chatContent.history;
 				if (chat?.current_message_id && history?.messages?.[chat.current_message_id]) {
 					history.currentId = chat.current_message_id;
 				}
@@ -4431,8 +4439,8 @@
 			} else {
 				// An early completion event may have already finished these replies.
 				if (
-					(messageIdsList ?? [{ message_id: responseMessageId }]).some(({ message_id }) =>
-						hasPendingAssistantLeaf(message_id)
+					(messageIdsList ?? [{ message_id: responseMessageId }]).some(
+						({ message_id }) => history.messages[message_id]?.done === false
 					)
 				) {
 					onToolCallResolved(res);
@@ -4444,6 +4452,7 @@
 				// and causing spurious toast notifications / state duplication).
 				if (
 					res.chat_id &&
+					history.messages[responseMessageId] &&
 					res.chat_id !== _chatId &&
 					($chatId === _chatId || $chatId === res.chat_id)
 				) {
