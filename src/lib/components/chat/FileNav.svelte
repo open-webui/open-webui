@@ -2014,7 +2014,11 @@
 		bind:this={containerEl}
 		class="flex flex-col h-full min-h-0 min-w-0 relative"
 		on:dragover={(e) => !isSearching && handleDragOver(e)}
-		on:dragleave={() => (isDragOver = false)}
+		on:dragleave={(e) => {
+			if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget))) {
+				isDragOver = false;
+			}
+		}}
 		on:drop={(e) => !isSearching && handleDrop(e)}
 		role="region"
 		aria-label={$i18n.t('File browser')}
@@ -2022,12 +2026,15 @@
 	>
 		{#if isDragOver && !isSearching}
 			<div
-				class="absolute inset-1 z-10 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-black/15 bg-white/80 dark:border-white/15 dark:bg-gray-900/80 pointer-events-none"
+				class="pointer-events-none absolute inset-0 z-10 bg-black/[0.02] dark:bg-white/[0.02]"
+				role="status"
 			>
-				<Icon name="upload" size={20} strokeWidth={1.4} class="text-gray-400 dark:text-gray-500" />
-				<span class="text-xs font-normal text-gray-600 dark:text-gray-300">
-					{$i18n.t('Drop to upload')}
-				</span>
+				<div
+					class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+				>
+					<Icon name="upload-tray" size={14} strokeWidth={1.5} />
+					<span class="truncate">{$i18n.t('Drop to upload')}</span>
+				</div>
 			</div>
 		{/if}
 
