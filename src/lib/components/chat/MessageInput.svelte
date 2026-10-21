@@ -1538,6 +1538,7 @@
 					canStatus: () => !!history?.currentId,
 					canFork: () =>
 						!!history?.currentId &&
+						!$temporaryChatEnabled &&
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
