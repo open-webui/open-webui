@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onDestroy } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import dayjs from 'dayjs';
 
@@ -51,6 +51,7 @@
 	let stopRequested = false;
 	let selectedFile: any = null;
 	let showFileItemModal = false;
+	let shiftKey = false;
 
 	$: busy = selectionStatus === 'loading' || !!operation || showDeleteConfirmDialog;
 	$: loadedSelected = (files ?? []).filter((file) => selectedIds.has(file.id)).length;
@@ -222,6 +223,34 @@
 			operation = null;
 		}
 	};
+
+	onMount(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onBlur = () => {
+			shiftKey = false;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
+		};
+	});
 
 	onDestroy(() => {
 		show = false;
@@ -482,8 +511,18 @@
 										><ArrowDownTray className="size-3.5" />{$i18n.t('Download')}</button
 									>
 									<!-- {$i18n.t('Delete File')} -->
-									<button type="button" disabled={busy} on:click={() => requestDelete([file.id])}
-										><GarbageBin className="size-3.5" />{$i18n.t('Delete')}</button
+									<button
+										type="button"
+										disabled={busy}
+										class={shiftKey ? 'text-red-500' : ''}
+										on:click={(event) => {
+											if (event.shiftKey) {
+												deleteIds = [file.id];
+												deleteHandler();
+											} else {
+												requestDelete([file.id]);
+											}
+										}}><GarbageBin className="size-3.5" />{$i18n.t('Delete')}</button
 									>
 								</DropdownMenu>
 							</div>
