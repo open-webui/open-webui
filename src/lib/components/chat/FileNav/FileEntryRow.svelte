@@ -353,7 +353,7 @@
 				class="mr-2 flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {selected
 					? 'bg-gray-900 border-gray-900 text-white dark:bg-gray-200 dark:border-gray-200 dark:text-gray-900'
 					: 'border-gray-300 dark:border-gray-600'} {viewMode === 'grid'
-					? 'absolute bottom-2 left-2 z-10'
+					? 'absolute bottom-[0.3125rem] left-1.5 z-10'
 					: ''}"
 				on:click|stopPropagation={(event) => onSelect(entry, event, entryPath, rowIndex)}
 			>
