@@ -109,7 +109,7 @@ We are incredibly grateful for the generous support of our sponsors. Their contr
 
 ### Installation via Python pip 🐍
 
-Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
+Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.12** to avoid compatibility issues.
 
 1. **Install Open WebUI**:
    Open your terminal and run the following command to install Open WebUI:
