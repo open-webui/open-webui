@@ -177,6 +177,7 @@
 
 	const handleKeydown = (e: KeyboardEvent) => {
 		if (show && e.key === 'Escape') {
+			if ((e.target as HTMLElement).closest?.('.model-selector-child-menu')) return;
 			e.preventDefault();
 			e.stopPropagation();
 			show = false;
