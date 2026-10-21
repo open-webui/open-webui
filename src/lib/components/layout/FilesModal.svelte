@@ -55,6 +55,7 @@
 	$: busy = selectionStatus === 'loading' || !!operation || showDeleteConfirmDialog;
 	$: loadedSelected = (files ?? []).filter((file) => selectedIds.has(file.id)).length;
 	$: allLoadedSelected = !!files?.length && loadedSelected === files.length;
+	$: shownFileCount = query ? (files?.length ?? null) : fileCount;
 	$: sortedFiles = [...(files ?? [])].sort((a, b) => {
 		const result =
 			orderBy === 'filename'
@@ -80,7 +81,7 @@
 			files = more ? [...(files ?? []), ...result] : result;
 			page = nextPage;
 			allFilesLoaded = result.length < PAGE_SIZE;
-			if (!more) {
+			if (!more && !query) {
 				const count = await getUserFileCount(localStorage.token);
 				if (request === generation) fileCount = count;
 			}
@@ -252,8 +253,8 @@
 		<div class="mb-2 flex h-6 items-center gap-2">
 			<div class="flex flex-1 items-center gap-1.5 text-sm font-medium">
 				{$i18n.t('Files')}
-				{#if fileCount !== null}<span class="text-xs font-normal tabular-nums text-gray-400"
-						>{fileCount}</span
+				{#if shownFileCount !== null}<span class="text-xs font-normal tabular-nums text-gray-400"
+						>{shownFileCount}</span
 					>{/if}
 			</div>
 			<Dropdown closeOnSelect align="end">
