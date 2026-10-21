@@ -65,7 +65,7 @@
 <div class="mb-1 flex gap-1 text-xs font-normal items-center text-gray-600 dark:text-gray-400">
 	{#if filteredPrompts.length > 0}
 		<Bolt />
-		{$i18n.t('Suggested')}
+		<h3 id="suggestions-heading">{$i18n.t('Suggested')}</h3>
 	{:else}
 		<!-- Keine Vorschläge -->
 
@@ -84,7 +84,11 @@
 
 <div class="h-36 w-full">
 	{#if filteredPrompts.length > 0}
-		<div role="list" class="max-h-36 overflow-auto scrollbar-none items-start {className}">
+		<div
+			role="list"
+			aria-labelledby="suggestions-heading"
+			class="max-h-36 overflow-auto scrollbar-none items-start {className}"
+		>
 			{#each filteredPrompts as prompt, idx (prompt.id || `${prompt.content}-${idx}`)}
 				<!-- svelte-ignore a11y-no-interactive-element-to-noninteractive-role -->
 				<button
