@@ -87,7 +87,8 @@
 		function handleKeydown(e: KeyboardEvent) {
 			if (e.key === 'Enter' || e.key === ' ') {
 				e.preventDefault();
-				toggleOpen();
+				if (show) closeDropdown();
+				else openDropdown(true);
 			}
 		}
 		node.addEventListener('click', handleClick);

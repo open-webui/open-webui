@@ -511,6 +511,15 @@ async def list_files(
 ############################
 
 
+async def _search_files(filename: str, content: bool, skip: int, limit: int, user_id: str | None, db: AsyncSession):
+    files = await Files.search_files(user_id=user_id, filename=filename, skip=skip, limit=limit, db=db)
+    if not content:
+        for file in files:
+            if file.data and 'content' in file.data:
+                del file.data['content']
+    return files
+
+
 @router.get('/search', response_model=list[FileModelResponse])
 async def search_files(
     filename: str = Query(
@@ -523,34 +532,26 @@ async def search_files(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """
-    Search for files by filename with support for wildcard patterns.
-    Uses SQL-based filtering with pagination for better performance.
-    """
-    # Determine user_id: null for admin with bypass (search all), user.id otherwise
     user_id = None if (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
-
-    # Use optimized database query with pagination
-    files = await Files.search_files(
-        user_id=user_id,
-        filename=filename,
-        skip=skip,
-        limit=limit,
-        db=db,
-    )
-
+    files = await _search_files(filename, content, skip, limit, user_id, db)
     if not files:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='No files found matching the pattern.',
         )
-
-    if not content:
-        for file in files:
-            if file.data and 'content' in file.data:
-                del file.data['content']
-
     return files
+
+
+@router.get('/user/search', response_model=list[FileModelResponse])
+async def search_user_files(
+    filename: str = Query('*'),
+    content: bool = Query(False),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=1000),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await _search_files(filename, content, skip, limit, user.id, db)
 
 
 ############################
@@ -565,6 +566,14 @@ async def count_files(
 ):
     user_id = None if (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
     return await Files.count_files_by_user_id(user_id=user_id, db=db)
+
+
+@router.get('/user/count', response_model=int)
+async def count_user_files(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await Files.count_files_by_user_id(user_id=user.id, db=db)
 
 
 ############################
