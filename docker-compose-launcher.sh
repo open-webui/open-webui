@@ -60,9 +60,9 @@ Options:
 
 Examples:
   $(basename "$0") --drop
-  $(basename "$0") --enable-gpu[count=1]
-  $(basename "$0") --enable-gpu[count=all] --webui[port=8080]
-  $(basename "$0") --enable-gpu[count=1] --enable-api[port=12345] --data[folder=./data] --build
+  $(basename "$0") '--enable-gpu[count=1]'
+  $(basename "$0") '--enable-gpu[count=all]' '--webui[port=8080]'
+  $(basename "$0") '--enable-gpu[count=1]' '--enable-api[port=12345]' '--data[folder=./data]' --build
 EOF
 }
 
