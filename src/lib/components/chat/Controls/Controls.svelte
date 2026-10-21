@@ -12,7 +12,8 @@
 	import { user, settings } from '$lib/stores';
 	export let models = [];
 	export let chatFiles = [];
-	export let params = {};
+	export let params: Record<string, any> = {};
+	export let onParamChange: (key: string, value: unknown) => void = () => {};
 	export let embed = false;
 
 	// Persist collapsible section open/close state
@@ -118,6 +119,7 @@
 					<div class="pt-1 pb-1" slot="content">
 						<textarea
 							bind:value={params.system}
+							on:change={() => onParamChange('system', params.system)}
 							class={($settings?.highContrastMode ?? false)
 								? systemPromptTextareaClass
 								: compactSystemPromptTextareaClass}
@@ -139,7 +141,12 @@
 				>
 					<div class="pt-1 pb-1 text-xs" slot="content">
 						<div>
-							<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
+							<AdvancedParams
+								admin={$user?.role === 'admin'}
+								custom={true}
+								bind:params
+								{onParamChange}
+							/>
 						</div>
 					</div>
 				</Collapsible>

@@ -1483,6 +1483,39 @@ async def update_chat_by_id(
 
 
 ############################
+# UpdateChatParams
+############################
+
+
+@router.patch('/{id}/params', response_model=dict)
+async def update_chat_params(
+    request: Request,
+    id: str,
+    form_data: dict,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not await Chats.get_chat_by_id_and_user_id(id, user.id, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    chat = await Chats.update_chat_params_by_id(id, form_data)
+    if chat is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    await publish_event(
+        request,
+        EVENTS.CHAT_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'title': chat.title},
+    )
+    return chat.chat['params']
+
+
+############################
 # UpdateChatMessageById
 ############################
 class MessageForm(BaseModel):

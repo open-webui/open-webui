@@ -852,6 +852,18 @@ class ChatTable:
         except Exception:
             return
 
+    async def update_chat_params_by_id(self, id: str, params: dict) -> ChatModel | None:
+        async with self._chat_transaction(id) as (_, chat):
+            if chat is None:
+                return None
+
+            stored = chat.chat or {}
+            chat.chat = {
+                **stored,
+                'params': self._clean_null_bytes({**(stored.get('params') or {}), **params}),
+            }
+            return ChatModel.model_validate(chat)
+
     async def update_chat_variables_by_id(
         self,
         id: str,

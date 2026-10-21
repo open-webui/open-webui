@@ -40,6 +40,7 @@
 
 	export let chatFiles = [];
 	export let params = {};
+	export let onParamChange: (key: string, value: unknown) => void = () => {};
 
 	export let bridge: import('$lib/utils/realtime').RealtimeCall;
 	export let callMode = 'current';
@@ -307,7 +308,7 @@
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
-								<Controls embed={true} {models} bind:chatFiles bind:params />
+								<Controls embed={true} {models} bind:chatFiles bind:params {onParamChange} />
 							{/if}
 						</div>
 					</div>
@@ -437,7 +438,7 @@
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav overlay={dragged} />
 							{:else}
-								<Controls embed={true} {models} bind:chatFiles bind:params />
+								<Controls embed={true} {models} bind:chatFiles bind:params {onParamChange} />
 							{/if}
 						</div>
 					</div>

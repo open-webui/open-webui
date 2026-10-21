@@ -93,6 +93,7 @@
 		importChats,
 		resolveChatMessageToolCall,
 		updateChatById,
+		updateChatParams,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import type { FilesystemFile } from '$lib/apis/terminal';
@@ -518,19 +519,12 @@
 				tool_approval_mode
 			}
 		});
+		await saveParam('tool_approval_mode', tool_approval_mode);
 		await updateUserSettings(localStorage.token, { ui: { params: $settings.params } }).catch(
 			(err) => {
 				console.error('[tool permissions settings]', err);
 			}
 		);
-
-		if (!isShared && $chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
-			const res = await updateChatById(localStorage.token, $chatId, { params }).catch((err) => {
-				console.error('[tool permissions chat]', err);
-				return null;
-			});
-			if (res) chat = res;
-		}
 
 		if (tool_approval_mode === 'full') {
 			if (isTemporaryChatId($chatId)) {
@@ -882,7 +876,7 @@
 	}
 
 	let saveControlsTimer;
-	$: if (!loading && !$temporaryChatEnabled && $chatId && params && chatFiles) {
+	$: if (!loading && !$temporaryChatEnabled && $chatId && chatFiles) {
 		clearTimeout(saveControlsTimer);
 		saveControlsTimer = setTimeout(saveControls, 400);
 	}
@@ -3216,6 +3210,29 @@
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
 		const messages = createMessagesList(history, responseMessageId);
+		let changed = false;
+		const actionSocket = $socket;
+		const onEvent = (event) => {
+			if (event.chat_id !== _chatId || event.message_id !== responseMessageId) return;
+			const { type, data } = event.data ?? {};
+			// These events are UI-only or already persisted by get_event_emitter.
+			if (
+				[
+					'notification',
+					'confirmation',
+					'input',
+					'status',
+					'message',
+					'replace',
+					'files',
+					'embeds'
+				].includes(type) ||
+				(['source', 'citation'].includes(type) && data?.type == null)
+			)
+				return;
+			changed = true;
+		};
+		actionSocket?.on('events', onEvent);
 
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
@@ -3232,16 +3249,23 @@
 			chat_id: _chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
-		}).catch((error) => {
-			toast.error(`${error}`);
-			messages.at(-1).error = { content: error };
-			return null;
-		});
+		})
+			.catch((error) => {
+				toast.error(`${error}`);
+				if ($chatId === _chatId && history.messages[responseMessageId]) {
+					history.messages[responseMessageId].error = { content: error };
+					changed = true;
+				}
+				return null;
+			})
+			.finally(() => actionSocket?.off('events', onEvent));
 
-		if (res !== null && res.messages) {
+		if ($chatId !== _chatId) return;
+
+		if (res?.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
-				history.messages[message.id] = {
+				const updated = {
 					...history.messages[message.id],
 					...(history.messages[message.id].content !== message.content
 						? { originalContent: history.messages[message.id].content }
@@ -3251,16 +3275,19 @@
 						: {}),
 					...message
 				};
+				if (!equal(history.messages[message.id], updated)) {
+					history.messages[message.id] = updated;
+					changed = true;
+				}
 			}
 		}
 
-		if ($chatId == _chatId) {
+		if (changed) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
-					messages: messages,
+					messages: createMessagesList(history, responseMessageId),
 					history: history,
-					params: params,
 					files: chatFiles
 				});
 
@@ -4465,9 +4492,7 @@
 						// chat completion request.  Files are now persisted
 						// by the backend at chat creation time.
 						if (Object.keys(params).length > 0) {
-							await updateChatById(localStorage.token, res.chat_id, {
-								params: params
-							});
+							await updateChatParams(localStorage.token, res.chat_id, params);
 						}
 					}
 				}
@@ -4751,21 +4776,26 @@
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
-					params: params,
 					files: chatFiles
 				});
 			}
 		}
 	};
 
+	const saveParam = async (key: string, value: unknown) => {
+		if (isShared || !$chatId || $temporaryChatEnabled || isTemporaryChatId($chatId)) return;
+		await updateChatParams(localStorage.token, $chatId, { [key]: value }).catch((error) => {
+			toast.error(`${error}`);
+		});
+	};
+
 	const saveControls = async () => {
 		if (isShared) return;
 		if (!$chatId || $temporaryChatEnabled) return;
 		const loaded = chat?.chat ?? {};
-		if (equal(params, loaded.params ?? {}) && equal(chatFiles, loaded.files ?? [])) return;
+		if (equal(chatFiles, loaded.files ?? [])) return;
 
 		const res = await updateChatById(localStorage.token, $chatId, {
-			params,
 			files: chatFiles
 		}).catch((err) => {
 			console.error('[controls autosave]', err);
@@ -5490,6 +5520,7 @@
 						bind:history
 						bind:chatFiles
 						bind:params
+						onParamChange={saveParam}
 						bind:files
 						chatId={$chatId}
 						chatUser={chatOwner}
