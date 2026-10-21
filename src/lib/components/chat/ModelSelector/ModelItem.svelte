@@ -55,6 +55,7 @@
 </script>
 
 <button
+	id="model-option-{index}"
 	role="option"
 	aria-selected={isSelected}
 	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}

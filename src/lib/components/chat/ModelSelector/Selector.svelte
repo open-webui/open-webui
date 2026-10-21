@@ -944,6 +944,13 @@
 								placeholder={searchPlaceholder ?? $i18n.t('Search a model')}
 								autocomplete="off"
 								aria-label={$i18n.t('Search In Models')}
+								role="combobox"
+								aria-autocomplete="list"
+								aria-expanded={filteredItems.length + downloadTargets.length > 0}
+								aria-controls="model-selector-list"
+								aria-activedescendant={filteredItems.length + downloadTargets.length > 0
+									? `model-option-${selectedModelIdx}`
+									: undefined}
 								on:keydown={(e) => {
 									if (e.code === 'Enter') {
 										if (selectedModelIdx >= filteredItems.length) {
@@ -1064,6 +1071,7 @@
 							<div
 								class="min-h-0 flex-1 overflow-y-auto"
 								style="max-height: 18rem;"
+								id="model-selector-list"
 								role="listbox"
 								aria-label={$i18n.t('Available models')}
 								bind:this={listContainer}
@@ -1107,6 +1115,7 @@
 									placement="top-start"
 								>
 									<div
+										id="model-option-{filteredItems.length + targetIndex}"
 										role="option"
 										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
 										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
@@ -1159,6 +1168,7 @@
 								<Tooltip content={target.actionLabel} placement="top-start">
 									<button
 										type="button"
+										id="model-option-{filteredItems.length + targetIndex}"
 										role="option"
 										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
 										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
