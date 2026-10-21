@@ -471,6 +471,27 @@
 		currentId: null
 	};
 
+	let liveStatus = '';
+	let liveStatusMessageId: string | null = null;
+	let liveStatusMessageDone = true;
+
+	const updateLiveStatus = (message) => {
+		if (message?.role !== 'assistant') return;
+
+		if (message.id !== liveStatusMessageId) {
+			liveStatusMessageId = message.id;
+			liveStatusMessageDone = message.done !== false;
+			if (!liveStatusMessageDone) {
+				liveStatus = $i18n.t('Generating...');
+			}
+		} else if (!liveStatusMessageDone && message.done) {
+			liveStatusMessageDone = true;
+			liveStatus = $i18n.t('Response complete');
+		}
+	};
+
+	$: updateLiveStatus(history.messages?.[history.currentId]);
+
 	let taskIds = null;
 
 	// Chat Input
@@ -5228,6 +5249,7 @@
 						/>
 					{/if}
 					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+						<div class="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</div>
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
