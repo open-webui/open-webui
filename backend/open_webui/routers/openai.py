@@ -84,12 +84,20 @@ def _clean_proxy_headers(raw_headers) -> dict:
     return {k: v for k, v in raw_headers.items() if k.lower() not in _STRIP_PROXY_HEADERS}
 
 
+def _get_models_urls(url: str) -> list[str]:
+    models_url = f'{url.rstrip("/")}/models'
+    if url and 'openrouter.ai' in url:
+        return [f'{models_url}/user?limit=500', models_url]
+    return [models_url]
+
+
 async def send_get_request(
     request: Request = None,
     url=None,
     key=None,
     user: UserModel = None,
     config=None,
+    raise_for_status: bool = False,
 ):
     try:
         async with aiohttp.ClientSession(timeout=_MODEL_LIST_TIMEOUT, trust_env=True) as session:
@@ -110,6 +118,8 @@ async def send_get_request(
                 cookies=cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
+                if raise_for_status and not response.ok:
+                    return None
                 return await response.json(loads=JSONCodec.loads)
     except Exception as e:
         # Handle connection error here
@@ -126,7 +136,21 @@ async def get_models_request(
 ):
     if is_anthropic_url(url):
         return await get_anthropic_models(url, key, user=user)
-    return await send_get_request(request, f'{url}/models', key, user=user, config=config)
+
+    models_urls = _get_models_urls(url)
+    if len(models_urls) > 1:
+        response = await send_get_request(
+            request,
+            models_urls[0],
+            key,
+            user=user,
+            config=config,
+            raise_for_status=True,
+        )
+        if response is not None:
+            return response
+
+    return await send_get_request(request, models_urls[-1], key, user=user, config=config)
 
 
 def openai_reasoning_model_handler(payload):
@@ -816,32 +840,38 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
                     if models is None:
                         raise Exception('Failed to connect to Anthropic API')
                 else:
-                    async with session.get(
-                        f'{url}/models',
-                        headers=headers,
-                        cookies=cookies,
-                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                    ) as r:
-                        if r.status != 200:
-                            error_detail = f'HTTP Error: {r.status}'
-                            try:
-                                res = await r.json(loads=JSONCodec.loads)
-                                if 'error' in res:
-                                    error_detail = f'External Error: {res["error"]}'
-                            except Exception:
-                                pass
-                            raise Exception(error_detail)
+                    model_urls = _get_models_urls(url)
+                    for model_url in model_urls:
+                        async with session.get(
+                            model_url,
+                            headers=headers,
+                            cookies=cookies,
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        ) as r:
+                            if r.status != 200:
+                                if model_url != model_urls[-1]:
+                                    continue
 
-                        response_data = await r.json(loads=JSONCodec.loads)
+                                error_detail = f'HTTP Error: {r.status}'
+                                try:
+                                    res = await r.json(loads=JSONCodec.loads)
+                                    if 'error' in res:
+                                        error_detail = f'External Error: {res["error"]}'
+                                except Exception:
+                                    pass
+                                raise Exception(error_detail)
 
-                        if 'api.openai.com' in url:
-                            response_data['data'] = [
-                                model
-                                for model in response_data.get('data', [])
-                                if not any(name in model['id'] for name in _UNSUPPORTED_OPENAI_MODEL_KEYWORDS)
-                            ]
+                            response_data = await r.json(loads=JSONCodec.loads)
 
-                        models = response_data
+                            if 'api.openai.com' in url:
+                                response_data['data'] = [
+                                    model
+                                    for model in response_data.get('data', [])
+                                    if not any(name in model['id'] for name in _UNSUPPORTED_OPENAI_MODEL_KEYWORDS)
+                                ]
+
+                            models = response_data
+                            break
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f'Client error: {str(e)}')
