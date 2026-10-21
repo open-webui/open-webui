@@ -714,7 +714,11 @@ async def get_oauth_client_info_with_static_credentials(
             oauth_server_metadata.token_endpoint_auth_methods_supported
             and token_endpoint_auth_method not in oauth_server_metadata.token_endpoint_auth_methods_supported
         ):
-            token_endpoint_auth_method = oauth_server_metadata.token_endpoint_auth_methods_supported[0]
+            # List order is no preference; prefer a method that sends the secret
+            if 'client_secret_basic' in oauth_server_metadata.token_endpoint_auth_methods_supported:
+                token_endpoint_auth_method = 'client_secret_basic'
+            else:
+                token_endpoint_auth_method = oauth_server_metadata.token_endpoint_auth_methods_supported[0]
 
         oauth_client_info = OAuthClientInformationFull(
             client_id=oauth_client_id,
