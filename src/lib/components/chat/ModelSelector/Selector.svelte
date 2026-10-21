@@ -1032,6 +1032,16 @@
 						</div>
 					{/if}
 
+					<div class="sr-only" aria-live="polite" aria-atomic="true">
+						{#if sanitizedSearchValue}
+							{filteredItems.length === 0
+								? $i18n.t('No results found')
+								: filteredItems.length === 1
+									? $i18n.t('1 item')
+									: $i18n.t('{{count}} items', { count: filteredItems.length })}
+						{/if}
+					</div>
+
 					<div class="group relative flex min-h-0 flex-1 flex-col">
 						{#if filteredItems.length === 0}
 							{#if items.length === 0 && $user?.role === 'admin'}
