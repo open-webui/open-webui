@@ -254,7 +254,7 @@
 
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
-	{#if loaded}
+	{#if loaded && !onboarding}
 		<div
 			class="fixed inset-0 h-dvh overflow-y-auto bg-transparent w-full z-50 text-black dark:text-white"
 			id="auth-container"
