@@ -329,7 +329,7 @@
 
 						<div
 							class="snap-center w-full max-w-full transition-all {compactPreview
-								? ''
+								? 'min-w-1/2'
 								: `m-1 border p-5 rounded-2xl ${
 										history.messages[messageId]?.modelIdx == modelIdx
 											? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
