@@ -153,6 +153,7 @@
 				deleteIds.slice(offset, offset + 3).map(async (id) => {
 					try {
 						await deleteFileById(localStorage.token, id);
+						// toast.success($i18n.t('File deleted successfully.'));
 						selectedIds.delete(id);
 						files = files?.filter((file) => file.id !== id) ?? null;
 					} catch {
@@ -480,6 +481,7 @@
 									<button type="button" disabled={busy} on:click={() => downloadHandler([file.id])}
 										><ArrowDownTray className="size-3.5" />{$i18n.t('Download')}</button
 									>
+									<!-- {$i18n.t('Delete File')} -->
 									<button type="button" disabled={busy} on:click={() => requestDelete([file.id])}
 										><GarbageBin className="size-3.5" />{$i18n.t('Delete')}</button
 									>
