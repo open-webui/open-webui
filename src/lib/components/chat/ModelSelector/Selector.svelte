@@ -188,7 +188,7 @@
 
 	let selectedModel = '';
 	$: selectedValues = values ?? (value ? [value] : []);
-	$: primaryValue = selectedValues[0] ?? value ?? '';
+	$: primaryValue = selectedValues[0] ?? '';
 	$: selectedModel = items.find((item) => item.value === primaryValue) ?? '';
 	$: selectedCount = selectedValues.filter(Boolean).length;
 	$: triggerLabel = selectedModel
