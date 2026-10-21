@@ -1028,7 +1028,7 @@
 					{#if filteredModels.length > 0}
 						{#each filteredModels as model, modelIdx (`${model.id}-${modelIdx}`)}
 							<div
-								class="flex cursor-pointer transition w-full px-2 py-1 rounded-xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50 {model
+								class="group/setting-row flex cursor-pointer transition w-full px-2 py-1 rounded-xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50 {model
 									?.meta?.hidden
 									? 'opacity-50 dark:opacity-50'
 									: ''}"
@@ -1090,7 +1090,10 @@
 											<div
 												class="flex min-w-0 items-center gap-1.5 text-[0.8125rem] font-normal leading-4"
 											>
-												<span class="min-w-0 truncate">{model.name}</span>
+												<span
+													class="min-w-0 truncate text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
+													>{model.name}</span
+												>
 
 												<span
 													class="shrink-0 text-[0.6875rem] font-normal leading-4 {modelAccessClass(

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import UserSettingRow from '../UserSettingRow.svelte';
 	import { onMount, getContext } from 'svelte';
 	import { mfaRequest } from '$lib/apis/auths/mfa';
 	import type { MfaManagementFlow } from '$lib/components/auth/MfaManagement.svelte';
@@ -53,20 +54,21 @@
 
 <div class="space-y-2.5 text-xs">
 	{#if status}
-		<div class="flex items-center justify-between gap-2.5">
-			<span class="text-gray-600 dark:text-gray-400"
+		<UserSettingRow let:labelId>
+			<span slot="label"
 				>{status.enabled
 					? $i18n.t('Authenticator configured')
 					: $i18n.t('Authenticator not configured')}</span
 			>
 			{#if status.required && status.enabled}<button
+					id={`${labelId}-control`}
 					type="button"
 					class={actionButtonClass}
 					on:click={() => {
 						show = !show;
 					}}>{show ? $i18n.t('Hide') : $i18n.t('Manage')}</button
 				>{/if}
-		</div>
+		</UserSettingRow>
 		<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{status.enabled
 				? $i18n.t('{{COUNT}} recovery codes remaining', { COUNT: status.recovery_codes_remaining })

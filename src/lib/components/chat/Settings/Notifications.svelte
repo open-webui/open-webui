@@ -1,4 +1,5 @@
 <script lang="ts">
+	import UserSettingRow from './UserSettingRow.svelte';
 	import { canUseNotificationTargets } from '$lib/utils/settings-access';
 	import { getContext, onMount } from 'svelte';
 	import type { Writable } from 'svelte/store';
@@ -197,32 +198,34 @@
 		</h2>
 
 		<div class="flex flex-col gap-2.5">
-			<label class="flex cursor-pointer items-center justify-between">
-				<span class="text-xs text-gray-600 dark:text-gray-400">
+			<UserSettingRow let:labelId>
+				<span slot="label">
 					{$i18n.t('settings.personal.notifications.browserNotifications.label')}
 				</span>
 				<Switch
+					ariaLabelledbyId={labelId}
 					bind:state={notificationEnabled}
 					ariaLabel={$i18n.t('settings.personal.notifications.browserNotifications.label')}
 					on:change={toggleNotifications}
 				/>
-			</label>
+			</UserSettingRow>
 			<p class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 				{$i18n.t('Allow browser notifications for completed responses.')}
 			</p>
 
-			<label class="flex cursor-pointer items-center justify-between">
-				<span class="text-xs text-gray-600 dark:text-gray-400">
+			<UserSettingRow let:labelId>
+				<span slot="label">
 					{$i18n.t('settings.personal.notifications.notificationSound.label')}
 				</span>
 				<Switch
+					ariaLabelledbyId={labelId}
 					bind:state={notificationSound}
 					ariaLabel={$i18n.t('settings.personal.notifications.notificationSound.label')}
 					on:change={() => {
 						saveSettings({ notificationSound });
 					}}
 				/>
-			</label>
+			</UserSettingRow>
 
 			{#if canUseWebhooks}
 				<div class="mt-3 flex items-center justify-between">
@@ -253,12 +256,15 @@
 								.filter((event) => target.events.includes(event.event))
 								.map((event) => $i18n.t(event.label))
 								.join(', ')}
-							<div class="flex items-center gap-3 px-1 py-1.5">
+							<div class="group/setting-row flex items-center gap-3 px-1 py-1.5">
 								<div class="min-w-0 flex-1">
 									<div class="flex min-w-0 items-center gap-2">
-										<span class="truncate text-[0.71875rem] text-gray-700 dark:text-gray-300">
+										<label
+											for={`notification-${target.id}-control`}
+											class="truncate text-[0.71875rem] text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+										>
 											{target.id}
-										</span>
+										</label>
 										<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
 											{$i18n.t('Webhook')}
 										</span>
@@ -326,6 +332,7 @@
 
 								<div class="flex w-9 shrink-0 justify-end">
 									<Switch
+										id={`notification-${target.id}-control`}
 										state={target.enabled}
 										ariaLabel={$i18n.t('Enabled')}
 										on:change={(event) => patchTarget(target, { enabled: event.detail })}

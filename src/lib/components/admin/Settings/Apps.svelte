@@ -78,7 +78,9 @@
 					</div>
 				{:else}<div class="flex flex-col gap-1.5">
 						{#each apps as app (app.id)}
-							<div class="flex w-full items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
+							<div
+								class="group/setting-row flex w-full items-center gap-3 text-xs text-gray-600 dark:text-gray-400"
+							>
 								<div
 									class="flex min-w-0 flex-1 items-center gap-1.5 {app.is_active
 										? ''
@@ -91,9 +93,11 @@
 											className="size-4 shrink-0 rounded!"
 										/>
 									{:else}<Grid className="size-4 shrink-0" strokeWidth="1.5" />{/if}
-									<span class="truncate"
+									<label
+										for={`app-${app.id}-control`}
+										class="truncate text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 										>{app.name}
-										<span class="text-gray-400 dark:text-gray-600">{app.slug}</span></span
+										<span class="text-gray-400 dark:text-gray-600">{app.slug}</span></label
 									>
 								</div>
 								{#if app.is_active}
@@ -122,6 +126,7 @@
 												: $i18n.t('Uninstalled')}
 									>
 										{#key `${app.is_active}-${show}-${busy}`}<Switch
+												id={`app-${app.id}-control`}
 												state={app.is_active}
 												disabled={busy === app.id}
 												ariaLabel={`${$i18n.t('Enable')} ${app.name}`}

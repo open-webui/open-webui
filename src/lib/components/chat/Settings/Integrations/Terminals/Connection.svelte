@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
+	const settingId = `connection-${uuidv4()}`;
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -50,7 +52,7 @@
 	}}
 />
 
-<div class="flex w-full gap-2 items-center">
+<div class="group/setting-row flex w-full gap-2 items-center">
 	<Tooltip className="w-full relative" content={''} placement="top-start">
 		<div class="flex w-full">
 			<div
@@ -60,9 +62,12 @@
 					<Cloud className="size-4" strokeWidth="1.5" />
 				</Tooltip>
 
-				<div class="outline-hidden w-full bg-transparent text-xs text-gray-700 dark:text-gray-300">
+				<label
+					for={`${settingId}-control`}
+					class="outline-hidden w-full bg-transparent text-xs text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+				>
 					{connection.name || connection.url || $i18n.t('New Terminal')}
-				</div>
+				</label>
 			</div>
 		</div>
 	</Tooltip>
@@ -82,6 +87,7 @@
 
 		<Tooltip content={connection?.enabled ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 			<Switch
+				id={`${settingId}-control`}
 				state={connection?.enabled}
 				on:change={() => (connection?.enabled ? onDisable() : onEnable())}
 			/>

@@ -815,7 +815,7 @@
 	<div class="flex flex-col gap-1.5">
 		{#each items as item}
 			{@const connection = connectionForItem(item)}
-			<div class="flex w-full gap-2 items-center">
+			<div class="group/setting-row flex w-full gap-2 items-center">
 				<Tooltip className="w-full relative" content={''} placement="top-start">
 					<div class="flex w-full">
 						<div
@@ -829,7 +829,11 @@
 							</Tooltip>
 
 							<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
-								<span>{item.name}</span>
+								<label
+									for={`knowledge-${item.id}-control`}
+									class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+									>{item.name}</label
+								>
 								{' '}
 								<span class="text-gray-500">
 									{item?.meta?.external?.provider ?? connection?.provider}
@@ -859,6 +863,7 @@
 						content={connection?.enabled !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					>
 						<Switch
+							id={`knowledge-${item.id}-control`}
 							state={connection?.enabled !== false}
 							on:change={() => {
 								toggleSource(item);

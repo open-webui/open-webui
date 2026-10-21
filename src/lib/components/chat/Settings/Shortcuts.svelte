@@ -1,4 +1,5 @@
 <script lang="ts">
+	import UserSettingRow from './UserSettingRow.svelte';
 	import { getContext, onMount } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { updateUserSettings } from '$lib/apis/users';
@@ -119,17 +120,14 @@
 	</div>
 
 	<div class="mb-3">
-		<div class="flex items-center justify-between gap-2.5">
-			<div
-				id="enable-keyboard-shortcuts-label"
-				class="min-w-0 text-xs text-gray-600 dark:text-gray-400"
-			>
+		<UserSettingRow let:labelId>
+			<span slot="label">
 				{$i18n.t('settings.personal.shortcuts.enableKeyboardShortcuts.label')}
-			</div>
+			</span>
 
 			<div class="flex shrink-0 items-center justify-end gap-1.5">
 				<Switch
-					ariaLabelledbyId="enable-keyboard-shortcuts-label"
+					ariaLabelledbyId={labelId}
 					tooltip={true}
 					bind:state={enableKeyboardShortcuts}
 					on:change={() => {
@@ -137,7 +135,7 @@
 					}}
 				/>
 			</div>
-		</div>
+		</UserSettingRow>
 		<p class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('settings.personal.shortcuts.enableKeyboardShortcuts.description')}
 		</p>
