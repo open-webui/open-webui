@@ -2946,7 +2946,8 @@
 				chatContent.history ??= convertMessagesToHistory(chatContent.messages);
 				// Keep live updates received while the chat and tags were loading.
 				for (const [id, message] of Object.entries(history.messages)) {
-					if (initialHistory.messages[id] !== message) chatContent.history.messages[id] = message;
+					if (initialHistory.messages[id] !== message)
+						chatContent.history.messages[id] = { ...chatContent.history.messages[id], ...message };
 				}
 				if (history.currentId !== initialHistory.currentId) chat.current_message_id = history.currentId;
 				history = chatContent.history;
