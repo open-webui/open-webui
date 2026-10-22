@@ -828,6 +828,7 @@
 	let visionCapableModels = [];
 	$: visionCapableModels = getCapableModelIds(selectedModelIds, 'vision', modelCapabilitiesById);
 
+	let fileUploadEnabled: boolean = true;
 	let fileUploadCapableModels = [];
 	$: fileUploadCapableModels = getCapableModelIds(
 		selectedModelIds,
@@ -1440,6 +1441,7 @@
 				char: '@',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
+					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
 
@@ -1591,6 +1593,7 @@
 				char: '#',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
+					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
 
@@ -2350,6 +2353,7 @@
 									<InputMenu
 										onCompare={openComparison}
 										bind:files
+										bind:fileUploadEnabled
 										selectedModels={selectedModelIds}
 										fileUploadCapableModels={getFilesystemUploadTerminal(
 											$selectedTerminalId,
