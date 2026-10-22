@@ -161,7 +161,12 @@
 		<DropdownMenu className={contentClass} style={`max-height: ${maxHeight}; overflow-y: auto;`}>
 			<slot {open} {selectItem}>
 				{#each items as item}
-					<button class="focus-ring {itemClass}" type="button" on:click={() => selectItem(item)}>
+					<button
+						class="focus-ring {itemClass}"
+						type="button"
+						aria-pressed={value === item.value}
+						on:click={() => selectItem(item)}
+					>
 						<slot name="item" {item} selected={value === item.value}>
 							{item.label}
 						</slot>
