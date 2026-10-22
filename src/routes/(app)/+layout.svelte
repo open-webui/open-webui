@@ -491,7 +491,7 @@
 
 				{#if loaded}
 					<main class="contents">
-						<div id="main-content" tabindex="-1" class="sr-only"></div>
+						<div id="main-content" tabindex="-1" class="sr-only left-0 top-0"></div>
 						<slot />
 					</main>
 				{:else}
