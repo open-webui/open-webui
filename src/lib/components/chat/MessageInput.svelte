@@ -904,6 +904,12 @@
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
+	$: callSupported =
+		callActive ||
+		$config?.audio?.realtime?.enabled ||
+		($config?.audio?.stt?.engine !== 'web' &&
+			($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true)));
+
 	// Disable code interpreter when terminal is active (mutually exclusive)
 	$: if ($selectedTerminalId && codeInterpreterEnabled) {
 		codeInterpreterEnabled = false;
@@ -2800,7 +2806,7 @@
 											{/if}
 										{/if}
 
-										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true)) && callSupported}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip
