@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { canUseTemporaryChats, isSettingsAdmin } from '$lib/utils/settings-access';
+	import {
+		canUseChannels,
+		canUseTemporaryChats,
+		isSettingsAdmin
+	} from '$lib/utils/settings-access';
 	import { config, settings, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -2094,7 +2098,7 @@
 		</p>
 	</div>
 
-	{#if imageCompression}
+	{#if imageCompression && canUseChannels({ user: $user, config: $config })}
 		<div>
 			<div class={settingRowClass}>
 				<label
