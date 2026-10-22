@@ -18,6 +18,8 @@ export const canUseNotificationTargets = ({ user, config }: SettingsAccessContex
 	(user?.role === 'admin' || (user?.permissions?.features?.webhooks ?? false));
 export const canUseTemporaryChats = ({ user }: SettingsAccessContext) =>
 	user?.role === 'admin' || user?.permissions?.chat?.temporary;
+export const canUseCalls = ({ user }: SettingsAccessContext) =>
+	user?.role === 'admin' || (user?.permissions?.chat?.call ?? true);
 export const isSettingsAdmin = ({ user }: SettingsAccessContext) => user?.role === 'admin';
 
 /** Only permission-gated text needs an explicit rule. Provider/disclosure state is irrelevant. */
@@ -65,5 +67,10 @@ export function canSearchSetting(
 		return isSettingsAdmin(context);
 	if (stem === 'settings.personal.interface.temporaryChatByDefault')
 		return !!canUseTemporaryChats(context);
+	if (
+		key.startsWith('settings.personal.interface.') &&
+		/\.(sections\.voice|allowVoiceInterruptionInCall|displayEmojiInCall)\./.test(key)
+	)
+		return canUseCalls(context);
 	return true;
 }
