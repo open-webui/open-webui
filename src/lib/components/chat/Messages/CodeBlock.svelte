@@ -569,9 +569,10 @@
 				{#if !collapsed}
 					{#if isDiff && !(edit && editingDiff)}
 						<DiffBlock code={_code} />
-					{:else if edit}
+					{:else if edit || markdown?.allowRemoteContent === false}
 						<CodeEditor
 							value={_code}
+							readOnly={!edit}
 							{id}
 							{lang}
 							onSave={() => {
