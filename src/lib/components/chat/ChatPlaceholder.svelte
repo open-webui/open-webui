@@ -78,6 +78,7 @@
 									sanitizeResponseContent(selectedModelDescription).replaceAll('\n', '<br>')
 								)
 							)}
+							allowHTML={true}
 							placement="right"
 						>
 							<img

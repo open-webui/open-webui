@@ -214,6 +214,7 @@
 										sanitizeResponseContent(selectedModelDescription).replaceAll('\n', '<br>')
 									)
 								)}
+								allowHTML={true}
 								placement="top"
 							>
 								<div

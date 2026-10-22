@@ -1200,6 +1200,7 @@
 									<span id="usage-{message.id}" hidden>{usage}</span>
 									<Tooltip
 										content={`<pre>${sanitizeResponseContent(usage)}</pre>`}
+										allowHTML={true}
 										placement="bottom"
 									>
 										<button
