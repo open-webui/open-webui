@@ -188,33 +188,33 @@
 					<Switch bind:state={webConfig.ENABLE_WEB_SEARCH} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
-				<AdminSettingRow
-					label={$i18n.t('settings.admin.web.webSearchConfirmation.label')}
-					description={$i18n.t('settings.admin.web.webSearchConfirmation.description')}
-					let:labelId
-				>
-					<Switch
-						bind:state={webConfig.ENABLE_WEB_SEARCH_CONFIRMATION}
-						ariaLabelledbyId={labelId}
-					/>
-				</AdminSettingRow>
-
-				{#if webConfig.ENABLE_WEB_SEARCH_CONFIRMATION}
-					<AdminSettingField
-						label={$i18n.t('settings.admin.web.webSearchConfirmationContent.label')}
-						description={$i18n.t('settings.admin.web.webSearchConfirmationContent.description')}
-					>
-						<Textarea
-							className={textareaClass}
-							placeholder={$i18n.t(
-								'Your query will be sent to the configured web search provider.'
-							)}
-							bind:value={webConfig.WEB_SEARCH_CONFIRMATION_CONTENT}
-						/>
-					</AdminSettingField>
-				{/if}
-
 				{#if webConfig.ENABLE_WEB_SEARCH}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.web.webSearchConfirmation.label')}
+						description={$i18n.t('settings.admin.web.webSearchConfirmation.description')}
+						let:labelId
+					>
+						<Switch
+							bind:state={webConfig.ENABLE_WEB_SEARCH_CONFIRMATION}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+
+					{#if webConfig.ENABLE_WEB_SEARCH_CONFIRMATION}
+						<AdminSettingField
+							label={$i18n.t('settings.admin.web.webSearchConfirmationContent.label')}
+							description={$i18n.t('settings.admin.web.webSearchConfirmationContent.description')}
+						>
+							<Textarea
+								className={textareaClass}
+								placeholder={$i18n.t(
+									'Your query will be sent to the configured web search provider.'
+								)}
+								bind:value={webConfig.WEB_SEARCH_CONFIRMATION_CONTENT}
+							/>
+						</AdminSettingField>
+					{/if}
+
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.web.webSearchEngine.label')}
 						description={$i18n.t('settings.admin.web.webSearchEngine.description')}
@@ -1232,13 +1232,18 @@
 					/>
 				</AdminSettingRow>
 
-				<AdminSettingRow
-					label={$i18n.t('settings.admin.web.bypassWebLoader.label')}
-					description={$i18n.t('settings.admin.web.bypassWebLoader.description')}
-					let:labelId
-				>
-					<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_WEB_LOADER} ariaLabelledbyId={labelId} />
-				</AdminSettingRow>
+				{#if webConfig.ENABLE_WEB_SEARCH}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.web.bypassWebLoader.label')}
+						description={$i18n.t('settings.admin.web.bypassWebLoader.description')}
+						let:labelId
+					>
+						<Switch
+							bind:state={webConfig.BYPASS_WEB_SEARCH_WEB_LOADER}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+				{/if}
 
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.web.trustProxyEnvironment.label')}
