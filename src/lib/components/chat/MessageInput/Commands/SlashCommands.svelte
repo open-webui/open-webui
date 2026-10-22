@@ -37,6 +37,7 @@
 	export let canTemporary = false;
 	export let temporaryEnabled = false;
 	export let hasChatContent = false;
+	export let canCreateSkill: boolean = false;
 	export let contextPercent = 0;
 	export let contextHasThreshold = false;
 
@@ -75,6 +76,7 @@
 			? [{ type: 'command', data: { id: 'compare' } }]
 			: []),
 		...(hasChatContent &&
+		canCreateSkill &&
 		($user?.role === 'admin' || $user?.permissions?.workspace?.skills) &&
 		'skills:create'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'skills:create' } }]

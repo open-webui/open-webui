@@ -1543,6 +1543,13 @@
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
 					hasChatContent: hasChatContent,
+					canCreateSkill: () =>
+						selectedModelIds.every((modelId) => {
+							const meta = $models.find((model) => model.id === modelId)?.info?.meta;
+							return (
+								(meta?.capabilities?.builtin_tools ?? true) && (meta?.builtinTools?.skills ?? true)
+							);
+						}),
 					temporaryEnabled: () => $temporaryChatEnabled === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
