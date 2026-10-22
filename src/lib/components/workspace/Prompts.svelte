@@ -735,10 +735,9 @@
 											</button>
 										</PromptMenu>
 
-										<button
+										<div
 											class="flex h-6 items-center"
-											type="button"
-											disabled={!prompt.write_access}
+											role="presentation"
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -758,7 +757,7 @@
 													}}
 												/>
 											</Tooltip>
-										</button>
+										</div>
 									</div>
 								{/if}
 							</div>
