@@ -330,7 +330,7 @@
 						</button>
 					</Tooltip>
 
-					{#if $config?.features?.enable_notes ?? false}
+					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')
