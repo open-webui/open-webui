@@ -23,7 +23,7 @@
 		latest: ''
 	};
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
@@ -133,7 +133,7 @@
 					<span class="capitalize">{$config?.license_metadata?.organization_name}</span>
 				</div>
 			{:else}
-				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-600">
+				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-500">
 					<a
 						class="hover:text-gray-700 dark:hover:text-gray-400"
 						href="https://discord.gg/5rJgQTnV4s"
@@ -152,7 +152,7 @@
 				</div>
 			{/if}
 
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+			<div class="text-xs text-gray-600 dark:text-gray-500">
 				{$i18n.t('Emoji graphics provided by')}
 				<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, {$i18n.t(
 					'licensed under'
@@ -160,7 +160,7 @@
 				<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
 			</div>
 
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+			<div class="text-xs text-gray-600 dark:text-gray-500">
 				<!-- LICENSE covers this Open WebUI copyright attribution.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
@@ -172,9 +172,9 @@
 				>
 			</div>
 
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+			<div class="text-xs text-gray-600 dark:text-gray-500">
 				{$i18n.t('Created by')}
-				<a class="text-gray-500 dark:text-gray-400" href="https://github.com/tjbck" target="_blank"
+				<a class="text-gray-700 dark:text-gray-400" href="https://github.com/tjbck" target="_blank"
 					>Tim J. Baek</a
 				>
 			</div>
