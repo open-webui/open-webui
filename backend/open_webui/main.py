@@ -3111,6 +3111,8 @@ async def check_db_health():
 mimetypes.add_type('text/javascript', '.js')
 mimetypes.add_type('text/javascript', '.mjs')
 mimetypes.add_type('application/wasm', '.wasm')
+# Python before 3.13 only knows .webp from /etc/mime.types, which the Docker image does not ship
+mimetypes.add_type('image/webp', '.webp')
 
 # Serve build-time static assets (CSS, JS, images, favicon, etc.)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
