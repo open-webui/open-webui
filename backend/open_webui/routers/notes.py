@@ -233,6 +233,7 @@ async def create_new_note(
         user.role,
         form_data.access_grants,
         'sharing.public_notes',
+        sharing_permission_key='sharing.notes',
         db=db,
     )
 
@@ -540,6 +541,7 @@ async def update_note_by_id(
             user.role,
             form_data.access_grants,
             'sharing.public_notes',
+            sharing_permission_key='sharing.notes',
             db=db,
         )
 
@@ -619,6 +621,7 @@ async def update_note_access_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_notes',
+        sharing_permission_key='sharing.notes',
     )
 
     await AccessGrants.set_access_grants('note', id, form_data.access_grants, db=db)

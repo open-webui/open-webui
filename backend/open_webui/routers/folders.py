@@ -561,6 +561,7 @@ async def update_folder_access_by_id(
         user.role,
         form_data.access_grants,
         None,
+        sharing_permission_key='sharing.folders',
         db=db,
     )
 
