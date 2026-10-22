@@ -6,7 +6,7 @@
 	import dayjs from 'dayjs';
 	import calendar from 'dayjs/plugin/calendar';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -47,6 +47,8 @@
 	let page = 1;
 
 	let query = '';
+	let searchInput: HTMLInputElement;
+	let chatListElement: HTMLDivElement;
 	let orderBy = 'updated_at';
 	let direction = 'desc';
 
@@ -119,12 +121,18 @@
 	};
 
 	const unarchiveHandler = async (id: string) => {
+		const index = chatList?.findIndex((chat) => chat.id === id) ?? -1;
 		await archiveChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 		});
 
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;
+
+		await tick();
+		const rows = chatListElement?.children ?? [];
+		(rows[Math.min(index, rows.length - 1)]?.querySelector('button') ?? searchInput)?.focus();
+
 		await refreshChatList(localStorage.token, { refreshPinned: true });
 	};
 
@@ -198,6 +206,7 @@
 		<div class="flex min-w-0 flex-1 items-center gap-2">
 			<Search className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600" />
 			<input
+				bind:this={searchInput}
 				data-settings-search
 				class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 				bind:value={query}
@@ -326,7 +335,7 @@
 				</button>
 			</div>
 
-			<div>
+			<div bind:this={chatListElement}>
 				{#each chatList as chat (chat.id)}
 					<div class="flex w-full justify-between gap-2 px-1 py-1 text-xs">
 						<a
