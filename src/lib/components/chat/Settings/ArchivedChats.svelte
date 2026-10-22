@@ -73,6 +73,7 @@
 	};
 
 	const searchHandler = () => {
+		chatList = null;
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
 		}
@@ -268,6 +269,18 @@
 				</DropdownMenu>
 			</div>
 		</Dropdown>
+	</div>
+
+	<div class="sr-only" aria-live="polite" aria-atomic="true">
+		{#if query && chatList !== null}
+			{#if chatList.length === 0}
+				{$i18n.t('No results found')}
+			{:else if chatList.length === 1}
+				{$i18n.t('1 item')}
+			{:else}
+				{$i18n.t('{{count}} items', { count: chatList.length })}
+			{/if}
+		{/if}
 	</div>
 
 	<div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
