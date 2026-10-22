@@ -1,3 +1,4 @@
+import asyncio
 import re
 import uuid
 from contextlib import asynccontextmanager
@@ -27,10 +28,15 @@ from loguru import logger
 from open_webui.env import AUDIT_INCLUDED_PATHS, AUDIT_LOG_LEVEL, ENABLE_AUDIT_GET_REQUESTS, MAX_BODY_LOG_SIZE
 from open_webui.models.users import UserModel
 from open_webui.utils.auth import get_current_user, get_http_authorization_cred
+from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.response import merge_usage, normalize_usage
 from starlette.requests import Request
 
 if TYPE_CHECKING:
     from loguru import Logger
+
+STREAM_CONTENT_TYPES = ('text/event-stream', 'application/x-ndjson')
+USAGE_MARKERS = (b'"usage":{', b'"usage": {', b'"timings"', b'"eval_count"')
 
 
 @dataclass(frozen=True)
@@ -44,6 +50,7 @@ class AuditLogEntry:
     user_agent: Optional[str] = None
     source_ip: Optional[str] = None
     model_id: Optional[str] = None
+    usage: Optional[dict[str, int]] = None
     # `Request` audit level properties
     request_object: Any = None
     # `Request Response` level
@@ -97,6 +104,7 @@ class AuditContext:
     response_body (bytearray): Accumulated response payload.
     max_body_size (int): Maximum number of bytes to capture.
     metadata (Dict[str, Any]): A dictionary to store additional audit metadata (user, http verb, user agent, etc.).
+    usage (Optional[dict[str, int]]): Token usage read from the response.
     """
 
     def __init__(self, max_body_size: int = MAX_BODY_LOG_SIZE):
@@ -104,6 +112,9 @@ class AuditContext:
         self.response_body = bytearray()
         self.max_body_size = max_body_size
         self.metadata: Dict[str, Any] = {}
+        self.usage: Optional[dict[str, int]] = None
+        self.response_content_type = ''
+        self.partial_line = bytearray()
 
     def add_request_chunk(self, chunk: bytes):
         if len(self.request_body) < self.max_body_size:
@@ -112,6 +123,32 @@ class AuditContext:
     def add_response_chunk(self, chunk: bytes):
         if len(self.response_body) < self.max_body_size:
             self.response_body.extend(chunk[: self.max_body_size - len(self.response_body)])
+
+    def add_usage_chunk(self, chunk: bytes, more_body: bool):
+        # Streams carry usage in their last event, past the body size cap, so read every line.
+        if self.response_content_type.startswith(STREAM_CONTENT_TYPES):
+            self.partial_line += chunk
+            if more_body and b'\n' not in chunk:
+                return
+            lines = self.partial_line.split(b'\n')
+            self.partial_line = lines.pop() if more_body else bytearray()
+            for line in lines:
+                self.read_usage(line.strip().removeprefix(b'data:').strip())
+        elif self.response_content_type.startswith('application/json') and not more_body:
+            self.read_usage(chunk)
+
+    def read_usage(self, raw: bytes):
+        if not any(marker in raw for marker in USAGE_MARKERS):
+            return
+        try:
+            event = JSONCodec.loads(raw)
+            payload = event['response'] if isinstance(event.get('response'), dict) else event
+            raw_usage = {**payload, **(payload.get('usage') or {}), **(payload.get('timings') or {})}
+            usage = to_audit_usage(raw_usage)
+        except (AttributeError, TypeError, ValueError):
+            return
+        if usage:
+            self.usage = usage
 
 
 def redact_passwords(body: str) -> str:
@@ -123,6 +160,18 @@ def redact_passwords(body: str) -> str:
         body,
         flags=re.IGNORECASE,
     )
+
+
+def to_audit_usage(raw_usage: Optional[dict]) -> Optional[dict[str, int]]:
+    usage = normalize_usage(raw_usage)
+    if not usage or not usage['total_tokens']:
+        return None
+    return {key: usage[key] for key in ('input_tokens', 'output_tokens', 'total_tokens')}
+
+
+def record_chat_usage(request: Request, usage: Optional[dict]):
+    """Add a finished background chat's usage to the audit entry of the request that started it."""
+    request.state.chat_usage = merge_usage(getattr(request.state, 'chat_usage', None), usage)
 
 
 class AuditLoggingMiddleware:
@@ -144,6 +193,7 @@ class AuditLoggingMiddleware:
     ) -> None:
         self.app = app
         self.audit_logger = AuditLogger(logger)
+        self.deferred_entries: set[asyncio.Task] = set()
 
         def normalize_paths(paths: Optional[list[str]]) -> list[str]:
             return [path for path in (path.strip().lstrip('/') for path in paths or []) if path]
@@ -189,6 +239,9 @@ class AuditLoggingMiddleware:
         async with self._audit_context(request) as context:
 
             async def send_wrapper(message: ASGISendEvent) -> None:
+                if capture_body:
+                    self._capture_usage(message, context)
+
                 if self.audit_level == AuditLevel.REQUEST_RESPONSE and (
                     capture_body or message['type'] == 'http.response.start'
                 ):
@@ -221,7 +274,18 @@ class AuditLoggingMiddleware:
         try:
             yield context
         finally:
-            await self._log_audit_entry(request, context)
+            # Web UI chats answer with a task id and generate afterwards; log once they finish.
+            if getattr(request.state, 'chat_tasks', None):
+                entry_task = asyncio.create_task(self._log_audit_entry_after_chats(request, context))
+                self.deferred_entries.add(entry_task)
+                entry_task.add_done_callback(self.deferred_entries.discard)
+            else:
+                await self._log_audit_entry(request, context)
+
+    async def _log_audit_entry_after_chats(self, request: Request, context: AuditContext):
+        await asyncio.wait(request.state.chat_tasks)
+        context.usage = to_audit_usage(getattr(request.state, 'chat_usage', None))
+        await self._log_audit_entry(request, context)
 
     async def _get_authenticated_user(self, request: Request) -> Optional[UserModel]:
         # get_current_user stashes the resolved user on the scope-backed state;
@@ -283,6 +347,13 @@ class AuditLoggingMiddleware:
             body = message.get('body', b'')
             context.add_request_chunk(body)
 
+    def _capture_usage(self, message: ASGISendEvent, context: AuditContext):
+        if message['type'] == 'http.response.start':
+            headers = dict(message.get('headers') or [])
+            context.response_content_type = headers.get(b'content-type', b'').decode('latin-1').lower()
+        elif message['type'] == 'http.response.body':
+            context.add_usage_chunk(message.get('body', b''), message.get('more_body', False))
+
     async def _capture_response(self, message: ASGISendEvent, context: AuditContext):
         if message['type'] == 'http.response.start':
             context.metadata['response_status_code'] = message['status']
@@ -314,6 +385,7 @@ class AuditLoggingMiddleware:
                 source_ip=request.client.host if request.client else None,
                 user_agent=request.headers.get('user-agent'),
                 model_id=getattr(request.state, 'model_id', None),
+                usage=context.usage,
                 request_object=request_body,
                 response_object=response_body,
             )
