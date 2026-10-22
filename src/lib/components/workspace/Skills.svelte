@@ -343,6 +343,8 @@
 	</title>
 </svelte:head>
 
+<h1 class="sr-only">{$i18n.t('Skills')}</h1>
+
 {#if loaded}
 	<ImportModal
 		bind:show={showImportFromLink}

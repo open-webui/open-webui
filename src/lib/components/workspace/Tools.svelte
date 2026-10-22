@@ -309,6 +309,8 @@
 	</title>
 </svelte:head>
 
+<h1 class="sr-only">{$i18n.t('Tools')}</h1>
+
 <ImportModal
 	bind:show={showImportModal}
 	onImport={(tool) => {
