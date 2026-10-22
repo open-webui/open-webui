@@ -108,29 +108,37 @@
 	};
 
 	const updateConfigHandler = async () => {
-		if (
-			config.IMAGE_GENERATION_ENGINE === 'automatic1111' &&
-			config.AUTOMATIC1111_BASE_URL === ''
-		) {
-			toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
-			config.ENABLE_IMAGE_GENERATION = false;
+		if (config.ENABLE_IMAGE_GENERATION) {
+			if (
+				config.IMAGE_GENERATION_ENGINE === 'automatic1111' &&
+				config.AUTOMATIC1111_BASE_URL === ''
+			) {
+				toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
+				config.ENABLE_IMAGE_GENERATION = false;
 
-			return null;
-		} else if (config.IMAGE_GENERATION_ENGINE === 'comfyui' && config.COMFYUI_BASE_URL === '') {
-			toast.error($i18n.t('ComfyUI Base URL is required.'));
-			config.ENABLE_IMAGE_GENERATION = false;
+				return null;
+			} else if (config.IMAGE_GENERATION_ENGINE === 'comfyui' && config.COMFYUI_BASE_URL === '') {
+				toast.error($i18n.t('ComfyUI Base URL is required.'));
+				config.ENABLE_IMAGE_GENERATION = false;
 
-			return null;
-		} else if (config.IMAGE_GENERATION_ENGINE === 'openai' && config.IMAGES_OPENAI_API_KEY === '') {
-			toast.error($i18n.t('OpenAI API Key is required.'));
-			config.ENABLE_IMAGE_GENERATION = false;
+				return null;
+			} else if (
+				config.IMAGE_GENERATION_ENGINE === 'openai' &&
+				config.IMAGES_OPENAI_API_KEY === ''
+			) {
+				toast.error($i18n.t('OpenAI API Key is required.'));
+				config.ENABLE_IMAGE_GENERATION = false;
 
-			return null;
-		} else if (config.IMAGE_GENERATION_ENGINE === 'gemini' && config.IMAGES_GEMINI_API_KEY === '') {
-			toast.error($i18n.t('Gemini API Key is required.'));
-			config.ENABLE_IMAGE_GENERATION = false;
+				return null;
+			} else if (
+				config.IMAGE_GENERATION_ENGINE === 'gemini' &&
+				config.IMAGES_GEMINI_API_KEY === ''
+			) {
+				toast.error($i18n.t('Gemini API Key is required.'));
+				config.ENABLE_IMAGE_GENERATION = false;
 
-			return null;
+				return null;
+			}
 		}
 
 		const res = await updateConfig(localStorage.token, {
@@ -729,7 +737,7 @@
 								variant="settings"
 								placeholder={$i18n.t('settings.admin.images.imagesGeminiApiKey.label')}
 								bind:value={config.IMAGES_GEMINI_API_KEY}
-								required={true}
+								required={config.ENABLE_IMAGE_GENERATION}
 							/>
 						</AdminSettingField>
 
@@ -1031,7 +1039,7 @@
 									variant="settings"
 									placeholder={$i18n.t('settings.admin.images.imagesEditGeminiApiKey.label')}
 									bind:value={config.IMAGES_EDIT_GEMINI_API_KEY}
-									required={true}
+									required={config.ENABLE_IMAGE_EDIT}
 								/>
 							</AdminSettingField>
 						</div>
