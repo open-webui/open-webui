@@ -266,6 +266,19 @@
 		}
 
 		fileItems = [fileItem, ...(fileItems ?? [])];
+
+		const markProcessing = (uploadedFile: { id: string }) => {
+			fileItems = fileItems.map((item) => {
+				if (item.itemId === fileItem.itemId) {
+					item.id = uploadedFile.id;
+					item.status = 'processing';
+				}
+				return item;
+			});
+			// Restarts the polling that keeps files still being processed up to date.
+			init();
+		};
+
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
@@ -279,19 +292,20 @@
 					: {})
 			};
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(
+				localStorage.token,
+				file,
+				metadata,
+				null,
+				true,
+				markProcessing
+			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
-				fileItems = fileItems.map((item) => {
-					if (item.itemId === fileItem.itemId) {
-						item.id = uploadedFile.id;
-					}
-					return item;
-				});
 
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);

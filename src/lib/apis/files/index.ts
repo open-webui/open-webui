@@ -6,7 +6,8 @@ export const uploadFile = async (
 	file: File,
 	metadata?: object | null,
 	process?: boolean | null,
-	stream: boolean = true
+	stream: boolean = true,
+	onUploaded?: (uploadedFile: { id: string }) => void
 ) => {
 	const data = new FormData();
 	data.append('file', file);
@@ -41,6 +42,10 @@ export const uploadFile = async (
 
 	if (error) {
 		throw error;
+	}
+
+	if (res) {
+		onUploaded?.(res);
 	}
 
 	if (res && stream) {
