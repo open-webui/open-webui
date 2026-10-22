@@ -521,6 +521,8 @@
 	</title>
 </svelte:head>
 
+<h1 class="sr-only">{$i18n.t('Models')}</h1>
+
 {#if loaded}
 	<ModelDeleteConfirmDialog
 		bind:show={showModelDeleteConfirm}

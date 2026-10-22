@@ -391,6 +391,8 @@
 	</title>
 </svelte:head>
 
+<h1 class="sr-only">{$i18n.t('Prompts')}</h1>
+
 {#if loaded}
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
