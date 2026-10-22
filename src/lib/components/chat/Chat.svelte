@@ -1518,7 +1518,7 @@
 			(interactionType === 'confirmation' && interactionData?.tool_call)
 		) {
 			if (!cb) return;
-			if (event.chat_id !== $chatId || !history.messages[event.message_id]) {
+			if (event.chat_id !== $chatId) {
 				cb({ status: 'cancelled', answers: {} });
 				return;
 			}
@@ -1583,6 +1583,45 @@
 				return;
 			}
 			if (type === 'chat:list') {
+				return;
+			}
+			// A call resent after a reload can arrive before the message has loaded.
+			if (type === 'confirmation' || type === 'execute' || type === 'input') {
+				const data = event?.data?.data ?? null;
+				if (type === 'confirmation') {
+					eventCallback = cb;
+
+					eventConfirmationInput = false;
+					showEventConfirmation = true;
+					eventConfirmationInputOptions = [];
+
+					eventConfirmationTitle = data.title;
+					eventConfirmationMessage = data.message;
+				} else if (type === 'execute') {
+					try {
+						// Use Function constructor to evaluate code in a safer way
+						const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+						const result = await asyncFunction(); // Await the result of the async function
+
+						if (cb) {
+							cb(result);
+						}
+					} catch (error) {
+						console.error('Error executing code:', error);
+					}
+				} else if (type === 'input') {
+					eventCallback = cb;
+
+					eventConfirmationInput = true;
+					showEventConfirmation = true;
+
+					eventConfirmationTitle = data.title;
+					eventConfirmationMessage = data.message;
+					eventConfirmationInputPlaceholder = data.placeholder;
+					eventConfirmationInputValue = data?.value ?? '';
+					eventConfirmationInputType = data?.input?.type ?? data?.type ?? '';
+					eventConfirmationInputOptions = data?.input?.options ?? data?.options ?? [];
+				}
 				return;
 			}
 			let message = history.messages[event.message_id];
@@ -1758,39 +1797,6 @@
 					} else {
 						toast.info(toastContent);
 					}
-				} else if (type === 'confirmation') {
-					eventCallback = cb;
-
-					eventConfirmationInput = false;
-					showEventConfirmation = true;
-					eventConfirmationInputOptions = [];
-
-					eventConfirmationTitle = data.title;
-					eventConfirmationMessage = data.message;
-				} else if (type === 'execute') {
-					try {
-						// Use Function constructor to evaluate code in a safer way
-						const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
-						const result = await asyncFunction(); // Await the result of the async function
-
-						if (cb) {
-							cb(result);
-						}
-					} catch (error) {
-						console.error('Error executing code:', error);
-					}
-				} else if (type === 'input') {
-					eventCallback = cb;
-
-					eventConfirmationInput = true;
-					showEventConfirmation = true;
-
-					eventConfirmationTitle = data.title;
-					eventConfirmationMessage = data.message;
-					eventConfirmationInputPlaceholder = data.placeholder;
-					eventConfirmationInputValue = data?.value ?? '';
-					eventConfirmationInputType = data?.input?.type ?? data?.type ?? '';
-					eventConfirmationInputOptions = data?.input?.options ?? data?.options ?? [];
 				} else if (type.startsWith('terminal:')) {
 					terminalEventHandler(type, data, message);
 				} else {
