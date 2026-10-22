@@ -340,6 +340,7 @@
 					baseModel?.owned_by !== 'arena' &&
 					!(baseModel?.direct ?? false) &&
 					($user?.role === 'admin' ||
+						$user?.permissions?.workspace?.models_view_hidden ||
 						!(baseModel?.info?.meta?.hidden ?? false) ||
 						baseModel.id === info.base_model_id)
 			)
@@ -1279,7 +1280,8 @@
 													items={getBaseModelItems($models)}
 													triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
 													selectionOnly
-													includeHidden={$user?.role === 'admin'}
+													includeHidden={$user?.role === 'admin' ||
+														$user?.permissions?.workspace?.models_view_hidden}
 													bind:value={info.base_model_id}
 												/>
 											</div>
