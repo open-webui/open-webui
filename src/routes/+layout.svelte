@@ -672,7 +672,7 @@
 					const connection = resolveTerminalConnection(
 						data.terminal_id,
 						[],
-						$settings?.terminalServers ?? [],
+						$config?.features?.enable_direct_integrations ? ($settings?.terminalServers ?? []) : [],
 						localStorage.token
 					);
 					if (!connection) throw new Error('Terminal Not Found');
