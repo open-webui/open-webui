@@ -330,7 +330,7 @@
 				{#each chatList as chat (chat.id)}
 					<div class="flex w-full justify-between gap-2 px-1 py-1 text-xs">
 						<a
-							class="mr-auto min-w-0 max-w-xl flex-1 self-center truncate text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
+							class="mr-auto min-w-0 max-w-xl flex-1 self-center truncate text-gray-800 hover:text-black dark:text-gray-200 dark:hover:text-white"
 							href={`/c/${chat.id}`}
 							title={chat?.title}
 							on:click={(event) => {
@@ -342,7 +342,7 @@
 							{chat?.title}
 						</a>
 						<div
-							class="hidden w-24 shrink-0 self-center justify-end text-gray-400 dark:text-gray-600 sm:flex"
+							class="hidden w-24 shrink-0 self-center justify-end text-gray-600 dark:text-gray-500 sm:flex"
 						>
 							{$i18n.t(
 								dayjs(chat?.updated_at * 1000)
