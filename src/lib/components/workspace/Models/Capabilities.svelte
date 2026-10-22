@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { config } from '$lib/stores';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
 	import ModelSettingToggle from './ModelSettingToggle.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
@@ -68,11 +69,18 @@
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;
 	const featureKeys: Capability[] = ['web_search', 'image_generation', 'code_interpreter'];
+	let globallyEnabled: Partial<Record<Capability, boolean>>;
+	$: globallyEnabled = {
+		web_search: $config?.features?.enable_web_search,
+		image_generation: $config?.features?.enable_image_generation,
+		code_interpreter: $config?.features?.enable_code_interpreter,
+		memory: $config?.features?.enable_memories
+	};
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
-		(key) => key !== 'file_context' || capabilities.file_upload
+		(key) => (key !== 'file_context' || capabilities.file_upload) && (globallyEnabled[key] ?? true)
 	);
 	$: enabledCapabilityIds = visibleCapabilities.filter((key) => capabilities[key]);
-	$: availableFeatures = featureKeys.filter((key) => capabilities[key]);
+	$: availableFeatures = featureKeys.filter((key) => enabledCapabilityIds.includes(key));
 	$: enabledDefaultIds = availableFeatures.filter((key) => defaultFeatureIds.includes(key));
 	const setDefault = (key: string, enabled: boolean) => {
 		defaultFeatureIds = enabled
