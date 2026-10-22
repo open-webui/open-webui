@@ -773,6 +773,10 @@
 			>
 				<button
 					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg"
+					aria-label={open
+						? $i18n.t('Collapse {{name}}', { name: folders[folderId]?.name })
+						: $i18n.t('Expand {{name}}', { name: folders[folderId]?.name })}
+					aria-expanded={open}
 					on:click={(e) => {
 						e.stopPropagation();
 						e.stopImmediatePropagation();
