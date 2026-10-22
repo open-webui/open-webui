@@ -65,5 +65,8 @@ export function canSearchSetting(
 		return isSettingsAdmin(context);
 	if (stem === 'settings.personal.interface.temporaryChatByDefault')
 		return !!canUseTemporaryChats(context);
+	if (stem === 'settings.personal.shortcuts.newTemporaryChat')
+		return !!canUseTemporaryChats(context);
+	if (stem === 'settings.personal.shortcuts.deleteChat') return canManageChats(context, 'delete');
 	return true;
 }
