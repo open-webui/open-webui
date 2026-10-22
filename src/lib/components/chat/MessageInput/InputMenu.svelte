@@ -146,6 +146,7 @@
 				>
 					{#if toolPermissionsEnabled}
 						<button
+							role="menuitem"
 							class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
 							on:click={() => {
 								tab = 'tool_permissions';
@@ -194,6 +195,7 @@
 						className="w-full"
 					>
 						<button
+							role="menuitem"
 							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
@@ -220,6 +222,7 @@
 						className="w-full"
 					>
 						<button
+							role="menuitem"
 							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
@@ -245,6 +248,7 @@
 					</Tooltip>
 
 					<button
+						role="menuitem"
 						type="button"
 						class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
 						on:click={async () => {
@@ -276,6 +280,7 @@
 						className="w-full"
 					>
 						<button
+							role="menuitem"
 							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!webUploadEnabled
 								? 'opacity-50'
 								: ''}"
@@ -301,6 +306,7 @@
 						className="w-full"
 					>
 						<button
+							role="menuitem"
 							class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
@@ -334,6 +340,7 @@
 							className="w-full"
 						>
 							<button
+								role="menuitem"
 								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
@@ -365,6 +372,7 @@
 						className="w-full"
 					>
 						<button
+							role="menuitem"
 							class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
@@ -395,6 +403,7 @@
 						className="w-full"
 					>
 						<button
+							role="menuitem"
 							class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
@@ -419,6 +428,7 @@
 					{#if fileUploadEnabled}
 						{#if $config?.features?.enable_google_drive_integration}
 							<button
+								role="menuitem"
 								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
 								type="button"
 								on:click={() => {
@@ -462,6 +472,7 @@
 
 						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
 							<button
+								role="menuitem"
 								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
@@ -571,6 +582,7 @@
 			{:else if tab === 'tool_permissions'}
 				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
+						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
@@ -589,6 +601,8 @@
 						{#each toolApprovalModes as mode}
 							<Tooltip content={$i18n.t(mode.description)} className="w-full">
 								<button
+									role="menuitemradio"
+									aria-checked={toolApprovalMode === mode.value}
 									class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
 									on:click={() => {
 										toolApprovalMode = mode.value;
@@ -620,6 +634,7 @@
 			{:else if tab === 'knowledge'}
 				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
+						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
@@ -639,6 +654,7 @@
 			{:else if tab === 'notes'}
 				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
+						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
@@ -658,6 +674,7 @@
 			{:else if tab === 'files'}
 				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
+						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
@@ -677,6 +694,7 @@
 			{:else if tab === 'chats'}
 				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
+						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
@@ -696,6 +714,7 @@
 			{:else if tab === 'microsoft_onedrive'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
+						role="menuitem"
 						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
@@ -712,6 +731,7 @@
 
 					{#if $config?.features?.enable_onedrive_personal}
 						<button
+							role="menuitem"
 							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
 							type="button"
 							on:click={() => {
@@ -727,6 +747,7 @@
 
 					{#if $config?.features?.enable_onedrive_business}
 						<button
+							role="menuitem"
 							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
 							type="button"
 							on:click={() => {

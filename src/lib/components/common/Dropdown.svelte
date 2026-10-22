@@ -326,6 +326,27 @@
 		if (event.key === 'Escape' && show) {
 			closeDropdown();
 		}
+
+		if (
+			['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) &&
+			event.target instanceof HTMLElement &&
+			event.target.matches('[role^="menuitem"]') &&
+			contentEl?.contains(event.target)
+		) {
+			const items = [
+				...contentEl.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([disabled])')
+			].filter((item) => item.getClientRects().length > 0);
+			const index = items.indexOf(event.target);
+			const nextIndex =
+				event.key === 'Home'
+					? 0
+					: event.key === 'End'
+						? items.length - 1
+						: (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+
+			event.preventDefault();
+			items[nextIndex]?.focus();
+		}
 	}
 
 	/** Close the dropdown programmatically */
