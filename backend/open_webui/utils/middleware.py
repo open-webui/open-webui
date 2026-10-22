@@ -1112,9 +1112,10 @@ async def chat_completion_tools_handler(
                     tool_type = tool.get('type', '')
                     direct_tool = tool.get('direct', False)
 
-                    spec = tool.get('spec', {})
-                    allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
-                    tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed_params}
+                    if tool_type != 'mcp':
+                        spec = tool.get('spec', {})
+                        allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
+                        tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed_params}
 
                     if tool.get('direct', False):
                         tool_result = await event_caller(
@@ -3090,8 +3091,10 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
         return params, f'Error: Tool "{name}" not found.', None, None, False
     tool_type = tool.get('type', '')
     direct_tool = tool.get('direct', False)
-    allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {}).keys()
-    params = {key: value for key, value in params.items() if key in allowed_params}
+    # MCP servers validate their own arguments, and a schema may name them only inside anyOf
+    if tool_type != 'mcp':
+        allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {}).keys()
+        params = {key: value for key, value in params.items() if key in allowed_params}
 
     try:
         if (
