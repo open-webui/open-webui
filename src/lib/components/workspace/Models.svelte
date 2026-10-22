@@ -940,7 +940,10 @@
 									{:else}
 										<div class="flex shrink-0 flex-row items-center gap-1 self-center">
 											<ModelMenu
-												accessHandler={() => accessModal.open(model.id)}
+												accessHandler={$user?.permissions?.sharing?.models ||
+												$user?.role === 'admin'
+													? () => accessModal.open(model.id)
+													: null}
 												user={$user}
 												{model}
 												writeAccess={model.write_access}
