@@ -1071,8 +1071,9 @@
 			role="navigation"
 			aria-label={$i18n.t('Chat history')}
 		>
-			<button
+			<div
 				class="flex flex-col flex-1 {isWindows ? 'cursor-pointer' : 'cursor-[e-resize]'}"
+				role="presentation"
 				on:click={async () => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -1196,7 +1197,7 @@
 						{/if}
 					{/each}
 				</div>
-			</button>
+			</div>
 
 			<div>
 				<div>
