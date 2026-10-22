@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { config } from '$lib/stores';
 	import ModelSettingToggle from './ModelSettingToggle.svelte';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
 
@@ -79,7 +80,22 @@
 		}
 	};
 
-	$: allTools = Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>;
+	let globallyEnabled: Partial<Record<keyof typeof toolLabels, boolean>>;
+	$: globallyEnabled = {
+		memory: $config?.features?.enable_memories,
+		notes: $config?.features?.enable_notes,
+		channels: $config?.features?.enable_channels,
+		notifications: $config?.features?.enable_user_webhooks,
+		web_search: $config?.features?.enable_web_search,
+		image_generation: $config?.features?.enable_image_generation,
+		code_interpreter: $config?.features?.enable_code_interpreter,
+		automations: $config?.features?.enable_automations,
+		calendar: $config?.features?.enable_calendar,
+		subagents: $config?.features?.enable_subagents
+	};
+	$: allTools = (Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>).filter(
+		(key) => globallyEnabled[key] ?? true
+	);
 
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;
