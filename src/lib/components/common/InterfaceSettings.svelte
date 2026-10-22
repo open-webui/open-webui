@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { canUseTemporaryChats, isSettingsAdmin } from '$lib/utils/settings-access';
+	import {
+		canRegenerateResponses,
+		canUseTemporaryChats,
+		isSettingsAdmin
+	} from '$lib/utils/settings-access';
 	import { config, settings, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -1344,32 +1348,34 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="regenerate-menu-label"
-				class={settingLabelClass}
-				for="regenerate-menu-label-control"
-			>
-				{$i18n.t('settings.personal.interface.regenerateMenu.label')}
-			</label>
+	{#if canRegenerateResponses({ user: $user, config: $config })}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="regenerate-menu-label"
+					class={settingLabelClass}
+					for="regenerate-menu-label-control"
+				>
+					{$i18n.t('settings.personal.interface.regenerateMenu.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="regenerate-menu-label"
-					tooltip={true}
-					bind:state={regenerateMenu}
-					inherited={isDefaultSetting('regenerateMenu')}
-					on:change={() => {
-						saveSettings({ regenerateMenu });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="regenerate-menu-label"
+						tooltip={true}
+						bind:state={regenerateMenu}
+						inherited={isDefaultSetting('regenerateMenu')}
+						on:change={() => {
+							saveSettings({ regenerateMenu });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.regenerateMenu.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.regenerateMenu.description')}
-		</p>
-	</div>
+	{/if}
 
 	<div>
 		<div class={settingRowClass}>
