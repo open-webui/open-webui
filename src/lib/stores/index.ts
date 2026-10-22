@@ -128,6 +128,11 @@ export const visiblePinnedModels = derived([pinnedModels, models], ([$pinnedMode
 	)
 );
 
+// Admins keep seeing hidden elements so they can manage them
+export const hiddenInterfaceElements = derived([config, user], ([$config, $user]) =>
+	$user?.role === 'admin' ? [] : ($config?.ui?.hidden_interface_elements ?? [])
+);
+
 export const audioQueue = writable<AudioQueue | null>(null);
 export const chatRequestQueues: Writable<
 	Record<string, { id: string; prompt: string; files: any[]; error?: string }[]>
@@ -409,6 +414,7 @@ type Config = {
 	};
 	ui?: {
 		default_interface_settings?: Record<string, unknown>;
+		hidden_interface_elements?: string[];
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
 		response_watermark?: string;

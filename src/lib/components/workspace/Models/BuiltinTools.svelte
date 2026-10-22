@@ -4,6 +4,7 @@
 	import type { i18n as i18nType } from 'i18next';
 	import ModelSettingToggle from './ModelSettingToggle.svelte';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
+	import { hiddenInterfaceElements } from '$lib/stores';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -79,7 +80,9 @@
 		}
 	};
 
-	$: allTools = Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>;
+	$: allTools = (Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>).filter(
+		(key) => !$hiddenInterfaceElements.includes(`model_editor.builtin_tool.${key}`)
+	);
 
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;

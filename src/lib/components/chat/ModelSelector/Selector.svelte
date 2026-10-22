@@ -31,7 +31,8 @@
 		temporaryChatEnabled,
 		settings,
 		config,
-		showSettings
+		showSettings,
+		hiddenInterfaceElements
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
@@ -1266,7 +1267,7 @@
 						{/each}
 					</div>
 
-					{#if showSetDefault}
+					{#if showSetDefault && !$hiddenInterfaceElements.includes('model_selector.set_default')}
 						<div class="flex shrink-0 items-center justify-end px-2 py-1 leading-none">
 							<button
 								type="button"

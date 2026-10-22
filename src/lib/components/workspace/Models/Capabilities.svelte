@@ -5,6 +5,7 @@
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
 	import ModelSettingToggle from './ModelSettingToggle.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
+	import { hiddenInterfaceElements } from '$lib/stores';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -69,10 +70,15 @@
 	export let disabled = false;
 	const featureKeys: Capability[] = ['web_search', 'image_generation', 'code_interpreter'];
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
-		(key) => key !== 'file_context' || capabilities.file_upload
+		(key) =>
+			(key !== 'file_context' || capabilities.file_upload) &&
+			!$hiddenInterfaceElements.includes(`model_editor.capability.${key}`)
 	);
 	$: enabledCapabilityIds = visibleCapabilities.filter((key) => capabilities[key]);
-	$: availableFeatures = featureKeys.filter((key) => capabilities[key]);
+	$: availableFeatures = featureKeys.filter(
+		(key) =>
+			capabilities[key] && !$hiddenInterfaceElements.includes(`model_editor.default_feature.${key}`)
+	);
 	$: enabledDefaultIds = availableFeatures.filter((key) => defaultFeatureIds.includes(key));
 	const setDefault = (key: string, enabled: boolean) => {
 		defaultFeatureIds = enabled

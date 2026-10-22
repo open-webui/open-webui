@@ -17,6 +17,7 @@
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
+	import HiddenElements from './HiddenElements.svelte';
 
 	export let initHandler = () => {};
 	export let dirty = false;
@@ -27,6 +28,7 @@
 	let showCapabilities = false;
 	let showParameters = false;
 	let showPromptSuggestions = false;
+	let showHiddenElements = false;
 	let savedSnapshot = '';
 
 	let defaultCapabilities = {};
@@ -38,6 +40,7 @@
 	let promptSuggestionsI18n = {};
 	let languages = [];
 	let editingLocale = '';
+	let hiddenInterfaceElements = [];
 
 	$: configuredParams = Object.entries(defaultParams ?? {}).filter(
 		([_, value]) => value !== null && value !== '' && value !== undefined
@@ -57,7 +60,8 @@
 			promptSuggestions: useDefaultPromptSuggestions
 				? null
 				: promptSuggestions.filter((p) => p.content !== ''),
-			promptSuggestionsI18n
+			promptSuggestionsI18n,
+			hiddenInterfaceElements
 		});
 
 	const updateDirty = async () => {
@@ -87,6 +91,7 @@
 		}
 
 		defaultParams = config?.DEFAULT_MODEL_PARAMS ?? {};
+		hiddenInterfaceElements = config?.HIDDEN_INTERFACE_ELEMENTS ?? [];
 		useDefaultPromptSuggestions = $appConfig?.default_prompt_suggestions == null;
 		promptSuggestions = resolveLocalizedPromptSuggestions(
 			$appConfig?.default_prompt_suggestions,
@@ -117,7 +122,8 @@
 			DEFAULT_PINNED_MODELS: config?.DEFAULT_PINNED_MODELS ?? null,
 			MODEL_ORDER_LIST: config?.MODEL_ORDER_LIST ?? [],
 			DEFAULT_MODEL_METADATA: metadata,
-			DEFAULT_MODEL_PARAMS: Object.fromEntries(configuredParams)
+			DEFAULT_MODEL_PARAMS: Object.fromEntries(configuredParams),
+			HIDDEN_INTERFACE_ELEMENTS: hiddenInterfaceElements
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -303,6 +309,39 @@
 									className="w-fit max-w-[10rem]"
 								/>
 							</LocalizedPromptSuggestions>
+						</div>
+					{/if}
+				</div>
+
+				<div>
+					<button
+						class="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left font-normal focus-visible:outline focus-visible:outline-2"
+						type="button"
+						aria-expanded={showHiddenElements}
+						on:click={() => {
+							showHiddenElements = !showHiddenElements;
+						}}
+					>
+						<span class="text-xs text-gray-600 dark:text-gray-400">
+							<ModelSettingsLabel
+								label={$i18n.t('settings.admin.models.defaults.hiddenElements.label')}
+								description={$i18n.t(
+									'Hide these elements from users without turning off the features behind them. Admins still see them.'
+								)}
+							/>
+						</span>
+						<ChevronRight
+							className={`size-3 text-gray-400 transition-transform ${showHiddenElements ? 'rotate-90' : ''}`}
+						/>
+					</button>
+
+					{#if showHiddenElements}
+						<div
+							class="max-h-[24rem] overflow-y-auto pb-2 pl-3 pr-1 scrollbar-hover"
+							on:click={updateDirty}
+							on:change={updateDirty}
+						>
+							<HiddenElements bind:hiddenInterfaceElements />
 						</div>
 					{/if}
 				</div>
