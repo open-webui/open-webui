@@ -8,6 +8,7 @@
 
 	import Markdown from './Markdown.svelte';
 	import ConsecutiveDetailsGroup from './Markdown/ConsecutiveDetailsGroup.svelte';
+	import ContextCompactionDivider from './ContextCompactionDivider.svelte';
 	import {
 		buildOutputDisplayItems,
 		type OutputDetailToken,
@@ -170,6 +171,8 @@
 		{#if displayItem.item?.displayed || $settings?.terminalFileDisplay === 'inline'}
 			<TerminalOutputFile item={displayItem.item} {chatId} />
 		{/if}
+	{:else if displayItem.type === 'context_compaction'}
+		<ContextCompactionDivider />
 	{:else}
 		{@const detailToken = displayItem.token}
 		{#if detailToken.attributes?.type === 'tool_calls'}

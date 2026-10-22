@@ -18,14 +18,27 @@
 		getOutputText(nodeData?.message?.output) || nodeData?.message?.content || '';
 
 	$: messageContent = getMessageContent(data);
+	$: isCompacted =
+		data?.message?.contextSummary ||
+		data?.message?.output?.some((item) => item?.type === 'open_webui:context_compaction');
 	$: modelName = data?.model
 		? resolveLocalizedModelName(data.model, $i18n.language)
 		: (data?.message?.model ?? 'Assistant');
 </script>
 
 <div
-	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border border-gray-100 dark:border-gray-900 w-60 h-20 group"
+	class="relative px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border border-gray-100 dark:border-gray-900 w-60 h-20 group"
 >
+	{#if isCompacted}
+		<div
+			class="absolute -top-6 inset-x-0 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500"
+		>
+			<div class="truncate">{$i18n.t('Context compacted')}</div>
+			<div
+				class="flex-1 min-w-4 border-t-2 border-dotted border-gray-200 dark:border-gray-800"
+			></div>
+		</div>
+	{/if}
 	<Tooltip
 		content={data?.message?.error ? data.message.error.content : messageContent}
 		class="w-full"

@@ -8,6 +8,7 @@
 	import { settings } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 
+	import ContextCompactionDivider from './ContextCompactionDivider.svelte';
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
 	import ResponseMessage from './ResponseMessage.svelte';
 	import UserMessage from './UserMessage.svelte';
@@ -70,6 +71,9 @@
 	class:message-virtualized={!isWebKit && !isCurrentTurn}
 >
 	{#if history.messages[messageId]}
+		{#if history.messages[messageId].contextSummary}
+			<ContextCompactionDivider />
+		{/if}
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
 				{user}

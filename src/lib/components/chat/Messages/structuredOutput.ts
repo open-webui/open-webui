@@ -64,6 +64,10 @@ export type OutputDisplayItem =
 			type: 'file';
 			id: string;
 			item: Record<string, unknown>;
+	  }
+	| {
+			type: 'context_compaction';
+			id: string;
 	  };
 
 type ResponseStreamEvent = {
@@ -406,6 +410,15 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 			if (token) {
 				currentDetailTokens.push(token);
 			}
+			return;
+		}
+
+		if (item.type === 'open_webui:context_compaction') {
+			flushDetails();
+			displayItems.push({
+				type: 'context_compaction',
+				id: item.id ?? `context-compaction-${index}`
+			});
 			return;
 		}
 
