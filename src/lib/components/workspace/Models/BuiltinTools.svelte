@@ -79,9 +79,21 @@
 		}
 	};
 
-	$: allTools = Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>;
+	let allowedByCapabilities: Partial<Record<keyof typeof toolLabels, boolean>>;
+	$: allowedByCapabilities = {
+		// with File Context on, attached files go into the prompt instead
+		files: capabilities.file_upload && !capabilities.file_context,
+		memory: capabilities.memory,
+		web_search: capabilities.web_search,
+		image_generation: capabilities.image_generation,
+		code_interpreter: capabilities.code_interpreter
+	};
+	$: allTools = (Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>).filter(
+		(key) => allowedByCapabilities[key] ?? true
+	);
 
 	export let builtinTools: Record<string, boolean> = {};
+	export let capabilities: Record<string, boolean> = {};
 	export let disabled = false;
 	$: enabledTools = allTools.filter((key) => builtinTools[key] !== false);
 
