@@ -533,6 +533,7 @@
 	size="full"
 	containerClassName="p-4 sm:p-6 lg:p-8"
 	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl overflow-hidden"
+	ariaLabel={$i18n.t('Settings')}
 	bind:show={modalShow}
 >
 	<nav
