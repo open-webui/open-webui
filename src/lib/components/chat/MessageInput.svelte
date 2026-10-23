@@ -811,7 +811,8 @@
 		| 'web_search'
 		| 'image_generation'
 		| 'code_interpreter'
-		| 'terminal';
+		| 'terminal'
+		| 'builtin_tools';
 	type ModelCapabilitiesById = Record<string, Partial<Record<ModelCapability, boolean>>>;
 
 	let modelCapabilitiesById: ModelCapabilitiesById = {};
@@ -871,6 +872,13 @@
 			(hasDirectToolServerAccess &&
 				(($terminalServers ?? []).some((t) => !t.id) ||
 					($settings?.terminalServers ?? []).some((s) => s.url))));
+
+	let canCreateSkill = false;
+	$: canCreateSkill = selectedModelIds.every(
+		(id) =>
+			(modelCapabilitiesById[id]?.builtin_tools ?? true) &&
+			($models.find((model) => model.id === id)?.info?.meta?.builtinTools?.skills ?? true)
+	);
 
 	let toggleFilters = [];
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
@@ -1543,13 +1551,7 @@
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
 					hasChatContent: hasChatContent,
-					canCreateSkill: () =>
-						selectedModelIds.every((modelId) => {
-							const meta = $models.find((model) => model.id === modelId)?.info?.meta;
-							return (
-								(meta?.capabilities?.builtin_tools ?? true) && (meta?.builtinTools?.skills ?? true)
-							);
-						}),
+					canCreateSkill: () => canCreateSkill,
 					temporaryEnabled: () => $temporaryChatEnabled === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
