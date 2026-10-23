@@ -41,6 +41,7 @@
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
+	export let visionCapableModels: string[] = [];
 
 	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;
@@ -220,7 +221,7 @@
 						</button>
 					</Tooltip>
 
-					{#if !$hiddenInterfaceElements.includes('input_menu.capture')}
+					{#if visionCapableModels.length > 0 && !$hiddenInterfaceElements.includes('input_menu.capture')}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')
@@ -345,7 +346,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if ($config?.features?.enable_notes ?? false) && !$hiddenInterfaceElements.includes('input_menu.attach_notes')}
+					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true)) && !$hiddenInterfaceElements.includes('input_menu.attach_notes')}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')

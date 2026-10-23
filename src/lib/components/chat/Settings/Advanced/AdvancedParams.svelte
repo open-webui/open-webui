@@ -7,6 +7,7 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
+	import { config } from '$lib/stores';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -201,7 +202,9 @@
 				)}
 			{/if}
 		</div>
+	{/if}
 
+	{#if admin && $config?.features?.enable_context_compaction}
 		<div>
 			<Tooltip
 				content={$i18n.t(

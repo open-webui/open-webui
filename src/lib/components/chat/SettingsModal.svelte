@@ -408,6 +408,15 @@
 				return $user?.role === 'admin' || ($user?.permissions?.settings?.interface ?? true);
 			}
 
+			if (tab.id === 'audio') {
+				return (
+					$user?.role === 'admin' ||
+					($user?.permissions?.chat?.stt ?? true) ||
+					($user?.permissions?.chat?.tts ?? true) ||
+					($user?.permissions?.chat?.call ?? true)
+				);
+			}
+
 			if (tab.id === 'usage') {
 				return !$hiddenInterfaceElements.includes('settings.usage');
 			}
