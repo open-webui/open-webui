@@ -34,7 +34,7 @@
 
 	export let query = '';
 	export let onSelect: (e: any) => void = () => {};
-	export let fileUploadEnabled = true;
+	export let fileUploadEnabled: boolean = true;
 
 	let selectedIdx = 0;
 	export let filteredItems: any[] = [];
@@ -62,6 +62,7 @@
 	});
 
 	$: filteredModels = query ? fuse.search(query).map((e) => e.item) : modelItems;
+	let webUploadEnabled: boolean = true;
 	$: webUploadEnabled = $user?.role === 'admin' || ($user?.permissions?.chat?.web_upload ?? true);
 	$: knowledgeResults = [
 		...filesystemItems,

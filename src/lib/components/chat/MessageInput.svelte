@@ -828,13 +828,18 @@
 	let visionCapableModels = [];
 	$: visionCapableModels = getCapableModelIds(selectedModelIds, 'vision', modelCapabilitiesById);
 
-	let fileUploadEnabled = true;
 	let fileUploadCapableModels = [];
 	$: fileUploadCapableModels = getCapableModelIds(
 		selectedModelIds,
 		'file_upload',
 		modelCapabilitiesById
 	);
+
+	let fileUploadEnabled: boolean = true;
+	$: fileUploadEnabled =
+		(getFilesystemUploadTerminal($selectedTerminalId, $terminalServers, $settings) ||
+			fileUploadCapableModels.length === selectedModelIds.length) &&
+		($_user?.role === 'admin' || $_user?.permissions?.chat?.file_upload);
 
 	let webSearchCapableModels = [];
 	$: webSearchCapableModels = getCapableModelIds(
@@ -2353,7 +2358,6 @@
 									<InputMenu
 										onCompare={openComparison}
 										bind:files
-										bind:fileUploadEnabled
 										selectedModels={selectedModelIds}
 										fileUploadCapableModels={getFilesystemUploadTerminal(
 											$selectedTerminalId,

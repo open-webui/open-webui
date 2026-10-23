@@ -65,7 +65,7 @@
 		}
 	];
 
-	export let fileUploadEnabled = true;
+	let fileUploadEnabled = true;
 	$: fileUploadEnabled =
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);

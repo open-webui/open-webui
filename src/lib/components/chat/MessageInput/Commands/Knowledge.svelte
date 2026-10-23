@@ -22,13 +22,14 @@
 
 	export let query = '';
 	export let onSelect = (e) => {};
-	export let fileUploadEnabled = true;
+	export let fileUploadEnabled: boolean = true;
 
 	let selectedIdx = 0;
 	let items = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	export let filteredItems = [];
+	let webUploadEnabled: boolean = true;
 	$: webUploadEnabled = $user?.role === 'admin' || ($user?.permissions?.chat?.web_upload ?? true);
 	$: filteredItems = [
 		...(query.startsWith('http')
