@@ -329,7 +329,7 @@
 
 	let canViewHiddenModels: boolean = false;
 	$: canViewHiddenModels =
-		$user?.role === 'admin' || ($user?.permissions?.workspace?.models_view_hidden ?? false);
+		$user?.role === 'admin' || $user?.permissions?.workspace?.models_view_hidden;
 
 	const getBaseModelItems = (models: any[] = []) => {
 		const currentModelId = (model as any)?.id;
