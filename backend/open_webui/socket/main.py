@@ -624,7 +624,7 @@ async def refresh_chat_access(chat_id=None):
     for batch in get_session_pool_batches():
         chat_owner_ids: dict[str, str] = {}
         if not chat_id:
-            # Owners keep access to their existing chats; role changes and deletion disconnect them separately.
+            # Owners keep access; role changes and deletion disconnect them separately.
             open_chat_ids: set[str] = set()
             for _, session in batch:
                 if not session:
