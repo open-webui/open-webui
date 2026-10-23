@@ -252,6 +252,7 @@ async def filter_allowed_access_grants(
     if user_role == 'admin':
         return access_grants
 
+    # Check if user can share at all
     if sharing_permission_key and not await has_permission(
         user_id,
         sharing_permission_key,
