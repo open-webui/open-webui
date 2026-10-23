@@ -279,19 +279,29 @@
 					: {})
 			};
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(
+				localStorage.token,
+				file,
+				metadata,
+				null,
+				true,
+				({ id }: { id: string }) => {
+					fileItems = fileItems.map((item) => {
+						if (item.itemId === fileItem.itemId) {
+							item.id = id;
+							item.status = 'processing';
+						}
+						return item;
+					});
+					init();
+				}
+			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
-				fileItems = fileItems.map((item) => {
-					if (item.itemId === fileItem.itemId) {
-						item.id = uploadedFile.id;
-					}
-					return item;
-				});
 
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
