@@ -37,7 +37,7 @@
 	export let canTemporary = false;
 	export let temporaryEnabled = false;
 	export let hasChatContent = false;
-	export let canCreateSkill = false;
+	export let canCreateSkill: boolean = false;
 	export let contextPercent = 0;
 	export let contextHasThreshold = false;
 

@@ -873,7 +873,7 @@
 				(($terminalServers ?? []).some((t) => !t.id) ||
 					($settings?.terminalServers ?? []).some((s) => s.url))));
 
-	let canCreateSkill = false;
+	let canCreateSkill: boolean = false;
 	$: canCreateSkill = selectedModelIds.every(
 		(id) =>
 			(modelCapabilitiesById[id]?.builtin_tools ?? true) &&
