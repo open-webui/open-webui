@@ -835,6 +835,12 @@
 		modelCapabilitiesById
 	);
 
+	let fileUploadEnabled: boolean = true;
+	$: fileUploadEnabled =
+		(getFilesystemUploadTerminal($selectedTerminalId, $terminalServers, $settings) ||
+			fileUploadCapableModels.length === selectedModelIds.length) &&
+		($_user?.role === 'admin' || $_user?.permissions?.chat?.file_upload);
+
 	let webSearchCapableModels = [];
 	$: webSearchCapableModels = getCapableModelIds(
 		selectedModelIds,
@@ -1441,6 +1447,7 @@
 				char: '@',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
+					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
 
@@ -1592,6 +1599,7 @@
 				char: '#',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
+					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
 
