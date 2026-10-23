@@ -34,6 +34,7 @@
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
+	export let visionCapableModels: string[] = [];
 
 	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;
@@ -213,39 +214,41 @@
 						</button>
 					</Tooltip>
 
-					<Tooltip
-						content={fileUploadCapableModels.length !== selectedModels.length
-							? $i18n.t('Model(s) do not support file upload')
-							: !fileUploadEnabled
-								? $i18n.t('You do not have permission to upload files.')
-								: ''}
-						className="w-full"
-					>
-						<button
-							role="menuitem"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
-								? 'opacity-50'
-								: ''}"
-							type="button"
-							on:click={() => {
-								if (fileUploadEnabled) {
-									if (!detectMobile()) {
-										screenCaptureHandler();
-									} else {
-										const cameraInputElement = document.getElementById('camera-input');
-
-										if (cameraInputElement) {
-											cameraInputElement.click();
-										}
-									}
-									show = false;
-								}
-							}}
+					{#if visionCapableModels.length > 0}
+						<Tooltip
+							content={fileUploadCapableModels.length !== selectedModels.length
+								? $i18n.t('Model(s) do not support file upload')
+								: !fileUploadEnabled
+									? $i18n.t('You do not have permission to upload files.')
+									: ''}
+							className="w-full"
 						>
-							<Camera />
-							<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
-						</button>
-					</Tooltip>
+							<button
+								role="menuitem"
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+									? 'opacity-50'
+									: ''}"
+								type="button"
+								on:click={() => {
+									if (fileUploadEnabled) {
+										if (!detectMobile()) {
+											screenCaptureHandler();
+										} else {
+											const cameraInputElement = document.getElementById('camera-input');
+
+											if (cameraInputElement) {
+												cameraInputElement.click();
+											}
+										}
+										show = false;
+									}
+								}}
+							>
+								<Camera />
+								<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+							</button>
+						</Tooltip>
+					{/if}
 
 					<button
 						role="menuitem"
