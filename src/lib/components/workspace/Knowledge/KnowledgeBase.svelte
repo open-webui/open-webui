@@ -320,7 +320,7 @@
 
 	// Rows go up front because each upload waits until its file is processed.
 	const uploadFiles = async (files: File[]) => {
-		const uploads = [];
+		const uploads: { file: File; fileItem: { itemId: string; directory_id: string | null } }[] = [];
 		for (const file of files) {
 			const fileItem = createFileItem(file);
 			if (fileItem) {
