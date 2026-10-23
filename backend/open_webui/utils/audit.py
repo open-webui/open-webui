@@ -11,6 +11,7 @@ from typing import (
     Dict,
     MutableMapping,
     Optional,
+    Set,
     cast,
 )
 
@@ -50,7 +51,7 @@ class AuditLogEntry:
     user_agent: Optional[str] = None
     source_ip: Optional[str] = None
     model_id: Optional[str] = None
-    usage: Optional[dict[str, int]] = None
+    usage: Optional[Dict[str, int]] = None
     # `Request` audit level properties
     request_object: Any = None
     # `Request Response` level
@@ -104,7 +105,9 @@ class AuditContext:
     response_body (bytearray): Accumulated response payload.
     max_body_size (int): Maximum number of bytes to capture.
     metadata (Dict[str, Any]): A dictionary to store additional audit metadata (user, http verb, user agent, etc.).
-    usage (Optional[dict[str, int]]): Token usage read from the response.
+    usage (Optional[Dict[str, int]]): Token usage read from the response.
+    response_content_type (str): Content type of the response, used to pick how usage is read.
+    partial_line (bytearray): Unfinished last line of a streamed response, kept until the next chunk.
     """
 
     def __init__(self, max_body_size: int = MAX_BODY_LOG_SIZE):
@@ -112,9 +115,9 @@ class AuditContext:
         self.response_body = bytearray()
         self.max_body_size = max_body_size
         self.metadata: Dict[str, Any] = {}
-        self.usage: Optional[dict[str, int]] = None
-        self.response_content_type = ''
-        self.partial_line = bytearray()
+        self.usage: Optional[Dict[str, int]] = None
+        self.response_content_type: str = ''
+        self.partial_line: bytearray = bytearray()
 
     def add_request_chunk(self, chunk: bytes):
         if len(self.request_body) < self.max_body_size:
@@ -162,14 +165,14 @@ def redact_passwords(body: str) -> str:
     )
 
 
-def to_audit_usage(raw_usage: Optional[dict]) -> Optional[dict[str, int]]:
+def to_audit_usage(raw_usage: Optional[Dict]) -> Optional[Dict[str, int]]:
     usage = normalize_usage(raw_usage)
     if not usage or not usage['total_tokens']:
         return None
     return {key: usage[key] for key in ('input_tokens', 'output_tokens', 'total_tokens')}
 
 
-def record_chat_usage(request: Request, usage: Optional[dict]):
+def record_chat_usage(request: Request, usage: Optional[Dict]):
     """Add a finished background chat's usage to the audit entry of the request that started it."""
     request.state.chat_usage = merge_usage(getattr(request.state, 'chat_usage', None), usage)
 
@@ -193,7 +196,7 @@ class AuditLoggingMiddleware:
     ) -> None:
         self.app = app
         self.audit_logger = AuditLogger(logger)
-        self.deferred_entries: set[asyncio.Task] = set()
+        self.deferred_entries: Set[asyncio.Task] = set()
 
         def normalize_paths(paths: Optional[list[str]]) -> list[str]:
             return [path for path in (path.strip().lstrip('/') for path in paths or []) if path]
