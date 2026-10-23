@@ -353,12 +353,14 @@ class Tools:
 						pruneEmptyLocaleEntries(selected ? selected.snapshot.meta.i18n : meta.i18n)
 					)}
 				/>
-				<AccessButton
-					disabled={!!selected || loading || selecting || promoting}
-					on:click={() => {
-						showAccessControlModal = true;
-					}}
-				/>
+				{#if $user?.permissions?.sharing?.tools || $user?.role === 'admin'}
+					<AccessButton
+						disabled={!!selected || loading || selecting || promoting}
+						on:click={() => {
+							showAccessControlModal = true;
+						}}
+					/>
+				{/if}
 			</div>
 		</div>
 

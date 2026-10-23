@@ -137,7 +137,7 @@
 				{/if}
 			</div>
 			<div class="flex items-center gap-1">
-				{#if edit && folder && ($user?.role === 'admin' || folder.user_id === $user?.id)}
+				{#if edit && folder && ($user?.role === 'admin' || (folder.user_id === $user?.id && $user?.permissions?.sharing?.folders))}
 					<AccessButton disabled={loading} on:click={() => (showAccessModal = true)} />
 				{/if}
 				<button

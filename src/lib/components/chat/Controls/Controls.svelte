@@ -9,7 +9,7 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
-	import { user, settings } from '$lib/stores';
+	import { config, user, settings } from '$lib/stores';
 	export let models = [];
 	export let chatFiles = [];
 	export let params: Record<string, any> = {};
@@ -92,7 +92,7 @@
 				</Collapsible>
 			{/if}
 
-			{#if $user?.role === 'admin' || ($user?.permissions.chat?.valves ?? true)}
+			{#if ($config?.features?.enable_tools || $config?.features?.enable_functions) && ($user?.role === 'admin' || ($user?.permissions.chat?.valves ?? true))}
 				<Collapsible
 					bind:open={showValves}
 					onChange={setOpen('valves')}

@@ -1272,14 +1272,16 @@ ${content}
 								</NoteMenu>
 
 								{#if note?.write_access}
-									<div class="ml-1.5">
-										<AccessButton
-											on:click={() => {
-												showAccessControlModal = true;
-											}}
-											disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
-										/>
-									</div>
+									{#if $user?.permissions?.sharing?.notes || $user?.role === 'admin'}
+										<div class="ml-1.5">
+											<AccessButton
+												on:click={() => {
+													showAccessControlModal = true;
+												}}
+												disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
+											/>
+										</div>
+									{/if}
 								{:else}
 									<div class="shrink-0 text-xs text-gray-500 px-2 py-1">
 										{$i18n.t('Read-Only Access')}

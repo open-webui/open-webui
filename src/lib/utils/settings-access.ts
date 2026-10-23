@@ -18,6 +18,9 @@ export const canUseNotificationTargets = ({ user, config }: SettingsAccessContex
 	(user?.role === 'admin' || (user?.permissions?.features?.webhooks ?? false));
 export const canUseTemporaryChats = ({ user }: SettingsAccessContext) =>
 	user?.role === 'admin' || user?.permissions?.chat?.temporary;
+export const canUseChannels = ({ user, config }: SettingsAccessContext) =>
+	config?.features?.enable_channels &&
+	(user?.role === 'admin' || (user?.permissions?.features?.channels ?? true));
 export const canUseWebSearch = ({ user, config }: SettingsAccessContext) =>
 	config?.features?.enable_web_search &&
 	(user?.role === 'admin' || user?.permissions?.features?.web_search);
@@ -68,6 +71,8 @@ export function canSearchSetting(
 		return isSettingsAdmin(context);
 	if (stem === 'settings.personal.interface.temporaryChatByDefault')
 		return !!canUseTemporaryChats(context);
+	if (stem === 'settings.personal.interface.compressImagesInChannels')
+		return !!canUseChannels(context);
 	if (stem === 'settings.personal.interface.webSearchInChat') return !!canUseWebSearch(context);
 	return true;
 }
