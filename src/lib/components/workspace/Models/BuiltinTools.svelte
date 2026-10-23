@@ -20,7 +20,8 @@
 		},
 		memory: {
 			label: $i18n.t('settings.admin.models.builtinTools.memory.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.memory.description')
+			description: $i18n.t('settings.admin.models.builtinTools.memory.description'),
+			enabled: $config?.features?.enable_memories
 		},
 		chats: {
 			label: $i18n.t('settings.admin.models.builtinTools.chats.label'),
@@ -28,7 +29,8 @@
 		},
 		notes: {
 			label: $i18n.t('settings.admin.models.builtinTools.notes.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.notes.description')
+			description: $i18n.t('settings.admin.models.builtinTools.notes.description'),
+			enabled: $config?.features?.enable_notes
 		},
 		knowledge: {
 			label: $i18n.t('settings.admin.models.builtinTools.knowledge.label'),
@@ -40,23 +42,28 @@
 		},
 		channels: {
 			label: $i18n.t('settings.admin.models.builtinTools.channels.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.channels.description')
+			description: $i18n.t('settings.admin.models.builtinTools.channels.description'),
+			enabled: $config?.features?.enable_channels
 		},
 		notifications: {
 			label: $i18n.t('settings.admin.models.builtinTools.notifications.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.notifications.description')
+			description: $i18n.t('settings.admin.models.builtinTools.notifications.description'),
+			enabled: $config?.features?.enable_user_webhooks
 		},
 		web_search: {
 			label: $i18n.t('settings.admin.models.builtinTools.webSearch.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.webSearch.description')
+			description: $i18n.t('settings.admin.models.builtinTools.webSearch.description'),
+			enabled: $config?.features?.enable_web_search
 		},
 		image_generation: {
 			label: $i18n.t('settings.admin.models.builtinTools.imageGeneration.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.imageGeneration.description')
+			description: $i18n.t('settings.admin.models.builtinTools.imageGeneration.description'),
+			enabled: $config?.features?.enable_image_generation
 		},
 		code_interpreter: {
 			label: $i18n.t('settings.admin.models.builtinTools.codeInterpreter.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.codeInterpreter.description')
+			description: $i18n.t('settings.admin.models.builtinTools.codeInterpreter.description'),
+			enabled: $config?.features?.enable_code_interpreter
 		},
 		tasks: {
 			label: $i18n.t('settings.admin.models.builtinTools.tasks.label'),
@@ -64,15 +71,18 @@
 		},
 		automations: {
 			label: $i18n.t('settings.admin.models.builtinTools.automations.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.automations.description')
+			description: $i18n.t('settings.admin.models.builtinTools.automations.description'),
+			enabled: $config?.features?.enable_automations
 		},
 		calendar: {
 			label: $i18n.t('settings.admin.models.builtinTools.calendar.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.calendar.description')
+			description: $i18n.t('settings.admin.models.builtinTools.calendar.description'),
+			enabled: $config?.features?.enable_calendar
 		},
 		subagents: {
 			label: $i18n.t('settings.admin.models.builtinTools.subagents.label'),
-			description: $i18n.t('settings.admin.models.builtinTools.subagents.description')
+			description: $i18n.t('settings.admin.models.builtinTools.subagents.description'),
+			enabled: $config?.features?.enable_subagents
 		},
 		skills: {
 			label: $i18n.t('settings.admin.models.builtinTools.skills.label'),
@@ -80,21 +90,8 @@
 		}
 	};
 
-	let featureEnabled: Partial<Record<keyof typeof toolLabels, boolean>>;
-	$: featureEnabled = {
-		memory: $config?.features?.enable_memories,
-		notes: $config?.features?.enable_notes,
-		channels: $config?.features?.enable_channels,
-		notifications: $config?.features?.enable_user_webhooks,
-		web_search: $config?.features?.enable_web_search,
-		image_generation: $config?.features?.enable_image_generation,
-		code_interpreter: $config?.features?.enable_code_interpreter,
-		automations: $config?.features?.enable_automations,
-		calendar: $config?.features?.enable_calendar,
-		subagents: $config?.features?.enable_subagents
-	};
 	$: allTools = (Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>).filter(
-		(key) => featureEnabled[key] ?? true
+		(key) => toolLabels[key].enabled ?? true
 	);
 
 	export let builtinTools: Record<string, boolean> = {};
