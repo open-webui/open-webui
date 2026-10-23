@@ -3091,7 +3091,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
         return params, f'Error: Tool "{name}" not found.', None, None, False
     tool_type = tool.get('type', '')
     direct_tool = tool.get('direct', False)
-    # MCP servers validate their own arguments, and a schema may name them only inside anyOf
+    # MCP servers validate their own arguments
     if tool_type != 'mcp':
         allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {}).keys()
         params = {key: value for key, value in params.items() if key in allowed_params}
