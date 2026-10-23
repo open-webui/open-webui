@@ -267,18 +267,6 @@
 
 		fileItems = [fileItem, ...(fileItems ?? [])];
 
-		const markProcessing = (uploadedFile: { id: string }) => {
-			fileItems = fileItems.map((item) => {
-				if (item.itemId === fileItem.itemId) {
-					item.id = uploadedFile.id;
-					item.status = 'processing';
-				}
-				return item;
-			});
-			// Restarts the polling that keeps files still being processed up to date.
-			init();
-		};
-
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
@@ -298,7 +286,17 @@
 				metadata,
 				null,
 				true,
-				markProcessing
+				({ id }: { id: string }) => {
+					fileItems = fileItems.map((item) => {
+						if (item.itemId === fileItem.itemId) {
+							item.id = id;
+							item.status = 'processing';
+						}
+						return item;
+					});
+					// Restarts the polling that keeps files still being processed up to date.
+					init();
+				}
 			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
