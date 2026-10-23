@@ -1578,7 +1578,8 @@ async def get_event_emitter(request_info, update_db=True):
 async def wait_for_user_chat_session_id(user_id: str, chat_id: str) -> str | None:
     if not is_saved_chat_id(chat_id):
         return None
-    for _ in range(EVENT_CALLER_RECONNECT_TIMEOUT):
+    deadline: float = time.time() + EVENT_CALLER_RECONNECT_TIMEOUT
+    while time.time() < deadline:
         now = time.time()
         for batch in get_session_pool_batches():
             for session_id, session in batch:
@@ -1594,7 +1595,7 @@ async def wait_for_user_chat_session_id(user_id: str, chat_id: str) -> str | Non
 
 
 async def call_user_session(request_info: dict, event_data: dict) -> Any:
-    """Ask the user's browser; if the session drops, the call and the rest of the request move to their next tab."""
+    """Ask the user's browser; if that tab drops, move the call to their next tab on the chat."""
     user_id = request_info['user_id']
     chat_id = request_info['chat_id']
     payload = {'chat_id': chat_id, 'message_id': request_info.get('message_id', None), 'data': event_data}
