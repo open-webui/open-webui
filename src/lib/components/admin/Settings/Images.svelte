@@ -736,7 +736,7 @@
 									variant="settings"
 									placeholder={$i18n.t('settings.admin.images.imagesGeminiApiKey.label')}
 									bind:value={config.IMAGES_GEMINI_API_KEY}
-									required={config.ENABLE_IMAGE_GENERATION}
+									required
 								/>
 							</AdminSettingField>
 
