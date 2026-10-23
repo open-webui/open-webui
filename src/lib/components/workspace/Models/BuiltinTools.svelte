@@ -80,8 +80,8 @@
 		}
 	};
 
-	let globallyEnabled: Partial<Record<keyof typeof toolLabels, boolean>>;
-	$: globallyEnabled = {
+	let featureEnabled: Partial<Record<keyof typeof toolLabels, boolean>>;
+	$: featureEnabled = {
 		memory: $config?.features?.enable_memories,
 		notes: $config?.features?.enable_notes,
 		channels: $config?.features?.enable_channels,
@@ -94,7 +94,7 @@
 		subagents: $config?.features?.enable_subagents
 	};
 	$: allTools = (Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>).filter(
-		(key) => globallyEnabled[key] ?? true
+		(key) => featureEnabled[key] ?? true
 	);
 
 	export let builtinTools: Record<string, boolean> = {};
