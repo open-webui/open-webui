@@ -1109,82 +1109,88 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="auto-generation-label"
-				class={settingLabelClass}
-				for="auto-generation-label-control"
-			>
-				{$i18n.t('settings.personal.interface.titleAutoGeneration.label')}
-			</label>
+	{#if $config?.features?.enable_title_generation}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="auto-generation-label"
+					class={settingLabelClass}
+					for="auto-generation-label-control"
+				>
+					{$i18n.t('settings.personal.interface.titleAutoGeneration.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="auto-generation-label"
-					tooltip={true}
-					bind:state={titleAutoGenerate}
-					inherited={isDefaultSetting('titleAutoGenerate')}
-					on:change={() => {
-						toggleTitleAutoGenerate();
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="auto-generation-label"
+						tooltip={true}
+						bind:state={titleAutoGenerate}
+						inherited={isDefaultSetting('titleAutoGenerate')}
+						on:change={() => {
+							toggleTitleAutoGenerate();
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.titleAutoGeneration.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.titleAutoGeneration.description')}
-		</p>
-	</div>
+	{/if}
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				class={settingLabelClass}
-				id="follow-up-auto-generation-label"
-				for="follow-up-auto-generation-label-control"
-			>
-				{$i18n.t('settings.personal.interface.followUpAutoGeneration.label')}
-			</label>
+	{#if $config?.features?.enable_follow_up_generation}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					class={settingLabelClass}
+					id="follow-up-auto-generation-label"
+					for="follow-up-auto-generation-label-control"
+				>
+					{$i18n.t('settings.personal.interface.followUpAutoGeneration.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="follow-up-auto-generation-label"
-					tooltip={true}
-					bind:state={autoFollowUps}
-					inherited={isDefaultSetting('autoFollowUps')}
-					on:change={() => {
-						saveSettings({ autoFollowUps });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="follow-up-auto-generation-label"
+						tooltip={true}
+						bind:state={autoFollowUps}
+						inherited={isDefaultSetting('autoFollowUps')}
+						on:change={() => {
+							saveSettings({ autoFollowUps });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.followUpAutoGeneration.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.followUpAutoGeneration.description')}
-		</p>
-	</div>
+	{/if}
 
-	<div>
-		<div class={settingRowClass}>
-			<label id="chat-tags-label" class={settingLabelClass} for="chat-tags-label-control">
-				{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.label')}
-			</label>
+	{#if $config?.features?.enable_tags_generation}
+		<div>
+			<div class={settingRowClass}>
+				<label id="chat-tags-label" class={settingLabelClass} for="chat-tags-label-control">
+					{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="chat-tags-label"
-					tooltip={true}
-					bind:state={autoTags}
-					inherited={isDefaultSetting('autoTags')}
-					on:change={() => {
-						saveSettings({ autoTags });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="chat-tags-label"
+						tooltip={true}
+						bind:state={autoTags}
+						inherited={isDefaultSetting('autoTags')}
+						on:change={() => {
+							saveSettings({ autoTags });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.description')}
-		</p>
-	</div>
+	{/if}
 
 	<div>
 		<div class={settingRowClass}>
