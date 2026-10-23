@@ -209,12 +209,12 @@
 		<div class="text-center flex gap-3.5 items-center">
 			{#if readOnly}
 				<div
-					class="rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center"
+					class="rounded-full bg-gray-50/50 dark:bg-gray-800/40 size-11 flex justify-center items-center"
 				>
 					{#if folder?.meta?.icon}
-						<Emoji className="size-6" shortCode={folder.meta.icon} />
+						<Emoji className="size-7" shortCode={folder.meta.icon} />
 					{:else}
-						<Folder className="size-4.5" strokeWidth="2" />
+						<Folder className="size-6" strokeWidth="2" />
 					{/if}
 				</div>
 			{:else}
@@ -228,12 +228,12 @@
 				>
 					<button
 						aria-label={$i18n.t('Change folder icon')}
-						class="rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center outline-hidden focus:outline-hidden"
+						class="rounded-full bg-gray-50/50 dark:bg-gray-800/40 size-11 flex justify-center items-center outline-hidden focus:outline-hidden"
 					>
 						{#if folder?.meta?.icon}
-							<Emoji className="size-6" shortCode={folder.meta.icon} />
+							<Emoji className="size-7" shortCode={folder.meta.icon} />
 						{:else}
-							<Folder className="size-4.5" strokeWidth="2" />
+							<Folder className="size-6" strokeWidth="2" />
 						{/if}
 					</button>
 				</EmojiPicker>
