@@ -222,7 +222,7 @@
 						<SettingsSelect
 							bind:value={webConfig.WEB_SEARCH_ENGINE}
 							placeholder={$i18n.t('Select a engine')}
-							required={webConfig.ENABLE_WEB_SEARCH}
+							required
 						>
 							<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 							{#each webSearchEngines as engine}
@@ -310,7 +310,7 @@
 											placeholder={$i18n.t('Enter Searxng Query URL')}
 											bind:value={webConfig.SEARXNG_QUERY_URL}
 											autocomplete="off"
-											required={webConfig.ENABLE_WEB_SEARCH}
+											required
 										/>
 									</div>
 								</div>
@@ -328,7 +328,7 @@
 											placeholder={$i18n.t('Enter Searxng search language')}
 											bind:value={webConfig.SEARXNG_LANGUAGE}
 											autocomplete="off"
-											required={webConfig.ENABLE_WEB_SEARCH}
+											required
 										/>
 									</div>
 								</div>
@@ -365,7 +365,7 @@
 										class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 										placeholder={$i18n.t('Enter Yacy Username')}
 										bind:value={webConfig.YACY_USERNAME}
-										required={webConfig.ENABLE_WEB_SEARCH}
+										required
 									/>
 								</div>
 
@@ -1117,7 +1117,7 @@
 										placeholder={$i18n.t('Enter OpenSERP Base URL')}
 										bind:value={webConfig.OPENSERP_BASE_URL}
 										autocomplete="off"
-										required={webConfig.ENABLE_WEB_SEARCH}
+										required
 									/>
 								</div>
 							</div>
