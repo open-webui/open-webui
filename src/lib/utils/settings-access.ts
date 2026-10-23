@@ -18,6 +18,9 @@ export const canUseNotificationTargets = ({ user, config }: SettingsAccessContex
 	(user?.role === 'admin' || (user?.permissions?.features?.webhooks ?? false));
 export const canUseTemporaryChats = ({ user }: SettingsAccessContext) =>
 	user?.role === 'admin' || user?.permissions?.chat?.temporary;
+export const canUseChannels = ({ user, config }: SettingsAccessContext) =>
+	config?.features?.enable_channels &&
+	(user?.role === 'admin' || (user?.permissions?.features?.channels ?? true));
 export const isSettingsAdmin = ({ user }: SettingsAccessContext) => user?.role === 'admin';
 
 /** Only permission-gated text needs an explicit rule. Provider/disclosure state is irrelevant. */
@@ -65,6 +68,8 @@ export function canSearchSetting(
 		return isSettingsAdmin(context);
 	if (stem === 'settings.personal.interface.temporaryChatByDefault')
 		return !!canUseTemporaryChats(context);
+	if (stem === 'settings.personal.interface.compressImagesInChannels')
+		return !!canUseChannels(context);
 	if (stem === 'settings.personal.shortcuts.newTemporaryChat')
 		return !!canUseTemporaryChats(context);
 	if (stem === 'settings.personal.shortcuts.deleteChat') return canManageChats(context, 'delete');

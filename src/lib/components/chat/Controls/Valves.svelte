@@ -28,7 +28,7 @@
 
 	export let show = false;
 
-	let tab = 'tools';
+	let tab = $config?.features?.enable_tools ? 'tools' : 'functions';
 	let selectedId = '';
 
 	let loading = false;
@@ -167,10 +167,16 @@
 							bind:value={tab}
 							placeholder={$i18n.t('Select')}
 						>
-							<option value="tools" class="bg-gray-100 dark:bg-gray-800">{$i18n.t('Tools')}</option>
-							<option value="functions" class="bg-gray-100 dark:bg-gray-800"
-								>{$i18n.t('Functions')}</option
-							>
+							{#if $config?.features?.enable_tools}
+								<option value="tools" class="bg-gray-100 dark:bg-gray-800"
+									>{$i18n.t('Tools')}</option
+								>
+							{/if}
+							{#if $config?.features?.enable_functions}
+								<option value="functions" class="bg-gray-100 dark:bg-gray-800"
+									>{$i18n.t('Functions')}</option
+								>
+							{/if}
 						</select>
 					</div>
 
