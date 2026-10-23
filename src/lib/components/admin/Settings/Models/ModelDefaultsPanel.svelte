@@ -17,7 +17,7 @@
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
-	import HiddenElements from './HiddenElements.svelte';
+	import HiddenElements from '$lib/components/admin/Settings/Models/HiddenElements.svelte';
 
 	export let initHandler = () => {};
 	export let dirty = false;
@@ -40,6 +40,7 @@
 	let promptSuggestionsI18n = {};
 	let languages = [];
 	let editingLocale = '';
+	/** @type {string[]} */
 	let hiddenInterfaceElements = [];
 
 	$: configuredParams = Object.entries(defaultParams ?? {}).filter(
@@ -325,9 +326,7 @@
 						<span class="text-xs text-gray-600 dark:text-gray-400">
 							<ModelSettingsLabel
 								label={$i18n.t('settings.admin.models.defaults.hiddenElements.label')}
-								description={$i18n.t(
-									'Hide these elements from users without turning off the features behind them. Admins still see them.'
-								)}
+								description={$i18n.t('settings.admin.models.defaults.hiddenElements.description')}
 							/>
 						</span>
 						<ChevronRight

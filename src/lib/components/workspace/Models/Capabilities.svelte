@@ -2,10 +2,10 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { hiddenInterfaceElements } from '$lib/stores';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
 	import ModelSettingToggle from './ModelSettingToggle.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
-	import { hiddenInterfaceElements } from '$lib/stores';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 

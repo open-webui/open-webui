@@ -9,7 +9,7 @@
 
 	export let hiddenInterfaceElements: string[] = [];
 
-	let groups;
+	let groups: { label: string; elements: { id: string; label: string }[] }[];
 	$: groups = [
 		{
 			label: $i18n.t('settings.admin.models.defaults.modelCapabilities.label'),
@@ -155,7 +155,7 @@
 			]
 		},
 		{
-			label: $i18n.t('Input Menu'),
+			label: $i18n.t('settings.admin.models.defaults.hiddenElements.groups.inputMenu.title'),
 			elements: [
 				{ id: 'input_menu.capture', label: $i18n.t('Capture') },
 				{ id: 'input_menu.compare_text', label: $i18n.t('Compare text') },
@@ -167,7 +167,7 @@
 			]
 		},
 		{
-			label: $i18n.t('Slash Commands'),
+			label: $i18n.t('settings.admin.models.defaults.hiddenElements.groups.slashCommands.title'),
 			elements: [
 				{ id: 'command.status', label: '/status' },
 				{ id: 'command.model', label: '/model' },
@@ -176,7 +176,7 @@
 			]
 		},
 		{
-			label: $i18n.t('Response Actions'),
+			label: $i18n.t('settings.admin.models.defaults.hiddenElements.groups.responseActions.title'),
 			elements: [
 				{ id: 'response.usage', label: $i18n.t('settings.admin.models.capabilities.usage.label') },
 				{ id: 'response.merge', label: $i18n.t('Merge Responses') },
@@ -185,7 +185,7 @@
 			]
 		},
 		{
-			label: $i18n.t('Chat Menu'),
+			label: $i18n.t('settings.admin.models.defaults.hiddenElements.groups.chatMenu.title'),
 			elements: [
 				{ id: 'chat_menu.artifacts', label: $i18n.t('Artifacts') },
 				{ id: 'chat_menu.archive', label: $i18n.t('Archive') },
@@ -193,23 +193,23 @@
 			]
 		},
 		{
-			label: $i18n.t('Model Selector'),
+			label: $i18n.t('settings.admin.models.defaults.hiddenElements.groups.modelSelector.title'),
 			elements: [
 				{ id: 'model_selector.set_default', label: $i18n.t('Set as default') },
 				{ id: 'model_selector.keep_in_sidebar', label: $i18n.t('Keep in Sidebar') }
 			]
 		},
 		{
-			label: $i18n.t('Settings'),
+			label: $i18n.t('settings.admin.models.defaults.hiddenElements.groups.settings.title'),
 			elements: [
 				{ id: 'settings.usage', label: $i18n.t('settings.personal.usage.title') },
 				{
 					id: 'settings.stt_web_api',
-					label: `${$i18n.t('settings.personal.audio.speechToTextEngine.label')}: ${$i18n.t('Web API')}`
+					label: $i18n.t('settings.admin.models.defaults.hiddenElements.speechToTextWebApi.label')
 				},
 				{
 					id: 'settings.tts_kokoro',
-					label: `${$i18n.t('settings.personal.audio.textToSpeechEngine.label')}: ${$i18n.t('Kokoro.js (Browser)')}`
+					label: $i18n.t('settings.admin.models.defaults.hiddenElements.textToSpeechKokoro.label')
 				}
 			]
 		},
