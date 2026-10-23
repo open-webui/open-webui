@@ -34,6 +34,7 @@
 		host: '',
 		port: null,
 		attribute_for_mail: 'mail',
+		mail_fallback_domain: '',
 		attribute_for_username: 'uid',
 		app_dn: '',
 		app_dn_password: '',
@@ -475,6 +476,22 @@
 						</Tooltip>
 					</AdminSettingField>
 				</div>
+
+				<AdminSettingField
+					label={$i18n.t('settings.admin.authentication.mailFallbackDomain.label')}
+					description={$i18n.t('settings.admin.authentication.mailFallbackDomain.description')}
+				>
+					<Tooltip
+						content={$i18n.t('The domain that builds the email of users without a mail attribute')}
+						placement="top-start"
+					>
+						<input
+							class={inputClass}
+							placeholder={$i18n.t('Example: example.com')}
+							bind:value={LDAP_SERVER.mail_fallback_domain}
+						/>
+					</Tooltip>
+				</AdminSettingField>
 
 				<AdminSettingField
 					label={$i18n.t('settings.admin.authentication.searchBase.label')}

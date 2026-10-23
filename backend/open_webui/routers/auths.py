@@ -150,6 +150,7 @@ LDAP_SERVER_CONFIG_KEYS = {
     'host': 'ldap.server.host',
     'port': 'ldap.server.port',
     'attribute_for_mail': 'ldap.server.attribute_for_mail',
+    'mail_fallback_domain': 'ldap.server.mail_fallback_domain',
     'attribute_for_username': 'ldap.server.attribute_for_username',
     'app_dn': 'ldap.server.app_dn',
     'app_dn_password': 'ldap.server.app_password',
@@ -436,6 +437,7 @@ async def ldap_auth(
     LDAP_SERVER_HOST = await Config.get('ldap.server.host')
     LDAP_SERVER_PORT = await Config.get('ldap.server.port')
     LDAP_ATTRIBUTE_FOR_MAIL = await Config.get('ldap.server.attribute_for_mail')
+    LDAP_MAIL_FALLBACK_DOMAIN = await Config.get('ldap.server.mail_fallback_domain')
     LDAP_ATTRIBUTE_FOR_USERNAME = await Config.get('ldap.server.attribute_for_username')
     LDAP_SEARCH_BASE = await Config.get('ldap.server.users_dn')
     LDAP_SEARCH_FILTERS = await Config.get('ldap.server.search_filter')
@@ -501,6 +503,10 @@ async def ldap_auth(
         entry = connection_app.entries[0]
         entry_username = entry[f'{LDAP_ATTRIBUTE_FOR_USERNAME}'].value
         email = entry[f'{LDAP_ATTRIBUTE_FOR_MAIL}'].value  # retrieve the Attribute value
+        if not email and LDAP_MAIL_FALLBACK_DOMAIN:
+            fallback_email = f'{form_data.user}@{LDAP_MAIL_FALLBACK_DOMAIN}'
+            if validate_email_format(fallback_email):
+                email = fallback_email
 
         username_list = []  # list of usernames from LDAP attribute
         if isinstance(entry_username, list):
@@ -1273,6 +1279,7 @@ class LdapServerConfig(BaseModel):
     host: str
     port: int | None = None
     attribute_for_mail: str = 'mail'
+    mail_fallback_domain: str = ''
     attribute_for_username: str = 'uid'
     app_dn: str
     app_dn_password: str
