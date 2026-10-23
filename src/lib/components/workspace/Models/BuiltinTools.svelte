@@ -79,10 +79,10 @@
 		}
 	};
 
+	// with File Context on, attached files go into the prompt instead
 	$: allTools = (Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>).filter((key) =>
-		// with File Context on, attached files go into the prompt instead
 		key === 'files'
-			? capabilities.file_upload && !capabilities.file_context
+			? (capabilities.file_upload ?? true) && !(capabilities.file_context ?? true)
 			: (capabilities[key] ?? true)
 	);
 
