@@ -114,25 +114,21 @@
 				config.AUTOMATIC1111_BASE_URL === ''
 			) {
 				toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
-
 				return null;
 			} else if (config.IMAGE_GENERATION_ENGINE === 'comfyui' && config.COMFYUI_BASE_URL === '') {
 				toast.error($i18n.t('ComfyUI Base URL is required.'));
-
 				return null;
 			} else if (
 				config.IMAGE_GENERATION_ENGINE === 'openai' &&
 				config.IMAGES_OPENAI_API_KEY === ''
 			) {
 				toast.error($i18n.t('OpenAI API Key is required.'));
-
 				return null;
 			} else if (
 				config.IMAGE_GENERATION_ENGINE === 'gemini' &&
 				config.IMAGES_GEMINI_API_KEY === ''
 			) {
 				toast.error($i18n.t('Gemini API Key is required.'));
-
 				return null;
 			}
 		}
