@@ -1013,6 +1013,8 @@
 								? chat.user_id
 								: null}
 							readonly={chat.user_id !== $user?.id}
+							canMove={folders[folderId]?.user_id === $user?.id}
+							canRename={folders[folderId]?.user_id === $user?.id}
 							{shiftKey}
 							onReadStateChange={applyReadState}
 							on:change={(e) => {
