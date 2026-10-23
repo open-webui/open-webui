@@ -2358,6 +2358,7 @@
 										)
 											? selectedModelIds
 											: fileUploadCapableModels}
+										{visionCapableModels}
 										{toolApprovalMode}
 										{onToolApprovalModeChange}
 										{screenCaptureHandler}

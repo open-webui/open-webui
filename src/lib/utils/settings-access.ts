@@ -18,6 +18,9 @@ export const canUseNotificationTargets = ({ user, config }: SettingsAccessContex
 	(user?.role === 'admin' || (user?.permissions?.features?.webhooks ?? false));
 export const canUseTemporaryChats = ({ user }: SettingsAccessContext) =>
 	user?.role === 'admin' || user?.permissions?.chat?.temporary;
+export const canUseChannels = ({ user, config }: SettingsAccessContext) =>
+	config?.features?.enable_channels &&
+	(user?.role === 'admin' || (user?.permissions?.features?.channels ?? true));
 export const canUseCalls = ({ user }: SettingsAccessContext) =>
 	user?.role === 'admin' || (user?.permissions?.chat?.call ?? true);
 export const isSettingsAdmin = ({ user }: SettingsAccessContext) => user?.role === 'admin';
@@ -67,6 +70,8 @@ export function canSearchSetting(
 		return isSettingsAdmin(context);
 	if (stem === 'settings.personal.interface.temporaryChatByDefault')
 		return !!canUseTemporaryChats(context);
+	if (stem === 'settings.personal.interface.compressImagesInChannels')
+		return !!canUseChannels(context);
 	if (
 		key.startsWith('settings.personal.interface.') &&
 		/\.(sections\.voice|allowVoiceInterruptionInCall|displayEmojiInCall)\./.test(key)

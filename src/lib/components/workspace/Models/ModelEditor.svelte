@@ -871,7 +871,9 @@
 						{translatedLocales}
 						className="w-fit"
 					/>
-					<AccessButton on:click={() => (showAccessControlModal = true)} />
+					{#if $user?.permissions?.sharing?.models || $user?.role === 'admin'}
+						<AccessButton on:click={() => (showAccessControlModal = true)} />
+					{/if}
 				</div>
 			{/if}
 		</div>

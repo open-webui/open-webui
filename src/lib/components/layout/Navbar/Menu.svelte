@@ -463,25 +463,25 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
 					</button>
 				</DropdownSub>
+
+				<button
+					draggable="false"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					id="chat-copy-button"
+					on:click={async () => {
+						const res = await copyToClipboard(await getChatAsText()).catch((e) => {
+							console.error(e);
+						});
+
+						if (res) {
+							toast.success($i18n.t('Copied to clipboard'));
+						}
+					}}
+				>
+					<Clipboard className="size-3.5" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Copy')}</div>
+				</button>
 			{/if}
-
-			<button
-				draggable="false"
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-				id="chat-copy-button"
-				on:click={async () => {
-					const res = await copyToClipboard(await getChatAsText()).catch((e) => {
-						console.error(e);
-					});
-
-					if (res) {
-						toast.success($i18n.t('Copied to clipboard'));
-					}
-				}}
-			>
-				<Clipboard className="size-3.5" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Copy')}</div>
-			</button>
 
 			{#if !readOnly && !$temporaryChatEnabled && chat?.id}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
