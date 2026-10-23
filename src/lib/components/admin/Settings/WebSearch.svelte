@@ -60,8 +60,6 @@
 	];
 
 	let webConfig: any = null;
-	// The loader section shows shared keys unless the search section above already does.
-	$: activeSearchEngine = webConfig?.ENABLE_WEB_SEARCH ? webConfig.WEB_SEARCH_ENGINE : '';
 	const inputClass =
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -238,7 +236,7 @@
 					</AdminSettingRow>
 				{/if}
 
-				{#if activeSearchEngine !== ''}
+				{#if webConfig.ENABLE_WEB_SEARCH && webConfig.WEB_SEARCH_ENGINE !== ''}
 					{#if webConfig.WEB_SEARCH_ENGINE === 'ollama_cloud'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>
@@ -1275,7 +1273,7 @@
 				</AdminSettingRow>
 
 				{#if webConfig.WEB_LOADER_ENGINE === 'exa'}
-					{#if activeSearchEngine === 'exa'}
+					{#if webConfig.ENABLE_WEB_SEARCH && webConfig.WEB_SEARCH_ENGINE === 'exa'}
 						<p class="text-xs text-gray-500 dark:text-gray-400">
 							{$i18n.t('Exa search and web loading share the API key configured above.')}
 						</p>
@@ -1349,7 +1347,7 @@
 							</div>
 						</div>
 					</div>
-				{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl' && activeSearchEngine !== 'firecrawl'}
+				{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl' && (!webConfig.ENABLE_WEB_SEARCH || webConfig.WEB_SEARCH_ENGINE !== 'firecrawl')}
 					<div class="mb-2.5 flex w-full flex-col">
 						<div>
 							<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
@@ -1401,7 +1399,7 @@
 							</div>
 						</div>
 
-						{#if activeSearchEngine !== 'tavily'}
+						{#if !webConfig.ENABLE_WEB_SEARCH || webConfig.WEB_SEARCH_ENGINE !== 'tavily'}
 							<div class="mt-2">
 								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
 									{$i18n.t('settings.admin.web.tavilyApiKey.label')}
@@ -1417,7 +1415,7 @@
 					</div>
 				{:else if webConfig.WEB_LOADER_ENGINE === 'microsoft_web_iq'}
 					<div class="mb-2.5 flex w-full flex-col">
-						{#if activeSearchEngine !== 'microsoft_web_iq'}
+						{#if !webConfig.ENABLE_WEB_SEARCH || webConfig.WEB_SEARCH_ENGINE !== 'microsoft_web_iq'}
 							<div>
 								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
 									{$i18n.t('settings.admin.web.microsoftWebIqApiBaseUrl.label')}
