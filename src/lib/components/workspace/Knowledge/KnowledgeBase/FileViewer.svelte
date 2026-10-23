@@ -120,7 +120,7 @@
 				data = { filePdfData: await blob.arrayBuffer() };
 			else if (ext === 'svg' || mime === 'image/svg+xml') {
 				previewName = `${name}.svg`;
-				data = { fileContent: await blob.text() };
+				data = { fileContent: await getFileIndexedText(localStorage.token, file.id!, signal) };
 				sourceToggle = true;
 			} else if (mime.startsWith('image/') || /^(png|jpe?g|gif|webp|avif|bmp|ico)$/.test(ext)) {
 				objectUrl = URL.createObjectURL(blob);
@@ -154,7 +154,7 @@
 				) ||
 				mime.includes('json')
 			) {
-				data = { fileContent: await blob.text() };
+				data = { fileContent: await getFileIndexedText(localStorage.token, file.id!, signal) };
 				if (mime === 'text/csv' && ext !== 'csv') previewName = `${name}.csv`;
 				if (mime === 'text/html' && !/^html?$/.test(ext)) previewName = `${name}.html`;
 				if (mime.includes('json') && !/^(json|jsonc|jsonl|json5|ipynb)$/.test(ext))
@@ -205,6 +205,7 @@
 		} catch (error) {
 			toast.error(message(error));
 		} finally {
+			if (!noOriginal && (loading || 'fileContent' in previewData)) await loadOriginal();
 			saving = false;
 		}
 	};

@@ -228,7 +228,7 @@
 								</div>
 							</Tooltip>
 
-							{#if models[selectedModelIdx]?.info?.meta?.user}
+							{#if models[selectedModelIdx]?.info?.meta?.user && (!models[selectedModelIdx]?.info?.meta?.user.community || $config?.features.enable_community_sharing)}
 								<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
 									{$i18n.t('By')}
 									{#if models[selectedModelIdx]?.info?.meta?.user.community}

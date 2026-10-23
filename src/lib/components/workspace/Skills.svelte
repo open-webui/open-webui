@@ -607,7 +607,10 @@
 										<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 											<SkillMenu
 												shareHandler={() => shareHandler(skill)}
-												accessHandler={() => accessModal.open(skill.id)}
+												accessHandler={$user?.permissions?.sharing?.skills ||
+												$user?.role === 'admin'
+													? () => accessModal.open(skill.id)
+													: null}
 												show={openSkillMenuId === skill.id}
 												editHandler={() => {
 													goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
