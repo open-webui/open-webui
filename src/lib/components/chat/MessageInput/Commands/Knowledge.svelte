@@ -22,7 +22,7 @@
 
 	export let query = '';
 	export let onSelect = (e) => {};
-	export let fileUploadEnabled: boolean = true;
+	export let fileUploadEnabled = true;
 
 	let selectedIdx = 0;
 	let items = [];

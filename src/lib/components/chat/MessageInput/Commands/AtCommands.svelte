@@ -34,7 +34,7 @@
 
 	export let query = '';
 	export let onSelect: (e: any) => void = () => {};
-	export let fileUploadEnabled: boolean = true;
+	export let fileUploadEnabled = true;
 
 	let selectedIdx = 0;
 	export let filteredItems: any[] = [];

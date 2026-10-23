@@ -828,7 +828,7 @@
 	let visionCapableModels = [];
 	$: visionCapableModels = getCapableModelIds(selectedModelIds, 'vision', modelCapabilitiesById);
 
-	let fileUploadEnabled: boolean = true;
+	let fileUploadEnabled = true;
 	let fileUploadCapableModels = [];
 	$: fileUploadCapableModels = getCapableModelIds(
 		selectedModelIds,
