@@ -421,6 +421,7 @@ async def create_new_tools(
                 user.role,
                 form_data.access_grants,
                 'sharing.public_tools',
+                sharing_permission_key='sharing.tools',
             )
 
             form_data.content = replace_imports(form_data.content)
@@ -592,6 +593,7 @@ async def _update_tool(request, id, form_data, user, db, version_id=None):
                 user.role,
                 new_access_grants,
                 'sharing.public_tools',
+                sharing_permission_key='sharing.tools',
             )
 
         updated = {
@@ -683,6 +685,7 @@ async def update_tool_access_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_tools',
+        sharing_permission_key='sharing.tools',
     )
 
     await AccessGrants.set_access_grants('tool', id, form_data.access_grants, db=db)

@@ -339,6 +339,7 @@ async def create_new_knowledge(
         user.role,
         form_data.access_grants,
         'sharing.public_knowledge',
+        sharing_permission_key='sharing.knowledge',
     )
 
     knowledge = await Knowledges.insert_new_knowledge(user.id, form_data)
@@ -911,6 +912,7 @@ async def create_external_knowledge(
         user.role,
         form_data.access_grants,
         'sharing.public_knowledge',
+        sharing_permission_key='sharing.knowledge',
     )
 
     knowledge = await Knowledges.insert_new_knowledge(
@@ -970,6 +972,7 @@ async def create_external_knowledge_source(
         user.role,
         form_data.access_grants,
         'sharing.public_knowledge',
+        sharing_permission_key='sharing.knowledge',
     )
 
     connections = await _get_external_connections()
@@ -1046,6 +1049,7 @@ async def update_external_knowledge_source(
         user.role,
         form_data.access_grants,
         'sharing.public_knowledge',
+        sharing_permission_key='sharing.knowledge',
     )
 
     connections[idx] = connection
@@ -1182,6 +1186,7 @@ async def update_knowledge_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_knowledge',
+        sharing_permission_key='sharing.knowledge',
     )
 
     knowledge = await Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
@@ -1258,6 +1263,7 @@ async def update_knowledge_access_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_knowledge',
+        sharing_permission_key='sharing.knowledge',
     )
 
     knowledge.access_grants = await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)

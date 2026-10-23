@@ -411,6 +411,7 @@ async def create_new_model(
         user.role,
         form_data.access_grants,
         'sharing.public_models',
+        sharing_permission_key='sharing.models',
     )
 
     await _check_model_controls(form_data, None, user, request)
@@ -615,6 +616,7 @@ async def import_models(
                                 user.role,
                                 updated_model.access_grants,
                                 'sharing.public_models',
+                                sharing_permission_key='sharing.models',
                             )
                         imported_model = updated_model
                     else:
@@ -657,6 +659,7 @@ async def import_models(
                             user.role,
                             new_model.access_grants,
                             'sharing.public_models',
+                            sharing_permission_key='sharing.models',
                         )
                         imported_model = new_model
 
@@ -1227,6 +1230,7 @@ async def update_model_by_id(
             user.role,
             new_access_grants,
             'sharing.public_models',
+            sharing_permission_key='sharing.models',
         )
 
     await _check_model_controls(form_data, model, user, request)
@@ -1308,6 +1312,7 @@ async def update_model_access_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_models',
+        sharing_permission_key='sharing.models',
     )
 
     await AccessGrants.set_access_grants('model', form_data.id, form_data.access_grants, db=db)

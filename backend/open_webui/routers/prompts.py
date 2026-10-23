@@ -172,6 +172,7 @@ async def create_new_prompt(
         user.role,
         form_data.access_grants,
         'sharing.public_prompts',
+        sharing_permission_key='sharing.prompts',
     )
 
     prompt = await Prompts.get_prompt_by_command(form_data.command, db=db)
@@ -310,6 +311,7 @@ async def update_prompt_by_id(
             user.role,
             new_access_grants,
             'sharing.public_prompts',
+            sharing_permission_key='sharing.prompts',
         )
 
     # Use the ID from the found prompt
@@ -490,6 +492,7 @@ async def update_prompt_access_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_prompts',
+        sharing_permission_key='sharing.prompts',
     )
 
     await AccessGrants.set_access_grants('prompt', prompt_id, form_data.access_grants, db=db)
