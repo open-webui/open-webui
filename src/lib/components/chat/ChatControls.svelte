@@ -87,6 +87,7 @@
 		$selectedTerminalId &&
 		(selectedSystemTerminalAvailable ||
 			(!selectedSystemTerminal &&
+				$config?.features?.enable_direct_integrations &&
 				($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))))
 	);
 	$: showFilesTab =
@@ -123,7 +124,10 @@
 		$selectedTerminalId &&
 		$terminalServers !== null &&
 		!($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) &&
-		!($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
+		!(
+			$config?.features?.enable_direct_integrations &&
+			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
+		)
 	) {
 		selectedTerminalId.set(null);
 	}
