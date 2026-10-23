@@ -904,7 +904,8 @@
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
-	$: callSupported =
+	let showCallButton = false;
+	$: showCallButton =
 		callActive ||
 		$config?.audio?.realtime?.enabled ||
 		($config?.audio?.stt?.engine !== 'web' &&
@@ -2806,7 +2807,7 @@
 											{/if}
 										{/if}
 
-										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true)) && callSupported}
+										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true)) && showCallButton}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip

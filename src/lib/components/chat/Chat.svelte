@@ -2599,7 +2599,14 @@
 	const openCallOverlay = () => {
 		if (isShared) return;
 
-		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.call ?? true))) {
+		if (
+			!($user?.role === 'admin' || ($user?.permissions?.chat?.call ?? true)) ||
+			!(
+				$user?.role === 'admin' ||
+				$config?.audio?.realtime?.enabled ||
+				($user?.permissions?.chat?.stt ?? true)
+			)
+		) {
 			return;
 		}
 
