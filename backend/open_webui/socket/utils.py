@@ -310,7 +310,7 @@ class YdocManager:
         return True
 
     async def claim_initial_content(self, document_id: str) -> bool:
-        """Grant loading the saved content into the empty document to one session at a time."""
+        """Let only one session load the saved content into an empty document."""
         # Expires so a session that crashed or left before sending the content cannot keep the note blank.
         if self._redis:
             claim_key = f'{self._redis_key_prefix}:{document_id}:content_claim'

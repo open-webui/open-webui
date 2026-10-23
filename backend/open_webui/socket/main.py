@@ -939,8 +939,6 @@ async def ydoc_document_join(sid, data):
         # Join Socket.IO room
         await sio.enter_room(sid, f'doc_{document_id}')
 
-        active_session_ids = get_session_ids_from_room(f'doc_{document_id}')
-
         # Get the Yjs document state
         ydoc = Y.Doc()
         updates = await YDOC_MANAGER.get_updates(document_id)
@@ -957,7 +955,6 @@ async def ydoc_document_join(sid, data):
                 'document_id': document_id,
                 'state': list(state_update),  # Convert bytes to list for JSON
                 'content': note.data.get('content') if document_id.startswith('note:') and note.data else None,
-                'sessions': active_session_ids,
                 'load_saved_content': load_saved_content,
             },
             room=sid,
