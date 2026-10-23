@@ -13,6 +13,7 @@
 		tags,
 		folders as _folders,
 		showSidebar,
+		showControls,
 		showSearch,
 		mobile,
 		pinnedChats,
@@ -1024,6 +1025,7 @@
 <MobileSwipePanel
 	open={$showSidebar}
 	enabled={$mobile}
+	blocked={$showControls}
 	width={$sidebarWidth}
 	onOpenChange={(open) => showSidebar.set(open)}
 	let:visible
