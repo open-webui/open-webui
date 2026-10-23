@@ -69,15 +69,15 @@
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;
 	const featureKeys: Capability[] = ['web_search', 'image_generation', 'code_interpreter'];
-	let globallyEnabled: Partial<Record<Capability, boolean>>;
-	$: globallyEnabled = {
+	let featureEnabled: Partial<Record<Capability, boolean>>;
+	$: featureEnabled = {
 		web_search: $config?.features?.enable_web_search,
 		image_generation: $config?.features?.enable_image_generation,
 		code_interpreter: $config?.features?.enable_code_interpreter,
 		memory: $config?.features?.enable_memories
 	};
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
-		(key) => (key !== 'file_context' || capabilities.file_upload) && (globallyEnabled[key] ?? true)
+		(key) => (key !== 'file_context' || capabilities.file_upload) && (featureEnabled[key] ?? true)
 	);
 	$: enabledCapabilityIds = visibleCapabilities.filter((key) => capabilities[key]);
 	$: availableFeatures = featureKeys.filter((key) => enabledCapabilityIds.includes(key));
