@@ -458,7 +458,9 @@
 				</button>
 			{/if}
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
-				{#if !disabled}<AccessButton on:click={() => (showAccessControlModal = true)} />
+				{#if !disabled}{#if $user?.permissions?.sharing?.prompts || $user?.role === 'admin'}<AccessButton
+							on:click={() => (showAccessControlModal = true)}
+						/>{/if}
 				{:else}<span class="px-2 py-1 text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
 				{#if modal}<button
 						type="button"

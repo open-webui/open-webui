@@ -701,7 +701,9 @@
 
 									<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
 										<PromptMenu
-											accessHandler={() => accessModal.open(prompt.id)}
+											accessHandler={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'
+												? () => accessModal.open(prompt.id)
+												: null}
 											writeAccess={prompt.write_access}
 											show={openPromptMenuId === prompt.id}
 											editHandler={() => {

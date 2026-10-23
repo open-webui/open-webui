@@ -190,7 +190,7 @@
 	}}
 />
 
-<div id="tab-archived-chats" class="flex flex-col h-full text-sm">
+<div id="tab-archived-chats" class="flex flex-col h-full overflow-y-auto text-sm">
 	<div class="mb-3 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 			{$i18n.t('settings.personal.archivedChats.title')}
@@ -292,7 +292,7 @@
 		{/if}
 	</div>
 
-	<div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
+	<div class="mt-3 flex-1 min-h-24 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if chatList === null}
 			<div class="flex min-h-20 items-center justify-center">
 				<Spinner className="size-5" />

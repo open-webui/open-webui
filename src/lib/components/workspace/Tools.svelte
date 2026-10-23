@@ -599,7 +599,9 @@
 										</Tooltip>
 
 										<ToolMenu
-											accessHandler={() => accessModal.open(tool.id)}
+											accessHandler={$user?.permissions?.sharing?.tools || $user?.role === 'admin'
+												? () => accessModal.open(tool.id)
+												: null}
 											show={openToolMenuId === tool.id}
 											editHandler={() => {
 												goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
