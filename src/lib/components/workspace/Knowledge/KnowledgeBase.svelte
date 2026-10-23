@@ -266,7 +266,6 @@
 		}
 
 		fileItems = [fileItem, ...(fileItems ?? [])];
-
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
@@ -294,7 +293,6 @@
 						}
 						return item;
 					});
-					// Restarts the polling that keeps files still being processed up to date.
 					init();
 				}
 			).catch((e) => {
