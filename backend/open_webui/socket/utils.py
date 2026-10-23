@@ -311,13 +311,14 @@ class YdocManager:
 
     async def claim_initial_content(self, document_id: str) -> bool:
         """Let only one session load the saved content into an empty document."""
-        # Expires so a session that crashed or left before sending the content cannot keep the note blank.
+        # Expires so a session that leaves early cannot keep the note blank.
         if self._redis:
             claim_key = f'{self._redis_key_prefix}:{document_id}:content_claim'
             return bool(await self._redis.set(claim_key, 1, nx=True, ex=self.INITIAL_CONTENT_CLAIM_TIMEOUT))
-        if self._content_claims.get(document_id, 0) > time.monotonic():
+        now: float = time.monotonic()
+        if self._content_claims.get(document_id, 0) > now:
             return False
-        self._content_claims[document_id] = time.monotonic() + self.INITIAL_CONTENT_CLAIM_TIMEOUT
+        self._content_claims[document_id] = now + self.INITIAL_CONTENT_CLAIM_TIMEOUT
         return True
 
     async def count_documents_for_user(self, user_id: str) -> int:

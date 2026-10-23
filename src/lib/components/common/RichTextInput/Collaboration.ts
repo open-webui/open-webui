@@ -181,7 +181,7 @@ export class SocketIOCollaborationProvider {
 								!this.editor.getText().trim() &&
 								this.doc.getXmlFragment('prosemirror').length === 0
 							) {
-								if ((data.content || this.initialContent) && data.load_saved_content) {
+								if ((data.content || this.initialContent) && data.apply_initial_content) {
 									// The HTTP snapshot may predate the last socket save.
 									this.applyInitialContent(
 										data.content

@@ -945,7 +945,7 @@ async def ydoc_document_join(sid, data):
         for update in updates:
             ydoc.apply_update(bytes(update))
 
-        load_saved_content = not updates and await YDOC_MANAGER.claim_initial_content(document_id)
+        apply_initial_content: bool = not updates and await YDOC_MANAGER.claim_initial_content(document_id)
 
         # Encode the entire document state as an update
         state_update = ydoc.get_update()
@@ -955,7 +955,7 @@ async def ydoc_document_join(sid, data):
                 'document_id': document_id,
                 'state': list(state_update),  # Convert bytes to list for JSON
                 'content': note.data.get('content') if document_id.startswith('note:') and note.data else None,
-                'load_saved_content': load_saved_content,
+                'apply_initial_content': apply_initial_content,
             },
             room=sid,
         )
