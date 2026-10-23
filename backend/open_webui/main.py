@@ -1882,6 +1882,8 @@ async def chat_completion(
                 'results': subagent_results,
             }
 
+        request.state.chat_tasks = list(chat_tasks.values())
+
         # Emit chat:active=true
         if chat_tasks:
             event_emitter = await get_event_emitter(
