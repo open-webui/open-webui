@@ -201,7 +201,11 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<div class="mb-3 px-6 @md:max-w-3xl justify-between w-full flex relative group items-center">
+	<div
+		class="{folder.data?.description
+			? 'mb-0.5'
+			: 'mb-2'} px-5 @md:max-w-3xl justify-between w-full flex relative group items-center"
+	>
 		<div class="text-center flex gap-3.5 items-center">
 			{#if readOnly}
 				<div
@@ -268,4 +272,13 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if folder.data?.description}
+		<!-- Align with the title after the row padding, icon, and gap. -->
+		<div
+			class="mb-2 w-full pl-[4.875rem] pr-6 text-left text-sm text-gray-400 dark:text-gray-500 @md:max-w-3xl"
+		>
+			<p class="line-clamp-2 whitespace-pre-wrap break-words">{folder.data.description}</p>
+		</div>
+	{/if}
 {/if}
