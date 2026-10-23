@@ -232,6 +232,8 @@
 	let actionIds = [];
 	let accessGrants = [];
 	let terminalId = '';
+	$: hasTerminal =
+		$config?.features?.enable_terminal_servers || $config?.features?.enable_direct_integrations;
 	let tts = { voice: '' };
 	let voice = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
@@ -1695,7 +1697,7 @@
 											/>
 										</div>
 									</ModelSettingsSection>
-									{#if capabilities.terminal}
+									{#if capabilities.terminal && hasTerminal}
 										<TerminalSelector bind:terminalId />
 									{/if}
 								</div>
