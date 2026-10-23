@@ -1578,8 +1578,8 @@ async def get_event_emitter(request_info, update_db=True):
 async def wait_for_user_chat_session_id(user_id: str, chat_id: str) -> str | None:
     if not is_saved_chat_id(chat_id):
         return None
-    deadline: float = time.time() + EVENT_CALLER_RECONNECT_TIMEOUT
-    while time.time() < deadline:
+    deadline: float = time.monotonic() + EVENT_CALLER_RECONNECT_TIMEOUT
+    while time.monotonic() < deadline:
         now = time.time()
         for batch in get_session_pool_batches():
             for session_id, session in batch:
