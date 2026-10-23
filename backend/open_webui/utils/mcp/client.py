@@ -198,7 +198,7 @@ class MCPClient:
         texts = [item['text'] for item in result_content if item['type'] == 'text']
 
         if result.isError:
-            raise Exception('\n'.join(texts) or 'MCP tool call returned an error.')
+            raise Exception('\n'.join(texts))
 
         structured_content = result_dict.get('structuredContent')
         if structured_content is None:
