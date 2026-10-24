@@ -2,6 +2,7 @@
 	import {
 		canUseChannels,
 		canUseTemporaryChats,
+		canUseWebSearch,
 		isSettingsAdmin
 	} from '$lib/utils/settings-access';
 	import { config, settings, user } from '$lib/stores';
@@ -1638,34 +1639,36 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="web-search-in-chat-label"
-				class={settingLabelClass}
-				for="web-search-in-chat-label-control"
-			>
-				{$i18n.t('settings.personal.interface.webSearchInChat.label')}
-			</label>
-
-			<button
-				id="web-search-in-chat-label-control"
-				aria-labelledby="web-search-in-chat-label web-search-state"
-				class={actionButtonClass}
-				on:click={() => {
-					toggleWebSearch();
-				}}
-				type="button"
-			>
-				<span id="web-search-state"
-					>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
+	{#if canUseWebSearch({ user: $user, config: $config })}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="web-search-in-chat-label"
+					class={settingLabelClass}
+					for="web-search-in-chat-label-control"
 				>
-			</button>
+					{$i18n.t('settings.personal.interface.webSearchInChat.label')}
+				</label>
+
+				<button
+					id="web-search-in-chat-label-control"
+					aria-labelledby="web-search-in-chat-label web-search-state"
+					class={actionButtonClass}
+					on:click={() => {
+						toggleWebSearch();
+					}}
+					type="button"
+				>
+					<span id="web-search-state"
+						>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
+					>
+				</button>
+			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.webSearchInChat.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.webSearchInChat.description')}
-		</p>
-	</div>
+	{/if}
 
 	<div class={sectionHeadingClass}>
 		{$i18n.t('settings.personal.interface.sections.input.title')}
