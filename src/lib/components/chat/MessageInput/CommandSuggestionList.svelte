@@ -34,6 +34,7 @@
 	export let canTemporary: boolean | (() => boolean) = false;
 	export let temporaryEnabled: boolean | (() => boolean) = false;
 	export let hasChatContent = false;
+	export let canCreateSkill: boolean | (() => boolean) = false;
 	export let contextUsage = null;
 
 	$: compactAvailable = typeof canCompact === 'function' ? canCompact() : canCompact;
@@ -45,6 +46,8 @@
 	$: temporaryAvailable = typeof canTemporary === 'function' ? canTemporary() : canTemporary;
 	$: isTemporaryEnabled =
 		typeof temporaryEnabled === 'function' ? temporaryEnabled() : temporaryEnabled;
+	$: createSkillAvailable =
+		typeof canCreateSkill === 'function' ? canCreateSkill() : canCreateSkill;
 	$: resolvedContextUsage = typeof contextUsage === 'function' ? contextUsage() : contextUsage;
 	$: contextHasThreshold = Number(resolvedContextUsage?.threshold) > 0;
 	$: contextPercent = contextHasThreshold
@@ -113,6 +116,7 @@
 					{contextPercent}
 					{contextHasThreshold}
 					{hasChatContent}
+					canCreateSkill={createSkillAvailable}
 					onSelect={(e) => {
 						const { type, data } = e;
 
