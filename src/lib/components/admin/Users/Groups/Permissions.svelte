@@ -71,6 +71,15 @@
 							ariaLabel={$i18n.t('Export Models')}
 						/>
 					</div>
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('View Hidden Models')}
+						</div>
+						<Switch
+							bind:state={permissions.workspace.models_view_hidden}
+							ariaLabel={$i18n.t('View Hidden Models')}
+						/>
+					</div>
 				</div>
 			{:else if defaultPermissions?.workspace?.models}
 				<div class="pb-0.5">
