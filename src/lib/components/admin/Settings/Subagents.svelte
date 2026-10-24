@@ -3,6 +3,8 @@
 	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	import { config as appConfig } from '$lib/stores';
+	import { getBackendConfig } from '$lib/apis';
 	import { getSubagentsConfig, setSubagentsConfig } from '$lib/apis/configs';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -48,6 +50,7 @@
 				SUBAGENTS_MAX_OUTPUT: maxOutput,
 				SUBAGENTS_SYSTEM_PROMPT: systemPrompt
 			});
+			await appConfig.set(await getBackendConfig());
 			toast.success($i18n.t('Settings saved successfully!'));
 		} catch (error) {
 			toast.error(`${error}`);
