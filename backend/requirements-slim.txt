@@ -30,6 +30,7 @@ aiofiles==25.1.0
 starlette-compress==1.7.1
 Brotli==1.2.0
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
+httpx2==2.16.0
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
 
@@ -50,7 +51,7 @@ asgiref==3.11.1
 
 # AI libraries
 tiktoken==0.13.0
-mcp==1.27.2
+mcp==2.3.0
 
 openai==2.29.0
 
