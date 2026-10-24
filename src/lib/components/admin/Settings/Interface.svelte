@@ -541,16 +541,18 @@
 					/>
 				</AdminSettingRow>
 
-				<AdminSettingRow
-					label={$i18n.t('settings.admin.interface.webSearchQueryGeneration.label')}
-					description={$i18n.t('settings.admin.interface.webSearchQueryGeneration.description')}
-					let:labelId
-				>
-					<Switch
-						bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION}
-						ariaLabelledbyId={labelId}
-					/>
-				</AdminSettingRow>
+				{#if $appConfig?.features?.enable_web_search}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.interface.webSearchQueryGeneration.label')}
+						description={$i18n.t('settings.admin.interface.webSearchQueryGeneration.description')}
+						let:labelId
+					>
+						<Switch
+							bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+				{/if}
 
 				<AdminSettingField
 					label={$i18n.t('settings.admin.interface.queryGenerationPrompt.label')}

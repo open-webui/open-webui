@@ -334,6 +334,7 @@
 
 				for (const [, sentence] of messageContentParts.entries()) {
 					if (signal.aborted) return;
+					if (!speaking) break;
 
 					const url = await $TTSWorker
 						.generate({ text: sentence, voice: voiceId })
@@ -354,6 +355,7 @@
 			} else {
 				for (const [, sentence] of messageContentParts.entries()) {
 					if (signal.aborted) return;
+					if (!speaking) break;
 
 					const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
 						(error) => {

@@ -227,7 +227,7 @@
 		}
 	};
 
-	const uploadFileHandler = async (file) => {
+	const createFileItem = (file: File) => {
 		const targetDirectoryId = currentDirectoryId;
 		console.log(file);
 
@@ -265,11 +265,17 @@
 			return;
 		}
 
-		fileItems = [fileItem, ...(fileItems ?? [])];
+		return fileItem;
+	};
+
+	const uploadFileHandler = async (
+		file,
+		fileItem: { itemId: string; directory_id: string | null }
+	) => {
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
-				directory_id: targetDirectoryId,
+				directory_id: fileItem.directory_id,
 				// If the file is an audio file, provide the language for STT.
 				...((file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
 				$settings?.audio?.stt?.language
@@ -309,6 +315,23 @@
 		} finally {
 			fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
 			await init();
+		}
+	};
+
+	// Rows go up front because each upload waits until its file is processed.
+	const uploadFiles = async (files: File[]) => {
+		const uploads: { file: File; fileItem: { itemId: string; directory_id: string | null } }[] = [];
+		for (const file of files) {
+			const fileItem = createFileItem(file);
+			if (fileItem) {
+				uploads.push({ file, fileItem });
+			}
+		}
+
+		fileItems = [...uploads.map(({ fileItem }) => fileItem), ...(fileItems ?? [])];
+
+		for (const { file, fileItem } of uploads) {
+			await uploadFileHandler(file, fileItem);
 		}
 	};
 
@@ -745,9 +768,7 @@
 						}
 					}
 
-					for (const file of looseFiles) {
-						await uploadFileHandler(file);
-					}
+					await uploadFiles(looseFiles);
 
 					if (directoryEntries.length > 0) {
 						await uploadDirectoryEntries(directoryEntries);
@@ -816,7 +837,7 @@
 	bind:show={showAddTextContentModal}
 	on:submit={(e) => {
 		const file = createFileFromText(e.detail.name, e.detail.content);
-		uploadFileHandler(file);
+		uploadFiles([file]);
 	}}
 />
 
@@ -828,9 +849,7 @@
 	hidden
 	on:change={async () => {
 		if (inputFiles && inputFiles.length > 0) {
-			for (const file of inputFiles) {
-				await uploadFileHandler(file);
-			}
+			await uploadFiles(Array.from(inputFiles));
 
 			inputFiles = null;
 			const fileInputElement = document.getElementById('files-input');
@@ -873,9 +892,9 @@
 				><ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}</button
 			>
 			<!-- Previous file count label: {$i18n.t('{{COUNT}} files')} -->
-			{#if knowledge.write_access}<AccessButton
-					on:click={() => (showAccessControlModal = true)}
-				/>{:else}<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
+			{#if knowledge.write_access}{#if $user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}<AccessButton
+						on:click={() => (showAccessControlModal = true)}
+					/>{/if}{:else}<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
 		</div>
 		<div class="shrink-0 px-1 pb-2.5">
 			<input

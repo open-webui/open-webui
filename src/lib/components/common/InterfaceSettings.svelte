@@ -1,6 +1,13 @@
 <script lang="ts">
-	import { canUseTemporaryChats, isSettingsAdmin } from '$lib/utils/settings-access';
-	import { config, settings, user } from '$lib/stores';
+	import {
+		canRegenerateResponses,
+		canUseCalls,
+		canUseChannels,
+		canUseTemporaryChats,
+		canUseWebSearch,
+		isSettingsAdmin
+	} from '$lib/utils/settings-access';
+	import { config, settings, terminalServers, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -22,6 +29,18 @@
 	$: currentSettings = (settingsValue ?? $settings ?? {}) as Record<string, any>;
 	$: externalSettings = settingsValue !== null;
 	$: defaultSettings = ($config?.ui?.default_interface_settings ?? {}) as Record<string, any>;
+	$: hasDirectToolServerAccess =
+		$user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true);
+	$: hasDirectTerminal =
+		($terminalServers ?? []).some((server) => !server.id) ||
+		(currentSettings?.terminalServers ?? []).some((server) => server.url);
+	// Defaults apply to every user, so they follow what the instance offers.
+	$: hasTerminal =
+		$config?.features?.enable_tool_servers &&
+		(($terminalServers ?? []).some((server) => server.id) ||
+			(externalSettings
+				? $config?.features?.enable_direct_integrations
+				: hasDirectToolServerAccess && hasDirectTerminal));
 
 	let backgroundImageUrl: string | null = null;
 	let inputFiles: FileList | null = null;
@@ -1109,82 +1128,88 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="auto-generation-label"
-				class={settingLabelClass}
-				for="auto-generation-label-control"
-			>
-				{$i18n.t('settings.personal.interface.titleAutoGeneration.label')}
-			</label>
+	{#if $config?.features?.enable_title_generation}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="auto-generation-label"
+					class={settingLabelClass}
+					for="auto-generation-label-control"
+				>
+					{$i18n.t('settings.personal.interface.titleAutoGeneration.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="auto-generation-label"
-					tooltip={true}
-					bind:state={titleAutoGenerate}
-					inherited={isDefaultSetting('titleAutoGenerate')}
-					on:change={() => {
-						toggleTitleAutoGenerate();
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="auto-generation-label"
+						tooltip={true}
+						bind:state={titleAutoGenerate}
+						inherited={isDefaultSetting('titleAutoGenerate')}
+						on:change={() => {
+							toggleTitleAutoGenerate();
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.titleAutoGeneration.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.titleAutoGeneration.description')}
-		</p>
-	</div>
+	{/if}
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				class={settingLabelClass}
-				id="follow-up-auto-generation-label"
-				for="follow-up-auto-generation-label-control"
-			>
-				{$i18n.t('settings.personal.interface.followUpAutoGeneration.label')}
-			</label>
+	{#if $config?.features?.enable_follow_up_generation}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					class={settingLabelClass}
+					id="follow-up-auto-generation-label"
+					for="follow-up-auto-generation-label-control"
+				>
+					{$i18n.t('settings.personal.interface.followUpAutoGeneration.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="follow-up-auto-generation-label"
-					tooltip={true}
-					bind:state={autoFollowUps}
-					inherited={isDefaultSetting('autoFollowUps')}
-					on:change={() => {
-						saveSettings({ autoFollowUps });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="follow-up-auto-generation-label"
+						tooltip={true}
+						bind:state={autoFollowUps}
+						inherited={isDefaultSetting('autoFollowUps')}
+						on:change={() => {
+							saveSettings({ autoFollowUps });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.followUpAutoGeneration.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.followUpAutoGeneration.description')}
-		</p>
-	</div>
+	{/if}
 
-	<div>
-		<div class={settingRowClass}>
-			<label id="chat-tags-label" class={settingLabelClass} for="chat-tags-label-control">
-				{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.label')}
-			</label>
+	{#if $config?.features?.enable_tags_generation}
+		<div>
+			<div class={settingRowClass}>
+				<label id="chat-tags-label" class={settingLabelClass} for="chat-tags-label-control">
+					{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="chat-tags-label"
-					tooltip={true}
-					bind:state={autoTags}
-					inherited={isDefaultSetting('autoTags')}
-					on:change={() => {
-						saveSettings({ autoTags });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="chat-tags-label"
+						tooltip={true}
+						bind:state={autoTags}
+						inherited={isDefaultSetting('autoTags')}
+						on:change={() => {
+							saveSettings({ autoTags });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.chatTagsAutoGeneration.description')}
-		</p>
-	</div>
+	{/if}
 
 	<div>
 		<div class={settingRowClass}>
@@ -1344,32 +1369,34 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="regenerate-menu-label"
-				class={settingLabelClass}
-				for="regenerate-menu-label-control"
-			>
-				{$i18n.t('settings.personal.interface.regenerateMenu.label')}
-			</label>
+	{#if canRegenerateResponses({ user: $user, config: $config })}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="regenerate-menu-label"
+					class={settingLabelClass}
+					for="regenerate-menu-label-control"
+				>
+					{$i18n.t('settings.personal.interface.regenerateMenu.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="regenerate-menu-label"
-					tooltip={true}
-					bind:state={regenerateMenu}
-					inherited={isDefaultSetting('regenerateMenu')}
-					on:change={() => {
-						saveSettings({ regenerateMenu });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="regenerate-menu-label"
+						tooltip={true}
+						bind:state={regenerateMenu}
+						inherited={isDefaultSetting('regenerateMenu')}
+						on:change={() => {
+							saveSettings({ regenerateMenu });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.regenerateMenu.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.regenerateMenu.description')}
-		</p>
-	</div>
+	{/if}
 
 	<div>
 		<div class={settingRowClass}>
@@ -1475,89 +1502,91 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="terminal-file-display-label"
-				class={settingLabelClass}
-				for="terminal-file-display-label-control"
-			>
-				{$i18n.t('settings.personal.interface.terminalFileDisplay.label')}
-			</label>
+	{#if hasTerminal}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="terminal-file-display-label"
+					class={settingLabelClass}
+					for="terminal-file-display-label-control"
+				>
+					{$i18n.t('settings.personal.interface.terminalFileDisplay.label')}
+				</label>
 
-			<button
-				id="terminal-file-display-label-control"
-				aria-labelledby="terminal-file-display-label terminal-file-display-state"
-				class={actionButtonClass}
-				on:click={() => {
-					terminalFileDisplay = terminalFileDisplay === 'inline' ? 'sidebar' : 'inline';
-					saveSettings({ terminalFileDisplay });
-				}}
-				type="button"
-			>
-				<span id="terminal-file-display-state">
-					{terminalFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
-				</span>
-			</button>
-		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.terminalFileDisplay.description')}
-		</p>
-	</div>
-
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="show-files-on-terminal-select-label"
-				class={settingLabelClass}
-				for="show-files-on-terminal-select-label-control"
-			>
-				{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
-			</label>
-
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="show-files-on-terminal-select-label"
-					tooltip={true}
-					bind:state={showFilesOnTerminalSelect}
-					inherited={isDefaultSetting('showFilesOnTerminalSelect')}
-					on:change={() => {
-						saveSettings({ showFilesOnTerminalSelect });
+				<button
+					id="terminal-file-display-label-control"
+					aria-labelledby="terminal-file-display-label terminal-file-display-state"
+					class={actionButtonClass}
+					on:click={() => {
+						terminalFileDisplay = terminalFileDisplay === 'inline' ? 'sidebar' : 'inline';
+						saveSettings({ terminalFileDisplay });
 					}}
-				/>
+					type="button"
+				>
+					<span id="terminal-file-display-state">
+						{terminalFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
+					</span>
+				</button>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.terminalFileDisplay.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.description')}
-		</p>
-	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="terminal-preview-allow-same-origin-label"
-				class={settingLabelClass}
-				for="terminal-preview-allow-same-origin-label-control"
-			>
-				{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.label')}
-			</label>
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="show-files-on-terminal-select-label"
+					class={settingLabelClass}
+					for="show-files-on-terminal-select-label-control"
+				>
+					{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="terminal-preview-allow-same-origin-label"
-					tooltip={true}
-					bind:state={terminalPreviewAllowSameOrigin}
-					inherited={isDefaultSetting('terminalPreviewAllowSameOrigin')}
-					on:change={() => {
-						saveSettings({ terminalPreviewAllowSameOrigin });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="show-files-on-terminal-select-label"
+						tooltip={true}
+						bind:state={showFilesOnTerminalSelect}
+						inherited={isDefaultSetting('showFilesOnTerminalSelect')}
+						on:change={() => {
+							saveSettings({ showFilesOnTerminalSelect });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.description')}
-		</p>
-	</div>
+
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="terminal-preview-allow-same-origin-label"
+					class={settingLabelClass}
+					for="terminal-preview-allow-same-origin-label-control"
+				>
+					{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.label')}
+				</label>
+
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="terminal-preview-allow-same-origin-label"
+						tooltip={true}
+						bind:state={terminalPreviewAllowSameOrigin}
+						inherited={isDefaultSetting('terminalPreviewAllowSameOrigin')}
+						on:change={() => {
+							saveSettings({ terminalPreviewAllowSameOrigin });
+						}}
+					/>
+				</div>
+			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.description')}
+			</p>
+		</div>
+	{/if}
 
 	<div>
 		<div class={settingRowClass}>
@@ -1628,34 +1657,36 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="web-search-in-chat-label"
-				class={settingLabelClass}
-				for="web-search-in-chat-label-control"
-			>
-				{$i18n.t('settings.personal.interface.webSearchInChat.label')}
-			</label>
-
-			<button
-				id="web-search-in-chat-label-control"
-				aria-labelledby="web-search-in-chat-label web-search-state"
-				class={actionButtonClass}
-				on:click={() => {
-					toggleWebSearch();
-				}}
-				type="button"
-			>
-				<span id="web-search-state"
-					>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
+	{#if canUseWebSearch({ user: $user, config: $config })}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="web-search-in-chat-label"
+					class={settingLabelClass}
+					for="web-search-in-chat-label-control"
 				>
-			</button>
+					{$i18n.t('settings.personal.interface.webSearchInChat.label')}
+				</label>
+
+				<button
+					id="web-search-in-chat-label-control"
+					aria-labelledby="web-search-in-chat-label web-search-state"
+					class={actionButtonClass}
+					on:click={() => {
+						toggleWebSearch();
+					}}
+					type="button"
+				>
+					<span id="web-search-state"
+						>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
+					>
+				</button>
+			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.webSearchInChat.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.webSearchInChat.description')}
-		</p>
-	</div>
+	{/if}
 
 	<div class={sectionHeadingClass}>
 		{$i18n.t('settings.personal.interface.sections.input.title')}
@@ -1962,59 +1993,61 @@
 		</p>
 	</div>
 
-	<div class={sectionHeadingClass}>
-		{$i18n.t('settings.personal.interface.sections.voice.title')}
-	</div>
-
-	<div>
-		<div class={settingRowClass}>
-			<label
-				class={settingLabelClass}
-				id="allow-voice-interruption-in-call-label"
-				for="allow-voice-interruption-in-call-label-control"
-			>
-				{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.label')}
-			</label>
-
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="allow-voice-interruption-in-call-label"
-					tooltip={true}
-					bind:state={voiceInterruption}
-					inherited={isDefaultSetting('voiceInterruption')}
-					on:change={() => {
-						saveSettings({ voiceInterruption });
-					}}
-				/>
-			</div>
+	{#if canUseCalls({ user: $user, config: $config })}
+		<div class={sectionHeadingClass}>
+			{$i18n.t('settings.personal.interface.sections.voice.title')}
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.description')}
-		</p>
-	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label id="display-emoji-label" class={settingLabelClass} for="display-emoji-label-control">
-				{$i18n.t('settings.personal.interface.displayEmojiInCall.label')}
-			</label>
+		<div>
+			<div class={settingRowClass}>
+				<label
+					class={settingLabelClass}
+					id="allow-voice-interruption-in-call-label"
+					for="allow-voice-interruption-in-call-label-control"
+				>
+					{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="display-emoji-label"
-					tooltip={true}
-					bind:state={showEmojiInCall}
-					inherited={isDefaultSetting('showEmojiInCall')}
-					on:change={() => {
-						saveSettings({ showEmojiInCall });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="allow-voice-interruption-in-call-label"
+						tooltip={true}
+						bind:state={voiceInterruption}
+						inherited={isDefaultSetting('voiceInterruption')}
+						on:change={() => {
+							saveSettings({ voiceInterruption });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.displayEmojiInCall.description')}
-		</p>
-	</div>
+
+		<div>
+			<div class={settingRowClass}>
+				<label id="display-emoji-label" class={settingLabelClass} for="display-emoji-label-control">
+					{$i18n.t('settings.personal.interface.displayEmojiInCall.label')}
+				</label>
+
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="display-emoji-label"
+						tooltip={true}
+						bind:state={showEmojiInCall}
+						inherited={isDefaultSetting('showEmojiInCall')}
+						on:change={() => {
+							saveSettings({ showEmojiInCall });
+						}}
+					/>
+				</div>
+			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.displayEmojiInCall.description')}
+			</p>
+		</div>
+	{/if}
 
 	<div class={sectionHeadingClass}>
 		{$i18n.t('settings.personal.interface.sections.file.title')}
@@ -2094,7 +2127,7 @@
 		</p>
 	</div>
 
-	{#if imageCompression}
+	{#if imageCompression && canUseChannels({ user: $user, config: $config })}
 		<div>
 			<div class={settingRowClass}>
 				<label

@@ -6,6 +6,8 @@ from pathlib import Path
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
 
+from open_webui.env import RAPIDOCR_PARAMS
+
 log = logging.getLogger(__name__)
 
 
@@ -94,7 +96,7 @@ class PDFLoader(BaseLoader):
             if self.ocr is None:
                 from rapidocr import RapidOCR
 
-                self.ocr = RapidOCR()
+                self.ocr = RapidOCR(params=RAPIDOCR_PARAMS)
             result = self.ocr(pixels)
             if result and result.txts:
                 texts.append('\n'.join(result.txts).strip())

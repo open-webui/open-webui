@@ -381,7 +381,7 @@ type Config = {
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;
-		enable_code_interpreter?: boolean;
+		enable_code_interpreter: boolean;
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;
 		enable_admin_analytics: boolean;
@@ -399,8 +399,12 @@ type Config = {
 		enable_tools?: boolean;
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
+		enable_terminal_servers?: boolean;
 		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;
+		enable_title_generation: boolean;
+		enable_follow_up_generation: boolean;
+		enable_tags_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_direct_integrations?: boolean;
 		enable_version_update_check: boolean;

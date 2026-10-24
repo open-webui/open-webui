@@ -4,6 +4,7 @@
 
 	import {
 		WEBUI_NAME,
+		artifactContents,
 		banners,
 		chatId,
 		config,
@@ -127,7 +128,7 @@
 								{title || chat?.chat?.title || $i18n.t('New Chat')}
 							</h1>
 
-							{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+							{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled) && (scrollToTop || ($artifactContents ?? []).length > 0 || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
 								<Menu
 									{chat}
 									{shareEnabled}

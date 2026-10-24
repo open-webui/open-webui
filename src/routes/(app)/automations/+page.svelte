@@ -653,9 +653,9 @@
 											</button>
 										</AutomationMenu>
 
-										<button
+										<div
 											class="flex h-6 items-center"
-											type="button"
+											role="presentation"
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -666,12 +666,13 @@
 											>
 												<Switch
 													bind:state={automation.is_active}
+													ariaLabel={$i18n.t('Enabled')}
 													on:change={() => {
 														toggleHandler(automation);
 													}}
 												/>
 											</Tooltip>
-										</button>
+										</div>
 									</div>
 								{/if}
 							</div>

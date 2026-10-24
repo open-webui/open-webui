@@ -411,7 +411,7 @@
 		});
 	}
 
-	$: if (value === null && html !== null && editor) {
+	$: if (value === null && html !== null && editor && !provider) {
 		editor.commands.setContent(html);
 	}
 

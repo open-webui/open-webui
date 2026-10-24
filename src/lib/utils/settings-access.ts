@@ -18,6 +18,16 @@ export const canUseNotificationTargets = ({ user, config }: SettingsAccessContex
 	(user?.role === 'admin' || (user?.permissions?.features?.webhooks ?? false));
 export const canUseTemporaryChats = ({ user }: SettingsAccessContext) =>
 	user?.role === 'admin' || user?.permissions?.chat?.temporary;
+export const canUseChannels = ({ user, config }: SettingsAccessContext) =>
+	config?.features?.enable_channels &&
+	(user?.role === 'admin' || (user?.permissions?.features?.channels ?? true));
+export const canUseCalls = ({ user }: SettingsAccessContext) =>
+	user?.role === 'admin' || (user?.permissions?.chat?.call ?? true);
+export const canUseWebSearch = ({ user, config }: SettingsAccessContext) =>
+	config?.features?.enable_web_search &&
+	(user?.role === 'admin' || user?.permissions?.features?.web_search);
+export const canRegenerateResponses = ({ user }: SettingsAccessContext) =>
+	user?.role === 'admin' || (user?.permissions?.chat?.regenerate_response ?? true);
 export const isSettingsAdmin = ({ user }: SettingsAccessContext) => user?.role === 'admin';
 
 /** Only permission-gated text needs an explicit rule. Provider/disclosure state is irrelevant. */
@@ -65,5 +75,17 @@ export function canSearchSetting(
 		return isSettingsAdmin(context);
 	if (stem === 'settings.personal.interface.temporaryChatByDefault')
 		return !!canUseTemporaryChats(context);
+	if (stem === 'settings.personal.interface.compressImagesInChannels')
+		return !!canUseChannels(context);
+	if (
+		key.startsWith('settings.personal.interface.') &&
+		/\.(sections\.voice|allowVoiceInterruptionInCall|displayEmojiInCall)\./.test(key)
+	)
+		return canUseCalls(context);
+	if (stem === 'settings.personal.interface.webSearchInChat') return !!canUseWebSearch(context);
+	if (stem === 'settings.personal.shortcuts.newTemporaryChat')
+		return !!canUseTemporaryChats(context);
+	if (stem === 'settings.personal.shortcuts.deleteChat') return canManageChats(context, 'delete');
+	if (stem === 'settings.personal.interface.regenerateMenu') return canRegenerateResponses(context);
 	return true;
 }

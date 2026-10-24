@@ -699,9 +699,11 @@ else:
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
 
-# Timeout (in seconds) for the MCP session.initialize() handshake.
-# The handshake performs a list-tools round-trip and can take tens of
-# seconds on cold-start servers or servers exposing many tools.
+# Timeout (in seconds) for each MCP protocol request other than a tool call:
+# the legacy initialize handshake, tool listing and resource reads. Raise it
+# for cold-start servers or servers exposing many tools. The SDK bounds its
+# server/discover probe separately (10s), and tool calls use
+# AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER.
 MCP_INITIALIZE_TIMEOUT = os.getenv('MCP_INITIALIZE_TIMEOUT', '10')
 try:
     MCP_INITIALIZE_TIMEOUT = int(MCP_INITIALIZE_TIMEOUT)
@@ -856,6 +858,16 @@ RAG_METADATA_MAX_VALUE_CHARS = (
 MINERU_MAX_MARKDOWN_BYTES = (
     int(os.getenv('MINERU_MAX_MARKDOWN_BYTES')) if os.getenv('MINERU_MAX_MARKDOWN_BYTES') else None
 )
+
+rapidocr_params = os.getenv('RAPIDOCR_PARAMS', '{"EngineConfig.onnxruntime.intra_op_num_threads": 1}')
+try:
+    rapidocr_params = json.loads(rapidocr_params)
+except json.JSONDecodeError:
+    rapidocr_params = {}
+if not isinstance(rapidocr_params, dict):
+    rapidocr_params = {}
+
+RAPIDOCR_PARAMS = rapidocr_params
 
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when

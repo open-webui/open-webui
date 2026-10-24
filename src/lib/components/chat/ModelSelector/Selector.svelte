@@ -132,6 +132,13 @@
 		if (!$mobile) {
 			document.getElementById('chat-input')?.focus();
 		}
+
+		if (
+			$settings?.highContrastMode &&
+			(document.activeElement === document.body || contentElement?.contains(document.activeElement))
+		) {
+			document.getElementById(`model-selector-${id}-button`)?.focus();
+		}
 	};
 
 	const toggleOpen = async () => {
@@ -181,7 +188,11 @@
 			e.preventDefault();
 			e.stopPropagation();
 			show = false;
-			document.getElementById(`model-selector-${id}-button`)?.blur();
+			if ($settings?.highContrastMode) {
+				document.getElementById(`model-selector-${id}-button`)?.focus();
+			} else {
+				document.getElementById(`model-selector-${id}-button`)?.blur();
+			}
 		}
 	};
 
