@@ -73,9 +73,12 @@
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;
 	const featureKeys: Capability[] = ['web_search', 'image_generation', 'code_interpreter'];
+	$: hasTerminal =
+		$config?.features?.enable_terminal_servers || $config?.features?.enable_direct_integrations;
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
 		(key) =>
 			(key !== 'file_context' || capabilities.file_upload) &&
+			(key !== 'terminal' || hasTerminal) &&
 			(capabilityLabels[key].enabled ?? true)
 	);
 	$: enabledCapabilityIds = visibleCapabilities.filter((key) => capabilities[key]);

@@ -1298,6 +1298,8 @@ async def chat_completion(
             )
         ):
             tool_servers = None
+        if tool_servers and not await Config.get('direct.integrations.enable', False):
+            tool_servers = None
 
         automation_id = form_data.pop('automation_id', None)
         tool_approval_mode = (
@@ -2331,6 +2333,7 @@ async def get_app_config(request: Request):
         'ui.enable_password_change_form',
         'direct.enable',
         'direct.integrations.enable',
+        'terminal_server.connections',
         'folders.enable',
         'folders.max_file_count',
         'channels.enable',
@@ -2348,6 +2351,9 @@ async def get_app_config(request: Request):
         'code_interpreter.enable',
         'image_generation.enable',
         'task.autocomplete.enable',
+        'task.title.enable',
+        'task.follow_up.enable',
+        'task.tags.enable',
         'ui.enable_community_sharing',
         'ui.enable_message_rating',
         'ui.enable_user_webhooks',
@@ -2428,6 +2434,11 @@ async def get_app_config(request: Request):
                     'enable_tools': ENABLE_TOOLS,
                     'enable_functions': ENABLE_FUNCTIONS,
                     'enable_tool_servers': ENABLE_TOOL_SERVERS,
+                    'enable_terminal_servers': ENABLE_TOOL_SERVERS
+                    and any(
+                        connection.get('enabled', True)
+                        for connection in config.get('terminal_server.connections') or []
+                    ),
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),
@@ -2445,6 +2456,9 @@ async def get_app_config(request: Request):
                     'enable_code_interpreter': config.get('code_interpreter.enable'),
                     'enable_image_generation': config.get('image_generation.enable'),
                     'enable_autocomplete_generation': config.get('task.autocomplete.enable'),
+                    'enable_title_generation': config.get('task.title.enable'),
+                    'enable_follow_up_generation': config.get('task.follow_up.enable'),
+                    'enable_tags_generation': config.get('task.tags.enable'),
                     'enable_community_sharing': config.get('ui.enable_community_sharing'),
                     'enable_message_rating': config.get('ui.enable_message_rating'),
                     'enable_user_webhooks': config.get('ui.enable_user_webhooks'),

@@ -232,6 +232,8 @@
 	let actionIds = [];
 	let accessGrants = [];
 	let terminalId = '';
+	$: hasTerminal =
+		$config?.features?.enable_terminal_servers || $config?.features?.enable_direct_integrations;
 	let tts = { voice: '' };
 	let voice = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
@@ -871,7 +873,9 @@
 						{translatedLocales}
 						className="w-fit"
 					/>
-					<AccessButton on:click={() => (showAccessControlModal = true)} />
+					{#if $user?.permissions?.sharing?.models || $user?.role === 'admin'}
+						<AccessButton on:click={() => (showAccessControlModal = true)} />
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -1695,7 +1699,7 @@
 											/>
 										</div>
 									</ModelSettingsSection>
-									{#if capabilities.terminal}
+									{#if capabilities.terminal && hasTerminal}
 										<TerminalSelector bind:terminalId />
 									{/if}
 								</div>

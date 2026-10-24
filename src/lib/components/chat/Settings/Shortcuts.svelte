@@ -14,7 +14,8 @@
 		shortcuts
 	} from '$lib/shortcuts';
 	import type { KeybindingsMap, ShortcutDefinition } from '$lib/shortcuts';
-	import { settings } from '$lib/stores';
+	import { settings, user } from '$lib/stores';
+	import { canManageChats, canUseTemporaryChats } from '$lib/utils/settings-access';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ShortcutItem from '../ShortcutItem.svelte';
 
@@ -44,7 +45,16 @@
 	});
 
 	$: {
-		const allShortcuts = Object.entries(shortcuts).filter(([, shortcut]) => {
+		const allShortcuts = Object.entries(shortcuts).filter(([id, shortcut]) => {
+			if (
+				id === Shortcut.NEW_TEMPORARY_CHAT &&
+				!canUseTemporaryChats({ user: $user, config: null })
+			) {
+				return false;
+			}
+			if (id === Shortcut.DELETE_CHAT && !canManageChats({ user: $user, config: null }, 'delete')) {
+				return false;
+			}
 			if (!shortcut.setting) {
 				return true;
 			}
@@ -105,7 +115,7 @@
 
 <svelte:window on:keydown|capture={handleRecordingKeydown} />
 
-<div id="tab-shortcuts" class="flex h-full flex-col text-sm">
+<div id="tab-shortcuts" class="flex h-full flex-col overflow-y-auto text-sm">
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 			{$i18n.t('settings.personal.shortcuts.title')}
@@ -141,7 +151,7 @@
 		</p>
 	</div>
 
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
+	<div class="flex-1 min-h-24 overflow-y-auto scrollbar-hover pr-1.5">
 		<div class="flex items-center gap-2 px-1 pb-1">
 			<span class="flex-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
 				{$i18n.t('settings.personal.shortcuts.command.label')}
