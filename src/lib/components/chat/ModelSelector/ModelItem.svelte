@@ -286,14 +286,20 @@
 		</div>
 	</div>
 
-	<div class="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
+	<div
+		class="ml-auto flex shrink-0 items-center {($settings?.highContrastMode ?? false)
+			? 'gap-0.5'
+			: 'gap-1.5'} pl-2"
+	>
 		{#if !selectionOnly && $user?.role === 'admin' && item.model.loaded}
 			<Tooltip
 				content={`${$i18n.t('Eject')}`}
 				className="flex-shrink-0 group-hover/item:opacity-100 group-focus-within/item:opacity-100 opacity-0 "
 			>
 				<button
-					class="focus-ring flex"
+					class="focus-ring flex {($settings?.highContrastMode ?? false)
+						? 'size-6 items-center justify-center rounded-lg'
+						: ''}"
 					aria-label={$i18n.t('Eject model')}
 					on:click={(e) => {
 						e.preventDefault();
@@ -319,7 +325,9 @@
 			>
 				<button
 					aria-label={`${$i18n.t('More Options')}`}
-					class="focus-ring flex"
+					class="focus-ring flex {($settings?.highContrastMode ?? false)
+						? 'size-6 items-center justify-center rounded-lg'
+						: ''}"
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
