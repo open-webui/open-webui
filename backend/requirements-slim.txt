@@ -11,7 +11,7 @@ itsdangerous==2.2.0
 
 python-socketio==5.16.2
 orjson==3.11.9
-cryptography==48.0.0
+cryptography==48.0.1
 pyotp==2.9.0
 qrcode==8.2
 bcrypt==5.0.0
