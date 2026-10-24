@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { hiddenInterfaceElements } from '$lib/stores';
 	import ModelSettingToggle from './ModelSettingToggle.svelte';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
 
@@ -79,7 +80,9 @@
 		}
 	};
 
-	$: allTools = Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>;
+	$: allTools = (Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>).filter(
+		(key) => !$hiddenInterfaceElements.includes(`model_editor.builtin_tool.${key}`)
+	);
 
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;

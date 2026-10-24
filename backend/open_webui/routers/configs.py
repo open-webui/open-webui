@@ -65,6 +65,7 @@ MODELS_CONFIG_KEYS = {
     'MODEL_ORDER_LIST': 'ui.model_order_list',
     'DEFAULT_MODEL_METADATA': 'models.default_metadata',
     'DEFAULT_MODEL_PARAMS': 'models.default_params',
+    'HIDDEN_INTERFACE_ELEMENTS': 'ui.hidden_interface_elements',
 }
 SUBAGENTS_CONFIG_KEYS = {
     'ENABLE_SUBAGENTS': 'subagents.enable',
@@ -757,6 +758,7 @@ class ModelsConfigForm(BaseModel):
     MODEL_ORDER_LIST: list[str] | None
     DEFAULT_MODEL_METADATA: dict | None = None
     DEFAULT_MODEL_PARAMS: dict | None = None
+    HIDDEN_INTERFACE_ELEMENTS: list[str] | None = None
 
 
 @router.get('/models/defaults')

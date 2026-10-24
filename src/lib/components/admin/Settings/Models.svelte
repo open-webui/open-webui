@@ -342,7 +342,8 @@
 			DEFAULT_PINNED_MODELS: defaultPinnedModelIds.join(','),
 			MODEL_ORDER_LIST: orderedModelIds,
 			DEFAULT_MODEL_METADATA: modelsConfig?.DEFAULT_MODEL_METADATA ?? null,
-			DEFAULT_MODEL_PARAMS: modelsConfig?.DEFAULT_MODEL_PARAMS ?? null
+			DEFAULT_MODEL_PARAMS: modelsConfig?.DEFAULT_MODEL_PARAMS ?? null,
+			HIDDEN_INTERFACE_ELEMENTS: modelsConfig?.HIDDEN_INTERFACE_ELEMENTS ?? []
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -393,7 +394,8 @@
 			DEFAULT_PINNED_MODELS: nextDefaultPinnedModelIds.join(','),
 			MODEL_ORDER_LIST: modelsConfig?.MODEL_ORDER_LIST ?? [],
 			DEFAULT_MODEL_METADATA: modelsConfig?.DEFAULT_MODEL_METADATA ?? null,
-			DEFAULT_MODEL_PARAMS: modelsConfig?.DEFAULT_MODEL_PARAMS ?? null
+			DEFAULT_MODEL_PARAMS: modelsConfig?.DEFAULT_MODEL_PARAMS ?? null,
+			HIDDEN_INTERFACE_ELEMENTS: modelsConfig?.HIDDEN_INTERFACE_ELEMENTS ?? []
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;

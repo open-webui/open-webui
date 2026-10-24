@@ -1745,6 +1745,10 @@ except Exception as e:
 
 DEFAULT_INTERFACE_SETTINGS = default_interface_settings if isinstance(default_interface_settings, dict) else {}
 
+HIDDEN_INTERFACE_ELEMENTS = [
+    item.strip() for item in os.getenv('HIDDEN_INTERFACE_ELEMENTS', '').split(',') if item.strip()
+]
+
 DEFAULT_USER_ROLE = os.getenv('DEFAULT_USER_ROLE', 'pending')
 
 DEFAULT_GROUP_ID = os.getenv('DEFAULT_GROUP_ID', '')
@@ -3184,6 +3188,7 @@ DEFAULT_CONFIG = {
     'ui.default_models': DEFAULT_MODELS,
     'ui.default_pinned_models': DEFAULT_PINNED_MODELS,
     'ui.default_interface_settings': DEFAULT_INTERFACE_SETTINGS,
+    'ui.hidden_interface_elements': HIDDEN_INTERFACE_ELEMENTS,
     'ui.i18n': {},
     'ui.prompt_suggestions': DEFAULT_PROMPT_SUGGESTIONS,
     'ui.prompt_suggestions_i18n': DEFAULT_PROMPT_SUGGESTIONS_I18N,

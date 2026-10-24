@@ -9,7 +9,14 @@
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
-	import { config, pinnedModels, settings, showSettings, user } from '$lib/stores';
+	import {
+		config,
+		pinnedModels,
+		settings,
+		showSettings,
+		user,
+		hiddenInterfaceElements
+	} from '$lib/stores';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
@@ -105,32 +112,34 @@
 				<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
 
-			<button
-				type="button"
-				aria-pressed={$pinnedModels.includes(model?.id)}
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
-				on:click={(e) => {
-					e.stopPropagation();
-					e.preventDefault();
+			{#if !$hiddenInterfaceElements.includes('model_selector.keep_in_sidebar')}
+				<button
+					type="button"
+					aria-pressed={$pinnedModels.includes(model?.id)}
+					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+					on:click={(e) => {
+						e.stopPropagation();
+						e.preventDefault();
 
-					pinModelHandler(model?.id);
-					show = false;
-				}}
-			>
-				{#if $pinnedModels.includes(model?.id)}
-					<PinSlash className="size-3.5" />
-				{:else}
-					<Pin className="size-3.5" />
-				{/if}
-
-				<div class="flex items-center">
+						pinModelHandler(model?.id);
+						show = false;
+					}}
+				>
 					{#if $pinnedModels.includes(model?.id)}
-						{$i18n.t('Hide from Sidebar')}
+						<PinSlash className="size-3.5" />
 					{:else}
-						{$i18n.t('Keep in Sidebar')}
+						<Pin className="size-3.5" />
 					{/if}
-				</div>
-			</button>
+
+					<div class="flex items-center">
+						{#if $pinnedModels.includes(model?.id)}
+							{$i18n.t('Hide from Sidebar')}
+						{:else}
+							{$i18n.t('Keep in Sidebar')}
+						{/if}
+					</div>
+				</button>
+			{/if}
 
 			<button
 				type="button"

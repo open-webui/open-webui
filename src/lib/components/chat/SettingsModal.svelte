@@ -9,7 +9,7 @@
 	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
-	import { config, mobile, models, settings, user } from '$lib/stores';
+	import { config, mobile, models, settings, user, hiddenInterfaceElements } from '$lib/stores';
 	import type { SettingsModalRequest } from '$lib/stores';
 	import { getUserSettings, updateUserSettings } from '$lib/apis/users';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
@@ -415,6 +415,10 @@
 					($user?.permissions?.chat?.tts ?? true) ||
 					($user?.permissions?.chat?.call ?? true)
 				);
+			}
+
+			if (tab.id === 'usage') {
+				return !$hiddenInterfaceElements.includes('settings.usage');
 			}
 
 			if (tab.id === 'personalization') {
