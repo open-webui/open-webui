@@ -914,8 +914,9 @@
 				</div>
 
 				{#if isWritable}
-					<button
+					<div
 						class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-gray-300"
+						role="presentation"
 						on:pointerdown={() => (openPreview = false)}
 					>
 						<FolderMenu
@@ -941,7 +942,7 @@
 								<MoreHorizontal className="size-3.5" strokeWidth="2" />
 							</div>
 						</FolderMenu>
-					</button>
+					</div>
 				{/if}
 			</div>
 		</div>

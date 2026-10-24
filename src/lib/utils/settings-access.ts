@@ -83,6 +83,9 @@ export function canSearchSetting(
 	)
 		return canUseCalls(context);
 	if (stem === 'settings.personal.interface.webSearchInChat') return !!canUseWebSearch(context);
+	if (stem === 'settings.personal.shortcuts.newTemporaryChat')
+		return !!canUseTemporaryChats(context);
+	if (stem === 'settings.personal.shortcuts.deleteChat') return canManageChats(context, 'delete');
 	if (stem === 'settings.personal.interface.regenerateMenu') return canRegenerateResponses(context);
 	return true;
 }

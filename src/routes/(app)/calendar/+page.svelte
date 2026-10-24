@@ -253,6 +253,7 @@
 							<button
 								id="sidebar-toggle-button"
 								class="cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								on:click={() => showSidebar.set(!$showSidebar)}
 							>
 								<div class="self-center p-1.5">

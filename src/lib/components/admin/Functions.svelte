@@ -704,9 +704,9 @@
 											</button>
 										</FunctionMenu>
 
-										<button
+										<div
 											class="flex h-6 items-center"
-											type="button"
+											role="presentation"
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -715,6 +715,7 @@
 											<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 												<Switch
 													bind:state={func.is_active}
+													ariaLabel={$i18n.t('Enabled')}
 													on:change={async () => {
 														toggleFunctionById(localStorage.token, func.id);
 														models.set(
@@ -729,7 +730,7 @@
 													}}
 												/>
 											</Tooltip>
-										</button>
+										</div>
 									{/if}
 								</div>
 							</div>

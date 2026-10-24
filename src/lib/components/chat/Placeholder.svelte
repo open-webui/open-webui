@@ -48,6 +48,7 @@
 	export let selectedModels: [''];
 
 	export let history;
+	export let chatId = '';
 
 	export let prompt = '';
 	export let files = [];
@@ -252,6 +253,7 @@
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
 				{#if !($selectedFolder && folderReadOnly)}
 					<MessageInput
+						{chatId}
 						{terminalContext}
 						{callActive}
 						{callEnabled}
