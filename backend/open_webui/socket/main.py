@@ -54,6 +54,7 @@ from open_webui.tasks import (
     stop_item_tasks,
 )
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.files import can_add_note_files
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
@@ -1002,6 +1003,12 @@ async def document_save_handler(document_id, data, user):
         ):
             log.error(f'User {user.get("id")} does not have write access to note {note_id}')
             return
+
+        if isinstance(data, dict) and 'files' in data:
+            editor = await Users.get_user_by_id(user.get('id'))
+            if not editor or not await can_add_note_files(note, data['files'], editor):
+                log.error('User %s does not have access to the files attached to note %s', user.get('id'), note_id)
+                return
 
         return await Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
 

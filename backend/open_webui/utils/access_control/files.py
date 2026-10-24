@@ -8,7 +8,7 @@ from open_webui.models.folders import FolderModel
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
-from open_webui.models.notes import Notes
+from open_webui.models.notes import NoteModel, Notes
 from open_webui.models.users import UserModel, Users
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -204,3 +204,27 @@ async def get_owner_accessible_folder_files(folder: FolderModel, db: AsyncSessio
         return []
 
     return await get_accessible_folder_files(files, owner, db=db)
+
+
+def get_note_file_ids(entries: list[dict] | None) -> set[str]:
+    """Ids of the file-type entries in a note's file list."""
+    if not isinstance(entries, list):
+        return set()
+    return {
+        entry['id']
+        for entry in entries
+        if isinstance(entry, dict) and entry.get('type') == 'file' and isinstance(entry.get('id'), str) and entry['id']
+    }
+
+
+async def can_add_note_files(
+    note: NoteModel,
+    entries: list[dict] | None,
+    user: UserModel,
+    db: AsyncSession | None = None,
+) -> bool:
+    """Check that the user can read every file they newly attach to the note."""
+    # Editors send back the owner's existing attachments, so only new ones are checked.
+    added_file_ids = get_note_file_ids(entries) - get_note_file_ids(note.data.get('files'))
+    added_files = [{'type': 'file', 'id': file_id} for file_id in added_file_ids]
+    return await can_read_all_folder_files(added_files, user, db=db)
