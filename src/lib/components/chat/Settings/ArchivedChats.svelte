@@ -304,99 +304,128 @@
 				{$i18n.t('You have no archived conversations.')}
 			</div>
 		{:else}
-			<div class="flex items-center px-1 text-xs text-gray-400 dark:text-gray-600">
-				<button
-					class="flex flex-1 items-center gap-1 py-0.5 text-left"
-					type="button"
-					on:click={() => setSortKey('title')}
-				>
-					{$i18n.t('Title')}
-					{#if orderBy === 'title'}
-						{#if direction === 'asc'}
-							<ChevronUp className="size-2" />
-						{:else}
-							<ChevronDown className="size-2" />
-						{/if}
-					{/if}
-				</button>
-				<button
-					class="hidden w-24 items-center justify-end gap-1 py-0.5 text-right sm:flex"
-					type="button"
-					on:click={() => setSortKey('updated_at')}
-				>
-					{$i18n.t('Updated at')}
-					{#if orderBy === 'updated_at'}
-						{#if direction === 'asc'}
-							<ChevronUp className="size-2" />
-						{:else}
-							<ChevronDown className="size-2" />
-						{/if}
-					{/if}
-				</button>
-			</div>
+			<div role="table" aria-label={$i18n.t('settings.personal.archivedChats.title')}>
+				<div class="flex items-center px-1 text-xs text-gray-400 dark:text-gray-600" role="row">
+					<div
+						class="flex flex-1"
+						role="columnheader"
+						aria-sort={orderBy === 'title'
+							? direction === 'asc'
+								? 'ascending'
+								: 'descending'
+							: undefined}
+					>
+						<button
+							class="flex flex-1 items-center gap-1 py-0.5 text-left"
+							type="button"
+							on:click={() => setSortKey('title')}
+						>
+							{$i18n.t('Title')}
+							{#if orderBy === 'title'}
+								{#if direction === 'asc'}
+									<ChevronUp className="size-2" />
+								{:else}
+									<ChevronDown className="size-2" />
+								{/if}
+							{/if}
+						</button>
+					</div>
+					<div
+						class="hidden w-24 sm:flex"
+						role="columnheader"
+						aria-sort={orderBy === 'updated_at'
+							? direction === 'asc'
+								? 'ascending'
+								: 'descending'
+							: undefined}
+					>
+						<button
+							class="flex w-full items-center justify-end gap-1 py-0.5 text-right"
+							type="button"
+							on:click={() => setSortKey('updated_at')}
+						>
+							{$i18n.t('Updated at')}
+							{#if orderBy === 'updated_at'}
+								{#if direction === 'asc'}
+									<ChevronUp className="size-2" />
+								{:else}
+									<ChevronDown className="size-2" />
+								{/if}
+							{/if}
+						</button>
+					</div>
+					<div role="columnheader" aria-label={$i18n.t('Actions')}></div>
+				</div>
 
-			<div bind:this={chatListElement}>
-				{#each chatList as chat (chat.id)}
-					<div class="flex w-full justify-between gap-2 px-1 py-1 text-xs">
-						<a
-							class="mr-auto min-w-0 max-w-xl flex-1 self-center truncate text-gray-800 hover:text-black dark:text-gray-200 dark:hover:text-white"
-							href={`/c/${chat.id}`}
-							title={chat?.title}
-							on:click={(event) => {
-								event.preventDefault();
-								showSettings.set(false);
-								goto(`/c/${chat.id}`);
-							}}
-						>
-							{chat?.title}
-						</a>
-						<div
-							class="hidden w-24 shrink-0 self-center justify-end text-gray-600 dark:text-gray-500 sm:flex"
-						>
-							{$i18n.t(
-								dayjs(chat?.updated_at * 1000)
-									.locale($i18n.language)
-									.calendar(null, {
-										sameDay: '[Today]',
-										nextDay: '[Tomorrow]',
-										nextWeek: 'dddd',
-										lastDay: '[Yesterday]',
-										lastWeek: '[Last] dddd',
-										sameElse: 'L'
-									})
-							)}
-						</div>
-						<div class="flex shrink-0 items-center justify-end text-gray-500 dark:text-gray-500">
-							<Tooltip content={$i18n.t('Unarchive Chat')}>
-								<button
-									class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-									type="button"
-									aria-label={$i18n.t('Unarchive Chat')}
-									on:click={() => {
-										unarchiveHandler(chat.id);
+				<div bind:this={chatListElement} role="rowgroup">
+					{#each chatList as chat (chat.id)}
+						<div class="flex w-full justify-between gap-2 px-1 py-1 text-xs" role="row">
+							<div class="mr-auto min-w-0 max-w-xl flex-1 self-center" role="cell">
+								<a
+									class="block truncate text-gray-800 hover:text-black dark:text-gray-200 dark:hover:text-white"
+									href={`/c/${chat.id}`}
+									title={chat?.title}
+									on:click={(event) => {
+										event.preventDefault();
+										showSettings.set(false);
+										goto(`/c/${chat.id}`);
 									}}
 								>
-									<UndoAction className="size-3.5" strokeWidth="1.5" />
-								</button>
-							</Tooltip>
-							{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
-								<Tooltip content={$i18n.t('Delete Chat')}>
+									{chat?.title}
+								</a>
+							</div>
+							<div
+								class="hidden w-24 shrink-0 self-center justify-end text-gray-600 dark:text-gray-500 sm:flex"
+								role="cell"
+							>
+								{$i18n.t(
+									dayjs(chat?.updated_at * 1000)
+										.locale($i18n.language)
+										.calendar(null, {
+											sameDay: '[Today]',
+											nextDay: '[Tomorrow]',
+											nextWeek: 'dddd',
+											lastDay: '[Yesterday]',
+											lastWeek: '[Last] dddd',
+											sameElse: 'L'
+										})
+								)}
+							</div>
+							<div
+								class="flex shrink-0 items-center justify-end text-gray-500 dark:text-gray-500"
+								role="cell"
+							>
+								<Tooltip content={$i18n.t('Unarchive Chat')}>
 									<button
 										class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 										type="button"
-										aria-label={$i18n.t('Delete Chat')}
+										aria-label={$i18n.t('Unarchive Chat')}
 										on:click={() => {
-											selectedChatId = chat.id;
-											showDeleteConfirmDialog = true;
+											unarchiveHandler(chat.id);
 										}}
 									>
-										<Trash className="size-3.5" strokeWidth="1.5" />
+										<UndoAction className="size-3.5" strokeWidth="1.5" />
 									</button>
 								</Tooltip>
-							{/if}
+								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+									<Tooltip content={$i18n.t('Delete Chat')}>
+										<button
+											class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+											type="button"
+											aria-label={$i18n.t('Delete Chat')}
+											on:click={() => {
+												selectedChatId = chat.id;
+												showDeleteConfirmDialog = true;
+											}}
+										>
+											<Trash className="size-3.5" strokeWidth="1.5" />
+										</button>
+									</Tooltip>
+								{/if}
+							</div>
 						</div>
-					</div>
-				{/each}
+					{/each}
+				</div>
 			</div>
 
 			{#if !allChatsLoaded}

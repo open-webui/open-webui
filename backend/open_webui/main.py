@@ -1298,6 +1298,8 @@ async def chat_completion(
             )
         ):
             tool_servers = None
+        if tool_servers and not await Config.get('direct.integrations.enable', False):
+            tool_servers = None
 
         automation_id = form_data.pop('automation_id', None)
         tool_approval_mode = (
@@ -2331,6 +2333,7 @@ async def get_app_config(request: Request):
         'ui.enable_password_change_form',
         'direct.enable',
         'direct.integrations.enable',
+        'terminal_server.connections',
         'folders.enable',
         'folders.max_file_count',
         'channels.enable',
@@ -2432,6 +2435,11 @@ async def get_app_config(request: Request):
                     'enable_tools': ENABLE_TOOLS,
                     'enable_functions': ENABLE_FUNCTIONS,
                     'enable_tool_servers': ENABLE_TOOL_SERVERS,
+                    'enable_terminal_servers': ENABLE_TOOL_SERVERS
+                    and any(
+                        connection.get('enabled', True)
+                        for connection in config.get('terminal_server.connections') or []
+                    ),
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),

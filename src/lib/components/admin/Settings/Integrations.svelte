@@ -97,6 +97,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Terminal servers saved'));
+			await config.set(await getBackendConfig());
 
 			// Refresh the terminalServers store so changes are reflected immediately
 			// Preserve user direct terminals, refresh system terminals from backend
