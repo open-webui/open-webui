@@ -100,7 +100,9 @@
 			terminalServers.set([]);
 			return;
 		}
-		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
+		let toolServersData = await getToolServersData(
+			$config?.features?.enable_direct_integrations ? ($settings?.toolServers ?? []) : []
+		);
 		toolServersData = toolServersData.filter((data) => {
 			if (!data || data.error) {
 				toast.error(
@@ -115,9 +117,11 @@
 		toolServers.set(toolServersData);
 
 		// Inject enabled terminal servers as always-on tool servers
-		const enabledTerminals = (($settings as any)?.terminalServers ?? []).filter(
-			(s: any) => s.enabled || s.url === $selectedTerminalId
-		);
+		const enabledTerminals = (
+			$config?.features?.enable_direct_integrations
+				? (($settings as any)?.terminalServers ?? [])
+				: []
+		).filter((s: any) => s.enabled || s.url === $selectedTerminalId);
 
 		// Fetch terminal servers the user has access to (for FileNav + terminal_id)
 		const systemTerminals = await getTerminalServers(localStorage.token);

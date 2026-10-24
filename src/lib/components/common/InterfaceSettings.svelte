@@ -1,7 +1,9 @@
 <script lang="ts">
 	import {
+		canUseCalls,
 		canUseChannels,
 		canUseTemporaryChats,
+		canUseWebSearch,
 		isSettingsAdmin
 	} from '$lib/utils/settings-access';
 	import { config, settings, user } from '$lib/stores';
@@ -1638,34 +1640,36 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="web-search-in-chat-label"
-				class={settingLabelClass}
-				for="web-search-in-chat-label-control"
-			>
-				{$i18n.t('settings.personal.interface.webSearchInChat.label')}
-			</label>
-
-			<button
-				id="web-search-in-chat-label-control"
-				aria-labelledby="web-search-in-chat-label web-search-state"
-				class={actionButtonClass}
-				on:click={() => {
-					toggleWebSearch();
-				}}
-				type="button"
-			>
-				<span id="web-search-state"
-					>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
+	{#if canUseWebSearch({ user: $user, config: $config })}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="web-search-in-chat-label"
+					class={settingLabelClass}
+					for="web-search-in-chat-label-control"
 				>
-			</button>
+					{$i18n.t('settings.personal.interface.webSearchInChat.label')}
+				</label>
+
+				<button
+					id="web-search-in-chat-label-control"
+					aria-labelledby="web-search-in-chat-label web-search-state"
+					class={actionButtonClass}
+					on:click={() => {
+						toggleWebSearch();
+					}}
+					type="button"
+				>
+					<span id="web-search-state"
+						>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
+					>
+				</button>
+			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.webSearchInChat.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.webSearchInChat.description')}
-		</p>
-	</div>
+	{/if}
 
 	<div class={sectionHeadingClass}>
 		{$i18n.t('settings.personal.interface.sections.input.title')}
@@ -1972,59 +1976,61 @@
 		</p>
 	</div>
 
-	<div class={sectionHeadingClass}>
-		{$i18n.t('settings.personal.interface.sections.voice.title')}
-	</div>
-
-	<div>
-		<div class={settingRowClass}>
-			<label
-				class={settingLabelClass}
-				id="allow-voice-interruption-in-call-label"
-				for="allow-voice-interruption-in-call-label-control"
-			>
-				{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.label')}
-			</label>
-
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="allow-voice-interruption-in-call-label"
-					tooltip={true}
-					bind:state={voiceInterruption}
-					inherited={isDefaultSetting('voiceInterruption')}
-					on:change={() => {
-						saveSettings({ voiceInterruption });
-					}}
-				/>
-			</div>
+	{#if canUseCalls({ user: $user, config: $config })}
+		<div class={sectionHeadingClass}>
+			{$i18n.t('settings.personal.interface.sections.voice.title')}
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.description')}
-		</p>
-	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label id="display-emoji-label" class={settingLabelClass} for="display-emoji-label-control">
-				{$i18n.t('settings.personal.interface.displayEmojiInCall.label')}
-			</label>
+		<div>
+			<div class={settingRowClass}>
+				<label
+					class={settingLabelClass}
+					id="allow-voice-interruption-in-call-label"
+					for="allow-voice-interruption-in-call-label-control"
+				>
+					{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="display-emoji-label"
-					tooltip={true}
-					bind:state={showEmojiInCall}
-					inherited={isDefaultSetting('showEmojiInCall')}
-					on:change={() => {
-						saveSettings({ showEmojiInCall });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="allow-voice-interruption-in-call-label"
+						tooltip={true}
+						bind:state={voiceInterruption}
+						inherited={isDefaultSetting('voiceInterruption')}
+						on:change={() => {
+							saveSettings({ voiceInterruption });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.allowVoiceInterruptionInCall.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.displayEmojiInCall.description')}
-		</p>
-	</div>
+
+		<div>
+			<div class={settingRowClass}>
+				<label id="display-emoji-label" class={settingLabelClass} for="display-emoji-label-control">
+					{$i18n.t('settings.personal.interface.displayEmojiInCall.label')}
+				</label>
+
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="display-emoji-label"
+						tooltip={true}
+						bind:state={showEmojiInCall}
+						inherited={isDefaultSetting('showEmojiInCall')}
+						on:change={() => {
+							saveSettings({ showEmojiInCall });
+						}}
+					/>
+				</div>
+			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.displayEmojiInCall.description')}
+			</p>
+		</div>
+	{/if}
 
 	<div class={sectionHeadingClass}>
 		{$i18n.t('settings.personal.interface.sections.file.title')}

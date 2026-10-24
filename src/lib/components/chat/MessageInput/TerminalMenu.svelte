@@ -3,6 +3,7 @@
 
 	import {
 		chatId as activeChatId,
+		config,
 		settings,
 		showControls,
 		showSettings,
@@ -31,7 +32,9 @@
 			chatContext(t) !== false &&
 			!(isTemporaryChatId($activeChatId) && chatContext(t)?.context_id === 'chat_id')
 	);
-	$: directTerminals = ($settings?.terminalServers ?? []).filter((s) => s.url);
+	$: directTerminals = (
+		$config?.features?.enable_direct_integrations ? ($settings?.terminalServers ?? []) : []
+	).filter((s) => s.url);
 
 	const refreshTerminalServersStore = async (servers: typeof directTerminals) => {
 		// Preserve system terminals (those with an `id`) — only refresh direct ones
