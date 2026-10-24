@@ -26,6 +26,8 @@ export const canUseCalls = ({ user }: SettingsAccessContext) =>
 export const canUseWebSearch = ({ user, config }: SettingsAccessContext) =>
 	config?.features?.enable_web_search &&
 	(user?.role === 'admin' || user?.permissions?.features?.web_search);
+export const canRegenerateResponses = ({ user }: SettingsAccessContext) =>
+	user?.role === 'admin' || (user?.permissions?.chat?.regenerate_response ?? true);
 export const isSettingsAdmin = ({ user }: SettingsAccessContext) => user?.role === 'admin';
 
 /** Only permission-gated text needs an explicit rule. Provider/disclosure state is irrelevant. */
@@ -81,5 +83,6 @@ export function canSearchSetting(
 	)
 		return canUseCalls(context);
 	if (stem === 'settings.personal.interface.webSearchInChat') return !!canUseWebSearch(context);
+	if (stem === 'settings.personal.interface.regenerateMenu') return canRegenerateResponses(context);
 	return true;
 }
