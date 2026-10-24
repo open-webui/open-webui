@@ -770,18 +770,10 @@
 									? 'cursor-pointer'
 									: ''} {model?.meta?.hidden ? 'opacity-50 dark:opacity-50' : ''}"
 								id="model-item-{model.id}"
-								role="button"
-								tabindex={model.write_access ? 0 : -1}
+								role="presentation"
 								on:click={(e) => {
 									if (shouldIgnoreRowClick(e.target)) return;
 									openModel(model);
-								}}
-								on:keydown={(e) => {
-									if (e.currentTarget !== e.target) return;
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault();
-										openModel(model);
-									}
 								}}
 							>
 								<div class="shrink-0 self-center">
