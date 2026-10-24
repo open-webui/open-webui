@@ -162,6 +162,6 @@
 	{/if}
 
 	{#if capabilities.builtin_tools}
-		<BuiltinTools bind:builtinTools {disabled} />
+		<BuiltinTools bind:builtinTools {capabilities} {disabled} />
 	{/if}
 </div>
