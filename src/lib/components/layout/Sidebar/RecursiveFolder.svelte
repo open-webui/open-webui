@@ -745,7 +745,12 @@
 	</DragGhost>
 {/if}
 
-<div bind:this={folderElement} class="relative {className}" draggable={!folders[folderId]?.shared}>
+<div
+	bind:this={folderElement}
+	class="relative {className}"
+	role="listitem"
+	draggable={!folders[folderId]?.shared}
+>
 	{#if draggedOver}
 		<div
 			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
@@ -956,27 +961,31 @@
 								})
 							)}
 
-						{#each children as childFolder (`${folderId}-${childFolder.id}`)}
-							<svelte:self
-								bind:folderRegistry
-								{folders}
-								folderId={childFolder.id}
-								{shiftKey}
-								parentDragged={dragged}
-								{onItemMove}
-								{onDelete}
-								{onFolderUnreadCounts}
-								on:import={(e) => {
-									dispatch('import', e.detail);
-								}}
-								on:update={(e) => {
-									dispatch('update', e.detail);
-								}}
-								on:change={(e) => {
-									dispatch('change', e.detail);
-								}}
-							/>
-						{/each}
+						{#if children.length > 0}
+							<div role="list">
+								{#each children as childFolder (`${folderId}-${childFolder.id}`)}
+									<svelte:self
+										bind:folderRegistry
+										{folders}
+										folderId={childFolder.id}
+										{shiftKey}
+										parentDragged={dragged}
+										{onItemMove}
+										{onDelete}
+										{onFolderUnreadCounts}
+										on:import={(e) => {
+											dispatch('import', e.detail);
+										}}
+										on:update={(e) => {
+											dispatch('update', e.detail);
+										}}
+										on:change={(e) => {
+											dispatch('change', e.detail);
+										}}
+									/>
+								{/each}
+							</div>
+						{/if}
 					{/if}
 
 					{#if chats === null && chatsLoading}
@@ -997,31 +1006,37 @@
 						</div>
 					{/if}
 
-					{#each chats ?? [] as chat (chat.id)}
-						<ChatItem
-							id={chat.id}
-							title={chat.title}
-							createdAt={chat.created_at}
-							updatedAt={chat.updated_at}
-							lastReadAt={chat.last_read_at}
-							active={chat.active ?? false}
-							ownerName={chat.owner_name ?? null}
-							participants={chat.participants ?? []}
-							ownerUserId={folders[folderId]?.showOwnerInfo ||
-							folders[folderId]?.shared ||
-							chat.user_id !== $user?.id
-								? chat.user_id
-								: null}
-							readonly={chat.user_id !== $user?.id}
-							canMove={folders[folderId]?.user_id === $user?.id}
-							canRename={folders[folderId]?.user_id === $user?.id}
-							{shiftKey}
-							onReadStateChange={applyReadState}
-							on:change={(e) => {
-								dispatch('change', e.detail);
-							}}
-						/>
-					{/each}
+					{#if (chats ?? []).length > 0}
+						<div role="list">
+							{#each chats ?? [] as chat (chat.id)}
+								<div role="listitem">
+									<ChatItem
+										id={chat.id}
+										title={chat.title}
+										createdAt={chat.created_at}
+										updatedAt={chat.updated_at}
+										lastReadAt={chat.last_read_at}
+										active={chat.active ?? false}
+										ownerName={chat.owner_name ?? null}
+										participants={chat.participants ?? []}
+										ownerUserId={folders[folderId]?.showOwnerInfo ||
+										folders[folderId]?.shared ||
+										chat.user_id !== $user?.id
+											? chat.user_id
+											: null}
+										readonly={chat.user_id !== $user?.id}
+										canMove={folders[folderId]?.user_id === $user?.id}
+										canRename={folders[folderId]?.user_id === $user?.id}
+										{shiftKey}
+										onReadStateChange={applyReadState}
+										on:change={(e) => {
+											dispatch('change', e.detail);
+										}}
+									/>
+								</div>
+							{/each}
+						</div>
+					{/if}
 
 					{#if hasMoreChats}
 						<button
