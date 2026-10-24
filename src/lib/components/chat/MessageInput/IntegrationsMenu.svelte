@@ -375,10 +375,9 @@
 								)}
 								placement="top-start"
 							>
-								<button
-									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-									role="menuitemcheckbox"
-									aria-checked={selectedFilterIds.includes(filter.id)}
+								<div
+									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+									role="presentation"
 									on:click={() => {
 										if (selectedFilterIds.includes(filter.id)) {
 											selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
@@ -387,7 +386,12 @@
 										}
 									}}
 								>
-									<div class="flex-1 truncate">
+									<button
+										type="button"
+										class="flex-1 truncate text-left cursor-pointer focus-visible:outline-none!"
+										role="menuitemcheckbox"
+										aria-checked={selectedFilterIds.includes(filter.id)}
+									>
 										<div class="flex flex-1 gap-2 items-center">
 											<div class="shrink-0">
 												{#if filter?.icon}
@@ -414,7 +418,7 @@
 												{resolveLocalizedFunction(filter, $localizedFunctions, $i18n.language)}
 											</div>
 										</div>
-									</div>
+									</button>
 
 									{#if filter?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
 										<div class=" shrink-0">
@@ -441,7 +445,7 @@
 									<div class=" shrink-0" inert>
 										<Switch state={selectedFilterIds.includes(filter.id)} />
 									</div>
-								</button>
+								</div>
 							</Tooltip>
 						{/each}
 					{/if}
@@ -560,14 +564,9 @@
 						{:else}
 							<div class="flex flex-col gap-0.5">
 								{#each toolIds as toolId}
-									<button
-										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-										role={(tools?.[toolId]?.authenticated ?? true)
-											? 'menuitemcheckbox'
-											: 'menuitem'}
-										aria-checked={(tools?.[toolId]?.authenticated ?? true)
-											? selectedToolIds.includes(toolId)
-											: undefined}
+									<div
+										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+										role="presentation"
 										on:click={async (e) => {
 											await toggleTool(toolId, e);
 										}}
@@ -576,7 +575,16 @@
 											<!-- make it slighly darker and not clickable -->
 											<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
 										{/if}
-										<div class="flex-1 truncate">
+										<button
+											type="button"
+											class="flex-1 truncate text-left cursor-pointer focus-visible:outline-none!"
+											role={(tools?.[toolId]?.authenticated ?? true)
+												? 'menuitemcheckbox'
+												: 'menuitem'}
+											aria-checked={(tools?.[toolId]?.authenticated ?? true)
+												? selectedToolIds.includes(toolId)
+												: undefined}
+										>
 											<div class="flex flex-1 gap-2 items-center">
 												<Tooltip
 													content={resolveLocalizedResource(
@@ -603,7 +611,7 @@
 													</div>
 												</Tooltip>
 											</div>
-										</div>
+										</button>
 
 										{#if tools?.[toolId]?.authenticated === true && toolId.startsWith('server:mcp:')}
 											<div class="shrink-0">
@@ -664,7 +672,7 @@
 										<div class=" shrink-0" inert>
 											<Switch state={selectedToolIds.includes(toolId)} />
 										</div>
-									</button>
+									</div>
 								{/each}
 							</div>
 						{/if}

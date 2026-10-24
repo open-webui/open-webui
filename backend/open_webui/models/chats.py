@@ -2531,7 +2531,8 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.folder_id = folder_id
                 chat.updated_at = int(time.time())
-                chat.last_read_at = int(time.time())
+                if chat.user_id == user_id:
+                    chat.last_read_at = int(time.time())
                 chat.pinned = False
                 if folder_id is not None:
                     # Folder listings only show unarchived chats, so moving an archived

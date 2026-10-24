@@ -23,6 +23,9 @@ export const canUseChannels = ({ user, config }: SettingsAccessContext) =>
 	(user?.role === 'admin' || (user?.permissions?.features?.channels ?? true));
 export const canUseCalls = ({ user }: SettingsAccessContext) =>
 	user?.role === 'admin' || (user?.permissions?.chat?.call ?? true);
+export const canUseWebSearch = ({ user, config }: SettingsAccessContext) =>
+	config?.features?.enable_web_search &&
+	(user?.role === 'admin' || user?.permissions?.features?.web_search);
 export const isSettingsAdmin = ({ user }: SettingsAccessContext) => user?.role === 'admin';
 
 /** Only permission-gated text needs an explicit rule. Provider/disclosure state is irrelevant. */
@@ -77,5 +80,6 @@ export function canSearchSetting(
 		/\.(sections\.voice|allowVoiceInterruptionInCall|displayEmojiInCall)\./.test(key)
 	)
 		return canUseCalls(context);
+	if (stem === 'settings.personal.interface.webSearchInChat') return !!canUseWebSearch(context);
 	return true;
 }

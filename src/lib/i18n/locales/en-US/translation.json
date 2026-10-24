@@ -2639,7 +2639,7 @@
 	"settings.admin.connections.cacheBaseModelList.label": "Cache Base Model List",
 	"settings.admin.connections.directConnections.description": "Direct Connections allow users to connect to their own OpenAI compatible API endpoints.",
 	"settings.admin.connections.directConnections.label": "Direct Connections",
-	"settings.admin.connections.directIntegrations.description": "Show the Integrations tab for users with permission to manage their own tool and terminal connections, including admins. Hiding it does not disable existing connections.",
+	"settings.admin.connections.directIntegrations.description": "Show the Integrations tab for users with permission to manage their own tool and terminal connections, including admins. While it is off, their existing connections are not used and come back when it is turned on again.",
 	"settings.admin.connections.directIntegrations.label": "Direct Integrations",
 	"settings.admin.connections.manageOllamaApiConnections.description": "Trouble accessing Ollama?",
 	"settings.admin.connections.manageOllamaApiConnections.label": "Manage Ollama API Connections",
