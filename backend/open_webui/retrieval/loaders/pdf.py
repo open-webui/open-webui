@@ -94,7 +94,8 @@ class PDFLoader(BaseLoader):
             if self.ocr is None:
                 from rapidocr import RapidOCR
 
-                self.ocr = RapidOCR()
+                # onnxruntime otherwise starts a pool per model sized to every host core
+                self.ocr = RapidOCR(params={'EngineConfig.onnxruntime.intra_op_num_threads': 1})
             result = self.ocr(pixels)
             if result and result.txts:
                 texts.append('\n'.join(result.txts).strip())
