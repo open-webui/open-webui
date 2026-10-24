@@ -501,18 +501,10 @@
 						{#each filteredItems as func (func.id)}
 							<div
 								class="group flex min-h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left"
-								role="button"
-								tabindex="0"
+								role="presentation"
 								on:click={(e) => {
 									if (shouldIgnoreRowClick(e.target)) return;
 									openFunction(func);
-								}}
-								on:keydown={(e) => {
-									if (e.currentTarget !== e.target) return;
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault();
-										openFunction(func);
-									}
 								}}
 							>
 								<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
@@ -526,11 +518,11 @@
 												</div>
 
 												<Tooltip content={func.id} className="min-w-0" placement="top-start">
-													<div
-														class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+													<a
+														href={`/admin/functions/edit?id=${encodeURIComponent(func.id)}`}
+														class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+														>{resolveLocalizedResource(func, $i18n.language)}</a
 													>
-														{resolveLocalizedResource(func, $i18n.language)}
-													</div>
 												</Tooltip>
 
 												{#if func?.meta?.manifest?.version}
