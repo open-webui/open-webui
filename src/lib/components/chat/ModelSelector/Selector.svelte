@@ -132,6 +132,13 @@
 		if (!$mobile) {
 			document.getElementById('chat-input')?.focus();
 		}
+
+		if (
+			$settings?.highContrastMode &&
+			(document.activeElement === document.body || contentElement?.contains(document.activeElement))
+		) {
+			document.getElementById(`model-selector-${id}-button`)?.focus();
+		}
 	};
 
 	const toggleOpen = async () => {
@@ -181,7 +188,11 @@
 			e.preventDefault();
 			e.stopPropagation();
 			show = false;
-			document.getElementById(`model-selector-${id}-button`)?.blur();
+			if ($settings?.highContrastMode) {
+				document.getElementById(`model-selector-${id}-button`)?.focus();
+			} else {
+				document.getElementById(`model-selector-${id}-button`)?.blur();
+			}
 		}
 	};
 
@@ -1031,6 +1042,16 @@
 							{/if}
 						</div>
 					{/if}
+
+					<div class="sr-only" aria-live="polite" aria-atomic="true">
+						{#if sanitizedSearchValue}
+							{filteredItems.length === 0
+								? $i18n.t('No results found')
+								: filteredItems.length === 1
+									? $i18n.t('1 item')
+									: $i18n.t('{{count}} items', { count: filteredItems.length })}
+						{/if}
+					</div>
 
 					<div class="group relative flex min-h-0 flex-1 flex-col">
 						{#if filteredItems.length === 0}

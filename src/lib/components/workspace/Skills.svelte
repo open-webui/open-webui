@@ -343,6 +343,8 @@
 	</title>
 </svelte:head>
 
+<h1 class="sr-only">{$i18n.t('Skills')}</h1>
+
 {#if loaded}
 	<ImportModal
 		bind:show={showImportFromLink}
@@ -605,7 +607,10 @@
 										<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 											<SkillMenu
 												shareHandler={() => shareHandler(skill)}
-												accessHandler={() => accessModal.open(skill.id)}
+												accessHandler={$user?.permissions?.sharing?.skills ||
+												$user?.role === 'admin'
+													? () => accessModal.open(skill.id)
+													: null}
 												show={openSkillMenuId === skill.id}
 												editHandler={() => {
 													goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
@@ -638,9 +643,9 @@
 												</button>
 											</SkillMenu>
 
-											<button
+											<div
 												class="flex h-6 items-center"
-												type="button"
+												role="presentation"
 												on:click={(e) => {
 													e.stopPropagation();
 													e.preventDefault();
@@ -651,13 +656,14 @@
 												>
 													<Switch
 														bind:state={skill.is_active}
+														ariaLabel={$i18n.t('Enabled')}
 														on:change={async () => {
 															await toggleSkillById(localStorage.token, skill.id);
 															_skills.set(await getSkills(localStorage.token));
 														}}
 													/>
 												</Tooltip>
-											</button>
+											</div>
 										</div>
 									{/if}
 								</div>

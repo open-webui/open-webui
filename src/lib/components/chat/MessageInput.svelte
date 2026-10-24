@@ -863,7 +863,8 @@
 		modelCapabilitiesById
 	);
 	$: hasDirectToolServerAccess =
-		$_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true);
+		$config?.features?.enable_direct_integrations &&
+		($_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true));
 	$: showTerminalSelector =
 		$config?.features?.enable_tool_servers &&
 		terminalCapableModels.length > 0 &&
@@ -2358,6 +2359,7 @@
 										)
 											? selectedModelIds
 											: fileUploadCapableModels}
+										{visionCapableModels}
 										{toolApprovalMode}
 										{onToolApprovalModeChange}
 										{screenCaptureHandler}

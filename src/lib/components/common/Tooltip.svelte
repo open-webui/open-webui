@@ -19,7 +19,7 @@
 	export let touch = true;
 	export let theme = '';
 	export let offset: TippyProps['offset'] = [0, 4];
-	export let allowHTML = true;
+	export let allowHTML = false;
 	export let tippyOptions: Partial<TippyProps> = {};
 	export let interactive = false;
 

@@ -2767,7 +2767,7 @@
 		const previousMessageId = history.currentId;
 		await resetInput();
 		// A chat opened or a message sent in the meantime keeps its id and history
-		if ($chatId !== previousChatId || history.currentId !== previousMessageId) return;
+		if (($chatId && $chatId !== previousChatId) || history.currentId !== previousMessageId) return;
 		await chatId.set('');
 		await chatTitle.set('');
 

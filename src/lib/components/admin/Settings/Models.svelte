@@ -1084,6 +1084,7 @@
 														? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
 														: model.id
 											)}
+											allowHTML={true}
 											className="min-w-0 flex-1"
 											placement="top-start"
 										>

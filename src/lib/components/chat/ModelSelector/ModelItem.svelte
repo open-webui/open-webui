@@ -263,6 +263,7 @@
 						content={`${marked.parse(
 							sanitizeResponseContent(localizedDescription).replaceAll('\n', '<br>')
 						)}`}
+						allowHTML={true}
 					>
 						<div class=" translate-y-[1px]">
 							<svg

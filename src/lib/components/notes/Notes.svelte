@@ -681,7 +681,9 @@
 														</Tooltip>
 													{:else}
 														<NoteMenu
-															onAccess={note.user_id === $user?.id || $user?.role === 'admin'
+															onAccess={(note.user_id === $user?.id &&
+																$user?.permissions?.sharing?.notes) ||
+															$user?.role === 'admin'
 																? () => accessModal.open(note.id)
 																: null}
 															show={openNoteMenuId === note.id}
@@ -772,7 +774,9 @@
 														</Tooltip>
 													{:else}
 														<NoteMenu
-															onAccess={note.user_id === $user?.id || $user?.role === 'admin'
+															onAccess={(note.user_id === $user?.id &&
+																$user?.permissions?.sharing?.notes) ||
+															$user?.role === 'admin'
 																? () => accessModal.open(note.id)
 																: null}
 															onDownload={(type) => {

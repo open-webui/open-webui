@@ -33,6 +33,7 @@
 		background_image_url: null
 	};
 	let data = {
+		description: '',
 		model_ids: [] as string[],
 		system_prompt: '',
 		files: []
@@ -65,6 +66,7 @@
 			meta,
 			// Sharing saves separately; do not overwrite its mode with the editor's snapshot.
 			data: {
+				description: data.description.trim(),
 				model_ids: data.model_ids,
 				system_prompt: data.system_prompt,
 				files: data.files
@@ -92,6 +94,7 @@
 				system_prompt: '',
 				files: [],
 				...folder.data,
+				description: folder.data?.description ?? '',
 				model_ids: folder.data?.model_ids ?? []
 			};
 		}
@@ -119,6 +122,7 @@
 			background_image_url: null
 		};
 		data = {
+			description: '',
 			model_ids: [],
 			system_prompt: '',
 			files: []
@@ -137,7 +141,7 @@
 				{/if}
 			</div>
 			<div class="flex items-center gap-1">
-				{#if edit && folder && ($user?.role === 'admin' || folder.user_id === $user?.id)}
+				{#if edit && folder && ($user?.role === 'admin' || (folder.user_id === $user?.id && $user?.permissions?.sharing?.folders))}
 					<AccessButton disabled={loading} on:click={() => (showAccessModal = true)} />
 				{/if}
 				<button
@@ -173,6 +177,20 @@
 								autocomplete="off"
 							/>
 						</div>
+					</div>
+
+					<div class="my-2">
+						<label for="folder-description" class="mb-1 block text-xs text-gray-500">
+							{$i18n.t('Description')}
+						</label>
+						<Textarea
+							id="folder-description"
+							ariaLabel={$i18n.t('Description')}
+							className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+							placeholder={$i18n.t('Enter description')}
+							maxSize={200}
+							bind:value={data.description}
+						/>
 					</div>
 
 					<input

@@ -105,7 +105,7 @@
 
 <svelte:window on:keydown|capture={handleRecordingKeydown} />
 
-<div id="tab-shortcuts" class="flex h-full flex-col text-sm">
+<div id="tab-shortcuts" class="flex h-full flex-col overflow-y-auto text-sm">
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 			{$i18n.t('settings.personal.shortcuts.title')}
@@ -141,7 +141,7 @@
 		</p>
 	</div>
 
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
+	<div class="flex-1 min-h-24 overflow-y-auto scrollbar-hover pr-1.5">
 		<div class="flex items-center gap-2 px-1 pb-1">
 			<span class="flex-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
 				{$i18n.t('settings.personal.shortcuts.command.label')}
@@ -153,10 +153,17 @@
 
 		{#each Object.entries(categorizedShortcuts) as [category, items], categoryIndex}
 			<div class={categoryIndex > 0 ? 'mt-3' : ''}>
-				<div class="px-1 pb-0.5 pt-1 text-xs text-gray-400 dark:text-gray-600">
+				<h3
+					id="shortcut-category-{categoryIndex}"
+					class="px-1 pb-0.5 pt-1 text-xs text-gray-400 dark:text-gray-600"
+				>
 					{$i18n.t(category)}
-				</div>
-				<div class="divide-y divide-gray-100/70 dark:divide-white/[0.03]">
+				</h3>
+				<div
+					role="list"
+					aria-labelledby="shortcut-category-{categoryIndex}"
+					class="divide-y divide-gray-100/70 dark:divide-white/[0.03]"
+				>
 					<!-- {$i18n.t('Chat')} -->
 					<!-- {$i18n.t('Global')} -->
 					<!-- {$i18n.t('Input')} -->
@@ -207,7 +214,7 @@
 						{@const configurable = isConfigurableShortcut(id)}
 						{@const chord = configurable ? $keybindings[id] : ''}
 						{@const conflict = configurable ? getConflict(id, chord) : null}
-						<div class="flex min-h-8 w-full items-center gap-3 px-1 py-1.5">
+						<div role="listitem" class="flex min-h-8 w-full items-center gap-3 px-1 py-1.5">
 							<ShortcutItem {id} {shortcut} {isMac} compact />
 
 							<div class="flex w-[9.5rem] shrink-0 items-center justify-end gap-1">

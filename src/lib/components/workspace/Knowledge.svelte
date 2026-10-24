@@ -311,6 +311,8 @@
 	</title>
 </svelte:head>
 
+<h1 class="sr-only">{$i18n.t('Knowledge')}</h1>
+
 {#if loaded}
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
@@ -534,7 +536,10 @@
 								{#if item?.write_access || $user?.role === 'admin'}
 									<div class="ml-2 flex shrink-0 flex-row items-center self-center">
 										<ItemMenu
-											accessHandler={() => accessModal.open(item.id)}
+											accessHandler={$user?.permissions?.sharing?.knowledge ||
+											$user?.role === 'admin'
+												? () => accessModal.open(item.id)
+												: null}
 											onExport={$user?.role === 'admin'
 												? () => {
 														exportHandler(item);

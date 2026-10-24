@@ -295,6 +295,7 @@
 	const copyHandler = async (prompt) => {
 		const res = await copyToClipboard(prompt.content);
 		if (res) {
+			toast.success($i18n.t('Copied to clipboard'));
 			copiedId = prompt.command;
 			setTimeout(() => {
 				copiedId = null;
@@ -389,6 +390,8 @@
 		{$i18n.t('Prompts')} / {$WEBUI_NAME}
 	</title>
 </svelte:head>
+
+<h1 class="sr-only">{$i18n.t('Prompts')}</h1>
 
 {#if loaded}
 	<DeleteConfirmDialog
@@ -698,7 +701,9 @@
 
 									<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
 										<PromptMenu
-											accessHandler={() => accessModal.open(prompt.id)}
+											accessHandler={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'
+												? () => accessModal.open(prompt.id)
+												: null}
 											writeAccess={prompt.write_access}
 											show={openPromptMenuId === prompt.id}
 											editHandler={() => {
@@ -735,10 +740,9 @@
 											</button>
 										</PromptMenu>
 
-										<button
+										<div
 											class="flex h-6 items-center"
-											type="button"
-											disabled={!prompt.write_access}
+											role="presentation"
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -758,7 +762,7 @@
 													}}
 												/>
 											</Tooltip>
-										</button>
+										</div>
 									</div>
 								{/if}
 							</div>
