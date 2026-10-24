@@ -6,7 +6,7 @@
 		canUseWebSearch,
 		isSettingsAdmin
 	} from '$lib/utils/settings-access';
-	import { config, settings, user } from '$lib/stores';
+	import { config, settings, terminalServers, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -28,6 +28,18 @@
 	$: currentSettings = (settingsValue ?? $settings ?? {}) as Record<string, any>;
 	$: externalSettings = settingsValue !== null;
 	$: defaultSettings = ($config?.ui?.default_interface_settings ?? {}) as Record<string, any>;
+	$: hasDirectToolServerAccess =
+		$user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true);
+	$: hasDirectTerminal =
+		($terminalServers ?? []).some((server) => !server.id) ||
+		(currentSettings?.terminalServers ?? []).some((server) => server.url);
+	// Defaults apply to every user, so they follow what the instance offers.
+	$: hasTerminal =
+		$config?.features?.enable_tool_servers &&
+		(($terminalServers ?? []).some((server) => server.id) ||
+			(externalSettings
+				? $config?.features?.enable_direct_integrations
+				: hasDirectToolServerAccess && hasDirectTerminal));
 
 	let backgroundImageUrl: string | null = null;
 	let inputFiles: FileList | null = null;
@@ -1487,89 +1499,91 @@
 		</p>
 	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="terminal-file-display-label"
-				class={settingLabelClass}
-				for="terminal-file-display-label-control"
-			>
-				{$i18n.t('settings.personal.interface.terminalFileDisplay.label')}
-			</label>
+	{#if hasTerminal}
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="terminal-file-display-label"
+					class={settingLabelClass}
+					for="terminal-file-display-label-control"
+				>
+					{$i18n.t('settings.personal.interface.terminalFileDisplay.label')}
+				</label>
 
-			<button
-				id="terminal-file-display-label-control"
-				aria-labelledby="terminal-file-display-label terminal-file-display-state"
-				class={actionButtonClass}
-				on:click={() => {
-					terminalFileDisplay = terminalFileDisplay === 'inline' ? 'sidebar' : 'inline';
-					saveSettings({ terminalFileDisplay });
-				}}
-				type="button"
-			>
-				<span id="terminal-file-display-state">
-					{terminalFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
-				</span>
-			</button>
-		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.terminalFileDisplay.description')}
-		</p>
-	</div>
-
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="show-files-on-terminal-select-label"
-				class={settingLabelClass}
-				for="show-files-on-terminal-select-label-control"
-			>
-				{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
-			</label>
-
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="show-files-on-terminal-select-label"
-					tooltip={true}
-					bind:state={showFilesOnTerminalSelect}
-					inherited={isDefaultSetting('showFilesOnTerminalSelect')}
-					on:change={() => {
-						saveSettings({ showFilesOnTerminalSelect });
+				<button
+					id="terminal-file-display-label-control"
+					aria-labelledby="terminal-file-display-label terminal-file-display-state"
+					class={actionButtonClass}
+					on:click={() => {
+						terminalFileDisplay = terminalFileDisplay === 'inline' ? 'sidebar' : 'inline';
+						saveSettings({ terminalFileDisplay });
 					}}
-				/>
+					type="button"
+				>
+					<span id="terminal-file-display-state">
+						{terminalFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
+					</span>
+				</button>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.terminalFileDisplay.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.description')}
-		</p>
-	</div>
 
-	<div>
-		<div class={settingRowClass}>
-			<label
-				id="terminal-preview-allow-same-origin-label"
-				class={settingLabelClass}
-				for="terminal-preview-allow-same-origin-label-control"
-			>
-				{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.label')}
-			</label>
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="show-files-on-terminal-select-label"
+					class={settingLabelClass}
+					for="show-files-on-terminal-select-label-control"
+				>
+					{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
+				</label>
 
-			<div class={settingControlClass}>
-				<Switch
-					ariaLabelledbyId="terminal-preview-allow-same-origin-label"
-					tooltip={true}
-					bind:state={terminalPreviewAllowSameOrigin}
-					inherited={isDefaultSetting('terminalPreviewAllowSameOrigin')}
-					on:change={() => {
-						saveSettings({ terminalPreviewAllowSameOrigin });
-					}}
-				/>
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="show-files-on-terminal-select-label"
+						tooltip={true}
+						bind:state={showFilesOnTerminalSelect}
+						inherited={isDefaultSetting('showFilesOnTerminalSelect')}
+						on:change={() => {
+							saveSettings({ showFilesOnTerminalSelect });
+						}}
+					/>
+				</div>
 			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.description')}
+			</p>
 		</div>
-		<p class={settingDescriptionClass}>
-			{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.description')}
-		</p>
-	</div>
+
+		<div>
+			<div class={settingRowClass}>
+				<label
+					id="terminal-preview-allow-same-origin-label"
+					class={settingLabelClass}
+					for="terminal-preview-allow-same-origin-label-control"
+				>
+					{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.label')}
+				</label>
+
+				<div class={settingControlClass}>
+					<Switch
+						ariaLabelledbyId="terminal-preview-allow-same-origin-label"
+						tooltip={true}
+						bind:state={terminalPreviewAllowSameOrigin}
+						inherited={isDefaultSetting('terminalPreviewAllowSameOrigin')}
+						on:change={() => {
+							saveSettings({ terminalPreviewAllowSameOrigin });
+						}}
+					/>
+				</div>
+			</div>
+			<p class={settingDescriptionClass}>
+				{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.description')}
+			</p>
+		</div>
+	{/if}
 
 	<div>
 		<div class={settingRowClass}>
