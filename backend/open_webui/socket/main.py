@@ -950,8 +950,6 @@ async def ydoc_document_join(sid, data):
         # Join Socket.IO room
         await sio.enter_room(sid, f'doc_{document_id}')
 
-        active_session_ids = get_session_ids_from_room(f'doc_{document_id}')
-
         # Get the Yjs document state
         ydoc = Y.Doc()
         updates = await YDOC_MANAGER.get_updates(document_id)
@@ -966,7 +964,6 @@ async def ydoc_document_join(sid, data):
                 'document_id': document_id,
                 'state': list(state_update),  # Convert bytes to list for JSON
                 'content': note.data.get('content') if document_id.startswith('note:') and note.data else None,
-                'sessions': active_session_ids,
             },
             room=sid,
         )
@@ -1102,6 +1099,16 @@ async def yjs_document_update(sid, data):
 
         update = data.get('update')  # List of bytes from frontend
 
+        # The document lock makes initialization first-write-wins across workers.
+        # Return the stored state so losing clients never apply their own seed.
+        if data.get('initialize'):
+            updates = await YDOC_MANAGER.get_updates(document_id)
+            if updates:
+                ydoc = Y.Doc()
+                for stored_update in updates:
+                    ydoc.apply_update(bytes(stored_update))
+                return list(ydoc.get_update())
+
         if update:
             user_id = data.get('user_id', sid)
 
@@ -1124,6 +1131,9 @@ async def yjs_document_update(sid, data):
                 )
             else:
                 log.warning(f'Update for document {document_id} is invalid or over the size limit. Rejecting update.')
+
+            if data.get('initialize'):
+                return update if stored else None
 
         async def debounced_save():
             await asyncio.sleep(0.5)
