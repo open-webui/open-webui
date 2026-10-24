@@ -69,7 +69,7 @@ lxml==6.1.1
 validators==0.35.0
 psutil==7.2.2
 
-pillow==12.3.0
+pillow==13.0.0
 rank-bm25==0.2.2
 
 black==26.5.1
