@@ -643,9 +643,9 @@
 												</button>
 											</SkillMenu>
 
-											<button
+											<div
 												class="flex h-6 items-center"
-												type="button"
+												role="presentation"
 												on:click={(e) => {
 													e.stopPropagation();
 													e.preventDefault();
@@ -656,13 +656,14 @@
 												>
 													<Switch
 														bind:state={skill.is_active}
+														ariaLabel={$i18n.t('Enabled')}
 														on:change={async () => {
 															await toggleSkillById(localStorage.token, skill.id);
 															_skills.set(await getSkills(localStorage.token));
 														}}
 													/>
 												</Tooltip>
-											</button>
+											</div>
 										</div>
 									{/if}
 								</div>
