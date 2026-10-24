@@ -23,7 +23,7 @@
 		latest: ''
 	};
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white inline-flex items-center min-h-[24px] px-1';
 
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
@@ -74,6 +74,7 @@
 								<span>{$i18n.t('Could not check for updates')}</span>
 							{:else}
 								<a
+									class="inline-flex items-center min-h-[24px] px-1"
 									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
 									target="_blank"
 								>
@@ -135,17 +136,17 @@
 			{:else}
 				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-600">
 					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
+						class="hover:text-gray-700 dark:hover:text-gray-400 inline-flex items-center min-h-[24px] px-1"
 						href="https://discord.gg/5rJgQTnV4s"
 						target="_blank">Discord</a
 					>
 					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
+						class="hover:text-gray-700 dark:hover:text-gray-400 inline-flex items-center min-h-[24px] px-1"
 						href="https://twitter.com/OpenWebUI"
 						target="_blank">X</a
 					>
 					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
+						class="hover:text-gray-700 dark:hover:text-gray-400 inline-flex items-center min-h-[24px] px-1"
 						href="https://github.com/open-webui/open-webui"
 						target="_blank">GitHub</a
 					>
@@ -154,10 +155,10 @@
 
 			<div class="text-xs text-gray-400 dark:text-gray-500">
 				{$i18n.t('Emoji graphics provided by')}
-				<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, {$i18n.t(
+				<a href="https://github.com/jdecked/twemoji" target="_blank" class="inline-flex items-center min-h-[24px] px-1">Twemoji</a>, {$i18n.t(
 					'licensed under'
 				)}
-				<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
+				<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" class="inline-flex items-center min-h-[24px] px-1">CC-BY 4.0</a>.
 			</div>
 
 			<div class="text-xs text-gray-400 dark:text-gray-500">
@@ -166,15 +167,15 @@
 				https://docs.openwebui.com/license. -->
 				{$i18n.t('Copyright (c)')}
 				{new Date().getFullYear()}
-				<a href="https://openwebui.com" target="_blank" class="underline">Open WebUI Inc.</a>
+				<a href="https://openwebui.com" target="_blank" class="underline inline-flex items-center min-h-[24px] px-1">Open WebUI Inc.</a>
 				<a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
-					>{$i18n.t('All rights reserved.')}</a
+					class="inline-flex items-center min-h-[24px] px-1">{$i18n.t('All rights reserved.')}</a
 				>
 			</div>
 
 			<div class="text-xs text-gray-400 dark:text-gray-500">
 				{$i18n.t('Created by')}
-				<a class="text-gray-500 dark:text-gray-400" href="https://github.com/tjbck" target="_blank"
+				<a class="text-gray-500 dark:text-gray-400 inline-flex items-center min-h-[24px] px-1" href="https://github.com/tjbck" target="_blank"
 					>Tim J. Baek</a
 				>
 			</div>
