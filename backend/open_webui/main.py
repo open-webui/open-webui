@@ -2360,6 +2360,7 @@ async def get_app_config(request: Request):
         'google_drive.enable',
         'onedrive.enable',
         'memories.enable',
+        'subagents.enable',
         'ui.default_models',
         'ui.default_pinned_models',
         'ui.default_interface_settings',
@@ -2463,6 +2464,7 @@ async def get_app_config(request: Request):
                     'enable_google_drive_integration': config.get('google_drive.enable'),
                     'enable_onedrive_integration': config.get('onedrive.enable'),
                     'enable_memories': config.get('memories.enable'),
+                    'enable_subagents': config.get('subagents.enable'),
                     **(
                         {
                             'enable_onedrive_personal': ENABLE_ONEDRIVE_PERSONAL,
