@@ -65,6 +65,7 @@
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
 	import { getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
+	import { isSavedChatId } from '$lib/utils/chatId';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getChatById } from '$lib/apis/chats';
@@ -161,7 +162,6 @@
 
 	export let autoScroll = false;
 	export let generating = false;
-	export let uploadPending = false;
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
@@ -258,7 +258,7 @@
 	$: chatInputDraft = {
 		prompt,
 		files: files
-			.filter((file) => file.type !== 'image')
+			.filter((file) => file.type !== 'image' && !(file.file instanceof File))
 			.map((file) => {
 				return {
 					...file,
@@ -980,6 +980,67 @@
 		);
 	};
 
+	const uploadTerminalFile = async (fileItem, sessionId: string | null) => {
+		fileItem.status = 'uploading';
+		fileItem.error = '';
+		files = files;
+		try {
+			const terminal = getFilesystemUploadTerminal(fileItem.terminal_id);
+			if (!terminal) throw new Error('The attached file’s terminal is unavailable.');
+			if (fileItem.session_id && fileItem.session_id !== sessionId)
+				throw new Error('Attached files must belong to this chat.');
+			if (terminal.contexts?.chat?.context_id === 'chat_id' && !isSavedChatId(sessionId))
+				throw new Error('A saved chat is required for this terminal');
+
+			const cwd =
+				(terminalContext?.terminalId === fileItem.terminal_id
+					? terminalContext?.currentDirectory
+					: null) || (await getCwd(terminal.url, terminal.key, sessionId || undefined))?.cwd;
+			if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
+			const uploadedFile = await uploadNewFileToTerminal(
+				terminal.url,
+				terminal.key,
+				cwd,
+				fileItem.file,
+				sessionId || undefined
+			);
+			if (!uploadedFile) throw new Error($i18n.t('Failed to upload file.'));
+
+			fileItem.status = 'uploaded';
+			fileItem.session_id = sessionId;
+			fileItem.name = uploadedFile.path.split('/').pop() || fileItem.name;
+			fileItem.id = uploadedFile.path;
+			fileItem.path = uploadedFile.path;
+			fileItem.url = uploadedFile.path;
+			fileItem.size = uploadedFile.size ?? fileItem.size;
+			fileItem.file = uploadedFile;
+			showFileNavDir.set(uploadedFile.path);
+		} catch (error) {
+			fileItem.status = 'error';
+			fileItem.error = `${error}`;
+			toast.error(fileItem.error);
+			return false;
+		} finally {
+			files = files;
+		}
+		return true;
+	};
+
+	export const uploadPendingFiles = async (sessionId: string) => {
+		if (!sessionId) return false;
+		for (const fileItem of files.filter(
+			(item) => item.status === 'pending' && item.file instanceof File
+		)) {
+			if (chatId !== sessionId) return false;
+			if (!(await uploadTerminalFile(fileItem, sessionId))) {
+				fileItem.status = 'pending';
+				files = files;
+				return false;
+			}
+		}
+		return !files.some((item) => item.status === 'pending' && item.file instanceof File);
+	};
+
 	const uploadFileHandler = async (file, process = true, itemData = {}) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
@@ -1019,54 +1080,20 @@
 		files = [...files, fileItem];
 
 		if (filesystemUploadTerminal) {
+			fileItem.type = 'filesystem';
+			fileItem.file = file;
 			fileItem.terminal_id = $selectedTerminalId;
 			fileItem.session_id = chatId || null;
-			try {
-				const cwd =
-					(terminalContext?.terminalId === $selectedTerminalId
-						? terminalContext?.currentDirectory
-						: null) ||
-					(
-						await getCwd(
-							filesystemUploadTerminal.url,
-							filesystemUploadTerminal.key,
-							fileItem.session_id || undefined
-						)
-					)?.cwd;
-				if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
-				const uploadedFile = await uploadNewFileToTerminal(
-					filesystemUploadTerminal.url,
-					filesystemUploadTerminal.key,
-					cwd,
-					file,
-					fileItem.session_id || undefined
-				);
-
-				if (uploadedFile) {
-					fileItem.type = 'filesystem';
-					fileItem.status = 'uploaded';
-					fileItem.name = uploadedFile.path.split('/').pop() || file.name;
-					fileItem.id = uploadedFile.path;
-					fileItem.path = uploadedFile.path;
-					fileItem.url = uploadedFile.path;
-					fileItem.size = uploadedFile.size ?? file.size;
-					fileItem.file = uploadedFile;
-					files = files;
-					showFileNavDir.set(uploadedFile.path);
-				} else {
-					fileItem.status = 'error';
-					fileItem.error = $i18n.t('Failed to upload file.');
-					toast.error(fileItem.error);
-					files = files.filter((item) => item?.itemId !== tempItemId);
-				}
-			} catch (e) {
-				fileItem.status = 'error';
-				fileItem.error = `${e}`;
-				toast.error(`${e}`);
-				files = files.filter((item) => item?.itemId !== tempItemId);
-			} finally {
-				onUpdate({ file: fileItem });
+			if (!chatId && filesystemUploadTerminal.contexts?.chat?.context_id === 'chat_id') {
+				fileItem.status = 'pending';
+				files = files;
+				return;
 			}
+
+			if (!(await uploadTerminalFile(fileItem, fileItem.session_id))) {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
+			onUpdate({ file: fileItem });
 			return;
 		}
 
@@ -2883,38 +2910,28 @@
 											</div>
 										{:else}
 											<div class=" flex items-center">
-												<Tooltip
-													content={uploadPending
-														? $i18n.t('Waiting for upload...')
-														: $i18n.t('Send message')}
-												>
+												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
-														aria-label={uploadPending
-															? $i18n.t('Waiting for upload...')
-															: $i18n.t('Send message')}
-														class="{!(prompt === '' && files.length === 0) || uploadPending
+														aria-label={$i18n.t('Send message')}
+														class="{!(prompt === '' && files.length === 0)
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
 														type="submit"
-														disabled={(prompt === '' && files.length === 0) || uploadPending}
+														disabled={prompt === '' && files.length === 0}
 													>
-														{#if uploadPending}
-															<Spinner className="size-5" />
-														{:else}
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 16 16"
-																fill="currentColor"
-																class="size-5"
-															>
-																<path
-																	fill-rule="evenodd"
-																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-																	clip-rule="evenodd"
-																/>
-															</svg>
-														{/if}
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="size-5"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
 													</button>
 												</Tooltip>
 											</div>
