@@ -259,3 +259,11 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	:global(html.high-contrast) a[aria-current='page'] {
+		text-decoration-line: underline;
+		text-decoration-thickness: 2px;
+		text-underline-offset: 3px;
+	}
+</style>
