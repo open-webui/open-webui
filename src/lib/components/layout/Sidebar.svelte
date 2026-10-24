@@ -1921,7 +1921,6 @@
 								<button
 									type="button"
 									class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-									aria-label={$i18n.t('User menu')}
 								>
 									<div class=" self-center mr-3 relative flex-shrink-0">
 										<img
