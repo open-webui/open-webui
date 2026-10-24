@@ -607,22 +607,23 @@
 										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-y-0.5 flex flex-col"
 									>
 										{#each notesList as note, idx (note.id)}
-											<button
-												type="button"
-												aria-label={$i18n.t('Open note')}
+											<div
 												class="group flex min-h-8 w-full items-center gap-2 rounded-xl px-2 py-[0.375rem] text-left transition hover:bg-gray-50 focus-within:bg-gray-50 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
-												on:click={() => {
+												role="presentation"
+												on:click={(e) => {
+													if (e.target instanceof Element && e.target.closest('a')) return;
 													goto(`/notes/${note.id}`);
 												}}
 											>
 												<div class="flex min-w-0 flex-1 items-center gap-2">
 													<Tooltip content={note.title} className="min-w-0" placement="top-start">
-														<div
+														<a
+															href={`/notes/${note.id}`}
 															dir="auto"
-															class="h-[1.25rem] truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+															class="focus-ring block h-[1.25rem] truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
 														>
 															{note.title}
-														</div>
+														</a>
 													</Tooltip>
 
 													<Tooltip
@@ -734,7 +735,7 @@
 														</NoteMenu>
 													{/if}
 												</div>
-											</button>
+											</div>
 										{/each}
 									</div>
 								{:else if displayOption === 'grid'}

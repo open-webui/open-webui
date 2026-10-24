@@ -12,6 +12,35 @@
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
+	// Only these prompt-defined attributes may reach DOM inputs.
+	const ALLOWED_INPUT_ATTRIBUTES = new Set([
+		'aria-describedby',
+		'aria-description',
+		'aria-label',
+		'aria-labelledby',
+		'autocapitalize',
+		'autocomplete',
+		'autocorrect',
+		'dir',
+		'disabled',
+		'enterkeyhint',
+		'inputmode',
+		'lang',
+		'max',
+		'maxlength',
+		'min',
+		'minlength',
+		'multiple',
+		'pattern',
+		'placeholder',
+		'readonly',
+		'required',
+		'size',
+		'spellcheck',
+		'step',
+		'title'
+	]);
+
 	export let show = false;
 	export let variables = {};
 	export let title: string | undefined = undefined;
@@ -106,7 +135,11 @@
 						{#if !loading}
 							<div class="flex flex-col gap-1">
 								{#each Object.keys(variables) as variable, idx}
-									{@const { type, ...variableAttributes } = variables[variable] ?? {}}
+									{@const variableAttributes = Object.fromEntries(
+										Object.entries(variables[variable] ?? {}).filter(([name]) =>
+											ALLOWED_INPUT_ATTRIBUTES.has(name)
+										)
+									)}
 
 									<div class=" py-0.5 w-full justify-between">
 										<div class="flex w-full justify-between mb-1.5">

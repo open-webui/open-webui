@@ -443,18 +443,10 @@
 							{@const metaPreview = getKnowledgeMetaPreview(item)}
 							<div
 								class="group flex min-h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left"
-								role="button"
-								tabindex="0"
+								role="presentation"
 								on:click={(e) => {
 									if (shouldIgnoreRowClick(e.target)) return;
 									openKnowledge(item);
-								}}
-								on:keydown={(e) => {
-									if (e.currentTarget !== e.target) return;
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault();
-										openKnowledge(item);
-									}
 								}}
 							>
 								<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
@@ -466,11 +458,18 @@
 													className="min-w-0"
 													placement="top-start"
 												>
-													<div
-														class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
-													>
-														{item.name}
-													</div>
+													{#if !item?.meta?.document}
+														<a
+															href={`/workspace/knowledge/${item.id}`}
+															class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+															>{item.name}</a
+														>
+													{:else}
+														<span
+															class="block truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+															>{item.name}</span
+														>
+													{/if}
 												</Tooltip>
 
 												{#if item?.meta?.source === 'external'}

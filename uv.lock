@@ -2924,6 +2924,7 @@ all = [
     { name = "pgvector" },
     { name = "pinecone" },
     { name = "playwright" },
+    { name = "preshed" },
     { name = "psycopg2-binary" },
     { name = "pymilvus" },
     { name = "qdrant-client" },
@@ -2938,6 +2939,7 @@ postgres = [
     { name = "psycopg2-binary" },
 ]
 unstructured = [
+    { name = "preshed" },
     { name = "unstructured" },
 ]
 
@@ -3013,6 +3015,8 @@ requires-dist = [
     { name = "pillow", specifier = "==13.0.0" },
     { name = "pinecone", marker = "extra == 'all'", specifier = "==6.0.2" },
     { name = "playwright", marker = "extra == 'all'", specifier = "==1.60.0" },
+    { name = "preshed", marker = "extra == 'all'", specifier = "==3.0.13" },
+    { name = "preshed", marker = "extra == 'unstructured'", specifier = "==3.0.13" },
     { name = "psutil", specifier = "==7.2.2" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.4" },
     { name = "psycopg2-binary", marker = "extra == 'all'", specifier = "==2.9.12" },

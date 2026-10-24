@@ -350,6 +350,7 @@
 		<DropdownMenu className="select-none min-w-[12.5rem] transition">
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
 				<button
+					role="menuitem"
 					draggable="false"
 					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 					on:click={() => {
@@ -364,6 +365,7 @@
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
 				<DropdownSub contentClass="select-none z-50">
 					<button
+						role="menuitem"
 						slot="trigger"
 						draggable="false"
 						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
@@ -373,6 +375,7 @@
 					</button>
 
 					<button
+						role="menuitem"
 						draggable="false"
 						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 						on:click={() => {
@@ -383,6 +386,7 @@
 					</button>
 
 					<button
+						role="menuitem"
 						draggable="false"
 						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 						on:click={() => {
@@ -393,6 +397,7 @@
 					</button>
 
 					<button
+						role="menuitem"
 						draggable="false"
 						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 select-none w-full"
 						on:click={() => {
@@ -405,6 +410,7 @@
 			{/if}
 
 			<button
+				role="menuitem"
 				draggable="false"
 				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 				on:click={() => {
@@ -416,6 +422,7 @@
 			</button>
 
 			<button
+				role="menuitem"
 				draggable="false"
 				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 				on:click={() => {
@@ -429,6 +436,7 @@
 			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
 			<button
+				role="menuitem"
 				draggable="false"
 				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 				on:click={() => {
@@ -446,6 +454,7 @@
 
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true)}
 				<button
+					role="menuitem"
 					draggable="false"
 					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 					on:click={() => {
@@ -460,6 +469,7 @@
 			{#if chatId && $folders.length > 0}
 				<DropdownSub contentClass="select-none z-50 max-h-52 overflow-y-auto scrollbar-hidden">
 					<button
+						role="menuitem"
 						slot="trigger"
 						draggable="false"
 						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 select-none w-full"
@@ -470,6 +480,7 @@
 
 					{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
 						<button
+							role="menuitem"
 							draggable="false"
 							class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 overflow-hidden w-full"
 							on:click={() => {
@@ -488,6 +499,7 @@
 
 			{#if !$hiddenInterfaceElements.includes('chat_menu.archive')}
 				<button
+					role="menuitem"
 					draggable="false"
 					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 					on:click={() => {
@@ -503,6 +515,7 @@
 
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
 				<button
+					role="menuitem"
 					draggable="false"
 					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 					on:click={() => {

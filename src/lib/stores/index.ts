@@ -394,6 +394,12 @@ type Config = {
 		enable_tool_permissions?: boolean;
 		enable_community_sharing: boolean;
 		enable_memories: boolean;
+		enable_notes?: boolean;
+		enable_channels?: boolean;
+		enable_user_webhooks?: boolean;
+		enable_automations?: boolean;
+		enable_calendar?: boolean;
+		enable_subagents?: boolean;
 		enable_plugins?: boolean;
 		enable_tools?: boolean;
 		enable_functions?: boolean;
