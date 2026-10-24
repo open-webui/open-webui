@@ -1456,6 +1456,14 @@
 			'high-contrast',
 			$settings?.highContrastMode ?? false
 		);
+
+		const viewport = document.querySelector('meta[name="viewport"]');
+		if (viewport) {
+			viewport.content = viewport.content.replace(
+				/maximum-scale=[\d.]+/,
+				`maximum-scale=${$settings?.highContrastMode ? 5 : 1}`
+			);
+		}
 	}
 
 	onDestroy(() => {
