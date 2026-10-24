@@ -141,6 +141,7 @@ mariadb = [
 ]
 unstructured = [
     "unstructured==0.22.31",
+    "preshed==3.0.13", # keep pinned: transitive via unstructured -> spaCy; 3.0.14 breaks HTML extraction (web loader)
 ]
 
 all = [
@@ -159,6 +160,7 @@ all = [
 
     "azure-search-documents==12.0.0",
     "unstructured==0.22.31",
+    "preshed==3.0.13", # keep pinned: transitive via unstructured -> spaCy; 3.0.14 breaks HTML extraction (web loader)
 ]
 
 [project.scripts]
