@@ -811,7 +811,8 @@
 		| 'web_search'
 		| 'image_generation'
 		| 'code_interpreter'
-		| 'terminal';
+		| 'terminal'
+		| 'builtin_tools';
 	type ModelCapabilitiesById = Record<string, Partial<Record<ModelCapability, boolean>>>;
 
 	let modelCapabilitiesById: ModelCapabilitiesById = {};
@@ -873,6 +874,13 @@
 				(($terminalServers ?? []).some((t) => !t.id) ||
 					($settings?.terminalServers ?? []).some((s) => s.url))));
 
+	let canCreateSkill: boolean = false;
+	$: canCreateSkill = selectedModelIds.every(
+		(id) =>
+			(modelCapabilitiesById[id]?.builtin_tools ?? true) &&
+			($models.find((model) => model.id === id)?.info?.meta?.builtinTools?.skills ?? true)
+	);
+
 	let toggleFilters = [];
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
 		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
@@ -904,6 +912,14 @@
 		selectedModelIds.length === codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
+	let showCallButton = false;
+	$: showCallButton =
+		($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true)) &&
+		(callActive ||
+			$config?.audio?.realtime?.enabled ||
+			($config?.audio?.stt?.engine !== 'web' &&
+				($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))));
 
 	// Disable code interpreter when terminal is active (mutually exclusive)
 	$: if ($selectedTerminalId && codeInterpreterEnabled) {
@@ -1571,6 +1587,7 @@
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
 					hasChatContent: hasChatContent,
+					canCreateSkill: () => canCreateSkill,
 					temporaryEnabled: () => $temporaryChatEnabled === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
@@ -2829,7 +2846,7 @@
 											{/if}
 										{/if}
 
-										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && showCallButton}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip
@@ -2857,13 +2874,6 @@
 																return;
 															}
 
-															if ($config.audio.stt.engine === 'web') {
-																toast.error(
-																	$i18n.t('Call feature is not supported when using Web STT engine')
-																);
-
-																return;
-															}
 															// check if user has access to getUserMedia
 															try {
 																let stream = await navigator.mediaDevices.getUserMedia({

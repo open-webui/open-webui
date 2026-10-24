@@ -170,9 +170,10 @@ class MCPClient:
 
         result_dict = result.model_dump(mode='json', by_alias=True)
         result_content = result_dict['content']
+        texts = [item['text'] for item in result_content if item['type'] == 'text']
 
         if result.is_error:
-            raise Exception(result_content)
+            raise Exception('\n'.join(texts) or 'MCP tool call returned an error.')
 
         structured_content = result_dict.get('structuredContent')
         if structured_content is None:
@@ -180,7 +181,6 @@ class MCPClient:
 
         # Compare serialized JSON: Python equality treats True and 1 as the same value.
         structured_json = JSONCodec.dumps(structured_content, sort_keys=True)
-        texts = [item['text'] for item in result_content if item['type'] == 'text']
         text_jsons = []
         for text in texts:
             try:

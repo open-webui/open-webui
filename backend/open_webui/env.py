@@ -859,6 +859,16 @@ MINERU_MAX_MARKDOWN_BYTES = (
     int(os.getenv('MINERU_MAX_MARKDOWN_BYTES')) if os.getenv('MINERU_MAX_MARKDOWN_BYTES') else None
 )
 
+rapidocr_params = os.getenv('RAPIDOCR_PARAMS', '{"EngineConfig.onnxruntime.intra_op_num_threads": 1}')
+try:
+    rapidocr_params = json.loads(rapidocr_params)
+except json.JSONDecodeError:
+    rapidocr_params = {}
+if not isinstance(rapidocr_params, dict):
+    rapidocr_params = {}
+
+RAPIDOCR_PARAMS = rapidocr_params
+
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
 # the upstream provider handles these steps or when ffmpeg is unavailable.

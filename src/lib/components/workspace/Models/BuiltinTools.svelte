@@ -80,11 +80,17 @@
 		}
 	};
 
+	// with File Context on, attached files go into the prompt instead
 	$: allTools = (Object.keys(toolLabels ?? {}) as Array<keyof typeof toolLabels>).filter(
-		(key) => !$hiddenInterfaceElements.includes(`model_editor.builtin_tool.${key}`)
+		(key) =>
+			!$hiddenInterfaceElements.includes(`model_editor.builtin_tool.${key}`) &&
+			(key === 'files'
+				? (capabilities.file_upload ?? true) && !(capabilities.file_context ?? true)
+				: (capabilities[key] ?? true))
 	);
 
 	export let builtinTools: Record<string, boolean> = {};
+	export let capabilities: Record<string, boolean> = {};
 	export let disabled = false;
 	$: enabledTools = allTools.filter((key) => builtinTools[key] !== false);
 
