@@ -259,6 +259,7 @@
 
 							<Tooltip content={$i18n.t('settings.admin.connections.addConnection.label')}>
 								<button
+									aria-label={$i18n.t('settings.admin.connections.addConnection.label')}
 									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
 									on:click={() => {
 										showAddOpenAIConnectionModal = true;
@@ -318,6 +319,7 @@
 
 							<Tooltip content={$i18n.t('settings.admin.connections.addConnection.label')}>
 								<button
+									aria-label={$i18n.t('settings.admin.connections.addConnection.label')}
 									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
 									on:click={() => {
 										showAddOllamaConnectionModal = true;

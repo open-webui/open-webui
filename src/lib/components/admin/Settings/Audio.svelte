@@ -408,8 +408,13 @@
 			<AdminSettingRow
 				label={$i18n.t('settings.admin.audio.speechToTextEngine.label')}
 				description={$i18n.t('settings.admin.audio.speechToTextEngine.description')}
+				let:labelId
 			>
-				<SettingsSelect bind:value={STT_ENGINE} placeholder={$i18n.t('Select an engine')}>
+				<SettingsSelect
+					id={`${labelId}-control`}
+					bind:value={STT_ENGINE}
+					placeholder={$i18n.t('Select an engine')}
+				>
 					<option value="" disabled={$config?.features?.slim === true}
 						>{$i18n.t('Whisper (Local)')}</option
 					>
@@ -456,8 +461,9 @@
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.audio.requestFormat.label')}
 					description={$i18n.t('settings.admin.audio.requestFormat.description')}
+					let:labelId
 				>
-					<SettingsSelect bind:value={STT_OPENAI_API_REQUEST_FORMAT}>
+					<SettingsSelect id={`${labelId}-control`} bind:value={STT_OPENAI_API_REQUEST_FORMAT}>
 						<option value="multipart">{$i18n.t('Multipart Upload')}</option>
 						<option value="json">{$i18n.t('JSON Base64')}</option>
 					</SettingsSelect>
@@ -633,8 +639,10 @@
 			<AdminSettingRow
 				label={$i18n.t('settings.admin.audio.textToSpeechEngine.label')}
 				description={$i18n.t('settings.admin.audio.textToSpeechEngine.description')}
+				let:labelId
 			>
 				<SettingsSelect
+					id={`${labelId}-control`}
 					bind:value={TTS_ENGINE}
 					placeholder={$i18n.t('Select a mode')}
 					on:change={async (e) => {
@@ -745,8 +753,8 @@
 			{/if}
 
 			{#if TTS_ENGINE === ''}
-				<AdminSettingField label={$i18n.t('settings.admin.audio.ttsVoice.label')}>
-					<SettingsSelect bind:value={TTS_VOICE} className="w-full">
+				<AdminSettingField label={$i18n.t('settings.admin.audio.ttsVoice.label')} forId="tts-voice">
+					<SettingsSelect id="tts-voice" bind:value={TTS_VOICE} className="w-full">
 						<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
 						{#each voices as voice}
 							<option

@@ -341,8 +341,10 @@
 						<AdminSettingRow
 							label={$i18n.t('settings.admin.images.imageGenerationEngine.label')}
 							description={$i18n.t('settings.admin.images.imageGenerationEngine.description')}
+							let:labelId
 						>
 							<SettingsSelect
+								id={`${labelId}-control`}
 								bind:value={config.IMAGE_GENERATION_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -739,8 +741,10 @@
 							<AdminSettingRow
 								label={$i18n.t('settings.admin.images.geminiEndpointMethod.label')}
 								description={$i18n.t('settings.admin.images.geminiEndpointMethod.description')}
+								let:labelId
 							>
 								<SettingsSelect
+									id={`${labelId}-control`}
 									bind:value={config.IMAGES_GEMINI_ENDPOINT_METHOD}
 									placeholder={$i18n.t('Select Method')}
 								>
@@ -763,8 +767,10 @@
 						<AdminSettingRow
 							label={$i18n.t('settings.admin.images.imageEditEngine.label')}
 							description={$i18n.t('settings.admin.images.imageEditEngine.description')}
+							let:labelId
 						>
 							<SettingsSelect
+								id={`${labelId}-control`}
 								bind:value={config.IMAGE_EDIT_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
