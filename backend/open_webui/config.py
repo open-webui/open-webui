@@ -2877,6 +2877,8 @@ LDAP_SERVER_PORT = int(os.getenv('LDAP_SERVER_PORT', '389'))
 
 LDAP_ATTRIBUTE_FOR_MAIL = os.getenv('LDAP_ATTRIBUTE_FOR_MAIL', 'mail')
 
+LDAP_MAIL_FALLBACK_DOMAIN = os.getenv('LDAP_MAIL_FALLBACK_DOMAIN', '')
+
 LDAP_ATTRIBUTE_FOR_USERNAME = os.getenv('LDAP_ATTRIBUTE_FOR_USERNAME', 'uid')
 
 LDAP_APP_DN = os.getenv('LDAP_APP_DN', '')
@@ -3319,6 +3321,7 @@ DEFAULT_CONFIG = {
     'ldap.server.host': LDAP_SERVER_HOST,
     'ldap.server.port': LDAP_SERVER_PORT,
     'ldap.server.attribute_for_mail': LDAP_ATTRIBUTE_FOR_MAIL,
+    'ldap.server.mail_fallback_domain': LDAP_MAIL_FALLBACK_DOMAIN,
     'ldap.server.attribute_for_username': LDAP_ATTRIBUTE_FOR_USERNAME,
     'ldap.server.app_dn': LDAP_APP_DN,
     'ldap.server.app_password': LDAP_APP_PASSWORD,
