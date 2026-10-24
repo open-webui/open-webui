@@ -2109,6 +2109,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     if metadata.get('tool_approval_resume') == 'tools' or pending_tool_calls(output):
                         pending_assistant_message = assistant_message
 
+            # Guided regeneration: show the model the reply it is asked to revise.
+            regeneration_message_id = metadata.get('regeneration_message_id')
+            if regeneration_message_id:
+                regenerated_message = await Chats.get_message_by_id_and_message_id(chat_id, regeneration_message_id)
+                if regenerated_message and (regenerated_message.get('content') or regenerated_message.get('output')):
+                    db_messages.append({k: v for k, v in regenerated_message.items() if k in MESSAGE_REPLAY_KEYS})
+
             system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
 
