@@ -25,15 +25,18 @@
 		},
 		web_search: {
 			label: $i18n.t('settings.admin.models.capabilities.webSearch.label'),
-			description: $i18n.t('settings.admin.models.capabilities.webSearch.description')
+			description: $i18n.t('settings.admin.models.capabilities.webSearch.description'),
+			enabled: $config?.features?.enable_web_search
 		},
 		image_generation: {
 			label: $i18n.t('settings.admin.models.capabilities.imageGeneration.label'),
-			description: $i18n.t('settings.admin.models.capabilities.imageGeneration.description')
+			description: $i18n.t('settings.admin.models.capabilities.imageGeneration.description'),
+			enabled: $config?.features?.enable_image_generation
 		},
 		code_interpreter: {
 			label: $i18n.t('settings.admin.models.capabilities.codeInterpreter.label'),
-			description: $i18n.t('settings.admin.models.capabilities.codeInterpreter.description')
+			description: $i18n.t('settings.admin.models.capabilities.codeInterpreter.description'),
+			enabled: $config?.features?.enable_code_interpreter
 		},
 		terminal: {
 			label: $i18n.t('settings.admin.models.capabilities.terminal.label'),
@@ -53,7 +56,8 @@
 		},
 		memory: {
 			label: $i18n.t('settings.admin.models.capabilities.memory.label'),
-			description: $i18n.t('settings.admin.models.capabilities.memory.description')
+			description: $i18n.t('settings.admin.models.capabilities.memory.description'),
+			enabled: $config?.features?.enable_memories
 		},
 		builtin_tools: {
 			label: $i18n.t('settings.admin.models.capabilities.builtinTools.label'),
@@ -73,10 +77,12 @@
 		$config?.features?.enable_terminal_servers || $config?.features?.enable_direct_integrations;
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
 		(key) =>
-			(key !== 'file_context' || capabilities.file_upload) && (key !== 'terminal' || hasTerminal)
+			(key !== 'file_context' || capabilities.file_upload) &&
+			(key !== 'terminal' || hasTerminal) &&
+			(capabilityLabels[key].enabled ?? true)
 	);
 	$: enabledCapabilityIds = visibleCapabilities.filter((key) => capabilities[key]);
-	$: availableFeatures = featureKeys.filter((key) => capabilities[key]);
+	$: availableFeatures = featureKeys.filter((key) => enabledCapabilityIds.includes(key));
 	$: enabledDefaultIds = availableFeatures.filter((key) => defaultFeatureIds.includes(key));
 	const setDefault = (key: string, enabled: boolean) => {
 		defaultFeatureIds = enabled
