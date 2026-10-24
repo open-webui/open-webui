@@ -392,6 +392,7 @@ type Config = {
 		enable_tools?: boolean;
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
+		enable_terminal_servers?: boolean;
 		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_title_generation: boolean;
