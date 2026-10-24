@@ -38,6 +38,7 @@
 >
 	<Tooltip content={$i18n.t('More')}>
 		<button
+			aria-label={$i18n.t('Folder options')}
 			on:click={(e) => {
 				e.stopPropagation();
 				show = !show;
