@@ -14,7 +14,8 @@
 		shortcuts
 	} from '$lib/shortcuts';
 	import type { KeybindingsMap, ShortcutDefinition } from '$lib/shortcuts';
-	import { settings } from '$lib/stores';
+	import { settings, user } from '$lib/stores';
+	import { canManageChats, canUseTemporaryChats } from '$lib/utils/settings-access';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ShortcutItem from '../ShortcutItem.svelte';
 
@@ -44,7 +45,16 @@
 	});
 
 	$: {
-		const allShortcuts = Object.entries(shortcuts).filter(([, shortcut]) => {
+		const allShortcuts = Object.entries(shortcuts).filter(([id, shortcut]) => {
+			if (
+				id === Shortcut.NEW_TEMPORARY_CHAT &&
+				!canUseTemporaryChats({ user: $user, config: null })
+			) {
+				return false;
+			}
+			if (id === Shortcut.DELETE_CHAT && !canManageChats({ user: $user, config: null }, 'delete')) {
+				return false;
+			}
 			if (!shortcut.setting) {
 				return true;
 			}
