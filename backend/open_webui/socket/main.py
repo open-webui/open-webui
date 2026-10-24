@@ -54,6 +54,7 @@ from open_webui.tasks import (
     stop_item_tasks,
 )
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
@@ -1096,6 +1097,13 @@ async def yjs_document_update(sid, data):
             ):
                 log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
                 return
+
+            snapshot = data.get('data')
+            if isinstance(snapshot, dict) and 'files' in snapshot:
+                editor = await Users.get_user_by_id(user['id'])
+                if not editor or not await has_access_to_note_files(note, snapshot['files'], editor):
+                    await sio.emit('error', {'message': 'Cannot attach files you cannot access'}, room=sid)
+                    return
 
         update = data.get('update')  # List of bytes from frontend
 

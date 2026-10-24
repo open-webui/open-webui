@@ -30,6 +30,7 @@ from open_webui.utils.access_control import (
     has_public_read_access_grant,
     has_public_write_access_grant,
 )
+from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -530,6 +531,13 @@ async def update_note_by_id(
             permission='write',
             db=db,
         )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    if (
+        form_data.data
+        and 'files' in form_data.data
+        and not await has_access_to_note_files(note, form_data.data['files'], user, db=db)
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
