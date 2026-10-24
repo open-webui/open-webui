@@ -913,6 +913,14 @@
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
+	let showCallButton = false;
+	$: showCallButton =
+		($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true)) &&
+		(callActive ||
+			$config?.audio?.realtime?.enabled ||
+			($config?.audio?.stt?.engine !== 'web' &&
+				($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))));
+
 	// Disable code interpreter when terminal is active (mutually exclusive)
 	$: if ($selectedTerminalId && codeInterpreterEnabled) {
 		codeInterpreterEnabled = false;
@@ -2838,7 +2846,7 @@
 											{/if}
 										{/if}
 
-										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && showCallButton}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip
@@ -2866,13 +2874,6 @@
 																return;
 															}
 
-															if ($config.audio.stt.engine === 'web') {
-																toast.error(
-																	$i18n.t('Call feature is not supported when using Web STT engine')
-																);
-
-																return;
-															}
 															// check if user has access to getUserMedia
 															try {
 																let stream = await navigator.mediaDevices.getUserMedia({

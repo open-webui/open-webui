@@ -2603,6 +2603,14 @@
 			return;
 		}
 
+		if (
+			$user?.role !== 'admin' &&
+			!($user?.permissions?.chat?.stt ?? true) &&
+			!$config?.audio?.realtime?.enabled
+		) {
+			return;
+		}
+
 		if (selectedModels.length > 1) {
 			toast.error($i18n.t('Select only one model to call'));
 			return;
