@@ -5,7 +5,7 @@
 	import { getVersionUpdates } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { WEBUI_BUILD_CHANNEL, WEBUI_VERSION } from '$lib/constants';
-	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
+	import { WEBUI_NAME, config, settings, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 
@@ -66,7 +66,11 @@
 		>
 			<UserSettingRow description={$i18n.t('settings.personal.about.seeWhatSNew.description')}>
 				<div slot="label" class="flex flex-col text-xs text-gray-600 dark:text-gray-400">
-					<div class="flex flex-wrap gap-1">
+					<div
+						class="flex flex-wrap {($settings?.highContrastMode ?? false)
+							? 'items-center'
+							: ''} gap-1"
+					>
 						<BuildVersion />
 
 						{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
@@ -74,6 +78,9 @@
 								<span>{$i18n.t('Could not check for updates')}</span>
 							{:else}
 								<a
+									class={($settings?.highContrastMode ?? false)
+										? 'inline-flex min-h-6 items-center'
+										: ''}
 									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
 									target="_blank"
 								>
@@ -88,7 +95,9 @@
 					</div>
 
 					<button
-						class="self-start {actionButtonClass}"
+						class="self-start {($settings?.highContrastMode ?? false)
+							? 'inline-flex min-h-6 items-center'
+							: ''} {actionButtonClass}"
 						on:click={() => {
 							showChangelog.set(true);
 						}}
