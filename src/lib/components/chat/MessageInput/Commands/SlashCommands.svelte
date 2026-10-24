@@ -522,6 +522,7 @@
 		{@const itemIdx = commandItems.length + filteredPrompts.length + skillIdx}
 		<Tooltip
 			content={getSkillTooltipContent(skill)}
+			allowHTML={true}
 			placement="top-start"
 			tippyOptions={{ maxWidth: '20rem' }}
 		>

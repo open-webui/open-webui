@@ -273,8 +273,12 @@ class MinerULoader:
         """
         Send one request to the MinerU V1 API and raise an HTTPException on failure.
         """
+        # A 4.x server started with --api-key rejects every V1 request without it
+        headers = {'Authorization': f'Bearer {self.api_key}'} if self.api_key else None
         try:
-            response = requests.request(method, f'{self.api_url}{path}', timeout=self.timeout, **kwargs)
+            response = requests.request(
+                method, f'{self.api_url}{path}', headers=headers, timeout=self.timeout, **kwargs
+            )
             response.raise_for_status()
         except requests.Timeout:
             raise HTTPException(

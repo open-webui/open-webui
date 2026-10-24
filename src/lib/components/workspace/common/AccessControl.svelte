@@ -17,6 +17,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import AddAccessModal from './AddAccessModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 
 	type AccessGrant = {
@@ -647,16 +648,14 @@
 						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50/50 dark:border-gray-850/50 pb-1.5 last:border-0"
 					>
 						<div class="flex items-center gap-2 min-w-0 flex-1">
-							<img
-								class="rounded-full size-5 object-cover"
-								src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-								alt={user.name ?? user.id}
-							/>
-							<div class="min-w-0 flex-1">
-								<Tooltip content={user.email} placement="top-start">
-									<div class="truncate text-sm">{user.name ?? user.id}</div>
-								</Tooltip>
-							</div>
+							<ProfilePreview {user}>
+								<img
+									class="rounded-full size-5 object-cover shrink-0"
+									src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+									alt=""
+								/>
+							</ProfilePreview>
+							<span class="min-w-0 truncate text-sm">{user.name ?? user.id}</span>
 						</div>
 
 						<div class="flex justify-end items-center gap-1.5 shrink-0">

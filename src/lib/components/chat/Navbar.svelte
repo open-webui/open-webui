@@ -4,6 +4,7 @@
 
 	import {
 		WEBUI_NAME,
+		artifactContents,
 		banners,
 		chatId,
 		config,
@@ -121,13 +122,13 @@
 				>
 					{#if chat?.id}
 						<div class="flex max-w-full min-w-0 items-center gap-2 mr-2">
-							<div
+							<h1
 								class="min-w-0 truncate py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
 							>
 								{title || chat?.chat?.title || $i18n.t('New Chat')}
-							</div>
+							</h1>
 
-							{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+							{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled) && (scrollToTop || ($artifactContents ?? []).length > 0 || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
 								<Menu
 									{chat}
 									{shareEnabled}
@@ -168,6 +169,7 @@
 							{/if}
 						</div>
 					{:else}
+						<h1 class="sr-only">{$i18n.t('New Chat')}</h1>
 						<div class="pointer-events-none invisible flex max-w-full min-w-0 items-center gap-2">
 							<div
 								class="min-w-0 truncate py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"

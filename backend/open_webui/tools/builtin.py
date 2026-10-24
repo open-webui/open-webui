@@ -539,7 +539,9 @@ async def ask_user(
     :return: JSON with status and answers keyed by question id
     """
     try:
-        if not isinstance(questions, list) or not 1 <= len(questions) <= 3:
+        if not isinstance(questions, list):
+            raise ValueError('ask_user questions must be an array of question objects.')
+        if not 1 <= len(questions) <= 3:
             raise ValueError('ask_user requires 1-3 questions.')
 
         normalized_questions = []
@@ -1348,21 +1350,26 @@ async def replace_note_content(
     __user__: dict = None,
 ) -> str:
     """
-    Update an existing note by replacing the whole markdown content or applying range operations.
+    Update an existing note by replacing the whole markdown content, exact text, or character ranges.
 
-    Prefer "replace_range" when only part of the note changes.
+    Prefer "replace_text" when only part of the note changes. Supply either find or start/end, not both.
+    find is non-empty, literal, and case-sensitive.
+    Text matches are non-overlapping. Multiple matches require a 0-indexed occurrence or replace_all=true;
+    otherwise nothing is changed and match offsets and context are returned.
     A "replace" operation must be the only operation in the request.
     start and end are 0-indexed character offsets into the markdown content from view_note.
     end is exclusive.
     Offsets never shift as operations are applied.
     Ranges must not overlap.
     expected is optional. When set, the request is rejected if the range's current text does not match it.
+    "replace_range" is a deprecated alias for the start/end form of "replace_text".
 
     :param note_id: The ID of the note to update
     :param content: The new markdown content for a whole-note update
     :param operations: Optional note operations:
     - {"action": "replace", "content": "..."}
-    - {"action": "replace_range", "start": 0, "end": 10, "content": "...", "expected": "..."}
+    - {"action": "replace_text", "start": 0, "end": 10, "content": "...", "expected": "..."}
+    - {"action": "replace_text", "find": "old text", "content": "new text", "occurrence": 0, "replace_all": false}
     :param title: Optional new title for the note
     :return: JSON with success status and updated note info
     """
@@ -1386,11 +1393,11 @@ async def replace_note_content(
 
         current_content = ((note.data or {}).get('content') or {}).get('md') or ''
         applied_operation_count = 0
+        range_operations = []
         if operations is not None:
             if not isinstance(operations, list) or len(operations) == 0:
                 return JSONCodec.dumps({'error': 'operations must be a non-empty list', 'code': 'invalid_operations'})
 
-            range_operations = []
             for idx, operation in enumerate(operations):
                 if not isinstance(operation, dict):
                     return JSONCodec.dumps(
@@ -1421,10 +1428,77 @@ async def replace_note_content(
                     applied_operation_count = 1
                     break
 
-                if action != 'replace_range':
+                if action not in ('replace_range', 'replace_text'):
                     return JSONCodec.dumps(
                         {'error': 'unknown operation action', 'code': 'invalid_action', 'index': idx, 'action': action}
                     )
+
+                if not isinstance(replacement, str):
+                    return JSONCodec.dumps(
+                        {'error': 'operation content must be a string', 'code': 'invalid_content', 'index': idx}
+                    )
+                if action == 'replace_text' and 'find' in operation:
+                    if 'start' in operation or 'end' in operation:
+                        return JSONCodec.dumps(
+                            {
+                                'error': 'use either find or start/end, not both',
+                                'code': 'invalid_operation',
+                                'index': idx,
+                            }
+                        )
+                    find = operation.get('find')
+                    occurrence = operation.get('occurrence')
+                    replace_all = operation.get('replace_all', False)
+                    if not isinstance(find, str) or not find:
+                        return JSONCodec.dumps(
+                            {'error': 'find must be a non-empty string', 'code': 'invalid_find', 'index': idx}
+                        )
+                    if (
+                        type(replace_all) is not bool
+                        or (occurrence is not None and (type(occurrence) is not int or occurrence < 0))
+                        or (replace_all and occurrence is not None)
+                    ):
+                        return JSONCodec.dumps(
+                            {
+                                'error': 'use a non-negative occurrence or replace_all boolean',
+                                'code': 'invalid_occurrence',
+                                'index': idx,
+                            }
+                        )
+
+                    matches = []
+                    start = current_content.find(find)
+                    while start != -1:
+                        end = start + len(find)
+                        matches.append({'start': start, 'end': end})
+                        start = current_content.find(find, end)
+
+                    if not matches:
+                        return JSONCodec.dumps({'error': 'Text not found', 'code': 'text_not_found', 'index': idx})
+                    if occurrence is not None and occurrence >= len(matches):
+                        return JSONCodec.dumps(
+                            {'error': 'occurrence is out of bounds', 'code': 'invalid_occurrence', 'index': idx}
+                        )
+                    if len(matches) > 1 and occurrence is None and not replace_all:
+                        return JSONCodec.dumps(
+                            {
+                                'error': 'Multiple matches; specify occurrence or replace_all',
+                                'code': 'ambiguous_match',
+                                'index': idx,
+                                'matches': [
+                                    {
+                                        **match,
+                                        'context': current_content[max(0, match['start'] - 50) : match['end'] + 50],
+                                    }
+                                    for match in matches
+                                ],
+                            },
+                            ensure_ascii=False,
+                        )
+                    if occurrence is not None:
+                        matches = [matches[occurrence]]
+                    range_operations.extend({**match, 'content': replacement} for match in matches)
+                    continue
 
                 start = operation.get('start')
                 end = operation.get('end')
@@ -1432,10 +1506,6 @@ async def replace_note_content(
                 if not isinstance(start, int) or not isinstance(end, int):
                     return JSONCodec.dumps(
                         {'error': 'operation start and end must be integers', 'code': 'invalid_range', 'index': idx}
-                    )
-                if not isinstance(replacement, str):
-                    return JSONCodec.dumps(
-                        {'error': 'operation content must be a string', 'code': 'invalid_content', 'index': idx}
                     )
                 if start < 0 or end < start or end > len(current_content):
                     return JSONCodec.dumps(
@@ -1503,6 +1573,7 @@ async def replace_note_content(
                 'title': updated_note.title,
                 'updated_at': updated_note.updated_at,
                 'applied_operation_count': applied_operation_count,
+                'applied_ranges': [{'start': op['start'], 'end': op['end']} for op in range_operations],
             },
             ensure_ascii=False,
         )

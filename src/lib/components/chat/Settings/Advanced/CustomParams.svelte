@@ -8,6 +8,7 @@
 	const i18n = getContext<Writable<I18n>>('i18n');
 	export let compact = false;
 	export let value: Record<string, unknown> = {};
+	export let onChange: (value: Record<string, unknown>) => void = () => {};
 	const id = `custom-params-${uuidv4()}`;
 
 	// Suggestions only; support depends on the provider and model.
@@ -94,6 +95,7 @@
 								value[name] = value[key];
 								delete value[key];
 								value = { ...value };
+								onChange(value);
 							}
 						}}
 					/>
@@ -113,6 +115,7 @@
 						placeholder={compact ? $i18n.t('e.g. 0.7') : $i18n.t('Custom Parameter Value')}
 						value={typeof value[key] === 'object' ? JSON.stringify(value[key]) : value[key]}
 						on:input={(event) => (value = { ...value, [key]: event.currentTarget.value })}
+						on:change={() => onChange(value)}
 					/>
 					{#if options.length}
 						<datalist id={`${id}-values-${index}`}>
@@ -131,6 +134,7 @@
 					on:click={() => {
 						delete value[key];
 						value = { ...value };
+						onChange(value);
 					}}
 				>
 					{#if compact}<XMark className="size-3" />{:else}{$i18n.t('Remove')}{/if}

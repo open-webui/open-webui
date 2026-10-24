@@ -42,7 +42,7 @@
 	}}
 />
 
-<div class="flex w-full gap-2 items-center">
+<div class="group/setting-row flex w-full gap-2 items-center">
 	<Tooltip
 		className="w-full relative"
 		content={$i18n.t(`WebUI will make requests to "{{url}}/chat/completions"`, {
@@ -58,7 +58,9 @@
 		<div class="flex w-full gap-2">
 			<div class="flex-1 relative">
 				<input
-					class=" outline-hidden w-full bg-transparent {pipeline ? 'pr-8' : ''}"
+					class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white outline-hidden w-full bg-transparent {pipeline
+						? 'pr-8'
+						: ''}"
 					placeholder={$i18n.t('API Base URL')}
 					bind:value={url}
 					autocomplete="off"

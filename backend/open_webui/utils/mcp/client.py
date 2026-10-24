@@ -219,6 +219,9 @@ class MCPClient:
 
         # FastMCP wraps scalar/list results while keeping their original text blocks.
         values = structured_content.get('result')
+        # The standalone fastmcp package sends the whole list as one text block.
+        if structured_content.keys() == {'result'} and text_jsons == [JSONCodec.dumps(values, sort_keys=True)]:
+            return result_content
         values = values if isinstance(values, list) else [values]
         if (
             structured_content.keys() == {'result'}

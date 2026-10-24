@@ -1217,12 +1217,6 @@ async def chat_completion(
         if not isinstance(model_controls, dict):
             raise HTTPException(400, 'Model control options must be keyed by model.')
         model_controls = {} if form_data.get('automation_id') else model_controls
-        if any(model_controls.values()) and user.role != 'admin':
-            permissions = await Config.get('user.permissions')
-            for permission in ('chat.controls', 'chat.params'):
-                if not await has_permission(user.id, permission, permissions):
-                    model_controls = {}
-                    break
         if missing_base_model and model_controls.get(model_id):
             raise HTTPException(400, 'Model control options cannot be applied to the fallback model.')
         if model_info_params or request_params:
@@ -1303,6 +1297,8 @@ async def chat_completion(
                 await Config.get('user.permissions'),
             )
         ):
+            tool_servers = None
+        if tool_servers and not await Config.get('direct.integrations.enable', False):
             tool_servers = None
 
         automation_id = form_data.pop('automation_id', None)
@@ -2354,6 +2350,9 @@ async def get_app_config(request: Request):
         'code_interpreter.enable',
         'image_generation.enable',
         'task.autocomplete.enable',
+        'task.title.enable',
+        'task.follow_up.enable',
+        'task.tags.enable',
         'ui.enable_community_sharing',
         'ui.enable_message_rating',
         'ui.enable_user_webhooks',
@@ -2451,6 +2450,9 @@ async def get_app_config(request: Request):
                     'enable_code_interpreter': config.get('code_interpreter.enable'),
                     'enable_image_generation': config.get('image_generation.enable'),
                     'enable_autocomplete_generation': config.get('task.autocomplete.enable'),
+                    'enable_title_generation': config.get('task.title.enable'),
+                    'enable_follow_up_generation': config.get('task.follow_up.enable'),
+                    'enable_tags_generation': config.get('task.tags.enable'),
                     'enable_community_sharing': config.get('ui.enable_community_sharing'),
                     'enable_message_rating': config.get('ui.enable_message_rating'),
                     'enable_user_webhooks': config.get('ui.enable_user_webhooks'),
@@ -3117,6 +3119,8 @@ async def check_db_health():
 mimetypes.add_type('text/javascript', '.js')
 mimetypes.add_type('text/javascript', '.mjs')
 mimetypes.add_type('application/wasm', '.wasm')
+# Python before 3.13 only knows .webp from /etc/mime.types, which the Docker image does not ship
+mimetypes.add_type('image/webp', '.webp')
 
 # Serve build-time static assets (CSS, JS, images, favicon, etc.)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')

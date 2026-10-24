@@ -1,9 +1,9 @@
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from open_webui.internal.db import get_async_session
 from open_webui.models.chat_messages import ChatMessageModel, ChatMessages
 from open_webui.models.chats import Chats
@@ -88,6 +88,7 @@ async def get_user_analytics(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     limit: int = Query(50, description='Max users to return'),
+    metric: Literal['messages', 'tokens'] = Query('messages'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -99,8 +100,14 @@ async def get_user_analytics(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
 
-    # Get user info for top users
-    top_user_ids = [uid for uid, _ in sorted(counts.items(), key=lambda x: -x[1])[:limit]]
+    # Rank by the selected metric before limiting the leaderboard.
+    top_user_ids = sorted(
+        counts,
+        key=lambda uid: (
+            -token_usage.get(uid, {}).get('total_tokens', 0) if metric == 'tokens' else -counts[uid],
+            -counts[uid],
+        ),
+    )[:limit]
     user_info = {u.id: u for u in await Users.get_users_by_user_ids(top_user_ids, db=db)}
 
     users = []
@@ -187,9 +194,18 @@ async def get_summary(
     )
 
 
+class ComparisonStatsEntry(BaseModel):
+    models: dict[str, int]
+    start: str
+    end: str
+
+
 class DailyStatsEntry(BaseModel):
     date: str
     models: dict[str, int]
+    start: Optional[str] = None
+    end: Optional[str] = None
+    previous: Optional[ComparisonStatsEntry] = None
 
 
 class DailyStatsResponse(BaseModel):
@@ -201,22 +217,51 @@ async def get_daily_stats(
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    granularity: str = Query('daily', description="Granularity: 'hourly' or 'daily'"),
+    granularity: Literal['10m', 'hourly', '3h', '6h', 'daily'] = Query('daily'),
+    metric: Literal['messages', 'tokens'] = Query('messages'),
+    compare: bool = Query(False),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Get message counts grouped by model for time-series chart."""
-    if granularity == 'hourly':
-        counts = await ChatMessages.get_hourly_message_counts_by_model(
-            start_date=start_date, end_date=end_date, group_id=group_id, db=db
-        )
-    else:
-        counts = await ChatMessages.get_daily_message_counts_by_model(
-            start_date=start_date, end_date=end_date, group_id=group_id, db=db
-        )
-    return DailyStatsResponse(
-        data=[DailyStatsEntry(date=date, models=models) for date, models in sorted(counts.items())]
+    """Get message counts or total tokens grouped by model for the time-series chart."""
+    if compare and (start_date is None or end_date is None or start_date > end_date):
+        raise HTTPException(status_code=400, detail='Comparison requires a bounded date range')
+    counts = await ChatMessages.get_usage_over_time_by_model(
+        start_date=start_date,
+        end_date=end_date,
+        group_id=group_id,
+        db=db,
+        granularity=granularity,
+        metric=metric,
     )
+    entries = [DailyStatsEntry(date=date, models=models) for date, models in sorted(counts.items())]
+    if compare:
+        # API bounds are inclusive: equal windows must not share an endpoint.
+        duration = end_date - start_date + 1
+        previous = await ChatMessages.get_usage_over_time_by_model(
+            start_date=start_date - duration,
+            end_date=start_date - 1,
+            group_id=group_id,
+            db=db,
+            granularity=granularity,
+            metric=metric,
+            bucket_offset=duration,
+        )
+        step = timedelta(
+            minutes={'10m': 10, 'hourly': 60, '3h': 180, '6h': 360, 'daily': 1440}[granularity]
+        )
+        for entry in entries:
+            bucket = datetime.fromisoformat(entry.date)
+            start = max(start_date, int(bucket.timestamp()))
+            end = min(end_date + 1, int((bucket + step).timestamp()))
+            entry.start = datetime.fromtimestamp(start).isoformat()
+            entry.end = datetime.fromtimestamp(end).isoformat()
+            entry.previous = ComparisonStatsEntry(
+                models=previous.get(entry.date, {}),
+                start=datetime.fromtimestamp(start - duration).isoformat(),
+                end=datetime.fromtimestamp(end - duration).isoformat(),
+            )
+    return DailyStatsResponse(data=entries)
 
 
 class TokenUsageEntry(BaseModel):

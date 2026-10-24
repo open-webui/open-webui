@@ -108,6 +108,7 @@
 	{#each filteredItems as skill, skillIdx}
 		<Tooltip
 			content={getTooltipContent(skill)}
+			allowHTML={true}
 			placement="top-start"
 			tippyOptions={{ maxWidth: '20rem' }}
 		>

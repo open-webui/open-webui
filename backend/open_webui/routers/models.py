@@ -580,12 +580,10 @@ async def import_models(
                             and existing_model.user_id != user.id
                             and model_id not in writable_model_ids
                         ):
-                            log.warning(
-                                'import_models: user %s skipped model %s (no write access)',
-                                user.id,
-                                model_id,
+                            raise HTTPException(
+                                status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
                             )
-                            continue
 
                         if (
                             user.role != 'admin'
@@ -648,12 +646,10 @@ async def import_models(
                                         base_model_ids.add(base_model_id.split(':', 1)[0])
 
                             if model_id in base_model_ids:
-                                log.warning(
-                                    'import_models: user %s skipped model %s (id belongs to a base model)',
-                                    user.id,
-                                    model_id,
+                                raise HTTPException(
+                                    status_code=status.HTTP_401_UNAUTHORIZED,
+                                    detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
                                 )
-                                continue
 
                         new_model.access_grants = await filter_allowed_access_grants(
                             await Config.get('user.permissions'),

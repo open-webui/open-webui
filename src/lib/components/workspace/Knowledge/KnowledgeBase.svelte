@@ -727,10 +727,12 @@
 					const directoryEntries: DirectoryFileEntry[] = [];
 					const looseFiles: File[] = [];
 
-					for (const rawItem of Array.from(inputItems)) {
+					const droppedItems = Array.from(inputItems).map((rawItem) => {
 						const item = rawItem as DataTransferItem & { webkitGetAsEntry?: () => any };
-						const entry = item.webkitGetAsEntry?.();
+						return { entry: item.webkitGetAsEntry?.(), file: item.getAsFile() };
+					});
 
+					for (const { entry, file } of droppedItems) {
 						if (entry?.isDirectory) {
 							try {
 								directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
@@ -738,11 +740,8 @@
 								handleUploadError(error);
 								return;
 							}
-						} else {
-							const file = item.getAsFile();
-							if (file) {
-								looseFiles.push(file);
-							}
+						} else if (file) {
+							looseFiles.push(file);
 						}
 					}
 
@@ -874,9 +873,9 @@
 				><ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}</button
 			>
 			<!-- Previous file count label: {$i18n.t('{{COUNT}} files')} -->
-			{#if knowledge.write_access}<AccessButton
-					on:click={() => (showAccessControlModal = true)}
-				/>{:else}<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
+			{#if knowledge.write_access}{#if $user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}<AccessButton
+						on:click={() => (showAccessControlModal = true)}
+					/>{/if}{:else}<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
 		</div>
 		<div class="shrink-0 px-1 pb-2.5">
 			<input

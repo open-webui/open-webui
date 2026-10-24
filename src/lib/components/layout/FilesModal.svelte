@@ -4,20 +4,30 @@
 	import type { Writable } from 'svelte/store';
 	import dayjs from 'dayjs';
 
-	import { searchFiles, deleteFileById, getFileCount } from '$lib/apis/files';
+	import {
+		searchUserFiles,
+		deleteFileById,
+		getUserFileCount,
+		getFileById,
+		getFileBlobById
+	} from '$lib/apis/files';
+	import { formatFileSize } from '$lib/utils';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
-	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
-	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Checkbox from '$lib/components/common/Checkbox.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FileItemModal from '$lib/components/common/FileItemModal.svelte';
+	import FileTypeIcon from '$lib/components/chat/FileNav/FileTypeIcon.svelte';
+	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n: Writable<any> = getContext('i18n');
-
+	const PAGE_SIZE = 50;
 	export let show = false;
 
 	let files: any[] | null = null;
@@ -25,134 +35,195 @@
 	let query = '';
 	let orderBy = 'created_at';
 	let direction = 'desc';
-
 	let page = 0;
 	let allFilesLoaded = false;
 	let filesLoading = false;
-	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let loadError = false;
+	let searchTimer: ReturnType<typeof setTimeout>;
+	let generation = 0;
 
-	let selectedFileId: string | null = null;
+	let selectedIds = new Set<string>();
+	let selectionStatus: 'idle' | 'loading' | 'all' | 'error' = 'idle';
+	let deleteIds: string[] = [];
 	let showDeleteConfirmDialog = false;
-
+	let operation: 'delete' | 'download' | null = null;
+	let progress = { done: 0, total: 0, failed: 0 };
+	let stopRequested = false;
 	let selectedFile: any = null;
 	let showFileItemModal = false;
-
 	let shiftKey = false;
 
-	const PAGE_SIZE = 50;
+	$: busy = selectionStatus === 'loading' || !!operation || showDeleteConfirmDialog;
+	$: loadedSelected = (files ?? []).filter((file) => selectedIds.has(file.id)).length;
+	$: allLoadedSelected = !!files?.length && loadedSelected === files.length;
+	$: shownFileCount = query ? (files?.length ?? null) : fileCount;
+	$: sortedFiles = [...(files ?? [])].sort((a, b) => {
+		const result =
+			orderBy === 'filename'
+				? (a.filename ?? '').localeCompare(b.filename ?? '')
+				: (a.created_at ?? 0) - (b.created_at ?? 0);
+		return direction === 'asc' ? result : -result;
+	});
 
-	const formatFileSize = (bytes: number): string => {
-		if (bytes === 0) return '0 B';
-		const k = 1024;
-		const sizes = ['B', 'KB', 'MB', 'GB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-	};
-
-	const setSortKey = (key: string) => {
-		if (orderBy === key) {
-			direction = direction === 'asc' ? 'desc' : 'asc';
-		} else {
-			orderBy = key;
-			direction = 'asc';
-		}
-		searchHandler();
-	};
-
-	const searchHandler = async () => {
-		if (!show) return;
-
-		page = 0;
-		files = null;
-		allFilesLoaded = false;
-
-		try {
-			const pattern = query ? `*${query}*` : '*';
-			const newFiles = await searchFiles(localStorage.token, pattern, 0, PAGE_SIZE);
-			files = sortFiles(newFiles);
-			allFilesLoaded = newFiles.length < PAGE_SIZE;
-
-			if (!query) {
-				fileCount = await getFileCount(localStorage.token);
-			}
-		} catch (error) {
-			// Handle 404 or other errors - show empty state instead of spinner
-			files = [];
-			allFilesLoaded = true;
-		}
-	};
-
-	const loadMoreFiles = async () => {
-		if (filesLoading || allFilesLoaded) return;
-
+	const loadFiles = async (more = false) => {
+		if (!show || (more && (busy || filesLoading || allFilesLoaded || loadError))) return;
+		const request = generation;
+		const nextPage = more ? page + 1 : 0;
 		filesLoading = true;
-		page += 1;
-
+		loadError = false;
 		try {
-			const pattern = query ? `*${query}*` : '*';
-			const newFiles = await searchFiles(localStorage.token, pattern, page * PAGE_SIZE, PAGE_SIZE);
-
-			allFilesLoaded = newFiles.length < PAGE_SIZE;
-
-			if (newFiles.length > 0) {
-				files = sortFiles([...(files || []), ...newFiles]);
+			const result = await searchUserFiles(
+				localStorage.token,
+				query ? `*${query}*` : '*',
+				nextPage * PAGE_SIZE,
+				PAGE_SIZE
+			);
+			if (request !== generation) return;
+			files = more ? [...(files ?? []), ...result] : result;
+			page = nextPage;
+			allFilesLoaded = result.length < PAGE_SIZE;
+			if (!more && !query) {
+				const count = await getUserFileCount(localStorage.token);
+				if (request === generation) fileCount = count;
 			}
-		} catch (error) {
-			// Handle errors silently for load more
-			allFilesLoaded = true;
+		} catch {
+			if (request !== generation) return;
+			files ??= [];
+			loadError = true;
+		} finally {
+			if (request === generation) filesLoading = false;
 		}
+	};
 
+	const resetSearch = (visible: boolean, _query: string) => {
+		++generation;
+		selectedIds = new Set();
+		selectionStatus = 'idle';
+		files = null;
+		fileCount = null;
 		filesLoading = false;
+		clearTimeout(searchTimer);
+		if (visible) searchTimer = setTimeout(() => loadFiles(), 300);
+	};
+	$: resetSearch(show, query);
+
+	const toggleSelection = (ids: string[], selected: boolean) => {
+		if (busy) return;
+		for (const id of ids) {
+			if (selected) selectedIds.add(id);
+			else selectedIds.delete(id);
+		}
+		selectedIds = new Set(selectedIds);
+		selectionStatus = 'idle';
 	};
 
-	const sortFiles = (fileList: any[]): any[] => {
-		return fileList.sort((a, b) => {
-			let aVal = a[orderBy] ?? 0;
-			let bVal = b[orderBy] ?? 0;
-
-			if (orderBy === 'filename') {
-				aVal = a.filename?.toLowerCase() ?? '';
-				bVal = b.filename?.toLowerCase() ?? '';
-			}
-
-			if (direction === 'asc') {
-				return aVal > bVal ? 1 : -1;
-			} else {
-				return aVal < bVal ? 1 : -1;
-			}
-		});
-	};
-
-	const deleteHandler = async (fileId: string) => {
+	const selectAllMatching = async () => {
+		if (busy) return;
+		const request = generation;
+		const pattern = query ? `*${query}*` : '*';
+		const ids = new Set<string>();
+		selectionStatus = 'loading';
 		try {
-			await deleteFileById(localStorage.token, fileId);
-			toast.success($i18n.t('File deleted successfully.'));
-			// Remove from local array instead of re-fetching to allow rapid deletion
-			files = files?.filter((f) => f.id !== fileId) ?? null;
-			if (fileCount !== null) fileCount--;
-		} catch (error) {
-			toast.error(`${error}`);
+			for (let skip = 0; ; skip += PAGE_SIZE) {
+				const result = await searchUserFiles(localStorage.token, pattern, skip, PAGE_SIZE);
+				if (request !== generation) return;
+				for (const file of result) ids.add(file.id);
+				if (result.length < PAGE_SIZE) break;
+			}
+			selectedIds = ids;
+			selectionStatus = 'all';
+		} catch {
+			if (request === generation) selectionStatus = 'error';
 		}
 	};
 
-	const openFileViewer = (file: any) => {
-		selectedFile = {
-			id: file.id,
-			name: file.filename,
-			type: 'file',
-			size: file.meta?.size,
-			meta: file.meta
-		};
-		showFileItemModal = true;
+	const requestDelete = (ids: string[]) => {
+		if (busy || !ids.length) return;
+		deleteIds = ids;
+		showDeleteConfirmDialog = true;
 	};
 
-	// Debounce query changes
-	$: if (show && query !== undefined) {
-		clearTimeout(searchDebounceTimer);
-		searchDebounceTimer = setTimeout(() => {
-			searchHandler();
-		}, 300);
-	}
+	const deleteHandler = async () => {
+		if (operation || !deleteIds.length) return;
+		operation = 'delete';
+		stopRequested = false;
+		progress = { done: 0, total: deleteIds.length, failed: 0 };
+		++generation;
+		clearTimeout(searchTimer);
+		for (let offset = 0; offset < deleteIds.length && !stopRequested; offset += 3) {
+			await Promise.all(
+				deleteIds.slice(offset, offset + 3).map(async (id) => {
+					try {
+						await deleteFileById(localStorage.token, id);
+						// toast.success($i18n.t('File deleted successfully.'));
+						selectedIds.delete(id);
+						files = files?.filter((file) => file.id !== id) ?? null;
+					} catch {
+						progress.failed++;
+						selectedIds.add(id);
+					} finally {
+						progress.done++;
+						selectedIds = new Set(selectedIds);
+					}
+				})
+			);
+		}
+		const message = $i18n.t(
+			'{{deleted}} deleted, {{failed}} failed, {{remaining}} not processed.',
+			{
+				deleted: progress.done - progress.failed,
+				failed: progress.failed,
+				remaining: progress.total - progress.done
+			}
+		);
+		if (progress.failed) toast.error(message);
+		else toast.success(message);
+		selectionStatus = 'idle';
+		await loadFiles();
+		operation = null;
+	};
+
+	const downloadHandler = async (ids: string[]) => {
+		if (busy || !ids.length) return;
+		operation = 'download';
+		stopRequested = false;
+		progress = { done: 0, total: ids.length, failed: 0 };
+		try {
+			// One archive avoids browser prompts for hundreds of separate downloads.
+			const zip = ids.length > 1 ? new (await import('jszip')).default() : null;
+			let output: Blob | undefined;
+			let filename = '';
+			for (const id of ids) {
+				if (stopRequested) return;
+				const file =
+					files?.find((file) => file.id === id) ?? (await getFileById(localStorage.token, id));
+				if (!file) throw new Error($i18n.t('Could not load files.'));
+				const blob = await getFileBlobById(localStorage.token, id, { attachment: true });
+				filename = (file.filename || 'file').replace(/[\\/]/g, '_');
+				if (filename === '.' || filename === '..') filename = 'file';
+				if (zip) {
+					let name = filename;
+					let suffix = 1;
+					while (zip.file(name)) name = `${suffix++}-${filename}`;
+					zip.file(name, await blob.arrayBuffer());
+				} else output = blob;
+				progress.done++;
+			}
+			if (stopRequested) return;
+			if (zip) output = await zip.generateAsync({ type: 'blob' });
+			if (stopRequested || !output) return;
+			const url = URL.createObjectURL(output);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = zip ? 'files.zip' : filename;
+			link.click();
+			setTimeout(() => URL.revokeObjectURL(url), 1000);
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : String(error));
+		} finally {
+			operation = null;
+		}
+	};
 
 	onMount(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
@@ -176,7 +247,6 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
-			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
@@ -184,230 +254,297 @@
 	});
 
 	onDestroy(() => {
-		clearTimeout(searchDebounceTimer);
+		show = false;
+		stopRequested = true;
+		++generation;
+		clearTimeout(searchTimer);
 	});
 </script>
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
-	on:confirm={() => {
-		if (selectedFileId) {
-			deleteHandler(selectedFileId);
-			selectedFileId = null;
-		}
-	}}
+	title={$i18n.t('Delete {{count}} files?', { count: deleteIds.length })}
+	message={$i18n.t('This cannot be undone. References to these files may stop working.')}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={deleteHandler}
 />
-
 <FileItemModal bind:show={showFileItemModal} item={selectedFile} edit={false} />
 
-<Modal size="xl" bind:show>
-	<div>
-		<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
-			<div class="flex items-center gap-2 text-sm font-medium self-center">
-				<div>{$i18n.t('Files')}</div>
-				{#if query && files}
-					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
-						{files.length}
-					</div>
-				{:else if fileCount !== null}
-					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
-						{fileCount}
-					</div>
-				{/if}
+<Modal
+	size="lg"
+	bind:show
+	onRequestClose={() => {
+		if (!operation) show = false;
+	}}
+	ariaLabel={$i18n.t('Files')}
+>
+	<div class="px-4 pb-3 pt-3 text-gray-700 dark:text-gray-200">
+		<div class="mb-2 flex h-6 items-center gap-2">
+			<div class="flex flex-1 items-center gap-1.5 text-sm font-medium">
+				{$i18n.t('Files')}
+				{#if shownFileCount !== null}<span class="text-xs font-normal tabular-nums text-gray-400"
+						>{shownFileCount}</span
+					>{/if}
 			</div>
+			<Dropdown closeOnSelect align="end">
+				<button
+					type="button"
+					aria-label={$i18n.t('Selection actions')}
+					disabled={busy || !selectedIds.size}
+					class="flex h-6 items-center gap-1 rounded-lg px-1.5 text-xs text-gray-500 transition hover:text-gray-900 disabled:opacity-40 dark:text-gray-400 dark:hover:text-gray-100"
+				>
+					{$i18n.t('Actions')}<Icon name="chevron-down" size={11} />
+				</button>
+				<div slot="content">
+					<DropdownMenu className="min-w-36" style="border: 0">
+						<button
+							type="button"
+							disabled={busy || !selectedIds.size}
+							on:click={() => downloadHandler([...selectedIds])}
+							><ArrowDownTray className="size-3.5" />{$i18n.t('Download')}</button
+						>
+						<button
+							type="button"
+							disabled={busy || !selectedIds.size}
+							on:click={() => requestDelete([...selectedIds])}
+							><GarbageBin className="size-3.5" />{$i18n.t('Delete')}</button
+						>
+					</DropdownMenu>
+				</div>
+			</Dropdown>
 			<button
+				type="button"
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				disabled={!!operation}
+				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 disabled:opacity-40 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
-				}}
+				}}><XMark className="size-3.5" /></button
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="size-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</button>
 		</div>
 
-		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
-			<!-- Search -->
-			<div class="flex w-full space-x-2 mb-0.5">
-				<div class="flex flex-1">
-					<div class="self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-					<input
-						class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
-						placeholder={$i18n.t('Search Files')}
-						maxlength="500"
-					/>
+		<div class="mb-1 flex h-7 items-center gap-2 px-1 pb-1">
+			{#if operation}
+				<Spinner className="size-3" />
+				<span class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-400" role="status"
+					>{$i18n.t(
+						operation === 'download'
+							? 'Preparing {{processed}} of {{total}}'
+							: 'Processed {{processed}} of {{total}}',
+						{ processed: progress.done, total: progress.total }
+					)}</span
+				>
+				<button
+					type="button"
+					class="text-xs text-gray-500 hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+					disabled={stopRequested}
+					on:click={() => {
+						stopRequested = true;
+					}}>{stopRequested ? $i18n.t('Stopping...') : $i18n.t('Stop')}</button
+				>
+			{:else}
+				<Icon name="search" size={13} class="shrink-0 text-gray-400" />
+				<input
+					class="min-w-0 flex-1 bg-transparent py-1 text-xs outline-hidden placeholder:text-gray-400"
+					bind:value={query}
+					disabled={showDeleteConfirmDialog}
+					placeholder={$i18n.t('Search Files')}
+					aria-label={$i18n.t('Search Files')}
+					maxlength="500"
+				/>
+				{#if query}<button
+						type="button"
+						aria-label={$i18n.t('Clear search')}
+						disabled={showDeleteConfirmDialog}
+						class="flex size-5 shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+						on:click={() => {
+							query = '';
+						}}><XMark className="size-3" /></button
+					>{/if}
+				{#if selectedIds.size}
+					<span
+						role="status"
+						class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
+						>{$i18n.t('{{count}} selected', { count: selectedIds.size })}</span
+					>
+					<button
+						type="button"
+						aria-label={$i18n.t('Clear selection')}
+						title={$i18n.t('Clear selection')}
+						disabled={busy}
+						class="flex size-5 shrink-0 items-center justify-center text-gray-400 hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-200"
+						on:click={() => {
+							selectedIds = new Set();
+							selectionStatus = 'idle';
+						}}><XMark className="size-3" /></button
+					>
+				{/if}
+			{/if}
+		</div>
 
-					{#if query}
-						<div class="self-center pl-1.5 pr-1 translate-y-[0.5px] rounded-l-xl bg-transparent">
-							<button
-								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								on:click={() => {
-									query = '';
-								}}
-							>
-								<XMark className="size-3" strokeWidth="2" />
-							</button>
-						</div>
-					{/if}
-				</div>
+		{#if selectionStatus === 'loading'}
+			<div class="flex h-6 items-center gap-1.5 px-1 text-[0.6875rem] text-gray-500" role="status">
+				<Spinner className="size-3" /><span>{$i18n.t('Selecting all matching files...')}</span>
 			</div>
+		{:else if selectionStatus === 'error'}
+			<div class="flex items-center gap-2 px-1 py-1 text-[0.6875rem] text-gray-500" role="alert">
+				<span
+					>{$i18n.t('Could not select all matching files. Your selection has not changed.')}</span
+				><button disabled={busy} class="shrink-0 underline" on:click={selectAllMatching}
+					>{$i18n.t('Retry')}</button
+				>
+			</div>
+		{:else if allLoadedSelected && !allFilesLoaded && selectionStatus !== 'all' && !operation}
+			<button
+				class="h-6 px-1 text-[0.6875rem] text-gray-500 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+				disabled={busy}
+				on:click={selectAllMatching}>{$i18n.t('Select all matching files')}</button
+			>
+		{/if}
 
-			<!-- Files List -->
-			<div class="flex flex-col w-full">
-				{#if files !== null}
-					<div class="w-full">
-						{#if files.length > 0}
-							<div class="flex text-xs font-normal mb-1.5">
-								<button
-									class="px-1.5 py-1 cursor-pointer select-none basis-3/5"
-									on:click={() => setSortKey('filename')}
-								>
-									<div class="flex gap-1.5 items-center">
-										{$i18n.t('Filename')}
-										{#if orderBy === 'filename'}
-											<span class="font-normal">
-												{#if direction === 'asc'}
-													<ChevronUp className="size-2" />
-												{:else}
-													<ChevronDown className="size-2" />
-												{/if}
-											</span>
-										{:else}
-											<span class="invisible">
-												<ChevronUp className="size-2" />
-											</span>
-										{/if}
-									</div>
-								</button>
-								<button
-									class="px-1.5 py-1 cursor-pointer select-none hidden sm:flex sm:basis-2/5 justify-end"
-									on:click={() => setSortKey('created_at')}
-								>
-									<div class="flex gap-1.5 items-center">
-										{$i18n.t('Created at')}
-										{#if orderBy === 'created_at'}
-											<span class="font-normal">
-												{#if direction === 'asc'}
-													<ChevronUp className="size-2" />
-												{:else}
-													<ChevronDown className="size-2" />
-												{/if}
-											</span>
-										{:else}
-											<span class="invisible">
-												<ChevronUp className="size-2" />
-											</span>
-										{/if}
-									</div>
-								</button>
-							</div>
-						{/if}
-
-						<div class="text-left text-sm w-full mb-3 max-h-[32rem] overflow-y-scroll">
-							{#if files.length === 0}
-								<div
-									class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
-								>
-									{$i18n.t('No files found')}
-								</div>
-							{/if}
-
-							{#each files as file (file.id)}
-								<div
-									class="w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 cursor-pointer"
-									on:click={() => openFileViewer(file)}
-								>
-									<div class="basis-3/5 min-w-0">
-										<div class="text-ellipsis line-clamp-1">{file.filename}</div>
-										<div class="text-xs text-gray-500">
-											{formatFileSize(file.meta?.size ?? 0)}
-										</div>
-									</div>
-
-									<div class="basis-2/5 flex items-center justify-end">
-										<Tooltip
-											content={dayjs(file.created_at * 1000)
-												.locale($i18n.language)
-												.format('MMM D, YYYY h:mm A')}
-											className="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs"
-										>
-											{dayjs(file.created_at * 1000)
-												.locale($i18n.language)
-												.format('MMM D, YYYY')}
-										</Tooltip>
-
-										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
-											<Tooltip content={shiftKey ? $i18n.t('Delete File') : $i18n.t('Delete File')}>
-												<button
-													class="self-center w-fit px-1 text-sm rounded-xl {shiftKey
-														? 'text-red-500'
-														: ''}"
-													on:click|stopPropagation={() => {
-														if (shiftKey) {
-															deleteHandler(file.id);
-														} else {
-															selectedFileId = file.id;
-															showDeleteConfirmDialog = true;
-														}
-													}}
-												>
-													<GarbageBin class="size-4" strokeWidth="1.5" />
-												</button>
-											</Tooltip>
-										</div>
-									</div>
-								</div>
-							{/each}
-
-							{#if !allFilesLoaded}
-								<Loader
-									on:visible={() => {
-										if (!filesLoading) {
-											loadMoreFiles();
-										}
-									}}
-								>
-									<div
-										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
-									>
-										<Spinner className="size-4" />
-										<div>{$i18n.t('Loading...')}</div>
-									</div>
-								</Loader>
-							{/if}
+		{#if files !== null}
+			{#if files.length}
+				<div
+					class="grid h-7 grid-cols-[1.75rem_minmax(0,1fr)_3.5rem_1.75rem] items-center gap-x-2 text-[0.6875rem] text-gray-400 sm:grid-cols-[1.75rem_minmax(0,1fr)_4rem_7rem_1.75rem]"
+				>
+					<div class="flex justify-center">
+						<Checkbox
+							state={allLoadedSelected ? 'checked' : 'unchecked'}
+							indeterminate={loadedSelected > 0 && !allLoadedSelected}
+							disabled={busy}
+							ariaLabel={$i18n.t('Select loaded files')}
+							on:change={() =>
+								toggleSelection(
+									(files ?? []).map((file) => file.id),
+									!allLoadedSelected
+								)}
+						/>
+					</div>
+					<button
+						disabled={busy}
+						class="flex items-center gap-1 text-left hover:text-gray-700 dark:hover:text-gray-200"
+						on:click={() => {
+							direction = orderBy === 'filename' && direction === 'asc' ? 'desc' : 'asc';
+							orderBy = 'filename';
+						}}
+					>
+						{$i18n.t('Filename')}{#if orderBy === 'filename'}<Icon
+								name={direction === 'asc' ? 'chevron-up' : 'chevron-down'}
+								size={10}
+							/>{/if}
+					</button>
+					<span class="text-right">{$i18n.t('Size')}</span>
+					<button
+						disabled={busy}
+						class="hidden items-center justify-end gap-1 hover:text-gray-700 dark:hover:text-gray-200 sm:flex"
+						on:click={() => {
+							direction = orderBy === 'created_at' && direction === 'asc' ? 'desc' : 'asc';
+							orderBy = 'created_at';
+						}}
+					>
+						{$i18n.t('Created at')}{#if orderBy === 'created_at'}<Icon
+								name={direction === 'asc' ? 'chevron-up' : 'chevron-down'}
+								size={10}
+							/>{/if}
+					</button>
+				</div>
+			{/if}
+			<div class="max-h-[min(28rem,calc(100dvh-12rem))] overflow-y-auto">
+				{#if !files.length && !loadError}<div
+						class="flex min-h-20 items-center justify-center text-xs text-gray-400"
+					>
+						{$i18n.t('No files found')}
+					</div>{/if}
+				{#each sortedFiles as file (file.id)}
+					<div
+						class="group grid h-7 grid-cols-[1.75rem_minmax(0,1fr)_3.5rem_1.75rem] items-center gap-x-2 rounded-xl text-xs transition-colors hover:bg-gray-50/40 dark:hover:bg-white/4 sm:grid-cols-[1.75rem_minmax(0,1fr)_4rem_7rem_1.75rem]"
+					>
+						<div class="flex justify-center">
+							<Checkbox
+								state={selectedIds.has(file.id) ? 'checked' : 'unchecked'}
+								disabled={busy}
+								ariaLabel={$i18n.t('Select {{filename}}', { filename: file.filename })}
+								on:change={() => toggleSelection([file.id], !selectedIds.has(file.id))}
+							/>
 						</div>
+						<button
+							class="flex h-full min-w-0 items-center gap-1.5 text-left"
+							title={file.filename}
+							disabled={!!operation}
+							on:click={() => {
+								selectedFile = {
+									id: file.id,
+									name: file.filename,
+									type: 'file',
+									size: file.meta?.size,
+									meta: file.meta
+								};
+								showFileItemModal = true;
+							}}
+						>
+							<FileTypeIcon name={file.filename} size={14} /><span class="truncate"
+								>{file.filename}</span
+							>
+						</button>
+						<span class="truncate text-right text-[0.6875rem] tabular-nums text-gray-400"
+							>{formatFileSize(file.meta?.size ?? 0)}</span
+						>
+						<span
+							class="hidden text-right text-[0.6875rem] tabular-nums text-gray-400 sm:block"
+							title={dayjs(file.created_at * 1000)
+								.locale($i18n.language)
+								.format('MMM D, YYYY h:mm A')}
+							>{dayjs(file.created_at * 1000)
+								.locale($i18n.language)
+								.format('MMM D, YYYY')}</span
+						>
+						<Dropdown closeOnSelect align="end">
+							<button
+								type="button"
+								aria-label={$i18n.t('Actions for {{filename}}', { filename: file.filename })}
+								disabled={busy}
+								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 disabled:opacity-40 dark:hover:text-gray-200"
+								><Icon name="three-dots" size={14} /></button
+							>
+							<div slot="content">
+								<DropdownMenu className="min-w-36" style="border: 0">
+									<button type="button" disabled={busy} on:click={() => downloadHandler([file.id])}
+										><ArrowDownTray className="size-3.5" />{$i18n.t('Download')}</button
+									>
+									<!-- {$i18n.t('Delete File')} -->
+									<button
+										type="button"
+										disabled={busy}
+										class={shiftKey ? 'text-red-500' : ''}
+										on:click={(event) => {
+											if (event.shiftKey) {
+												deleteIds = [file.id];
+												deleteHandler();
+											} else {
+												requestDelete([file.id]);
+											}
+										}}><GarbageBin className="size-3.5" />{$i18n.t('Delete')}</button
+									>
+								</DropdownMenu>
+							</div>
+						</Dropdown>
 					</div>
-				{:else}
-					<div class="w-full h-full flex justify-center items-center min-h-20">
-						<Spinner className="size-5" />
+				{/each}
+				{#if loadError}
+					<div role="alert" class="py-2 text-center text-xs text-gray-500">
+						{$i18n.t('Could not load files.')}
+						<button disabled={busy} class="underline" on:click={() => loadFiles()}
+							>{$i18n.t('Retry')}</button
+						>
 					</div>
+				{:else if !allFilesLoaded && !busy}
+					<Loader on:visible={() => loadFiles(true)}
+						><div class="flex justify-center py-2"><Spinner className="size-3" /></div></Loader
+					>
 				{/if}
 			</div>
-		</div>
+		{:else}
+			<div class="flex min-h-20 items-center justify-center"><Spinner className="size-4" /></div>
+		{/if}
 	</div>
 </Modal>

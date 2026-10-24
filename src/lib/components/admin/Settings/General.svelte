@@ -339,6 +339,13 @@
 						/>
 					</AdminSettingRow>
 				{/if}
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.skillLazyLoading.label')}
+					description={$i18n.t('settings.admin.general.skillLazyLoading.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_SKILL_LAZY_LOADING} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
 				<AdminSettingField
 					forId="skill-content-max-chars"
 					label={$i18n.t('settings.admin.general.skillContentMaxChars.label')}

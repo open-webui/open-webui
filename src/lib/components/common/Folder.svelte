@@ -156,21 +156,23 @@
 					id="sidebar-folder-button"
 					class=" w-full group rounded-xl relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 transition {buttonClassName}"
 				>
-					<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-normal">
-						{#if chevron}
-							<div class=" p-[0.0625rem]">
-								{#if open}
-									<ChevronDown className=" size-3" strokeWidth="2" />
-								{:else}
-									<ChevronRight className=" size-3" strokeWidth="2" />
-								{/if}
-							</div>
-						{/if}
+					<h3 class="w-full">
+						<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-normal">
+							{#if chevron}
+								<div class=" p-[0.0625rem]">
+									{#if open}
+										<ChevronDown className=" size-3" strokeWidth="2" />
+									{:else}
+										<ChevronRight className=" size-3" strokeWidth="2" />
+									{/if}
+								</div>
+							{/if}
 
-						<div class="translate-y-[0.5px] {chevron ? '' : 'pl-0.5'}">
-							{name}
-						</div>
-					</button>
+							<div class="translate-y-[0.5px] {chevron ? '' : 'pl-0.5'}">
+								{name}
+							</div>
+						</button>
+					</h3>
 
 					{#if onAdd}
 						<button

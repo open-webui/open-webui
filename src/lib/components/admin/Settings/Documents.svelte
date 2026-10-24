@@ -1370,10 +1370,12 @@
 							</AdminSettingField>
 
 							<AdminSettingRow
+								let:labelId
 								label={$i18n.t('settings.admin.documents.bm25Weight.label')}
 								description={$i18n.t('settings.admin.documents.bm25Weight.description')}
 							>
 								<button
+									id={`${labelId}-control`}
 									class={actionButtonClass}
 									type="button"
 									on:click={() => {
@@ -1543,10 +1545,12 @@
 
 			<AdminSettingSection title={$i18n.t('settings.admin.documents.sections.dangerZone.title')}>
 				<AdminSettingRow
+					let:labelId
 					label={$i18n.t('settings.admin.documents.resetUploadDirectory.label')}
 					description={$i18n.t('settings.admin.documents.resetUploadDirectory.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						type="button"
 						on:click={() => {
@@ -1557,10 +1561,12 @@
 					</button>
 				</AdminSettingRow>
 				<AdminSettingRow
+					let:labelId
 					label={$i18n.t('settings.admin.documents.resetVectorStorageKnowledge.label')}
 					description={$i18n.t('settings.admin.documents.resetVectorStorageKnowledge.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						type="button"
 						on:click={() => {
@@ -1571,12 +1577,14 @@
 					</button>
 				</AdminSettingRow>
 				<AdminSettingRow
+					let:labelId
 					label={$i18n.t('settings.admin.documents.reindexKnowledgeAndMemoryVectors.label')}
 					description={$i18n.t(
 						'settings.admin.documents.reindexKnowledgeAndMemoryVectors.description'
 					)}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						type="button"
 						on:click={() => {

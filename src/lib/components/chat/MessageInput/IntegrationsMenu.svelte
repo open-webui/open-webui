@@ -315,6 +315,7 @@
 					{#if tools}
 						{#if Object.keys(tools).length > 0}
 							<button
+								role="menuitem"
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								on:click={() => {
 									tab = 'tools';
@@ -337,6 +338,7 @@
 
 						{#if skills && Object.keys(skills).length > 0}
 							<button
+								role="menuitem"
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								on:click={() => {
 									tab = 'skills';
@@ -373,9 +375,9 @@
 								)}
 								placement="top-start"
 							>
-								<button
-									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-									aria-pressed={selectedFilterIds.includes(filter.id)}
+								<div
+									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+									role="presentation"
 									on:click={() => {
 										if (selectedFilterIds.includes(filter.id)) {
 											selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
@@ -384,7 +386,12 @@
 										}
 									}}
 								>
-									<div class="flex-1 truncate">
+									<button
+										type="button"
+										class="flex-1 truncate text-left cursor-pointer focus-visible:outline-none!"
+										role="menuitemcheckbox"
+										aria-checked={selectedFilterIds.includes(filter.id)}
+									>
 										<div class="flex flex-1 gap-2 items-center">
 											<div class="shrink-0">
 												{#if filter?.icon}
@@ -411,12 +418,13 @@
 												{resolveLocalizedFunction(filter, $localizedFunctions, $i18n.language)}
 											</div>
 										</div>
-									</div>
+									</button>
 
 									{#if filter?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
 										<div class=" shrink-0">
 											<Tooltip content={$i18n.t('Valves')}>
 												<button
+													aria-label={$i18n.t('Valves')}
 													class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
 													type="button"
 													on:click={(e) => {
@@ -437,7 +445,7 @@
 									<div class=" shrink-0" inert>
 										<Switch state={selectedFilterIds.includes(filter.id)} />
 									</div>
-								</button>
+								</div>
 							</Tooltip>
 						{/each}
 					{/if}
@@ -446,7 +454,8 @@
 						<Tooltip content={$i18n.t('Search the internet')} placement="top-start">
 							<button
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-								aria-pressed={webSearchEnabled}
+								role="menuitemcheckbox"
+								aria-checked={webSearchEnabled}
 								on:click={() => {
 									webSearchEnabled = !webSearchEnabled;
 									// Left open, this menu would swallow the first click on the confirmation dialog
@@ -477,7 +486,8 @@
 						<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
 							<button
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-								aria-pressed={imageGenerationEnabled}
+								role="menuitemcheckbox"
+								aria-checked={imageGenerationEnabled}
 								on:click={() => {
 									imageGenerationEnabled = !imageGenerationEnabled;
 								}}
@@ -503,7 +513,8 @@
 						<Tooltip content={$i18n.t('Execute code for analysis')} placement="top-start">
 							<button
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-								aria-pressed={codeInterpreterEnabled}
+								role="menuitemcheckbox"
+								aria-checked={codeInterpreterEnabled}
 								on:click={() => {
 									codeInterpreterEnabled = !codeInterpreterEnabled;
 								}}
@@ -528,6 +539,7 @@
 			{:else if tab === 'tools' && tools}
 				<div class="flex max-h-72 min-h-0 flex-col gap-0.5" in:fly={{ x: 20, duration: 150 }}>
 					<button
+						role="menuitem"
 						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							toolQuery = '';
@@ -552,11 +564,9 @@
 						{:else}
 							<div class="flex flex-col gap-0.5">
 								{#each toolIds as toolId}
-									<button
-										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-										aria-pressed={(tools?.[toolId]?.authenticated ?? true)
-											? selectedToolIds.includes(toolId)
-											: undefined}
+									<div
+										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+										role="presentation"
 										on:click={async (e) => {
 											await toggleTool(toolId, e);
 										}}
@@ -565,7 +575,16 @@
 											<!-- make it slighly darker and not clickable -->
 											<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
 										{/if}
-										<div class="flex-1 truncate">
+										<button
+											type="button"
+											class="flex-1 truncate text-left cursor-pointer focus-visible:outline-none!"
+											role={(tools?.[toolId]?.authenticated ?? true)
+												? 'menuitemcheckbox'
+												: 'menuitem'}
+											aria-checked={(tools?.[toolId]?.authenticated ?? true)
+												? selectedToolIds.includes(toolId)
+												: undefined}
+										>
 											<div class="flex flex-1 gap-2 items-center">
 												<Tooltip
 													content={resolveLocalizedResource(
@@ -592,12 +611,13 @@
 													</div>
 												</Tooltip>
 											</div>
-										</div>
+										</button>
 
 										{#if tools?.[toolId]?.authenticated === true && toolId.startsWith('server:mcp:')}
 											<div class="shrink-0">
 												<Tooltip content={$i18n.t('Disconnect OAuth')}>
 													<button
+														aria-label={$i18n.t('Disconnect OAuth')}
 														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
 														type="button"
 														on:click={async (e) => {
@@ -631,6 +651,7 @@
 											<div class=" shrink-0">
 												<Tooltip content={$i18n.t('Valves')}>
 													<button
+														aria-label={$i18n.t('Valves')}
 														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
 														type="button"
 														on:click={(e) => {
@@ -651,7 +672,7 @@
 										<div class=" shrink-0" inert>
 											<Switch state={selectedToolIds.includes(toolId)} />
 										</div>
-									</button>
+									</div>
 								{/each}
 							</div>
 						{/if}
@@ -660,6 +681,7 @@
 			{:else if tab === 'skills' && skills}
 				<div class="flex max-h-72 min-h-0 flex-col gap-0.5" in:fly={{ x: 20, duration: 150 }}>
 					<button
+						role="menuitem"
 						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							skillQuery = '';
@@ -686,7 +708,8 @@
 								{#each skillIds as skillId}
 									<button
 										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-										aria-pressed={selectedSkillIds.includes(skillId)}
+										role="menuitemcheckbox"
+										aria-checked={selectedSkillIds.includes(skillId)}
 										on:click={async () => {
 											await toggleSkill(skillId);
 										}}

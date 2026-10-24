@@ -9,6 +9,9 @@
 
 	export let open = false;
 	export let enabled = false;
+	export let side: 'left' | 'right' = 'left';
+	export let blocked = false;
+	export let startTarget: string | null = null;
 	export let width = 245;
 	export let onOpenChange: (open: boolean) => void = () => {};
 
@@ -31,10 +34,11 @@
 	let lastEnabled: boolean | null = null;
 
 	$: panelWidth = width || 245;
+	$: openingSign = side === 'left' ? 1 : -1;
 	$: progress = enabled ? Math.max(0, Math.min(1, swipeProgress)) : 1;
 	$: visible = open || (enabled && mounted);
 	$: panelStyle = enabled
-		? `transform: translateX(${(progress - 1) * 100}%); transition: ${
+		? `transform: translateX(${(progress - 1) * 100 * openingSign}%); transition: ${
 				settling ? `transform ${SETTLE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)` : 'none'
 			};`
 		: '';
@@ -47,10 +51,13 @@
 	$: if (open !== lastOpen || enabled !== lastEnabled) {
 		lastOpen = open;
 		lastEnabled = enabled;
+		resetSwipe();
 
 		if (enabled) {
 			animate(open);
 		} else {
+			clearTimer();
+			clearFrame();
 			mounted = false;
 			swipeProgress = open ? 1 : 0;
 			settling = false;
@@ -58,12 +65,15 @@
 		}
 	}
 
+	$: if (blocked && active) cancelSwipe();
+
 	const shouldSkipSwipe = (target: EventTarget | null) => {
+		if (!(target instanceof Element)) return true;
+		const modal = target.closest('.modal, [role="dialog"]');
 		return (
-			target instanceof Element &&
 			!!target.closest(
-				'input, textarea, select, [role="dialog"], [role="menu"], [contenteditable="true"], [data-sidebar-no-gesture]'
-			)
+				'input, textarea, select, [role="menu"], [role="listbox"], [role="slider"], [contenteditable="true"], [data-sidebar-no-gesture], [data-swipe-no-gesture], .svelte-flow, .cm-editor'
+			) || !!(modal && (!open || modal.getAttribute('data-swipe-panel') !== side))
 		);
 	};
 
@@ -135,6 +145,8 @@
 		const finish = () => {
 			settling = false;
 			settleTimer = null;
+			// Controls contain previews and editors that should unmount after closing.
+			if (side === 'right' && !nextOpen) mounted = false;
 		};
 
 		const settle = () => {
@@ -170,7 +182,14 @@
 	};
 
 	const onTouchStart = (e: TouchEvent) => {
-		if (!enabled || e.touches.length !== 1 || shouldSkipSwipe(e.target) || hasTextSelection()) {
+		if (active) cancelSwipe();
+		if (
+			!enabled ||
+			blocked ||
+			e.touches.length !== 1 ||
+			shouldSkipSwipe(e.target) ||
+			hasTextSelection()
+		) {
 			return;
 		}
 
@@ -178,13 +197,15 @@
 		const x = touch.clientX;
 
 		if (!open) {
-			if (x < UNSAFE_EDGE) {
+			if (
+				(side === 'left' ? x < UNSAFE_EDGE : x > window.innerWidth - UNSAFE_EDGE) ||
+				(startTarget && !(e.target instanceof Element && e.target.closest(startTarget)))
+			) {
 				return;
 			}
 
 			direction = 'open';
 			startProgress = 0;
-			mounted = true;
 			swipeProgress = 0;
 		} else {
 			direction = 'close';
@@ -192,6 +213,7 @@
 		}
 
 		clearTimer();
+		clearFrame();
 		settling = false;
 		active = true;
 		locked = false;
@@ -203,12 +225,17 @@
 	};
 
 	const onTouchMove = (e: TouchEvent) => {
-		if (!active || !direction || e.touches.length !== 1) {
+		if (!active || !direction) {
+			return;
+		}
+		if (!enabled || blocked || e.touches.length !== 1) {
+			cancelSwipe();
 			return;
 		}
 
 		const touch = e.touches[0];
 		const dx = touch.clientX - startX;
+		const openingDelta = dx * openingSign;
 		const dy = touch.clientY - startY;
 		const absX = Math.abs(dx);
 		const absY = Math.abs(dy);
@@ -217,10 +244,6 @@
 			if (hasTextSelection()) {
 				cancelSwipe();
 				return;
-			}
-
-			if ((direction === 'open' && dx > 0) || (direction === 'close' && dx < 0)) {
-				swipeProgress = Math.max(0, Math.min(1, startProgress + dx / panelWidth));
 			}
 
 			if (absX < SWIPE_SLOP && absY < SWIPE_SLOP) {
@@ -232,12 +255,17 @@
 				return;
 			}
 
-			if (absY > absX || absX < absY * AXIS_RATIO) {
+			if (
+				absY > absX ||
+				absX < absY * AXIS_RATIO ||
+				(direction === 'open' ? openingDelta <= 0 : openingDelta >= 0)
+			) {
 				cancelSwipe();
 				return;
 			}
 
 			locked = true;
+			mounted = true;
 			setScrollLock(true);
 		}
 
@@ -245,11 +273,11 @@
 
 		const now = e.timeStamp;
 		const elapsed = Math.max(1, now - lastTime);
-		velocity = (touch.clientX - lastX) / elapsed;
+		velocity = ((touch.clientX - lastX) * openingSign) / elapsed;
 		lastX = touch.clientX;
 		lastTime = now;
 
-		swipeProgress = Math.max(0, Math.min(1, startProgress + dx / panelWidth));
+		swipeProgress = Math.max(0, Math.min(1, startProgress + openingDelta / panelWidth));
 	};
 
 	const onTouchEnd = () => {

@@ -334,6 +334,7 @@
 
 				for (const [, sentence] of messageContentParts.entries()) {
 					if (signal.aborted) return;
+					if (!speaking) break;
 
 					const url = await $TTSWorker
 						.generate({ text: sentence, voice: voiceId })
@@ -354,6 +355,7 @@
 			} else {
 				for (const [, sentence] of messageContentParts.entries()) {
 					if (signal.aborted) return;
+					if (!speaking) break;
 
 					const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
 						(error) => {
@@ -1190,22 +1192,22 @@
 								{/if}
 
 								{#if message.usage}
+									{@const usage = JSON.stringify(message.usage, null, 2)
+										.replace(/"([^(")"]+)":/g, '$1:')
+										.slice(1, -1)
+										.split('\n')
+										.map((line) => line.slice(2))
+										.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
+										.join('\n')}
+									<span id="usage-{message.id}" hidden>{usage}</span>
 									<Tooltip
-										content={message.usage
-											? `<pre>${sanitizeResponseContent(
-													JSON.stringify(message.usage, null, 2)
-														.replace(/"([^(")"]+)":/g, '$1:')
-														.slice(1, -1)
-														.split('\n')
-														.map((line) => line.slice(2))
-														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
-														.join('\n')
-												)}</pre>`
-											: ''}
+										content={`<pre>${sanitizeResponseContent(usage)}</pre>`}
+										allowHTML={true}
 										placement="bottom"
 									>
 										<button
-											aria-hidden="true"
+											aria-label={$i18n.t('Info')}
+											aria-describedby="usage-{message.id}"
 											class=" {isLastMessage || ($settings?.highContrastMode ?? false)
 												? 'visible'
 												: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-gray-400 hover:text-gray-600 transition whitespace-pre-wrap"

@@ -19,7 +19,7 @@
 	export let touch = true;
 	export let theme = '';
 	export let offset: TippyProps['offset'] = [0, 4];
-	export let allowHTML = true;
+	export let allowHTML = false;
 	export let tippyOptions: Partial<TippyProps> = {};
 	export let interactive = false;
 
@@ -58,10 +58,29 @@
 					placement,
 					allowHTML,
 					touch,
+					trigger: 'mouseenter focusin',
 					...(theme !== '' ? { theme } : { theme: 'dark' }),
 					arrow: false,
 					offset,
 					...(interactive ? { interactive: true } : {}),
+					plugins: [
+						{
+							fn: (instance) => {
+								const onKeyDown = (e: KeyboardEvent) => {
+									if (e.key === 'Escape') {
+										e.stopPropagation();
+										instance.hide();
+									}
+								};
+
+								return {
+									onShow: () => document.addEventListener('keydown', onKeyDown),
+									onHide: () => document.removeEventListener('keydown', onKeyDown),
+									onDestroy: () => document.removeEventListener('keydown', onKeyDown)
+								};
+							}
+						}
+					],
 					...tippyOptions
 				});
 			}

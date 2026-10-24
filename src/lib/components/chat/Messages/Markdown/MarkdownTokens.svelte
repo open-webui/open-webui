@@ -295,6 +295,7 @@
 			<div class=" absolute top-1 right-1.5 z-20 hover-reveal flex gap-0.5">
 				<Tooltip content={$i18n.t('Copy')}>
 					<button
+						aria-label={$i18n.t('Copy')}
 						class="p-1 rounded-lg bg-transparent transition"
 						on:click={(e) => {
 							e.stopPropagation();
@@ -307,6 +308,7 @@
 
 				<Tooltip content={$i18n.t('Export to CSV')}>
 					<button
+						aria-label={$i18n.t('Export to CSV')}
 						class="p-1 rounded-lg bg-transparent transition"
 						on:click={(e) => {
 							e.stopPropagation();

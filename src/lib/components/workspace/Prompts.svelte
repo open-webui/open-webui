@@ -36,6 +36,8 @@
 	import Search from '../icons/Search.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
@@ -293,6 +295,7 @@
 	const copyHandler = async (prompt) => {
 		const res = await copyToClipboard(prompt.content);
 		if (res) {
+			toast.success($i18n.t('Copied to clipboard'));
 			copiedId = prompt.command;
 			setTimeout(() => {
 				copiedId = null;
@@ -387,6 +390,8 @@
 		{$i18n.t('Prompts')} / {$WEBUI_NAME}
 	</title>
 </svelte:head>
+
+<h1 class="sr-only">{$i18n.t('Prompts')}</h1>
 
 {#if loaded}
 	<DeleteConfirmDialog
@@ -640,17 +645,21 @@
 							<div
 								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
-								<Tooltip
-									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-									className="min-w-0"
-									placement="top-start"
-								>
-									<div class="truncate">
-										{capitalizeFirstLetter(
-											prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-										)}
-									</div>
-								</Tooltip>
+								<ProfilePreview user={prompt?.user ?? null} side="left">
+									<span class="flex max-w-44 items-center gap-1.75">
+										<ProfileImage
+											src={prompt?.user?.id
+												? `/api/v1/users/${prompt.user.id}/profile/image`
+												: '/user.png'}
+											className="size-4 shrink-0 rounded-full!"
+										/>
+										<span class="min-w-0 max-w-24 truncate">
+											{capitalizeFirstLetter(
+												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+											)}
+										</span>
+									</span>
+								</ProfilePreview>
 							</div>
 
 							<div class="ml-2 flex shrink-0 flex-row items-center self-center">
@@ -692,7 +701,9 @@
 
 									<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
 										<PromptMenu
-											accessHandler={() => accessModal.open(prompt.id)}
+											accessHandler={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'
+												? () => accessModal.open(prompt.id)
+												: null}
 											writeAccess={prompt.write_access}
 											show={openPromptMenuId === prompt.id}
 											editHandler={() => {
@@ -729,10 +740,9 @@
 											</button>
 										</PromptMenu>
 
-										<button
+										<div
 											class="flex h-6 items-center"
-											type="button"
-											disabled={!prompt.write_access}
+											role="presentation"
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -752,7 +762,7 @@
 													}}
 												/>
 											</Tooltip>
-										</button>
+										</div>
 									</div>
 								{/if}
 							</div>

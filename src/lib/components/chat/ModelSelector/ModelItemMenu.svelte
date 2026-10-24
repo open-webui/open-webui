@@ -42,7 +42,7 @@
 		content={$i18n.t('More')}
 		className={($settings?.highContrastMode ?? false)
 			? ''
-			: 'group-hover/item:opacity-100 opacity-0'}
+			: 'group-hover/item:opacity-100 group-focus-within/item:opacity-100 opacity-0'}
 	>
 		<slot />
 	</Tooltip>

@@ -63,6 +63,11 @@
 			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
 					<button
+						aria-hidden={models.length <= 1}
+						tabindex={models.length > 1 ? 0 : -1}
+						aria-label={$i18n.t('Get information on {{name}} in the UI', {
+							name: resolveLocalizedModelName(model, $i18n.language)
+						})}
 						on:click={() => {
 							selectedModelIdx = modelIdx;
 						}}
@@ -73,12 +78,13 @@
 									sanitizeResponseContent(selectedModelDescription).replaceAll('\n', '<br>')
 								)
 							)}
+							allowHTML={true}
 							placement="right"
 						>
 							<img
 								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 								class=" size-[2.7rem] rounded-full"
-								alt="logo"
+								alt=""
 								draggable="false"
 								on:error={(e) => {
 									// LICENSE covers this Open WebUI fallback logo.
@@ -109,13 +115,13 @@
 			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4"
 		>
 			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+				<h2 class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
 					{#if selectedModelName}
 						{selectedModelName}
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
-				</div>
+				</h2>
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if selectedModelDescription}
@@ -128,7 +134,7 @@
 								)
 							)}
 						</div>
-						{#if models[selectedModelIdx]?.info?.meta?.user}
+						{#if models[selectedModelIdx]?.info?.meta?.user && (!models[selectedModelIdx]?.info?.meta?.user.community || $config?.features.enable_community_sharing)}
 							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
 								{$i18n.t('By')}
 								{#if models[selectedModelIdx]?.info?.meta?.user.community}

@@ -432,7 +432,14 @@
 		chatInputElement?.focus(options);
 	};
 
-	export const setText = async (text?: string, cb?: (text: string) => void) => {
+	export const setText = (text: string = '') => {
+		chatInputElement?.setText(text);
+		if (!$showCallOverlay) {
+			focus();
+		}
+	};
+
+	export const setTextHandler = async (text?: string, cb?: (text: string) => void) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
@@ -440,10 +447,7 @@
 				text = await textVariableHandler(text || '');
 			}
 
-			chatInputElement?.setText(text);
-			if (!$showCallOverlay) {
-				focus();
-			}
+			setText(text);
 
 			if (text !== '') {
 				text = await inputVariableHandler(text);
@@ -859,7 +863,8 @@
 		modelCapabilitiesById
 	);
 	$: hasDirectToolServerAccess =
-		$_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true);
+		$config?.features?.enable_direct_integrations &&
+		($_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true));
 	$: showTerminalSelector =
 		$config?.features?.enable_tool_servers &&
 		terminalCapableModels.length > 0 &&
@@ -1534,6 +1539,7 @@
 					canStatus: () => !!history?.currentId,
 					canFork: () =>
 						!!history?.currentId &&
+						!$temporaryChatEnabled &&
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
@@ -2029,6 +2035,7 @@
 										<div>
 											<button
 												class="flex items-center dark:text-gray-500"
+												aria-label={$i18n.t('Remove Selected Model')}
 												on:click={() => {
 													atSelectedModel = undefined;
 												}}
@@ -2352,6 +2359,7 @@
 										)
 											? selectedModelIds
 											: fileUploadCapableModels}
+										{visionCapableModels}
 										{toolApprovalMode}
 										{onToolApprovalModeChange}
 										{screenCaptureHandler}
@@ -2481,12 +2489,13 @@
 								</div>
 
 								<div class="flex flex-1 items-center min-w-0 overflow-x-auto scrollbar-none">
-									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}
+									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.valves ?? true))}
 										<div class="ml-1 flex gap-1.5 shrink-0">
 											<Tooltip content={$i18n.t('Valves')} placement="top">
 												<button
 													type="button"
 													id="model-valves-button"
+													aria-label={$i18n.t('Valves')}
 													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden"
 													on:click={() => {
 														selectedValvesType = 'function';
@@ -2621,6 +2630,8 @@
 										{#if webSearchEnabled && showWebSearchButton}
 											<Tooltip content={$i18n.t('Web Search')} placement="top">
 												<button
+													aria-label={$i18n.t('Web Search')}
+													aria-pressed={webSearchEnabled}
 													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 													type="button"
 													class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
@@ -2639,6 +2650,8 @@
 										{#if imageGenerationEnabled && showImageGenerationButton}
 											<Tooltip content={$i18n.t('Image')} placement="top">
 												<button
+													aria-label={$i18n.t('Image')}
+													aria-pressed={imageGenerationEnabled}
 													on:click|preventDefault={() =>
 														(imageGenerationEnabled = !imageGenerationEnabled)}
 													type="button"
@@ -2877,6 +2890,9 @@
 												>
 													<button
 														id="send-message-button"
+														aria-label={uploadPending
+															? $i18n.t('Waiting for upload...')
+															: $i18n.t('Send message')}
 														class="{!(prompt === '' && files.length === 0) || uploadPending
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-[0.3125rem] self-center"

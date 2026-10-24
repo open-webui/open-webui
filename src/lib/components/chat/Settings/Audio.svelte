@@ -224,12 +224,14 @@
 			{/if}
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.audio.instantAutoSendAfterVoiceTranscription.label')}
 				description={$i18n.t(
 					'settings.personal.audio.instantAutoSendAfterVoiceTranscription.description'
 				)}
 			>
 				<Switch
+					ariaLabelledbyId={labelId}
 					state={speechAutoSend}
 					ariaLabel={$i18n.t(
 						'settings.personal.audio.instantAutoSendAfterVoiceTranscription.label'
@@ -276,10 +278,12 @@
 			{/if}
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.audio.autoPlaybackResponse.label')}
 				description={$i18n.t('settings.personal.audio.autoPlaybackResponse.description')}
 			>
 				<Switch
+					ariaLabelledbyId={labelId}
 					state={responseAutoPlayback}
 					ariaLabel={$i18n.t('settings.personal.audio.autoPlaybackResponse.label')}
 					on:change={(event) => {
@@ -360,18 +364,19 @@
 						<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
 						{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 							<option
-								value={_voice.name}
+								value={_voice.voiceURI}
 								class="bg-gray-100 dark:bg-gray-700"
-								selected={voice === _voice.name}>{_voice.name}</option
+								selected={voice === _voice.voiceURI}>{_voice.name}</option
 							>
 						{/each}
 					</SettingsSelect>
 				</UserSettingField>
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.audio.allowNonLocalVoices.label')}
 					description={$i18n.t('settings.personal.audio.allowNonLocalVoices.description')}
 				>
-					<Switch bind:state={nonLocalVoices} />
+					<Switch ariaLabelledbyId={labelId} bind:state={nonLocalVoices} />
 				</UserSettingRow>
 			</UserSettingSection>
 		{:else if $config.audio.tts.engine !== ''}

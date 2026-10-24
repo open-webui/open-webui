@@ -24,7 +24,9 @@ def get_ask_user_tool_calls(tool_calls: list[dict]) -> tuple[list[dict], str | N
 
 def normalize_ask_user_request(arguments: dict) -> dict:
     questions = arguments.get('questions')
-    if not isinstance(questions, list) or not 1 <= len(questions) <= 3:
+    if not isinstance(questions, list):
+        raise ValueError('ask_user questions must be an array of question objects.')
+    if not 1 <= len(questions) <= 3:
         raise ValueError('ask_user requires 1-3 questions.')
 
     normalized_questions = []

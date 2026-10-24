@@ -23,6 +23,7 @@ from sqlalchemy import (
     cast,
     delete,
     func,
+    literal,
     select,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -961,20 +962,38 @@ class ChatMessageTable:
             result = await db.execute(stmt)
             return {row.chat_id: row.count for row in result.all()}
 
-    async def get_daily_message_counts_by_model(
+    async def get_usage_over_time_by_model(
         self,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
         group_id: Optional[str] = None,
         db: Optional[AsyncSession] = None,
+        granularity: str = 'daily',
+        metric: str = 'messages',
+        bucket_offset: int = 0,
     ) -> dict[str, dict[str, int]]:
-        """Get message counts grouped by day and model."""
-        async with get_async_db_context(db) as db:
-            from datetime import datetime, timedelta
+        """Get message counts or total tokens grouped by time bucket and model."""
+        bucket_minutes = {'10m': 10, 'hourly': 60, '3h': 180, '6h': 360, 'daily': 1440}[granularity]
+        date_format = '%Y-%m-%d' if granularity == 'daily' else '%Y-%m-%d %H:%M'
+        step = timedelta(minutes=bucket_minutes)
 
+        def bucket_start(timestamp):
+            # Shift comparison events before bucketing so partial intervals align exactly.
+            date = datetime.fromtimestamp(_normalize_timestamp(timestamp) + bucket_offset)
+            minutes = date.hour * 60 + date.minute
+            minutes = minutes // bucket_minutes * bucket_minutes
+            return date.replace(hour=minutes // 60, minute=minutes % 60, second=0, microsecond=0)
+
+        async with get_async_db_context(db) as db:
             from open_webui.models.groups import group_user_memberships
 
-            stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
+            value = literal(1)
+            if metric == 'tokens':
+                bind = await db.connection()
+                input_tokens, output_tokens = _token_columns(bind.dialect.name)
+                value = func.coalesce(input_tokens, 0) + func.coalesce(output_tokens, 0)
+
+            stmt = select(ChatMessage.created_at, ChatMessage.model_id, value).filter(
                 ChatMessage.role == 'assistant',
                 ChatMessage.model_id.isnot(None),
             )
@@ -988,78 +1007,20 @@ class ChatMessageTable:
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
             result = await db.execute(stmt)
-            results = result.all()
+            counts: dict[str, dict[str, int]] = {}
+            for timestamp, model_id, value in result.all():
+                date_str = bucket_start(timestamp).strftime(date_format)
+                bucket = counts.setdefault(date_str, {})
+                bucket[model_id] = bucket.get(model_id, 0) + int(value)
 
-            # Group by date -> model -> count
-            daily_counts: dict[str, dict[str, int]] = {}
-            for timestamp, model_id in results:
-                date_str = datetime.fromtimestamp(_normalize_timestamp(timestamp)).strftime('%Y-%m-%d')
-                if date_str not in daily_counts:
-                    daily_counts[date_str] = {}
-                daily_counts[date_str][model_id] = daily_counts[date_str].get(model_id, 0) + 1
-
-            # Fill in missing days
             if start_date and end_date:
-                current = datetime.fromtimestamp(_normalize_timestamp(start_date))
-                end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date))
+                current = bucket_start(start_date)
+                end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date) + bucket_offset)
                 while current <= end_dt:
-                    date_str = current.strftime('%Y-%m-%d')
-                    if date_str not in daily_counts:
-                        daily_counts[date_str] = {}
-                    current += timedelta(days=1)
+                    counts.setdefault(current.strftime(date_format), {})
+                    current += step
 
-            return daily_counts
-
-    async def get_hourly_message_counts_by_model(
-        self,
-        start_date: Optional[int] = None,
-        end_date: Optional[int] = None,
-        group_id: Optional[str] = None,
-        db: Optional[AsyncSession] = None,
-    ) -> dict[str, dict[str, int]]:
-        """Get message counts grouped by hour and model."""
-        async with get_async_db_context(db) as db:
-            from datetime import datetime, timedelta
-
-            from open_webui.models.groups import group_user_memberships
-
-            stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
-                ChatMessage.role == 'assistant',
-                ChatMessage.model_id.isnot(None),
-            )
-
-            if start_date:
-                stmt = stmt.filter(ChatMessage.created_at >= start_date)
-            if end_date:
-                stmt = stmt.filter(ChatMessage.created_at <= end_date)
-            if group_id:
-                group_users = select(group_user_memberships([group_id], True).c.user_id).scalar_subquery()
-                stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
-
-            result = await db.execute(stmt)
-            results = result.all()
-
-            # Group by hour -> model -> count
-            hourly_counts: dict[str, dict[str, int]] = {}
-            for timestamp, model_id in results:
-                hour_str = datetime.fromtimestamp(_normalize_timestamp(timestamp)).strftime('%Y-%m-%d %H:00')
-                if hour_str not in hourly_counts:
-                    hourly_counts[hour_str] = {}
-                hourly_counts[hour_str][model_id] = hourly_counts[hour_str].get(model_id, 0) + 1
-
-            # Fill in missing hours
-            if start_date and end_date:
-                current = datetime.fromtimestamp(_normalize_timestamp(start_date)).replace(
-                    minute=0, second=0, microsecond=0
-                )
-                end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date))
-                while current <= end_dt:
-                    hour_str = current.strftime('%Y-%m-%d %H:00')
-                    if hour_str not in hourly_counts:
-                        hourly_counts[hour_str] = {}
-                    current += timedelta(hours=1)
-
-            return hourly_counts
+            return counts
 
 
 ChatMessages = ChatMessageTable()
