@@ -62,7 +62,7 @@
 					...(theme !== '' ? { theme } : { theme: 'dark' }),
 					arrow: false,
 					offset,
-					...(interactive ? { interactive: true } : {}),
+					...(interactive ? { interactive: true, aria: { expanded: false } } : {}),
 					plugins: [
 						{
 							fn: (instance) => {
