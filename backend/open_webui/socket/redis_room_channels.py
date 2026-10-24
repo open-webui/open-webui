@@ -111,6 +111,9 @@ class AsyncRedisRoomChannelManager(AsyncRedisManager):
                     if data.get('type') == 'subscribe':
                         # redis-py can reconnect internally and restore a pending removal.
                         self._subscription_queue.put_nowait(asyncio.Event())
+                        # Ping once per (re)subscribe, not per channel: a silent reconnect drops the pending PONG.
+                        if data['channel'] == self.channel.encode():
+                            await pubsub.ping(str(serial).encode())
                     elif data.get('type') == 'pong' and data['data'] == str(serial).encode():
                         for ready in waiters:
                             ready.set()

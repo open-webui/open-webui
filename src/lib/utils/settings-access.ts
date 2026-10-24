@@ -21,6 +21,11 @@ export const canUseTemporaryChats = ({ user }: SettingsAccessContext) =>
 export const canUseChannels = ({ user, config }: SettingsAccessContext) =>
 	config?.features?.enable_channels &&
 	(user?.role === 'admin' || (user?.permissions?.features?.channels ?? true));
+export const canUseCalls = ({ user }: SettingsAccessContext) =>
+	user?.role === 'admin' || (user?.permissions?.chat?.call ?? true);
+export const canUseWebSearch = ({ user, config }: SettingsAccessContext) =>
+	config?.features?.enable_web_search &&
+	(user?.role === 'admin' || user?.permissions?.features?.web_search);
 export const canRegenerateResponses = ({ user }: SettingsAccessContext) =>
 	user?.role === 'admin' || (user?.permissions?.chat?.regenerate_response ?? true);
 export const isSettingsAdmin = ({ user }: SettingsAccessContext) => user?.role === 'admin';
@@ -72,6 +77,12 @@ export function canSearchSetting(
 		return !!canUseTemporaryChats(context);
 	if (stem === 'settings.personal.interface.compressImagesInChannels')
 		return !!canUseChannels(context);
+	if (
+		key.startsWith('settings.personal.interface.') &&
+		/\.(sections\.voice|allowVoiceInterruptionInCall|displayEmojiInCall)\./.test(key)
+	)
+		return canUseCalls(context);
+	if (stem === 'settings.personal.interface.webSearchInChat') return !!canUseWebSearch(context);
 	if (stem === 'settings.personal.interface.regenerateMenu') return canRegenerateResponses(context);
 	return true;
 }

@@ -1298,6 +1298,8 @@ async def chat_completion(
             )
         ):
             tool_servers = None
+        if tool_servers and not await Config.get('direct.integrations.enable', False):
+            tool_servers = None
 
         automation_id = form_data.pop('automation_id', None)
         tool_approval_mode = (

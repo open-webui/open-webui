@@ -672,7 +672,7 @@
 					const connection = resolveTerminalConnection(
 						data.terminal_id,
 						[],
-						$settings?.terminalServers ?? [],
+						$config?.features?.enable_direct_integrations ? ($settings?.terminalServers ?? []) : [],
 						localStorage.token
 					);
 					if (!connection) throw new Error('Terminal Not Found');
@@ -1456,6 +1456,14 @@
 			'high-contrast',
 			$settings?.highContrastMode ?? false
 		);
+
+		const viewport = document.querySelector('meta[name="viewport"]');
+		if (viewport) {
+			viewport.content = viewport.content.replace(
+				/maximum-scale=[\d.]+/,
+				`maximum-scale=${$settings?.highContrastMode ? 5 : 1}`
+			);
+		}
 	}
 
 	onDestroy(() => {
