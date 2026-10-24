@@ -1819,6 +1819,21 @@ export const splitProperties = (str: string, delimiter: string): string[] => {
 	return result;
 };
 
+// Definitions are user-controlled text and get spread onto the input element.
+const SAFE_VARIABLE_PROPERTIES = new Set([
+	'default',
+	'label',
+	'max',
+	'maxlength',
+	'min',
+	'minlength',
+	'options',
+	'placeholder',
+	'required',
+	'step',
+	'type'
+]);
+
 export const parseVariableDefinition = (definition: string): Record<string, any> => {
 	// Use splitProperties for the main colon delimiter to handle quoted strings
 	const parts = splitProperties(definition, ':');
@@ -1839,7 +1854,7 @@ export const parseVariableDefinition = (definition: string): Record<string, any>
 			if (equalsParts.length === 1) {
 				// It's a flag with no value, e.g. "required" -> true
 				const flagName = equalsParts[0].trim();
-				if (flagName.length > 0) {
+				if (SAFE_VARIABLE_PROPERTIES.has(flagName)) {
 					return { ...props, [flagName]: true };
 				}
 				return props;
@@ -1849,6 +1864,7 @@ export const parseVariableDefinition = (definition: string): Record<string, any>
 			const propertyValueRaw = valueParts.join('='); // Handle values with extra '='
 
 			if (!propertyName || propertyValueRaw == null) return props;
+			if (!SAFE_VARIABLE_PROPERTIES.has(propertyName.trim())) return props;
 
 			return {
 				...props,
