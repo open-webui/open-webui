@@ -622,11 +622,22 @@ async def refresh_chat_access(chat_id=None):
     access = {}
     chat_ids = set()
     for batch in get_session_pool_batches():
+        chat_owner_ids: dict[str, str] = {}
+        if not chat_id:
+            # Owners keep access; role changes and deletion disconnect them separately.
+            open_chat_ids: set[str] = set()
+            for _, session in batch:
+                if not session:
+                    continue
+                open_chat_ids.update(session.get('chat_ids') or [])
+            chat_owner_ids = await Chats.get_owner_ids_by_chat_ids(list(open_chat_ids))
         for sid, session in batch:
             if not session:
                 continue
             for cid in session.get('chat_ids') or []:
                 if chat_id and cid != chat_id:
+                    continue
+                if chat_owner_ids.get(cid) == session['id']:
                     continue
                 key = (cid, session['id'])
                 if key not in access:
