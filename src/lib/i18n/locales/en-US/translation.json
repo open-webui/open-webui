@@ -3002,6 +3002,8 @@
 	"settings.admin.interface.taskModel.description": "Choose fallback models for background tasks. Current Model follows the active chat model.",
 	"settings.admin.interface.taskModel.label": "Task Model",
 	"settings.admin.interface.taskModelParameters.label": "Task Model Parameters",
+	"settings.admin.interface.visibility.description": "Choose which controls appear for users. Hiding a control keeps its current setting and underlying feature available. Administrators always see available controls.",
+	"settings.admin.interface.visibility.title": "Visible controls",
 	"settings.admin.interface.title": "Interface",
 	"settings.admin.interface.titleGeneration.description": "Allow automatic names for new chats.",
 	"settings.admin.interface.titleGeneration.label": "Title Generation",

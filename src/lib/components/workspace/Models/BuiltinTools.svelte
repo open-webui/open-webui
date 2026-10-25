@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { config } from '$lib/stores';
+	import { config, visibleControls } from '$lib/stores';
 	import ModelSettingToggle from './ModelSettingToggle.svelte';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
 
@@ -143,7 +143,7 @@
 	{$i18n.t('Work')}
 	-->
 	<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-		{#each allTools as key}
+		{#each allTools.filter((key) => $visibleControls[`model_editor.tools.${key}`]) as key}
 			<ModelSettingToggle
 				label={toolLabels[key].label}
 				description={toolLabels[key].description}

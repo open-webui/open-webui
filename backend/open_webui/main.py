@@ -2366,6 +2366,7 @@ async def get_app_config(request: Request):
         'ui.default_models',
         'ui.default_pinned_models',
         'ui.default_interface_settings',
+        'ui.visibility',
         'ui.i18n',
         'ui.prompt_suggestions',
         'ui.prompt_suggestions_i18n',
@@ -2532,6 +2533,7 @@ async def get_app_config(request: Request):
                 },
                 'ui': {
                     'default_interface_settings': config.get('ui.default_interface_settings'),
+                    'visibility': config.get('ui.visibility'),
                     'pending_user_overlay_title': config.get('ui.pending_user_overlay_title'),
                     'pending_user_overlay_content': config.get('ui.pending_user_overlay_content'),
                     'response_watermark': config.get('ui.watermark'),

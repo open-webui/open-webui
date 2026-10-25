@@ -19,7 +19,7 @@
 		getArchivedChatList,
 		unarchiveAllChats
 	} from '$lib/apis/chats';
-	import { chatId, showSettings, user } from '$lib/stores';
+	import { chatId, showSettings, user, visibleControls } from '$lib/stores';
 	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
 	import { formatNumber } from '$lib/utils';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -244,23 +244,25 @@
 
 			<div slot="content">
 				<DropdownMenu className="min-w-[10.625rem] shadow-sm">
-					<button
-						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
-						disabled={loading || chatCount === 0}
-						type="button"
-						on:click={() => {
-							showUnarchiveAllConfirmDialog = true;
-						}}
-					>
-						{#if loading}
-							<Spinner className="size-3.5 shrink-0" />
-						{:else}
-							<UndoAction className="size-3.5 shrink-0" strokeWidth="1.5" />
-						{/if}
-						<div class="min-w-0 flex-1 truncate text-left">
-							{$i18n.t('settings.personal.archivedChats.unarchiveAll.label')}
-						</div>
-					</button>
+					{#if $visibleControls['chat.archive']}
+						<button
+							class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+							disabled={loading || chatCount === 0}
+							type="button"
+							on:click={() => {
+								showUnarchiveAllConfirmDialog = true;
+							}}
+						>
+							{#if loading}
+								<Spinner className="size-3.5 shrink-0" />
+							{:else}
+								<UndoAction className="size-3.5 shrink-0" strokeWidth="1.5" />
+							{/if}
+							<div class="min-w-0 flex-1 truncate text-left">
+								{$i18n.t('settings.personal.archivedChats.unarchiveAll.label')}
+							</div>
+						</button>
+					{/if}
 
 					{#if $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true)}
 						<button
@@ -395,18 +397,20 @@
 								class="flex shrink-0 items-center justify-end text-gray-500 dark:text-gray-500"
 								role="cell"
 							>
-								<Tooltip content={$i18n.t('Unarchive Chat')}>
-									<button
-										class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-										type="button"
-										aria-label={$i18n.t('Unarchive Chat')}
-										on:click={() => {
-											unarchiveHandler(chat.id);
-										}}
-									>
-										<UndoAction className="size-3.5" strokeWidth="1.5" />
-									</button>
-								</Tooltip>
+								{#if $visibleControls['chat.archive']}
+									<Tooltip content={$i18n.t('Unarchive Chat')}>
+										<button
+											class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+											type="button"
+											aria-label={$i18n.t('Unarchive Chat')}
+											on:click={() => {
+												unarchiveHandler(chat.id);
+											}}
+										>
+											<UndoAction className="size-3.5" strokeWidth="1.5" />
+										</button>
+									</Tooltip>
+								{/if}
 								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
 									<Tooltip content={$i18n.t('Delete Chat')}>
 										<button

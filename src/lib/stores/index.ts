@@ -1,3 +1,9 @@
+import {
+	CONTROL_LABELS,
+	isControlVisible,
+	type ControlId,
+	type Visibility
+} from '$lib/utils/ui-visibility';
 import { APP_NAME } from '$lib/constants';
 import { type Writable, derived, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
@@ -126,6 +132,17 @@ export const visiblePinnedModels = derived([pinnedModels, models], ([$pinnedMode
 	$pinnedModels.filter((id) =>
 		$models.some((model) => model.id === id && !model.info?.meta?.hidden)
 	)
+);
+
+export const visibleControls = derived(
+	[config, user],
+	([$config, $user]) =>
+		Object.fromEntries(
+			(Object.keys(CONTROL_LABELS) as ControlId[]).map((id) => [
+				id,
+				isControlVisible(id, { config: $config, user: $user })
+			])
+		) as Record<ControlId, boolean>
 );
 
 export const audioQueue = writable<AudioQueue | null>(null);
@@ -420,6 +437,7 @@ type Config = {
 	};
 	ui?: {
 		default_interface_settings?: Record<string, unknown>;
+		visibility?: Visibility;
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
 		response_watermark?: string;

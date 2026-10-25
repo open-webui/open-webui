@@ -89,6 +89,10 @@
 	let keyboardIndex = 0;
 	let plot: HTMLDivElement;
 	let chartWidth = 0;
+	let legendExpanded = false;
+	$: legendColumns = Math.max(1, Math.floor((chartWidth + 16) / 256));
+	$: legendLimit = legendColumns * 2 - 1;
+	$: legendIds = legendExpanded ? ids : ids.slice(0, legendLimit);
 	let tooltip: Instance | undefined;
 	let tooltipContent: HTMLDivElement;
 	let tooltipId = '';
@@ -145,22 +149,27 @@
 				: [0, series.length - 1]
 		)
 	].filter((i) => i >= 0 && i < series.length);
-	$: lanes = visibleIds.map((id) => {
+	$: lanes = (view === 'activity' ? visibleIds : []).map((id) => {
 		const values = series.map((point) => point.models[id] ?? 0);
 		return { id, peak: Math.max(0, ...values), values };
 	});
-	$: stacks = series.map((point) => visibleIds.filter((id) => (point.models[id] ?? 0) > 0));
+	$: stacks =
+		view === 'volume'
+			? series.map((point) => visibleIds.filter((id) => (point.models[id] ?? 0) > 0))
+			: [];
+	$: activityPositions = series.map((point) => (point.time - start) / span);
 	const name = (id: string) => modelNames[id] || id;
-	const number = (value: number) =>
-		new Intl.NumberFormat($i18n.language, { notation: 'compact', maximumFractionDigits: 1 }).format(
-			value
-		);
+	$: numberFormat = new Intl.NumberFormat($i18n.language, {
+		notation: 'compact',
+		maximumFractionDigits: 1
+	});
+	const number = (value: number) => numberFormat.format(value);
 	const dateLabel = (date: string) =>
 		dayjs(date)
 			.locale($i18n.language)
 			.format(granularity === 'daily' ? 'MMM D' : 'MMM D, HH:mm');
 	const position = (time: number) => ((time - start + step / 2) / span) * 100;
-	function navigate(event: KeyboardEvent, index: number) {
+	async function navigate(event: KeyboardEvent, index: number) {
 		const buttons = plot.querySelectorAll<HTMLButtonElement>('button[data-point]');
 		const destinations: Record<string, number> = {
 			ArrowRight: index + 1,
@@ -171,12 +180,74 @@
 		if (view === 'activity') {
 			destinations.ArrowDown = index + series.length;
 			destinations.ArrowUp = index - series.length;
+			destinations.End = lanes.length * series.length - 1;
 		}
 		const next = destinations[event.key];
 		if (next === undefined) return;
 		event.preventDefault();
-		keyboardIndex = Math.max(0, Math.min(buttons.length - 1, next));
-		buttons[keyboardIndex]?.focus();
+		keyboardIndex = Math.max(
+			0,
+			Math.min((view === 'activity' ? lanes.length * series.length : buttons.length) - 1, next)
+		);
+		if (view === 'activity') {
+			const row = Math.floor(keyboardIndex / series.length);
+			await tick();
+			buttons[row]?.focus();
+			showTooltip({ currentTarget: buttons[row] }, keyboardIndex % series.length, lanes[row].id);
+		} else buttons[keyboardIndex]?.focus();
+	}
+
+	// One canvas and focus target per lane avoids a DOM element for every model/date pair.
+	function drawActivity(
+		canvas: HTMLCanvasElement,
+		options: {
+			lane: { id: string; peak: number; values: number[] };
+			positions: number[];
+			cellWidth: number;
+			width: number;
+		}
+	) {
+		function draw() {
+			const { lane, positions, cellWidth } = options;
+			const width = canvas.clientWidth;
+			const height = canvas.clientHeight;
+			const scale = window.devicePixelRatio || 1;
+			canvas.width = Math.round(width * scale);
+			canvas.height = Math.round(height * scale);
+			const context = canvas.getContext('2d');
+			if (!context) return;
+			context.scale(scale, scale);
+			context.fillStyle = modelColor(lane.id);
+			lane.values.forEach((value, index) => {
+				if (value <= 0) return;
+				context.globalAlpha = 0.25 + (0.75 * value) / lane.peak;
+				context.fillRect(positions[index] * width, 0, cellWidth * width, height);
+			});
+		}
+		draw();
+		return {
+			update(next: typeof options) {
+				options = next;
+				draw();
+			}
+		};
+	}
+
+	function hoverActivity(event: MouseEvent, id: string) {
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		const time = start + Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)) * span;
+		let low = 0;
+		let high = series.length - 1;
+		while (low < high) {
+			const mid = Math.ceil((low + high) / 2);
+			if (series[mid].time <= time) low = mid;
+			else high = mid - 1;
+		}
+		if (time >= series[low].time + step && time < start + span) {
+			hideTooltip();
+			return;
+		}
+		if (active !== low || activeModel !== id) showTooltip(event, low, id);
 	}
 
 	onMount(() => {
@@ -188,7 +259,7 @@
 			placement: 'right-start',
 			offset: [0, 12],
 			popperOptions: {
-				modifiers: [{ name: 'flip', options: { fallbackPlacements: ['left-start'] } }]
+				modifiers: [{ name: 'flip', options: { fallbackPlacements: ['left-start', 'top'] } }]
 			},
 			duration: 0,
 			interactive: true,
@@ -203,7 +274,9 @@
 				const rect = (anchor ?? plot).getBoundingClientRect();
 				const height = tooltip?.popper.offsetHeight || tooltipContent.offsetHeight;
 				return new DOMRect(
-					rect.x + rect.width / 2,
+					rect.x +
+						rect.width *
+							(view === 'activity' && active !== null ? position(series[active].time) / 100 : 0.5),
 					plot.getBoundingClientRect().top - height / 2,
 					0,
 					0
@@ -214,7 +287,7 @@
 		return () => tooltip?.destroy();
 	});
 	async function showTooltip(
-		event: MouseEvent | FocusEvent,
+		event: { currentTarget: EventTarget | null },
 		index: number,
 		modelId: string | null = null
 	) {
@@ -410,6 +483,8 @@
 		{:else}
 			<div class="space-y-1">
 				{#each lanes as lane, row (lane.id)}
+					{@const index =
+						Math.floor(keyboardIndex / series.length) === row ? keyboardIndex % series.length : 0}
 					<div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-2 items-center">
 						<button
 							type="button"
@@ -418,41 +493,34 @@
 							aria-pressed={selectedModel === lane.id}
 							on:click={() => isolate(lane.id)}>{name(lane.id)}</button
 						>
-						<div class="relative h-6 bg-gray-100/70 dark:bg-gray-850/40">
-							{#each series as point, index (point.date)}
-								{@const cellIndex = row * series.length + index}
-								<button
-									type="button"
-									data-point
-									class="absolute inset-y-0 focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
-									style:left={`${position(point.time)}%`}
-									style:width={`${(100 * step) / span}%`}
-									style:transform="translateX(-50%)"
-									tabindex={keyboardIndex === cellIndex ? 0 : -1}
-									aria-label={`${name(lane.id)}, ${dateLabel(point.date)}: ${lane.values[index].toLocaleString($i18n.language)} ${metricLabel}`}
-									aria-describedby={active === index && activeModel === lane.id
-										? tooltipId
-										: undefined}
-									on:mouseenter={(event) => showTooltip(event, index, lane.id)}
-									on:mouseleave={leaveTooltip}
-									on:focus={(event) => {
-										keyboardIndex = cellIndex;
-										showTooltip(event, index, lane.id);
-									}}
-									on:blur={hideTooltip}
-									on:click={(event) => showTooltip(event, index, lane.id)}
-									on:keydown={(event) => navigate(event, cellIndex)}
-								>
-									<span
-										class="block absolute inset-0"
-										style:background-color={modelColor(lane.id)}
-										style:opacity={lane.values[index] > 0
-											? 0.25 + (0.75 * lane.values[index]) / lane.peak
-											: 0}
-									></span>
-								</button>
-							{/each}
-						</div>
+						<button
+							type="button"
+							data-point
+							class="relative h-6 bg-gray-100/70 dark:bg-gray-850/40 focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
+							tabindex={Math.floor(keyboardIndex / series.length) === row ? 0 : -1}
+							aria-label={`${name(lane.id)}, ${dateLabel(series[index].date)}: ${lane.values[index].toLocaleString($i18n.language)} ${metricLabel}`}
+							aria-describedby={activeModel === lane.id ? tooltipId : undefined}
+							on:mousemove={(event) => hoverActivity(event, lane.id)}
+							on:mouseleave={leaveTooltip}
+							on:focus={(event) => {
+								keyboardIndex = row * series.length + index;
+								showTooltip(event, index, lane.id);
+							}}
+							on:blur={hideTooltip}
+							on:click={(event) => hoverActivity(event, lane.id)}
+							on:keydown={(event) => navigate(event, row * series.length + index)}
+						>
+							<canvas
+								class="absolute inset-0 w-full h-full pointer-events-none"
+								aria-hidden="true"
+								use:drawActivity={{
+									lane,
+									positions: activityPositions,
+									cellWidth: step / span,
+									width: chartWidth
+								}}
+							></canvas>
+						</button>
 					</div>
 				{/each}
 			</div>
@@ -489,16 +557,19 @@
 			>
 		{/each}
 	</div>
-	<div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.6875rem]">
+	<div
+		class="mt-2 grid items-center gap-x-4 gap-y-1 text-[0.6875rem]"
+		style:grid-template-columns={`repeat(${legendColumns}, minmax(0, 1fr))`}
+	>
 		<button
 			type="button"
-			class="py-1"
+			class="py-1 text-left"
 			class:text-gray-900={selectedModel === null}
 			class:dark:text-gray-200={selectedModel === null}
 			aria-pressed={selectedModel === null}
 			on:click={() => isolate(null)}>{$i18n.t('All models')}</button
 		>
-		{#each ids as id (id)}
+		{#each legendIds as id (id)}
 			<button
 				type="button"
 				class="flex min-w-0 max-w-full items-center gap-1.5 py-1 text-left hover:text-gray-900 dark:hover:text-gray-100"
@@ -510,7 +581,7 @@
 				<span class="size-2 shrink-0" style:background-color={modelColor(id)}></span>
 				<span class="max-w-40 truncate" title={name(id)}>{name(id)}</span>
 				<span
-					class="w-14 shrink-0 text-right tabular-nums text-gray-400 dark:text-gray-500"
+					class="ml-auto w-14 shrink-0 text-right tabular-nums text-gray-400 dark:text-gray-500"
 					title={(hovered ? (hoveredModels?.[id] ?? 0) : (totals[id] ?? 0)).toLocaleString(
 						$i18n.language
 					)}>{number(hovered ? (hoveredModels?.[id] ?? 0) : (totals[id] ?? 0))}</span
@@ -518,6 +589,15 @@
 			</button>
 		{/each}
 	</div>
+	{#if ids.length > legendLimit}
+		<button
+			type="button"
+			class="mt-1 py-1 text-[0.6875rem] hover:text-gray-900 dark:hover:text-gray-100"
+			aria-expanded={legendExpanded}
+			on:click={() => (legendExpanded = !legendExpanded)}
+			>{legendExpanded ? $i18n.t('Show less') : $i18n.t('Show more')}</button
+		>
+	{/if}
 	<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
 		{view === 'activity'
 			? $i18n.t('Intensity relative to each model’s peak. Blank means no recorded usage.')

@@ -16,6 +16,9 @@
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
 	import { config as appConfig } from '$lib/stores';
+	import { setInterfaceVisibility } from '$lib/apis/configs';
+	import type { Visibility } from '$lib/utils/ui-visibility';
+	import VisibilitySettings from './Interface/Visibility.svelte';
 
 	export let saveHandler: () => void;
 
@@ -58,6 +61,7 @@
 	};
 	let toolSearchAlwaysLoaded = '';
 	let showTaskParameters = false;
+	let visibility: Visibility = { ...($appConfig?.ui?.visibility ?? {}) };
 
 	const configuredParams = (params: Record<string, any> = {}) =>
 		Object.fromEntries(
@@ -73,7 +77,7 @@
 		};
 
 		try {
-			[taskConfig, chatConfig] = await Promise.all([
+			[taskConfig, chatConfig, visibility] = await Promise.all([
 				updateTaskConfig(localStorage.token, taskConfigPayload),
 				updateChatConfig(localStorage.token, {
 					...chatConfig,
@@ -81,7 +85,8 @@
 						.split(',')
 						.map((item) => item.trim())
 						.filter((item) => item !== '')
-				})
+				}),
+				setInterfaceVisibility(localStorage.token, visibility)
 			]);
 		} catch (error) {
 			toast.error(
@@ -94,6 +99,7 @@
 			current
 				? {
 						...current,
+						ui: { ...current.ui, visibility },
 						features: {
 							...current.features,
 							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION,
@@ -193,7 +199,8 @@
 		</h2>
 
 		<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-			<AdminSettingSection title={$i18n.t('settings.admin.interface.sections.tasks.title')} first>
+			<VisibilitySettings bind:visibility />
+			<AdminSettingSection title={$i18n.t('settings.admin.interface.sections.tasks.title')}>
 				<div>
 					<div class="mb-2">
 						<div class="text-xs text-gray-600 dark:text-gray-400">

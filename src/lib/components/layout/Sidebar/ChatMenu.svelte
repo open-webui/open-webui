@@ -14,7 +14,7 @@
 		getChatPinnedStatusById,
 		toggleChatPinnedStatusById
 	} from '$lib/apis/chats';
-	import { chats, folders, settings, theme, user } from '$lib/stores';
+	import { chats, folders, settings, theme, user, visibleControls } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import ArchiveBoxIcon from '$lib/components/icons/ArchiveBox.svelte';
@@ -497,19 +497,21 @@
 				</DropdownSub>
 			{/if}
 
-			<button
-				role="menuitem"
-				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
-				on:click={() => {
-					archiveChatHandler();
-				}}
-			>
-				<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
-				<div class="flex items-center">
-					{archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
-				</div>
-			</button>
+			{#if $visibleControls['chat.archive']}
+				<button
+					role="menuitem"
+					draggable="false"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+					on:click={() => {
+						archiveChatHandler();
+					}}
+				>
+					<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
+					<div class="flex items-center">
+						{archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
+					</div>
+				</button>
+			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
 				<button

@@ -31,7 +31,7 @@ from open_webui.utils.tools import (
     set_terminal_servers,
     set_tool_servers,
 )
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StrictBool
 
 router = APIRouter()
 
@@ -125,6 +125,24 @@ async def export_config(user=Depends(get_admin_user)):
 @router.get('/namespace/{namespace}', response_model=dict)
 async def get_config_namespace(namespace: str, user=Depends(get_admin_user)):
     return await Config.get_namespace(namespace)
+
+
+class InterfaceVisibilityForm(BaseModel):
+    visibility: dict[str, StrictBool]
+
+
+@router.post('/interface/visibility', response_model=InterfaceVisibilityForm)
+async def set_interface_visibility(request: Request, form_data: InterfaceVisibilityForm, user=Depends(get_admin_user)):
+    await Config.upsert({'ui.visibility': form_data.visibility})
+    await publish_event(
+        request,
+        EVENTS.CONFIG_UPDATED,
+        actor=user,
+        subject_id='interface',
+        subject_type='config',
+        data={'keys': ['ui.visibility']},
+    )
+    return form_data
 
 
 ############################

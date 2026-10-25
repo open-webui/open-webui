@@ -14,7 +14,8 @@
 		selectedTerminalId,
 		settings,
 		terminalServers,
-		terminalSkills
+		terminalSkills,
+		visibleControls
 	} from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChatBubbleDotted from '$lib/components/icons/ChatBubbleDotted.svelte';
@@ -60,19 +61,19 @@
 		...(canCompact && 'compact'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'compact' } }]
 			: []),
-		...(canFork && 'fork'.startsWith(query.toLowerCase())
+		...(canFork && $visibleControls['chat.fork'] && 'fork'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'fork' } }]
 			: []),
-		...(canStatus && 'status'.startsWith(query.toLowerCase())
+		...(canStatus && $visibleControls['chat.status'] && 'status'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'status' } }]
 			: []),
-		...('model'.startsWith(query.toLowerCase())
+		...($visibleControls['chat.model_command'] && 'model'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'model' } }]
 			: []),
-		...('settings'.startsWith(query.toLowerCase())
+		...($visibleControls['chat.settings_command'] && 'settings'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'settings' } }]
 			: []),
-		...(canCompare && 'compare'.startsWith(query.toLowerCase())
+		...(canCompare && $visibleControls['chat.compare'] && 'compare'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'compare' } }]
 			: []),
 		...(hasChatContent &&

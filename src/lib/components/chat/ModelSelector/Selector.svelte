@@ -31,7 +31,8 @@
 		temporaryChatEnabled,
 		settings,
 		config,
-		showSettings
+		showSettings,
+		visibleControls
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
@@ -1277,7 +1278,7 @@
 						{/each}
 					</div>
 
-					{#if showSetDefault}
+					{#if showSetDefault && $visibleControls['models.set_default']}
 						<div
 							class="flex shrink-0 items-center justify-end px-2 leading-none {($settings?.highContrastMode ??
 							false)

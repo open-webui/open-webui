@@ -24,6 +24,7 @@
 		config,
 		isApp,
 		visiblePinnedModels,
+		visibleControls,
 		selectedFolder,
 		WEBUI_NAME,
 		sidebarWidth
@@ -1867,17 +1868,19 @@
 								>{$i18n.t('{{count}} selected', { count: $selectedChatIds.size })}</span
 							>
 							<div class="flex items-center gap-0.5">
-								<Tooltip content={$i18n.t('Archive')}>
-									<button
-										type="button"
-										aria-label={$i18n.t('Archive selected chats')}
-										disabled={$selectionBusy}
-										class="flex size-6 items-center justify-center rounded-md hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
-										on:click={() => applySelectedChatAction('archive', [...$selectedChatIds])}
-									>
-										<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
-									</button>
-								</Tooltip>
+								{#if $visibleControls['chat.archive']}
+									<Tooltip content={$i18n.t('Archive')}>
+										<button
+											type="button"
+											aria-label={$i18n.t('Archive selected chats')}
+											disabled={$selectionBusy}
+											class="flex size-6 items-center justify-center rounded-md hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+											on:click={() => applySelectedChatAction('archive', [...$selectedChatIds])}
+										>
+											<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
+										</button>
+									</Tooltip>
+								{/if}
 								{#if canDeleteChats}
 									<Tooltip content={$i18n.t('Delete')}>
 										<button

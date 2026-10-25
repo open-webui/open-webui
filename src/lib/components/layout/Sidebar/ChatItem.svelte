@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+	import { visibleControls } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import dayjs, { getDayjsLocale } from '$lib/dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -815,18 +816,20 @@
 				</div>
 			{:else if shiftKey && mouseOver && !chatSelection}
 				<div class=" flex items-center self-center space-x-1.5">
-					<Tooltip content={$i18n.t('Archive')} className="flex items-center">
-						<button
-							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
-							disabled={archiving}
-							on:click={() => {
-								archiveChatHandler(id);
-							}}
-							type="button"
-						>
-							<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
-						</button>
-					</Tooltip>
+					{#if $visibleControls['chat.archive']}
+						<Tooltip content={$i18n.t('Archive')} className="flex items-center">
+							<button
+								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+								disabled={archiving}
+								on:click={() => {
+									archiveChatHandler(id);
+								}}
+								type="button"
+							>
+								<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
+							</button>
+						</Tooltip>
+					{/if}
 
 					{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
 						<Tooltip content={$i18n.t('Delete')}>

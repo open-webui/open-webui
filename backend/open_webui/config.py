@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 import redis
 import requests
 from authlib.integrations.starlette_client import OAuth
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictBool, TypeAdapter
 
 from open_webui.env import (
     USE_SLIM,
@@ -1745,6 +1745,12 @@ except Exception as e:
 
 DEFAULT_INTERFACE_SETTINGS = default_interface_settings if isinstance(default_interface_settings, dict) else {}
 
+try:
+    UI_VISIBILITY = TypeAdapter(dict[str, StrictBool]).validate_json(os.getenv('UI_VISIBILITY', '{}'))
+except Exception as e:
+    log.exception(f'Error loading UI_VISIBILITY: {e}')
+    UI_VISIBILITY = {}
+
 DEFAULT_USER_ROLE = os.getenv('DEFAULT_USER_ROLE', 'pending')
 
 DEFAULT_GROUP_ID = os.getenv('DEFAULT_GROUP_ID', '')
@@ -3191,6 +3197,7 @@ DEFAULT_CONFIG = {
     'ui.default_models': DEFAULT_MODELS,
     'ui.default_pinned_models': DEFAULT_PINNED_MODELS,
     'ui.default_interface_settings': DEFAULT_INTERFACE_SETTINGS,
+    'ui.visibility': UI_VISIBILITY,
     'ui.i18n': {},
     'ui.prompt_suggestions': DEFAULT_PROMPT_SUGGESTIONS,
     'ui.prompt_suggestions_i18n': DEFAULT_PROMPT_SUGGESTIONS_I18N,
