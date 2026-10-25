@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
+	import { settings } from '$lib/stores';
 	import type { CalendarEventModel, CalendarModel } from '$lib/apis/calendar';
 	import CalendarEventChip from './CalendarEventChip.svelte';
 
@@ -172,7 +173,7 @@
 					{@const row = Math.floor(i / 7)}
 					<button
 						class="p-1 min-h-0 text-left overflow-hidden transition cursor-pointer flex flex-col
-							{isCurrentMonth(day) ? '' : 'opacity-40'}
+							{isCurrentMonth(day) ? '' : ($settings?.highContrastMode ?? false) ? 'opacity-80' : 'opacity-40'}
 							hover:bg-gray-50/80 dark:hover:bg-gray-850/30
 							{col > 0 ? 'border-l border-gray-100/20 dark:border-gray-850/20' : ''}
 							{row > 0 ? 'border-t border-gray-100/20 dark:border-gray-850/20' : ''}"
@@ -181,7 +182,11 @@
 						<div class="flex justify-start px-0.5 mb-0.5">
 							<span
 								class="text-xs w-6 h-6 flex items-center justify-center rounded-full
-								{isToday(day) ? 'bg-blue-500 text-white' : 'text-gray-500 dark:text-gray-400'}"
+								{isToday(day)
+									? ($settings?.highContrastMode ?? false)
+										? 'bg-blue-600 text-white'
+										: 'bg-blue-500 text-white'
+									: 'text-gray-500 dark:text-gray-400'}"
 							>
 								{day.getDate()}
 							</span>
@@ -234,7 +239,9 @@
 										class="text-sm mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full {isToday(
 											day
 										)
-											? 'bg-blue-500 text-white'
+											? ($settings?.highContrastMode ?? false)
+												? 'bg-blue-600 text-white'
+												: 'bg-blue-500 text-white'
 											: ''}"
 									>
 										{day.getDate()}
