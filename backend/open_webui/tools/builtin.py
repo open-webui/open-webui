@@ -2844,7 +2844,7 @@ async def view_file(
     :param max_chars: Maximum characters to return (a server-side hard cap applies)
     :param line_numbers: If true, prefix each line with its 1-indexed line number
     :param start_line: Optional 1-indexed start line (overrides offset/max_chars when set)
-    :param end_line: Optional 1-indexed end line (inclusive)
+    :param end_line: Optional 1-indexed end line (inclusive; reads from line 1 if no start line is given)
     :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
@@ -2886,10 +2886,10 @@ async def view_file(
         total_chars = len(content)
 
         # Line-based addressing (overrides char-based offset/max_chars)
-        if start_line is not None:
+        if start_line is not None or end_line is not None:
             all_lines = content.split('\n')
             total_lines = len(all_lines)
-            s = max(1, int(start_line)) - 1  # 1-indexed to 0-indexed
+            s = max(1, int(start_line or 1)) - 1  # 1-indexed to 0-indexed
             e = min(total_lines, int(end_line) if end_line else s + 100)
             selected = all_lines[s:e]
             sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
@@ -2957,7 +2957,7 @@ async def view_knowledge_file(
     :param max_chars: Maximum characters to return (a server-side hard cap applies)
     :param line_numbers: If true, prefix each line with its 1-indexed line number
     :param start_line: Optional 1-indexed start line (overrides offset/max_chars when set)
-    :param end_line: Optional 1-indexed end line (inclusive)
+    :param end_line: Optional 1-indexed end line (inclusive; reads from line 1 if no start line is given)
     :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
@@ -3027,10 +3027,10 @@ async def view_knowledge_file(
         total_chars = len(content)
 
         # Line-based addressing (overrides char-based offset/max_chars)
-        if start_line is not None:
+        if start_line is not None or end_line is not None:
             all_lines = content.split('\n')
             total_lines = len(all_lines)
-            s = max(1, int(start_line)) - 1
+            s = max(1, int(start_line or 1)) - 1
             e = min(total_lines, int(end_line) if end_line else s + 100)
             selected = all_lines[s:e]
             sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
