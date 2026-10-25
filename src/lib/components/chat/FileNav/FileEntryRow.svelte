@@ -5,7 +5,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { LinkPreview } from 'bits-ui';
-	import { mobile } from '$lib/stores';
+	import { mobile, settings } from '$lib/stores';
 	import { getContext, tick, onDestroy } from 'svelte';
 	import { copyToClipboard, formatFileSize } from '$lib/utils';
 	import { listFiles, type FileEntry } from '$lib/apis/terminal';
@@ -548,7 +548,9 @@
 		<Dropdown bind:show={menuOpen} align="end" sideOffset={4}>
 			<button
 				type="button"
-				class="shrink-0 flex h-5 w-5 items-center justify-center mr-1 rounded transition
+				class="shrink-0 flex {($settings?.highContrastMode ?? false)
+					? 'h-6 w-6'
+					: 'h-5 w-5'} items-center justify-center mr-1 rounded transition
 					text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400
 					hover:bg-gray-50/40 dark:hover:bg-white/4 {viewMode === 'grid'
 					? folderCard
