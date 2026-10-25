@@ -258,8 +258,15 @@
 
 		if (shouldFocusContent) {
 			shouldFocusContent = false;
+			const firstControl = contentEl?.querySelector<HTMLElement>(
+				'button:not([disabled]), a[href], input'
+			);
 			(
-				contentEl?.querySelector<HTMLElement>('button:not([disabled]), a[href], input') ?? contentEl
+				(firstControl?.matches('input')
+					? firstControl
+					: contentEl?.querySelector<HTMLElement>('[role^="menuitem"]:not([disabled])')) ??
+				firstControl ??
+				contentEl
 			)?.focus();
 		}
 	}
