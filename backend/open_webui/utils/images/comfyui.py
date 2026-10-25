@@ -20,10 +20,13 @@ async def queue_prompt(prompt, client_id, base_url, api_key):
     log.debug('queue_prompt data: %s', p)
     try:
         session = await get_session()
+        headers = {**default_headers, 'Authorization': f'Bearer {api_key}'}
+        if client_id:
+            headers['X-ComfyUI-Client-Id'] = client_id
         async with session.post(
             f'{base_url}/prompt',
             json=p,
-            headers={**default_headers, 'Authorization': f'Bearer {api_key}'},
+            headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         ) as r:
             r.raise_for_status()
@@ -33,14 +36,17 @@ async def queue_prompt(prompt, client_id, base_url, api_key):
         raise
 
 
-async def get_image(filename, subfolder, folder_type, base_url, api_key):
+async def get_image(filename, subfolder, folder_type, base_url, api_key, client_id=None):
     log.info('get_image')
     data = {'filename': filename, 'subfolder': subfolder, 'type': folder_type}
     url_values = urllib.parse.urlencode(data)
     session = await get_session()
+    headers = {**default_headers, 'Authorization': f'Bearer {api_key}'}
+    if client_id:
+        headers['X-ComfyUI-Client-Id'] = client_id
     async with session.get(
         f'{base_url}/view?{url_values}',
-        headers={**default_headers, 'Authorization': f'Bearer {api_key}'},
+        headers=headers,
         ssl=AIOHTTP_CLIENT_SESSION_SSL,
     ) as r:
         r.raise_for_status()
@@ -54,12 +60,15 @@ def get_image_url(filename, subfolder, folder_type, base_url):
     return f'{base_url}/view?{url_values}'
 
 
-async def get_history(prompt_id, base_url, api_key):
+async def get_history(prompt_id, base_url, api_key, client_id=None):
     log.info('get_history')
     session = await get_session()
+    headers = {**default_headers, 'Authorization': f'Bearer {api_key}'}
+    if client_id:
+        headers['X-ComfyUI-Client-Id'] = client_id
     async with session.get(
         f'{base_url}/history/{prompt_id}',
-        headers={**default_headers, 'Authorization': f'Bearer {api_key}'},
+        headers=headers,
         ssl=AIOHTTP_CLIENT_SESSION_SSL,
     ) as r:
         r.raise_for_status()
@@ -86,7 +95,7 @@ async def _ws_get_images(ws, workflow, client_id, base_url, api_key):
             break
         # binary messages (previews) are silently skipped
 
-    history = (await get_history(prompt_id, base_url, api_key))[prompt_id]
+    history = (await get_history(prompt_id, base_url, api_key, client_id=client_id))[prompt_id]
     for node_id in history['outputs']:
         node_output = history['outputs'][node_id]
         if node_id in workflow and workflow[node_id].get('class_type') in [
@@ -101,12 +110,14 @@ async def _ws_get_images(ws, workflow, client_id, base_url, api_key):
     return {'data': output_images}
 
 
-async def comfyui_upload_image(image_file_item, base_url, api_key):
+async def comfyui_upload_image(image_file_item, base_url, api_key, client_id=None):
     url = f'{base_url}/api/upload/image'
     headers = {}
 
     if api_key:
         headers['Authorization'] = f'Bearer {api_key}'
+    if client_id:
+        headers['X-ComfyUI-Client-Id'] = client_id
 
     _, (filename, file_bytes, mime_type) = image_file_item
 
@@ -193,6 +204,8 @@ async def comfyui_create_image(model: str, payload: ComfyUICreateImageForm, clie
     _apply_workflow_nodes(workflow, payload.workflow.nodes, model, payload)
 
     headers = {'Authorization': f'Bearer {api_key}'}
+    if client_id:
+        headers['X-ComfyUI-Client-Id'] = client_id
     session = await get_session()
 
     try:
@@ -234,6 +247,8 @@ async def comfyui_edit_image(model: str, payload: ComfyUIEditImageForm, client_i
     _apply_workflow_nodes(workflow, payload.workflow.nodes, model, payload)
 
     headers = {'Authorization': f'Bearer {api_key}'}
+    if client_id:
+        headers['X-ComfyUI-Client-Id'] = client_id
     session = await get_session()
 
     try:

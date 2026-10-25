@@ -767,10 +767,11 @@ async def image_generations(
                     **data,
                 }
             )
+            client_id = str(uuid.uuid4())
             res = await comfyui_create_image(
                 model,
                 form_data,
-                str(uuid.uuid4()),
+                client_id,
                 image_config.COMFYUI_BASE_URL,
                 image_config.COMFYUI_API_KEY,
             )
@@ -779,9 +780,9 @@ async def image_generations(
             images = []
 
             for image in res['data']:
-                headers = None
+                headers = {'X-ComfyUI-Client-Id': client_id}
                 if image_config.COMFYUI_API_KEY:
-                    headers = {'Authorization': f'Bearer {image_config.COMFYUI_API_KEY}'}
+                    headers['Authorization'] = f'Bearer {image_config.COMFYUI_API_KEY}'
 
                 image_data, content_type = await get_image_data(
                     image['url'],
@@ -1120,6 +1121,7 @@ async def image_edits(
             return images
 
         elif image_config.IMAGE_EDIT_ENGINE == 'comfyui':
+            client_id = str(uuid.uuid4())
             try:
                 files = []
                 if isinstance(form_data.image, str):
@@ -1135,6 +1137,7 @@ async def image_edits(
                         file_item,
                         image_config.IMAGES_EDIT_COMFYUI_BASE_URL,
                         image_config.IMAGES_EDIT_COMFYUI_API_KEY,
+                        client_id=client_id,
                     )
                     comfyui_images.append(res.get('name', file_item[1][0]))
             except Exception as e:
@@ -1163,7 +1166,7 @@ async def image_edits(
             res = await comfyui_edit_image(
                 model,
                 form_data,
-                str(uuid.uuid4()),
+                client_id,
                 image_config.IMAGES_EDIT_COMFYUI_BASE_URL,
                 image_config.IMAGES_EDIT_COMFYUI_API_KEY,
             )
@@ -1183,9 +1186,9 @@ async def image_edits(
             images = []
 
             for image_url in image_urls:
-                headers = None
+                headers = {'X-ComfyUI-Client-Id': client_id}
                 if image_config.IMAGES_EDIT_COMFYUI_API_KEY:
-                    headers = {'Authorization': f'Bearer {image_config.IMAGES_EDIT_COMFYUI_API_KEY}'}
+                    headers['Authorization'] = f'Bearer {image_config.IMAGES_EDIT_COMFYUI_API_KEY}'
 
                 image_data, content_type = await get_image_data(
                     image_url,
