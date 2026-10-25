@@ -22,7 +22,7 @@
 		"format": "prettier --plugin-search-dir --write \"**/*.{js,ts,svelte,css,md,html,json}\"",
 		"format:backend": "ruff format . --exclude .venv --exclude venv",
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write \"src/lib/i18n/**/*.{js,json}\" && npm run i18n:check",
-		"i18n:check": "node scripts/i18n/check.mjs",
+		"i18n:check": "node scripts/i18n/check.mjs --fix",
 		"cy:open": "cypress open",
 		"test:frontend": "vitest --passWithNoTests",
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"

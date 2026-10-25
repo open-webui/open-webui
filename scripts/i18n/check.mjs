@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -45,8 +45,8 @@ export function validateTranslation(key, value, source = key) {
 	return problems;
 }
 
-/** @param {string} directory */
-export function checkCatalogs(directory) {
+/** @param {string} directory @param {boolean} fix */
+export function checkCatalogs(directory, fix = false) {
 	/** @param {string} locale @returns {Record<string, string>} */
 	const readCatalog = (locale) =>
 		JSON.parse(readFileSync(join(directory, locale, 'translation.json'), 'utf8'));
@@ -56,21 +56,39 @@ export function checkCatalogs(directory) {
 		.filter((entry) => entry.isDirectory())
 		.map((entry) => entry.name)
 		.sort()) {
-		for (const [key, value] of Object.entries(readCatalog(locale))) {
+		const catalog = readCatalog(locale);
+		let changed = false;
+		for (const [key, value] of Object.entries(catalog)) {
 			const baseKey = key.replace(pluralSuffix, '');
 			const source = english[key] || english[baseKey] || english[`${baseKey}_other`] || key;
 			const issues = validateTranslation(key, value, source);
 			if (issues.length) {
 				problems.push(`${locale}/translation.json: ${JSON.stringify(key)}: ${issues.join('; ')}`);
+				if (fix) {
+					// Empty translations use the existing English fallback and remain available to translators.
+					catalog[key] = '';
+					changed = true;
+				}
 			}
+		}
+		if (changed) {
+			writeFileSync(
+				join(directory, locale, 'translation.json'),
+				JSON.stringify(catalog, null, '\t') + '\n'
+			);
 		}
 	}
 	return problems;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	const problems = checkCatalogs(resolve('src/lib/i18n/locales'));
-	if (problems.length) {
+	const fix = process.argv.includes('--fix');
+	const problems = checkCatalogs(resolve('src/lib/i18n/locales'), fix);
+	if (problems.length && fix) {
+		console.log(
+			`i18n: reset ${problems.length} invalid translation(s) to missing; using English fallback.`
+		);
+	} else if (problems.length) {
 		console.error(problems.join('\n'));
 		console.error(`i18n: ${problems.length} invalid translation(s). Fix the entries above.`);
 		process.exitCode = 1;
