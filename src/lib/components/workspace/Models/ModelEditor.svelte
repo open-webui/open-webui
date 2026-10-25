@@ -1707,7 +1707,9 @@
 
 							<div class="my-2 text-xs text-gray-400 dark:text-gray-500">
 								<div
-									class="flex w-full items-center gap-2 opacity-30 transition-opacity hover:opacity-60 focus-within:opacity-60"
+									class="flex w-full items-center gap-2 {($settings?.highContrastMode ?? false)
+										? ''
+										: 'opacity-30 transition-opacity hover:opacity-60 focus-within:opacity-60'}"
 								>
 									<button
 										type="button"
