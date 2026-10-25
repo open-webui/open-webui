@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.5] - 2026-10-25
+
+### Added
+
+- ✏️ **Rename from chat menu.** The menu next to an open chat's title now has Rename, which turns the title at the top of the page into a text box, so a chat can be renamed without finding it in the sidebar first. [#33177](https://github.com/open-webui/open-webui/pull/33177), [#33176](https://github.com/open-webui/open-webui/discussions/33176), [Commit](https://github.com/open-webui/open-webui/commit/551b03ff90bddaa2bbdac49d76d2bab61367e895)
+- ⌨️ **Unassign single shortcuts.** Settings > Keyboard now shows a small x beside every assigned shortcut that unassigns only that one, so a shortcut such as Regenerate Response on Ctrl+R or Cmd+R can be switched off while all others keep working. [#33185](https://github.com/open-webui/open-webui/pull/33185), [#31463](https://github.com/open-webui/open-webui/discussions/31463), [Commit](https://github.com/open-webui/open-webui/commit/9fef07de3ae8c16b8f53e46b456c144bd739a8a2)
+- 🎚️ **Slider for number Valves.** Plugin authors can now show a number Valve or UserValve as a slider with a number box beside it, whose ends come from the field's minimum and maximum, so users see the allowed range while picking a value. [#33179](https://github.com/open-webui/open-webui/pull/33179), [#32045](https://github.com/open-webui/open-webui/discussions/32045), [Commit](https://github.com/open-webui/open-webui/commit/9ed317dc90c7a7fda96a6de68491648341d27ca2)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Portuguese (Brazil) were enhanced and expanded.
+
+### Fixed
+
+- 🔎 **Search dialog filters restored.** The search dialog again understands and suggests the "tag:", "folder:", "pinned:", "shared:" and "archived:" filters, where adding one emptied the results and archived chats could not be found at all. [#33181](https://github.com/open-webui/open-webui/pull/33181), [#32518](https://github.com/open-webui/open-webui/issues/32518), [Commit](https://github.com/open-webui/open-webui/commit/ec83763f1373801e7d0ed2f39e0b53f58a75156c)
+- 📜 **Keyboard tab scrolling.** Scrolling on the Settings > Keyboard tab no longer moves the whole Settings window. [#33187](https://github.com/open-webui/open-webui/pull/33187), [#33186](https://github.com/open-webui/open-webui/issues/33186), [Commit](https://github.com/open-webui/open-webui/commit/22dd3e2be1dadddfeeccb616f8e45df352f87e72)
+
 ## [0.12.4] - 2026-10-25
 
 ### Added
