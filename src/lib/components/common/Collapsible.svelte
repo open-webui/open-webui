@@ -131,7 +131,7 @@
 		>
 			<div>
 				<div class="flex items-start justify-between">
-					<slot />
+					<slot {open} />
 
 					{#if chevron}
 						<div class="flex self-start translate-y-1">
