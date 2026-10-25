@@ -1603,6 +1603,20 @@ async def get_event_emitter(request_info, update_db=True):
         return None
 
 
+def get_user_chat_session_id(user_id: str, chat_id: str) -> str | None:
+    now = time.time()
+    for batch in get_session_pool_batches():
+        for session_id, session in batch:
+            if (
+                session
+                and session.get('id') == user_id
+                and chat_id in (session.get('chat_ids') or [])
+                and now - session.get('last_seen_at', 0) <= SESSION_POOL_TIMEOUT
+            ):
+                return session_id
+    return None
+
+
 async def get_event_call(request_info):
     async def __event_caller__(event_data):
         session_id = request_info['session_id']
@@ -1613,12 +1627,17 @@ async def get_event_call(request_info):
             log.warning(f'Event caller: session {session_id} not owned by requesting user or disconnected')
             return {'error': 'Client session disconnected.'}
 
-        interaction_id = None
+        is_input_request = event_data.get('type') in {
+            'confirmation',
+            'input',
+            'request:user_input',
+            'request:elicitation',
+        }
+        interaction_id = str(uuid4()) if is_input_request else None
         timeout = WEBSOCKET_EVENT_CALLER_TIMEOUT
         if event_data.get('type') in ('request:user_input', 'request:elicitation') or (
             event_data.get('type') == 'confirmation' and (event_data.get('data') or {}).get('tool_call')
         ):
-            interaction_id = str(uuid4())
             data = dict(event_data.get('data') or {})
             timeout_ms = data.get('timeout_ms', 120_000)
             if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int):
@@ -1626,19 +1645,56 @@ async def get_event_call(request_info):
             timeout = min(max(timeout_ms / 1000, 60), 240)
             if WEBSOCKET_EVENT_CALLER_TIMEOUT is not None and WEBSOCKET_EVENT_CALLER_TIMEOUT > 0:
                 timeout = min(timeout, WEBSOCKET_EVENT_CALLER_TIMEOUT)
-            event_data = {**event_data, 'data': {**data, 'interaction_id': interaction_id}}
+        if interaction_id:
+            event_data = {**event_data, 'data': {**(event_data.get('data') or {}), 'interaction_id': interaction_id}}
 
+        can_resume = (
+            is_input_request
+            and 'session_id' not in (event_data.get('data') or {})
+            and is_saved_chat_id(request_info['chat_id'])
+        )
         try:
-            return await sio.call(
-                'events',
-                {
-                    'chat_id': request_info.get('chat_id', None),
-                    'message_id': request_info.get('message_id', None),
-                    'data': event_data,
-                },
-                to=session_id,
-                timeout=timeout,
-            )
+            async with asyncio.timeout(timeout):
+                while True:
+                    call_task = asyncio.create_task(
+                        sio.call(
+                            'events',
+                            {
+                                'chat_id': request_info['chat_id'],
+                                'message_id': request_info['message_id'],
+                                'data': event_data,
+                            },
+                            to=session_id,
+                            timeout=None,
+                        )
+                    )
+                    try:
+                        while (
+                            not call_task.done()
+                            and get_user_id_from_session_pool(session_id) == request_info['user_id']
+                        ):
+                            await asyncio.wait({call_task}, timeout=1)
+                        if call_task.done():
+                            return call_task.result()
+                    finally:
+                        call_task.cancel()
+                        await asyncio.gather(call_task, return_exceptions=True)
+                    log.warning('Event caller: session %s disconnected before answering', session_id)
+                    if not can_resume:
+                        return {'error': 'Client session disconnected.'}
+                    try:
+                        async with asyncio.timeout(60):
+                            while True:
+                                # Redis session scans are synchronous; keep them off the event loop.
+                                next_session_id = await asyncio.to_thread(
+                                    get_user_chat_session_id, request_info['user_id'], request_info['chat_id']
+                                )
+                                if next_session_id is not None:
+                                    session_id = request_info['session_id'] = next_session_id
+                                    break
+                                await asyncio.sleep(1)
+                    except TimeoutError:
+                        return {'error': 'Client session disconnected.'}
         except (TimeoutError, socketio.exceptions.TimeoutError):
             log.warning(f'Event caller timed out for session {session_id}')
             return {'error': 'Event call timed out. The browser tab may be inactive or closed.'}
