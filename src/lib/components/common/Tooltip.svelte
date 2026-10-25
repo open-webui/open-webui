@@ -59,6 +59,16 @@
 					allowHTML,
 					touch,
 					trigger: 'mouseenter focusin',
+					onShow: () => {
+						const focused = document.activeElement;
+						if (
+							!tooltipElement?.matches(':hover') &&
+							tooltipElement?.contains(focused) &&
+							!focused?.matches(':focus-visible')
+						) {
+							return false;
+						}
+					},
 					...(theme !== '' ? { theme } : { theme: 'dark' }),
 					arrow: false,
 					offset,
@@ -74,7 +84,7 @@
 								};
 
 								return {
-									onShow: () => document.addEventListener('keydown', onKeyDown),
+									onMount: () => document.addEventListener('keydown', onKeyDown),
 									onHide: () => document.removeEventListener('keydown', onKeyDown),
 									onDestroy: () => document.removeEventListener('keydown', onKeyDown)
 								};
