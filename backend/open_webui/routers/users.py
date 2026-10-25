@@ -202,6 +202,7 @@ class WorkspacePermissions(BaseModel):
     skills: bool = False
     models_import: bool = False
     models_export: bool = False
+    models_hidden: bool = False
     prompts_import: bool = False
     prompts_export: bool = False
     tools_import: bool = False

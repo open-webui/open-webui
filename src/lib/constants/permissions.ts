@@ -7,6 +7,7 @@ export const DEFAULT_PERMISSIONS = {
 		skills: false,
 		models_import: false,
 		models_export: false,
+		models_hidden: false,
 		prompts_import: false,
 		prompts_export: false,
 		tools_import: false,

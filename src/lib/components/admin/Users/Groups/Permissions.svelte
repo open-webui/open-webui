@@ -71,6 +71,17 @@
 							ariaLabel={$i18n.t('Export Models')}
 						/>
 					</div>
+					<div class="flex w-full justify-between">
+						<Tooltip content={$i18n.t('Allow selecting hidden models as base models.')}>
+							<div class="self-center text-xs">
+								{$i18n.t('Hidden Models')}
+							</div>
+						</Tooltip>
+						<Switch
+							bind:state={permissions.workspace.models_hidden}
+							ariaLabel={$i18n.t('Hidden Models')}
+						/>
+					</div>
 				</div>
 			{:else if defaultPermissions?.workspace?.models}
 				<div class="pb-0.5">
