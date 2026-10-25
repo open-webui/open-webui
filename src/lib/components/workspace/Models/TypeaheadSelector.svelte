@@ -120,7 +120,7 @@
 			type="button"
 			{disabled}
 			aria-expanded={show}
-			aria-label={label || triggerLabel || placeholder}
+			aria-label={label ? undefined : triggerLabel || placeholder}
 			class={label
 				? 'grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal disabled:cursor-default sm:grid-cols-[8rem_minmax(0,1fr)_auto]'
 				: 'flex min-w-0 items-center bg-transparent text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}
