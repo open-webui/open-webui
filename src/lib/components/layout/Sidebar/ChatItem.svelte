@@ -246,7 +246,7 @@
 	let showShareChatModal = false;
 	let confirmEdit = false;
 
-	let chatTitle = title;
+	let chatTitle = '';
 
 	const editChatTitle = async (id, title) => {
 		title = title?.trim();
