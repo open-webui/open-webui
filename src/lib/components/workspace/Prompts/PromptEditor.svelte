@@ -14,7 +14,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
-	import { user } from '$lib/stores';
+	import { user, settings } from '$lib/stores';
 	import { slugify, formatDate, copyToClipboard } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -473,7 +473,9 @@
 
 		<div class="shrink-0 px-1 pb-2">
 			<input
-				class="w-full bg-transparent text-sm outline-hidden"
+				class="w-full {($settings?.highContrastMode ?? false)
+					? 'min-h-6'
+					: ''} bg-transparent text-sm outline-hidden"
 				placeholder={$i18n.t('Prompt Name')}
 				aria-label={$i18n.t('Prompt Name')}
 				bind:value={name}
@@ -495,7 +497,9 @@
 					<div class="flex min-w-0 items-center gap-0.5">
 						<span>/</span>
 						<input
-							class="min-w-0 flex-1 bg-transparent outline-hidden"
+							class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
+								? 'min-h-6'
+								: ''} bg-transparent outline-hidden"
 							placeholder={$i18n.t('command')}
 							aria-label={$i18n.t('Command')}
 							bind:value={command}
