@@ -61,6 +61,7 @@
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
+	import ContextCompactionLabel from './ContextCompactionLabel.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
@@ -78,6 +79,7 @@
 		model: string;
 		content: string;
 		output?: OutputItem[];
+		contextSummary?: string;
 		files?: { type: string; url: string }[];
 		timestamp: number;
 		role: string;
@@ -710,6 +712,10 @@
 						</span>
 					</Tooltip>
 				</Name>
+			{/if}
+
+			{#if message.contextSummary}
+				<ContextCompactionLabel summary={message.contextSummary} />
 			{/if}
 
 			<div>

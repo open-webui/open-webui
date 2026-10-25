@@ -18,6 +18,7 @@
 	import equal from 'fast-deep-equal';
 
 	import Name from './Name.svelte';
+	import ContextCompactionLabel from './ContextCompactionLabel.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -193,6 +194,10 @@
 					<Name>{isOwn && !$settings.showUsername ? $i18n.t('You') : authorName}</Name>
 				{/if}
 			</div>
+		{/if}
+
+		{#if message.contextSummary}
+			<ContextCompactionLabel summary={message.contextSummary} />
 		{/if}
 
 		<div class="chat-{message.role} w-full min-w-full">
