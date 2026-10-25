@@ -273,7 +273,7 @@
 	onMount(loadUsage);
 </script>
 
-<div class="flex h-full min-h-0 flex-col">
+<div id="tab-usage" class="flex h-full min-h-0 flex-col">
 	<div class="mb-4">
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 			{$i18n.t('settings.personal.usage.title')}

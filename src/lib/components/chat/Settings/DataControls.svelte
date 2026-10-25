@@ -141,7 +141,7 @@
 	}}
 />
 
-<div id="tab-chats" class="flex flex-col h-full text-sm">
+<div id="tab-data-controls" class="flex flex-col h-full text-sm">
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
 		{$i18n.t('settings.personal.dataControls.title')}
 	</h2>
