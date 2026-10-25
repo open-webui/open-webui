@@ -321,7 +321,7 @@
 		}}
 	/>
 
-	<Modal bind:show={showCreateModal} size="md">
+	<Modal bind:show={showCreateModal} size="md" ariaLabel={$i18n.t('Create a knowledge base')}>
 		<CreateKnowledgeBase
 			modal={true}
 			onBack={() => {
