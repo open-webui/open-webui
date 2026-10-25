@@ -542,6 +542,7 @@
 				</div>
 			{:else}
 				<div class="gap-y-0.5 grid my-1">
+					<!-- Preserve the former row label for i18n extraction: $i18n.t('Open automation') -->
 					{#each automations as automation (automation.id)}
 						<div
 							role="presentation"

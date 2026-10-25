@@ -2928,6 +2928,7 @@
 											</div>
 										{:else}
 											<div class=" flex items-center">
+												<!-- Preserve the former upload label for i18n extraction: $i18n.t('Waiting for upload...') -->
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"

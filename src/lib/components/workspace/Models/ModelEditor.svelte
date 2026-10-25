@@ -1250,6 +1250,9 @@
 												{/if}
 											</div>
 										{:else}
+											<!-- Preserve the former description labels for i18n extraction:
+											aria-label={enableDescription ? $i18n.t('Custom description enabled') : $i18n.t('Default description enabled')}
+											-->
 											<button
 												class="grid w-full grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 												type="button"

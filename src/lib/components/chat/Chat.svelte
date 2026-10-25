@@ -3682,6 +3682,8 @@
 		}
 
 		const model = atSelectedModel?.id ?? selectedModels.find((modelId) => modelId);
+		// Preserve the former toast translation for i18n extraction.
+		// const toastId = toast.loading($i18n.t('Compacting context...'));
 		const compactChatId = $chatId;
 		const compactMessageId = history.currentId;
 		if ($contextCompactions[compactMessageId] === 'in_progress') return;
