@@ -370,6 +370,7 @@
 	};
 
 	const submitSource = async () => {
+		if (creating) return;
 		if (editingItem) {
 			await updateSource();
 		} else {
@@ -432,7 +433,12 @@
 
 		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
 			<div class="flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-				<form class="flex flex-col w-full" on:submit|preventDefault={submitSource}>
+				<form
+					class="flex flex-col w-full"
+					inert={creating}
+					aria-busy={creating}
+					on:submit|preventDefault={submitSource}
+				>
 					<div class="px-1">
 						<div class="flex gap-2">
 							<div class="flex flex-col flex-1">
@@ -773,19 +779,21 @@
 							share={true}
 							sharePublic={true}
 							shareUsers={true}
-							onChange={async () => {
+							onChange={async (grants) => {
 								if (editingItem) {
+									const item = editingItem;
+									creating = true;
 									try {
-										await updateKnowledgeAccessGrants(
-											localStorage.token,
-											editingItem.id,
-											accessGrants
-										);
-										editingItem.access_grants = structuredClone(accessGrants);
+										await updateKnowledgeAccessGrants(localStorage.token, item.id, grants);
+										item.access_grants = structuredClone(grants);
+										if (editingItem === item) accessGrants = item.access_grants;
 										toast.success($i18n.t('Saved'));
 									} catch (error) {
-										accessGrants = structuredClone(editingItem.access_grants ?? []);
+										if (editingItem === item)
+											accessGrants = structuredClone(item.access_grants ?? []);
 										toast.error(`${error}`);
+									} finally {
+										creating = false;
 									}
 								}
 							}}

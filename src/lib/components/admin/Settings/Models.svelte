@@ -1344,6 +1344,9 @@
 			edit
 			model={models.find((m) => m.id === selectedModelId)}
 			preset={false}
+			onAccessUpdate={(model) => {
+				savedModels = [...savedModels.filter((m) => m.id !== model.id), model];
+			}}
 			onSubmit={async (model) => {
 				console.log(model);
 				if (!(await upsertModelHandler(model))) {

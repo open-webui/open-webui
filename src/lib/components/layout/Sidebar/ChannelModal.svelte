@@ -59,6 +59,7 @@
 	};
 
 	const submitHandler = async () => {
+		if (loading) return;
 		loading = true;
 		if (name.length > 128) {
 			toast.error($i18n.t('Channel name must be less than 128 characters'));
@@ -138,7 +139,6 @@
 		name = '';
 		accessGrants = [];
 		userIds = [];
-		loading = false;
 	};
 </script>
 
@@ -239,25 +239,27 @@
 					</div>
 
 					{#if type !== 'dm'}
-						<div class="-mx-2 mb-1 mt-2.5 px-2">
+						<div class="-mx-2 mb-1 mt-2.5 px-2" inert={loading} aria-busy={loading}>
 							{#if type === ''}
 								<AccessControl
 									bind:accessGrants
 									accessRoles={['read', 'write']}
-									onChange={async () => {
+									onChange={async (grants) => {
 										if (edit && channel?.id) {
+											const item = channel;
+											loading = true;
 											try {
-												await updateChannelAccessGrants(
-													localStorage.token,
-													channel.id,
-													accessGrants
-												);
-												channel.access_grants = structuredClone(accessGrants);
+												await updateChannelAccessGrants(localStorage.token, item.id, grants);
+												item.access_grants = structuredClone(grants);
+												if (channel === item) accessGrants = item.access_grants;
 												toast.success($i18n.t('Saved'));
 												onUpdate();
 											} catch (error) {
-												accessGrants = structuredClone(channel.access_grants ?? []);
+												if (channel === item)
+													accessGrants = structuredClone(item.access_grants ?? []);
 												toast.error(`${error}`);
+											} finally {
+												loading = false;
 											}
 										}
 									}}

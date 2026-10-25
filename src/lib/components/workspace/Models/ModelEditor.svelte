@@ -68,6 +68,7 @@
 	const formId = `model-editor-${uuidv4()}`;
 
 	export let onSubmit: Function = () => {};
+	export let onAccessUpdate: Function = () => {};
 	export let readOnly = false;
 	export let onBack: null | Function = null;
 
@@ -832,6 +833,7 @@
 		}}
 	/>
 	<AccessControlModal
+		disabled={loading}
 		bind:show={showAccessControlModal}
 		bind:accessGrants
 		accessRoles={preset ? ['read', 'write'] : ['read']}
@@ -840,15 +842,25 @@
 		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 		allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
 			$user?.role === 'admin'}
-		onChange={async () => {
+		onChange={async (grants) => {
 			if (edit && model?.id) {
+				loading = true;
 				try {
-					await updateModelAccessGrants(localStorage.token, model.id, model.name, accessGrants);
-					model.access_grants = structuredClone(accessGrants);
+					const saved = await updateModelAccessGrants(
+						localStorage.token,
+						model.id,
+						model.name,
+						grants
+					);
+					model.access_grants = structuredClone(saved.access_grants);
+					accessGrants = structuredClone(saved.access_grants);
+					onAccessUpdate(saved);
 					toast.success($i18n.t('Saved'));
 				} catch (error) {
 					accessGrants = structuredClone(model.access_grants ?? []);
 					toast.error(`${error}`);
+				} finally {
+					loading = false;
 				}
 			}
 		}}

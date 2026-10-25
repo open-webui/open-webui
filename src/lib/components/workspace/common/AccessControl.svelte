@@ -33,6 +33,7 @@
 	};
 
 	export let onChange: Function = () => {};
+	let saving = false;
 
 	export let accessRoles = ['read'];
 	export let labels: Partial<Record<'title' | 'public' | 'private' | 'read' | 'empty', string>> =
@@ -227,9 +228,15 @@
 				grant.permission === permission
 		);
 
-	const commitAccessGrants = (nextGrants: AccessGrant[]) => {
+	const commitAccessGrants = async (nextGrants: AccessGrant[]) => {
+		if (saving) return;
+		saving = true;
 		accessGrants = dedupeAccessGrants(nextGrants);
-		onChange(accessGrants);
+		try {
+			await onChange(accessGrants);
+		} finally {
+			saving = false;
+		}
 	};
 
 	const getVisibility = (grants: AccessGrant[]): 'private' | 'public' | 'open' => {
@@ -493,7 +500,7 @@
 	onAdd={handleAddAccess}
 />
 
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2" inert={saving} aria-busy={saving}>
 	<div class="-mx-1 rounded-xl bg-gray-50/60 px-3 py-2 dark:bg-white/[0.03]">
 		<Tooltip
 			content={!(share && sharePublic) && visibility === 'private'
