@@ -210,10 +210,12 @@
 		</div>
 
 		{#each calendars as cal (cal.id)}
-			<div class="group flex items-center w-full">
+			<div
+				class="group flex items-center w-full rounded-lg text-xs transition
+					hover:bg-gray-50 dark:hover:bg-gray-800/50"
+			>
 				<button
-					class="flex items-center gap-2 px-2 py-1 rounded-lg text-xs transition
-						hover:bg-gray-50 dark:hover:bg-gray-800/50 flex-1 text-left min-w-0"
+					class="flex items-center gap-2 px-2 py-1 flex-1 text-left min-w-0"
 					on:click={() => onToggle(cal.id)}
 				>
 					<span
@@ -231,30 +233,28 @@
 					>
 						{cal.name}
 					</span>
-
-					{#if isDeletable(cal)}
-						<!-- svelte-ignore a11y-click-events-have-key-events -->
-						<span
-							class="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
-								transition-all duration-150"
-							role="button"
-							tabindex="-1"
-							title={$i18n.t('Delete calendar')}
-							on:click|stopPropagation={(e) => handleDeleteClick(e, cal)}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="2"
-								stroke="currentColor"
-								class="size-3"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-							</svg>
-						</span>
-					{/if}
 				</button>
+
+				{#if isDeletable(cal)}
+					<button
+						type="button"
+						class="shrink-0 p-0.5 mr-2 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
+							transition-all duration-150"
+						title={$i18n.t('Delete calendar')}
+						on:click|stopPropagation={(e) => handleDeleteClick(e, cal)}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="size-3"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+						</svg>
+					</button>
+				{/if}
 			</div>
 		{/each}
 	</div>
