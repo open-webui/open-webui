@@ -357,7 +357,12 @@
 						{/if}
 
 						<div class="shrink-0">
-							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
+							<button
+								type="button"
+								class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+								aria-label={$i18n.t('System Instructions')}
+								aria-expanded={showSystem}
+							>
 								{#if showSystem}
 									<ChevronUp className="size-3.5" />
 								{:else}
@@ -474,10 +479,6 @@
 								false)
 									? ''
 									: 'outline-hidden'}"
-								aria-pressed={role === 'assistant'}
-								aria-label={role === 'user'
-									? $i18n.t('Switch to Assistant role')
-									: $i18n.t('Switch to User role')}
 								on:click={() => {
 									role = role === 'user' ? 'assistant' : 'user';
 								}}
@@ -487,6 +488,11 @@
 								{:else}
 									{$i18n.t('Assistant')}
 								{/if}
+								<span class="sr-only"
+									>{role === 'user'
+										? $i18n.t('Switch to Assistant role')
+										: $i18n.t('Switch to User role')}</span
+								>
 							</button>
 						</div>
 
@@ -494,6 +500,7 @@
 							<div class="flex-1">
 								<select
 									class=" bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
+									aria-label={$i18n.t('Model')}
 									bind:value={selectedModelId}
 								>
 									{#each $models as model}

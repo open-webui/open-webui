@@ -69,8 +69,10 @@
 									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks\u2014proceed with extreme caution.'
 								)
 							: $i18n.t('settings.admin.codeExecution.codeExecutionEngine.description')}
+						let:labelId
 					>
 						<SettingsSelect
+							id={`${labelId}-control`}
 							bind:value={config.CODE_EXECUTION_ENGINE}
 							placeholder={$i18n.t('Select a engine')}
 							required
@@ -106,8 +108,10 @@
 							description={$i18n.t(
 								'settings.admin.codeExecution.codeExecutionJupyterAuth.description'
 							)}
+							let:labelId
 						>
 							<SettingsSelect
+								id={`${labelId}-control`}
 								bind:value={config.CODE_EXECUTION_JUPYTER_AUTH}
 								placeholder={$i18n.t('Select an auth method')}
 							>
@@ -183,8 +187,10 @@
 									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks\u2014proceed with extreme caution.'
 								)
 							: $i18n.t('settings.admin.codeExecution.codeInterpreterEngine.description')}
+						let:labelId
 					>
 						<SettingsSelect
+							id={`${labelId}-control`}
 							bind:value={config.CODE_INTERPRETER_ENGINE}
 							placeholder={$i18n.t('Select a engine')}
 							required
@@ -220,8 +226,10 @@
 							description={$i18n.t(
 								'settings.admin.codeExecution.codeInterpreterJupyterAuth.description'
 							)}
+							let:labelId
 						>
 							<SettingsSelect
+								id={`${labelId}-control`}
 								bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH}
 								placeholder={$i18n.t('Select an auth method')}
 							>

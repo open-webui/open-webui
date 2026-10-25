@@ -216,8 +216,10 @@
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.web.webSearchEngine.label')}
 						description={$i18n.t('settings.admin.web.webSearchEngine.description')}
+						let:labelId
 					>
 						<SettingsSelect
+							id={`${labelId}-control`}
 							bind:value={webConfig.WEB_SEARCH_ENGINE}
 							placeholder={$i18n.t('Select a engine')}
 							required
@@ -1258,8 +1260,10 @@
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.web.webLoaderEngine.label')}
 					description={$i18n.t('settings.admin.web.webLoaderEngine.description')}
+					let:labelId
 				>
 					<SettingsSelect
+						id={`${labelId}-control`}
 						bind:value={webConfig.WEB_LOADER_ENGINE}
 						placeholder={$i18n.t('Select a engine')}
 					>

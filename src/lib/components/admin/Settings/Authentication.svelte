@@ -154,8 +154,10 @@
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.authentication.defaultUserRole.label')}
 					description={$i18n.t('settings.admin.authentication.defaultUserRole.description')}
+					let:labelId
 				>
 					<SettingsSelect
+						id={`${labelId}-control`}
 						bind:value={adminConfig.DEFAULT_USER_ROLE}
 						placeholder={$i18n.t('Select a role')}
 					>
@@ -168,8 +170,10 @@
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.authentication.defaultGroup.label')}
 					description={$i18n.t('settings.admin.authentication.defaultGroup.description')}
+					let:labelId
 				>
 					<SettingsSelect
+						id={`${labelId}-control`}
 						bind:value={adminConfig.DEFAULT_GROUP_ID}
 						placeholder={$i18n.t('Select a group')}
 					>

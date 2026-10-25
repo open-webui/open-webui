@@ -706,6 +706,7 @@
 			</div>
 			<Tooltip content={$i18n.t('Add webhook')}>
 				<button
+					aria-label={$i18n.t('Add webhook')}
 					class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 					on:click={newWebhook}
 					type="button"

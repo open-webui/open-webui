@@ -36,6 +36,7 @@
 	export let hasChatContent = false;
 	export let canCreateSkill: boolean | (() => boolean) = false;
 	export let contextUsage = null;
+	export let fileUploadEnabled: boolean | (() => boolean) = true;
 
 	$: compactAvailable = typeof canCompact === 'function' ? canCompact() : canCompact;
 	$: isCompactDisabled =
@@ -53,6 +54,8 @@
 	$: contextPercent = contextHasThreshold
 		? Math.max(0, Math.round(resolvedContextUsage?.percent ?? 0))
 		: null;
+	$: isFileUploadEnabled =
+		typeof fileUploadEnabled === 'function' ? fileUploadEnabled() : fileUploadEnabled;
 
 	let suggestionElement: any = null;
 	let filteredItems: any[] = [];
@@ -168,6 +171,7 @@
 				<Knowledge
 					bind:this={suggestionElement}
 					{query}
+					fileUploadEnabled={isFileUploadEnabled}
 					bind:filteredItems
 					onSelect={(e) => {
 						const { type, data } = e;
@@ -193,6 +197,7 @@
 				<AtCommands
 					bind:this={suggestionElement}
 					{query}
+					fileUploadEnabled={isFileUploadEnabled}
 					bind:filteredItems
 					onSelect={(e) => {
 						const { type, data } = e;

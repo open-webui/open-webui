@@ -1279,10 +1279,17 @@
 					</div>
 
 					{#if showSetDefault && !$hiddenInterfaceElements.includes('model_selector.set_default')}
-						<div class="flex shrink-0 items-center justify-end px-2 py-1 leading-none">
+						<div
+							class="flex shrink-0 items-center justify-end px-2 leading-none {($settings?.highContrastMode ??
+							false)
+								? ''
+								: 'py-1'}"
+						>
 							<button
 								type="button"
-								class="focus-ring text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
+								class="focus-ring {($settings?.highContrastMode ?? false)
+									? 'inline-flex min-h-6 items-center'
+									: ''} text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
 								on:click|stopPropagation={setDefaultHandler}
 							>
 								{$i18n.t('Set as default')}
