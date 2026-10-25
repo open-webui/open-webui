@@ -1134,6 +1134,7 @@ ${content}
 											<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 												<button
 													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													aria-label={$i18n.t('Undo')}
 													on:click={() => {
 														editor.chain().focus().undo().run();
 														// versionNavigateHandler('prev');
@@ -1145,6 +1146,7 @@ ${content}
 
 												<button
 													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													aria-label={$i18n.t('Redo')}
 													on:click={() => {
 														editor.chain().focus().redo().run();
 														// versionNavigateHandler('next');
@@ -1218,9 +1220,13 @@ ${content}
 										}}
 									>
 										<Tooltip content={$i18n.t('Record')} placement="top">
-											<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
+											<button
+												type="button"
+												class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+												aria-label={$i18n.t('Record')}
+											>
 												<Mic className="size-4" />
-											</div>
+											</button>
 										</Tooltip>
 									</RecordMenu>
 								{/if}
@@ -1266,9 +1272,13 @@ ${content}
 										pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 									}}
 								>
-									<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
+									<button
+										type="button"
+										class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+										aria-label={$i18n.t('Note Menu')}
+									>
 										<EllipsisHorizontal className="size-5" />
-									</div>
+									</button>
 								</NoteMenu>
 
 								{#if note?.write_access}
