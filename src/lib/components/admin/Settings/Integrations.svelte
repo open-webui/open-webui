@@ -200,6 +200,7 @@
 
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
+									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
 									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 									on:click={() => {
 										showConnectionModal = true;
@@ -247,6 +248,7 @@
 
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
+									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
 									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 									on:click={() => {
 										editTerminalIdx = null;

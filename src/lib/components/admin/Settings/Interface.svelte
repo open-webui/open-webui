@@ -205,8 +205,12 @@
 					</div>
 
 					<div class="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
-						<AdminSettingField label={$i18n.t('settings.admin.interface.localTaskModel.label')}>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.interface.localTaskModel.label')}
+							forId="task-model"
+						>
 							<SettingsSelect
+								id="task-model"
 								bind:value={taskConfig.TASK_MODEL}
 								className="w-full"
 								placeholder={$i18n.t('Select a model')}
@@ -224,8 +228,12 @@
 							</SettingsSelect>
 						</AdminSettingField>
 
-						<AdminSettingField label={$i18n.t('settings.admin.interface.externalTaskModel.label')}>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.interface.externalTaskModel.label')}
+							forId="task-model-external"
+						>
 							<SettingsSelect
+								id="task-model-external"
 								bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 								className="w-full"
 								placeholder={$i18n.t('Select a model')}
@@ -300,8 +308,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.interface.contextCompactionModel.label')}
 						description={$i18n.t('settings.admin.interface.contextCompactionModel.description')}
+						forId="context-compaction-model"
 					>
 						<SettingsSelect
+							id="context-compaction-model"
 							bind:value={chatConfig.CONTEXT_COMPACTION_MODEL}
 							className="w-full"
 							placeholder={$i18n.t('Select a model')}
