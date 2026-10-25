@@ -277,6 +277,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'DATALAB_MARKER_STRIP_EXISTING_OCR': 'rag.datalab_marker_strip_existing_ocr',
     'DATALAB_MARKER_USE_LLM': 'rag.datalab_marker_use_llm',
     'DDGS_BACKEND': 'web.search.ddgs_backend',
+    'DDGS_BACKEND_EXCLUDE': 'web.search.ddgs_backend_exclude',
     'DOCLING_API_KEY': 'rag.docling_api_key',
     'DOCLING_PARAMS': 'rag.docling_params',
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
@@ -711,6 +712,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'SERPHOUSE_DOMAIN': config['web.search.serphouse_domain'],
             'SERPLY_API_KEY': config['web.search.serply_api_key'],
             'DDGS_BACKEND': config['web.search.ddgs_backend'],
+            'DDGS_BACKEND_EXCLUDE': config['web.search.ddgs_backend_exclude'],
             'TAVILY_API_KEY': config['web.search.tavily_api_key'],
             'STAAN_API_KEY': config['web.search.staan_api_key'],
             'STAAN_MARKET': config['web.search.staan_market'],
@@ -795,6 +797,7 @@ class WebConfig(BaseModel):
     SERPHOUSE_DOMAIN: str | None = None
     SERPLY_API_KEY: str | None = None
     DDGS_BACKEND: str | None = None
+    DDGS_BACKEND_EXCLUDE: list[str] | None = None
     TAVILY_API_KEY: str | None = None
     STAAN_API_KEY: str | None = None
     STAAN_MARKET: str | None = None
@@ -2370,6 +2373,7 @@ async def search_web(
             config['web.search.domain.filter_list'],
             concurrent_requests=config['web.search.concurrent_requests'],
             backend=config['web.search.ddgs_backend'],
+            excluded_backends=config['web.search.ddgs_backend_exclude'],
         )
     elif engine == 'tavily':
         if config['web.search.tavily_api_key']:

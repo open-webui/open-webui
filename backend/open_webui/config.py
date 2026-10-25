@@ -1260,6 +1260,14 @@ SERPHOUSE_DOMAIN = os.getenv('SERPHOUSE_DOMAIN', 'google.com')
 
 DDGS_BACKEND = os.getenv('DDGS_BACKEND', 'auto')
 
+DDGS_BACKEND_EXCLUDE_ENV = 'DDGS_BACKEND_EXCLUDE'
+DDGS_BACKEND_EXCLUDE_SEPARATOR = ','
+DDGS_BACKEND_EXCLUDE = [
+    backend.strip()
+    for backend in os.getenv(DDGS_BACKEND_EXCLUDE_ENV, '').split(DDGS_BACKEND_EXCLUDE_SEPARATOR)
+    if backend.strip()
+]
+
 JINA_API_KEY = os.getenv('JINA_API_KEY', '')
 
 JINA_API_BASE_URL = os.getenv('JINA_API_BASE_URL', '')
@@ -3072,6 +3080,7 @@ DEFAULT_CONFIG = {
     'web.search.serphouse_api_key': SERPHOUSE_API_KEY,
     'web.search.serphouse_domain': SERPHOUSE_DOMAIN,
     'web.search.ddgs_backend': DDGS_BACKEND,
+    'web.search.ddgs_backend_exclude': DDGS_BACKEND_EXCLUDE,
     'web.search.jina_api_key': JINA_API_KEY,
     'web.search.jina_api_base_url': JINA_API_BASE_URL,
     'web.search.searchapi_api_key': SEARCHAPI_API_KEY,
