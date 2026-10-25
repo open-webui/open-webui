@@ -1102,7 +1102,9 @@
 											<div class="flex min-w-0 items-center gap-2">
 												{#if editingLocale}
 													<input
-														class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+														class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
+															? 'min-h-6'
+															: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
 														placeholder={name || $i18n.t('Model Name')}
 														value={localizedField('name')}
 														on:input={(e) =>
@@ -1113,7 +1115,9 @@
 													/>
 												{:else}
 													<input
-														class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+														class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
+															? 'min-h-6'
+															: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
 														placeholder={$i18n.t('Model Name')}
 														bind:value={name}
 														required
@@ -1181,7 +1185,9 @@
 											{/if}
 
 											<input
-												class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+												class="block w-full {($settings?.highContrastMode ?? false)
+													? 'min-h-6'
+													: ''} bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
 												placeholder={$i18n.t('Model ID')}
 												bind:value={id}
 												disabled={edit}
