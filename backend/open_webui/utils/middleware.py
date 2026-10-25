@@ -135,6 +135,7 @@ from open_webui.utils.response import (
     handle_responses_streaming_event,
     merge_usage,
     normalize_usage,
+    update_usage_snapshot,
 )
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skills import (
@@ -3069,11 +3070,9 @@ async def build_chat_response_context(request, form_data, user, model, metadata,
 
 
 async def execute_tool_call(form_data, metadata, event_caller, tool_call):
-    error = resolve_tool_call(tool_call, metadata.get('tools', {}))
-    if error:
-        return {}, error, None, None, False
-    name = tool_call.get('function', {}).get('name', '')
-    tool_args = tool_call.get('function', {}).get('arguments', '{}')
+    """Execute the saved function_call item, already resolved before approval staging."""
+    name = tool_call.get('name', '')
+    tool_args = tool_call.get('arguments', '{}')
     params = {}
     if tool_args and tool_args.strip():
         try:
@@ -3083,7 +3082,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
                 params = ast.literal_eval(tool_args)
             except Exception as e:
                 log.debug(e)
-                return {}, None, None, None, False
+                return {}, 'Error: Tool arguments are not valid JSON.', None, None, False
     if not isinstance(params, dict):
         return (
             {},
@@ -3092,7 +3091,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
             None,
             False,
         )
-    tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
+    tool_call['arguments'] = JSONCodec.dumps(params)
 
     tool = metadata.get('tools', {}).get(name)
     if not tool:
@@ -3114,7 +3113,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
                 or await event_caller(
                     {
                         'type': 'confirmation',
-                        'data': {'tool_call': {'id': tool_call.get('id'), 'name': name, 'arguments': params}},
+                        'data': {'tool_call': {'id': tool_call.get('call_id'), 'name': name, 'arguments': params}},
                     }
                 )
                 is not True  # Disconnection and timeout replies are error objects, not approval.
@@ -3122,31 +3121,37 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
         ):
             return params, 'Error: tool call was not approved.', tool, tool_type, direct_tool
 
-        if direct_tool:
-            if not event_caller:
-                result = 'Error: Browser session is not connected for this direct tool.'
+        tool_call['started_at'] = time.time()
+        started = time.perf_counter()
+        try:
+            if direct_tool:
+                if not event_caller:
+                    result = 'Error: Browser session is not connected for this direct tool.'
+                else:
+                    result = await event_caller(
+                        {
+                            'type': 'execute:tool',
+                            'data': {
+                                'id': str(uuid4()),
+                                'name': name,
+                                'params': params,
+                                'server': tool.get('server', {}),
+                                'session_id': metadata.get('session_id'),
+                            },
+                        }
+                    )
             else:
-                result = await event_caller(
-                    {
-                        'type': 'execute:tool',
-                        'data': {
-                            'id': str(uuid4()),
-                            'name': name,
-                            'params': params,
-                            'server': tool.get('server', {}),
-                            'session_id': metadata.get('session_id'),
-                        },
-                    }
+                function = await get_updated_tool_function(
+                    function=tool['callable'],
+                    extra_params={
+                        '__messages__': form_data.get('messages', []),
+                        '__files__': metadata.get('files') or [],
+                    },
                 )
-        else:
-            function = await get_updated_tool_function(
-                function=tool['callable'],
-                extra_params={
-                    '__messages__': form_data.get('messages', []),
-                    '__files__': metadata.get('files') or [],
-                },
-            )
-            result = await function(**params)
+                result = await function(**params)
+        finally:
+            tool_call['ended_at'] = time.time()
+            tool_call['duration'] = time.perf_counter() - started
     except Exception as e:
         result = {'error': str(e)}
     return params, result, tool, tool_type, direct_tool
@@ -3229,17 +3234,9 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
             saved['done'] = False
             item = copy.deepcopy(item)
 
-        tool_call = {
-            'id': item.get('call_id', ''),
-            'type': 'function',
-            'function': {
-                'name': item.get('name', ''),
-                'arguments': item.get('arguments', '{}'),
-            },
-        }
         try:
             params, result, tool, tool_type, direct_tool = await execute_tool_call(
-                form_data, metadata, event_caller, tool_call
+                form_data, metadata, event_caller, item
             )
             files, embeds = [], []
             if result is None and tool is None:
@@ -3264,7 +3261,6 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                     ):
                         await event_emitter({'type': 'source', 'data': source})
             content = tool_result_content(result)
-            item['arguments'] = tool_call.get('function', {}).get('arguments', '{}')
             output_parts = [{'type': 'input_text', 'text': content}]
             item['status'] = 'failed' if _is_tool_result_error(content) else 'completed'
             display_files = []
@@ -3280,7 +3276,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
             result_item = {
                 'type': 'function_call_output',
                 'id': output_id('fco'),
-                'call_id': tool_call['id'],
+                'call_id': item['call_id'],
                 'output': output_parts,
                 'status': item['status'],
                 **({'files': display_files} if display_files else {}),
@@ -3297,7 +3293,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                     {
                         'type': 'function_call_output',
                         'id': output_id('fco'),
-                        'call_id': tool_call['id'],
+                        'call_id': item['call_id'],
                         'status': 'incomplete',
                         'output': [
                             {
@@ -3450,13 +3446,13 @@ def update_assistant_message_from_stream(assistant_message, raw) -> bool:
             if output:
                 assistant_message['output'] = output
             if meta and meta.get('usage'):
-                assistant_message['usage'] = merge_usage(assistant_message.get('usage'), meta['usage'])
+                assistant_message['usage'] = update_usage_snapshot(assistant_message.get('usage'), meta['usage'])
             continue
 
         raw_usage = data.get('usage', {}) or {}
         raw_usage.update(data.get('timings', {}))
         if raw_usage:
-            assistant_message['usage'] = merge_usage(assistant_message.get('usage'), raw_usage)
+            assistant_message['usage'] = update_usage_snapshot(assistant_message.get('usage'), raw_usage)
 
         for choice in data.get('choices', []):
             if choice.get('finish_reason'):
@@ -3948,6 +3944,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         {
                             'error': {'content': error},
                             'done': True,
+                            'meta': {'response_ended_at': time.time()},
                         },
                     )
                 if isinstance(error, str) or isinstance(error, dict):
@@ -4067,6 +4064,8 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
+                    if continuing:
+                        usage = merge_usage((ctx.get('assistant_message') or {}).get('usage'), usage or {'incomplete': True})
                     finish_reason = choices[0].get('finish_reason') if choices else None
 
                     if save_to_chat:
@@ -4075,6 +4074,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             metadata['message_id'],
                             {
                                 'done': True,
+                                'meta': {'response_ended_at': time.time()},
                                 'role': 'assistant',
                                 'output': response_output,
                                 **({'usage': usage} if usage else {}),
@@ -4512,7 +4512,7 @@ async def streaming_chat_response_handler(response, ctx):
                 prior_output, output = output, []
                 content_parts = []
 
-            usage = None
+            usage = normalize_usage((message or {}).get('usage') or {}) if existing_output else None
             finish_reason = None
             last_response_id = None
 
@@ -4655,6 +4655,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal stream_size
 
                     response_tool_calls = []
+                    prior_usage = usage
                     current_usage = {}
                     form_data['model'] = current_form_data['model']
 
@@ -4881,8 +4882,8 @@ async def streaming_chat_response_handler(response, ctx):
 
                                         # Normalize and capture usage for DB persistence
                                         if response_metadata.get('usage'):
-                                            current_usage = response_metadata['usage']
-                                            usage = merge_usage(usage, response_metadata['usage'])
+                                            current_usage = update_usage_snapshot(current_usage, response_metadata['usage'])
+                                            usage = merge_usage(prior_usage, current_usage)
                                             response_metadata['usage'] = usage
 
                                         if response_metadata.get('error'):
@@ -4924,8 +4925,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     raw_usage = data.get('usage', {}) or {}
                                     raw_usage.update(data.get('timings', {}))  # llama.cpp
                                     if raw_usage:
-                                        current_usage = raw_usage
-                                        usage = merge_usage(usage, raw_usage)
+                                        current_usage = update_usage_snapshot(current_usage, raw_usage)
+                                        usage = merge_usage(prior_usage, current_usage)
                                         await event_emitter(
                                             {
                                                 'type': 'chat:completion',
@@ -5567,6 +5568,8 @@ async def streaming_chat_response_handler(response, ctx):
                             tool_calls.append(_split_tool_calls(responses_api_tool_calls))
 
                     await save_current_response_stream()
+                    if not current_usage:
+                        usage = {**(usage or {}), 'incomplete': True}
                     return normalize_usage(current_usage)
 
                 output_start = len(prior_output)
@@ -5728,20 +5731,18 @@ async def streaming_chat_response_handler(response, ctx):
 
                     results = []
 
-                    delegate_calls = [
-                        tool_call
-                        for tool_call in response_tool_calls
-                        if tool_call.get('function', {}).get('name') == 'delegate_task'
-                    ]
+                    # Provider calls have been resolved and staged; execute their saved items directly.
+                    response_tool_calls = [output_by_call_id[call['id']] for call in response_tool_calls]
+                    delegate_calls = [call for call in response_tool_calls if call.get('name') == 'delegate_task']
                     tool_results = {}
                     for tool_call in response_tool_calls:
-                        if tool_call.get('function', {}).get('name') != 'delegate_task':
-                            tool_results[id(tool_call)] = await execute_tool_call(
+                        if tool_call.get('name') != 'delegate_task':
+                            tool_results[tool_call['call_id']] = await execute_tool_call(
                                 form_data, metadata, event_caller, tool_call
                             )
                     tool_results.update(
                         zip(
-                            [id(tool_call) for tool_call in delegate_calls],
+                            [tool_call['call_id'] for tool_call in delegate_calls],
                             await asyncio.gather(
                                 *(
                                     execute_tool_call(form_data, metadata, event_caller, tool_call)
@@ -5752,9 +5753,9 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                     for tool_call in response_tool_calls:
-                        tool_call_id = tool_call.get('id', '')
-                        tool_function_name = tool_call.get('function', {}).get('name', '')
-                        tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[id(tool_call)]
+                        tool_call_id = tool_call['call_id']
+                        tool_function_name = tool_call.get('name', '')
+                        tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[tool_call['call_id']]
                         if tool_result is None:
                             results.append(
                                 {
@@ -5848,14 +5849,8 @@ async def streaming_chat_response_handler(response, ctx):
                             }
                         )
 
-                    # Update function_call statuses and parsed/sanitized arguments.
-                    for tc in response_tool_calls:
-                        call_id = tc.get('id', '')
-                        for item in output:
-                            if item.get('type') == 'function_call' and item.get('call_id') == call_id:
-                                item['status'] = result_status_by_call_id.get(call_id, 'completed')
-                                item['arguments'] = tc.get('function', {}).get('arguments', '{}')
-                                break
+                    for item in response_tool_calls:
+                        item['status'] = result_status_by_call_id.get(item['call_id'], 'completed')
 
                     # Emit citation sources to the frontend for display
                     if citations_enabled:
@@ -6324,6 +6319,7 @@ async def streaming_chat_response_handler(response, ctx):
                         metadata['message_id'],
                         {
                             'done': True,
+                            'meta': {'response_ended_at': time.time()},
                             'output': current_output,
                             **({'usage': usage} if usage else {}),
                         },

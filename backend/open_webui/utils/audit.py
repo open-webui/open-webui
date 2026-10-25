@@ -133,7 +133,7 @@ def log_model_usage(request: Request, user: UserModel, model_id: str, usage: Opt
                 source_ip=request.client.host if request.client else None,
                 user_agent=request.headers.get('user-agent'),
                 model_id=model_id,
-                usage={key: usage[key] for key in ('input_tokens', 'output_tokens', 'total_tokens')},
+                usage={key: usage[key] for key in ('input_tokens', 'output_tokens', 'total_tokens') if key in usage},
             ),
             extra={'event': 'model_usage', 'request_id': request_id},
         )

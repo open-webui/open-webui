@@ -1,31 +1,31 @@
-from contextlib import nullcontext
 import os
 import time
 import uuid
 from collections import Counter
+from contextlib import nullcontext
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import select, delete, func, cast, Integer, distinct
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
-from open_webui.utils.response import merge_usage, normalize_usage
+from open_webui.utils.response import normalize_usage
+from open_webui.utils.session_records import normalize_tool_output, recorded_timestamp
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
     Column,
-    ForeignKey,
     Float,
+    ForeignKey,
     Index,
     Integer,
     Text,
-    cast,
     case,
+    cast,
     delete,
+    distinct,
     func,
     literal,
     select,
@@ -255,7 +255,7 @@ class ChatMessageTable:
         if 'content' in data:
             message.content = data.get('content')
         if 'output' in data:
-            message.output = data.get('output')
+            message.output = normalize_tool_output(data.get('output'))
         if 'model_id' in data or 'model' in data:
             message.model_id = data.get('model_id') or data.get('model')
         if 'files' in data:
@@ -277,8 +277,8 @@ class ChatMessageTable:
 
         usage = get_usage(data)
         if usage:
-            existing_usage = normalize_usage(message.usage)
-            message.usage = existing_usage if usage == existing_usage else merge_usage(existing_usage, usage)
+            # The caller saves a cumulative message snapshot; accumulation belongs to the model-call loop.
+            message.usage = usage
         message.updated_at = now
 
     @staticmethod
@@ -290,7 +290,7 @@ class ChatMessageTable:
             role=data.get('role', 'user'),
             parent_id=data.get('parent_id') or data.get('parentId'),
             content=data.get('content'),
-            output=data.get('output'),
+            output=normalize_tool_output(data.get('output')),
             model_id=data.get('model_id') or data.get('model'),
             files=data.get('files'),
             sources=data.get('sources'),
@@ -301,7 +301,7 @@ class ChatMessageTable:
             error=data.get('error'),
             usage=get_usage(data),
             context_summary=data.get('context_summary') or data.get('contextSummary'),
-            created_at=data.get('timestamp') or now,
+            created_at=(recorded_timestamp(data.get('timestamp')) or 0) if 'timestamp' in data else now,
             updated_at=now,
         )
 
@@ -336,15 +336,21 @@ class ChatMessageTable:
         self, chat_id: str, user_id: str, messages: dict[str, dict], db: AsyncSession | None = None
     ) -> None:
         """Backfill missing rows without overwriting newer message data."""
-        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
         from sqlalchemy.dialects.postgresql import insert as pg_insert
+        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
         if not messages:
             return
         async with get_async_db_context(db) as db:
             insert = sqlite_insert if db.bind.dialect.name == 'sqlite' else pg_insert
             rows = [
-                self._build_message(f'{chat_id}-{mid}', chat_id, data.get('user_id') or user_id, data, int(time.time()))
+                self._build_message(
+                    f'{chat_id}-{mid}',
+                    chat_id,
+                    data.get('user_id') or user_id,
+                    {**data, 'timestamp': data.get('timestamp')},
+                    int(time.time()),
+                )
                 for mid, data in messages.items()
             ]
             await db.execute(
@@ -805,7 +811,7 @@ class ChatMessageTable:
                     day_stmt = day_stmt.filter(ChatMessage.created_at >= start_date)
                 if end_date:
                     day_stmt = day_stmt.filter(ChatMessage.created_at <= end_date)
-                day_result = await db.execute(day_stmt)
+                day_result = await db.execute(day_stmt.where(ChatMessage.created_at > 0))
                 active_days = {_date_key(row.created_at, tz) for row in day_result.all()}
 
             input_total = int(token_result.input_tokens or 0)
@@ -831,7 +837,7 @@ class ChatMessageTable:
             result = await db.execute(
                 select(func.min(ChatMessage.created_at)).filter(
                     ChatMessage.user_id == user_id,
-                    ChatMessage.created_at.isnot(None),
+                    ChatMessage.created_at > 0,
                 )
             )
             value = result.scalar()
@@ -865,7 +871,7 @@ class ChatMessageTable:
                 ChatMessage.created_at <= end_date,
             )
 
-            result = await db.execute(stmt)
+            result = await db.execute(stmt.where(ChatMessage.created_at > 0))
             daily: dict[str, dict] = {}
             for row in result.all():
                 date = _date_key(row.created_at, tz)
@@ -1082,7 +1088,7 @@ class ChatMessageTable:
 
             if day is not None:
                 stmt = stmt.group_by(day, ChatMessage.model_id)
-            result = await db.execute(stmt)
+            result = await db.execute(stmt.where(ChatMessage.created_at > 0))
             counts: dict[str, dict[str, int]] = {}
             for timestamp, model_id, value in result.all():
                 date_str = timestamp if day is not None else bucket_start(timestamp).strftime(date_format)
