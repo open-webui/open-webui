@@ -348,7 +348,9 @@
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
-									tab = 'notes';
+									if (fileUploadEnabled) {
+										tab = 'notes';
+									}
 								}}
 							>
 								<PageEdit />
@@ -380,7 +382,9 @@
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
-								tab = 'knowledge';
+								if (fileUploadEnabled) {
+									tab = 'knowledge';
+								}
 							}}
 						>
 							<Database />
@@ -411,7 +415,9 @@
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
-								tab = 'chats';
+								if (fileUploadEnabled) {
+									tab = 'chats';
+								}
 							}}
 						>
 							<ClockRotateRight />

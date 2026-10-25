@@ -8,7 +8,8 @@
 		models,
 		selectedTerminalId,
 		settings,
-		terminalServers
+		terminalServers,
+		user
 	} from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFolders } from '$lib/apis/folders';
@@ -33,6 +34,7 @@
 
 	export let query = '';
 	export let onSelect: (e: any) => void = () => {};
+	export let fileUploadEnabled: boolean = true;
 
 	let selectedIdx = 0;
 	export let filteredItems: any[] = [];
@@ -60,6 +62,8 @@
 	});
 
 	$: filteredModels = query ? fuse.search(query).map((e) => e.item) : modelItems;
+	let webUploadEnabled: boolean = true;
+	$: webUploadEnabled = $user?.role === 'admin' || ($user?.permissions?.chat?.web_upload ?? true);
 	$: knowledgeResults = [
 		...filesystemItems,
 		...(query.startsWith('http')
@@ -70,7 +74,9 @@
 		...folderItems,
 		...knowledgeItems,
 		...fileItems
-	];
+	].filter((item) =>
+		['youtube', 'web'].includes(item.type) ? webUploadEnabled : fileUploadEnabled
+	);
 
 	$: filteredItems = [
 		...knowledgeResults.map((data) => ({ type: data.type, data })),
