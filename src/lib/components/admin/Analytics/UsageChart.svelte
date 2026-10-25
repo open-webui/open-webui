@@ -89,6 +89,11 @@
 	let keyboardIndex = 0;
 	let plot: HTMLDivElement;
 	let chartWidth = 0;
+	const activityRowHeight = 28;
+	let activityViewport: HTMLDivElement;
+	let activityScrollTop = 0;
+	let activityHeight = 336;
+	let activityWidth = 0;
 	let legendExpanded = false;
 	$: legendColumns = Math.max(1, Math.floor((chartWidth + 16) / 256));
 	$: legendLimit = legendColumns * 2 - 1;
@@ -107,6 +112,7 @@
 		active = null;
 		activeModel = null;
 		keyboardIndex = 0;
+		resetActivityScroll();
 	}
 	$: totals = modelTotals(data);
 	$: comparing = compare && view === 'volume';
@@ -149,10 +155,15 @@
 				: [0, series.length - 1]
 		)
 	].filter((i) => i >= 0 && i < series.length);
-	$: lanes = (view === 'activity' ? visibleIds : []).map((id) => {
-		const values = series.map((point) => point.models[id] ?? 0);
-		return { id, peak: Math.max(0, ...values), values };
-	});
+	$: activityStart = Math.max(0, Math.floor(activityScrollTop / activityRowHeight) - 2);
+	$: activityEnd = Math.min(
+		visibleIds.length,
+		Math.ceil((activityScrollTop + activityHeight) / activityRowHeight) + 2
+	);
+	$: getActivityLanes = activityLaneWindow(series);
+	$: lanes = getActivityLanes(
+		view === 'activity' ? visibleIds.slice(activityStart, activityEnd) : []
+	);
 	$: stacks =
 		view === 'volume'
 			? series.map((point) => visibleIds.filter((id) => (point.models[id] ?? 0) > 0))
@@ -169,6 +180,30 @@
 			.locale($i18n.language)
 			.format(granularity === 'daily' ? 'MMM D' : 'MMM D, HH:mm');
 	const position = (time: number) => ((time - start + step / 2) / span) * 100;
+	function resetActivityScroll() {
+		activityScrollTop = 0;
+		if (activityViewport) activityViewport.scrollTop = 0;
+	}
+
+	// Preserve overlapping rows so scrolling only prepares and draws newly visible models.
+	function activityLaneWindow(points: ReturnType<typeof chartSeries>) {
+		type Lane = { id: string; peak: number; values: number[] };
+		let cache = new Map<string, Lane>();
+		return (ids: string[]) => {
+			const next = new Map<string, Lane>();
+			const lanes = ids.map((id) => {
+				let lane = cache.get(id);
+				if (!lane) {
+					const values = points.map((point) => point.models[id] ?? 0);
+					lane = { id, peak: values.reduce((peak, value) => Math.max(peak, value), 0), values };
+				}
+				next.set(id, lane);
+				return lane;
+			});
+			cache = next;
+			return lanes;
+		};
+	}
 	async function navigate(event: KeyboardEvent, index: number) {
 		const buttons = plot.querySelectorAll<HTMLButtonElement>('button[data-point]');
 		const destinations: Record<string, number> = {
@@ -180,20 +215,27 @@
 		if (view === 'activity') {
 			destinations.ArrowDown = index + series.length;
 			destinations.ArrowUp = index - series.length;
-			destinations.End = lanes.length * series.length - 1;
+			destinations.End = visibleIds.length * series.length - 1;
 		}
 		const next = destinations[event.key];
 		if (next === undefined) return;
 		event.preventDefault();
 		keyboardIndex = Math.max(
 			0,
-			Math.min((view === 'activity' ? lanes.length * series.length : buttons.length) - 1, next)
+			Math.min((view === 'activity' ? visibleIds.length * series.length : buttons.length) - 1, next)
 		);
 		if (view === 'activity') {
 			const row = Math.floor(keyboardIndex / series.length);
+			const top = row * activityRowHeight;
+			activityScrollTop = Math.max(
+				top + activityRowHeight - activityHeight,
+				Math.min(activityScrollTop, top)
+			);
+			activityViewport.scrollTop = activityScrollTop;
 			await tick();
-			buttons[row]?.focus();
-			showTooltip({ currentTarget: buttons[row] }, keyboardIndex % series.length, lanes[row].id);
+			const button = plot.querySelector<HTMLButtonElement>(`button[data-row="${row}"]`);
+			button?.focus();
+			showTooltip({ currentTarget: button }, keyboardIndex % series.length, visibleIds[row]);
 		} else buttons[keyboardIndex]?.focus();
 	}
 
@@ -227,8 +269,19 @@
 		draw();
 		return {
 			update(next: typeof options) {
+				if (
+					next.lane === options.lane &&
+					next.positions === options.positions &&
+					next.cellWidth === options.cellWidth &&
+					next.width === options.width
+				)
+					return;
 				options = next;
 				draw();
+			},
+			destroy() {
+				canvas.width = 0;
+				canvas.height = 0;
 			}
 		};
 	}
@@ -481,54 +534,83 @@
 				</div>
 			</div>
 		{:else}
-			<div class="space-y-1">
-				{#each lanes as lane, row (lane.id)}
-					{@const index =
-						Math.floor(keyboardIndex / series.length) === row ? keyboardIndex % series.length : 0}
-					<div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-2 items-center">
-						<button
-							type="button"
-							class="text-left truncate py-1"
-							title={name(lane.id)}
-							aria-pressed={selectedModel === lane.id}
-							on:click={() => isolate(lane.id)}>{name(lane.id)}</button
+			<div
+				bind:this={activityViewport}
+				bind:clientHeight={activityHeight}
+				bind:clientWidth={activityWidth}
+				class="overflow-y-auto overscroll-contain"
+				style:height={`${Math.min(visibleIds.length * activityRowHeight, 336)}px`}
+				style:max-height="50vh"
+				on:scroll={() => {
+					if (activityScrollTop !== activityViewport.scrollTop) {
+						activityScrollTop = activityViewport.scrollTop;
+						hideTooltip();
+					}
+				}}
+			>
+				<div
+					style:padding-top={`${activityStart * activityRowHeight}px`}
+					style:padding-bottom={`${(visibleIds.length - activityEnd) * activityRowHeight}px`}
+				>
+					{#each lanes as lane, offset (lane.id)}
+						{@const row = activityStart + offset}
+						{@const index =
+							Math.floor(keyboardIndex / series.length) === row ? keyboardIndex % series.length : 0}
+						<div
+							class="grid grid-cols-[7rem_minmax(0,1fr)] gap-2 items-center"
+							style:height={`${activityRowHeight}px`}
 						>
-						<button
-							type="button"
-							data-point
-							class="relative h-6 bg-gray-100/70 dark:bg-gray-850/40 focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
-							tabindex={Math.floor(keyboardIndex / series.length) === row ? 0 : -1}
-							aria-label={`${name(lane.id)}, ${dateLabel(series[index].date)}: ${lane.values[index].toLocaleString($i18n.language)} ${metricLabel}`}
-							aria-describedby={activeModel === lane.id ? tooltipId : undefined}
-							on:mousemove={(event) => hoverActivity(event, lane.id)}
-							on:mouseleave={leaveTooltip}
-							on:focus={(event) => {
-								keyboardIndex = row * series.length + index;
-								showTooltip(event, index, lane.id);
-							}}
-							on:blur={hideTooltip}
-							on:click={(event) => hoverActivity(event, lane.id)}
-							on:keydown={(event) => navigate(event, row * series.length + index)}
-						>
-							<canvas
-								class="absolute inset-0 w-full h-full pointer-events-none"
-								aria-hidden="true"
-								use:drawActivity={{
-									lane,
-									positions: activityPositions,
-									cellWidth: step / span,
-									width: chartWidth
+							<button
+								type="button"
+								class="text-left truncate py-1"
+								title={name(lane.id)}
+								aria-pressed={selectedModel === lane.id}
+								on:click={() => isolate(lane.id)}>{name(lane.id)}</button
+							>
+							<button
+								type="button"
+								data-point
+								data-row={row}
+								class="relative h-6 bg-gray-100/70 dark:bg-gray-850/40 focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
+								tabindex={Math.floor(keyboardIndex / series.length) === row ||
+								(row === activityStart &&
+									(Math.floor(keyboardIndex / series.length) < activityStart ||
+										Math.floor(keyboardIndex / series.length) >= activityEnd))
+									? 0
+									: -1}
+								aria-label={`${name(lane.id)}, ${dateLabel(series[index].date)}: ${lane.values[index].toLocaleString($i18n.language)} ${metricLabel}`}
+								aria-describedby={activeModel === lane.id ? tooltipId : undefined}
+								on:mousemove={(event) => hoverActivity(event, lane.id)}
+								on:mouseleave={leaveTooltip}
+								on:focus={(event) => {
+									keyboardIndex = row * series.length + index;
+									showTooltip(event, index, lane.id);
 								}}
-							></canvas>
-						</button>
-					</div>
-				{/each}
+								on:blur={hideTooltip}
+								on:click={(event) => hoverActivity(event, lane.id)}
+								on:keydown={(event) => navigate(event, row * series.length + index)}
+							>
+								<canvas
+									class="absolute inset-0 w-full h-full pointer-events-none"
+									aria-hidden="true"
+									use:drawActivity={{
+										lane,
+										positions: activityPositions,
+										cellWidth: step / span,
+										width: activityWidth
+									}}
+								></canvas>
+							</button>
+						</div>
+					{/each}
+				</div>
 			</div>
 		{/if}
 		{#if hovered}
 			<div
 				class="pointer-events-none absolute inset-y-0 right-0 z-10"
 				style:left={view === 'volume' ? '3rem' : '7.5rem'}
+				style:right={view === 'activity' ? `${chartWidth - activityWidth}px` : '0'}
 				aria-hidden="true"
 			>
 				<div
@@ -542,6 +624,7 @@
 	<div
 		class="relative mt-2 h-4 text-[0.625rem] tabular-nums"
 		style:margin-left={view === 'volume' ? '3rem' : '7.5rem'}
+		style:margin-right={view === 'activity' ? `${chartWidth - activityWidth}px` : '0'}
 	>
 		{#each labels as index}
 			<span
