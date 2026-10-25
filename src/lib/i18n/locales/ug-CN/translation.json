@@ -2515,7 +2515,7 @@
 	"settings.admin.authentication.attributeForMail.description": "ئىشلەتكۈچىنىڭ ئېلخەت ئادرېسى قىلىپ ئىشلىتىلىدىغان LDAP خاسلىقى.",
 	"settings.admin.authentication.attributeForMail.label": "ئېلىخەت خاسلىقى",
 	"settings.admin.authentication.attributeForUsername.description": "ئىشلەتكۈچى نامى قىلىپ ئىشلىتىلىدىغان LDAP خاسلىقى.",
-	"settings.admin.authentication.attributeForUsername.label": "ئىشلەتكۈچى ئىسمى  خاسلىقى",
+	"settings.admin.authentication.attributeForUsername.label": "ئىشلەتكۈچى ئىسمى\u00a0 خاسلىقى",
 	"settings.admin.authentication.autoRedirect.description": "ئىشلەتكۈچىلەرنى كىرىش بېتىدىن بىۋاسىتە OAuth تەمىنلىگۈچىسىگە يوللاڭ.",
 	"settings.admin.authentication.autoRedirect.label": "ئاپتوماتىك قايتا يۆنىلىش",
 	"settings.admin.authentication.blockedGroups.description": "كىرىشى چەكلەنگەن تەمىنلىگۈچى گۇرۇپپىلىرى.",

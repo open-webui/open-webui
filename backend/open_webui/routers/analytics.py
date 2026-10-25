@@ -64,9 +64,7 @@ async def get_model_analytics(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts per model."""
-    counts = await ChatMessages.get_model_analytics(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
+    counts = await ChatMessages.get_model_analytics(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
     models = [
         ModelAnalyticsEntry(model_id=model_id, **data)
         for model_id, data in sorted(counts.items(), key=lambda x: -x[1]['count'])
@@ -85,9 +83,7 @@ async def get_user_analytics(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts and token usage per user with user info."""
-    usage = await ChatMessages.get_user_analytics(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
+    usage = await ChatMessages.get_user_analytics(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
 
     # Rank by the selected metric before limiting the leaderboard.
     top_user_ids = sorted(
@@ -225,9 +221,7 @@ async def get_daily_stats(
             metric=metric,
             bucket_offset=duration,
         )
-        step = timedelta(
-            minutes={'10m': 10, 'hourly': 60, '3h': 180, '6h': 360, 'daily': 1440}[granularity]
-        )
+        step = timedelta(minutes={'10m': 10, 'hourly': 60, '3h': 180, '6h': 360, 'daily': 1440}[granularity])
         for entry in entries:
             bucket = datetime.fromisoformat(entry.date)
             start = max(start_date, int(bucket.timestamp()))
