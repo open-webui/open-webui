@@ -4107,7 +4107,7 @@
 	"Workspace search": "Anadi deg temnaḍṭ n umahil",
 	"Write": "Aru",
 	"Write a prompt…": "Aru aneftaɣ…",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Aru agzul s 50 n wawalen i yessewzalen [asefru neɣ tasarut].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Aru agzul s 50 n wawalen i yessewzalen {{topic}}.",
 	"Write something...": "Aru kra…",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Ru da, agbur-ik·im n unagraw i uneftaɣ n tmudemt\nAmedya.) Kečč d Mario seg Super Mario Bros, txeddmeḍ amzun d amalal.",
 	"Yahoo": "Yahoo",

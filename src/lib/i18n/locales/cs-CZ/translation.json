@@ -4157,7 +4157,7 @@
 	"Workspace search": "Vyhledávání v pracovním prostoru",
 	"Write": "Napsat",
 	"Write a prompt…": "Napište instrukci…",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Napište shrnutí na 50 slov, které shrnuje [téma nebo klíčové slovo].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Napište shrnutí na 50 slov, které shrnuje {{topic}}.",
 	"Write something...": "Napište něco...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Sem napište obsah systémových instrukcí vašeho modelu\nnapř.: Jste Mario ze Super Mario Bros a vystupujete jako asistent.",
 	"Yahoo": "Yahoo",

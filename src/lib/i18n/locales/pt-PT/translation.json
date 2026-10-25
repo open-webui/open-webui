@@ -4132,7 +4132,7 @@
 	"Workspace search": "",
 	"Write": "Escrever",
 	"Write a prompt…": "",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Escreva um resumo em 50 palavras que resuma [tópico ou palavra-chave].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Escreva um resumo em 50 palavras que resuma {{topic}}.",
 	"Write something...": "Escreva algo...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Escreva aqui o conteúdo do system prompt do seu modelo\np. ex.: É o Mario do Super Mario Bros e atua como assistente.",
 	"Yahoo": "Yahoo",

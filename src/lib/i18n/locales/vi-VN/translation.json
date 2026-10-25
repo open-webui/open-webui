@@ -4082,7 +4082,7 @@
 	"Workspace search": "Tìm kiếm trong không gian làm việc",
 	"Write": "Viết",
 	"Write a prompt…": "Viết một prompt…",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Viết một tóm tắt trong vòng 50 từ cho [chủ đề hoặc từ khóa].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Viết một tóm tắt trong vòng 50 từ cho {{topic}}.",
 	"Write something...": "Viết gì đó...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Viết nội dung system prompt của mô hình tại đây\nví dụ: Bạn là Mario trong Super Mario Bros và đang đóng vai trò trợ lý.",
 	"Yahoo": "Yahoo",

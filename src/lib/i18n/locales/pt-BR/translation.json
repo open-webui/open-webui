@@ -992,7 +992,7 @@
 	"Enter a title for the pending user info overlay. Leave empty for default.": "Insira um título para a sobreposição de informações pendentes do usuário. Deixe em branco como padrão.",
 	"Enter a watermark for the response. Leave empty for none.": "Insira uma marca d'água para a resposta. Deixe em branco se não houver nenhuma.",
 	"Enter additional headers in JSON format": "Insira cabeçalhos adicionais no formato JSON",
-	"Enter additional headers in JSON format (e.g. {\"X-Custom-Header\": \"value\"}": "Insira cabeçalhos adicionais no formato JSON (por exemplo, {{'{{\"X-Custom-Header\": \"value\"}}'}})",
+	"Enter additional headers in JSON format (e.g. {\"X-Custom-Header\": \"value\"}": "Insira cabeçalhos adicionais no formato JSON (por exemplo, {\"X-Custom-Header\": \"value\"})",
 	"Enter additional parameters in JSON format": "Insira parâmetros adicionais no formato JSON",
 	"Enter api auth string (e.g. username:password)": "Digite a string de autenticação da API (por exemplo, username:password)",
 	"Enter Application DN": "Digite o DN da Aplicação",

@@ -4107,7 +4107,7 @@
 	"Workspace search": "Pagpangita sa lugar sa trabaho",
 	"Write": "Pagsulat",
 	"Write a prompt…": "Pagsulat og aghat…",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Pagsulat og 50 ka pulong nga summary nga nagsumaryo [topic o keyword].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Pagsulat og 50 ka pulong nga summary nga nagsumaryo {{topic}}.",
 	"Write something...": "Pagsulat og bisan unsa...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Isulat dinhi ang sulod sa system prompt sa imong modelo\npananglitan: Ikaw si Mario gikan sa Super Mario Bros, naglihok isip assistant.",
 	"Yahoo": "Yahoo",

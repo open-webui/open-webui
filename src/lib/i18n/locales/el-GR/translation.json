@@ -4107,7 +4107,7 @@
 	"Workspace search": "Αναζήτηση χώρου εργασίας",
 	"Write": "Εγγραφή",
 	"Write a prompt…": "Γράψτε μια προτροπή…",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Γράψτε μια περίληψη σε 50 λέξεις που συνοψίζει [θέμα ή λέξη-κλειδί].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Γράψτε μια περίληψη σε 50 λέξεις που συνοψίζει {{topic}}.",
 	"Write something...": "Γράψτε κάτι...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Γράψτε εδώ την προτροπή συστήματος του μοντέλου σας\nπ.χ.: Είστε ο Mario από το Super Mario Bros και ενεργείτε ως βοηθός.",
 	"Yahoo": "Yahoo",

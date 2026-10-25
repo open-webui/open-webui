@@ -4132,7 +4132,7 @@
 	"Workspace search": "Pretraga radnog prostora",
 	"Write": "Pisanje",
 	"Write a prompt…": "Napišite prompt…",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Napišite sažetak u 50 riječi koji sažima [temu ili ključnu riječ].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Napišite sažetak u 50 riječi koji sažima {{topic}}.",
 	"Write something...": "Napišite nešto...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Ovdje upišite sadržaj sistemskog upita (system prompt) vašeg modela\nnpr.: Vi ste Mario iz Super Mario Bros i djelujete kao asistent.",
 	"Yahoo": "Yahoo",

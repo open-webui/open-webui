@@ -4132,7 +4132,7 @@
 	"Workspace search": "",
 	"Write": "Escriure",
 	"Write a prompt…": "",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Escriu un resum en 50 paraules que resumeixi [tema o paraula clau].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Escriu un resum en 50 paraules que resumeixi {{topic}}.",
 	"Write something...": "Escriu quelcom...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Escriu aquí el contingut del system prompt del teu model\np. ex.: Ets en Mario de Super Mario Bros i actues com a assistent.",
 	"Yahoo": "Yahoo",

@@ -4107,7 +4107,7 @@
 	"Workspace search": "Lan-eremuko bilaketa",
 	"Write": "Idaztea",
 	"Write a prompt…": "Idatzi prompt bat…",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Idatzi 50 hitzeko laburpen bat [gaia edo gako-hitza] laburbiltzen duena.",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Idatzi 50 hitzeko laburpen bat {{topic}} laburbiltzen duena.",
 	"Write something...": "Idatzi zerbait...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Idatzi hemen zure ereduaren sistema-promptaren edukia\nadib.: Super Mario Bros-eko Mario zara eta laguntzaile gisa jokatzen duzu.",
 	"Yahoo": "Yahoo",

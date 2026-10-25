@@ -4157,7 +4157,7 @@
 	"Workspace search": "Пошук у робочому просторі",
 	"Write": "Писати",
 	"Write a prompt…": "Напишіть промт…",
-	"Write a summary in 50 words that summarizes {{topic}}.": "Напишіть стислий зміст у 50 слів, який узагальнює [тема або ключове слово].",
+	"Write a summary in 50 words that summarizes {{topic}}.": "Напишіть стислий зміст у 50 слів, який узагальнює {{topic}}.",
 	"Write something...": "Напишіть щось...",
 	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Напишіть тут зміст системного підказу (system prompt) вашої моделі\nнапр.: Ви — Маріо з Super Mario Bros і дієте як асистент.",
 	"Yahoo": "Yahoo",
