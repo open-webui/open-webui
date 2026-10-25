@@ -120,6 +120,33 @@
 									dispatch('change');
 								}}
 							/>
+						{:else if displaySpec.properties[property]?.input?.type === 'range'}
+							<div class="flex space-x-2">
+								<div class=" flex-1">
+									<input
+										type="range"
+										aria-label={displaySpec.properties[property].title}
+										min={displaySpec.properties[property]?.minimum}
+										max={displaySpec.properties[property]?.maximum}
+										step={displaySpec.properties[property]?.input?.step}
+										bind:value={valves[property]}
+										on:change
+										class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+									/>
+								</div>
+								<div>
+									<input
+										bind:value={valves[property]}
+										on:change
+										type="number"
+										aria-label={displaySpec.properties[property].title}
+										class=" bg-transparent text-center w-14"
+										min={displaySpec.properties[property]?.minimum}
+										max={displaySpec.properties[property]?.maximum}
+										step={displaySpec.properties[property]?.input?.step}
+									/>
+								</div>
+							</div>
 						{:else if (displaySpec.properties[property]?.type ?? null) !== 'string'}
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
