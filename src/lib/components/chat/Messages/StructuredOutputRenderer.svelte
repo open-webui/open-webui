@@ -172,7 +172,7 @@
 			<TerminalOutputFile item={displayItem.item} {chatId} />
 		{/if}
 	{:else if displayItem.type === 'context_compaction'}
-		<ContextCompactionLabel summary={displayItem.summary} />
+		<ContextCompactionLabel summary={displayItem.summary} {compactPreview} />
 	{:else}
 		{@const detailToken = displayItem.token}
 		{#if detailToken.attributes?.type === 'tool_calls'}

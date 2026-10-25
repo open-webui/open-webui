@@ -13,6 +13,8 @@
 	import type { i18n as i18nType, t } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
+	const contextCompactions =
+		getContext<Writable<Record<string, 'in_progress' | { error: string }>>>('contextCompactions');
 
 	const dispatch = createEventDispatcher();
 
@@ -130,6 +132,7 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
+	$: compactionStatus = $contextCompactions?.[messageId];
 	export let selectedModels = [];
 
 	let messageSource = history.messages[messageId];
@@ -714,8 +717,8 @@
 				</Name>
 			{/if}
 
-			{#if message.contextSummary}
-				<ContextCompactionLabel summary={message.contextSummary} />
+			{#if message.contextSummary && !compactionStatus}
+				<ContextCompactionLabel summary={message.contextSummary} {compactPreview} />
 			{/if}
 
 			<div>
@@ -922,7 +925,11 @@
 								/>
 							{/if}
 
-							{#if !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
+							{#if compactionStatus}
+								<ContextCompactionLabel status={compactionStatus} {compactPreview} />
+							{/if}
+
+							{#if !compactionStatus && !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
 								<div class="text-[0.9375rem] leading-relaxed">
 									<span
 										class="inline-block w-[0.125rem] h-3.5 bg-gray-400 dark:bg-gray-500 ml-0.5 animate-cursor-pulse align-text-bottom"

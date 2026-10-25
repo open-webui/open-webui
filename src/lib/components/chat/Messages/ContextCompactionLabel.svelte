@@ -1,21 +1,35 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let summary = '';
+	export let status: 'in_progress' | { error: string } | undefined = undefined;
+	export let compactPreview = false;
+
+	$: rowClass = `flex w-full min-w-0 items-center gap-1.5 py-0.5 ${
+		compactPreview ? 'text-xs' : 'text-[0.9375rem]'
+	} text-gray-400 dark:text-gray-500`;
 </script>
 
-{#if summary.trim()}
+{#if status}
+	<div role="status" class={rowClass}>
+		{#if status === 'in_progress'}
+			<Spinner className="size-4 shrink-0" />
+			<span class="shimmer">{$i18n.t('Compacting context')}</span>
+		{:else}
+			<span>{status.error}</span>
+		{/if}
+	</div>
+{:else if summary.trim()}
 	<!-- Only stop the response card's click handler; summary provides keyboard interaction. -->
 	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-	<details class="my-1" on:click|stopPropagation>
+	<details on:click|stopPropagation>
 		<summary
-			class="flex w-full cursor-pointer items-center gap-2 text-xs leading-5 text-gray-500 outline-offset-4 transition-colors before:flex-1 before:border-t before:border-dashed before:border-current before:opacity-25 after:flex-1 after:border-t after:border-dashed after:border-current after:opacity-25 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-gray-400 dark:text-gray-400 dark:hover:text-gray-200 [&::-webkit-details-marker]:hidden"
+			class="{rowClass} cursor-pointer outline-offset-4 transition-colors hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-gray-400 dark:hover:text-gray-400 [&::-webkit-details-marker]:hidden"
 		>
-			<span class="min-w-0 px-2 text-center">
-				{$i18n.t('Context compacted')}
-			</span>
+			<span>{$i18n.t('Context compacted')}</span>
 		</summary>
 		<div
 			role="region"
@@ -26,9 +40,7 @@
 		</div>
 	</details>
 {:else}
-	<div
-		class="my-1 flex w-full items-center gap-2 text-xs leading-5 text-gray-500 before:flex-1 before:border-t before:border-dashed before:border-current before:opacity-25 after:flex-1 after:border-t after:border-dashed after:border-current after:opacity-25 dark:text-gray-400"
-	>
-		<span class="min-w-0 px-2 text-center">{$i18n.t('Context compacted')}</span>
+	<div class={rowClass}>
+		<span>{$i18n.t('Context compacted')}</span>
 	</div>
 {/if}
