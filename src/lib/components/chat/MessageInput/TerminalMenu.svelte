@@ -208,6 +208,8 @@
 						{#each directTerminals as terminal}
 							<button
 								type="button"
+								role="menuitemradio"
+								aria-checked={$selectedTerminalId === terminal.url}
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 								terminal.url
 									? 'bg-gray-50/40 dark:bg-gray-800/40'
@@ -277,6 +279,8 @@
 						{#each systemTerminals as terminal}
 							<button
 								type="button"
+								role="menuitemradio"
+								aria-checked={$selectedTerminalId === terminal.id}
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 								terminal.id
 									? 'bg-gray-50/40 dark:bg-gray-800/40'
