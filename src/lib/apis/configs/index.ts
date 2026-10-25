@@ -1,5 +1,22 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import type { Banner } from '$lib/types';
+import type { Visibility } from '$lib/utils/ui-visibility';
+
+export const setInterfaceVisibility = async (
+	token: string,
+	visibility: Visibility
+): Promise<Visibility> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/interface/visibility`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ visibility })
+	});
+	if (!res.ok) throw (await res.json()).detail;
+	return (await res.json()).visibility;
+};
 
 export const importConfig = async (token: string, config: object) => {
 	let error = null;

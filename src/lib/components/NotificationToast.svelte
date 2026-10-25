@@ -114,7 +114,7 @@
 		<!-- LICENSE covers this Open WebUI notification logo.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
-		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="favicon" class="size-6 rounded-full" />
+		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="" class="size-6 rounded-full" />
 	</div>
 
 	<div>

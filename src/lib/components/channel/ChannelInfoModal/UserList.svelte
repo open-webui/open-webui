@@ -124,10 +124,10 @@
 				<div class="">
 					<button
 						type="button"
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+						class="inline-flex h-6 items-center gap-1 rounded-lg px-1.5 text-xs font-normal text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
 						on:click={onAdd}
 					>
-						<Plus className="size-3.5 " />
+						<Plus className="size-3" />
 						<span>{$i18n.t('Add Member')}</span>
 					</button>
 				</div>

@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { user } from '$lib/stores';
+	import { user, visibleControls } from '$lib/stores';
 	import { refreshSidebar } from '$lib/stores/chatList';
 
 	import { archiveAllChats, deleteAllChats, getAllChats, importChats } from '$lib/apis/chats';
@@ -141,7 +141,7 @@
 	}}
 />
 
-<div id="tab-chats" class="flex flex-col h-full text-sm">
+<div id="tab-data-controls" class="flex flex-col h-full text-sm">
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
 		{$i18n.t('settings.personal.dataControls.title')}
 	</h2>
@@ -162,10 +162,12 @@
 		>
 			{#if canManageChats({ user: $user, config: null }, 'import')}
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.dataControls.importChats.label')}
 					description={$i18n.t('settings.personal.dataControls.importChats.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						on:click={() => {
 							chatImportInputElement.click();
@@ -179,10 +181,12 @@
 
 			{#if canManageChats({ user: $user, config: null }, 'export')}
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.dataControls.exportChats.label')}
 					description={$i18n.t('settings.personal.dataControls.exportChats.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						on:click={() => {
 							exportChats();
@@ -195,10 +199,12 @@
 			{/if}
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.dataControls.sharedChats.label')}
 				description={$i18n.t('settings.personal.dataControls.sharedChats.description')}
 			>
 				<button
+					id={`${labelId}-control`}
 					class={actionButtonClass}
 					on:click={() => {
 						showSharedChatsModal = true;
@@ -209,27 +215,33 @@
 				</button>
 			</UserSettingRow>
 
-			<UserSettingRow
-				label={$i18n.t('settings.personal.dataControls.archiveAllChats.label')}
-				description={$i18n.t('settings.personal.dataControls.archiveAllChats.description')}
-			>
-				<button
-					class={actionButtonClass}
-					on:click={() => {
-						showArchiveConfirmDialog = true;
-					}}
-					type="button"
+			{#if $visibleControls['chat.archive']}
+				<UserSettingRow
+					let:labelId
+					label={$i18n.t('settings.personal.dataControls.archiveAllChats.label')}
+					description={$i18n.t('settings.personal.dataControls.archiveAllChats.description')}
 				>
-					{$i18n.t('settings.personal.dataControls.archiveAll.label')}
-				</button>
-			</UserSettingRow>
+					<button
+						id={`${labelId}-control`}
+						class={actionButtonClass}
+						on:click={() => {
+							showArchiveConfirmDialog = true;
+						}}
+						type="button"
+					>
+						{$i18n.t('settings.personal.dataControls.archiveAll.label')}
+					</button>
+				</UserSettingRow>
+			{/if}
 
 			{#if canManageChats({ user: $user, config: null }, 'delete')}
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.dataControls.deleteAllChats.label')}
 					description={$i18n.t('settings.personal.dataControls.deleteAllChats.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						on:click={() => {
 							showDeleteConfirmDialog = true;
@@ -244,10 +256,12 @@
 
 		<UserSettingSection title={$i18n.t('settings.personal.dataControls.sections.files.title')}>
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.dataControls.manageFiles.label')}
 				description={$i18n.t('settings.personal.dataControls.manageFiles.description')}
 			>
 				<button
+					id={`${labelId}-control`}
 					class={actionButtonClass}
 					on:click={() => {
 						showFilesModal = true;

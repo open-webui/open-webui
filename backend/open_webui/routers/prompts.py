@@ -7,7 +7,7 @@ from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrants, normalize_access_grants
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
@@ -23,7 +23,7 @@ from open_webui.models.prompts import (
     Prompts,
     PromptUserResponse,
 )
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission, validate_access_grants
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -171,7 +171,7 @@ async def create_new_prompt(
         user.id,
         user.role,
         form_data.access_grants,
-        'sharing.public_prompts',
+        resource_type='prompt',
     )
 
     prompt = await Prompts.get_prompt_by_command(form_data.command, db=db)
@@ -288,29 +288,6 @@ async def update_prompt_by_id(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.COMMAND_TAKEN,
             )
-
-    if form_data.access_grants is not None:
-        existing_access_grants = {
-            (grant.principal_type, grant.principal_id, grant.permission) for grant in prompt.access_grants
-        }
-        submitted_access_grants_map = {
-            (grant['principal_type'], grant['principal_id'], grant['permission']): grant
-            for grant in normalize_access_grants(form_data.access_grants)
-        }
-        preserved_access_grants = [
-            grant for key, grant in submitted_access_grants_map.items() if key in existing_access_grants
-        ]
-        new_access_grants = [
-            grant for key, grant in submitted_access_grants_map.items() if key not in existing_access_grants
-        ]
-
-        form_data.access_grants = preserved_access_grants + await filter_allowed_access_grants(
-            await Config.get('user.permissions'),
-            user.id,
-            user.role,
-            new_access_grants,
-            'sharing.public_prompts',
-        )
 
     # Use the ID from the found prompt
     updated_prompt = await Prompts.update_prompt_by_id(prompt.id, form_data, user.id, db=db)
@@ -484,12 +461,12 @@ async def update_prompt_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await validate_access_grants(
         await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
-        'sharing.public_prompts',
+        resource_type='prompt',
     )
 
     await AccessGrants.set_access_grants('prompt', prompt_id, form_data.access_grants, db=db)

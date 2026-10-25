@@ -37,7 +37,6 @@ from langchain_text_splitters import (
 from open_webui.config import (
     Config,
     DEFAULT_LOCALE,
-    ENV,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
@@ -1575,8 +1574,26 @@ async def process_file(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Standalone processing endpoint: index the file, then mark it completed.
+
+    Uploads call index_file directly so they can finish knowledge linking before
+    reporting completion.
     """
-    Process a file and save its content to the vector database.
+    result = await index_file(request, form_data, user, db)
+    async with get_async_db() as session:
+        await Files.update_file_data_by_id(form_data.file_id, {'status': 'completed', 'error': None}, db=session)
+    return result
+
+
+async def index_file(
+    request: Request,
+    form_data: ProcessFileForm,
+    user,
+    db: AsyncSession,
+):
+    """Extract or reuse file content and index it without marking completion.
+
+    The caller marks completion after all its work, including any knowledge linking.
     Note: granular session management is used to prevent connection pool exhaustion.
     The session is committed before external API calls, and updates use a fresh session.
     """
@@ -1714,7 +1731,6 @@ async def process_file(
             hash = calculate_sha256_string(text_content)
 
             if config['rag.bypass_embedding_and_retrieval']:
-                await Files.update_file_data_by_id(file.id, {'status': 'completed', 'error': None}, db=db)
                 await Files.update_file_hash_by_id(file.id, hash, db=db)
                 await publish_event(
                     request,
@@ -1771,11 +1787,6 @@ async def process_file(
                                 db=session,
                             )
 
-                            await Files.update_file_data_by_id(
-                                file.id,
-                                {'status': 'completed', 'error': None},
-                                db=session,
-                            )
                             await Files.update_file_hash_by_id(file.id, hash, db=session)
 
                             await publish_event(
@@ -2988,13 +2999,6 @@ async def reset_upload_dir(request: Request, user=Depends(get_admin_user)) -> bo
         subject_type='file.uploads',
     )
     return True
-
-
-if ENV == 'dev':
-
-    @router.get('/ef/{text}')
-    async def get_embeddings(request: Request, text: str | None = 'Hello World!'):
-        return {'result': await request.app.state.EMBEDDING_FUNCTION(text, prefix=RAG_EMBEDDING_QUERY_PREFIX)}
 
 
 class BatchProcessFilesForm(BaseModel):

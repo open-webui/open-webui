@@ -25,6 +25,8 @@
 	} from '$lib/apis/functions';
 
 	import Tooltip from '../common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import { getModels } from '$lib/apis';
 	import FunctionMenu from './Functions/FunctionMenu.svelte';
@@ -408,6 +410,7 @@
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
 								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								aria-label={$i18n.t('Clear search')}
 								on:click={() => {
 									query = '';
 									handleSearchInput();
@@ -498,18 +501,10 @@
 						{#each filteredItems as func (func.id)}
 							<div
 								class="group flex min-h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left"
-								role="button"
-								tabindex="0"
+								role="presentation"
 								on:click={(e) => {
 									if (shouldIgnoreRowClick(e.target)) return;
 									openFunction(func);
-								}}
-								on:keydown={(e) => {
-									if (e.currentTarget !== e.target) return;
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault();
-										openFunction(func);
-									}
 								}}
 							>
 								<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
@@ -523,11 +518,11 @@
 												</div>
 
 												<Tooltip content={func.id} className="min-w-0" placement="top-start">
-													<div
-														class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+													<a
+														href={`/admin/functions/edit?id=${encodeURIComponent(func.id)}`}
+														class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+														>{resolveLocalizedResource(func, $i18n.language)}</a
 													>
-														{resolveLocalizedResource(func, $i18n.language)}
-													</div>
 												</Tooltip>
 
 												{#if func?.meta?.manifest?.version}
@@ -573,17 +568,21 @@
 								<div
 									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 								>
-									<Tooltip
-										content={func?.user?.email ?? $i18n.t('Deleted User')}
-										className="min-w-0"
-										placement="top-start"
-									>
-										<div class="truncate">
-											{capitalizeFirstLetter(
-												func?.user?.name ?? func?.user?.email ?? $i18n.t('Deleted User')
-											)}
-										</div>
-									</Tooltip>
+									<ProfilePreview user={func?.user ?? null} side="left">
+										<span class="flex max-w-44 items-center gap-1.75">
+											<ProfileImage
+												src={func?.user?.id
+													? `/api/v1/users/${func.user.id}/profile/image`
+													: '/user.png'}
+												className="size-4 shrink-0 rounded-full!"
+											/>
+											<span class="min-w-0 max-w-24 truncate">
+												{capitalizeFirstLetter(
+													func?.user?.name ?? func?.user?.email ?? $i18n.t('Deleted User')
+												)}
+											</span>
+										</span>
+									</ProfilePreview>
 								</div>
 
 								<div class="ml-2 flex shrink-0 flex-row items-center gap-1.5 self-center">
@@ -697,9 +696,9 @@
 											</button>
 										</FunctionMenu>
 
-										<button
+										<div
 											class="flex h-6 items-center"
-											type="button"
+											role="presentation"
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -708,6 +707,7 @@
 											<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 												<Switch
 													bind:state={func.is_active}
+													ariaLabel={$i18n.t('Enabled')}
 													on:change={async () => {
 														toggleFunctionById(localStorage.token, func.id);
 														models.set(
@@ -722,7 +722,7 @@
 													}}
 												/>
 											</Tooltip>
-										</button>
+										</div>
 									{/if}
 								</div>
 							</div>

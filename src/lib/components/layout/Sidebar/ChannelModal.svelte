@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
-	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
+	import {
+		createNewChannel,
+		deleteChannelById,
+		updateChannelAccessGrants
+	} from '$lib/apis/channels';
 	import { user } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -31,7 +35,7 @@
 	let name = '';
 
 	let isPrivate = null;
-	let accessGrants = [];
+	let accessGrants: any[] = [];
 
 	let groupIds = [];
 	let userIds = [];
@@ -55,6 +59,7 @@
 	};
 
 	const submitHandler = async () => {
+		if (loading) return;
 		loading = true;
 		if (name.length > 128) {
 			toast.error($i18n.t('Channel name must be less than 128 characters'));
@@ -66,7 +71,7 @@
 			type: type,
 			name: name.replace(/\s/g, '-'),
 			is_private: type === 'group' ? (isPrivate ?? true) : null,
-			access_grants: type === '' ? accessGrants : [],
+			...(!edit ? { access_grants: type === '' ? accessGrants : [] } : {}),
 			group_ids: groupIds,
 			user_ids: userIds
 		});
@@ -90,7 +95,7 @@
 			} else {
 				isPrivate = null;
 			}
-			accessGrants = channel?.access_grants ?? [];
+			accessGrants = structuredClone(channel?.access_grants ?? []);
 			userIds = channel?.user_ids ?? [];
 		}
 	};
@@ -134,7 +139,6 @@
 		name = '';
 		accessGrants = [];
 		userIds = [];
-		loading = false;
 	};
 </script>
 
@@ -149,6 +153,7 @@
 				{/if}
 			</div>
 			<button
+				aria-label={$i18n.t('Close')}
 				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
@@ -234,9 +239,31 @@
 					</div>
 
 					{#if type !== 'dm'}
-						<div class="-mx-2 mb-1 mt-2.5 px-2">
+						<div class="-mx-2 mb-1 mt-2.5 px-2" inert={loading} aria-busy={loading}>
 							{#if type === ''}
-								<AccessControl bind:accessGrants accessRoles={['read', 'write']} />
+								<AccessControl
+									bind:accessGrants
+									accessRoles={['read', 'write']}
+									onChange={async (grants) => {
+										if (edit && channel?.id) {
+											const item = channel;
+											loading = true;
+											try {
+												await updateChannelAccessGrants(localStorage.token, item.id, grants);
+												item.access_grants = structuredClone(grants);
+												if (channel === item) accessGrants = item.access_grants;
+												toast.success($i18n.t('Saved'));
+												onUpdate();
+											} catch (error) {
+												if (channel === item)
+													accessGrants = structuredClone(item.access_grants ?? []);
+												toast.error(`${error}`);
+											} finally {
+												loading = false;
+											}
+										}
+									}}
+								/>
 							{:else if type === 'group'}
 								<Visibility
 									state={isPrivate ? 'private' : 'public'}

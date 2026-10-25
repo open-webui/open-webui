@@ -5,6 +5,7 @@
 	import ChevronRightIcon from '$lib/components/layout/Sidebar/icons/ChevronRight.svelte';
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
+	import type { Writable } from 'svelte/store';
 
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
@@ -18,6 +19,7 @@
 	import equal from 'fast-deep-equal';
 
 	import Name from './Name.svelte';
+	import ContextCompactionLabel from './ContextCompactionLabel.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -28,6 +30,8 @@
 	import SubagentResultRow from './SubagentResultRow.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const contextCompactions =
+		getContext<Writable<Record<string, 'in_progress' | { error: string }>>>('contextCompactions');
 	export let user;
 
 	export let chatId;
@@ -193,6 +197,14 @@
 					<Name>{isOwn && !$settings.showUsername ? $i18n.t('You') : authorName}</Name>
 				{/if}
 			</div>
+		{/if}
+
+		{#if message.contextSummary || $contextCompactions?.[messageId]}
+			<ContextCompactionLabel
+				summary={message.contextSummary}
+				status={$contextCompactions?.[messageId]}
+				{compactPreview}
+			/>
 		{/if}
 
 		<div class="chat-{message.role} w-full min-w-full">
@@ -545,7 +557,7 @@
 							</div>
 						{/if}
 					{/if}
-					{#if !compactPreview && (!readOnly || (shareMode === 'continue' && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.edit ?? true))))}
+					{#if !compactPreview && (!readOnly || shareMode === 'continue') && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.edit ?? true))}
 						<Tooltip content={$i18n.t('Edit')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)

@@ -14,7 +14,8 @@
 		selectedTerminalId,
 		settings,
 		terminalServers,
-		terminalSkills
+		terminalSkills,
+		visibleControls
 	} from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChatBubbleDotted from '$lib/components/icons/ChatBubbleDotted.svelte';
@@ -37,6 +38,7 @@
 	export let canTemporary = false;
 	export let temporaryEnabled = false;
 	export let hasChatContent = false;
+	export let canCreateSkill: boolean = false;
 	export let contextPercent = 0;
 	export let contextHasThreshold = false;
 
@@ -59,22 +61,23 @@
 		...(canCompact && 'compact'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'compact' } }]
 			: []),
-		...(canFork && 'fork'.startsWith(query.toLowerCase())
+		...(canFork && $visibleControls['chat.fork'] && 'fork'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'fork' } }]
 			: []),
-		...(canStatus && 'status'.startsWith(query.toLowerCase())
+		...(canStatus && $visibleControls['chat.status'] && 'status'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'status' } }]
 			: []),
-		...('model'.startsWith(query.toLowerCase())
+		...($visibleControls['chat.model_command'] && 'model'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'model' } }]
 			: []),
-		...('settings'.startsWith(query.toLowerCase())
+		...($visibleControls['chat.settings_command'] && 'settings'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'settings' } }]
 			: []),
-		...(canCompare && 'compare'.startsWith(query.toLowerCase())
+		...(canCompare && $visibleControls['chat.compare'] && 'compare'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'compare' } }]
 			: []),
 		...(hasChatContent &&
+		canCreateSkill &&
 		($user?.role === 'admin' || $user?.permissions?.workspace?.skills) &&
 		'skills:create'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'skills:create' } }]
@@ -522,6 +525,7 @@
 		{@const itemIdx = commandItems.length + filteredPrompts.length + skillIdx}
 		<Tooltip
 			content={getSkillTooltipContent(skill)}
+			allowHTML={true}
 			placement="top-start"
 			tippyOptions={{ maxWidth: '20rem' }}
 		>

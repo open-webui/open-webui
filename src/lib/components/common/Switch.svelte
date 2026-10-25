@@ -35,7 +35,7 @@
 		<Switch.Root
 			bind:checked={state}
 			{disabled}
-			{id}
+			id={id || (ariaLabelledbyId ? `${ariaLabelledbyId}-control` : '')}
 			aria-labelledby={ariaLabelledbyId || undefined}
 			aria-label={ariaLabel || undefined}
 			class="focus-ring relative h-4 min-h-4 w-7 shrink-0 cursor-pointer rounded-full mx-[0.0625rem] transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 {($settings?.highContrastMode ??

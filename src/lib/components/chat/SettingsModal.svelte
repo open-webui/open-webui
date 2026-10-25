@@ -9,7 +9,7 @@
 	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, mobile, models, settings, user, visibleControls } from '$lib/stores';
 	import type { SettingsModalRequest } from '$lib/stores';
 	import { getUserSettings, updateUserSettings } from '$lib/apis/users';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
@@ -101,6 +101,7 @@
 	$: if (show !== lastShow) {
 		lastShow = show;
 		search = '';
+		showSearch = false;
 		if (show && typeof show === 'object') {
 			selectedTab = show.tab;
 			tabState = show.state ?? null;
@@ -129,6 +130,7 @@
 	$: if (!modalShow && show !== false) {
 		show = false;
 		search = '';
+		showSearch = false;
 		lastShow = false;
 		selectedTab = 'general';
 		tabState = null;
@@ -377,6 +379,9 @@
 	let filteredAdminSettings: string[] = [];
 
 	let search = '';
+	let showSearch = false;
+	let searchInput: HTMLInputElement;
+	let searchButton: HTMLButtonElement;
 	let englishRequested = false;
 	$: if (modalShow && !englishRequested) {
 		englishRequested = true;
@@ -401,6 +406,19 @@
 
 			if (tab.id === 'interface') {
 				return $user?.role === 'admin' || ($user?.permissions?.settings?.interface ?? true);
+			}
+
+			if (tab.id === 'audio') {
+				return (
+					$user?.role === 'admin' ||
+					($user?.permissions?.chat?.stt ?? true) ||
+					($user?.permissions?.chat?.tts ?? true) ||
+					($user?.permissions?.chat?.call ?? true)
+				);
+			}
+
+			if (tab.id === 'usage') {
+				return $visibleControls['settings.usage'];
 			}
 
 			if (tab.id === 'personalization') {
@@ -435,11 +453,19 @@
 		selectedTab = id;
 	};
 
+	const toggleSearch = async () => {
+		showSearch = !(showSearch || search);
+		if (!showSearch) search = '';
+		await tick();
+		(showSearch ? searchInput : searchButton)?.focus();
+	};
+
 	const searchKeydown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape' && search) {
+		if (event.key === 'Escape' && (search || $mobile)) {
 			event.preventDefault();
 			event.stopPropagation();
-			search = '';
+			if (search) search = '';
+			else toggleSearch();
 		} else if (event.key === 'Enter') {
 			event.preventDefault();
 			if (filteredSettings.length) selectTab(filteredSettings[0]);
@@ -520,39 +546,56 @@
 	size="full"
 	containerClassName="p-4 sm:p-6 lg:p-8"
 	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl overflow-hidden"
+	ariaLabel={$i18n.t('Settings')}
 	bind:show={modalShow}
 >
 	<nav
 		id="settings-tabs-container"
 		class="shrink-0 min-w-0 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
 	>
-		<button
-			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-600 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
-			type="button"
-			on:click={() => {
-				show = false;
-			}}
-		>
-			<ChevronLeft className="size-3" strokeWidth="2" />
-			<span>{$i18n.t('Back')}</span>
-		</button>
-
-		<div
-			class="flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
-		>
-			<div class="self-center rounded-l-xl bg-transparent">
+		<div class="flex items-center gap-1 m-1 md:mb-0 shrink-0">
+			<button
+				class="flex flex-1 items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-gray-600 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+				type="button"
+				on:click={() => {
+					show = false;
+				}}
+			>
+				<ChevronLeft className="size-3" strokeWidth="2" />
+				<span>{$i18n.t('Back')}</span>
+			</button>
+			<button
+				bind:this={searchButton}
+				type="button"
+				class="flex md:hidden size-7 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/[0.04] dark:hover:text-gray-300"
+				aria-label={$i18n.t('Search')}
+				aria-expanded={showSearch || !!search}
+				aria-controls="search-input-settings-modal"
+				on:click={toggleSearch}
+			>
 				<Search className="size-3.5" strokeWidth="1.5" />
-			</div>
-			<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
-			<input
-				data-settings-search
-				class="w-full text-xs bg-transparent py-1 outline-hidden placeholder:text-gray-600 dark:text-gray-300 dark:placeholder:text-gray-500"
-				bind:value={search}
-				id="search-input-settings-modal"
-				on:keydown={searchKeydown}
-				placeholder={$i18n.t('Search')}
-			/>
+			</button>
 		</div>
+
+		{#if !$mobile || showSearch || search}
+			<div
+				class="flex items-center gap-1.5 h-7 px-2 mx-1 md:mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
+			>
+				<div class="self-center rounded-l-xl bg-transparent">
+					<Search className="size-3.5" strokeWidth="1.5" />
+				</div>
+				<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
+				<input
+					bind:this={searchInput}
+					data-settings-search
+					class="w-full text-xs bg-transparent py-1 outline-hidden placeholder:text-gray-600 dark:text-gray-300 dark:placeholder:text-gray-500"
+					bind:value={search}
+					id="search-input-settings-modal"
+					on:keydown={searchKeydown}
+					placeholder={$i18n.t('Search')}
+				/>
+			</div>
+		{/if}
 
 		<div class="sr-only" role="status" aria-live="polite">
 			{search
@@ -572,188 +615,190 @@
 			</span>
 
 			{#if filteredPersonalSettings.length > 0}
-				{#each filteredPersonalSettings as tabId, index (tabId)}
-					{#if shouldShowSettingGroup(filteredPersonalSettings, index)}
-						<span class={settingGroupHeadingClass(index === 0)}>
-							{settingGroupTitle(tabId)}
-						</span>
-					{/if}
+				<div role="tablist" aria-label={$i18n.t('Personal')} class="contents">
+					{#each filteredPersonalSettings as tabId, index (tabId)}
+						{#if shouldShowSettingGroup(filteredPersonalSettings, index)}
+							<span class={settingGroupHeadingClass(index === 0)}>
+								{settingGroupTitle(tabId)}
+							</span>
+						{/if}
 
-					{#if tabId === 'general'}
-						<button
-							role="tab"
-							aria-controls="tab-general"
-							aria-selected={selectedTab === 'general'}
-							class={tabButtonClass(selectedTab === 'general')}
-							on:click={() => {
-								selectTab('general');
-							}}
-						>
-							<SettingsAlt className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.general.title')}</span>
-						</button>
-					{:else if tabId === 'interface'}
-						<button
-							role="tab"
-							aria-controls="tab-interface"
-							aria-selected={selectedTab === 'interface'}
-							class={tabButtonClass(selectedTab === 'interface')}
-							on:click={() => {
-								selectTab('interface');
-							}}
-						>
-							<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.interface.title')}</span>
-						</button>
-					{:else if tabId === 'notifications'}
-						<button
-							role="tab"
-							aria-controls="tab-notifications"
-							aria-selected={selectedTab === 'notifications'}
-							class={tabButtonClass(selectedTab === 'notifications')}
-							on:click={() => {
-								selectTab('notifications');
-							}}
-						>
-							<AppNotification className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.notifications.title')}</span>
-						</button>
-					{:else if tabId === 'shortcuts'}
-						<button
-							role="tab"
-							aria-controls="tab-shortcuts"
-							aria-selected={selectedTab === 'shortcuts'}
-							class={tabButtonClass(selectedTab === 'shortcuts')}
-							on:click={() => {
-								selectTab('shortcuts');
-							}}
-						>
-							<Keyboard className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.shortcuts.title')}</span>
-						</button>
-					{:else if tabId === 'connections'}
-						{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
+						{#if tabId === 'general'}
 							<button
 								role="tab"
-								aria-controls="tab-connections"
-								aria-selected={selectedTab === 'connections'}
-								class={tabButtonClass(selectedTab === 'connections')}
+								aria-controls="tab-general"
+								aria-selected={selectedTab === 'general'}
+								class={tabButtonClass(selectedTab === 'general')}
 								on:click={() => {
-									selectTab('connections');
+									selectTab('general');
 								}}
 							>
-								<Link className="size-3.5" strokeWidth="2" />
-								<span>{$i18n.t('settings.personal.connections.title')}</span>
+								<SettingsAlt className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.general.title')}</span>
 							</button>
-						{/if}
-					{:else if tabId === 'tools'}
-						{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
+						{:else if tabId === 'interface'}
 							<button
 								role="tab"
-								aria-controls="tab-tools"
-								aria-selected={selectedTab === 'tools'}
-								class={tabButtonClass(selectedTab === 'tools')}
+								aria-controls="tab-interface"
+								aria-selected={selectedTab === 'interface'}
+								class={tabButtonClass(selectedTab === 'interface')}
 								on:click={() => {
-									selectTab('tools');
+									selectTab('interface');
 								}}
 							>
-								<WrenchAlt className="size-3.5" strokeWidth="2" />
-								<span>{$i18n.t('settings.personal.tools.title')}</span>
+								<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.interface.title')}</span>
+							</button>
+						{:else if tabId === 'notifications'}
+							<button
+								role="tab"
+								aria-controls="tab-notifications"
+								aria-selected={selectedTab === 'notifications'}
+								class={tabButtonClass(selectedTab === 'notifications')}
+								on:click={() => {
+									selectTab('notifications');
+								}}
+							>
+								<AppNotification className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.notifications.title')}</span>
+							</button>
+						{:else if tabId === 'shortcuts'}
+							<button
+								role="tab"
+								aria-controls="tab-shortcuts"
+								aria-selected={selectedTab === 'shortcuts'}
+								class={tabButtonClass(selectedTab === 'shortcuts')}
+								on:click={() => {
+									selectTab('shortcuts');
+								}}
+							>
+								<Keyboard className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.shortcuts.title')}</span>
+							</button>
+						{:else if tabId === 'connections'}
+							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
+								<button
+									role="tab"
+									aria-controls="tab-connections"
+									aria-selected={selectedTab === 'connections'}
+									class={tabButtonClass(selectedTab === 'connections')}
+									on:click={() => {
+										selectTab('connections');
+									}}
+								>
+									<Link className="size-3.5" strokeWidth="2" />
+									<span>{$i18n.t('settings.personal.connections.title')}</span>
+								</button>
+							{/if}
+						{:else if tabId === 'tools'}
+							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
+								<button
+									role="tab"
+									aria-controls="tab-tools"
+									aria-selected={selectedTab === 'tools'}
+									class={tabButtonClass(selectedTab === 'tools')}
+									on:click={() => {
+										selectTab('tools');
+									}}
+								>
+									<WrenchAlt className="size-3.5" strokeWidth="2" />
+									<span>{$i18n.t('settings.personal.tools.title')}</span>
+								</button>
+							{/if}
+						{:else if tabId === 'personalization'}
+							<button
+								role="tab"
+								aria-controls="tab-personalization"
+								aria-selected={selectedTab === 'personalization'}
+								class={tabButtonClass(selectedTab === 'personalization')}
+								on:click={() => {
+									selectTab('personalization');
+								}}
+							>
+								<Face className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.personalization.title')}</span>
+							</button>
+						{:else if tabId === 'audio'}
+							<button
+								role="tab"
+								aria-controls="tab-audio"
+								aria-selected={selectedTab === 'audio'}
+								class={tabButtonClass(selectedTab === 'audio')}
+								on:click={() => {
+									selectTab('audio');
+								}}
+							>
+								<SoundHigh className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.audio.title')}</span>
+							</button>
+						{:else if tabId === 'data_controls'}
+							<button
+								role="tab"
+								aria-controls="tab-data-controls"
+								aria-selected={selectedTab === 'data_controls'}
+								class={tabButtonClass(selectedTab === 'data_controls')}
+								on:click={() => {
+									selectTab('data_controls');
+								}}
+							>
+								<DatabaseSettings className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.dataControls.title')}</span>
+							</button>
+						{:else if tabId === 'usage'}
+							<button
+								role="tab"
+								aria-controls="tab-usage"
+								aria-selected={selectedTab === 'usage'}
+								class={tabButtonClass(selectedTab === 'usage')}
+								on:click={() => {
+									selectTab('usage');
+								}}
+							>
+								<UsageIcon className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.usage.title')}</span>
+							</button>
+						{:else if tabId === 'archived_chats'}
+							<button
+								role="tab"
+								aria-controls="tab-archived-chats"
+								aria-selected={selectedTab === 'archived_chats'}
+								class={tabButtonClass(selectedTab === 'archived_chats')}
+								on:click={() => {
+									selectTab('archived_chats');
+								}}
+							>
+								<ArchiveBox className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.archivedChats.title')}</span>
+							</button>
+						{:else if tabId === 'account'}
+							<button
+								role="tab"
+								aria-controls="tab-account"
+								aria-selected={selectedTab === 'account'}
+								class={tabButtonClass(selectedTab === 'account')}
+								on:click={() => {
+									selectTab('account');
+								}}
+							>
+								<UserCircle className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.account.title')}</span>
+							</button>
+						{:else if tabId === 'about'}
+							<button
+								role="tab"
+								aria-controls="tab-about"
+								aria-selected={selectedTab === 'about'}
+								class={tabButtonClass(selectedTab === 'about')}
+								on:click={() => {
+									selectTab('about');
+								}}
+							>
+								<InfoCircle className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('settings.personal.about.title')}</span>
 							</button>
 						{/if}
-					{:else if tabId === 'personalization'}
-						<button
-							role="tab"
-							aria-controls="tab-personalization"
-							aria-selected={selectedTab === 'personalization'}
-							class={tabButtonClass(selectedTab === 'personalization')}
-							on:click={() => {
-								selectTab('personalization');
-							}}
-						>
-							<Face className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.personalization.title')}</span>
-						</button>
-					{:else if tabId === 'audio'}
-						<button
-							role="tab"
-							aria-controls="tab-audio"
-							aria-selected={selectedTab === 'audio'}
-							class={tabButtonClass(selectedTab === 'audio')}
-							on:click={() => {
-								selectTab('audio');
-							}}
-						>
-							<SoundHigh className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.audio.title')}</span>
-						</button>
-					{:else if tabId === 'data_controls'}
-						<button
-							role="tab"
-							aria-controls="tab-data-controls"
-							aria-selected={selectedTab === 'data_controls'}
-							class={tabButtonClass(selectedTab === 'data_controls')}
-							on:click={() => {
-								selectTab('data_controls');
-							}}
-						>
-							<DatabaseSettings className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.dataControls.title')}</span>
-						</button>
-					{:else if tabId === 'usage'}
-						<button
-							role="tab"
-							aria-controls="tab-usage"
-							aria-selected={selectedTab === 'usage'}
-							class={tabButtonClass(selectedTab === 'usage')}
-							on:click={() => {
-								selectTab('usage');
-							}}
-						>
-							<UsageIcon className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.usage.title')}</span>
-						</button>
-					{:else if tabId === 'archived_chats'}
-						<button
-							role="tab"
-							aria-controls="tab-archived-chats"
-							aria-selected={selectedTab === 'archived_chats'}
-							class={tabButtonClass(selectedTab === 'archived_chats')}
-							on:click={() => {
-								selectTab('archived_chats');
-							}}
-						>
-							<ArchiveBox className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.archivedChats.title')}</span>
-						</button>
-					{:else if tabId === 'account'}
-						<button
-							role="tab"
-							aria-controls="tab-account"
-							aria-selected={selectedTab === 'account'}
-							class={tabButtonClass(selectedTab === 'account')}
-							on:click={() => {
-								selectTab('account');
-							}}
-						>
-							<UserCircle className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.account.title')}</span>
-						</button>
-					{:else if tabId === 'about'}
-						<button
-							role="tab"
-							aria-controls="tab-about"
-							aria-selected={selectedTab === 'about'}
-							class={tabButtonClass(selectedTab === 'about')}
-							on:click={() => {
-								selectTab('about');
-							}}
-						>
-							<InfoCircle className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('settings.personal.about.title')}</span>
-						</button>
-					{/if}
-				{/each}
+					{/each}
+				</div>
 			{/if}
 
 			{#if $user?.role === 'admin' && filteredAdminSettings.length > 0}
@@ -764,29 +809,31 @@
 					{$i18n.t('Admin')}
 				</span>
 
-				{#each filteredAdminSettings as tabId, index (tabId)}
-					{#if shouldShowSettingGroup(filteredAdminSettings, index)}
-						<span class={settingGroupHeadingClass(index === 0)}>
-							{settingGroupTitle(tabId)}
-						</span>
-					{/if}
+				<div role="tablist" aria-label={$i18n.t('Admin')} class="contents">
+					{#each filteredAdminSettings as tabId, index (tabId)}
+						{#if shouldShowSettingGroup(filteredAdminSettings, index)}
+							<span class={settingGroupHeadingClass(index === 0)}>
+								{settingGroupTitle(tabId)}
+							</span>
+						{/if}
 
-					{@const tab = adminSettings.find((setting) => setting.id === tabId)}
-					{#if tab}
-						<button
-							role="tab"
-							aria-controls={adminTabPanelId(tab.id)}
-							aria-selected={selectedTab === tab.id}
-							class={tabButtonClass(selectedTab === tab.id)}
-							on:click={() => {
-								selectTab(tab.id);
-							}}
-						>
-							<AdminTabIcon id={adminTabSegment(tab.id)} className="size-3.5" strokeWidth="2" />
-							<span>{tab.title}</span>
-						</button>
-					{/if}
-				{/each}
+						{@const tab = adminSettings.find((setting) => setting.id === tabId)}
+						{#if tab}
+							<button
+								role="tab"
+								aria-controls={adminTabPanelId(tab.id)}
+								aria-selected={selectedTab === tab.id}
+								class={tabButtonClass(selectedTab === tab.id)}
+								on:click={() => {
+									selectTab(tab.id);
+								}}
+							>
+								<AdminTabIcon id={adminTabSegment(tab.id)} className="size-3.5" strokeWidth="2" />
+								<span>{tab.title}</span>
+							</button>
+						{/if}
+					{/each}
+				</div>
 			{/if}
 
 			{#if filteredSettings.length === 0}
@@ -798,7 +845,10 @@
 	</nav>
 
 	<div class="flex-1 min-w-0 min-h-0 p-4 md:px-5 flex flex-col">
-		<div class="flex-1 min-h-0 overflow-hidden">
+		<div
+			class="flex-1 min-h-0 overflow-hidden"
+			id={isAdminTab(selectedTab) ? adminTabPanelId(selectedTab) : undefined}
+		>
 			{#if selectedTab === 'general'}
 				<General
 					{getModels}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import { settings } from '$lib/stores';
 	import type { CalendarModel } from '$lib/apis/calendar';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
@@ -109,7 +110,9 @@
 			<div class="text-[0.6875rem] font-normal">{miniMonthNames[miniMonth]} {miniYear}</div>
 			<div class="flex items-center gap-0.5">
 				<button
-					class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+					class="{($settings?.highContrastMode ?? false)
+						? 'p-1.5'
+						: 'p-0.5'} rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 					aria-label={$i18n.t('Previous month')}
 					on:click={() => navigateMini(-1)}
 				>
@@ -128,7 +131,9 @@
 					>
 				</button>
 				<button
-					class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+					class="{($settings?.highContrastMode ?? false)
+						? 'p-1.5'
+						: 'p-0.5'} rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 					aria-label={$i18n.t('Next month')}
 					on:click={() => navigateMini(1)}
 				>
@@ -162,7 +167,11 @@
 				<button
 					class="w-6 h-6 flex items-center justify-center rounded-full transition
 						{day.getMonth() !== miniMonth ? 'text-gray-300 dark:text-gray-600' : ''}
-						{isToday(day) ? 'bg-blue-500 text-white' : ''}
+						{isToday(day)
+						? ($settings?.highContrastMode ?? false)
+							? 'bg-blue-600 text-white'
+							: 'bg-blue-500 text-white'
+						: ''}
 						{day.toDateString() === currentDate.toDateString() && !isToday(day)
 						? 'bg-gray-200 dark:bg-gray-700'
 						: ''}
@@ -201,10 +210,12 @@
 		</div>
 
 		{#each calendars as cal (cal.id)}
-			<div class="group flex items-center w-full">
+			<div
+				class="group flex items-center w-full rounded-lg text-xs transition
+					hover:bg-gray-50 dark:hover:bg-gray-800/50"
+			>
 				<button
-					class="flex items-center gap-2 px-2 py-1 rounded-lg text-xs transition
-						hover:bg-gray-50 dark:hover:bg-gray-800/50 flex-1 text-left min-w-0"
+					class="flex items-center gap-2 px-2 py-1 flex-1 text-left min-w-0"
 					on:click={() => onToggle(cal.id)}
 				>
 					<span
@@ -222,30 +233,28 @@
 					>
 						{cal.name}
 					</span>
-
-					{#if isDeletable(cal)}
-						<!-- svelte-ignore a11y-click-events-have-key-events -->
-						<span
-							class="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
-								transition-all duration-150"
-							role="button"
-							tabindex="-1"
-							title={$i18n.t('Delete calendar')}
-							on:click|stopPropagation={(e) => handleDeleteClick(e, cal)}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="2"
-								stroke="currentColor"
-								class="size-3"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-							</svg>
-						</span>
-					{/if}
 				</button>
+
+				{#if isDeletable(cal)}
+					<button
+						type="button"
+						class="shrink-0 p-0.5 mr-2 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
+							transition-all duration-150"
+						title={$i18n.t('Delete calendar')}
+						on:click|stopPropagation={(e) => handleDeleteClick(e, cal)}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="size-3"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+						</svg>
+					</button>
+				{/if}
 			</div>
 		{/each}
 	</div>

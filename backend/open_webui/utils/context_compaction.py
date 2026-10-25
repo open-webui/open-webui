@@ -61,7 +61,7 @@ async def compact_messages_for_request(
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
     system_prompt = system_prompt or (get_content_from_message(system_messages[0]) if system_messages else '')
     token_threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
-    if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold) or len(messages) <= 3:
+    if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold):
         return [*system_messages, *messages], previous_summary, False
 
     boundary = _find_compaction_boundary(messages, config['retention_percentage'])
@@ -145,6 +145,10 @@ async def compact_messages_for_request(
                     'action': 'context_compaction',
                     'description': 'Context compacted',
                     'done': True,
+                    'checkpoint_message_id': (
+                        recent_messages[0].get('id') if recent_messages[0].get('role') == 'user' else None
+                    ),
+                    'context_summary': summary,
                 },
             }
         )
@@ -374,6 +378,8 @@ def _find_compaction_boundary(messages: list[dict], retention_percentage: int = 
         ][1:]
     else:
         boundaries = [idx for idx, message in enumerate(messages) if message.get('role') == 'user'][1:]
+        # The first later user turn stays a valid boundary even inside the retained share.
+        target = max(target, min(boundaries, default=0))
     return next((idx for idx in reversed(boundaries) if idx <= target), 0)
 
 

@@ -5,6 +5,7 @@
 	import { user } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
@@ -37,23 +38,25 @@
 <div
 	class="group flex h-[1.6875rem] w-full items-center rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 >
+	<div class="ml-2 mr-2 flex shrink-0">
+		<ProfilePreview user={{ id: authorId, name: author }}>
+			<ProfileImage
+				src={authorId ? `/api/v1/users/${authorId}/profile/image` : '/user.png'}
+				className="size-4 shrink-0 rounded-full!"
+			/>
+		</ProfilePreview>
+	</div>
 	<button
 		type="button"
 		role="menuitemradio"
 		aria-label={status || message}
 		aria-checked={selected}
-		class="flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl px-2 text-left"
+		class="flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl pr-2 text-left"
 		title={entry
 			? `${entry.id}${date ? ` · ${date.toLocaleString($i18n.language)}` : ''}`
 			: undefined}
 		on:click={onSelect}
 	>
-		<Tooltip as="span" className="flex shrink-0" content={author} allowHTML={false}>
-			<ProfileImage
-				src={authorId ? `/api/v1/users/${authorId}/profile/image` : '/user.png'}
-				className="size-4 shrink-0 rounded-full!"
-			/>
-		</Tooltip>
 		<Tooltip as="span" className="block min-w-0 flex-1" content={message} allowHTML={false}>
 			<span class="block truncate text-xs">{message}</span>
 		</Tooltip>

@@ -11,7 +11,7 @@ import {
 } from 'y-prosemirror';
 import type { Socket } from 'socket.io-client';
 import type { SessionUser } from '$lib/stores';
-import { Editor, Extension } from '@tiptap/core';
+import { createNodeFromContent, Editor, Extension } from '@tiptap/core';
 import { keymap } from 'prosemirror-keymap';
 import { Plugin } from 'prosemirror-state';
 import { tick } from 'svelte';
@@ -68,6 +68,15 @@ export class SocketIOCollaborationProvider {
 				const plugins = [
 					new Plugin({
 						filterTransaction: (tr) => {
+							// Wait for the saved content before accepting local edits.
+							if (
+								!this.synced &&
+								this.isConnected &&
+								tr.docChanged &&
+								!tr.getMeta(ySyncPluginKey)?.isChangeOrigin
+							) {
+								return false;
+							}
 							// Preserve literal URLs received from another editor.
 							if (tr.getMeta(ySyncPluginKey)?.isChangeOrigin) {
 								tr.setMeta('preventAutolink', true);
@@ -104,16 +113,26 @@ export class SocketIOCollaborationProvider {
 		}
 	}
 
-	private applyInitialContent(content = this.initialContent) {
-		if (!this.editor || !content) return;
+	private initializeContent(content = this.initialContent) {
+		if (!this.editor) return;
 
 		if (typeof content === 'string') {
-			this.editor.commands.setContent(content);
-			return;
+			content = createNodeFromContent(content, this.editor.schema, { slice: false }).toJSON();
 		}
 
 		const doc = prosemirrorJSONToYDoc(this.editor.schema, content);
-		Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(doc));
+		const update = Array.from(Y.encodeStateAsUpdate(doc));
+		doc.destroy();
+		this.socket.emit(
+			'ydoc:document:update',
+			{ document_id: this.documentId, update, initialize: true },
+			(state: number[] | null) => {
+				if (!state || !this.editor) return;
+				Y.applyUpdate(this.doc, new Uint8Array(state), 'server');
+				this.synced = true;
+				if (!this.contentSnapshotTimer) this.sendContentSnapshot();
+			}
+		);
 	}
 
 	// Send the merged content; the remote sender had not seen our edits yet.
@@ -181,18 +200,16 @@ export class SocketIOCollaborationProvider {
 								!this.editor.getText().trim() &&
 								this.doc.getXmlFragment('prosemirror').length === 0
 							) {
-								if (
-									(data.content || this.initialContent) &&
-									[...(data.sessions ?? [])].sort()[0] === this.socket.id
-								) {
+								if (data.content || this.initialContent) {
 									// The HTTP snapshot may predate the last socket save.
-									this.applyInitialContent(
+									this.initializeContent(
 										data.content
 											? data.content.json ||
 													data.content.html ||
 													marked.parse(data.content.md ?? '', { async: false })
 											: this.initialContent
 									);
+									return;
 								}
 							} else {
 								// If the editor already has content, we don't need to send an empty state

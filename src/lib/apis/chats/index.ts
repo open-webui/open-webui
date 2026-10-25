@@ -1315,6 +1315,23 @@ export const updateChatById = async (
 	return res;
 };
 
+export const updateChatParams = async (
+	token: string,
+	id: string,
+	params: Record<string, unknown>
+) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/params`, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(params)
+	});
+	if (!res.ok) throw getErrorDetail(await res.json());
+	return res.json();
+};
+
 export const compactChatById = async (token: string, id: string, model?: string | null) => {
 	let error = null;
 

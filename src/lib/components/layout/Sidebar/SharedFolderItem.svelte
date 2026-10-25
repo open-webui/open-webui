@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { registerFolderRefreshHandler } from '$lib/stores/chatList';
 	import type { Writable } from 'svelte/store';
 
 	const i18n: Writable<any> = getContext('i18n');
@@ -27,6 +28,12 @@
 	let loaded = false;
 	let page = 1;
 	let hasMoreChats = false;
+
+	onMount(() =>
+		registerFolderRefreshHandler((folderId) => {
+			if (loaded && (folderId === undefined || folderId === folder.id)) return loadChats();
+		})
+	);
 
 	$: children = allSharedFolders.filter((f) => f.parent_id === folder.id);
 	$: permission = folder.permission || 'read';

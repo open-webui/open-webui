@@ -434,11 +434,7 @@ class PromptsTable:
                 current_access_grants = await self._get_access_grants(prompt.id, db=session)
 
                 # Check if content changed to decide on history creation
-                content_changed = (
-                    prompt.name != form_data.name
-                    or prompt.content != form_data.content
-                    or form_data.access_grants is not None
-                )
+                content_changed = prompt.name != form_data.name or prompt.content != form_data.content
 
                 # Update prompt fields
                 prompt.name = form_data.name
@@ -446,10 +442,6 @@ class PromptsTable:
                 prompt.data = form_data.data or prompt.data
                 prompt.meta = form_data.meta or prompt.meta
                 prompt.updated_at = int(time.time())
-                if form_data.access_grants is not None:
-                    await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
-                    current_access_grants = await self._get_access_grants(prompt.id, db=session)
-
                 await session.commit()
 
                 # Create history entry only if content changed
@@ -504,7 +496,6 @@ class PromptsTable:
                     prompt.name != form_data.name
                     or prompt.command != form_data.command
                     or prompt.content != form_data.content
-                    or form_data.access_grants is not None
                     or (form_data.tags is not None and prompt.tags != form_data.tags)
                 )
 
@@ -519,10 +510,6 @@ class PromptsTable:
 
                     if form_data.tags is not None:
                         prompt.tags = form_data.tags
-
-                if form_data.access_grants is not None:
-                    await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
-                    current_access_grants = await self._get_access_grants(prompt.id, db=session)
 
                 prompt.updated_at = int(time.time())
 

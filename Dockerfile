@@ -56,7 +56,7 @@ RUN chown -R $UID:$GID /app/backend && \
     chmod -R g=u /app/backend/open_webui/static
 
 ######## WebUI backend ########
-FROM python:3.11-slim-bookworm AS base
+FROM python:3.12-slim-trixie AS base
 
 # Use args
 ARG USE_CUDA

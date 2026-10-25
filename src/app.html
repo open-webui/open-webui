@@ -113,6 +113,7 @@
 				// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				// https://docs.openwebui.com/license.
 				logo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
+				logo.alt = '';
 
 				document.addEventListener('DOMContentLoaded', function () {
 					const splash = document.getElementById('splash-screen');
@@ -162,6 +163,7 @@
 				https://docs.openwebui.com/license. -->
 				<img
 					id="logo-her"
+					alt=""
 					style="width: auto; height: 13rem"
 					src="/static/splash.png"
 					loading="eager"

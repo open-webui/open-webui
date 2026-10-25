@@ -10,7 +10,7 @@
 	import { LanguageDescription, indentUnit } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 	import { oneDark } from '@codemirror/theme-one-dark';
-	import type { Chunk, MergeView } from '@codemirror/merge';
+	import type { Chunk } from '@codemirror/merge';
 	import Dropdown from './Dropdown.svelte';
 	import DropdownMenu from './DropdownMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
@@ -27,7 +27,7 @@
 		lineAlignment,
 		alignChangedLines,
 		clearLineAlignment,
-		pairedLinePosition
+		alignmentGeometryChanged
 	} from './diffEditorAlignment';
 	import {
 		diffPresentation,
@@ -42,7 +42,7 @@
 		chunkOverview,
 		changedLineCounts,
 		nearestOverviewChunk,
-		diffEditorConfig,
+		DiffEditorView,
 		type MergeDirection
 	} from './diffEditor';
 
@@ -78,7 +78,7 @@
 	let working = '';
 	let proposal = '';
 	let comparing = false;
-	let merge: MergeView | null = null;
+	let merge: DiffEditorView | null = null;
 	let visibleChunks: readonly Chunk[] = [];
 	let showOptions = false;
 	let optionsDropdown: Dropdown;
@@ -245,6 +245,7 @@
 		if (!merge || !chunkCount) return;
 		activeChunk = Math.max(0, Math.min(index, chunkCount - 1));
 		const chunk = visibleChunks[activeChunk];
+		merge.scrollSource = chunk.toB > chunk.fromB ? merge.b : merge.a;
 		for (const [view, start] of [
 			[merge.a, chunk.fromA],
 			[merge.b, chunk.fromB]
@@ -323,7 +324,6 @@
 		activeChunk = 0;
 		if (merge) {
 			clearLineAlignment(merge.a, merge.b);
-			merge.reconfigure({ gutter: !ignoreWhitespace && !ignoreEmphasis });
 		}
 		updatePresentation?.(true);
 		refresh();
@@ -331,7 +331,7 @@
 
 	const mountMerge = (node: HTMLElement) => {
 		let disposed = false;
-		let view: MergeView | null = null;
+		let view: DiffEditorView | null = null;
 		let observer: MutationObserver | undefined;
 		let alignmentFrame = 0;
 		let presentationFrame = 0;
@@ -371,7 +371,35 @@
 		};
 		updatePresentation = schedulePresentation;
 		let alignmentDocuments: readonly [Text, Text] | null = null;
-		let alignmentGeometry = '';
+		let alignmentGeometry: readonly number[] | null = null;
+		const scheduleAlignment = () => {
+			if (alignmentFrame || disposed) return;
+			// Align after both virtualized editors have measured their visible lines.
+			alignmentFrame = requestAnimationFrame(() => {
+				alignmentFrame = 0;
+				if (!disposed && view) {
+					const documents = [view.a.state.doc, view.b.state.doc] as const;
+					const geometry = [
+						view.a.contentDOM.clientWidth,
+						view.b.contentDOM.clientWidth,
+						view.a.defaultLineHeight,
+						view.b.defaultLineHeight
+					];
+					const resized =
+						alignmentGeometry && alignmentGeometryChanged(alignmentGeometry, geometry);
+					const reset =
+						alignmentDocuments &&
+						(alignmentDocuments[0] !== documents[0] ||
+							alignmentDocuments[1] !== documents[1] ||
+							resized);
+					alignmentDocuments = documents;
+					if (!alignmentGeometry || resized) alignmentGeometry = geometry;
+					if (!reset || !clearLineAlignment(view.a, view.b))
+						alignChangedLines(view.a, view.b, view.linePairs);
+					view.syncScroll();
+				}
+			});
+		};
 		const themes = [new Compartment(), new Compartment()];
 		const language = [new Compartment(), new Compartment()];
 		const paths = ['a', 'b'].map((side) => paneFile(side)?.path ?? session?.path);
@@ -413,77 +441,23 @@
 						update.transactions.some((tr) => tr.effects.length)) &&
 					!alignmentFrame
 				) {
-					// Align after both virtualized editors have measured their visible lines.
-					alignmentFrame = requestAnimationFrame(() => {
-						alignmentFrame = 0;
-						if (!disposed && view) {
-							const documents = [view.a.state.doc, view.b.state.doc] as const;
-							const geometry = [
-								view.a.contentDOM.clientWidth,
-								view.b.contentDOM.clientWidth,
-								view.a.defaultLineHeight,
-								view.b.defaultLineHeight
-							].join(':');
-							const reset =
-								alignmentDocuments &&
-								(alignmentDocuments[0] !== documents[0] ||
-									alignmentDocuments[1] !== documents[1] ||
-									geometry !== alignmentGeometry);
-							const resized = alignmentDocuments && geometry !== alignmentGeometry;
-							alignmentDocuments = documents;
-							alignmentGeometry = geometry;
-							const previousSpacersA = view.a.state.field(lineAlignment);
-							const previousSpacersB = view.b.state.field(lineAlignment);
-							if (!reset || !clearLineAlignment(view.a, view.b))
-								alignChangedLines(view.a, view.b, view.chunks);
-							if (resized) {
-								// Reflow can leave one viewport entirely inside an old EOF spacer.
-								// Measure both panes around the row the reader was looking at.
-								const top = Math.max(0, node.getBoundingClientRect().top - view.a.documentTop);
-								const position = Math.min(
-									view.a.lineBlockAtHeight(top).from,
-									view.a.state.doc.length
-								);
-								const other = pairedLinePosition(
-									view.a.state.doc,
-									view.b.state.doc,
-									view.chunks,
-									position
-								);
-								view.a.dispatch({
-									effects: EditorView.scrollIntoView(position, { y: 'start', yMargin: 0 })
-								});
-								view.b.dispatch({
-									effects: EditorView.scrollIntoView(other, { y: 'start', yMargin: 0 })
-								});
-							}
-							// Remeasuring unchanged spacers feeds CodeMirror's own layout updates back into itself.
-							if (
-								resized ||
-								previousSpacersA !== view.a.state.field(lineAlignment) ||
-								previousSpacersB !== view.b.state.field(lineAlignment)
-							)
-								view.reconfigure({});
-						}
-					});
+					scheduleAlignment();
 				}
 			}),
 			EditorView.theme({
-				'&': { fontSize: '0.75rem' },
+				'&': { fontSize: '0.75rem', height: '100%' },
+				'.cm-scroller': { overflowY: 'auto' },
 				'.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
 				'&.cm-focused': { outline: 'none' }
 			})
 		];
 		void (async () => {
 			try {
-				const { MergeView } = await import('@codemirror/merge');
 				if (disposed) return;
-				view = new MergeView({
+				view = new DiffEditorView({
 					a: { doc: working, extensions: extensions('a', 0) },
 					b: { doc: proposal, extensions: extensions('b', 1) },
-					parent: node,
-					gutter: !ignoreWhitespace && !ignoreEmphasis,
-					diffConfig: diffEditorConfig
+					parent: node
 				});
 				merge = view;
 				refresh();
@@ -988,9 +962,11 @@
 	}
 	.merge-container :global(.cm-mergeView) {
 		height: 100%;
-		overflow: auto;
+		overflow: hidden;
 	}
 	.merge-container :global(.cm-mergeViewEditor) {
+		flex: 1 1 0;
+		overflow: hidden;
 		min-width: 0;
 	}
 	.merge-container :global(.cm-merge-a .cm-changedLine),
@@ -1051,6 +1027,9 @@
 		background: #101413 !important;
 	}
 	.merge-container :global(.cm-mergeViewEditors) {
+		height: 100%;
+		display: flex;
+		align-items: stretch;
 		gap: 1rem;
 	}
 	.diff-editor :global(.cm-gutters) {

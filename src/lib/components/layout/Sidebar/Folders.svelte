@@ -44,51 +44,57 @@
 	};
 </script>
 
-{#each ownedList as folderId (folderId)}
-	<RecursiveFolder
-		className=""
-		bind:folderRegistry
-		{folders}
-		{folderId}
-		{shiftKey}
-		{onDelete}
-		{onItemMove}
-		{onFolderUnreadCounts}
-		on:import={(e) => {
-			dispatch('import', e.detail);
-		}}
-		on:update={(e) => {
-			dispatch('update', e.detail);
-		}}
-		on:change={(e) => {
-			dispatch('change', e.detail);
-		}}
-	/>
-{/each}
+{#if ownedList.length > 0}
+	<div role="list">
+		{#each ownedList as folderId (folderId)}
+			<RecursiveFolder
+				className=""
+				bind:folderRegistry
+				{folders}
+				{folderId}
+				{shiftKey}
+				{onDelete}
+				{onItemMove}
+				{onFolderUnreadCounts}
+				on:import={(e) => {
+					dispatch('import', e.detail);
+				}}
+				on:update={(e) => {
+					dispatch('update', e.detail);
+				}}
+				on:change={(e) => {
+					dispatch('change', e.detail);
+				}}
+			/>
+		{/each}
+	</div>
+{/if}
 
 {#if sharedList.length > 0}
 	<div class="w-full pl-2.5 text-[0.6875rem] text-gray-400 dark:text-gray-600 pt-2 pb-0.5">
 		{$i18n.t('Shared')}
 	</div>
-	{#each sharedList as folderId (folderId)}
-		<RecursiveFolder
-			className=""
-			bind:folderRegistry
-			{folders}
-			{folderId}
-			{shiftKey}
-			{onDelete}
-			{onItemMove}
-			{onFolderUnreadCounts}
-			on:import={(e) => {
-				dispatch('import', e.detail);
-			}}
-			on:update={(e) => {
-				dispatch('update', e.detail);
-			}}
-			on:change={(e) => {
-				dispatch('change', e.detail);
-			}}
-		/>
-	{/each}
+	<div role="list">
+		{#each sharedList as folderId (folderId)}
+			<RecursiveFolder
+				className=""
+				bind:folderRegistry
+				{folders}
+				{folderId}
+				{shiftKey}
+				{onDelete}
+				{onItemMove}
+				{onFolderUnreadCounts}
+				on:import={(e) => {
+					dispatch('import', e.detail);
+				}}
+				on:update={(e) => {
+					dispatch('update', e.detail);
+				}}
+				on:change={(e) => {
+					dispatch('change', e.detail);
+				}}
+			/>
+		{/each}
+	</div>
 {/if}

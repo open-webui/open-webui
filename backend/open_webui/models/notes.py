@@ -109,7 +109,6 @@ class NoteUpdateForm(BaseModel):
     title: Optional[str] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
-    access_grants: Optional[list[dict]] = None
 
     @field_validator('data', mode='before')
     @classmethod
@@ -376,11 +375,8 @@ class NoteTable:
             if 'meta' in form_data:
                 note.meta = {**(note.meta or {}), **(form_data['meta'] or {})}
 
-            if not db.is_modified(note) and 'access_grants' not in form_data:
+            if not db.is_modified(note):
                 return await self._to_note_model(note, db=db)
-
-            if 'access_grants' in form_data:
-                await AccessGrants.set_access_grants('note', id, form_data['access_grants'], db=db)
 
             note.updated_at = int(time.time_ns())
 

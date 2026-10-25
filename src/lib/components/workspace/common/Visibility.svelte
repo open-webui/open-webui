@@ -22,7 +22,6 @@
 	<Dropdown closeOnSelect>
 		<button
 			type="button"
-			aria-label={$i18n.t('Visibility')}
 			class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-gray-800 transition hover:text-gray-950 dark:text-gray-200 dark:hover:text-white"
 		>
 			{#if state === 'private'}
@@ -30,6 +29,7 @@
 			{:else}
 				<Hashtag className="size-3.5 text-gray-500 dark:text-gray-400" />
 			{/if}
+			<span class="sr-only">{$i18n.t('Visibility')}</span>
 			<span>{state === 'private' ? $i18n.t('Private') : $i18n.t('Public')}</span>
 			<ChevronDown className="size-3 text-gray-400 dark:text-gray-500" strokeWidth="2" />
 		</button>

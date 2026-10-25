@@ -262,7 +262,10 @@ export const getPromptById = async (token: string, promptId: string) => {
 	return res;
 };
 
-export const updatePromptById = async (token: string, prompt: PromptItem) => {
+export const updatePromptById = async (
+	token: string,
+	prompt: Omit<PromptItem, 'access_grants'>
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${prompt.id}/update`, {
@@ -272,7 +275,7 @@ export const updatePromptById = async (token: string, prompt: PromptItem) => {
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(prompt)
+		body: JSON.stringify({ ...prompt, access_grants: undefined })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

@@ -248,7 +248,7 @@
 				>{/if}
 			<button
 				class={quietButton}
-				aria-label={$i18n.t('Content type')}
+				aria-label={`${$i18n.t('Content type')}: ${$i18n.t(kind === 'all' ? 'Everything' : labels[kind])}`}
 				data-search-panel
 				aria-expanded={panel === 'types'}
 				on:click={() => (panel = panel === 'types' ? null : 'types')}
@@ -415,8 +415,9 @@
 				<div
 					class="flex h-6 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
 				>
-					<span>{$i18n.t(query.trim() ? 'Results' : 'Pinned & recent')}</span><span
-						aria-live="polite"
+					<span id="workspace-search-results-label"
+						>{$i18n.t(query.trim() ? 'Results' : 'Pinned & recent')}</span
+					><span aria-live="polite"
 						>{loading
 							? $i18n.t('Searching…')
 							: results.length
@@ -428,7 +429,7 @@
 					bind:this={list}
 					id="workspace-search-results"
 					role="listbox"
-					aria-label={$i18n.t('Search results')}
+					aria-labelledby="workspace-search-results-label"
 					tabindex="-1"
 					class="outline-hidden"
 				>

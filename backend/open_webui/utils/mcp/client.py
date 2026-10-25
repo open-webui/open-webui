@@ -1,68 +1,47 @@
 import asyncio
 import logging
+import math
 from contextlib import AsyncExitStack
-from datetime import timedelta
 from typing import Optional
 from urllib.parse import urlsplit
 
-log = logging.getLogger(__name__)
-
-import anyio
-import httpx
+import httpx2
 from jsonschema import Draft202012Validator, FormatChecker
-from mcp import ClientSession
-from mcp.client.auth import OAuthClientProvider, TokenStorage
-from mcp.client.streamable_http import streamablehttp_client
-from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
+from mcp import Client
+from mcp.client.streamable_http import streamable_http_client
 from mcp.types import ElicitRequestFormParams, ElicitResult
-from referencing import Registry
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     MCP_INITIALIZE_TIMEOUT,
 )
 from open_webui.utils.json_codec import JSONCodec
+from referencing import Registry
+
+log = logging.getLogger(__name__)
 
 
-def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
-    """Create an httpx AsyncClient for MCP transport.
+def create_httpx_client(headers=None, auth=None):
+    """Create the httpx2 AsyncClient that carries MCP traffic.
 
-    Falls back to AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER when the caller
-    (i.e. the MCP SDK) does not supply an explicit timeout.
+    Note: verify must be passed at construction time because httpx2
+    configures the SSL context during __init__. AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+    may be True, False, or an ssl.SSLContext (when a custom CA bundle path is
+    configured); verify= accepts all three.
 
-    Note: verify must be passed at construction time because httpx
-    configures the SSL context during __init__. Setting client.verify = False
-    after construction does not affect the underlying transport's SSL context.
+    Redirects are not configured here: the MCP SDK follows same-origin
+    redirects itself and ignores the client's follow_redirects setting.
     """
-    kwargs = {
-        'follow_redirects': True,
-        'verify': verify,
-    }
-    if timeout is not None:
-        kwargs['timeout'] = timeout
-    elif AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER is not None:
-        kwargs['timeout'] = float(AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
-    if headers is not None:
-        kwargs['headers'] = headers
-    if auth is not None:
-        kwargs['auth'] = auth
-    return httpx.AsyncClient(**kwargs)
+    return httpx2.AsyncClient(
+        headers=headers,
+        auth=auth,
+        verify=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+        # The SDK's transport defaults: reads stay open for long-lived SSE streams.
+        timeout=httpx2.Timeout(30, read=300),
+    )
 
 
-def create_httpx_client(headers=None, timeout=None, auth=None):
-    # AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL may be True, False, or an
-    # ssl.SSLContext (when a custom CA bundle path is configured).
-    # httpx's verify= accepts bool | str | ssl.SSLContext, so all three work.
-    ssl_setting = AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-    verify = ssl_setting if ssl_setting is not True else True
-    return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=verify)
-
-
-def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
-    return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=False)
-
-
-class OAuthTokenAuth(httpx.Auth):
+class OAuthTokenAuth(httpx2.Auth):
     """Resolve current credentials per request and recover from concurrent token rotation."""
 
     requires_request_body = True
@@ -71,15 +50,15 @@ class OAuthTokenAuth(httpx.Auth):
         self.get_headers = get_headers
 
     async def async_auth_flow(self, request):
-        headers = httpx.Headers(await self.get_headers())
+        headers = httpx2.Headers(await self.get_headers())
         authorization = headers.get('Authorization')
         if not authorization:
-            raise httpx.RequestError('No OAuth access token available', request=request)
+            raise httpx2.RequestError('No OAuth access token available', request=request)
         request.headers.update(headers)
         response = yield request
 
         if response.status_code == 401:
-            headers = httpx.Headers(await self.get_headers())
+            headers = httpx2.Headers(await self.get_headers())
             if headers.get('Authorization') and headers['Authorization'] != authorization:
                 request.headers.update(headers)
                 yield request
@@ -87,7 +66,7 @@ class OAuthTokenAuth(httpx.Auth):
 
 class MCPClient:
     def __init__(self, event_caller=None, server_name=''):
-        self.session: Optional[ClientSession] = None
+        self.client: Optional[Client] = None
         self.exit_stack = None
         self.event_caller = event_caller
         self.server_name = server_name
@@ -96,7 +75,7 @@ class MCPClient:
     async def elicit(self, context, params):
         try:
             if isinstance(params, ElicitRequestFormParams):
-                Draft202012Validator.check_schema(params.requestedSchema)
+                Draft202012Validator.check_schema(params.requested_schema)
             else:
                 url = urlsplit(params.url)
                 if url.scheme not in ('http', 'https') or not url.hostname or url.username or url.password:
@@ -106,7 +85,9 @@ class MCPClient:
                 {
                     'type': 'request:elicitation',
                     'data': {
-                        **params.model_dump(mode='json', include={'mode', 'message', 'requestedSchema', 'url'}),
+                        **params.model_dump(
+                            mode='json', by_alias=True, include={'mode', 'message', 'requested_schema', 'url'}
+                        ),
                         'server_name': self.server_name,
                     },
                 }
@@ -119,51 +100,45 @@ class MCPClient:
                 content = response.get('content')
                 # Never fetch server-supplied schema references or coerce user answers.
                 Draft202012Validator(
-                    params.requestedSchema, format_checker=FormatChecker(), registry=Registry()
+                    params.requested_schema, format_checker=FormatChecker(), registry=Registry()
                 ).validate(content)
             return ElicitResult(action=response['action'], content=content)
         except Exception as e:
             log.warning('MCP elicitation failed: %s', type(e).__name__)
             return ElicitResult(action='cancel')
 
-    async def connect(self, url: str, headers: Optional[dict] = None, auth: Optional[httpx.Auth] = None):
+    async def connect(self, url: str, headers: Optional[dict] = None, auth: Optional[httpx2.Auth] = None):
         async with AsyncExitStack() as exit_stack:
             try:
-                self._streams_context = streamablehttp_client(
-                    url,
-                    headers=headers,
-                    auth=auth,
-                    httpx_client_factory=create_httpx_client
-                    if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-                    else create_insecure_httpx_client,
+                http_client = await exit_stack.enter_async_context(create_httpx_client(headers=headers, auth=auth))
+
+                # mode='auto' (the default) probes server/discover for the stateless
+                # 2026-07-28 protocol and falls back to the initialize handshake on
+                # legacy servers. The read timeout bounds that handshake and every
+                # later request that does not set its own; the SDK caps the probe itself.
+                self.client = await exit_stack.enter_async_context(
+                    Client(
+                        streamable_http_client(url, http_client=http_client),
+                        read_timeout_seconds=MCP_INITIALIZE_TIMEOUT,
+                        elicitation_callback=self.elicit if self.event_caller else None,
+                    )
                 )
-
-                transport = await exit_stack.enter_async_context(self._streams_context)
-                read_stream, write_stream, _ = transport
-
-                self._session_context = ClientSession(
-                    read_stream, write_stream, elicitation_callback=self.elicit if self.event_caller else None
-                )
-
-                self.session = await exit_stack.enter_async_context(self._session_context)
-                with anyio.fail_after(MCP_INITIALIZE_TIMEOUT):
-                    result = await self.session.initialize()
-                self.instructions = result.instructions
+                self.instructions = self.client.instructions
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
                 await self.disconnect()
                 raise e
 
     async def list_tool_specs(self) -> Optional[dict]:
-        if not self.session:
+        if not self.client:
             raise RuntimeError('MCP client is not connected.')
 
         tools = []
         cursor = None
         while True:
-            result = await self.session.list_tools(cursor=cursor)
+            result = await self.client.list_tools(cursor=cursor)
             tools.extend(result.tools)
-            cursor = result.nextCursor
+            cursor = result.next_cursor
             if cursor is None:
                 break
 
@@ -172,32 +147,33 @@ class MCPClient:
             name = tool.name
             description = tool.description
 
-            inputSchema = tool.inputSchema
+            input_schema = tool.input_schema
 
-            # TODO: handle outputSchema if needed
-            outputSchema = getattr(tool, 'outputSchema', None)
+            # TODO: handle output_schema if needed
 
-            tool_specs.append({'name': name, 'description': description, 'parameters': inputSchema})
+            tool_specs.append({'name': name, 'description': description, 'parameters': input_schema})
 
         return tool_specs
 
     async def call_tool(self, function_name: str, function_args: dict) -> list[dict]:
-        if not self.session:
+        if not self.client:
             raise RuntimeError('MCP client is not connected.')
 
-        tool_call_timeout = None
+        # math.inf is the SDK's own "no timeout"; None would fall back to MCP_INITIALIZE_TIMEOUT.
+        tool_call_timeout = math.inf
         if AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER is not None and AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER > 0:
-            tool_call_timeout = timedelta(seconds=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
+            tool_call_timeout = AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER
 
-        result = await self.session.call_tool(function_name, function_args, read_timeout_seconds=tool_call_timeout)
+        result = await self.client.call_tool(function_name, function_args, read_timeout_seconds=tool_call_timeout)
         if not result:
             raise Exception('No result returned from MCP tool call.')
 
-        result_dict = result.model_dump(mode='json')
+        result_dict = result.model_dump(mode='json', by_alias=True)
         result_content = result_dict['content']
+        texts = [item['text'] for item in result_content if item['type'] == 'text']
 
-        if result.isError:
-            raise Exception(result_content)
+        if result.is_error:
+            raise Exception('\n'.join(texts) or 'MCP tool call returned an error.')
 
         structured_content = result_dict.get('structuredContent')
         if structured_content is None:
@@ -205,7 +181,6 @@ class MCPClient:
 
         # Compare serialized JSON: Python equality treats True and 1 as the same value.
         structured_json = JSONCodec.dumps(structured_content, sort_keys=True)
-        texts = [item['text'] for item in result_content if item['type'] == 'text']
         text_jsons = []
         for text in texts:
             try:
@@ -219,6 +194,9 @@ class MCPClient:
 
         # FastMCP wraps scalar/list results while keeping their original text blocks.
         values = structured_content.get('result')
+        # The standalone fastmcp package sends the whole list as one text block.
+        if structured_content.keys() == {'result'} and text_jsons == [JSONCodec.dumps(values, sort_keys=True)]:
+            return result_content
         values = values if isinstance(values, list) else [values]
         if (
             structured_content.keys() == {'result'}
@@ -235,26 +213,26 @@ class MCPClient:
         return result_content
 
     async def list_resources(self, cursor: Optional[str] = None) -> Optional[dict]:
-        if not self.session:
+        if not self.client:
             raise RuntimeError('MCP client is not connected.')
 
-        result = await self.session.list_resources(cursor=cursor)
+        result = await self.client.list_resources(cursor=cursor)
         if not result:
             raise Exception('No result returned from MCP list_resources call.')
 
-        result_dict = result.model_dump()
+        result_dict = result.model_dump(by_alias=True)
         resources = result_dict.get('resources', [])
 
         return resources
 
     async def read_resource(self, uri: str) -> Optional[dict]:
-        if not self.session:
+        if not self.client:
             raise RuntimeError('MCP client is not connected.')
 
-        result = await self.session.read_resource(uri)
+        result = await self.client.read_resource(uri)
         if not result:
             raise Exception('No result returned from MCP read_resource call.')
-        result_dict = result.model_dump()
+        result_dict = result.model_dump(by_alias=True)
 
         return result_dict
 
@@ -270,7 +248,7 @@ class MCPClient:
 
         # Prevent double-close from concurrent callers
         self.exit_stack = None
-        self.session = None
+        self.client = None
 
         try:
             # IMPORTANT: Do NOT use asyncio.shield() or asyncio.wait_for()

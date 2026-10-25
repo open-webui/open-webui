@@ -288,7 +288,7 @@ export const updateExternalKnowledgeSource = async (token: string, id: string, p
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(payload)
+		body: JSON.stringify({ ...payload, access_grants: undefined })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -608,7 +608,6 @@ type KnowledgeUpdateForm = {
 	name?: string;
 	description?: string;
 	data?: object;
-	access_grants?: object[];
 };
 
 export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
@@ -624,8 +623,7 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 		body: JSON.stringify({
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
-			data: form?.data ? form.data : undefined,
-			access_grants: form.access_grants
+			data: form?.data ? form.data : undefined
 		})
 	})
 		.then(async (res) => {

@@ -35,6 +35,8 @@
 	import { capitalizeFirstLetter } from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ToolMenu from './Tools/ToolMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
@@ -307,6 +309,8 @@
 	</title>
 </svelte:head>
 
+<h1 class="sr-only">{$i18n.t('Tools')}</h1>
+
 <ImportModal
 	bind:show={showImportModal}
 	onImport={(tool) => {
@@ -434,18 +438,10 @@
 							class="group flex min-h-8 w-full items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left {tool.write_access
 								? 'cursor-pointer'
 								: 'cursor-not-allowed opacity-60'}"
-							role="button"
-							tabindex={tool.write_access ? 0 : -1}
+							role="presentation"
 							on:click={(e) => {
 								if (!tool.write_access || shouldIgnoreRowClick(e.target)) return;
 								openTool(tool);
-							}}
-							on:keydown={(e) => {
-								if (!tool.write_access || e.currentTarget !== e.target) return;
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									openTool(tool);
-								}
 							}}
 						>
 							<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
@@ -453,11 +449,18 @@
 									<div class="flex min-w-0 items-center gap-2 overflow-hidden">
 										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 											<Tooltip content={tool.id} className="min-w-0" placement="top-start">
-												<div
-													class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
-												>
-													{resolveLocalizedResource(tool, $i18n.language)}
-												</div>
+												{#if tool.write_access}
+													<a
+														href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+														class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+														>{resolveLocalizedResource(tool, $i18n.language)}</a
+													>
+												{:else}
+													<span
+														class="block truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+														>{resolveLocalizedResource(tool, $i18n.language)}</span
+													>
+												{/if}
 											</Tooltip>
 
 											{#if tool?.meta?.manifest?.version}
@@ -507,17 +510,21 @@
 							<div
 								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
-								<Tooltip
-									content={tool?.user?.email ?? $i18n.t('Deleted User')}
-									className="min-w-0"
-									placement="top-start"
-								>
-									<div class="truncate">
-										{capitalizeFirstLetter(
-											tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
-										)}
-									</div>
-								</Tooltip>
+								<ProfilePreview user={tool?.user ?? null} side="left">
+									<span class="flex max-w-44 items-center gap-1.75">
+										<ProfileImage
+											src={tool?.user?.id
+												? `/api/v1/users/${tool.user.id}/profile/image`
+												: '/user.png'}
+											className="size-4 shrink-0 rounded-full!"
+										/>
+										<span class="min-w-0 max-w-24 truncate">
+											{capitalizeFirstLetter(
+												tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
+											)}
+										</span>
+									</span>
+								</ProfilePreview>
 							</div>
 
 							{#if tool.write_access}
@@ -591,7 +598,9 @@
 										</Tooltip>
 
 										<ToolMenu
-											accessHandler={() => accessModal.open(tool.id)}
+											accessHandler={$user?.permissions?.sharing?.tools || $user?.role === 'admin'
+												? () => accessModal.open(tool.id)
+												: null}
 											show={openToolMenuId === tool.id}
 											editHandler={() => {
 												goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);

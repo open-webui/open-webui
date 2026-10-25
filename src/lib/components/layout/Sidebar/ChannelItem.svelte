@@ -58,11 +58,10 @@
 	edit={true}
 	{onUpdate}
 	onSubmit={async (payload: any) => {
-		const { name, is_private, access_grants, group_ids, user_ids } = payload ?? {};
+		const { name, is_private, group_ids, user_ids } = payload ?? {};
 		const res = await updateChannelById(localStorage.token, channel.id, {
 			name,
 			is_private,
-			access_grants,
 			group_ids,
 			user_ids
 		}).catch((error) => {

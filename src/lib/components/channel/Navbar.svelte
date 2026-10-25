@@ -77,6 +77,7 @@
 						<button
 							id="sidebar-toggle-button"
 							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							on:click={() => {
 								showSidebar.set(!$showSidebar);
 							}}
@@ -178,7 +179,6 @@
 							<Tooltip content={$i18n.t('Users')}>
 								<button
 									class=" flex h-7 items-center cursor-pointer shrink-0 px-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
-									aria-label={$i18n.t('User Count')}
 									type="button"
 									on:click={() => {
 										showChannelInfoModal = true;
@@ -187,6 +187,7 @@
 									<div class=" flex items-center gap-1 m-auto self-center shrink-0">
 										<UserAlt className=" size-4" strokeWidth="1.5" />
 
+										<span class="sr-only">{$i18n.t('User Count')}</span>
 										<div class="text-xs tabular-nums shrink-0">
 											{channel.user_count}
 										</div>

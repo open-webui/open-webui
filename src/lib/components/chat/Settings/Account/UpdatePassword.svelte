@@ -1,4 +1,5 @@
 <script lang="ts">
+	import UserSettingRow from '../UserSettingRow.svelte';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { getLogoutRedirectUrl, updateUserPassword, userSignOut } from '$lib/apis/auths';
@@ -54,18 +55,19 @@
 		updatePasswordHandler();
 	}}
 >
-	<div class="flex items-center justify-between gap-2.5">
-		<div class="text-xs text-gray-600 dark:text-gray-400">
+	<UserSettingRow let:labelId>
+		<span slot="label">
 			{$i18n.t('settings.personal.account.changePassword.label')}
-		</div>
+		</span>
 		<button
+			id={`${labelId}-control`}
 			class={actionButtonClass}
 			type="button"
 			on:click={() => {
 				show = !show;
 			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
 		>
-	</div>
+	</UserSettingRow>
 	<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 		{$i18n.t('settings.personal.account.changePassword.description')}
 	</p>

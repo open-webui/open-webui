@@ -1288,6 +1288,45 @@ def _is_safe_collection_name(name: str) -> bool:
     return isinstance(name, str) and bool(_SAFE_COLLECTION_NAME_RE.match(name))
 
 
+def resolve_collection_names(collection_name: str) -> set[str]:
+    """Names that may share a vector collection after backend normalization."""
+    normalized_name = collection_name.lower().replace('_', '-').strip('-')
+    collection_names = {normalized_name}
+    # Weaviate prepends C to digit-leading names, so both spellings can reach the same collection.
+    if normalized_name[:1].isdigit():
+        collection_names.add(f'c{normalized_name}')
+    elif normalized_name.startswith('c') and normalized_name[1:2].isdigit():
+        collection_names.add(normalized_name[1:])
+    return collection_names
+
+
+async def has_access_to_collection(collection_name: str, user: UserModel, access_type: str) -> bool:
+    """Require access to every recognized collection, preserving the policy for unknown names."""
+    has_authorized_collection = False
+    for resolved_name in resolve_collection_names(collection_name):
+        if resolved_name == 'knowledge-bases':
+            return False
+        if resolved_name.startswith('file-'):
+            has_access = await has_access_to_file(
+                file_id=resolved_name[len('file-') :], access_type=access_type, user=user
+            )
+        elif resolved_name.startswith('user-memory-'):
+            has_access = resolved_name == f'user-memory-{user.id}'
+        elif resolved_name.startswith('web-search-'):
+            has_access = resolved_name.startswith(f'web-search-{user.id}-')
+        else:
+            has_access = await Knowledges.check_access_by_user_id(resolved_name, user.id, permission=access_type)
+            if not has_access and not await Knowledges.get_knowledge_by_id(resolved_name):
+                continue
+
+        # A denied collection must win even when another name is authorized or unscoped names are enabled.
+        if not has_access:
+            return False
+        has_authorized_collection = True
+
+    return has_authorized_collection or ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS
+
+
 async def filter_accessible_collections(
     collection_names: set[str],
     user: UserModel,
@@ -1308,6 +1347,8 @@ async def filter_accessible_collections(
                           ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS is True,
                           the name is treated as a legacy/ephemeral
                           collection and allowed.
+
+    Access to every recognized collection is required; unknown names do not override a denial.
     """
     # Applied before the admin bypass — malformed names should never reach the vector store.
     safe_names = {n for n in collection_names if _is_safe_collection_name(n)}
@@ -1323,36 +1364,9 @@ async def filter_accessible_collections(
         return safe_names
 
     validated = set()
-    for name in safe_names:
-        # Some vector stores fold case and _/- together, so authorize a name as the collection it can resolve to.
-        canonical = name.lower().replace('_', '-')
-        if canonical == 'knowledge-bases':
-            # System meta-collection — never exposed to non-admins.
-            continue
-        elif canonical.startswith('file-'):
-            file_id = canonical[len('file-') :]
-            if await has_access_to_file(file_id=file_id, access_type=access_type, user=user):
-                validated.add(name)
-        elif canonical.startswith('user-memory-'):
-            if canonical == f'user-memory-{user.id}':
-                validated.add(name)
-        elif canonical.startswith('web-search-'):
-            # Ephemeral per-query collections, owner-bound: process_web_search mints
-            # them as web-search-{user.id}-<hash>, so only the creator may read/write.
-            if canonical.startswith(f'web-search-{user.id}-'):
-                validated.add(name)
-        else:
-            # May be a knowledge-base ID or a legacy/ephemeral collection.
-            # If it IS a KB, enforce access control.  If no such KB
-            # exists, the behaviour depends on
-            # ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS:
-            #   False (default) — deny (closes the unscoped namespace)
-            #   True  — allow (preserves legacy behaviour)
-            if await Knowledges.check_access_by_user_id(canonical, user.id, permission=access_type):
-                validated.add(name)
-            elif ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS and not await Knowledges.get_knowledge_by_id(canonical):
-                # Not a KB at all — legacy/ephemeral collection, allow
-                validated.add(name)
+    for collection_name in safe_names:
+        if await has_access_to_collection(collection_name, user, access_type):
+            validated.add(collection_name)
     return validated
 
 

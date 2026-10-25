@@ -253,13 +253,12 @@ async def refresh_group_sessions(user_ids):
         return
     # Import lazily to avoid models/socket import cycles. A committed write must not
     # be reported as failed just because a client has already disconnected.
-    from open_webui.socket.main import disconnect_user_sessions
+    from open_webui.socket.main import disconnect_sessions_for_users
 
-    for user_id in set(user_ids):
-        try:
-            await disconnect_user_sessions(user_id, refresh_access=True)
-        except Exception:
-            log.exception('Unable to refresh group access for user %s', user_id)
+    try:
+        await disconnect_sessions_for_users(user_ids, refresh_access=True)
+    except Exception:
+        log.exception('Unable to refresh group access for %s user(s)', len(user_ids))
 
 
 async def validate_parent(db, group_id, parent_id):

@@ -54,6 +54,7 @@ from open_webui.tasks import (
     stop_item_tasks,
 )
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
@@ -440,11 +441,6 @@ def get_session_ids_from_room(room):
     return list(members) if members else []
 
 
-def get_session_ids_by_user_id(user_id: str) -> list[str]:
-    """Get known session IDs for a user across the local rooms and shared session pool."""
-    return get_session_ids_by_user_ids([user_id])
-
-
 def get_session_ids_by_user_ids(user_ids: list[str]) -> list[str]:
     """Get known session IDs for users across the local rooms and shared session pool."""
     if not user_ids:
@@ -517,7 +513,14 @@ async def disconnect_user_sessions(user_id: str, *, refresh_access: bool = False
     The client will automatically reconnect and re-authenticate with
     fresh data from the database.
     """
-    session_ids = get_session_ids_by_user_id(user_id)
+    session_ids = await disconnect_sessions_for_users([user_id], refresh_access=refresh_access)
+    if session_ids:
+        log.info('Requested disconnect of %s session(s) for user %s', len(session_ids), user_id)
+
+
+async def disconnect_sessions_for_users(user_ids: list[str], *, refresh_access: bool = False) -> list[str]:
+    """Disconnect all Socket.IO sessions belonging to these users and return their session IDs."""
+    session_ids = get_session_ids_by_user_ids(user_ids)
     for sid in session_ids:
         if refresh_access:
             try:
@@ -527,10 +530,8 @@ async def disconnect_user_sessions(user_id: str, *, refresh_access: bool = False
         try:
             await sio.disconnect(sid)
         except Exception:
-            log.exception('Failed to disconnect session %s for user %s', sid, user_id)
-
-    if session_ids:
-        log.info('Requested disconnect of %s session(s) for user %s', len(session_ids), user_id)
+            log.exception('Failed to disconnect session %s', sid)
+    return session_ids
 
 
 @sio.on('usage')
@@ -622,11 +623,22 @@ async def refresh_chat_access(chat_id=None):
     access = {}
     chat_ids = set()
     for batch in get_session_pool_batches():
+        chat_owner_ids: dict[str, str] = {}
+        if not chat_id:
+            # Owners keep access; role changes and deletion disconnect them separately.
+            open_chat_ids: set[str] = set()
+            for _, session in batch:
+                if not session:
+                    continue
+                open_chat_ids.update(session.get('chat_ids') or [])
+            chat_owner_ids = await Chats.get_owner_ids_by_chat_ids(list(open_chat_ids))
         for sid, session in batch:
             if not session:
                 continue
             for cid in session.get('chat_ids') or []:
                 if chat_id and cid != chat_id:
+                    continue
+                if chat_owner_ids.get(cid) == session['id']:
                     continue
                 key = (cid, session['id'])
                 if key not in access:
@@ -939,8 +951,6 @@ async def ydoc_document_join(sid, data):
         # Join Socket.IO room
         await sio.enter_room(sid, f'doc_{document_id}')
 
-        active_session_ids = get_session_ids_from_room(f'doc_{document_id}')
-
         # Get the Yjs document state
         ydoc = Y.Doc()
         updates = await YDOC_MANAGER.get_updates(document_id)
@@ -955,7 +965,6 @@ async def ydoc_document_join(sid, data):
                 'document_id': document_id,
                 'state': list(state_update),  # Convert bytes to list for JSON
                 'content': note.data.get('content') if document_id.startswith('note:') and note.data else None,
-                'sessions': active_session_ids,
             },
             room=sid,
         )
@@ -1089,7 +1098,24 @@ async def yjs_document_update(sid, data):
                 log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
                 return
 
+            snapshot = data.get('data')
+            if isinstance(snapshot, dict) and 'files' in snapshot:
+                editor = await Users.get_user_by_id(user['id'])
+                if not editor or not await has_access_to_note_files(note, snapshot['files'], editor):
+                    await sio.emit('error', {'message': 'Cannot attach files you cannot access'}, room=sid)
+                    return
+
         update = data.get('update')  # List of bytes from frontend
+
+        # The document lock makes initialization first-write-wins across workers.
+        # Return the stored state so losing clients never apply their own seed.
+        if data.get('initialize'):
+            updates = await YDOC_MANAGER.get_updates(document_id)
+            if updates:
+                ydoc = Y.Doc()
+                for stored_update in updates:
+                    ydoc.apply_update(bytes(stored_update))
+                return list(ydoc.get_update())
 
         if update:
             user_id = data.get('user_id', sid)
@@ -1113,6 +1139,9 @@ async def yjs_document_update(sid, data):
                 )
             else:
                 log.warning(f'Update for document {document_id} is invalid or over the size limit. Rejecting update.')
+
+            if data.get('initialize'):
+                return update if stored else None
 
         async def debounced_save():
             await asyncio.sleep(0.5)
@@ -1574,6 +1603,20 @@ async def get_event_emitter(request_info, update_db=True):
         return None
 
 
+def get_user_chat_session_id(user_id: str, chat_id: str) -> str | None:
+    now = time.time()
+    for batch in get_session_pool_batches():
+        for session_id, session in batch:
+            if (
+                session
+                and session.get('id') == user_id
+                and chat_id in (session.get('chat_ids') or [])
+                and now - session.get('last_seen_at', 0) <= SESSION_POOL_TIMEOUT
+            ):
+                return session_id
+    return None
+
+
 async def get_event_call(request_info):
     async def __event_caller__(event_data):
         session_id = request_info['session_id']
@@ -1584,12 +1627,17 @@ async def get_event_call(request_info):
             log.warning(f'Event caller: session {session_id} not owned by requesting user or disconnected')
             return {'error': 'Client session disconnected.'}
 
-        interaction_id = None
+        is_input_request = event_data.get('type') in {
+            'confirmation',
+            'input',
+            'request:user_input',
+            'request:elicitation',
+        }
+        interaction_id = str(uuid4()) if is_input_request else None
         timeout = WEBSOCKET_EVENT_CALLER_TIMEOUT
         if event_data.get('type') in ('request:user_input', 'request:elicitation') or (
             event_data.get('type') == 'confirmation' and (event_data.get('data') or {}).get('tool_call')
         ):
-            interaction_id = str(uuid4())
             data = dict(event_data.get('data') or {})
             timeout_ms = data.get('timeout_ms', 120_000)
             if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int):
@@ -1597,19 +1645,56 @@ async def get_event_call(request_info):
             timeout = min(max(timeout_ms / 1000, 60), 240)
             if WEBSOCKET_EVENT_CALLER_TIMEOUT is not None and WEBSOCKET_EVENT_CALLER_TIMEOUT > 0:
                 timeout = min(timeout, WEBSOCKET_EVENT_CALLER_TIMEOUT)
-            event_data = {**event_data, 'data': {**data, 'interaction_id': interaction_id}}
+        if interaction_id:
+            event_data = {**event_data, 'data': {**(event_data.get('data') or {}), 'interaction_id': interaction_id}}
 
+        can_resume = (
+            is_input_request
+            and 'session_id' not in (event_data.get('data') or {})
+            and is_saved_chat_id(request_info['chat_id'])
+        )
         try:
-            return await sio.call(
-                'events',
-                {
-                    'chat_id': request_info.get('chat_id', None),
-                    'message_id': request_info.get('message_id', None),
-                    'data': event_data,
-                },
-                to=session_id,
-                timeout=timeout,
-            )
+            async with asyncio.timeout(timeout):
+                while True:
+                    call_task = asyncio.create_task(
+                        sio.call(
+                            'events',
+                            {
+                                'chat_id': request_info['chat_id'],
+                                'message_id': request_info['message_id'],
+                                'data': event_data,
+                            },
+                            to=session_id,
+                            timeout=None,
+                        )
+                    )
+                    try:
+                        while (
+                            not call_task.done()
+                            and get_user_id_from_session_pool(session_id) == request_info['user_id']
+                        ):
+                            await asyncio.wait({call_task}, timeout=1)
+                        if call_task.done():
+                            return call_task.result()
+                    finally:
+                        call_task.cancel()
+                        await asyncio.gather(call_task, return_exceptions=True)
+                    log.warning('Event caller: session %s disconnected before answering', session_id)
+                    if not can_resume:
+                        return {'error': 'Client session disconnected.'}
+                    try:
+                        async with asyncio.timeout(60):
+                            while True:
+                                # Redis session scans are synchronous; keep them off the event loop.
+                                next_session_id = await asyncio.to_thread(
+                                    get_user_chat_session_id, request_info['user_id'], request_info['chat_id']
+                                )
+                                if next_session_id is not None:
+                                    session_id = request_info['session_id'] = next_session_id
+                                    break
+                                await asyncio.sleep(1)
+                    except TimeoutError:
+                        return {'error': 'Client session disconnected.'}
         except (TimeoutError, socketio.exceptions.TimeoutError):
             log.warning(f'Event caller timed out for session {session_id}')
             return {'error': 'Event call timed out. The browser tab may be inactive or closed.'}

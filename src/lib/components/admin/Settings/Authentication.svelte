@@ -34,6 +34,7 @@
 		host: '',
 		port: null,
 		attribute_for_mail: 'mail',
+		default_email_domain: '',
 		attribute_for_username: 'uid',
 		app_dn: '',
 		app_dn_password: '',
@@ -153,8 +154,10 @@
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.authentication.defaultUserRole.label')}
 					description={$i18n.t('settings.admin.authentication.defaultUserRole.description')}
+					let:labelId
 				>
 					<SettingsSelect
+						id={`${labelId}-control`}
 						bind:value={adminConfig.DEFAULT_USER_ROLE}
 						placeholder={$i18n.t('Select a role')}
 					>
@@ -167,8 +170,10 @@
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.authentication.defaultGroup.label')}
 					description={$i18n.t('settings.admin.authentication.defaultGroup.description')}
+					let:labelId
 				>
 					<SettingsSelect
+						id={`${labelId}-control`}
 						bind:value={adminConfig.DEFAULT_GROUP_ID}
 						placeholder={$i18n.t('Select a group')}
 					>
@@ -263,8 +268,9 @@
 			</AdminSettingSection>
 
 			<AdminSettingSection title={$i18n.t('Multi-factor authentication')}>
-				<AdminSettingRow label={$i18n.t('Require an authenticator for all users')}>
+				<AdminSettingRow let:labelId label={$i18n.t('Require an authenticator for all users')}>
 					<Switch
+						ariaLabelledbyId={labelId}
 						bind:state={adminConfig.ENABLE_MFA}
 						ariaLabel={$i18n.t('Require an authenticator for all users')}
 					/>
@@ -273,14 +279,20 @@
 					{$i18n.t('Changes sign out all devices. Users enroll on their next sign-in.')}
 				</p>
 				{#if adminConfig.ENABLE_MFA}
-					<AdminSettingRow label={$i18n.t('Allow OAuth sign-in without an authenticator')}
+					<AdminSettingRow
+						let:labelId
+						label={$i18n.t('Allow OAuth sign-in without an authenticator')}
 						><Switch
+							ariaLabelledbyId={labelId}
 							bind:state={adminConfig.MFA_ALLOW_OAUTH_BYPASS}
 							ariaLabel={$i18n.t('Allow OAuth sign-in without an authenticator')}
 						/></AdminSettingRow
 					>
-					<AdminSettingRow label={$i18n.t('Allow trusted-header sign-in without an authenticator')}
+					<AdminSettingRow
+						let:labelId
+						label={$i18n.t('Allow trusted-header sign-in without an authenticator')}
 						><Switch
+							ariaLabelledbyId={labelId}
 							bind:state={adminConfig.MFA_ALLOW_TRUSTED_HEADER_BYPASS}
 							ariaLabel={$i18n.t('Allow trusted-header sign-in without an authenticator')}
 						/></AdminSettingRow
@@ -468,6 +480,17 @@
 						</Tooltip>
 					</AdminSettingField>
 				</div>
+
+				<AdminSettingField
+					label={$i18n.t('settings.admin.authentication.defaultEmailDomain.label')}
+					description={$i18n.t('settings.admin.authentication.defaultEmailDomain.description')}
+				>
+					<input
+						class={inputClass}
+						placeholder="example.com"
+						bind:value={LDAP_SERVER.default_email_domain}
+					/>
+				</AdminSettingField>
 
 				<AdminSettingField
 					label={$i18n.t('settings.admin.authentication.searchBase.label')}

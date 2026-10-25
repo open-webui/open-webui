@@ -17,6 +17,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import AddAccessModal from './AddAccessModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 
 	type AccessGrant = {
@@ -32,6 +33,7 @@
 	};
 
 	export let onChange: Function = () => {};
+	let saving = false;
 
 	export let accessRoles = ['read'];
 	export let labels: Partial<Record<'title' | 'public' | 'private' | 'read' | 'empty', string>> =
@@ -226,9 +228,15 @@
 				grant.permission === permission
 		);
 
-	const commitAccessGrants = (nextGrants: AccessGrant[]) => {
+	const commitAccessGrants = async (nextGrants: AccessGrant[]) => {
+		if (saving) return;
+		saving = true;
 		accessGrants = dedupeAccessGrants(nextGrants);
-		onChange(accessGrants);
+		try {
+			await onChange(accessGrants);
+		} finally {
+			saving = false;
+		}
 	};
 
 	const getVisibility = (grants: AccessGrant[]): 'private' | 'public' | 'open' => {
@@ -492,7 +500,7 @@
 	onAdd={handleAddAccess}
 />
 
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2" inert={saving} aria-busy={saving}>
 	<div class="-mx-1 rounded-xl bg-gray-50/60 px-3 py-2 dark:bg-white/[0.03]">
 		<Tooltip
 			content={!(share && sharePublic) && visibility === 'private'
@@ -502,7 +510,6 @@
 			<Dropdown closeOnSelect>
 				<button
 					type="button"
-					aria-label={labels.title ?? $i18n.t('Visibility')}
 					class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-gray-800 transition hover:text-gray-950 dark:text-gray-200 dark:hover:text-white"
 				>
 					{#if visibility === 'private'}
@@ -510,6 +517,7 @@
 					{:else}
 						<GlobeAlt className="size-3.5 text-gray-500 dark:text-gray-400" />
 					{/if}
+					<span class="sr-only">{labels.title ?? $i18n.t('Visibility')}</span>
 					<span>{visibilityOptions.find((option) => option.value === visibility)?.label}</span>
 					<ChevronDown className="size-3 text-gray-400 dark:text-gray-500" strokeWidth="2" />
 				</button>
@@ -647,16 +655,14 @@
 						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50/50 dark:border-gray-850/50 pb-1.5 last:border-0"
 					>
 						<div class="flex items-center gap-2 min-w-0 flex-1">
-							<img
-								class="rounded-full size-5 object-cover"
-								src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-								alt={user.name ?? user.id}
-							/>
-							<div class="min-w-0 flex-1">
-								<Tooltip content={user.email} placement="top-start">
-									<div class="truncate text-sm">{user.name ?? user.id}</div>
-								</Tooltip>
-							</div>
+							<ProfilePreview {user}>
+								<img
+									class="rounded-full size-5 object-cover shrink-0"
+									src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+									alt=""
+								/>
+							</ProfilePreview>
+							<span class="min-w-0 truncate text-sm">{user.name ?? user.id}</span>
 						</div>
 
 						<div class="flex justify-end items-center gap-1.5 shrink-0">

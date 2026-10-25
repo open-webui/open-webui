@@ -315,7 +315,11 @@ export const createNoteChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateNoteById = async (token: string, id: string, note: NoteItem) => {
+export const updateNoteById = async (
+	token: string,
+	id: string,
+	note: Omit<NoteItem, 'access_grants'>
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/update`, {
@@ -326,7 +330,8 @@ export const updateNoteById = async (token: string, id: string, note: NoteItem) 
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			...note
+			...note,
+			access_grants: undefined
 		})
 	})
 		.then(async (res) => {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import { settings } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -73,7 +74,9 @@
 
 		<Dropdown bind:show={showMenu} align="end" sideOffset={6}>
 			<button
-				class="focus-ring flex items-center border-l border-gray-200 px-1.5 py-1 transition hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+				class="focus-ring flex items-center {($settings?.highContrastMode ?? false)
+					? 'min-w-6 justify-center'
+					: ''} border-l border-gray-200 px-1.5 py-1 transition hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
 				aria-label={$i18n.t('Open create menu')}
 			>
 				<ChevronDown className="size-2.5" strokeWidth="2.5" />

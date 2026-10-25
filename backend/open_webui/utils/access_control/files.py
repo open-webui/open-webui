@@ -8,13 +8,42 @@ from open_webui.models.folders import FolderModel
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
-from open_webui.models.notes import Notes
+from open_webui.models.notes import NoteModel, Notes
 from open_webui.models.users import UserModel, Users
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 FOLDER_FILE_TYPES = {'file', 'collection', 'note'}
+
+
+def get_note_file_ids(entries: list[dict] | None) -> set[str]:
+    if not isinstance(entries, list):
+        return set()
+    return {
+        entry['id']
+        for entry in entries
+        if isinstance(entry, dict) and entry.get('type') == 'file' and isinstance(entry.get('id'), str) and entry['id']
+    }
+
+
+async def has_access_to_note_files(
+    note: NoteModel, entries: list[dict] | None, user: UserModel, db: AsyncSession | None = None
+) -> bool:
+    """Check the editor's read access to newly attached files."""
+    if entries is not None and not isinstance(entries, list):
+        return False
+
+    # Existing attachments may belong to another editor; only additions need permission.
+    added_ids = get_note_file_ids(entries) - get_note_file_ids((note.data or {}).get('files'))
+    if not added_ids or user.role == 'admin':
+        return True
+
+    group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)}
+    for file_id in added_ids:
+        if not await has_access_to_file(file_id, 'read', user, db=db, user_group_ids=group_ids):
+            return False
+    return True
 
 
 async def has_access_to_file(

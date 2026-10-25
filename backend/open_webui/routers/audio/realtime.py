@@ -9,13 +9,13 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 import aiohttp
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, DEFAULT_REALTIME_CALL_PROMPT_TEMPLATE
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FORWARD_USER_INFO_HEADERS
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.models import Models, ModelVoice
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
-from open_webui.utils.headers import get_microsoft_entra_id_access_token
+from open_webui.utils.headers import get_microsoft_entra_id_access_token, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import check_model_access, get_all_models
 from open_webui.utils.session_pool import get_session
@@ -424,6 +424,8 @@ async def realtime_call(ws: WebSocket):
         async with asyncio.timeout(30):
             async with asyncio.timeout(15):
                 ws_url, headers = await _get_realtime_connection(config)
+                if ENABLE_FORWARD_USER_INFO_HEADERS:
+                    headers = include_user_info_headers(headers, user)
                 session = await get_session()
                 try:
                     upstream = await session.ws_connect(
@@ -547,6 +549,9 @@ async def realtime_call(ws: WebSocket):
         detail = (
             str(exc)
             if type(exc) is ValueError
+            # A send can still fail on the provider connection that just closed.
+            else 'Voice provider connection closed'
+            if isinstance(exc, aiohttp.ClientConnectionResetError)
             else ('Voice connection timed out' if isinstance(exc, TimeoutError) else 'Voice connection failed')
         )
         log.info('Bridge closed: user_id=%s error_type=%s', user.id if user else None, type(exc).__name__)

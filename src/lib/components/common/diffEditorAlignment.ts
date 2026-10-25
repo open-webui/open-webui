@@ -1,4 +1,4 @@
-import { StateEffect, StateField, type Text } from '@codemirror/state';
+import { StateEffect, StateField } from '@codemirror/state';
 import {
 	BlockType,
 	Decoration,
@@ -6,24 +6,10 @@ import {
 	WidgetType,
 	type DecorationSet
 } from '@codemirror/view';
-import type { Chunk } from '@codemirror/merge';
-import { changedLinePairs } from './diffEditor';
 
-export function pairedLinePosition(a: Text, b: Text, chunks: readonly Chunk[], position: number) {
-	let offset = 0;
-	for (const chunk of chunks) {
-		if (position < chunk.fromA) break;
-		if (position < chunk.toA) {
-			const pairs = changedLinePairs(a, b, chunk);
-			const line = a.lineAt(position).from;
-			return (
-				(pairs.find(([from]) => from >= line) ?? pairs.at(-1))?.[1] ??
-				Math.min(chunk.fromB, b.length)
-			);
-		}
-		offset = chunk.toB - chunk.toA;
-	}
-	return Math.max(0, Math.min(position + offset, b.length));
+// Font measurements can differ by fractions of a pixel between virtualized lines.
+export function alignmentGeometryChanged(previous: readonly number[], next: readonly number[]) {
+	return next.some((value, index) => Math.abs(value - previous[index]) > (index < 2 ? 0 : 0.5));
 }
 
 class RowSpacer extends WidgetType {
@@ -64,76 +50,68 @@ export function clearLineAlignment(a: EditorView, b: EditorView) {
 	return changed;
 }
 
-// Only remeasure paired rows present in both virtualized viewports. Recomputing
-// offscreen spacers from estimated heights would move already aligned content.
-export function alignChangedLines(a: EditorView, b: EditorView, chunks: readonly Chunk[]) {
+export function lineTextTop(view: EditorView, pos: number) {
+	const block = view.lineBlockAt(pos);
+	const text = Array.isArray(block.type)
+		? block.type.find((part) => part.type === BlockType.Text && part.from === pos)
+		: block.type === BlockType.Text
+			? block
+			: null;
+	return text?.from === pos ? text.top : null;
+}
+
+// Measure matching rows locally; estimate unmatched ranges so large insertions remain scrollable.
+export function alignChangedLines(
+	a: EditorView,
+	b: EditorView,
+	pairs: readonly [number, number][]
+) {
 	const previous = (view: EditorView) => {
 		const result = new Map<number, number>();
 		for (let cursor = view.state.field(lineAlignment).iter(); cursor.value; cursor.next())
-			result.set(cursor.from, cursor.value.spec.widget.height);
+			result.set(cursor.value.spec.row, cursor.value.spec.widget.height);
 		return result;
 	};
 	const oldA = previous(a),
 		oldB = previous(b);
 	const nextA = new Map(oldA),
 		nextB = new Map(oldB);
-	let offsetA = 0,
-		offsetB = 0;
-	const textTop = (view: EditorView, pos: number) => {
-		const block = view.lineBlockAt(pos);
-		const text = Array.isArray(block.type)
-			? block.type.find((part) => part.type === BlockType.Text && part.from === pos)
-			: block.type === BlockType.Text
-				? block
-				: null;
-		return text?.from === pos ? text.top : null;
-	};
-	const align = (posA: number, posB: number) => {
-		if (
-			posA < a.viewport.from ||
-			posB < b.viewport.from ||
-			posA > a.viewport.to ||
-			posB > b.viewport.to
-		)
-			return;
-		const topA = textTop(a, posA),
-			topB = textTop(b, posB);
-		if (topA === null || topB === null) return;
-		const previousA = oldA.get(posA) ?? 0,
-			previousB = oldB.get(posB) ?? 0;
-		const difference = topA - previousA + offsetA - topB + previousB - offsetB;
-		const sizeA = difference < -1 ? -difference : 0,
-			sizeB = difference > 1 ? difference : 0;
-		nextA.delete(posA);
-		nextB.delete(posB);
-		if (sizeA) nextA.set(posA, sizeA);
-		if (sizeB) nextB.set(posB, sizeB);
-		offsetA += sizeA - previousA;
-		offsetB += sizeB - previousB;
-	};
-	let fromA = 0,
-		fromB = 0;
-	for (let index = 0; index <= chunks.length; index++) {
-		const chunk = chunks[index];
-		const endA = chunk ? chunk.fromA : a.state.doc.length + 1;
-		let posA = Math.max(
-			fromA,
-			a.state.doc.lineAt(
-				Math.min(
-					a.state.doc.length,
-					Math.max(fromA, a.viewport.from, fromA + b.viewport.from - fromB)
-				)
-			).from
-		);
-		for (; posA < endA && posA <= a.viewport.to; posA = a.state.doc.lineAt(posA).to + 1) {
-			const posB = fromB + posA - fromA;
-			if (posB > b.viewport.to) break;
-			align(posA, posB);
+	// Compare heights between adjacent matching rows, never estimated offsets from document start.
+	for (let index = 0; index <= pairs.length; index++) {
+		const start = index ? pairs[index - 1] : null;
+		const end =
+			index < pairs.length ? pairs[index] : [a.state.doc.length + 1, b.state.doc.length + 1];
+		const from = start ?? [0, 0];
+		const to = [Math.min(end[0], a.state.doc.length), Math.min(end[1], b.state.doc.length)];
+		const measured =
+			from[0] >= a.viewport.from &&
+			from[1] >= b.viewport.from &&
+			to[0] <= a.viewport.to &&
+			to[1] <= b.viewport.to;
+		if (!measured) {
+			// Keep estimates fixed until the range is rendered, otherwise they feed back into the height map.
+			if (oldA.has(end[0]) || oldB.has(end[1])) continue;
+			const matchedRows = start && index < pairs.length ? 1 : 0;
+			const unmatched =
+				a.state.doc.lineAt(to[0]).number - a.state.doc.lineAt(from[0]).number > matchedRows ||
+				b.state.doc.lineAt(to[1]).number - b.state.doc.lineAt(from[1]).number > matchedRows;
+			if (!unmatched) continue;
 		}
-		if (!chunk) break;
-		for (const [posA, posB] of changedLinePairs(a.state.doc, b.state.doc, chunk)) align(posA, posB);
-		fromA = chunk.toA;
-		fromB = chunk.toB;
+		const heights = [a, b].map((view, side) => {
+			const from = start ? (measured ? start[side] : view.state.doc.lineAt(start[side]).to + 1) : 0,
+				to = Math.min(end[side], view.state.doc.length);
+			if (!measured && from >= end[side]) return 0;
+			const top = start ? lineTextTop(view, from) : 0;
+			const bottom =
+				end[side] > view.state.doc.length ? view.lineBlockAt(to).bottom : lineTextTop(view, to);
+			return top === null || bottom === null ? null : bottom - top;
+		});
+		if (heights[0] === null || heights[1] === null) continue;
+		const difference = heights[0] - (oldA.get(end[0]) ?? 0) - heights[1] + (oldB.get(end[1]) ?? 0);
+		nextA.delete(end[0]);
+		nextB.delete(end[1]);
+		if (difference < -1) nextA.set(end[0], -difference);
+		if (difference > 1) nextB.set(end[1], difference);
 	}
 	const apply = (view: EditorView, old: Map<number, number>, next: Map<number, number>) => {
 		if (
@@ -145,7 +123,12 @@ export function alignChangedLines(a: EditorView, b: EditorView, chunks: readonly
 			effects: setSpacers.of(
 				Decoration.set(
 					[...next].map(([pos, height]) =>
-						Decoration.widget({ widget: new RowSpacer(height), block: true, side: -1 }).range(pos)
+						Decoration.widget({
+							widget: new RowSpacer(height),
+							block: true,
+							side: pos ? 1 : -1,
+							row: pos
+						}).range(Math.max(0, pos - 1))
 					),
 					true
 				)

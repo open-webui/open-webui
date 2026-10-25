@@ -243,6 +243,7 @@
 
 						<Tooltip content={$i18n.t('Show Files')} placement="top">
 							<button
+								aria-label={$i18n.t('Show Files')}
 								type="button"
 								class=" ml-2 opacity-50 hover:opacity-100 transition"
 								on:click={() => {

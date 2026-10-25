@@ -1,7 +1,10 @@
 <script lang="ts">
+	import AdminSettingRow from './AdminSettingRow.svelte';
 	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	import { config as appConfig } from '$lib/stores';
+	import { getBackendConfig } from '$lib/apis';
 	import { getSubagentsConfig, setSubagentsConfig } from '$lib/apis/configs';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -47,6 +50,7 @@
 				SUBAGENTS_MAX_OUTPUT: maxOutput,
 				SUBAGENTS_SYSTEM_PROMPT: systemPrompt
 			});
+			await appConfig.set(await getBackendConfig());
 			toast.success($i18n.t('Settings saved successfully!'));
 		} catch (error) {
 			toast.error(`${error}`);
@@ -66,12 +70,12 @@
 			<div class="flex justify-center py-8"><Spinner className="size-6" /></div>
 		{:else}
 			<div class="flex flex-col gap-2.5">
-				<label class="flex cursor-pointer items-center justify-between">
-					<span class="text-xs text-gray-600 dark:text-gray-400">
+				<AdminSettingRow let:labelId>
+					<span slot="label">
 						{$i18n.t('settings.admin.subagents.enableSubAgents.label')}
 					</span>
-					<Switch bind:state={enabled} />
-				</label>
+					<Switch ariaLabelledbyId={labelId} bind:state={enabled} />
+				</AdminSettingRow>
 				<p class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 					{$i18n.t(
 						'Allow the AI to delegate tasks to sub-agents. Each sub-agent creates a real chat with full tool access. Uses additional LLM calls.'
@@ -98,12 +102,12 @@
 					</div>
 
 					<div>
-						<label class="flex cursor-pointer items-center justify-between">
-							<span class="text-xs text-gray-600 dark:text-gray-400">
+						<AdminSettingRow let:labelId>
+							<span slot="label">
 								{$i18n.t('settings.admin.subagents.enableBackgroundSubAgents.label')}
 							</span>
-							<Switch bind:state={backgroundEnabled} />
-						</label>
+							<Switch ariaLabelledbyId={labelId} bind:state={backgroundEnabled} />
+						</AdminSettingRow>
 						<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{$i18n.t('settings.admin.subagents.enableBackgroundSubAgents.description')}
 						</p>

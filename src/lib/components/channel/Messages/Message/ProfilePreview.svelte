@@ -19,6 +19,7 @@
 
 	export let user: { id?: string | null; name?: string | null } | null = null;
 
+	export let className = '';
 	export let align = 'center';
 	export let side = 'right';
 	export let sideOffset = 8;
@@ -46,7 +47,7 @@
 {#if user?.id && $sessionUser}
 	<LinkPreview.Root openDelay={0} closeDelay={200} bind:open={openPreview}>
 		<LinkPreview.Trigger
-			class="flex shrink-0 items-center cursor-pointer no-underline! font-normal!"
+			class="flex shrink-0 items-center cursor-pointer no-underline! font-normal! {className}"
 		>
 			{#snippet child({ props })}
 				<button

@@ -261,8 +261,8 @@ export class RealtimeCall {
 		)
 			return;
 		if (command.type === 'bridge.respond' && command.item_id) {
-			const index = this.commands.findIndex((item) => !item.item_id);
-			this.commands.splice(index < 0 ? this.commands.length : index, 0, command);
+			// The newest reply hears every transcript, so older unsent ones are redundant.
+			this.commands = [command, ...this.commands.filter((item) => !item.item_id)];
 		} else this.commands.push(command);
 		this.flush();
 	}

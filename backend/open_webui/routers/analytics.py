@@ -1,9 +1,9 @@
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from open_webui.internal.db import get_async_session
 from open_webui.models.chat_messages import ChatMessageModel, ChatMessages
 from open_webui.models.chats import Chats
@@ -64,20 +64,10 @@ async def get_model_analytics(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts per model."""
-    counts = await ChatMessages.get_message_count_by_model(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
-    unique_counts = await ChatMessages.get_unique_counts_by_model(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
+    counts = await ChatMessages.get_model_analytics(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
     models = [
-        ModelAnalyticsEntry(
-            model_id=model_id,
-            count=count,
-            unique_users=unique_counts.get(model_id, {}).get('unique_users', 0),
-            unique_chats=unique_counts.get(model_id, {}).get('unique_chats', 0),
-        )
-        for model_id, count in sorted(counts.items(), key=lambda x: -x[1])
+        ModelAnalyticsEntry(model_id=model_id, **data)
+        for model_id, data in sorted(counts.items(), key=lambda x: -x[1]['count'])
     ]
     return ModelAnalyticsResponse(models=models)
 
@@ -88,31 +78,33 @@ async def get_user_analytics(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     limit: int = Query(50, description='Max users to return'),
+    metric: Literal['messages', 'tokens'] = Query('messages'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts and token usage per user with user info."""
-    counts = await ChatMessages.get_message_count_by_user(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
-    token_usage = await ChatMessages.get_token_usage_by_user(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
+    usage = await ChatMessages.get_user_analytics(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
 
-    # Get user info for top users
-    top_user_ids = [uid for uid, _ in sorted(counts.items(), key=lambda x: -x[1])[:limit]]
+    # Rank by the selected metric before limiting the leaderboard.
+    top_user_ids = sorted(
+        usage,
+        key=lambda uid: (
+            -usage[uid]['total_tokens'] if metric == 'tokens' else -usage[uid]['message_count'],
+            -usage[uid]['message_count'],
+        ),
+    )[:limit]
     user_info = {u.id: u for u in await Users.get_users_by_user_ids(top_user_ids, db=db)}
 
     users = []
     for user_id in top_user_ids:
         u = user_info.get(user_id)
-        tokens = token_usage.get(user_id, {})
+        tokens = usage[user_id]
         users.append(
             UserAnalyticsEntry(
                 user_id=user_id,
                 name=u.name if u else None,
                 email=u.email if u else None,
-                count=counts[user_id],
+                count=tokens['message_count'],
                 input_tokens=tokens.get('input_tokens', 0),
                 output_tokens=tokens.get('output_tokens', 0),
                 total_tokens=tokens.get('total_tokens', 0),
@@ -169,27 +161,25 @@ async def get_summary(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get summary statistics for the dashboard."""
-    model_counts = await ChatMessages.get_message_count_by_model(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
-    user_counts = await ChatMessages.get_message_count_by_user(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
-    chat_counts = await ChatMessages.get_message_count_by_chat(
+    summary = await ChatMessages.get_analytics_summary(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
 
-    return SummaryResponse(
-        total_messages=sum(model_counts.values()),
-        total_chats=len(chat_counts),
-        total_models=len(model_counts),
-        total_users=len(user_counts),
-    )
+    return SummaryResponse(**summary)
+
+
+class ComparisonStatsEntry(BaseModel):
+    models: dict[str, int]
+    start: str
+    end: str
 
 
 class DailyStatsEntry(BaseModel):
     date: str
     models: dict[str, int]
+    start: Optional[str] = None
+    end: Optional[str] = None
+    previous: Optional[ComparisonStatsEntry] = None
 
 
 class DailyStatsResponse(BaseModel):
@@ -201,22 +191,49 @@ async def get_daily_stats(
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    granularity: str = Query('daily', description="Granularity: 'hourly' or 'daily'"),
+    granularity: Literal['10m', 'hourly', '3h', '6h', 'daily'] = Query('daily'),
+    metric: Literal['messages', 'tokens'] = Query('messages'),
+    compare: bool = Query(False),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Get message counts grouped by model for time-series chart."""
-    if granularity == 'hourly':
-        counts = await ChatMessages.get_hourly_message_counts_by_model(
-            start_date=start_date, end_date=end_date, group_id=group_id, db=db
-        )
-    else:
-        counts = await ChatMessages.get_daily_message_counts_by_model(
-            start_date=start_date, end_date=end_date, group_id=group_id, db=db
-        )
-    return DailyStatsResponse(
-        data=[DailyStatsEntry(date=date, models=models) for date, models in sorted(counts.items())]
+    """Get message counts or total tokens grouped by model for the time-series chart."""
+    if compare and (start_date is None or end_date is None or start_date > end_date):
+        raise HTTPException(status_code=400, detail='Comparison requires a bounded date range')
+    counts = await ChatMessages.get_usage_over_time_by_model(
+        start_date=start_date,
+        end_date=end_date,
+        group_id=group_id,
+        db=db,
+        granularity=granularity,
+        metric=metric,
     )
+    entries = [DailyStatsEntry(date=date, models=models) for date, models in sorted(counts.items())]
+    if compare:
+        # API bounds are inclusive: equal windows must not share an endpoint.
+        duration = end_date - start_date + 1
+        previous = await ChatMessages.get_usage_over_time_by_model(
+            start_date=start_date - duration,
+            end_date=start_date - 1,
+            group_id=group_id,
+            db=db,
+            granularity=granularity,
+            metric=metric,
+            bucket_offset=duration,
+        )
+        step = timedelta(minutes={'10m': 10, 'hourly': 60, '3h': 180, '6h': 360, 'daily': 1440}[granularity])
+        for entry in entries:
+            bucket = datetime.fromisoformat(entry.date)
+            start = max(start_date, int(bucket.timestamp()))
+            end = min(end_date + 1, int((bucket + step).timestamp()))
+            entry.start = datetime.fromtimestamp(start).isoformat()
+            entry.end = datetime.fromtimestamp(end).isoformat()
+            entry.previous = ComparisonStatsEntry(
+                models=previous.get(entry.date, {}),
+                start=datetime.fromtimestamp(start - duration).isoformat(),
+                end=datetime.fromtimestamp(end - duration).isoformat(),
+            )
+    return DailyStatsResponse(data=entries)
 
 
 class TokenUsageEntry(BaseModel):

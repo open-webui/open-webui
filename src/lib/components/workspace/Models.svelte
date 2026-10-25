@@ -54,6 +54,8 @@
 	import ModelMenu from './Models/ModelMenu.svelte';
 	import ModelDeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
 	import Switch from '../common/Switch.svelte';
@@ -519,6 +521,8 @@
 	</title>
 </svelte:head>
 
+<h1 class="sr-only">{$i18n.t('Models')}</h1>
+
 {#if loaded}
 	<ModelDeleteConfirmDialog
 		bind:show={showModelDeleteConfirm}
@@ -766,18 +770,10 @@
 									? 'cursor-pointer'
 									: ''} {model?.meta?.hidden ? 'opacity-50 dark:opacity-50' : ''}"
 								id="model-item-{model.id}"
-								role="button"
-								tabindex={model.write_access ? 0 : -1}
+								role="presentation"
 								on:click={(e) => {
 									if (shouldIgnoreRowClick(e.target)) return;
 									openModel(model);
-								}}
-								on:keydown={(e) => {
-									if (e.currentTarget !== e.target) return;
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault();
-										openModel(model);
-									}
 								}}
 							>
 								<div class="shrink-0 self-center">
@@ -881,17 +877,21 @@
 								<div
 									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 								>
-									<Tooltip
-										content={model?.user?.email ?? $i18n.t('Deleted User')}
-										className="min-w-0"
-										placement="top-start"
-									>
-										<div class="truncate">
-											{capitalizeFirstLetter(
-												model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
-											)}
-										</div>
-									</Tooltip>
+									<ProfilePreview user={model?.user ?? null} side="left">
+										<span class="flex max-w-44 items-center gap-1.75">
+											<ProfileImage
+												src={model?.user?.id
+													? `/api/v1/users/${model.user.id}/profile/image`
+													: '/user.png'}
+												className="size-4 shrink-0 rounded-full!"
+											/>
+											<span class="min-w-0 max-w-24 truncate">
+												{capitalizeFirstLetter(
+													model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
+												)}
+											</span>
+										</span>
+									</ProfilePreview>
 								</div>
 
 								<div class="ml-1 flex shrink-0 flex-row items-center self-center">
@@ -932,7 +932,10 @@
 									{:else}
 										<div class="flex shrink-0 flex-row items-center gap-1 self-center">
 											<ModelMenu
-												accessHandler={() => accessModal.open(model.id)}
+												accessHandler={$user?.permissions?.sharing?.models ||
+												$user?.role === 'admin'
+													? () => accessModal.open(model.id)
+													: null}
 												user={$user}
 												{model}
 												writeAccess={model.write_access}

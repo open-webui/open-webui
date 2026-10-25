@@ -177,13 +177,21 @@
 						{#each [{ key: 'rating', label: 'RK', class: 'w-3' }, { key: 'name', label: $i18n.t('Model'), class: '' }, { key: 'rating', label: $i18n.t('Rating'), class: 'text-right w-fit' }, { key: 'won', label: $i18n.t('Won'), class: 'text-right w-5' }, { key: 'lost', label: $i18n.t('Lost'), class: 'text-right w-5' }] as col}
 							<th
 								scope="col"
-								class="px-2.5 py-2 font-normal cursor-pointer select-none {col.class}"
-								on:click={() => toggleSort(col.key)}
+								class="font-normal select-none {col.class}"
+								aria-sort={orderBy === col.key
+									? direction === 'asc'
+										? 'ascending'
+										: 'descending'
+									: 'none'}
 							>
-								<div
-									class="flex gap-1.5 items-center {col.class.includes('right')
+								<button
+									type="button"
+									class="flex w-full cursor-pointer gap-1.5 items-center px-2.5 py-2 uppercase {col.class.includes(
+										'right'
+									)
 										? 'justify-end'
 										: ''}"
+									on:click={() => toggleSort(col.key)}
 								>
 									{$i18n.t(col.label)}
 									{#if orderBy === col.key}
@@ -193,7 +201,7 @@
 									{:else}
 										<span class="invisible"><ChevronUp className="size-2" /></span>
 									{/if}
-								</div>
+								</button>
 							</th>
 						{/each}
 					</tr>
@@ -221,8 +229,10 @@
 										}}
 									/>
 									<Tooltip content={`${model.name} (${model.id})`} placement="top-start">
-										<span class="font-normal text-gray-800 dark:text-gray-200 line-clamp-1"
-											>{model.name}</span
+										<button
+											type="button"
+											class="cursor-pointer font-normal text-left text-gray-800 dark:text-gray-200 line-clamp-1"
+											on:click={() => openModal(model)}>{model.name}</button
 										>
 									</Tooltip>
 								</div>

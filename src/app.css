@@ -448,6 +448,13 @@ html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):
 	outline-offset: -2px;
 }
 
+html [data-sonner-toaster][data-theme='light'] {
+	--success-text: hsl(140, 100%, 25%);
+	--info-text: hsl(210, 92%, 43%);
+	--warning-text: hsl(31, 92%, 35%);
+	--error-text: hsl(360, 100%, 43%);
+}
+
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
@@ -956,11 +963,11 @@ body {
 	}
 }
 
-html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table) {
+html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table, .cm-placeholder) {
 	color: var(--color-gray-700);
 }
 
-html.high-contrast.dark :is(.app-muted, .app-icon-muted, .tiptap table) {
+html.high-contrast.dark :is(.app-muted, .app-icon-muted, .tiptap table, .cm-placeholder) {
 	color: var(--color-gray-300);
 }
 

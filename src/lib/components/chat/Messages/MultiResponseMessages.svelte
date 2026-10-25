@@ -2,7 +2,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
-	import { mobile, models, settings } from '$lib/stores';
+	import { mobile, models, settings, visibleControls } from '$lib/stores';
 
 	import { generateMoACompletion } from '$lib/apis';
 	import { updateChatById } from '$lib/apis/chats';
@@ -437,10 +437,11 @@
 						{/if}
 					</div>
 
-					{#if isLastMessage}
+					{#if isLastMessage && $visibleControls['chat.merge']}
 						<div class=" shrink-0 text-gray-600 dark:text-gray-500 mt-1">
 							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
 								<button
+									aria-label={$i18n.t('Merge Responses')}
 									type="button"
 									id="merge-response-button"
 									class="{true

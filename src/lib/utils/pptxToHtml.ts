@@ -257,6 +257,8 @@ const paragraphAlign = (
 	const align = para.getElementsByTagName('a:pPr')[0]?.getAttribute('algn');
 	if (align === 'ctr') return 'center';
 	if (align === 'r') return 'right';
+	// l and the justified modes the preview cannot draw render from the left
+	if (align) return 'left';
 
 	const type = normalizePlaceholderType(ph?.type ?? '');
 	if (type === 'title' || type === 'subTitle') return 'center';

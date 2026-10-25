@@ -3,6 +3,7 @@
 
 	import {
 		chatId as activeChatId,
+		config,
 		settings,
 		showControls,
 		showSettings,
@@ -31,7 +32,9 @@
 			chatContext(t) !== false &&
 			!(isTemporaryChatId($activeChatId) && chatContext(t)?.context_id === 'chat_id')
 	);
-	$: directTerminals = ($settings?.terminalServers ?? []).filter((s) => s.url);
+	$: directTerminals = (
+		$config?.features?.enable_direct_integrations ? ($settings?.terminalServers ?? []) : []
+	).filter((s) => s.url);
 
 	const refreshTerminalServersStore = async (servers: typeof directTerminals) => {
 		// Preserve system terminals (those with an `id`) — only refresh direct ones
@@ -132,7 +135,13 @@
 <div class="flex items-center translate-x-0.5">
 	{#if disabled}
 		<Tooltip content={$i18n.t('Terminal')} placement="top">
-			<button type="button" disabled aria-disabled="true" class={triggerClass}>
+			<button
+				type="button"
+				disabled
+				aria-disabled="true"
+				aria-label={$selectedTerminalId && selectedLabel ? undefined : $i18n.t('Terminal')}
+				class={triggerClass}
+			>
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
@@ -145,7 +154,11 @@
 	{:else}
 		<Dropdown bind:show align="start">
 			<Tooltip content={$i18n.t('Terminal')} placement="top">
-				<button type="button" class={triggerClass}>
+				<button
+					type="button"
+					aria-label={$selectedTerminalId && selectedLabel ? undefined : $i18n.t('Terminal')}
+					class={triggerClass}
+				>
 					<Cloud className="size-3.5" strokeWidth="2" />
 
 					{#if $selectedTerminalId && selectedLabel}
@@ -195,6 +208,8 @@
 						{#each directTerminals as terminal}
 							<button
 								type="button"
+								role="menuitemradio"
+								aria-checked={$selectedTerminalId === terminal.url}
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 								terminal.url
 									? 'bg-gray-50/40 dark:bg-gray-800/40'
@@ -264,6 +279,8 @@
 						{#each systemTerminals as terminal}
 							<button
 								type="button"
+								role="menuitemradio"
+								aria-checked={$selectedTerminalId === terminal.id}
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 								terminal.id
 									? 'bg-gray-50/40 dark:bg-gray-800/40'

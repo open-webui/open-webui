@@ -3,6 +3,7 @@
 	import { onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
@@ -171,7 +172,10 @@
 </script>
 
 {#if show}
-	<section class="my-1 rounded-2xl bg-gray-50/70 px-3.5 py-3 dark:bg-white/[0.035]">
+	<section
+		dir={$settings?.chatDirection ?? 'auto'}
+		class="my-1 rounded-2xl bg-gray-50/70 px-3.5 py-3 dark:bg-white/[0.035]"
+	>
 		<div class="space-y-2">
 			{#if question}
 				{#key question.id}
@@ -199,7 +203,7 @@
 								{#each question.options || [] as option, optionIndex}
 									<button
 										type="button"
-										class="group flex w-full min-w-0 items-baseline gap-2 rounded-lg py-1.5 text-left transition-colors {isSelectedOption(
+										class="group flex w-full min-w-0 items-baseline gap-2 rounded-lg py-1.5 text-start transition-colors {isSelectedOption(
 											question,
 											optionIndex
 										)
@@ -241,6 +245,7 @@
 										{$i18n.t('Other')}
 									</div>
 									<input
+										dir={$settings?.chatDirection ?? 'auto'}
 										class="min-w-0 flex-1 bg-transparent text-xs text-gray-800 outline-hidden placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
 										placeholder={$i18n.t('Type your answer')}
 										value={otherText(question)}

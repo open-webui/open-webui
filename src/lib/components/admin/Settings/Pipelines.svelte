@@ -276,8 +276,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.pipelines.pipelineUrl.label')}
 						description={$i18n.t('settings.admin.pipelines.pipelineUrl.description')}
+						forId="pipelines-url"
 					>
 						<SettingsSelect
+							id="pipelines-url"
 							bind:value={selectedPipelinesUrlIdx}
 							className="w-full"
 							placeholder={$i18n.t('Select a pipeline url')}
@@ -364,9 +366,11 @@
 							<AdminSettingField
 								label={$i18n.t('settings.admin.pipelines.pipeline.label')}
 								description={$i18n.t('settings.admin.pipelines.pipeline.description')}
+								forId="pipeline"
 							>
 								<div class="flex gap-2">
 									<SettingsSelect
+										id="pipeline"
 										bind:value={selectedPipelineIdx}
 										className="w-full"
 										placeholder={$i18n.t('Select a pipeline')}
@@ -401,10 +405,12 @@
 									{#each Object.keys(valves_spec.properties) as property}
 										<div>
 											<AdminSettingRow
+												let:labelId
 												label={valves_spec.properties[property].title}
 												description={valves_spec.properties[property]?.description ?? ''}
 											>
 												<button
+													id={`${labelId}-control`}
 													class={actionButtonClass}
 													type="button"
 													on:click={() => {

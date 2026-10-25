@@ -20,7 +20,8 @@
 		searchKnowledgeBases,
 		testExternalKnowledgeSource,
 		updateExternalKnowledgeConnection,
-		updateExternalKnowledgeSource
+		updateExternalKnowledgeSource,
+		updateKnowledgeAccessGrants
 	} from '$lib/apis/knowledge';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
@@ -173,7 +174,7 @@
 			tableName: sourceConfig.table_name ?? defaults.tableName,
 			collectionField: sourceConfig.collection_field ?? defaults.collectionField
 		};
-		accessGrants = item.access_grants ?? [];
+		accessGrants = structuredClone(item.access_grants ?? []);
 		showSourceModal = true;
 	};
 
@@ -352,7 +353,6 @@
 			description: sourceForm.description,
 			connection: connectionPayload(),
 			source: sourcePayload(),
-			access_grants: accessGrants,
 			test_query: sourceForm.testQuery,
 			test_count: 5
 		}).catch((error) => {
@@ -370,6 +370,7 @@
 	};
 
 	const submitSource = async () => {
+		if (creating) return;
 		if (editingItem) {
 			await updateSource();
 		} else {
@@ -432,7 +433,12 @@
 
 		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
 			<div class="flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-				<form class="flex flex-col w-full" on:submit|preventDefault={submitSource}>
+				<form
+					class="flex flex-col w-full"
+					inert={creating}
+					aria-busy={creating}
+					on:submit|preventDefault={submitSource}
+				>
 					<div class="px-1">
 						<div class="flex gap-2">
 							<div class="flex flex-col flex-1">
@@ -773,6 +779,24 @@
 							share={true}
 							sharePublic={true}
 							shareUsers={true}
+							onChange={async (grants) => {
+								if (editingItem) {
+									const item = editingItem;
+									creating = true;
+									try {
+										await updateKnowledgeAccessGrants(localStorage.token, item.id, grants);
+										item.access_grants = structuredClone(grants);
+										if (editingItem === item) accessGrants = item.access_grants;
+										toast.success($i18n.t('Saved'));
+									} catch (error) {
+										if (editingItem === item)
+											accessGrants = structuredClone(item.access_grants ?? []);
+										toast.error(`${error}`);
+									} finally {
+										creating = false;
+									}
+								}
+							}}
 						/>
 
 						<div class="flex justify-between items-center pt-3 text-sm font-normal">
@@ -803,6 +827,7 @@
 
 		<Tooltip content={$i18n.t('settings.admin.integrations.externalKnowledge.addConnection.label')}>
 			<button
+				aria-label={$i18n.t('settings.admin.integrations.externalKnowledge.addConnection.label')}
 				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 				on:click={openCreateSource}
 				type="button"
@@ -815,7 +840,7 @@
 	<div class="flex flex-col gap-1.5">
 		{#each items as item}
 			{@const connection = connectionForItem(item)}
-			<div class="flex w-full gap-2 items-center">
+			<div class="group/setting-row flex w-full gap-2 items-center">
 				<Tooltip className="w-full relative" content={''} placement="top-start">
 					<div class="flex w-full">
 						<div
@@ -829,7 +854,11 @@
 							</Tooltip>
 
 							<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
-								<span>{item.name}</span>
+								<label
+									for={`knowledge-${item.id}-control`}
+									class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+									>{item.name}</label
+								>
 								{' '}
 								<span class="text-gray-500">
 									{item?.meta?.external?.provider ?? connection?.provider}
@@ -859,6 +888,7 @@
 						content={connection?.enabled !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					>
 						<Switch
+							id={`knowledge-${item.id}-control`}
 							state={connection?.enabled !== false}
 							on:change={() => {
 								toggleSource(item);

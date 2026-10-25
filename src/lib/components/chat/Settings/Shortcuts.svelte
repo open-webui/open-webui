@@ -1,4 +1,5 @@
 <script lang="ts">
+	import UserSettingRow from './UserSettingRow.svelte';
 	import { getContext, onMount } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { updateUserSettings } from '$lib/apis/users';
@@ -13,7 +14,8 @@
 		shortcuts
 	} from '$lib/shortcuts';
 	import type { KeybindingsMap, ShortcutDefinition } from '$lib/shortcuts';
-	import { settings } from '$lib/stores';
+	import { settings, user } from '$lib/stores';
+	import { canManageChats, canUseTemporaryChats } from '$lib/utils/settings-access';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ShortcutItem from '../ShortcutItem.svelte';
 
@@ -43,7 +45,16 @@
 	});
 
 	$: {
-		const allShortcuts = Object.entries(shortcuts).filter(([, shortcut]) => {
+		const allShortcuts = Object.entries(shortcuts).filter(([id, shortcut]) => {
+			if (
+				id === Shortcut.NEW_TEMPORARY_CHAT &&
+				!canUseTemporaryChats({ user: $user, config: null })
+			) {
+				return false;
+			}
+			if (id === Shortcut.DELETE_CHAT && !canManageChats({ user: $user, config: null }, 'delete')) {
+				return false;
+			}
 			if (!shortcut.setting) {
 				return true;
 			}
@@ -104,7 +115,7 @@
 
 <svelte:window on:keydown|capture={handleRecordingKeydown} />
 
-<div id="tab-shortcuts" class="flex h-full flex-col text-sm">
+<div id="tab-shortcuts" class="flex h-full flex-col overflow-y-auto text-sm">
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 			{$i18n.t('settings.personal.shortcuts.title')}
@@ -119,17 +130,14 @@
 	</div>
 
 	<div class="mb-3">
-		<div class="flex items-center justify-between gap-2.5">
-			<div
-				id="enable-keyboard-shortcuts-label"
-				class="min-w-0 text-xs text-gray-600 dark:text-gray-400"
-			>
+		<UserSettingRow let:labelId>
+			<span slot="label">
 				{$i18n.t('settings.personal.shortcuts.enableKeyboardShortcuts.label')}
-			</div>
+			</span>
 
 			<div class="flex shrink-0 items-center justify-end gap-1.5">
 				<Switch
-					ariaLabelledbyId="enable-keyboard-shortcuts-label"
+					ariaLabelledbyId={labelId}
 					tooltip={true}
 					bind:state={enableKeyboardShortcuts}
 					on:change={() => {
@@ -137,13 +145,13 @@
 					}}
 				/>
 			</div>
-		</div>
+		</UserSettingRow>
 		<p class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('settings.personal.shortcuts.enableKeyboardShortcuts.description')}
 		</p>
 	</div>
 
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
+	<div class="flex-1 min-h-24 overflow-y-auto scrollbar-hover pr-1.5">
 		<div class="flex items-center gap-2 px-1 pb-1">
 			<span class="flex-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
 				{$i18n.t('settings.personal.shortcuts.command.label')}
@@ -155,10 +163,17 @@
 
 		{#each Object.entries(categorizedShortcuts) as [category, items], categoryIndex}
 			<div class={categoryIndex > 0 ? 'mt-3' : ''}>
-				<div class="px-1 pb-0.5 pt-1 text-xs text-gray-400 dark:text-gray-600">
+				<h3
+					id="shortcut-category-{categoryIndex}"
+					class="px-1 pb-0.5 pt-1 text-xs text-gray-400 dark:text-gray-600"
+				>
 					{$i18n.t(category)}
-				</div>
-				<div class="divide-y divide-gray-100/70 dark:divide-white/[0.03]">
+				</h3>
+				<div
+					role="list"
+					aria-labelledby="shortcut-category-{categoryIndex}"
+					class="divide-y divide-gray-100/70 dark:divide-white/[0.03]"
+				>
 					<!-- {$i18n.t('Chat')} -->
 					<!-- {$i18n.t('Global')} -->
 					<!-- {$i18n.t('Input')} -->
@@ -209,7 +224,7 @@
 						{@const configurable = isConfigurableShortcut(id)}
 						{@const chord = configurable ? $keybindings[id] : ''}
 						{@const conflict = configurable ? getConflict(id, chord) : null}
-						<div class="flex min-h-8 w-full items-center gap-3 px-1 py-1.5">
+						<div role="listitem" class="flex min-h-8 w-full items-center gap-3 px-1 py-1.5">
 							<ShortcutItem {id} {shortcut} {isMac} compact />
 
 							<div class="flex w-[9.5rem] shrink-0 items-center justify-end gap-1">

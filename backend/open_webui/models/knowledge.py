@@ -792,8 +792,6 @@ class KnowledgeTable:
                     )
                 )
                 await db.commit()
-                if form_data.access_grants is not None:
-                    await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
                 return await self.get_knowledge_by_id(id=id, db=db)
         except Exception as e:
             log.exception(e)

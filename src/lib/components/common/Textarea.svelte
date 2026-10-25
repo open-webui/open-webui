@@ -95,4 +95,5 @@
 		resize();
 	}}
 	on:blur={onBlur}
+	on:change
 ></textarea>

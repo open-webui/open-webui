@@ -459,7 +459,7 @@
 						</AdminSettingField>
 					</AdminSettingSection>
 					<AdminSettingSection>
-						<AdminSettingRow label={$i18n.t('Scopes')}>
+						<AdminSettingRow let:labelId label={$i18n.t('Scopes')}>
 							<div class="flex items-center gap-3 text-xs">
 								<span class="text-gray-400 dark:text-gray-600"
 									>{$i18n.t('{{COUNT}} selected', {
@@ -467,6 +467,7 @@
 									})}</span
 								>
 								<button
+									id={`${labelId}-control`}
 									type="button"
 									class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
 									on:click={() => {

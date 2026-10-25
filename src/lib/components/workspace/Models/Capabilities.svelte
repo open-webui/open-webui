@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { config, visibleControls } from '$lib/stores';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
 	import ModelSettingToggle from './ModelSettingToggle.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
@@ -24,15 +25,18 @@
 		},
 		web_search: {
 			label: $i18n.t('settings.admin.models.capabilities.webSearch.label'),
-			description: $i18n.t('settings.admin.models.capabilities.webSearch.description')
+			description: $i18n.t('settings.admin.models.capabilities.webSearch.description'),
+			enabled: $config?.features?.enable_web_search
 		},
 		image_generation: {
 			label: $i18n.t('settings.admin.models.capabilities.imageGeneration.label'),
-			description: $i18n.t('settings.admin.models.capabilities.imageGeneration.description')
+			description: $i18n.t('settings.admin.models.capabilities.imageGeneration.description'),
+			enabled: $config?.features?.enable_image_generation
 		},
 		code_interpreter: {
 			label: $i18n.t('settings.admin.models.capabilities.codeInterpreter.label'),
-			description: $i18n.t('settings.admin.models.capabilities.codeInterpreter.description')
+			description: $i18n.t('settings.admin.models.capabilities.codeInterpreter.description'),
+			enabled: $config?.features?.enable_code_interpreter
 		},
 		terminal: {
 			label: $i18n.t('settings.admin.models.capabilities.terminal.label'),
@@ -52,7 +56,8 @@
 		},
 		memory: {
 			label: $i18n.t('settings.admin.models.capabilities.memory.label'),
-			description: $i18n.t('settings.admin.models.capabilities.memory.description')
+			description: $i18n.t('settings.admin.models.capabilities.memory.description'),
+			enabled: $config?.features?.enable_memories
 		},
 		builtin_tools: {
 			label: $i18n.t('settings.admin.models.capabilities.builtinTools.label'),
@@ -67,12 +72,17 @@
 	export let defaultFeatureIds: string[] = [];
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;
-	const featureKeys: Capability[] = ['web_search', 'image_generation', 'code_interpreter'];
-	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
-		(key) => key !== 'file_context' || capabilities.file_upload
+	const featureKeys = ['web_search', 'image_generation', 'code_interpreter'] as const;
+	$: hasTerminal =
+		$config?.features?.enable_terminal_servers || $config?.features?.enable_direct_integrations;
+	$: availableCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
+		(key) =>
+			(key !== 'file_context' || capabilities.file_upload) &&
+			(key !== 'terminal' || hasTerminal) &&
+			(capabilityLabels[key].enabled ?? true)
 	);
-	$: enabledCapabilityIds = visibleCapabilities.filter((key) => capabilities[key]);
-	$: availableFeatures = featureKeys.filter((key) => capabilities[key]);
+	$: enabledCapabilityIds = availableCapabilities.filter((key) => capabilities[key]);
+	$: availableFeatures = featureKeys.filter((key) => enabledCapabilityIds.includes(key));
 	$: enabledDefaultIds = availableFeatures.filter((key) => defaultFeatureIds.includes(key));
 	const setDefault = (key: string, enabled: boolean) => {
 		defaultFeatureIds = enabled
@@ -100,7 +110,7 @@
 				>{/if}
 		</span>
 		<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-			{#each visibleCapabilities as key}
+			{#each availableCapabilities.filter((key) => $visibleControls[`model_editor.capabilities.${key}`]) as key}
 				<ModelSettingToggle
 					label={capabilityLabels[key].label}
 					description={capabilityLabels[key].description}
@@ -119,7 +129,7 @@
 	{$i18n.t('settings.admin.models.defaultFeatures.codeInterpreter.label')}
 	{$i18n.t('settings.admin.models.defaultFeatures.codeInterpreter.description')}
 	-->
-	{#if availableFeatures.length}
+	{#if availableFeatures.some((key) => $visibleControls[`model_editor.defaults.${key}`])}
 		<ModelSettingsSection
 			label={$i18n.t('settings.admin.models.defaultFeatures.title')}
 			description={$i18n.t('Choose which available features start enabled in new chats.')}
@@ -139,7 +149,7 @@
 				{$i18n.t('Start enabled in new chats')}
 			</p>
 			<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-				{#each availableFeatures as key}
+				{#each availableFeatures.filter((key) => $visibleControls[`model_editor.defaults.${key}`]) as key}
 					<ModelSettingToggle
 						label={capabilityLabels[key].label}
 						checked={defaultFeatureIds.includes(key)}
@@ -152,6 +162,6 @@
 	{/if}
 
 	{#if capabilities.builtin_tools}
-		<BuiltinTools bind:builtinTools {disabled} />
+		<BuiltinTools bind:builtinTools {capabilities} {disabled} />
 	{/if}
 </div>
