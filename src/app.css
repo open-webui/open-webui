@@ -963,11 +963,11 @@ body {
 	}
 }
 
-html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table) {
+html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table, .cm-placeholder) {
 	color: var(--color-gray-700);
 }
 
-html.high-contrast.dark :is(.app-muted, .app-icon-muted, .tiptap table) {
+html.high-contrast.dark :is(.app-muted, .app-icon-muted, .tiptap table, .cm-placeholder) {
 	color: var(--color-gray-300);
 }
 
