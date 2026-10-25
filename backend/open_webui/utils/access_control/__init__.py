@@ -2,14 +2,11 @@ import logging
 from copy import deepcopy
 from typing import Any
 
+from fastapi import HTTPException
 from open_webui.config import DEFAULT_USER_PERMISSIONS
 from open_webui.models.access_grants import (
-    has_anyone_read_access_grant,
-    has_public_read_access_grant,
-    has_public_write_access_grant,
-    has_user_access_grant,
+    normalize_access_grants,
     strip_anyone_access_grants,
-    strip_user_access_grants,
 )
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
@@ -218,85 +215,91 @@ def migrate_access_control(data: dict, ac_key: str = 'access_control', grants_ke
     data.pop(ac_key, None)
 
 
+# General sharing, all authenticated users, and anonymous readers, respectively.
+_SHARING_PERMISSION_KEYS = {
+    'model': ('sharing.models', 'sharing.public_models', None),
+    'knowledge': ('sharing.knowledge', 'sharing.public_knowledge', None),
+    'prompt': ('sharing.prompts', 'sharing.public_prompts', None),
+    'tool': ('sharing.tools', 'sharing.public_tools', None),
+    'skill': ('sharing.skills', 'sharing.public_skills', None),
+    'note': ('sharing.notes', 'sharing.public_notes', None),
+    'folder': ('sharing.folders', None, None),
+    'channel': (None, 'sharing.public_channels', None),
+    'calendar': (None, 'sharing.public_calendars', None),
+    'shared_chat': (None, 'sharing.public_chats', 'sharing.open_chats'),
+}
+
+
 async def filter_allowed_access_grants(
     default_permissions: dict[str, Any],
     user_id: str,
     user_role: str,
-    access_grants: list,
-    public_permission_key: str,
-    anyone_permission_key: str | None = None,
+    access_grants: list | None,
+    resource_type: str,
+    *,
     db: AsyncSession | None = None,
-) -> list:
-    """
-    Checks if the user has the required permissions to grant access to a resource.
-    Returns the filtered list of access grants if permissions are missing.
-    """
+) -> list | None:
+    """Filter initial sharing by the resource policy when creating an item."""
+    if resource_type not in _SHARING_PERMISSION_KEYS:
+        raise ValueError(f'Unsupported sharing resource type: {resource_type}')
+    sharing_permission_key, public_permission_key, anyone_permission_key = _SHARING_PERMISSION_KEYS[resource_type]
+
     if not access_grants:
         return access_grants
 
-    if has_anyone_read_access_grant(access_grants) and (
-        not anyone_permission_key
-        or (
-            user_role != 'admin'
-            and not await has_permission(
-                user_id,
-                anyone_permission_key,
-                default_permissions,
-                db=db,
-            )
-        )
-    ):
+    access_grants = normalize_access_grants(access_grants)
+    # Unsupported audiences are forbidden even for admins.
+    if anyone_permission_key is None:
         access_grants = strip_anyone_access_grants(access_grants)
+    if public_permission_key is None:
+        access_grants = [
+            grant for grant in access_grants if (grant['principal_type'], grant['principal_id']) != ('user', '*')
+        ]
 
-    if user_role == 'admin':
+    if user_role == 'admin' or not access_grants:
         return access_grants
 
-    # Check if user can share publicly
-    if (
-        has_public_read_access_grant(access_grants) or has_public_write_access_grant(access_grants)
-    ) and not await has_permission(
-        user_id,
-        public_permission_key,
-        default_permissions,
-        db=db,
-    ):
-        access_grants = [
-            grant
-            for grant in access_grants
-            if not (
-                (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None))
-                == 'user'
-                and (grant.get('principal_id') if isinstance(grant, dict) else getattr(grant, 'principal_id', None))
-                == '*'
-            )
-        ]
+    permissions = await get_permissions(user_id, default_permissions, db=db)
 
-    # Strip individual user sharing if user lacks permission
-    if has_user_access_grant(access_grants) and not await has_permission(
-        user_id,
-        'access_grants.allow_users',
-        default_permissions,
-        db=db,
-    ):
-        access_grants = strip_user_access_grants(access_grants)
+    def allowed(key: str | None) -> bool:
+        if key is None:
+            return False
+        section, name = key.split('.')
+        return bool(permissions.get(section, {}).get(name, False))
 
-    if any(
-        (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None)) == 'group'
+    if sharing_permission_key and not allowed(sharing_permission_key):
+        return []
+
+    allowed_audiences = {
+        'anyone': allowed(anyone_permission_key),
+        'public': allowed(public_permission_key),
+        'user': allowed('access_grants.allow_users'),
+        'group': allowed('access_grants.allow_groups'),
+    }
+    return [
+        grant
         for grant in access_grants
-    ) and not await has_permission(
-        user_id,
-        'access_grants.allow_groups',
-        default_permissions,
-        db=db,
-    ):
-        access_grants = [
-            grant
-            for grant in access_grants
-            if (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None))
-            != 'group'
+        if allowed_audiences[
+            'public' if (grant['principal_type'], grant['principal_id']) == ('user', '*') else grant['principal_type']
         ]
+    ]
 
-    return access_grants
+
+async def validate_access_grants(
+    default_permissions: dict[str, Any],
+    user_id: str,
+    user_role: str,
+    access_grants: list,
+    resource_type: str,
+    *,
+    db: AsyncSession | None = None,
+) -> list:
+    """Reject unauthorized sharing changes before replacing any stored grants."""
+    grants = normalize_access_grants(access_grants)
+    allowed = await filter_allowed_access_grants(default_permissions, user_id, user_role, grants, resource_type, db=db)
+    if len(allowed) != len(grants):
+        raise HTTPException(403, 'You do not have permission to share with the requested audience')
+    return allowed
 
 
 async def has_base_model_access(

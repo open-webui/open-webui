@@ -16,8 +16,8 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
-    Column,
     CheckConstraint,
+    Column,
     ForeignKey,
     String,
     Text,
@@ -243,12 +243,12 @@ class ChannelForm(BaseModel):
     is_private: Optional[bool] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
-    access_grants: Optional[list[dict]] = None
     group_ids: Optional[list[str]] = None
     user_ids: Optional[list[str]] = None
 
 
 class CreateChannelForm(ChannelForm):
+    access_grants: Optional[list[dict]] = None
     type: Optional[str] = None
 
 
@@ -896,8 +896,6 @@ class ChannelTable:
             channel.data = form_data.data
             channel.meta = form_data.meta
 
-            if form_data.access_grants is not None:
-                await AccessGrants.set_access_grants('channel', id, form_data.access_grants, db=db)
             channel.updated_at = int(time.time_ns())
 
             await db.commit()

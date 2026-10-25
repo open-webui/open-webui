@@ -11,7 +11,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.models.access_grants import AccessGrantModel, AccessGrants, has_public_write_access_grant
 from open_webui.models.chats import ChatForm, ChatResponse, Chats
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
@@ -20,6 +20,7 @@ from open_webui.models.notes import (
     NoteListResponse,
     NoteModel,
     Notes,
+    NoteUpdateForm,
     NoteUserResponse,
 )
 from open_webui.models.users import UserModel, UserResponse, Users
@@ -27,8 +28,7 @@ from open_webui.socket.main import leave_room_for_users, sio
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_permission,
-    has_public_read_access_grant,
-    has_public_write_access_grant,
+    validate_access_grants,
 )
 from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -233,7 +233,7 @@ async def create_new_note(
         user.id,
         user.role,
         form_data.access_grants,
-        'sharing.public_notes',
+        resource_type='note',
         db=db,
     )
 
@@ -512,7 +512,7 @@ async def create_note_chat_by_id(
 async def update_note_by_id(
     request: Request,
     id: str,
-    form_data: NoteForm,
+    form_data: NoteUpdateForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -541,22 +541,8 @@ async def update_note_by_id(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    if form_data.access_grants is not None:
-        form_data.access_grants = await filter_allowed_access_grants(
-            await Config.get('user.permissions'),
-            user.id,
-            user.role,
-            form_data.access_grants,
-            'sharing.public_notes',
-            db=db,
-        )
-
-    previous_access_grants = note.access_grants
-
     try:
         note = await Notes.update_note_by_id(id, form_data, db=db)
-        if form_data.access_grants is not None:
-            await leave_note_rooms_for_revoked_users(note, previous_access_grants, db=db)
 
         pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
         note.is_pinned = note.id in pinned_note_ids
@@ -621,12 +607,12 @@ async def update_note_access_by_id(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await validate_access_grants(
         await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
-        'sharing.public_notes',
+        resource_type='note',
     )
 
     await AccessGrants.set_access_grants('note', id, form_data.access_grants, db=db)

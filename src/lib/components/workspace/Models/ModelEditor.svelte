@@ -19,6 +19,7 @@
 	import { getLanguages } from '$lib/i18n';
 	import {
 		getBaseModelTags,
+		updateModelAccessGrants,
 		getModelTags,
 		type ModelHistoryEntry,
 		type ModelSnapshot
@@ -230,7 +231,7 @@
 	let builtinTools = {};
 
 	let actionIds = [];
-	let accessGrants = [];
+	let accessGrants: any[] = [];
 	let terminalId = '';
 	$: hasTerminal =
 		$config?.features?.enable_terminal_servers || $config?.features?.enable_direct_integrations;
@@ -397,7 +398,8 @@
 
 		modelInfo.params = { ...modelInfo.params, ...params };
 
-		modelInfo.access_grants = accessGrants;
+		if (edit) delete modelInfo.access_grants;
+		else modelInfo.access_grants = accessGrants;
 		modelInfo.meta.capabilities = capabilities;
 
 		if (enableDescription) {
@@ -838,6 +840,18 @@
 		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 		allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
 			$user?.role === 'admin'}
+		onChange={async () => {
+			if (edit && model?.id) {
+				try {
+					await updateModelAccessGrants(localStorage.token, model.id, model.name, accessGrants);
+					model.access_grants = structuredClone(accessGrants);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					accessGrants = structuredClone(model.access_grants ?? []);
+					toast.error(`${error}`);
+				}
+			}
+		}}
 	/>
 
 	<div class="flex h-full min-h-0 w-full flex-col">

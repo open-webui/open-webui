@@ -20,7 +20,8 @@
 		searchKnowledgeBases,
 		testExternalKnowledgeSource,
 		updateExternalKnowledgeConnection,
-		updateExternalKnowledgeSource
+		updateExternalKnowledgeSource,
+		updateKnowledgeAccessGrants
 	} from '$lib/apis/knowledge';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
@@ -173,7 +174,7 @@
 			tableName: sourceConfig.table_name ?? defaults.tableName,
 			collectionField: sourceConfig.collection_field ?? defaults.collectionField
 		};
-		accessGrants = item.access_grants ?? [];
+		accessGrants = structuredClone(item.access_grants ?? []);
 		showSourceModal = true;
 	};
 
@@ -352,7 +353,6 @@
 			description: sourceForm.description,
 			connection: connectionPayload(),
 			source: sourcePayload(),
-			access_grants: accessGrants,
 			test_query: sourceForm.testQuery,
 			test_count: 5
 		}).catch((error) => {
@@ -773,6 +773,22 @@
 							share={true}
 							sharePublic={true}
 							shareUsers={true}
+							onChange={async () => {
+								if (editingItem) {
+									try {
+										await updateKnowledgeAccessGrants(
+											localStorage.token,
+											editingItem.id,
+											accessGrants
+										);
+										editingItem.access_grants = structuredClone(accessGrants);
+										toast.success($i18n.t('Saved'));
+									} catch (error) {
+										accessGrants = structuredClone(editingItem.access_grants ?? []);
+										toast.error(`${error}`);
+									}
+								}
+							}}
 						/>
 
 						<div class="flex justify-between items-center pt-3 text-sm font-normal">

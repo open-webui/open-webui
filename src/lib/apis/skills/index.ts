@@ -217,7 +217,8 @@ export const updateSkillById = async (token: string, id: string, skill: object) 
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			...skill
+			...skill,
+			access_grants: undefined
 		})
 	})
 		.then(async (res) => {

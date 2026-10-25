@@ -433,8 +433,6 @@ class SkillsTable:
                 )
                 if result.rowcount != 1:
                     raise HTTPException(409, {'code': 'version_conflict'})
-                if updated.get('access_grants') is not None:
-                    await AccessGrants.replace_access_grants(session, 'skill', id, updated['access_grants'])
                 await session.commit()
                 await session.refresh(skill)
                 grants = (

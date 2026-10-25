@@ -214,7 +214,8 @@ export const updateToolById = async (token: string, id: string, tool: object) =>
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			...tool
+			...tool,
+			access_grants: undefined
 		})
 	})
 		.then(async (res) => {

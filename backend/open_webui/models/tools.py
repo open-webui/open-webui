@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import time
 
+from fastapi import HTTPException
+
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrant, AccessGrantModel, AccessGrants
@@ -12,7 +14,6 @@ from open_webui.models.groups import Groups
 from open_webui.models.tool_history import ToolHistories, ToolHistory, tool_snapshot
 from open_webui.models.users import UserResponse, Users
 from open_webui.utils.valves import decrypt_valves, encrypt_valves, validate_valves
-from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, String, Text, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -375,10 +376,8 @@ class ToolsTable:
                 if not allow_code_changes and updated.get('content', tool.content) != tool.content:
                     raise HTTPException(401, 'You do not have permission to change executable Tool code')
                 updated = dict(updated)
-                grants = updated.pop('access_grants', None)
+                updated.pop('access_grants', None)
                 await self._write_tool(session, tool, updated, user_id, version_id, module)
-                if grants is not None:
-                    await AccessGrants.replace_access_grants(session, 'tool', id, grants)
                 await session.flush()
                 grants = (
                     (await session.execute(select(AccessGrant).filter_by(resource_type='tool', resource_id=id)))

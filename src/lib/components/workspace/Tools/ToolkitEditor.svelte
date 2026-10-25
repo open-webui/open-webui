@@ -252,7 +252,7 @@ class Tools:
 				name,
 				meta: { ...meta, i18n: pruneEmptyLocaleEntries(meta.i18n) },
 				content,
-				access_grants: accessGrants
+				...(!edit ? { access_grants: accessGrants } : {})
 			});
 			if (saved) {
 				if (saved.version_id && saved.content !== undefined) await applyProduction(saved);

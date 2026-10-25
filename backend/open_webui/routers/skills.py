@@ -28,7 +28,7 @@ from open_webui.models.skills import (
     SkillUserResponse,
     get_skill_snapshot,
 )
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission, validate_access_grants
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.skill_files import (
     MAX_IMPORT_BYTES,
@@ -261,7 +261,7 @@ async def create_new_skill(
         user.id,
         user.role,
         form_data.access_grants,
-        'sharing.public_skills',
+        resource_type='skill',
     )
 
     try:
@@ -373,22 +373,9 @@ async def update_skill_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    # Strip public/user grants the requesting user is not permitted to assign
-    # (matches the channel/notes/calendar pattern). The access check above only
-    # restricts WHO can write to the skill; this filter restricts WHICH grants
-    # they may set, so a non-admin owner cannot make their own skill publicly
-    # readable/writable without sharing.public_skills permission.
-    form_data.access_grants = await filter_allowed_access_grants(
-        await Config.get('user.permissions'),
-        user.id,
-        user.role,
-        form_data.access_grants,
-        'sharing.public_skills',
-    )
-
     try:
         updated = {
-            **form_data.model_dump(exclude={'id'}, exclude_unset=True),
+            **form_data.model_dump(exclude={'id', 'access_grants'}, exclude_unset=True),
         }
 
         skill = await Skills.update_skill_by_id(id, updated, db=db, user_id=user.id)
@@ -456,12 +443,12 @@ async def update_skill_access_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await validate_access_grants(
         await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
-        'sharing.public_skills',
+        resource_type='skill',
     )
 
     await AccessGrants.set_access_grants('skill', id, form_data.access_grants, db=db)

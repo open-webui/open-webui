@@ -12,10 +12,11 @@ from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
-from open_webui.models.shared_chats import ChatShareMode
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.automations import Automations
 from open_webui.models.chat_messages import ChatMessages
-from open_webui.models.config import Config
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
 from open_webui.models.folders import (
     FolderForm,
     FolderModel,
@@ -23,17 +24,16 @@ from open_webui.models.folders import (
     Folders,
     FolderUpdateForm,
 )
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.automations import Automations
 from open_webui.models.groups import Groups
+from open_webui.models.shared_chats import ChatShareMode
 from open_webui.models.users import Users
-from open_webui.utils.access_control import has_permission
+from open_webui.tasks import has_active_tasks
 from open_webui.utils.access_control import (
-    filter_allowed_access_grants,
+    has_permission,
+    validate_access_grants,
 )
 from open_webui.utils.access_control.files import can_read_all_folder_files, get_accessible_folder_files
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.tasks import has_active_tasks
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -555,12 +555,12 @@ async def update_folder_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await validate_access_grants(
         await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
-        None,
+        resource_type='folder',
         db=db,
     )
 

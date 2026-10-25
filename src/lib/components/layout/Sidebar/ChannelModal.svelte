@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
-	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
+	import {
+		createNewChannel,
+		deleteChannelById,
+		updateChannelAccessGrants
+	} from '$lib/apis/channels';
 	import { user } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -31,7 +35,7 @@
 	let name = '';
 
 	let isPrivate = null;
-	let accessGrants = [];
+	let accessGrants: any[] = [];
 
 	let groupIds = [];
 	let userIds = [];
@@ -66,7 +70,7 @@
 			type: type,
 			name: name.replace(/\s/g, '-'),
 			is_private: type === 'group' ? (isPrivate ?? true) : null,
-			access_grants: type === '' ? accessGrants : [],
+			...(!edit ? { access_grants: type === '' ? accessGrants : [] } : {}),
 			group_ids: groupIds,
 			user_ids: userIds
 		});
@@ -90,7 +94,7 @@
 			} else {
 				isPrivate = null;
 			}
-			accessGrants = channel?.access_grants ?? [];
+			accessGrants = structuredClone(channel?.access_grants ?? []);
 			userIds = channel?.user_ids ?? [];
 		}
 	};
@@ -237,7 +241,27 @@
 					{#if type !== 'dm'}
 						<div class="-mx-2 mb-1 mt-2.5 px-2">
 							{#if type === ''}
-								<AccessControl bind:accessGrants accessRoles={['read', 'write']} />
+								<AccessControl
+									bind:accessGrants
+									accessRoles={['read', 'write']}
+									onChange={async () => {
+										if (edit && channel?.id) {
+											try {
+												await updateChannelAccessGrants(
+													localStorage.token,
+													channel.id,
+													accessGrants
+												);
+												channel.access_grants = structuredClone(accessGrants);
+												toast.success($i18n.t('Saved'));
+												onUpdate();
+											} catch (error) {
+												accessGrants = structuredClone(channel.access_grants ?? []);
+												toast.error(`${error}`);
+											}
+										}
+									}}
+								/>
 							{:else if type === 'group'}
 								<Visibility
 									state={isPrivate ? 'private' : 'public'}

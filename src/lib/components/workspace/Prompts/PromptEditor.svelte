@@ -239,7 +239,7 @@
 				command,
 				content,
 				tags: tags.map((tag) => tag.name),
-				access_grants: accessGrants,
+				...(!edit ? { access_grants: accessGrants } : {}),
 				commit_message: commitMessage || undefined,
 				is_production: production
 			});

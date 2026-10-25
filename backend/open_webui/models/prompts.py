@@ -442,17 +442,6 @@ class PromptsTable:
                 prompt.data = form_data.data or prompt.data
                 prompt.meta = form_data.meta or prompt.meta
                 prompt.updated_at = int(time.time())
-                if form_data.access_grants is not None:
-                    previous_access_grants = {
-                        (grant.principal_type, grant.principal_id, grant.permission) for grant in current_access_grants
-                    }
-                    await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
-                    current_access_grants = await self._get_access_grants(prompt.id, db=session)
-                    if previous_access_grants != {
-                        (grant.principal_type, grant.principal_id, grant.permission) for grant in current_access_grants
-                    }:
-                        content_changed = True
-
                 await session.commit()
 
                 # Create history entry only if content changed
@@ -521,17 +510,6 @@ class PromptsTable:
 
                     if form_data.tags is not None:
                         prompt.tags = form_data.tags
-
-                if form_data.access_grants is not None:
-                    previous_access_grants = {
-                        (grant.principal_type, grant.principal_id, grant.permission) for grant in current_access_grants
-                    }
-                    await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
-                    current_access_grants = await self._get_access_grants(prompt.id, db=session)
-                    if previous_access_grants != {
-                        (grant.principal_type, grant.principal_id, grant.permission) for grant in current_access_grants
-                    }:
-                        content_changed = True
 
                 prompt.updated_at = int(time.time())
 

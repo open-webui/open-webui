@@ -326,15 +326,13 @@ export const toggleModelById = async (token: string, id: string) => {
 export const updateModelById = async (token: string, id: string, model: object) => {
 	let error = null;
 
-	const { base_model_id, name, meta, params, access_grants, is_active, commit_message } =
-		model as any;
+	const { base_model_id, name, meta, params, is_active, commit_message } = model as any;
 	const payload = {
 		id,
 		base_model_id,
 		name,
 		meta,
 		params,
-		access_grants,
 		is_active,
 		commit_message
 	};

@@ -23,10 +23,11 @@ from open_webui.models.calendar import (
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission, validate_access_grants
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.calendar import expand_recurring_event
 from open_webui.utils.recurrence import schedule_start_ns
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ async def create_calendar(request: Request, form_data: CalendarForm, user: UserM
         user.id,
         user.role,
         form_data.access_grants,
-        'sharing.public_calendars',
+        resource_type='calendar',
     )
     calendar = await Calendars.insert_new_calendar(user.id, form_data)
     await publish_event(
@@ -415,25 +416,7 @@ async def update_calendar(
     request: Request, calendar_id: str, form_data: CalendarUpdateForm, user: UserModel = Depends(get_verified_user)
 ):
     await check_calendar_permission(request, user)
-    cal = await _check_calendar_access(calendar_id, user, 'write')
-
-    # Only owner/admin can change access grants
-    if form_data.access_grants is not None and cal.user_id != user.id and user.role != 'admin':
-        raise HTTPException(status_code=403, detail='Only owner can manage sharing')
-
-    # Strip public/user grants the requesting user is not permitted to assign
-    # (matches the channel/notes/models pattern). The owner-only check above
-    # only restricts WHO can set grants; this filter restricts WHICH grants
-    # they may set, so a non-admin owner cannot make their calendar
-    # publicly readable/writable without the corresponding sharing permission.
-    if form_data.access_grants is not None:
-        form_data.access_grants = await filter_allowed_access_grants(
-            await Config.get('user.permissions'),
-            user.id,
-            user.role,
-            form_data.access_grants,
-            'sharing.public_calendars',
-        )
+    await _check_calendar_access(calendar_id, user, 'write')
 
     updated = await Calendars.update_calendar_by_id(calendar_id, form_data)
     if not updated:
@@ -446,6 +429,30 @@ async def update_calendar(
         data={'name': updated.name},
     )
     return updated
+
+
+class CalendarAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post('/{calendar_id}/access/update', response_model=CalendarModel)
+async def update_calendar_access_by_id(
+    request: Request,
+    calendar_id: str,
+    form_data: CalendarAccessGrantsForm,
+    user: UserModel = Depends(get_verified_user),
+):
+    await check_calendar_permission(request, user)
+    cal = await _check_calendar_access(calendar_id, user, 'write')
+    if cal.user_id != user.id and user.role != 'admin':
+        raise HTTPException(status_code=403, detail='Only owner can manage sharing')
+
+    grants = await validate_access_grants(
+        await Config.get('user.permissions'), user.id, user.role, form_data.access_grants, resource_type='calendar'
+    )
+    cal.access_grants = await AccessGrants.set_access_grants('calendar', calendar_id, grants)
+    await publish_event(request, EVENTS.CALENDAR_UPDATED, actor=user, subject_id=cal.id, data={'name': cal.name})
+    return cal
 
 
 @router.delete('/{calendar_id}/delete')
