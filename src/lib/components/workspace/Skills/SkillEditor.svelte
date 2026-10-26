@@ -224,6 +224,7 @@
 
 	let accessGrants: any[] = [];
 	let showAccessControlModal = false;
+	let savedAccessGrants: any[] = [];
 	const handleContentChange = (path: string, content: string) => {
 		if (edit || path !== 'SKILL.md') return;
 		const fields = parseFrontmatter(content);
@@ -329,9 +330,11 @@
 	onChange={async () => {
 		if (edit && skill?.id) {
 			try {
-				await updateSkillAccessGrants(localStorage.token, skill.id, accessGrants);
+				const saved = await updateSkillAccessGrants(localStorage.token, skill.id, accessGrants);
+				savedAccessGrants = structuredClone(saved.access_grants);
 				toast.success($i18n.t('Saved'));
 			} catch (error) {
+				accessGrants = structuredClone(savedAccessGrants);
 				toast.error(`${error}`);
 			}
 		}
@@ -359,7 +362,12 @@
 				<LanguageModeSelect bind:value={locale} translatedLocales={Object.keys(meta.i18n ?? {})} />
 				{#if !disabled}
 					{#if $user?.permissions?.sharing?.skills || $user?.role === 'admin'}
-						<AccessButton on:click={() => (showAccessControlModal = true)} />
+						<AccessButton
+							on:click={() => {
+								savedAccessGrants = structuredClone(accessGrants);
+								showAccessControlModal = true;
+							}}
+						/>
 					{/if}
 				{:else}
 					<span class="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-500 dark:bg-gray-850">

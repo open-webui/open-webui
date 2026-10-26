@@ -180,6 +180,7 @@
 
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
+	let savedAccessGrants = [];
 
 	let ignoreBlur = false;
 	let titleInputFocused = false;
@@ -1016,9 +1017,15 @@ ${content}
 		onChange={async () => {
 			if (id) {
 				try {
-					await updateNoteAccessGrants(localStorage.token, id, note.access_grants ?? []);
+					const saved = await updateNoteAccessGrants(
+						localStorage.token,
+						id,
+						note.access_grants ?? []
+					);
+					savedAccessGrants = structuredClone(saved.access_grants);
 					toast.success($i18n.t('Saved'));
 				} catch (error) {
+					note.access_grants = structuredClone(savedAccessGrants);
 					toast.error(`${error}`);
 				}
 			}
@@ -1286,6 +1293,7 @@ ${content}
 										<div class="ml-1.5">
 											<AccessButton
 												on:click={() => {
+													savedAccessGrants = structuredClone(note.access_grants ?? []);
 													showAccessControlModal = true;
 												}}
 												disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
