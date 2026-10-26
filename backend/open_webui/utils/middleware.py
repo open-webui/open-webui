@@ -4384,10 +4384,9 @@ async def streaming_chat_response_handler(response, ctx):
                         clear_scanned_length(item)
                         end_flag = True
 
-                        # Strip start and end tags from content
-                        start_tag_pattern = _start_tag_pattern(start_tag)
-                        block_content = re.sub(start_tag_pattern, '', block_content)
-
+                        # Strip the end tag from content. The start tag was already
+                        # consumed when the block was opened; stripping it again here
+                        # would also remove the next block's start tag from the leftover.
                         end_tag_pattern = rf'{re.escape(end_tag)}'
                         end_tag_regex = re.compile(end_tag_pattern, re.DOTALL)
                         split_content = end_tag_regex.split(block_content, maxsplit=1)
@@ -4442,6 +4441,14 @@ async def streaming_chat_response_handler(response, ctx):
                                     ],
                                 }
                             )
+                        if leftover_content:
+                            # The leftover can already contain the start of the next
+                            # block (e.g. when several reasoning blocks arrive in one
+                            # provider chunk); parse it now instead of waiting for
+                            # another delta that may never come.
+                            _, recursive_end = tag_output_handler(content_type, tags, output)
+                            if recursive_end:
+                                end_flag = True
                         return output, end_flag
                     else:
                         save_scanned_length(item, block_content)
