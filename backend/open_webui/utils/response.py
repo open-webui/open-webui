@@ -138,10 +138,10 @@ def merge_usage(current: dict | None, incoming: dict | None) -> dict:
                 incoming_usage.get(key) if isinstance(incoming_usage.get(key), dict) else {},
             )
 
-    # Aliases mirror the cumulative canonical values, including a measured zero.
+    # Aliases keep the latest call's size, which context compaction reads.
     for alias, canonical in (('prompt_tokens', 'input_tokens'), ('completion_tokens', 'output_tokens')):
-        if canonical in result:
-            result[alias] = result[canonical]
+        if canonical in incoming_usage:
+            result[alias] = incoming_usage[canonical]
 
     return result
 
