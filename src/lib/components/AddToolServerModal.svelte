@@ -460,6 +460,8 @@
 		enable = true;
 		functionNameFilterList = '';
 		accessGrants = [];
+		headers = '';
+		showAdvanced = false;
 	};
 
 	const init = async () => {
