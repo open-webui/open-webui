@@ -64,7 +64,7 @@
 	let detailPanel: HTMLElement;
 	let selectedButton: HTMLElement | null = null;
 	async function selectSession(session: Session, event: MouseEvent) {
-		selectedButton = event.currentTarget as HTMLElement;
+		selectedButton = (event.currentTarget as HTMLTableRowElement).querySelector('button');
 		selected = session;
 		await tick();
 		detailPanel
@@ -289,15 +289,16 @@
 						</thead>
 						<tbody>
 							{#each items as session (session.id)}
+								<!-- The native title button provides keyboard activation; its click bubbles to the row. -->
 								<tr
-									class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+									on:click={(event) => selectSession(session, event)}
+									class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 									class:bg-gray-50={selected?.id === session.id}
 									class:dark:bg-gray-850={selected?.id === session.id}
 								>
 									<td class="px-2.5 py-1.5">
 										<button
 											type="button"
-											on:click={(event) => selectSession(session, event)}
 											class="text-left block w-full max-w-[12rem] sm:max-w-80 rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
 										>
 											<span
