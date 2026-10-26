@@ -1824,6 +1824,11 @@ class ChatTable:
                     chat_ids = chat_ids.filter(ChatMessage.created_at >= filter.get('start_date'))
                 if filter.get('end_date'):
                     chat_ids = chat_ids.filter(ChatMessage.created_at <= filter.get('end_date'))
+                if filter.get('group_id'):
+                    from open_webui.models.groups import group_user_memberships
+
+                    group_users = select(group_user_memberships([filter['group_id']], True).c.user_id).scalar_subquery()
+                    chat_ids = chat_ids.filter(ChatMessage.user_id.in_(group_users))
 
             chat_ids = chat_ids.subquery()
 

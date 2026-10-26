@@ -12,6 +12,7 @@
 	export let model: { id: string; name: string } | null = null;
 	export let startDate: number | null = null;
 	export let endDate: number | null = null;
+	export let groupId: string | null = null;
 	export let onClose: () => void = () => {};
 
 	const i18n: any = getContext('i18n');
@@ -95,7 +96,8 @@
 				0,
 				PAGE_SIZE,
 				chatOrderBy,
-				chatDirection
+				chatDirection,
+				groupId
 			);
 			const chats = res?.chats ?? [];
 			chatList = chats.map((c: any) => ({
@@ -127,7 +129,8 @@
 				skip,
 				PAGE_SIZE,
 				chatOrderBy,
-				chatDirection
+				chatDirection,
+				groupId
 			);
 			const chats = res?.chats ?? [];
 			const newChats = chats.map((c: any) => ({
