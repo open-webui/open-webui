@@ -270,7 +270,7 @@
 
 		speaking = true;
 
-		if ($config.audio.tts.engine === '') {
+		if ($config.audio.tts.engine === '' && $settings.audio?.tts?.engine !== 'browser-kokoro') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
 				voices = speechSynthesis.getVoices();
