@@ -410,8 +410,8 @@
 			},
 			info: {
 				id: id,
-				name: name,
-				description: description,
+				...(name.trim() ? { name: name.trim() } : {}),
+				...(description.trim() ? { description: description.trim() } : {}),
 				...(type === 'mcp' && oauthAuthTypes.includes(auth_type)
 					? {
 							...(oauthScope ? { oauth_scope: oauthScope } : {}),
