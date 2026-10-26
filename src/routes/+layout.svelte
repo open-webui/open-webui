@@ -41,7 +41,7 @@
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chatList';
-	import { getFileContentById } from '$lib/apis/files';
+	import { getFileBlobById, getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { beforeNavigate } from '$app/navigation';
@@ -672,11 +672,20 @@
 					const connection = resolveTerminalConnection(
 						data.terminal_id,
 						[],
-						$config?.features?.enable_direct_integrations ? ($settings?.terminalServers ?? []) : [],
+						$config?.features?.enable_direct_integrations
+							? ($settings?.terminalServers ?? []).filter((server) => server.enabled)
+							: [],
 						localStorage.token
 					);
 					if (!connection) throw new Error('Terminal Not Found');
-					const result = await terminalRequest(connection, event.chat_id, data.path);
+					let options = {};
+					if (data.file) {
+						const blob = await getFileBlobById(localStorage.token, data.file.id);
+						const body = new FormData();
+						body.append('file', blob, data.file.name);
+						options = { method: 'POST', body };
+					}
+					const result = await terminalRequest(connection, event.chat_id, data.path, options);
 					cb?.({ data: result });
 				} catch (error) {
 					cb?.({ error: `${error}` });

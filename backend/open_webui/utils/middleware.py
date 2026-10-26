@@ -151,6 +151,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
+from open_webui.utils.terminals import upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
 from open_webui.utils.tools import (
@@ -1496,6 +1497,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
         'message_id': metadata.get('message_id', None),
         **({'channel_id': chat_id.removeprefix('channel:')} if is_channel_chat else {'chat_id': chat_id}),
     }
+    terminal_metadata = {**metadata, 'terminal_id': form_data.get('terminal_id')}
 
     if not is_saved_chat_id(chat_id):
         message_list = form_data.get('messages', [])
@@ -1544,6 +1546,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 metadata=image_metadata,
                 user=user,
             )
+            await upload_files_to_terminal(request, user, images, terminal_metadata, extra_params)
 
             await __event_emitter__(
                 {
@@ -1567,7 +1570,10 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 }
             )
 
-            system_message_content = '<context>The requested image has been edited and created and is now being shown to the user. Let them know that it has been generated.</context>'
+            system_message_content = (
+                '<context>The edited images are shown in chat. Use terminal_path with terminal tools or '
+                f'display_file when available. Images: {JSONCodec.dumps(images)}</context>'
+            )
         except Exception as e:
             log.debug(e)
 
@@ -1652,6 +1658,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 metadata=image_metadata,
                 user=user,
             )
+            await upload_files_to_terminal(request, user, images, terminal_metadata, extra_params)
 
             await __event_emitter__(
                 {
@@ -1675,7 +1682,10 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 }
             )
 
-            system_message_content = '<context>The requested image has been created by the system successfully and is now being shown to the user. Let the user know that the image they requested has been generated and is now shown in the chat.</context>'
+            system_message_content = (
+                '<context>The generated images are shown in chat. Use terminal_path with terminal tools or '
+                f'display_file when available. Images: {JSONCodec.dumps(images)}</context>'
+            )
         except Exception as e:
             log.debug(e)
 

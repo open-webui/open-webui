@@ -69,6 +69,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
+from open_webui.utils.terminals import upload_files_to_terminal
 
 log = logging.getLogger(__name__)
 
@@ -375,6 +376,8 @@ async def generate_image(
     __event_emitter__: callable = None,
     __chat_id__: str = None,
     __message_id__: str = None,
+    __metadata__: dict = None,
+    __event_call__: callable = None,
 ) -> str:
     """
     Generate an image based on a text prompt.
@@ -382,7 +385,7 @@ async def generate_image(
     :param prompt: A detailed description of the image to generate
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
-    :return: Confirmation that the image was generated, or an error message
+    :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -399,6 +402,10 @@ async def generate_image(
                 else None
             ),
             user=user,
+        )
+
+        await upload_files_to_terminal(
+            __request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__}
         )
 
         # Prepare file entries for the images
@@ -428,7 +435,10 @@ async def generate_image(
             return JSONCodec.dumps(
                 {
                     'status': 'success',
-                    'message': 'The image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.',
+                    'message': (
+                        'The image is already visible in chat. Use terminal_path with terminal tools or '
+                        'display_file when available to continue the requested task.'
+                    ),
                     'images': images,
                 },
                 ensure_ascii=False,
@@ -449,6 +459,8 @@ async def edit_image(
     __event_emitter__: callable = None,
     __chat_id__: str = None,
     __message_id__: str = None,
+    __metadata__: dict = None,
+    __event_call__: callable = None,
 ) -> str:
     """
     Transform one or more existing images according to a text prompt.
@@ -458,7 +470,7 @@ async def edit_image(
     :param image_urls: Source image URLs to modify or use as composition inputs
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
-    :return: Confirmation that the images were edited, or an error message
+    :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -475,6 +487,10 @@ async def edit_image(
                 else None
             ),
             user=user,
+        )
+
+        await upload_files_to_terminal(
+            __request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__}
         )
 
         # Prepare file entries for the images
@@ -504,7 +520,10 @@ async def edit_image(
             return JSONCodec.dumps(
                 {
                     'status': 'success',
-                    'message': 'The edited image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.',
+                    'message': (
+                        'The edited image is already visible in chat. Use terminal_path with terminal tools or '
+                        'display_file when available to continue the requested task.'
+                    ),
                     'images': images,
                 },
                 ensure_ascii=False,
