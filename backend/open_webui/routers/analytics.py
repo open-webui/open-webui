@@ -310,6 +310,7 @@ async def get_model_chats(
     limit: int = Query(50, le=100),
     order_by: str = Query('updated_at'),
     direction: str = Query('desc'),
+    group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -319,6 +320,8 @@ async def get_model_chats(
         filter['start_date'] = start_date
     if end_date:
         filter['end_date'] = end_date
+    if group_id:
+        filter['group_id'] = group_id
     if order_by in MODEL_CHAT_ORDER_FIELDS:
         filter['order_by'] = order_by
     if direction in {'asc', 'desc'}:

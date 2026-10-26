@@ -420,6 +420,7 @@
 		model={selectedModel}
 		startDate={dateRange.start}
 		endDate={dateRange.end}
+		groupId={selectedGroupId}
 	/>
 
 	{#if !loading && !loadError && validRange}
