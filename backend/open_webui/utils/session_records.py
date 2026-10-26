@@ -33,33 +33,36 @@ def normalize_tool_output(output):
         return output
     items = [dict(item) for item in output if isinstance(item, dict)]
     deduped = []
-    positions = {}
+    round_items = {}
+    previous_kind = None
     for item in items:
         kind = item.get('type')
+        # Some providers restart call ids every round.
+        if kind != 'function_call_output' and previous_kind == 'function_call_output':
+            pair_results(round_items)
+            round_items = {}
+        previous_kind = kind
         call_id = item.get('call_id') or item.get('id')
         if kind in {'function_call', 'function_call_output'} and call_id:
             key = (kind, call_id)
-            if key in positions:
-                deduped[positions[key]] = {**deduped[positions[key]], **item}
+            if key in round_items:
+                round_items[key].update(item)
                 continue
-            positions[key] = len(deduped)
+            round_items[key] = item
         deduped.append(item)
-    return pair_results(deduped)
+    pair_results(round_items)
+    return deduped
 
 
-def pair_results(deduped):
-    results = {item.get('call_id'): item for item in deduped if item.get('type') == 'function_call_output'}
-    for item in deduped:
-        if item.get('type') != 'function_call':
+def pair_results(round_items):
+    for (kind, call_id), item in round_items.items():
+        if kind != 'function_call':
             continue
-        result = results.get(item.get('call_id'))
+        result = round_items.get(('function_call_output', call_id))
         if result:
-            if result.get('status'):
-                item['status'] = result['status']
             for key in ('started_at', 'ended_at', 'duration', 'error_type'):
                 if key in result and key not in item:
                     item[key] = result[key]
         elif item.get('status') == 'completed':
             item['status'] = 'unknown'
-    return deduped
 
