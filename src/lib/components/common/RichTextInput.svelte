@@ -1403,6 +1403,7 @@
 
 		if (editor) {
 			editor.destroy();
+			editor = null;
 		}
 	});
 
