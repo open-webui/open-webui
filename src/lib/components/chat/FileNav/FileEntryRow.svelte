@@ -58,6 +58,7 @@
 	export let onLongPress: () => void = () => {};
 	export let onToggleExpand: (path: string) => void = () => {};
 	export let showDate: boolean = false;
+	export let showHidden: boolean = false;
 	export let parentWritable = true;
 
 	$: entryPath =
@@ -130,7 +131,10 @@
 			observer.disconnect();
 			// Only inspect visible folders; failed reads leave their contents unknown.
 			void listFiles(url, key, path, session).then((result) => {
-				if (!disposed && result) folderItemCount = result.entries.length;
+				if (!disposed && result)
+					folderItemCount = result.entries.filter(
+						(item) => showHidden || !item.name.startsWith('.')
+					).length;
 			});
 		});
 		observer.observe(node);

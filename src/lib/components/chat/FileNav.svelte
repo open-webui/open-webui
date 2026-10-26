@@ -2632,6 +2632,7 @@
 									onLongPress={enterSelectionMode}
 									onToggleExpand={toggleExpand}
 									showDate={sortBy === 'date'}
+									{showHidden}
 									parentWritable={currentWritable}
 								/>
 							{/each}
