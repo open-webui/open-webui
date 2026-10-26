@@ -59,6 +59,10 @@
 	let suggestionIndex = -1;
 	const icons = { chat: ChatBubble, message: Hashtag, note: Document };
 	const labels = { chat: 'Chats', message: 'Messages', note: 'Notes' };
+	const locations = [
+		{ kind: 'folder', label: 'Folders', type: 'chat' },
+		{ kind: 'channel', label: 'Channels', type: 'message' }
+	];
 	const filterDescriptions: Record<string, string> = {
 		tag: 'search for tags',
 		folder: 'search for folders',
@@ -418,6 +422,12 @@
 					>{#each kinds as type}<button
 							on:click={() => {
 								kind = type;
+								if (
+									!locations.some(
+										(group) => group.type === type && scope.startsWith(`${group.kind}:`)
+									)
+								)
+									scope = '';
 								panel = null;
 								input.focus();
 							}}
@@ -488,8 +498,8 @@
 						>
 							{$i18n.t('Everywhere')}{#if !scope}<Check className="ml-auto size-3.5" />{/if}
 						</button>
-						{#each [{ kind: 'folder', label: 'Folders' }, { kind: 'channel', label: 'Channels' }] as group}
-							{#if scopes.some((item) => item.kind === group.kind)}
+						{#each locations as group}
+							{#if (kind === 'all' || kind === group.type) && scopes.some((item) => item.kind === group.kind)}
 								<div
 									data-search-panel
 									class="px-2 pb-1 pt-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
