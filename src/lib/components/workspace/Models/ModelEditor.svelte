@@ -858,7 +858,7 @@
 					toast.success($i18n.t('Saved'));
 				} catch (error) {
 					accessGrants = structuredClone(model.access_grants ?? []);
-					toast.error(`${error}`);
+					toast.error(`${error?.detail ?? error}`);
 				} finally {
 					loading = false;
 				}

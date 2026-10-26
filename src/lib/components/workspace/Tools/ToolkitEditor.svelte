@@ -35,6 +35,7 @@
 
 	let showConfirm = false;
 	let showAccessControlModal = false;
+	let savedAccessGrants: any[] = [];
 
 	export let edit = false;
 	export let clone = false;
@@ -299,9 +300,11 @@ class Tools:
 	onChange={async () => {
 		if (edit && id) {
 			try {
-				await updateToolAccessGrants(localStorage.token, id, accessGrants);
+				const saved = await updateToolAccessGrants(localStorage.token, id, accessGrants);
+				savedAccessGrants = structuredClone(saved.access_grants);
 				toast.success($i18n.t('Saved'));
 			} catch (error: any) {
+				accessGrants = structuredClone(savedAccessGrants);
 				toast.error(`${error}`);
 			}
 		}
@@ -357,6 +360,7 @@ class Tools:
 					<AccessButton
 						disabled={!!selected || loading || selecting || promoting}
 						on:click={() => {
+							savedAccessGrants = structuredClone(accessGrants);
 							showAccessControlModal = true;
 						}}
 					/>

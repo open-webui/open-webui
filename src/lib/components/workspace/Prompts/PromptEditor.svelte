@@ -56,6 +56,7 @@
 	let isProduction = true;
 	let accessGrants = [];
 	let showAccessControlModal = false;
+	let savedAccessGrants = [];
 	let hasManualEdit = false;
 	let history: any[] = [];
 	let productionEntry: any = null;
@@ -401,9 +402,11 @@
 	onChange={async () => {
 		if (edit && prompt?.id) {
 			try {
-				await updatePromptAccessGrants(localStorage.token, prompt.id, accessGrants);
+				const saved = await updatePromptAccessGrants(localStorage.token, prompt.id, accessGrants);
+				savedAccessGrants = structuredClone(saved.access_grants);
 				toast.success($i18n.t('Saved'));
 			} catch (error) {
+				accessGrants = structuredClone(savedAccessGrants);
 				toast.error(`${error}`);
 			}
 		}
@@ -459,7 +462,10 @@
 			{/if}
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
 				{#if !disabled}{#if $user?.permissions?.sharing?.prompts || $user?.role === 'admin'}<AccessButton
-							on:click={() => (showAccessControlModal = true)}
+							on:click={() => {
+								savedAccessGrants = structuredClone(accessGrants);
+								showAccessControlModal = true;
+							}}
 						/>{/if}
 				{:else}<span class="px-2 py-1 text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
 				{#if modal}<button
