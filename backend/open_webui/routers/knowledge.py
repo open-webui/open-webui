@@ -1489,7 +1489,7 @@ async def add_file_to_knowledge_by_id(
     if knowledge:
         response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Files.get_file_metadatas_by_ids([form_data.file_id], db=db),
         )
         await publish_event(
             request,
@@ -1573,7 +1573,7 @@ async def update_file_from_knowledge_by_id(
     if knowledge:
         response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Files.get_file_metadatas_by_ids([form_data.file_id], db=db),
         )
         await publish_event(
             request,
@@ -1643,6 +1643,8 @@ async def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    removed_file_metadata = await Files.get_file_metadatas_by_ids([form_data.file_id], db=db)
+
     await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
 
     # Remove content from the vector database
@@ -1662,7 +1664,7 @@ async def remove_file_from_knowledge_by_id(
     if knowledge:
         response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=removed_file_metadata,
         )
         await publish_event(
             request,
@@ -2105,7 +2107,7 @@ async def add_files_to_knowledge_batch(
     if not new_entries:
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=[],
         )
 
     # Narrow the file list to only new files for processing
@@ -2141,7 +2143,7 @@ async def add_files_to_knowledge_batch(
         error_details = [f'{err.file_id}: {err.error}' for err in result.errors]
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Files.get_file_metadatas_by_ids(successful_file_ids, db=db),
             warnings={
                 'message': 'Some files failed to process',
                 'errors': error_details,
@@ -2150,7 +2152,7 @@ async def add_files_to_knowledge_batch(
 
     return KnowledgeFilesResponse(
         **knowledge.model_dump(),
-        files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+        files=await Files.get_file_metadatas_by_ids(successful_file_ids, db=db),
     )
 
 
