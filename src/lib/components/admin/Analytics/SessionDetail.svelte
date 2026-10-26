@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import dayjs from 'dayjs';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
@@ -208,8 +210,28 @@
 		class="min-h-0 overflow-y-auto overscroll-contain scrollbar-hover"
 		data-session-content
 	>
-		<div class="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem]">
-			{#if session.user_name}<span>{session.user_name}</span>{/if}
+		<div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem]">
+			{#if session.user_id}
+				<ProfilePreview
+					user={{ id: session.user_id, name: session.user_name }}
+					side="bottom"
+					align="start"
+					sideOffset={6}
+					className="gap-1.75"
+				>
+					<img
+						src={`${WEBUI_API_BASE_URL}/users/${session.user_id}/profile/image`}
+						alt=""
+						class="size-4 rounded-full object-cover shrink-0"
+						loading="lazy"
+						on:error={(event) => {
+							const image = event.currentTarget as HTMLImageElement;
+							if (!image.src.endsWith('/user.png')) image.src = '/user.png';
+						}}
+					/>
+					<span class="block max-w-28 truncate">{session.user_name || $i18n.t('User')}</span>
+				</ProfilePreview>
+			{:else}<span>{session.user_name || '-'}</span>{/if}
 			{#if session.started_at}<span
 					>{dayjs
 						.unix(session.started_at)

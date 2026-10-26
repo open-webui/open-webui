@@ -8,6 +8,7 @@ export type SessionScope = {
 export type Session = {
 	id: string;
 	title: string;
+	user_id: string | null;
 	user_name: string | null;
 	folder_name: string | null;
 	kind: string | null;

@@ -151,6 +151,7 @@ def session_query(
         select(
             Chat.id,
             func.substr(Chat.title, 1, 200).label('title'),
+            User.id.label('user_id'),
             User.name.label('user_name'),
             Folder.name.label('folder_name'),
             json_text(db, Chat.meta, 'type').label('kind'),
