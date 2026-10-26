@@ -300,7 +300,7 @@ class KnowledgeTable:
                     elif source == 'local':
                         stmt = stmt.filter(
                             or_(
-                                Knowledge.meta.is_(None),
+                                Knowledge.meta['source'].as_string().is_(None),
                                 Knowledge.meta['source'].as_string() != 'external',
                             )
                         )
