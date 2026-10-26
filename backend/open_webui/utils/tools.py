@@ -1758,8 +1758,9 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
         if info and isinstance(openapi_data, dict):
             openapi_data['info'] = openapi_data.get('info', {})
 
-            if 'name' in info:
-                openapi_data['info']['title'] = info.get('name', 'Tool Server')
+            name = info.get('name')
+            if isinstance(name, str) and name.strip():
+                openapi_data['info']['title'] = name.strip()
 
             if 'description' in info:
                 openapi_data['info']['description'] = info.get('description', '')

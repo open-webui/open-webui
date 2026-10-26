@@ -133,7 +133,7 @@ async def get_tools(
                 **{
                     'id': server_id,
                     'user_id': server_id,
-                    'name': server.get('openapi', {}).get('info', {}).get('title', 'Tool Server'),
+                    'name': server.get('openapi', {}).get('info', {}).get('title') or 'Tool Server',
                     'meta': {
                         'description': server.get('openapi', {}).get('info', {}).get('description', ''),
                     },
@@ -167,7 +167,7 @@ async def get_tools(
                     **{
                         'id': tool_id,
                         'user_id': tool_id,
-                        'name': info.get('name', 'MCP Tool Server'),
+                        'name': (info.get('name') or '').strip() or 'MCP Tool Server',
                         'meta': {
                             'description': info.get('description', ''),
                         },
