@@ -1205,7 +1205,7 @@
 									</Tooltip>
 								{/if}
 
-								{#if message.usage && $visibleControls['chat.usage']}
+								{#if Object.keys(message.usage ?? {}).some((key) => key !== 'incomplete') && $visibleControls['chat.usage']}
 									{@const usage = JSON.stringify(message.usage, null, 2)
 										.replace(/"([^(")"]+)":/g, '$1:')
 										.slice(1, -1)
