@@ -14,7 +14,6 @@ from urllib.parse import unquote
 
 from fastapi import HTTPException, Request
 
-from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.env import (
     KNOWLEDGE_GREP_MAX_MATCHES,
     VIEW_FILE_DEFAULT_MAX_CHARS,
@@ -3496,7 +3495,9 @@ async def query_knowledge_bases(
         if not embedding_function:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
         user_model = UserModel(**__user__)
-        query_embedding = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user_model)
+        query_embedding = await embedding_function(
+            query, prefix=await Config.get('rag.embedding_query_prefix'), user=user_model
+        )
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
         top_results_heap = []

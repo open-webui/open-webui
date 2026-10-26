@@ -4,7 +4,6 @@ import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.config import RAG_EMBEDDING_CONTENT_PREFIX, RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
@@ -144,7 +143,7 @@ async def reindex_memory_vectors_for_user(
     # One list call so batching and the concurrency limit apply.
     vectors = await request.app.state.EMBEDDING_FUNCTION(
         [memory_vector_text(memory.content, memory.path) for memory in memories],
-        prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+        prefix=await Config.get('rag.embedding_content_prefix'),
         user=user,
     )
 
@@ -200,7 +199,9 @@ async def add_memory(
     )
 
     vector = await request.app.state.EMBEDDING_FUNCTION(
-        memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
+        memory_vector_text(memory.content, memory.path),
+        prefix=await Config.get('rag.embedding_content_prefix'),
+        user=user,
     )
 
     await upsert_memory_vectors_or_reindex(
@@ -256,6 +257,7 @@ async def update_memories(
     delete_ids = []
     response = []
 
+    content_prefix = await Config.get('rag.embedding_content_prefix')
     for result in results:
         memory = result.get('memory')
         if isinstance(memory, MemoryModel):
@@ -263,7 +265,7 @@ async def update_memories(
             if result.get('status') in {'created', 'updated'}:
                 vector = await request.app.state.EMBEDDING_FUNCTION(
                     memory_vector_text(memory.content, memory.path),
-                    prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                    prefix=content_prefix,
                     user=user,
                 )
                 upsert_items.append(
@@ -340,7 +342,9 @@ async def query_memory(
     if not memories:
         raise HTTPException(status_code=404, detail='No memories found for user')
 
-    vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user)
+    vector = await request.app.state.EMBEDDING_FUNCTION(
+        form_data.content, prefix=await Config.get('rag.embedding_query_prefix'), user=user
+    )
 
     results = await ASYNC_VECTOR_DB_CLIENT.search(
         collection_name=f'user-memory-{user.id}',
@@ -570,7 +574,9 @@ async def update_memory_by_id(
 
     if form_data.content is not None or form_data.path is not None:
         vector = await request.app.state.EMBEDDING_FUNCTION(
-            memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
+            memory_vector_text(memory.content, memory.path),
+            prefix=await Config.get('rag.embedding_content_prefix'),
+            user=user,
         )
 
         await upsert_memory_vectors_or_reindex(

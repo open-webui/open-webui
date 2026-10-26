@@ -203,6 +203,8 @@ type EmbeddingModelUpdateForm = {
 	azure_openai_config?: AzureOpenAIConfigForm;
 	RAG_EMBEDDING_ENGINE: string;
 	RAG_EMBEDDING_MODEL: string;
+	RAG_EMBEDDING_QUERY_PREFIX?: string;
+	RAG_EMBEDDING_CONTENT_PREFIX?: string;
 	RAG_EMBEDDING_BATCH_SIZE?: number;
 	ENABLE_ASYNC_EMBEDDING?: boolean;
 	RAG_EMBEDDING_CONCURRENT_REQUESTS?: number;

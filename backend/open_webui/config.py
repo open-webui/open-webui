@@ -3012,6 +3012,8 @@ DEFAULT_CONFIG = {
     'rag.embedding_model': RAG_EMBEDDING_MODEL,
     'rag.tokenizer_model': RAG_TOKENIZER_MODEL,
     'rag.embedding_batch_size': RAG_EMBEDDING_BATCH_SIZE,
+    'rag.embedding_query_prefix': RAG_EMBEDDING_QUERY_PREFIX,
+    'rag.embedding_content_prefix': RAG_EMBEDDING_CONTENT_PREFIX,
     'rag.enable_async_embedding': ENABLE_ASYNC_EMBEDDING,
     'rag.embedding_concurrent_requests': RAG_EMBEDDING_CONCURRENT_REQUESTS,
     'rag.reranking_engine': RAG_RERANKING_ENGINE,

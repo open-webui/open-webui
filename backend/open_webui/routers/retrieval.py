@@ -37,10 +37,8 @@ from langchain_text_splitters import (
 from open_webui.config import (
     Config,
     DEFAULT_LOCALE,
-    RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_EMBEDDING_QUERY_PREFIX,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
@@ -347,6 +345,8 @@ RETRIEVAL_CONFIG_KEYS = {
     'RAG_EMBEDDING_BATCH_SIZE': 'rag.embedding_batch_size',
     'RAG_EMBEDDING_CONCURRENT_REQUESTS': 'rag.embedding_concurrent_requests',
     'RAG_EMBEDDING_ENGINE': 'rag.embedding_engine',
+    'RAG_EMBEDDING_QUERY_PREFIX': 'rag.embedding_query_prefix',
+    'RAG_EMBEDDING_CONTENT_PREFIX': 'rag.embedding_content_prefix',
     'RAG_EMBEDDING_MODEL': 'rag.embedding_model',
     'RAG_TOKENIZER_MODEL': 'rag.tokenizer_model',
     'RAG_EXTERNAL_RERANKER_API_KEY': 'rag.external_reranker_api_key',
@@ -443,6 +443,8 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
     return {
         'status': True,
         'RAG_EMBEDDING_ENGINE': config['rag.embedding_engine'],
+        'RAG_EMBEDDING_QUERY_PREFIX': config['rag.embedding_query_prefix'],
+        'RAG_EMBEDDING_CONTENT_PREFIX': config['rag.embedding_content_prefix'],
         'RAG_EMBEDDING_MODEL': config['rag.embedding_model'],
         'RAG_EMBEDDING_BATCH_SIZE': config['rag.embedding_batch_size'],
         'ENABLE_ASYNC_EMBEDDING': config['rag.enable_async_embedding'],
@@ -484,6 +486,8 @@ class EmbeddingModelUpdateForm(BaseModel):
     ollama_config: OllamaConfigForm | None = None
     azure_openai_config: AzureOpenAIConfigForm | None = None
     RAG_EMBEDDING_ENGINE: str
+    RAG_EMBEDDING_QUERY_PREFIX: str | None = None
+    RAG_EMBEDDING_CONTENT_PREFIX: str | None = None
     RAG_EMBEDDING_MODEL: str
     RAG_EMBEDDING_BATCH_SIZE: int | None = 1
     ENABLE_ASYNC_EMBEDDING: bool | None = True
@@ -521,6 +525,10 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
             'rag.enable_async_embedding': form_data.ENABLE_ASYNC_EMBEDDING,
             'rag.embedding_concurrent_requests': form_data.RAG_EMBEDDING_CONCURRENT_REQUESTS,
         }
+        if 'RAG_EMBEDDING_QUERY_PREFIX' in form_data.model_fields_set:
+            updates['rag.embedding_query_prefix'] = form_data.RAG_EMBEDDING_QUERY_PREFIX or None
+        if 'RAG_EMBEDDING_CONTENT_PREFIX' in form_data.model_fields_set:
+            updates['rag.embedding_content_prefix'] = form_data.RAG_EMBEDDING_CONTENT_PREFIX or None
         if form_data.RAG_EMBEDDING_ENGINE == 'openai' and form_data.openai_config is not None:
             updates['rag.openai.api_base_url'] = form_data.openai_config.url or ''
             updates['rag.openai.api_key'] = form_data.openai_config.key or ''
@@ -572,6 +580,8 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
         return {
             'status': True,
             'RAG_EMBEDDING_ENGINE': config['rag.embedding_engine'],
+            'RAG_EMBEDDING_QUERY_PREFIX': config['rag.embedding_query_prefix'],
+            'RAG_EMBEDDING_CONTENT_PREFIX': config['rag.embedding_content_prefix'],
             'RAG_EMBEDDING_MODEL': config['rag.embedding_model'],
             'RAG_EMBEDDING_BATCH_SIZE': config['rag.embedding_batch_size'],
             'ENABLE_ASYNC_EMBEDDING': config['rag.enable_async_embedding'],
@@ -1526,7 +1536,7 @@ def save_docs_to_vector_db(
         future = asyncio.run_coroutine_threadsafe(
             embedding_function(
                 list(map(lambda x: x.replace('\n', ' '), texts)),
-                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                prefix=config['rag.embedding_content_prefix'],
                 user=user,
             ),
             request.app.state.main_loop,
@@ -2790,7 +2800,7 @@ async def query_doc_handler(
             )
         else:
             query_embedding = await request.app.state.EMBEDDING_FUNCTION(
-                form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
+                form_data.query, prefix=config['rag.embedding_query_prefix'], user=user
             )
             # query_doc wraps a blocking get_vector_db_client().search call;
             # offload so the request's event loop stays responsive.

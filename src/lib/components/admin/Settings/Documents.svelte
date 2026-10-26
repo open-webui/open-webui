@@ -31,6 +31,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
@@ -43,10 +44,13 @@
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
 	let showReindexConfirm = false;
+	let showEmbeddingAdvanced = false;
 	let showExternalDocumentLoaderHeadersHint = false;
 
 	let RAG_EMBEDDING_ENGINE = '';
 	let RAG_EMBEDDING_MODEL = '';
+	let RAG_EMBEDDING_QUERY_PREFIX = '';
+	let RAG_EMBEDDING_CONTENT_PREFIX = '';
 	let RAG_EMBEDDING_BATCH_SIZE = 1;
 	let ENABLE_ASYNC_EMBEDDING = true;
 	let RAG_EMBEDDING_CONCURRENT_REQUESTS = 0;
@@ -126,6 +130,8 @@
 		const payload: Parameters<typeof updateEmbeddingConfig>[1] = {
 			RAG_EMBEDDING_ENGINE: RAG_EMBEDDING_ENGINE,
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
+			RAG_EMBEDDING_QUERY_PREFIX,
+			RAG_EMBEDDING_CONTENT_PREFIX,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
 			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS
@@ -301,6 +307,9 @@
 		if (embeddingConfig) {
 			RAG_EMBEDDING_ENGINE = embeddingConfig.RAG_EMBEDDING_ENGINE;
 			RAG_EMBEDDING_MODEL = embeddingConfig.RAG_EMBEDDING_MODEL;
+			RAG_EMBEDDING_QUERY_PREFIX = embeddingConfig.RAG_EMBEDDING_QUERY_PREFIX ?? '';
+			RAG_EMBEDDING_CONTENT_PREFIX = embeddingConfig.RAG_EMBEDDING_CONTENT_PREFIX ?? '';
+			showEmbeddingAdvanced = Boolean(RAG_EMBEDDING_QUERY_PREFIX || RAG_EMBEDDING_CONTENT_PREFIX);
 			RAG_EMBEDDING_BATCH_SIZE = embeddingConfig.RAG_EMBEDDING_BATCH_SIZE ?? 1;
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
 			RAG_EMBEDDING_CONCURRENT_REQUESTS = embeddingConfig.RAG_EMBEDDING_CONCURRENT_REQUESTS ?? 0;
@@ -1225,6 +1234,40 @@
 							/>
 						</AdminSettingRow>
 					{/if}
+
+					<Collapsible
+						title={$i18n.t('Advanced')}
+						bind:open={showEmbeddingAdvanced}
+						buttonClassName="w-full py-1 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+					>
+						<div slot="content" class="flex flex-col gap-2.5 pt-2.5">
+							<AdminSettingField
+								label={$i18n.t('settings.admin.documents.embeddingQueryPrefix.label')}
+								description={$i18n.t('settings.admin.documents.embeddingQueryPrefix.description')}
+								forId="embedding-query-prefix"
+							>
+								<input
+									id="embedding-query-prefix"
+									class={inputClass}
+									placeholder={$i18n.t('Optional')}
+									bind:value={RAG_EMBEDDING_QUERY_PREFIX}
+								/>
+							</AdminSettingField>
+
+							<AdminSettingField
+								label={$i18n.t('settings.admin.documents.embeddingContentPrefix.label')}
+								description={$i18n.t('settings.admin.documents.embeddingContentPrefix.description')}
+								forId="embedding-content-prefix"
+							>
+								<input
+									id="embedding-content-prefix"
+									class={inputClass}
+									placeholder={$i18n.t('Optional')}
+									bind:value={RAG_EMBEDDING_CONTENT_PREFIX}
+								/>
+							</AdminSettingField>
+						</div>
+					</Collapsible>
 				</AdminSettingSection>
 			{/if}
 
