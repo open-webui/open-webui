@@ -4273,5 +4273,20 @@
 	"Recorded sequence": "Recorded sequence",
 	"Saved order": "Saved order",
 	"Saved order only; spacing does not represent elapsed time.": "Saved order only; spacing does not represent elapsed time.",
-	"Count": "Count"
+	"Count": "Count",
+	"Provider details": "Provider details",
+	"Reported by the provider.": "Reported by the provider.",
+	"Not provided": "Not provided",
+	"None reported": "None reported",
+	"Inputs": "Inputs",
+	"Outputs": "Outputs",
+	"Context window": "Context window",
+	"Provider context": "Provider context",
+	"Max output": "Max output",
+	"Supported parameters": "Supported parameters",
+	"{{tokens}} tokens": "{{tokens}} tokens",
+	"Text": "Text",
+	"Audio": "Audio",
+	"Video": "Video",
+	"Embeddings": "Embeddings"
 }
