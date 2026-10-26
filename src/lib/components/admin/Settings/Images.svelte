@@ -208,7 +208,11 @@
 					type: node.type,
 					key: node.key,
 					node_ids:
-						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
+						typeof node.node_ids === 'string' && node.node_ids.trim() !== ''
+							? node.node_ids.split(',').map((id) => id.trim())
+							: Array.isArray(node.node_ids)
+								? node.node_ids
+								: []
 				};
 			});
 		}
@@ -225,7 +229,11 @@
 					type: node.type,
 					key: node.key,
 					node_ids:
-						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
+						typeof node.node_ids === 'string' && node.node_ids.trim() !== ''
+							? node.node_ids.split(',').map((id) => id.trim())
+							: Array.isArray(node.node_ids)
+								? node.node_ids
+								: []
 				};
 			});
 		}
@@ -266,13 +274,15 @@
 			}
 
 			REQUIRED_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
-				const n = config.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
-				console.debug(n);
+				const nodes = Array.isArray(config.COMFYUI_WORKFLOW_NODES)
+					? config.COMFYUI_WORKFLOW_NODES
+					: [];
+				const n = nodes.find((n) => n.type === node.type) ?? node;
 
 				return {
 					type: n.type,
 					key: n.key,
-					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
+					node_ids: typeof n.node_ids === 'string' ? n.node_ids : (n.node_ids ?? []).join(',')
 				};
 			});
 
@@ -299,14 +309,15 @@
 					: config.AUTOMATIC1111_PARAMS;
 
 			REQUIRED_EDIT_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
-				const n =
-					config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
-				console.debug(n);
+				const nodes = Array.isArray(config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES)
+					? config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES
+					: [];
+				const n = nodes.find((n) => n.type === node.type) ?? node;
 
 				return {
 					type: n.type,
 					key: n.key,
-					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
+					node_ids: typeof n.node_ids === 'string' ? n.node_ids : (n.node_ids ?? []).join(',')
 				};
 			});
 		}
