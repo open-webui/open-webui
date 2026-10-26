@@ -1475,8 +1475,7 @@
 			uploading = false;
 			if (selectedTerminal?.url === terminal.url && (chatId ?? undefined) === sessionId) {
 				invalidateTreeCache(destination);
-				if (currentPath === destination && !selectedFile)
-					await loadDir(destination, { preserveTree: true });
+				if (currentPath === destination && !selectedFile) await refreshBrowser();
 			}
 		}
 	};
@@ -1523,7 +1522,7 @@
 			result ? $i18n.t('Folder created') : $i18n.t('Failed to create folder')
 		);
 		invalidateTreeCache(currentPath);
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	// ── File creation ────────────────────────────────────────────────────
@@ -1560,7 +1559,7 @@
 			result ? $i18n.t('File created') : $i18n.t('Failed to create file')
 		);
 		invalidateTreeCache(currentPath);
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	// ── Delete ───────────────────────────────────────────────────────────
@@ -1575,7 +1574,7 @@
 				: $i18n.t('Failed to delete {{name}}', { name })
 		);
 		invalidateTreeCache(currentPath, path);
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	const requestDelete = (path: string, name: string) => {
@@ -1660,7 +1659,7 @@
 			toast.success($i18n.t('Renamed to {{name}}', { name: newName }));
 		}
 		invalidateTreeCache(currentPath, oldPath);
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	// ── Multi-select ────────────────────────────────────────────────────
@@ -1737,7 +1736,7 @@
 		);
 		invalidateTreeCache(currentPath, ...paths);
 		clearSelection();
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	const bulkDownload = async () => {
