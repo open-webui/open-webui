@@ -1,0 +1,22 @@
+name: openwebui-oci-local
+
+services:
+  open-webui:
+    image: oracle-openwebui:oci-local
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: open-webui-local
+    env_file:
+      - path: ../../.deployment/openwebui.env
+        format: raw
+    ports:
+      - "127.0.0.1:3000:8080"
+    volumes:
+      - data:/app/backend/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+
+volumes:
+  data:

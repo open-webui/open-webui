@@ -1,0 +1,1689 @@
+{
+  "schema_version": 1,
+  "exported_at": "2026-10-26T16:49:26.850954+00:00",
+  "source": {
+    "ssh_host": "openwebui",
+    "container": "open-webui",
+    "url": "https://orac-ai.com",
+    "image_id": "sha256:1565038903151ced924b5a3226f73f40f16963df4b910441f6391f10144afdaa"
+  },
+  "settings": {
+    "webui.url": "https://orac-ai.com",
+    "ui.default_user_role": "user",
+    "ui.enable_signup": false,
+    "ui.enable_login_form": true,
+    "ui.enable_password_change_form": true,
+    "ui.default_locale": "",
+    "ui.default_models": null,
+    "ui.default_pinned_models": null,
+    "ui.default_group_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+    "ui.default_interface_settings": {},
+    "ui.model_order_list": [],
+    "ui.enable_community_sharing": true,
+    "ui.enable_message_rating": true,
+    "ui.enable_user_webhooks": false,
+    "ui.banners": [],
+    "user.permissions": {
+      "workspace": {
+        "models": false,
+        "knowledge": false,
+        "prompts": false,
+        "tools": false,
+        "skills": false,
+        "models_import": false,
+        "models_export": false,
+        "prompts_import": false,
+        "prompts_export": false,
+        "tools_import": false,
+        "tools_export": false,
+        "skills_import": false,
+        "skills_export": false
+      },
+      "sharing": {
+        "models": false,
+        "public_models": false,
+        "knowledge": false,
+        "public_knowledge": false,
+        "prompts": false,
+        "public_prompts": false,
+        "tools": false,
+        "public_tools": false,
+        "skills": false,
+        "public_skills": false,
+        "notes": false,
+        "public_notes": false,
+        "folders": false,
+        "public_chats": false,
+        "open_chats": false,
+        "public_calendars": false
+      },
+      "access_grants": {
+        "allow_users": true,
+        "allow_groups": true
+      },
+      "chat": {
+        "controls": true,
+        "valves": true,
+        "system_prompt": true,
+        "params": true,
+        "file_upload": true,
+        "web_upload": true,
+        "delete": true,
+        "delete_message": true,
+        "continue_response": true,
+        "regenerate_response": true,
+        "rate_response": true,
+        "edit": true,
+        "share": true,
+        "export": true,
+        "import": true,
+        "stt": true,
+        "tts": true,
+        "call": true,
+        "multiple_models": true,
+        "temporary": true,
+        "temporary_enforced": false
+      },
+      "features": {
+        "api_keys": false,
+        "notes": true,
+        "folders": true,
+        "channels": true,
+        "direct_tool_servers": false,
+        "web_search": true,
+        "image_generation": true,
+        "code_interpreter": true,
+        "memories": true,
+        "automations": false,
+        "calendar": true,
+        "webhooks": false
+      },
+      "settings": {
+        "interface": true
+      }
+    },
+    "openai.enable": true,
+    "openai.api_base_urls": [
+      "https://api.openai.com/v1",
+      "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com/openai/v1"
+    ],
+    "openai.api_configs": {
+      "1": {
+        "enable": true,
+        "auth_type": "bearer",
+        "prefix_id": "OCI",
+        "model_ids": [
+          "google.gemini-2.5-flash",
+          "google.gemini-2.5-flash-lite",
+          "google.gemini-2.5-pro",
+          "meta.llama-3.3-70b-instruct",
+          "openai.gpt-4.1",
+          "openai.gpt-4.1-2025-04-14",
+          "openai.gpt-4.1-mini",
+          "openai.gpt-4.1-mini-2025-04-14",
+          "openai.gpt-4.1-nano",
+          "openai.gpt-4.1-nano-2025-04-14",
+          "openai.gpt-4o",
+          "openai.gpt-4o-2024-08-06",
+          "openai.gpt-4o-2024-11-20",
+          "openai.gpt-4o-mini",
+          "openai.gpt-4o-mini-2024-07-18",
+          "openai.gpt-5",
+          "openai.gpt-5-2025-08-07",
+          "openai.gpt-5-mini",
+          "openai.gpt-5-mini-2025-08-07",
+          "openai.gpt-5-nano",
+          "openai.gpt-5-nano-2025-08-07",
+          "openai.gpt-5.1",
+          "openai.gpt-5.1-2025-11-13",
+          "openai.gpt-5.2",
+          "openai.gpt-5.2-2025-12-11",
+          "openai.gpt-5.4",
+          "openai.gpt-5.4-2026-03-05",
+          "openai.gpt-5.4-mini",
+          "openai.gpt-5.4-mini-2026-03-17",
+          "openai.gpt-5.4-nano",
+          "openai.gpt-5.4-nano-2026-03-17",
+          "openai.gpt-5.5",
+          "openai.gpt-5.5-2026-04-23",
+          "openai.gpt-5.6-luna",
+          "openai.gpt-5.6-sol",
+          "openai.gpt-5.6-terra",
+          "openai.gpt-6-astra",
+          "openai.gpt-6-luna",
+          "openai.gpt-6-sol",
+          "openai.gpt-6.1-sol",
+          "openai.gpt-oss-120b",
+          "openai.gpt-oss-20b",
+          "openai.o1",
+          "openai.o1-2024-12-17",
+          "openai.o3",
+          "openai.o3-2025-04-16",
+          "openai.o3-mini",
+          "openai.o3-mini-2025-01-31",
+          "openai.o4-mini",
+          "openai.o4-mini-2025-04-16"
+        ],
+        "connection_type": "external",
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "0": {
+        "enable": false
+      }
+    },
+    "ollama.enable": true,
+    "ollama.base_urls": [
+      "http://host.docker.internal:11434"
+    ],
+    "ollama.api_configs": {}
+  },
+  "groups": [
+    {
+      "id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+      "name": "OCI-GenAI-Users",
+      "description": "Read access to the configured Oracle OCI Generative AI models.",
+      "data": {
+        "config": {
+          "share": "members"
+        }
+      },
+      "permissions": null,
+      "parent_group_id": null
+    }
+  ],
+  "models": [
+    {
+      "id": "OCI.meta.llama-3.3-70b-instruct",
+      "base_model_id": null,
+      "name": "oci.claude",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": {
+          "file_context": true,
+          "vision": true,
+          "file_upload": true,
+          "web_search": true,
+          "image_generation": true,
+          "code_interpreter": true,
+          "terminal": true,
+          "citations": true,
+          "status_updates": true,
+          "memory": true,
+          "builtin_tools": true
+        },
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "oci-genai-oss-120b",
+      "base_model_id": "OCI.openai.gpt-oss-120b",
+      "name": "oci-genai-oss-120b",
+      "params": {},
+      "meta": {
+        "profile_image_url": "/static/favicon.png",
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": {
+          "file_context": true,
+          "vision": true,
+          "file_upload": true,
+          "web_search": true,
+          "image_generation": true,
+          "code_interpreter": true,
+          "terminal": true,
+          "citations": true,
+          "status_updates": true,
+          "memory": true,
+          "builtin_tools": true
+        },
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "suggestion_prompts": null,
+        "tags": []
+      },
+      "is_active": true,
+      "access_grants": []
+    },
+    {
+      "id": "OCI.google.gemini-2.5-flash",
+      "base_model_id": null,
+      "name": "OCI.google.gemini-2.5-flash",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.google.gemini-2.5-flash-lite",
+      "base_model_id": null,
+      "name": "OCI.google.gemini-2.5-flash-lite",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.google.gemini-2.5-pro",
+      "base_model_id": null,
+      "name": "OCI.google.gemini-2.5-pro",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4.1",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4.1",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4.1-2025-04-14",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4.1-2025-04-14",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4.1-mini",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4.1-mini",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4.1-mini-2025-04-14",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4.1-mini-2025-04-14",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4.1-nano",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4.1-nano",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4.1-nano-2025-04-14",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4.1-nano-2025-04-14",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4o",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4o",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4o-2024-08-06",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4o-2024-08-06",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4o-2024-11-20",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4o-2024-11-20",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4o-mini",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4o-mini",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-4o-mini-2024-07-18",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-4o-mini-2024-07-18",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5-2025-08-07",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5-2025-08-07",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5-mini",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5-mini",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5-mini-2025-08-07",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5-mini-2025-08-07",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5-nano",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5-nano",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5-nano-2025-08-07",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5-nano-2025-08-07",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.1",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.1",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.1-2025-11-13",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.1-2025-11-13",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.2",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.2",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.2-2025-12-11",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.2-2025-12-11",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.4",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.4",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.4-2026-03-05",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.4-2026-03-05",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.4-mini",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.4-mini",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.4-mini-2026-03-17",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.4-mini-2026-03-17",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.4-nano",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.4-nano",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.4-nano-2026-03-17",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.4-nano-2026-03-17",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.5",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.5",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.5-2026-04-23",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.5-2026-04-23",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.6-luna",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.6-luna",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.6-sol",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.6-sol",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-5.6-terra",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-5.6-terra",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-6-astra",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-6-astra",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-6-luna",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-6-luna",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-6-sol",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-6-sol",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-6.1-sol",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-6.1-sol",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-oss-120b",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-oss-120b",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.gpt-oss-20b",
+      "base_model_id": null,
+      "name": "OCI.openai.gpt-oss-20b",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.o1",
+      "base_model_id": null,
+      "name": "OCI.openai.o1",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.o1-2024-12-17",
+      "base_model_id": null,
+      "name": "OCI.openai.o1-2024-12-17",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.o3",
+      "base_model_id": null,
+      "name": "OCI.openai.o3",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.o3-2025-04-16",
+      "base_model_id": null,
+      "name": "OCI.openai.o3-2025-04-16",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.o3-mini",
+      "base_model_id": null,
+      "name": "OCI.openai.o3-mini",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.o3-mini-2025-01-31",
+      "base_model_id": null,
+      "name": "OCI.openai.o3-mini-2025-01-31",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.o4-mini",
+      "base_model_id": null,
+      "name": "OCI.openai.o4-mini",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    },
+    {
+      "id": "OCI.openai.o4-mini-2025-04-16",
+      "base_model_id": null,
+      "name": "OCI.openai.o4-mini-2025-04-16",
+      "params": {},
+      "meta": {
+        "profile_image_url": null,
+        "background_image_url": null,
+        "description": null,
+        "i18n": null,
+        "capabilities": null,
+        "knowledge": null,
+        "voice": null,
+        "voice_avatar": null,
+        "tags": [
+          {
+            "name": "Oracle OCI"
+          }
+        ]
+      },
+      "is_active": true,
+      "access_grants": [
+        {
+          "principal_type": "group",
+          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
+          "permission": "read"
+        }
+      ]
+    }
+  ]
+}

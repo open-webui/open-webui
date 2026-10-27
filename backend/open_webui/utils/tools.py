@@ -1022,11 +1022,66 @@ def clean_properties(schema: dict):
         clean_properties(schema['items'])
 
 
+def _json_values_equal(left, right):
+    # JSON Schema distinguishes booleans from numbers (Python's True == 1).
+    if isinstance(left, bool) or isinstance(right, bool):
+        return type(left) is type(right) and left == right
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(_json_values_equal(left[k], right[k]) for k in left)
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(_json_values_equal(a, b) for a, b in zip(left, right))
+    return left == right
+
+
+def _normalize_schema_constants(schema):
+    """Express const as an equivalent enum for OpenAPI-based tool providers."""
+    if not isinstance(schema, dict):
+        return
+
+    if 'const' in schema:
+        constant = schema.pop('const')
+        # Retain the intersection if the schema already has an enum constraint.
+        schema['enum'] = (
+            [constant]
+            if 'enum' not in schema
+            else [value for value in schema['enum'] if _json_values_equal(value, constant)]
+        )
+
+    # Visit schema locations only: property names and example/default values
+    # may themselves contain the literal key "const" and must stay untouched.
+    for keyword in ('properties', 'patternProperties', '$defs', 'definitions', 'dependentSchemas'):
+        children = schema.get(keyword)
+        if isinstance(children, dict):
+            for child in children.values():
+                _normalize_schema_constants(child)
+    for keyword in (
+        'allOf',
+        'anyOf',
+        'oneOf',
+        'prefixItems',
+        'items',
+        'additionalItems',
+        'contains',
+        'additionalProperties',
+        'unevaluatedProperties',
+        'unevaluatedItems',
+        'propertyNames',
+        'not',
+        'if',
+        'then',
+        'else',
+    ):
+        children = schema.get(keyword)
+        for child in children if isinstance(children, list) else [children]:
+            _normalize_schema_constants(child)
+
+
 def clean_openai_tool_schema(spec: dict) -> dict:
 
     cleaned_spec = copy.deepcopy(spec)
 
     if 'parameters' in cleaned_spec:
+        _normalize_schema_constants(cleaned_spec['parameters'])
         clean_properties(cleaned_spec['parameters'])
 
     return cleaned_spec

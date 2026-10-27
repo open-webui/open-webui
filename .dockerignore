@@ -21,3 +21,5 @@ backend/data/*
 
 .venv
 .git
+/.deployment/
+/secret.yml

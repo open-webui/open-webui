@@ -311,3 +311,9 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 .cptr
+
+# Local Oracle SSO credentials
+/secret.yml
+
+# Local deployment snapshots and credentials
+/.deployment/

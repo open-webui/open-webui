@@ -1,0 +1,292 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base Styles */
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  * {
+    @apply border-dark-border;
+  }
+
+  body {
+    @apply bg-dark-bg text-white antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-bg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-border rounded-full hover:bg-gray-600;
+  }
+
+  /* Firefox Scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #30363D #0D1117;
+  }
+}
+
+/* Component Styles */
+@layer components {
+  /* Input Focus Ring */
+  .input-focus {
+    @apply focus:outline-none focus:ring-2 focus:border-transparent;
+  }
+  .input-focus:focus {
+    --tw-ring-color: #C74634;
+  }
+
+  /* Card Hover Effect */
+  .card-hover {
+    @apply hover:shadow-lg transition-all duration-200;
+  }
+  .card-hover:hover {
+    border-color: rgba(199, 70, 52, 0.3);
+    --tw-shadow-color: rgba(199, 70, 52, 0.05);
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, #C74634, #E55D4A);
+  }
+
+  /* Pulse Animation for Status */
+  .status-pulse {
+    @apply relative;
+  }
+
+  .status-pulse::before {
+    content: '';
+    @apply absolute inset-0 rounded-full animate-ping;
+    background-color: rgba(199, 70, 52, 0.5);
+  }
+
+  /* Loading Skeleton */
+  .skeleton {
+    @apply animate-pulse bg-dark-border rounded;
+  }
+
+  /* Map Container */
+  .map-container {
+    @apply w-full h-full rounded-xl overflow-hidden border border-dark-border;
+  }
+
+  /* Leaflet Custom Styles */
+  .leaflet-container {
+    @apply bg-dark-bg !important;
+    font-family: inherit !important;
+  }
+
+  .leaflet-popup-content-wrapper {
+    @apply bg-dark-card border border-dark-border !important;
+    border-radius: 0.75rem !important;
+  }
+
+  .leaflet-popup-content {
+    @apply text-white !important;
+    margin: 0.75rem !important;
+  }
+
+  .leaflet-popup-tip {
+    @apply bg-dark-card border-dark-border !important;
+  }
+
+  .leaflet-control-zoom {
+    @apply border-dark-border !important;
+  }
+
+  .leaflet-control-zoom a {
+    @apply bg-dark-card text-white border-dark-border hover:bg-dark-hover !important;
+  }
+
+  .leaflet-bar {
+    @apply border-dark-border !important;
+  }
+}
+
+/* Animation Utilities */
+@layer utilities {
+  /* Fade In */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Slide In */
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Scale In */
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Bounce Loading */
+  .animate-bounce-loading {
+    animation: bounceLoading 1.4s infinite ease-in-out both;
+  }
+
+  @keyframes bounceLoading {
+    0%,
+    80%,
+    100% {
+      transform: scale(0);
+    }
+    40% {
+      transform: scale(1);
+    }
+  }
+
+  /* Gradient Border */
+  .gradient-border {
+    position: relative;
+    background: linear-gradient(#1B1F2E, #1B1F2E) padding-box,
+      linear-gradient(135deg, #C74634, #30363D) border-box;
+    border: 1px solid transparent;
+  }
+
+  /* Glow Effect */
+  .glow-oci {
+    box-shadow: 0 0 20px rgba(199, 70, 52, 0.15);
+  }
+
+  /* Text Truncate */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Recharts Custom Styles */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #30363D;
+}
+
+.recharts-text {
+  fill: #8B949E;
+  font-size: 0.75rem;
+}
+
+.recharts-legend-item-text {
+  color: #C9D1D9 !important;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+/* Custom Range Input */
+input[type='range'] {
+  @apply appearance-none bg-transparent cursor-pointer;
+}
+
+input[type='range']::-webkit-slider-track {
+  @apply h-1.5 rounded-full bg-dark-border;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  @apply appearance-none w-4 h-4 rounded-full -mt-1.5 shadow-lg;
+  background-color: #C74634;
+  box-shadow: 0 0 0 3px rgba(199, 70, 52, 0.2);
+}
+
+input[type='range']::-webkit-slider-thumb:hover {
+  background-color: #E55D4A;
+  box-shadow: 0 0 0 4px rgba(199, 70, 52, 0.3);
+}
+
+input[type='range']::-moz-range-track {
+  @apply h-1.5 rounded-full bg-dark-border;
+}
+
+input[type='range']::-moz-range-thumb {
+  @apply w-4 h-4 rounded-full border-0 shadow-lg;
+  background-color: #C74634;
+  box-shadow: 0 0 0 3px rgba(199, 70, 52, 0.2);
+}
+
+/* Table Styles */
+.table-striped tbody tr:nth-child(even) {
+  @apply bg-dark-bg/50;
+}
+
+/* Focus Visible */
+:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-offset-dark-bg;
+  --tw-ring-color: #C74634;
+}
+
+/* Selection */
+::selection {
+  @apply text-white;
+  background-color: rgba(199, 70, 52, 0.3);
+}
+
+/* Print Styles */
+@media print {
+  body {
+    @apply bg-white text-black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
