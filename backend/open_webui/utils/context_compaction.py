@@ -26,6 +26,7 @@ DEFAULT_CONTEXT_COMPACTION_PROMPT = """### Task:
 Summarize the conversation history that will be compacted out of the active chat context.
 
 ### Instructions:
+- Write the summary in the chat's primary language; default to English if multilingual.
 - Preserve key decisions, user preferences, and constraints.
 - Preserve files, artifacts, tool results, and code changes that matter going forward.
 - Preserve the current task state, unresolved questions, and next steps.
