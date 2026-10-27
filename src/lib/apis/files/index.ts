@@ -49,46 +49,64 @@ export const uploadFile = async (
 	}
 
 	if (res && stream) {
-		const status = await getFileProcessStatus(token, res.id);
+		// Reopen a dropped status stream (e.g. the device slept) until processing ends
+		let isStreamDone = false;
+		for (let attempt = 0; attempt < 20 && !isStreamDone; attempt++) {
+			if (attempt > 0) {
+				await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * 2 ** attempt, 10000)));
+			}
 
-		if (status && status.ok) {
+			const status = await getFileProcessStatus(token, res.id);
+			if (!status) {
+				continue;
+			}
+			if (!status.ok) {
+				break;
+			}
+
 			const reader = status.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
-			while (true) {
-				const { value, done } = await reader.read();
-				if (done) {
-					break;
-				}
+			try {
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done) {
+						isStreamDone = true;
+						error = null;
+						break;
+					}
 
-				try {
-					let lines = value.split('\n');
+					try {
+						let lines = value.split('\n');
 
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
+						for (const line of lines) {
+							if (line !== '') {
 								console.log(line);
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
+								if (line === 'data: [DONE]') {
+									console.log(line);
+								} else {
+									let data = JSON.parse(line.replace(/^data: /, ''));
+									console.log(data);
 
-								if (data?.error) {
-									console.error(data.error);
-									res.error = data.error;
-								}
+									if (data?.error) {
+										console.error(data.error);
+										res.error = data.error;
+									}
 
-								if (res?.data) {
-									res.data = data;
+									if (res?.data) {
+										res.data = data;
+									}
 								}
 							}
 						}
+					} catch (error) {
+						console.log(error);
 					}
-				} catch (error) {
-					console.log(error);
 				}
+			} catch (streamError) {
+				error = streamError;
 			}
 		}
 	}
