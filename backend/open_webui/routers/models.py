@@ -1130,7 +1130,7 @@ async def toggle_model_by_id(
             )
     else:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
@@ -1151,7 +1151,7 @@ async def update_model_by_id(
     model = await Models.get_model_by_id(form_data.id, db=db)
     if not model:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
@@ -1309,7 +1309,7 @@ async def delete_model_by_id(
     model = await Models.get_model_by_id(form_data.id, db=db)
     if not model:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 

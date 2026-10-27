@@ -537,7 +537,7 @@ async def _update_tool(request, id, form_data, user, db, version_id=None):
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
@@ -688,7 +688,7 @@ async def delete_tools_by_id(
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
@@ -829,7 +829,7 @@ async def update_tools_valves_by_id(
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
@@ -853,7 +853,7 @@ async def update_tools_valves_by_id(
 
     if not hasattr(tools_module, 'Valves'):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
     Valves = tools_module.Valves
@@ -1018,7 +1018,7 @@ async def update_tools_user_valves_by_id(
             )
     else:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
