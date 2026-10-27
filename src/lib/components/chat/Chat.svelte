@@ -820,16 +820,6 @@
 		}
 	};
 
-	let oldSelectedModelIds = [''];
-	$: if (!equal(selectedModelIds, oldSelectedModelIds)) {
-		onSelectedModelIdsChange();
-	}
-
-	const onSelectedModelIdsChange = () => {
-		resetInput();
-		oldSelectedModelIds = structuredClone(selectedModelIds);
-	};
-
 	const mergeFiles = (current, incoming) => {
 		const seen = new Set();
 		return [...(incoming ?? []), ...(current ?? [])].filter((file) => {
@@ -893,7 +883,7 @@
 	}
 
 	let saveControlsTimer;
-	$: if (!loading && !$temporaryChatEnabled && $chatId && chatFiles) {
+	$: if (!loading && !$temporaryChatEnabled && $chatId && chatFiles && selectedModels) {
 		clearTimeout(saveControlsTimer);
 		saveControlsTimer = setTimeout(saveControls, 400);
 	}
@@ -2629,6 +2619,8 @@
 	};
 
 	const initNewChat = async () => {
+		clearTimeout(saveControlsTimer);
+		await saveControls();
 		if ($chatId) terminalContext = null;
 		cancelBrowserInteractions();
 		bridge?.end();
@@ -2957,8 +2949,6 @@
 					selectedModels = normalizeSelectedModels(selectedModels);
 					noteChatDebug('normalized empty selected models after load', { selectedModels });
 				}
-
-				oldSelectedModelIds = structuredClone(selectedModels);
 
 				chatContent.history ??= convertMessagesToHistory(chatContent.messages);
 				// Keep live updates received while the chat and tags were loading.
@@ -4051,12 +4041,11 @@
 		_history = structuredClone(_history);
 
 		const responseMessageIds: Record<PropertyKey, string> = {};
-		// If modelId is provided, use it, else use selected model
-		let selectedModelIds = modelId
-			? [modelId]
-			: atSelectedModel !== undefined
-				? [atSelectedModel.id]
-				: selectedModels;
+		if (!modelId && atSelectedModel) {
+			selectedModels = [atSelectedModel.id];
+			atSelectedModel = undefined;
+		}
+		const selectedModelIds = modelId ? [modelId] : selectedModels;
 		if (!modelId && history.messages[parentId]) {
 			history.messages[parentId].models = [...selectedModelIds];
 		}
@@ -4687,7 +4676,8 @@
 				scrollToBottom();
 			}
 
-			await sendMessage(history, userMessage.id, {
+			const currentModels = atSelectedModel ? [atSelectedModel.id] : selectedModels;
+			const options = {
 				...(suggestionPrompt
 					? {
 							messages: createMessagesList(history, message.id),
@@ -4695,14 +4685,16 @@
 							regenerationMessageId: message.id
 						}
 					: {}),
-				...((userMessage?.models ?? [...selectedModels]).length > 1
+				...((userMessage.models ?? currentModels).length > 1 && currentModels.length > 1
 					? {
-							// If multiple models are selected, use the model from the message
-							modelId: message.model,
+							// Regenerate the selected column with its current model.
+							modelId: currentModels[message.modelIdx ?? 0] ?? message.model,
 							modelIdx: message.modelIdx
 						}
 					: {})
-			});
+			};
+			userMessage.models = [...currentModels];
+			await sendMessage(history, userMessage.id, options);
 		}
 	};
 
@@ -4860,18 +4852,20 @@
 
 	const saveControls = async () => {
 		if (isShared) return;
-		if (!$chatId || $temporaryChatEnabled) return;
+		if (!$chatId || $temporaryChatEnabled || chat?.id !== $chatId) return;
 		const loaded = chat?.chat ?? {};
-		if (equal(chatFiles, loaded.files ?? [])) return;
+		if (equal(chatFiles, loaded.files ?? []) && equal(selectedModels, loaded.models ?? [])) return;
+		const id = $chatId;
 
-		const res = await updateChatById(localStorage.token, $chatId, {
-			files: chatFiles
+		const res = await updateChatById(localStorage.token, id, {
+			files: chatFiles,
+			...(selectedModels.length && selectedModels.every(Boolean) ? { models: selectedModels } : {})
 		}).catch((err) => {
 			console.error('[controls autosave]', err);
 			return null;
 		});
 		// Refresh the dedupe baseline so a later revert still saves.
-		if (res) chat = res;
+		if (res && $chatId === id) chat = res;
 	};
 
 	const MAX_DRAFT_LENGTH = 5000;

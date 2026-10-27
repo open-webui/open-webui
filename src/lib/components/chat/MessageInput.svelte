@@ -927,6 +927,18 @@
 			($config?.audio?.stt?.engine !== 'web' &&
 				($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))));
 
+	$: if (webSearchCapableModels.length < selectedModelIds.length) webSearchEnabled = false;
+	$: if (imageGenerationCapableModels.length < selectedModelIds.length)
+		imageGenerationEnabled = false;
+	$: if (codeInterpreterCapableModels.length < selectedModelIds.length)
+		codeInterpreterEnabled = false;
+	$: {
+		const filterIds = selectedFilterIds.filter((id) =>
+			toggleFilters.some((filter: { id: string }) => filter.id === id)
+		);
+		if (filterIds.length !== selectedFilterIds.length) selectedFilterIds = filterIds;
+	}
+
 	// Disable code interpreter when terminal is active (mutually exclusive)
 	$: if ($selectedTerminalId && codeInterpreterEnabled) {
 		codeInterpreterEnabled = false;
