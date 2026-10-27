@@ -231,7 +231,7 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
     if not metadata.get('terminal_id') or not files:
         return
     try:
-        cwd = await get_terminal_json(request, user, metadata, '/files/cwd', extra_params)
+        cwd = await asyncio.wait_for(get_terminal_json(request, user, metadata, '/files/cwd', extra_params), timeout=30)
         directory = cwd.get('cwd') if isinstance(cwd, dict) else None
         if not directory:
             raise ValueError('Terminal working directory unavailable')
@@ -240,7 +240,9 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
             try:
                 # The file ID keeps separate files from overwriting one another.
                 file = {'id': entry['id'], 'name': f'{entry["id"]}{Path(entry["name"]).suffix}'}
-                result = await get_terminal_json(request, user, metadata, path, extra_params, file=file)
+                result = await asyncio.wait_for(
+                    get_terminal_json(request, user, metadata, path, extra_params, file=file), timeout=30
+                )
                 if not isinstance(result, dict) or not isinstance(result.get('path'), str) or not result['path']:
                     raise ValueError('Terminal upload failed')
                 entry['terminal_path'] = result['path']
