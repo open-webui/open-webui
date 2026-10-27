@@ -8,7 +8,7 @@ import posixpath
 from pathlib import Path
 from urllib.parse import quote
 
-from open_webui.env import ENABLE_TOOL_SERVERS
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT_TERMINAL, ENABLE_TOOL_SERVERS
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.skill_files import (
     SKILL_CONTENT_MAX_CHARS,
@@ -140,7 +140,7 @@ async def get_terminal_json(
         return None
 
     import aiohttp
-    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
+    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
     from open_webui.models.config import Config
     from open_webui.models.groups import Groups
     from open_webui.models.users import UserModel
@@ -196,18 +196,24 @@ async def get_terminal_json(
                 content_type=(source.meta or {}).get('content_type') or 'application/octet-stream',
             )
             headers = {key: value for key, value in headers.items() if key.lower() != 'content-type'}
-        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.request(
-                'POST' if file else 'GET',
-                f'{get_terminal_server_url(connection)}{path}',
-                headers=headers,
-                cookies=cookies,
-                data=body,
-                ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
-                allow_redirects=False,
-            ) as response:
-                return await response.json() if 200 <= response.status < 300 else None
+        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                async with session.request(
+                    'POST' if file else 'GET',
+                    f'{get_terminal_server_url(connection)}{path}',
+                    headers=headers,
+                    cookies=cookies,
+                    data=body,
+                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                    allow_redirects=False,
+                ) as response:
+                    return await response.json() if 200 <= response.status < 300 else None
+        except TimeoutError as error:
+            raise TimeoutError(
+                f"Terminal '{connection.get('name') or terminal_id}' timed out. "
+                'It may still be starting. Please try again.'
+            ) from error
 
     event_caller = (extra_params or {}).get('__event_call__')
     if event_caller:
@@ -231,7 +237,10 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
     if not metadata.get('terminal_id') or not files:
         return
     try:
-        cwd = await asyncio.wait_for(get_terminal_json(request, user, metadata, '/files/cwd', extra_params), timeout=30)
+        cwd = await asyncio.wait_for(
+            get_terminal_json(request, user, metadata, '/files/cwd', extra_params),
+            timeout=AIOHTTP_CLIENT_TIMEOUT_TERMINAL,
+        )
         directory = cwd.get('cwd') if isinstance(cwd, dict) else None
         if not directory:
             raise ValueError('Terminal working directory unavailable')
@@ -241,7 +250,8 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
                 # The file ID keeps separate files from overwriting one another.
                 file = {'id': entry['id'], 'name': f'{entry["id"]}{Path(entry["name"]).suffix}'}
                 result = await asyncio.wait_for(
-                    get_terminal_json(request, user, metadata, path, extra_params, file=file), timeout=30
+                    get_terminal_json(request, user, metadata, path, extra_params, file=file),
+                    timeout=AIOHTTP_CLIENT_TIMEOUT_TERMINAL,
                 )
                 if not isinstance(result, dict) or not isinstance(result.get('path'), str) or not result['path']:
                     raise ValueError('Terminal upload failed')

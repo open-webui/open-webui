@@ -15,7 +15,7 @@ export const getErrorMessage = (err: any, fallback = 'Server connection failed')
 			err?.message,
 			err?.content,
 			err
-		].find((value) => typeof value === 'string') ?? fallback
+		].find((value) => typeof value === 'string' && value.trim()) ?? fallback
 	);
 };
 
