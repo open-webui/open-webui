@@ -109,7 +109,7 @@ async def _load_notifications(user_id: str) -> dict[str, Any]:
     ).strip()
 
     if not isinstance(targets, list) or not targets:
-        if legacy_url:
+        if legacy_url and not notifications.get('legacy_notification_events_migrated'):
             target = _normalize_target(
                 {
                     'id': DEFAULT_TARGET_ID,
