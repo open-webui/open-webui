@@ -446,6 +446,7 @@
 								scope="col"
 								class="px-2.5 py-2 font-normal text-right cursor-pointer select-none w-0"
 							>
+								<span class="sr-only">{$i18n.t('Actions')}</span>
 							</th>
 						</tr>
 					</thead>
