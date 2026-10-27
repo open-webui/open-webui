@@ -29,7 +29,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
-from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
+from open_webui.retrieval.web.utils import assert_identity_encoding, get_ssrf_safe_session, validate_url
 from open_webui.routers.files import get_file_content_by_id, upload_file_handler
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -940,9 +940,13 @@ async def image_edits(
                 # that passed validate_url cannot reach an internal address.
                 async with get_ssrf_safe_session() as session:
                     async with session.get(
-                        data, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+                        data,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                        headers={'Accept-Encoding': 'identity'},
                     ) as r:
                         r.raise_for_status()
+                        assert_identity_encoding(r.headers.getall('Content-Encoding', ()))
 
                         image_data = base64.b64encode(await r.read()).decode('utf-8')
                         return f'data:{r.headers["content-type"]};base64,{image_data}'

@@ -117,6 +117,18 @@ def _assert_addresses_allowed(addresses: Sequence[str]) -> None:
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
 
+def is_identity_encoding(content_encodings: Sequence[str]) -> bool:
+    """True when no content coding was applied, so the body costs what the sender transmitted."""
+    return all(content_encoding.lower() in ('', 'identity') for content_encoding in content_encodings)
+
+
+def assert_identity_encoding(content_encodings: Sequence[str]) -> None:
+    """Reject a compressed body, whose decoded size the sender would choose for us."""
+    if not is_identity_encoding(content_encodings):
+        log.warning('Blocked compressed response body: %s', ', '.join(content_encodings))
+        raise ValueError(ERROR_MESSAGES.COMPRESSED_RESPONSE)
+
+
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url, simple_host=ENABLE_LOCAL_WEB_FETCH), validators.ValidationError):
@@ -239,7 +251,9 @@ class _SSRFSafeAdapter(HTTPAdapter):
     def send(self, request, *args, **kwargs):
         # Per request, not per connection: the connection layer sees the proxy.
         _assert_host_allowed(urllib.parse.urlparse(request.url).hostname)
-        return super().send(request, *args, **kwargs)
+        response = super().send(request, *args, **kwargs)
+        assert_identity_encoding(response.raw.headers.getlist('Content-Encoding'))
+        return response
 
 
 class _SSRFSafeConnector(aiohttp.TCPConnector):
@@ -304,7 +318,8 @@ _UNWRAP_EXTRA_MAINS = (
 
 
 def _forwardable_request_headers(headers: Dict[str, str]) -> Dict[str, str]:
-    return {name: value for name, value in headers.items() if name.lower() not in _DROPPED_REQUEST_HEADERS}
+    forwardable = {name: value for name, value in headers.items() if name.lower() not in _DROPPED_REQUEST_HEADERS}
+    return forwardable | {'Accept-Encoding': 'identity'}
 
 
 def _fulfillable_response_headers(header_pairs: Iterable[Tuple[str, str]]) -> Dict[str, str]:
@@ -913,6 +928,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                     ssl=AIOHTTP_CLIENT_SESSION_SSL if self.verify_ssl else False,
                     timeout=aiohttp.ClientTimeout(total=self._request_timeout()),
                 )
+                assert_identity_encoding(response.headers.getall('Content-Encoding', ()))
                 # aiohttp only returns the connection to the pool once the body is buffered
                 return response, await response.read()
 
@@ -1034,6 +1050,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
 WEB_LOADER_HEADERS = {
     'User-Agent': USER_AGENT or 'DefaultLangchainUserAgent',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Encoding': 'identity',
     'Accept-Language': 'en-US,en;q=0.5',
     'Referer': 'https://www.google.com/',
     'DNT': '1',
@@ -1107,6 +1124,7 @@ class SafeWebBaseLoader(BaseLoader):
                     async with session.get(url, **options) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
+                        assert_identity_encoding(response.headers.getall('Content-Encoding', ()))
                         return await response.text()
                 except aiohttp.ClientConnectionError as e:
                     if i == retries - 1:

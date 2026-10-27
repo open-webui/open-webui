@@ -83,7 +83,7 @@ from open_webui.models.config import Config
 from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateForm
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import Users
-from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
+from open_webui.retrieval.web.utils import assert_identity_encoding, get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import (
     get_optional_verified_user_from_request,
     get_password_hash,
@@ -1878,20 +1878,19 @@ class OAuthManager:
         try:
             await asyncio.to_thread(validate_url, picture_url)
 
-            get_kwargs = {}
+            headers = {'Accept-Encoding': 'identity'}
             if access_token:
-                get_kwargs['headers'] = {
-                    'Authorization': f'Bearer {access_token}',
-                }
+                headers['Authorization'] = f'Bearer {access_token}'
             # get_ssrf_safe_session pins the connect-time IP (defeats DNS rebinding); allow_redirects=False keeps validate_url's vet authoritative.
             async with get_ssrf_safe_session() as session:
                 async with session.get(
                     picture_url,
-                    **get_kwargs,
+                    headers=headers,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
                 ) as resp:
                     if resp.ok:
+                        assert_identity_encoding(resp.headers.getall('Content-Encoding', ()))
                         upstream_mime = (resp.headers.get('Content-Type', '') or '').split(';', 1)[0].strip().lower()
                         picture = await resp.read()
                         base64_encoded_picture = base64.b64encode(picture).decode('utf-8')

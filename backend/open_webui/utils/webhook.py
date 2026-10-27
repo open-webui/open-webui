@@ -7,7 +7,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     VERSION,
 )
-from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, is_identity_encoding, validate_url
 from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
@@ -90,8 +90,10 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
                 json=payload,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                headers={'Accept-Encoding': 'identity'},
             ) as r:
-                r_text = await r.text()
+                # The reply is only logged, so a compressed one is left unread rather than failing the delivery.
+                r_text = await r.text() if is_identity_encoding(r.headers.getall('Content-Encoding', ())) else ''
                 r.raise_for_status()
                 log.debug('r.text: %s', r_text)
 

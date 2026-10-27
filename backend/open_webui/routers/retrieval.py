@@ -93,7 +93,7 @@ from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.google_pse import search_google_pse
 from open_webui.retrieval.web.jina_search import search_jina
 from open_webui.retrieval.web.kagi import search_kagi
-from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
+from open_webui.retrieval.web.utils import assert_identity_encoding, get_ssrf_safe_session, validate_url
 
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
@@ -1917,13 +1917,14 @@ async def _fetch_url(url: str, max_size_mb: int | str | None) -> dict:
         except (TypeError, ValueError):
             max_bytes = None
 
-    headers = {'User-Agent': USER_AGENT} if USER_AGENT else None
+    headers = {'Accept-Encoding': 'identity'} | ({'User-Agent': USER_AGENT} if USER_AGENT else {})
 
     async with get_ssrf_safe_session() as session:
         async with session.get(
             url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
         ) as response:
             response.raise_for_status()
+            assert_identity_encoding(response.headers.getall('Content-Encoding', ()))
 
             content_type = response.headers.get('Content-Type', '')
             content_disposition = response.headers.get('Content-Disposition', '')
