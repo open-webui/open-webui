@@ -516,43 +516,45 @@
 							</div>
 						</Loader>
 					{/if}
-					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
-						{#each messages as message, messageIdx (message.id)}
-							<Message
-								{chatId}
-								bind:history
-								{selectedModels}
-								messageId={message.id}
-								idx={messageIdx}
-								{user}
-								{setInputText}
-								{gotoMessage}
-								{showPreviousMessage}
-								{showNextMessage}
-								{updateChat}
-								{editMessage}
-								{deleteMessage}
-								{rateMessage}
-								{actionMessage}
-								{saveMessage}
-								{submitMessage}
-								{regenerateResponse}
-								{continueResponse}
-								{mergeResponses}
-								{addMessages}
-								{onToolCallResolved}
-								{forkHandler}
-								{allowDelete}
-								{triggerScroll}
-								{readOnly}
-								{compactPreview}
-								{editCodeBlock}
-								{topPadding}
-								{onInsertToNote}
-								{shareMode}
-							/>
-						{/each}
-					</ul>
+					<div role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
+						<ul>
+							{#each messages as message, messageIdx (message.id)}
+								<Message
+									{chatId}
+									bind:history
+									{selectedModels}
+									messageId={message.id}
+									idx={messageIdx}
+									{user}
+									{setInputText}
+									{gotoMessage}
+									{showPreviousMessage}
+									{showNextMessage}
+									{updateChat}
+									{editMessage}
+									{deleteMessage}
+									{rateMessage}
+									{actionMessage}
+									{saveMessage}
+									{submitMessage}
+									{regenerateResponse}
+									{continueResponse}
+									{mergeResponses}
+									{addMessages}
+									{onToolCallResolved}
+									{forkHandler}
+									{allowDelete}
+									{triggerScroll}
+									{readOnly}
+									{compactPreview}
+									{editCodeBlock}
+									{topPadding}
+									{onInsertToNote}
+									{shareMode}
+								/>
+							{/each}
+						</ul>
+					</div>
 				</section>
 				<div class="pb-18" />
 				{#if bottomPadding}
