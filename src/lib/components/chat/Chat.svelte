@@ -928,8 +928,10 @@
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
 		);
 
+		const navigatedChatId = chatIdProp;
 		const loaded = chatIdProp ? await loadChat() : false;
 		noteChatDebug('loadChat completed inside navigateHandler', { loaded });
+		if (chatIdProp !== navigatedChatId) return;
 		if (loaded) {
 			await tick();
 			loading = false;
@@ -1425,14 +1427,16 @@
 		if (!id || $temporaryChatEnabled) return Promise.resolve();
 		if (chatRefresh?.id === id) return chatRefresh.promise;
 		const baseline = { ...history.messages };
+		const loadCountAtStart = chatLoadCount;
 		const promise = (async () => {
 			try {
 				const fresh = await getChatById(localStorage.token, id);
 				if ($chatId !== id || joinedChatId !== id) return;
+				if (chatLoadCount !== loadCountAtStart) return;
 				chat = fresh;
 				mergeChatMessages(fresh.chat.history, baseline);
 			} catch (error) {
-				if ($chatId === id && joinedChatId === id) {
+				if ($chatId === id && joinedChatId === id && chatLoadCount === loadCountAtStart) {
 					clearPresence();
 					chat = null;
 					history = { messages: {}, currentId: null };
@@ -2880,7 +2884,16 @@
 		messageInput?.focus({ preventScroll: true });
 	};
 
-	const loadChat = async () => {
+	let chatLoadCount = 0;
+	let latestChatLoad: Promise<boolean | null | undefined> | null = null;
+
+	// Overlapping loads and refreshes must not lay an older copy of the chat over a newer one.
+	const loadChat = () => {
+		latestChatLoad = fetchAndShowChat(++chatLoadCount);
+		return latestChatLoad;
+	};
+
+	const fetchAndShowChat = async (loadId: number) => {
 		if (chatIdProp && chatIdProp !== $chatId) {
 			terminalContext = null;
 			history = { messages: {}, currentId: null };
@@ -2896,17 +2909,19 @@
 			temporaryChatEnabled.set(false);
 		}
 
-		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
+		const loadedChat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
 			console.error('[note-chat] getChatById failed', {
 				chatIdProp,
 				activeChatId: $chatId,
 				error
 			});
-			if (!embedded) {
+			if (!embedded && loadId === chatLoadCount) {
 				await goto('/');
 			}
 			return null;
 		});
+		if (loadId !== chatLoadCount) return latestChatLoad;
+		chat = loadedChat;
 		noteChatDebug('getChatById completed', {
 			found: !!chat,
 			chatId: chat?.id,
@@ -2915,7 +2930,7 @@
 		});
 
 		if (chat) {
-			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+			const loadedTags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
 				console.warn('[note-chat] getTagsById failed; continuing without tags', {
 					chatIdProp,
 					activeChatId: $chatId,
@@ -2923,6 +2938,8 @@
 				});
 				return [];
 			});
+			if (loadId !== chatLoadCount) return latestChatLoad;
+			tags = loadedTags;
 			noteChatDebug('getTagsById completed', { tagCount: tags?.length ?? 0 });
 
 			const chatContent = chat.chat;
@@ -3019,6 +3036,7 @@
 						});
 						return [];
 					});
+				if (loadId !== chatLoadCount) return latestChatLoad;
 				noteChatDebug('task reconciliation completed', {
 					pendingTaskCount: pendingTaskIds.length,
 					hasCurrentMessage: !!currentMessage
