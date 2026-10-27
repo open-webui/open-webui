@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- 🔀 **Model switch keeps selections.** Switching models in a chat now keeps the tools, skills, filters, web search, image generation and code interpreter you turned on and only turns off what the new model cannot use, where every switch cleared them and applied the new model's defaults. [Commit](https://github.com/open-webui/open-webui/commit/3aaecdd0e99f6407187732f2fb117841ce2cc013)
+- 🔀 **Model switch keeps your picks.** Switching models in a chat now applies the new model's default tools, skills, filters and features while keeping the ones you turned on or off yourself, where every switch cleared your picks, and chats with several models now get the default tools and skills of every selected model. [Commit](https://github.com/open-webui/open-webui/commit/3aaecdd0e99f6407187732f2fb117841ce2cc013), [Commit](https://github.com/open-webui/open-webui/commit/1c572c49bc5103b78c812e069872015d7fcb7391)
 - 📣 **Model mentions switch chats.** Sending a message to a model picked with @ now switches the chat to that model, where the mention stayed above the input and the chat kept its own model. [Commit](https://github.com/open-webui/open-webui/commit/3aaecdd0e99f6407187732f2fb117841ce2cc013)
 - 🔁 **Regenerate uses current models.** Regenerating a response in a chat with several models now uses the model currently picked for that column, where it reused the model that first wrote the response. [Commit](https://github.com/open-webui/open-webui/commit/3aaecdd0e99f6407187732f2fb117841ce2cc013)
 
