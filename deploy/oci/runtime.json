@@ -121,8 +121,6 @@
           "openai.gpt-4.1-2025-04-14",
           "openai.gpt-4.1-mini",
           "openai.gpt-4.1-mini-2025-04-14",
-          "openai.gpt-4.1-nano",
-          "openai.gpt-4.1-nano-2025-04-14",
           "openai.gpt-4o",
           "openai.gpt-4o-2024-08-06",
           "openai.gpt-4o-2024-11-20",
@@ -155,14 +153,8 @@
           "openai.gpt-6.1-sol",
           "openai.gpt-oss-120b",
           "openai.gpt-oss-20b",
-          "openai.o1",
-          "openai.o1-2024-12-17",
           "openai.o3",
-          "openai.o3-2025-04-16",
-          "openai.o3-mini",
-          "openai.o3-mini-2025-01-31",
-          "openai.o4-mini",
-          "openai.o4-mini-2025-04-16"
+          "openai.o3-2025-04-16"
         ],
         "connection_type": "external",
         "tags": [
@@ -442,64 +434,6 @@
       "id": "OCI.openai.gpt-4.1-mini-2025-04-14",
       "base_model_id": null,
       "name": "OCI.openai.gpt-4.1-mini-2025-04-14",
-      "params": {},
-      "meta": {
-        "profile_image_url": null,
-        "background_image_url": null,
-        "description": null,
-        "i18n": null,
-        "capabilities": null,
-        "knowledge": null,
-        "voice": null,
-        "voice_avatar": null,
-        "tags": [
-          {
-            "name": "Oracle OCI"
-          }
-        ]
-      },
-      "is_active": true,
-      "access_grants": [
-        {
-          "principal_type": "group",
-          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
-          "permission": "read"
-        }
-      ]
-    },
-    {
-      "id": "OCI.openai.gpt-4.1-nano",
-      "base_model_id": null,
-      "name": "OCI.openai.gpt-4.1-nano",
-      "params": {},
-      "meta": {
-        "profile_image_url": null,
-        "background_image_url": null,
-        "description": null,
-        "i18n": null,
-        "capabilities": null,
-        "knowledge": null,
-        "voice": null,
-        "voice_avatar": null,
-        "tags": [
-          {
-            "name": "Oracle OCI"
-          }
-        ]
-      },
-      "is_active": true,
-      "access_grants": [
-        {
-          "principal_type": "group",
-          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
-          "permission": "read"
-        }
-      ]
-    },
-    {
-      "id": "OCI.openai.gpt-4.1-nano-2025-04-14",
-      "base_model_id": null,
-      "name": "OCI.openai.gpt-4.1-nano-2025-04-14",
       "params": {},
       "meta": {
         "profile_image_url": null,
@@ -1454,64 +1388,6 @@
       ]
     },
     {
-      "id": "OCI.openai.o1",
-      "base_model_id": null,
-      "name": "OCI.openai.o1",
-      "params": {},
-      "meta": {
-        "profile_image_url": null,
-        "background_image_url": null,
-        "description": null,
-        "i18n": null,
-        "capabilities": null,
-        "knowledge": null,
-        "voice": null,
-        "voice_avatar": null,
-        "tags": [
-          {
-            "name": "Oracle OCI"
-          }
-        ]
-      },
-      "is_active": true,
-      "access_grants": [
-        {
-          "principal_type": "group",
-          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
-          "permission": "read"
-        }
-      ]
-    },
-    {
-      "id": "OCI.openai.o1-2024-12-17",
-      "base_model_id": null,
-      "name": "OCI.openai.o1-2024-12-17",
-      "params": {},
-      "meta": {
-        "profile_image_url": null,
-        "background_image_url": null,
-        "description": null,
-        "i18n": null,
-        "capabilities": null,
-        "knowledge": null,
-        "voice": null,
-        "voice_avatar": null,
-        "tags": [
-          {
-            "name": "Oracle OCI"
-          }
-        ]
-      },
-      "is_active": true,
-      "access_grants": [
-        {
-          "principal_type": "group",
-          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
-          "permission": "read"
-        }
-      ]
-    },
-    {
       "id": "OCI.openai.o3",
       "base_model_id": null,
       "name": "OCI.openai.o3",
@@ -1568,122 +1444,21 @@
           "permission": "read"
         }
       ]
-    },
-    {
-      "id": "OCI.openai.o3-mini",
-      "base_model_id": null,
-      "name": "OCI.openai.o3-mini",
-      "params": {},
-      "meta": {
-        "profile_image_url": null,
-        "background_image_url": null,
-        "description": null,
-        "i18n": null,
-        "capabilities": null,
-        "knowledge": null,
-        "voice": null,
-        "voice_avatar": null,
-        "tags": [
-          {
-            "name": "Oracle OCI"
-          }
-        ]
-      },
-      "is_active": true,
-      "access_grants": [
-        {
-          "principal_type": "group",
-          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
-          "permission": "read"
-        }
-      ]
-    },
-    {
-      "id": "OCI.openai.o3-mini-2025-01-31",
-      "base_model_id": null,
-      "name": "OCI.openai.o3-mini-2025-01-31",
-      "params": {},
-      "meta": {
-        "profile_image_url": null,
-        "background_image_url": null,
-        "description": null,
-        "i18n": null,
-        "capabilities": null,
-        "knowledge": null,
-        "voice": null,
-        "voice_avatar": null,
-        "tags": [
-          {
-            "name": "Oracle OCI"
-          }
-        ]
-      },
-      "is_active": true,
-      "access_grants": [
-        {
-          "principal_type": "group",
-          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
-          "permission": "read"
-        }
-      ]
-    },
-    {
-      "id": "OCI.openai.o4-mini",
-      "base_model_id": null,
-      "name": "OCI.openai.o4-mini",
-      "params": {},
-      "meta": {
-        "profile_image_url": null,
-        "background_image_url": null,
-        "description": null,
-        "i18n": null,
-        "capabilities": null,
-        "knowledge": null,
-        "voice": null,
-        "voice_avatar": null,
-        "tags": [
-          {
-            "name": "Oracle OCI"
-          }
-        ]
-      },
-      "is_active": true,
-      "access_grants": [
-        {
-          "principal_type": "group",
-          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
-          "permission": "read"
-        }
-      ]
-    },
-    {
-      "id": "OCI.openai.o4-mini-2025-04-16",
-      "base_model_id": null,
-      "name": "OCI.openai.o4-mini-2025-04-16",
-      "params": {},
-      "meta": {
-        "profile_image_url": null,
-        "background_image_url": null,
-        "description": null,
-        "i18n": null,
-        "capabilities": null,
-        "knowledge": null,
-        "voice": null,
-        "voice_avatar": null,
-        "tags": [
-          {
-            "name": "Oracle OCI"
-          }
-        ]
-      },
-      "is_active": true,
-      "access_grants": [
-        {
-          "principal_type": "group",
-          "principal_id": "d90806cd-1e1f-423b-aa8b-7b2070654db0",
-          "permission": "read"
-        }
-      ]
     }
-  ]
+  ],
+  "model_retirement_audit": {
+    "checked_at": "2026-10-27",
+    "removed_models": [
+      "openai.gpt-4.1-nano",
+      "openai.gpt-4.1-nano-2025-04-14",
+      "openai.o1",
+      "openai.o1-2024-12-17",
+      "openai.o3-mini",
+      "openai.o3-mini-2025-01-31",
+      "openai.o4-mini",
+      "openai.o4-mini-2025-04-16"
+    ],
+    "evidence": "The configured OCI Frankfurt chat/completions endpoint returned HTTP 400 with an explicit model-is-retired message for each removed ID. All 42 retained IDs returned HTTP 200 with a short text completion.",
+    "server_backup": "/app/backend/data/backups/model-retirement-20261027T125251Z.sqlite3"
+  }
 }

@@ -1508,6 +1508,18 @@ async def generate_chat_completion(
 
     is_responses = api_config.get('api_type') == 'responses'
 
+    # OCI's Luna Chat Completions endpoint only supports function tools without reasoning.
+    # Apply this after user/model parameters so existing chat settings cannot reintroduce it.
+    hostname = urlparse(url).hostname or ''
+    if (
+        not is_responses
+        and hostname.startswith('inference.generativeai.')
+        and hostname.endswith('.oci.oraclecloud.com')
+        and payload.get('model') == 'openai.gpt-6-luna'
+        and any(tool.get('type') == 'function' for tool in payload.get('tools', []) or [])
+    ):
+        payload['reasoning_effort'] = 'none'
+
     # Explicit continuation keeps llama.cpp from echoing the prefill in streamed replies.
     if (
         api_config.get('provider') == 'llama.cpp'
