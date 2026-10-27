@@ -374,6 +374,7 @@
 											class="h-full w-full rounded-[0.125rem] {modelPalette(topItem(entry))[
 												intensity(entry)
 											]}"
+											role="img"
 											aria-label={tooltipFor(entry)}
 										></div>
 									</Tooltip>
