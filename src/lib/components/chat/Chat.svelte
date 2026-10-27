@@ -820,6 +820,16 @@
 		}
 	};
 
+	let oldSelectedModelIds = [''];
+	$: if (!equal(selectedModelIds, oldSelectedModelIds)) {
+		onSelectedModelIdsChange();
+	}
+
+	const onSelectedModelIdsChange = () => {
+		resetInput();
+		oldSelectedModelIds = structuredClone(selectedModelIds);
+	};
+
 	const mergeFiles = (current, incoming) => {
 		const seen = new Set();
 		return [...(incoming ?? []), ...(current ?? [])].filter((file) => {
@@ -2949,6 +2959,8 @@
 					selectedModels = normalizeSelectedModels(selectedModels);
 					noteChatDebug('normalized empty selected models after load', { selectedModels });
 				}
+
+				oldSelectedModelIds = structuredClone(selectedModels);
 
 				chatContent.history ??= convertMessagesToHistory(chatContent.messages);
 				// Keep live updates received while the chat and tags were loading.
