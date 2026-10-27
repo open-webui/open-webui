@@ -521,7 +521,7 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
         updates = {
             'rag.embedding_engine': form_data.RAG_EMBEDDING_ENGINE,
             'rag.embedding_model': form_data.RAG_EMBEDDING_MODEL.strip(),
-            'rag.embedding_batch_size': form_data.RAG_EMBEDDING_BATCH_SIZE,
+            'rag.embedding_batch_size': form_data.RAG_EMBEDDING_BATCH_SIZE or 1,
             'rag.enable_async_embedding': form_data.ENABLE_ASYNC_EMBEDDING,
             'rag.embedding_concurrent_requests': form_data.RAG_EMBEDDING_CONCURRENT_REQUESTS,
         }
