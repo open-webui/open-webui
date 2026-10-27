@@ -1755,15 +1755,6 @@ async def chat_completion(
             # Clean up MCP clients.  Each client is isolated so one
             # failure doesn't skip the rest.
             #
-            # NOTE: asyncio.wait_for() / asyncio.shield() must NOT be used
-            # here — they create new asyncio Tasks, which violate anyio
-            # cancel-scope task-ownership rules when the MCPClient's
-            # exit_stack contains anyio transport resources (streamable_http).
-            # Exiting those cancel scopes from the wrong task raises
-            # "Attempted to exit a cancel scope that isn't the current
-            # task's current cancel scope", which propagates as a
-            # BaseException through the finally block, discards the response
-            # return value, and surfaces as a 500 "No response returned."
             # MCPClient.disconnect() suppresses known transport teardown errors
             # while still propagating real task cancellation.
             try:

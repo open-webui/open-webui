@@ -257,7 +257,6 @@ async def connect_mcp_server(
             tool_specs = [spec for spec in tool_specs if is_string_allowed(spec['name'], function_name_filter_list)]
         return client, tool_specs
     except BaseException:
-        # MCP sessions must be closed in the same task that opened them.
         await client.disconnect()
         raise
 
