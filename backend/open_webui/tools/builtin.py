@@ -3104,6 +3104,54 @@ async def view_knowledge_file(
         return JSONCodec.dumps({'error': str(e)})
 
 
+async def display_file(
+    file_id: str,
+    page: Optional[int] = None,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Show a chat or knowledge base file to the user inline in the chat.
+    After display_file succeeds, do not display the same file again or emit Markdown for it.
+
+    :param file_id: The ID of the file to show
+    :param page: For PDF and PPTX files, open the preview at this 1-based page or slide number
+    :return: JSON with the displayed file's id, name, and content type
+    """
+    if __request__ is None:
+        return JSONCodec.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return JSONCodec.dumps({'error': 'User context not available'})
+
+    try:
+        from open_webui.models.files import Files
+
+        file = await Files.get_file_by_id(file_id)
+        if not file:
+            return JSONCodec.dumps({'error': 'File not found'})
+
+        if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
+            return JSONCodec.dumps({'error': 'File not found'})
+
+        file_meta = file.meta or {}
+        result = {
+            'type': 'file',
+            'source': 'open_webui',
+            'displayed': True,
+            'id': file.id,
+            'name': file_meta.get('name') or file.filename,
+            'content_type': file_meta.get('content_type'),
+        }
+        if page:
+            result['page'] = page
+        return JSONCodec.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'display_file error: {e}')
+        return JSONCodec.dumps({'error': str(e)})
+
+
 async def list_knowledge(
     knowledge_id: Optional[str] = None,
     skip: int = 0,

@@ -155,6 +155,7 @@ from open_webui.utils.terminals import upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
 from open_webui.utils.tools import (
+    add_display_file_id_param,
     connect_mcp_server,
     get_attached_knowledge,
     get_builtin_tools,
@@ -2869,6 +2870,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
+                elif name == 'display_file' and (
+                    tools_dict[name].get('type') == 'terminal'
+                    or tools_dict[name].get('server', {}).get('is_terminal') is True
+                ):
+                    tools_dict[name] = add_display_file_id_param(tools_dict[name], tool_dict)
 
         # Connections can keep shell tools advertised across browser disconnects for prompt caching.
         shell_tools = {
@@ -3106,6 +3112,8 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     tool = metadata.get('tools', {}).get(name)
     if not tool:
         return params, f'Error: Tool "{name}" not found.', None, None, False
+    if params.get('file_id') and tool.get('file_tool'):
+        tool = tool['file_tool']
     tool_type = tool.get('type', '')
     direct_tool = tool.get('direct', False)
     # MCP servers validate their own arguments

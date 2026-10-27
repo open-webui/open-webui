@@ -181,14 +181,15 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 	}
 
 	const result = parseJSONStringValue(getToolResultText(resultItem)) as Record<string, unknown>;
+	const isTerminalFile =
+		result?.source === 'open_terminal' && !!result.path && !!result.terminal_selector;
+	const isOpenWebUIFile = result?.source === 'open_webui' && !!result.id;
 	if (
 		!result ||
 		typeof result !== 'object' ||
 		result.type !== 'file' ||
-		result.source !== 'open_terminal' ||
 		result.exists === false ||
-		!result.path ||
-		!result.terminal_selector
+		!(isTerminalFile || isOpenWebUIFile)
 	) {
 		return null;
 	}

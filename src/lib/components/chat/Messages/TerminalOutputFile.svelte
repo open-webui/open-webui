@@ -15,6 +15,7 @@
 		terminalServers
 	} from '$lib/stores';
 	import { downloadFileBlob, downloadFilePreview, readFile } from '$lib/apis/terminal';
+	import { getFileContentById } from '$lib/apis/files';
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import { fileIconName } from '$lib/components/chat/FileNav/fileIcon';
@@ -51,13 +52,15 @@
 	const SQLITE_EXTS = new Set(['db', 'sqlite', 'sqlite3', 'db3']);
 	const OFFICE_EXTS = new Set(['docx', 'xlsx', 'xls', 'pptx']);
 
-	$: path = String(item?.full_path || item?.path || '');
+	// Open WebUI files have no path; the name carries the extension.
+	$: path = String(item?.full_path || item?.path || item?.name || '');
+	$: fileId = item?.source === 'open_webui' ? String(item.id) : '';
 	$: name = String(item?.name || path.split('/').filter(Boolean).at(-1) || 'file');
 	$: targetPage = normalizeDocumentTargetPage(item?.page);
 	$: selector = item?.terminal_selector;
 	$: terminal = resolveTerminal();
-	$: unavailable = !terminal;
-	$: previewKey = terminal ? `${terminal.url}|${terminal.key}|${path}|${chatId}` : '';
+	$: unavailable = !terminal && !fileId;
+	$: previewKey = fileId || (terminal ? `${terminal.url}|${terminal.key}|${path}|${chatId}` : '');
 	$: isPerChatTerminal =
 		($terminalServers ?? []).find((server: any) => server.id === selector)?.contexts?.chat
 			?.context_id === 'chat_id';
@@ -74,7 +77,7 @@
 			  getExt(path) === 'svg'
 			? 'h-96'
 			: 'h-72';
-	$: if (expanded && terminal && path && previewKey !== loadedKey && !loading) {
+	$: if (expanded && !unavailable && path && previewKey !== loadedKey && !loading) {
 		void loadPreview(previewKey);
 	}
 
@@ -125,6 +128,12 @@
 	}
 
 	async function blobForPreview() {
+		if (fileId) {
+			const data = await getFileContentById(fileId).catch(() => null);
+			return data
+				? { blob: new Blob([data], { type: item?.content_type ?? '' }), filename: name }
+				: null;
+		}
 		if (!terminal) return null;
 		return downloadFileBlob(terminal.url, terminal.key, path, chatId || undefined);
 	}
@@ -167,12 +176,9 @@
 					const arrayBuffer = await result.blob.arrayBuffer();
 					fileSqliteData = arrayBuffer;
 				} else if (ext === 'docx') {
-					const preview = await downloadFilePreview(
-						terminal.url,
-						terminal.key,
-						path,
-						chatId || undefined
-					);
+					const preview = terminal
+						? await downloadFilePreview(terminal.url, terminal.key, path, chatId || undefined)
+						: null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -191,12 +197,9 @@
 						await loadExcelSheet(excelSheetNames[0]);
 					}
 				} else if (ext === 'pptx') {
-					const preview = await downloadFilePreview(
-						terminal.url,
-						terminal.key,
-						path,
-						chatId || undefined
-					);
+					const preview = terminal
+						? await downloadFilePreview(terminal.url, terminal.key, path, chatId || undefined)
+						: null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -208,6 +211,10 @@
 						fileOfficeSlides = resultImages.images;
 					}
 				}
+			} else if (fileId) {
+				const result = await blobForPreview();
+				if (!result) throw new Error(t('Preview failed'));
+				fileContent = await result.blob.text();
 			} else if (terminal) {
 				fileContent = await readFile(terminal.url, terminal.key, path, chatId || undefined);
 			}
@@ -225,8 +232,8 @@
 	}
 
 	async function downloadFile() {
-		if (!terminal || !path) return;
-		const result = await downloadFileBlob(terminal.url, terminal.key, path, chatId || undefined);
+		if (unavailable || !path) return;
+		const result = await blobForPreview();
 		if (!result) {
 			toast.error(t('Download failed'));
 			return;
@@ -274,15 +281,17 @@
 		>
 			<Icon name="download" size={13} />
 		</button>
-		<button
-			type="button"
-			class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 disabled:hover:text-gray-400 dark:text-gray-500 dark:hover:text-gray-200 dark:disabled:hover:text-gray-500"
-			disabled={unavailable}
-			on:click|stopPropagation={openInFiles}
-			aria-label={t('Open')}
-		>
-			<Icon name="external-link" size={13} />
-		</button>
+		{#if !fileId}
+			<button
+				type="button"
+				class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 disabled:hover:text-gray-400 dark:text-gray-500 dark:hover:text-gray-200 dark:disabled:hover:text-gray-500"
+				disabled={unavailable}
+				on:click|stopPropagation={openInFiles}
+				aria-label={t('Open')}
+			>
+				<Icon name="external-link" size={13} />
+			</button>
+		{/if}
 	</div>
 
 	{#if expanded}

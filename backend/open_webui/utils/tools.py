@@ -56,6 +56,7 @@ from open_webui.tools.builtin import (
     delete_automation,
     delete_calendar_event,
     delete_memory,
+    display_file,
     edit_image,
     execute_code,
     fetch_url,
@@ -716,7 +717,7 @@ async def get_builtin_tools(
         and has_chat_files
         and await has_user_chat_permission('file_upload')
     ):
-        builtin_functions.extend([list_chat_files, query_chat_files, grep_chat_files, view_file])
+        builtin_functions.extend([list_chat_files, query_chat_files, grep_chat_files, view_file, display_file])
 
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_files
@@ -728,6 +729,7 @@ async def get_builtin_tools(
         if ENABLE_KB_EXEC:
             builtin_functions.append(kb_exec)
             builtin_functions.append(query_knowledge_files)
+            builtin_functions.append(display_file)
             # Notes attached to the model need view_note since kb_exec is file-only
             if model_knowledge:
                 knowledge_types = {item.get('type') for item in model_knowledge}
@@ -743,7 +745,7 @@ async def get_builtin_tools(
 
             knowledge_types = {item.get('type') for item in model_knowledge}
             if 'file' in knowledge_types or 'collection' in knowledge_types:
-                builtin_functions.extend([view_file, view_knowledge_file])
+                builtin_functions.extend([view_file, view_knowledge_file, display_file])
             if 'note' in knowledge_types:
                 builtin_functions.append(view_note)
         else:
@@ -756,6 +758,7 @@ async def get_builtin_tools(
                     search_knowledge_files,
                     query_knowledge_files,
                     view_knowledge_file,
+                    display_file,
                 ]
             )
 
@@ -1100,6 +1103,20 @@ def add_terminal_display_file_inline_param(spec: dict) -> dict:
         'description': 'For PDF, DOCX, and PPTX files, open the preview at this 1-based page or slide number.',
     }
     return spec
+
+
+def add_display_file_id_param(terminal_tool: dict, file_tool: dict) -> dict:
+    """Let the terminal display_file also show chat and knowledge base files, run by the builtin tool."""
+    spec = copy.deepcopy(terminal_tool['spec'])
+    spec['description'] = (
+        f'{spec.get("description", "")} '
+        'To show a chat or knowledge base file instead, pass its file_id, which takes precedence over path; '
+        'it is always shown inline and page applies to PDF and PPTX files.'
+    ).strip()
+    parameters = spec['parameters']
+    parameters['properties']['file_id'] = file_tool['spec']['parameters']['properties']['file_id']
+    parameters['required'] = [name for name in parameters.get('required', []) if name != 'path']
+    return {**terminal_tool, 'spec': spec, 'file_tool': file_tool}
 
 
 @cache
