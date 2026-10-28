@@ -2548,7 +2548,7 @@ class ChatTable:
                 chat.folder_id = folder_id
                 if chat.user_id == user_id:
                     chat.last_read_at = int(time.time())
-                chat.pinned = False
+                    chat.pinned = False
                 if folder_id is not None:
                     # Folder listings only show unarchived chats, so moving an archived
                     # chat into a folder would otherwise have no visible effect: the chat
