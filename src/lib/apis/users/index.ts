@@ -758,6 +758,16 @@ export const revokeUserSessions = async (token: string, userId: string) => {
 	return result;
 };
 
+export const rotateUserAPIKeyById = async (token: string, userId: string): Promise<string> => {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/api_key/rotate`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${token}` }
+	});
+	const result = await response.json();
+	if (!response.ok) throw new Error(result.detail || 'Failed to rotate API key');
+	return result.api_key;
+};
+
 export const deleteUserAPIKeyById = async (token: string, userId: string) => {
 	const response = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/api_key`, {
 		method: 'DELETE',
