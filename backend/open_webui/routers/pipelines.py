@@ -23,6 +23,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.routers.openai import get_all_models_responses
 from open_webui.utils.auth import get_admin_user
+from open_webui.utils.model_ids import strip_provider_model_prefix
 from pydantic import BaseModel
 from starlette.responses import FileResponse
 
@@ -86,21 +87,28 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
             if not key:
                 continue
 
+            api_configs = await Config.get('openai.api_configs', {})
+            prefix_id = api_configs.get(str(urlIdx), api_configs.get(url, {})).get('prefix_id')
+            payload_model = payload['model']
+            body_model = strip_provider_model_prefix(payload_model, prefix_id)
+
             headers = {'Authorization': f'Bearer {key}'}
             request_data = {
                 'user': user,
-                'body': payload,
+                'body': {**payload, 'model': body_model},
             }
 
             try:
                 async with session.post(
-                    f'{url}/{filter["id"]}/filter/inlet',
+                    f'{url}/{strip_provider_model_prefix(filter["id"], prefix_id)}/filter/inlet',
                     headers=headers,
                     json=request_data,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as response:
                     response.raise_for_status()
                     payload = await response.json()
+                    if payload.get('model') == body_model:
+                        payload['model'] = payload_model
             except aiohttp.ClientResponseError as e:
                 try:
                     res = await response.json() if 'application/json' in response.content_type else {}
@@ -152,21 +160,28 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
             if not key:
                 continue
 
+            api_configs = await Config.get('openai.api_configs', {})
+            prefix_id = api_configs.get(str(urlIdx), api_configs.get(url, {})).get('prefix_id')
+            payload_model = payload['model']
+            body_model = strip_provider_model_prefix(payload_model, prefix_id)
+
             headers = {'Authorization': f'Bearer {key}'}
             request_data = {
                 'user': user,
-                'body': payload,
+                'body': {**payload, 'model': body_model},
             }
 
             try:
                 async with session.post(
-                    f'{url}/{filter["id"]}/filter/outlet',
+                    f'{url}/{strip_provider_model_prefix(filter["id"], prefix_id)}/filter/outlet',
                     headers=headers,
                     json=request_data,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as response:
                     response.raise_for_status()
                     payload = await response.json()
+                    if payload.get('model') == body_model:
+                        payload['model'] = payload_model
             except aiohttp.ClientResponseError as e:
                 try:
                     res = await response.json() if 'application/json' in response.content_type else {}
