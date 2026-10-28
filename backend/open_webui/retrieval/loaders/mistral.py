@@ -34,6 +34,7 @@ class MistralLoader:
         max_retries: int = 3,
         enable_debug_logging: bool = False,
         use_base64: bool = False,
+        params: Optional[Dict[str, Any]] = None,
         user: Optional[Any] = None,
     ):
         """
@@ -46,6 +47,7 @@ class MistralLoader:
             max_retries: Maximum number of retry attempts.
             enable_debug_logging: Enable detailed debug logs.
             use_base64: Send the document as a data URL instead of uploading it first.
+            params: Extra fields merged into the OCR request, overriding the defaults (e.g. model).
             user: The requesting user, forwarded to Mistral via user-info headers
                 when ENABLE_FORWARD_USER_INFO_HEADERS is enabled.
         """
@@ -60,6 +62,7 @@ class MistralLoader:
         self.max_retries = max_retries
         self.debug = enable_debug_logging
         self.use_base64 = use_base64
+        self.params = params or {}
         self.user = user
 
         # PERFORMANCE OPTIMIZATION: Differentiated timeouts for different operations
@@ -247,6 +250,7 @@ class MistralLoader:
                 'document_url': signed_url,
             },
             'include_image_base64': False,
+            **self.params,
         }
 
         def ocr_request():

@@ -263,6 +263,18 @@
 				return;
 			}
 		}
+		if (RAGConfig.MISTRAL_OCR_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.MISTRAL_OCR_PARAMS);
+			} catch {
+				toast.error(
+					$i18n.t('Invalid JSON format in {{NAME}}', {
+						NAME: $i18n.t('Mistral OCR Parameters')
+					})
+				);
+				return;
+			}
+		}
 
 		const res = await updateRAGConfig(localStorage.token, {
 			...RAGConfig,
@@ -290,6 +302,11 @@
 					: RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.split(',')
 							.map((mimeType: string) => mimeType.trim())
 							.filter((mimeType: string) => mimeType !== ''),
+			MISTRAL_OCR_PARAMS:
+				typeof RAGConfig.MISTRAL_OCR_PARAMS === 'string' &&
+				RAGConfig.MISTRAL_OCR_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.MISTRAL_OCR_PARAMS)
+					: {},
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
@@ -340,6 +357,11 @@
 			typeof config.MINERU_PARAMS === 'object'
 				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
 				: config.MINERU_PARAMS;
+
+		config.MISTRAL_OCR_PARAMS =
+			typeof config.MISTRAL_OCR_PARAMS === 'object'
+				? JSON.stringify(config.MISTRAL_OCR_PARAMS ?? {}, null, 2)
+				: config.MISTRAL_OCR_PARAMS;
 
 		config.EXTERNAL_DOCUMENT_LOADER_HEADERS =
 			typeof config.EXTERNAL_DOCUMENT_LOADER_HEADERS === 'object'
@@ -803,6 +825,17 @@
 					>
 						<Switch bind:state={RAGConfig.MISTRAL_OCR_USE_BASE64} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.documents.mistralOcrParams.label')}
+						description={$i18n.t('settings.admin.documents.mistralOcrParams.description')}
+					>
+						<Textarea
+							className={textareaClass}
+							bind:value={RAGConfig.MISTRAL_OCR_PARAMS}
+							placeholder={$i18n.t('Enter additional parameters in JSON format')}
+							minSize={100}
+						/>
+					</AdminSettingField>
 				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'paddleocr_vl'}
 					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 						<AdminSettingField

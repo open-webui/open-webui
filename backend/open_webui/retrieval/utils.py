@@ -211,6 +211,7 @@ async def get_content_from_url(request, url: str, *, config: dict | None = None)
             'rag.mineru_params',
             'rag.mistral_ocr_api_base_url',
             'rag.mistral_ocr_api_key',
+            'rag.mistral_ocr_params',
             'rag.mistral_ocr_use_base64',
             'rag.paddleocr_vl_base_url',
             'rag.paddleocr_vl_token',

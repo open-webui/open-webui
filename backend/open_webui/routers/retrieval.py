@@ -326,6 +326,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'MICROSOFT_WEB_IQ_LANGUAGE': 'web.search.microsoft_web_iq_language',
     'MISTRAL_OCR_API_BASE_URL': 'rag.mistral_ocr_api_base_url',
     'MISTRAL_OCR_API_KEY': 'rag.mistral_ocr_api_key',
+    'MISTRAL_OCR_PARAMS': 'rag.mistral_ocr_params',
     'MISTRAL_OCR_USE_BASE64': 'rag.mistral_ocr_use_base64',
     'MOJEEK_SEARCH_API_KEY': 'web.search.mojeek_search_api_key',
     'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': 'web.search.ollama_cloud_api_key',
@@ -654,6 +655,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'MISTRAL_OCR_API_BASE_URL': config['rag.mistral_ocr_api_base_url'],
         'MISTRAL_OCR_API_KEY': config['rag.mistral_ocr_api_key'],
         'MISTRAL_OCR_USE_BASE64': config['rag.mistral_ocr_use_base64'],
+        'MISTRAL_OCR_PARAMS': config['rag.mistral_ocr_params'],
         'PADDLEOCR_VL_BASE_URL': config['rag.paddleocr_vl_base_url'],
         'PADDLEOCR_VL_TOKEN': config['rag.paddleocr_vl_token'],
         # MinerU settings
@@ -900,6 +902,7 @@ class ConfigForm(BaseModel):
     MISTRAL_OCR_API_BASE_URL: str | None = None
     MISTRAL_OCR_API_KEY: str | None = None
     MISTRAL_OCR_USE_BASE64: bool | None = None
+    MISTRAL_OCR_PARAMS: dict | None = None
     PADDLEOCR_VL_BASE_URL: str | None = None
     PADDLEOCR_VL_TOKEN: str | None = None
 
@@ -1086,6 +1089,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'MISTRAL_OCR_API_BASE_URL': config['rag.mistral_ocr_api_base_url'],
         'MISTRAL_OCR_API_KEY': config['rag.mistral_ocr_api_key'],
         'MISTRAL_OCR_USE_BASE64': config['rag.mistral_ocr_use_base64'],
+        'MISTRAL_OCR_PARAMS': config['rag.mistral_ocr_params'],
         'PADDLEOCR_VL_BASE_URL': config['rag.paddleocr_vl_base_url'],
         'PADDLEOCR_VL_TOKEN': config['rag.paddleocr_vl_token'],
         # MinerU settings
