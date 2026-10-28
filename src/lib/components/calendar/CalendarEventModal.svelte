@@ -142,7 +142,7 @@
 		loading = true;
 		try {
 			const startNs = dateTimeToNs(startDate, allDay ? '00:00' : startTime);
-			const endDays = overnight && !endsPastMidnight() ? 0 : endDayOffset;
+			const endDays = endsPastMidnight() ? Math.max(endDayOffset, 1) : overnight ? 0 : endDayOffset;
 			const shiftedEndDate = endDate
 				? nsToDateStr(dateTimeToNs(startDate, '12:00') + endDays * 24 * 60 * 60 * 1000 * NS)
 				: '';
