@@ -925,6 +925,34 @@ async def revoke_user_sessions(request: Request, user_id: str, session_user=Depe
     return True
 
 
+@router.delete('/{user_id}/api_key', response_model=bool)
+async def delete_user_api_key_by_id(
+    request: Request,
+    user_id: str,
+    session_user: UserModel = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    target_user = await Users.get_user_by_id(user_id, db=db)
+    if target_user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.USER_NOT_FOUND)
+
+    first_user = await Users.get_first_user(db=db)
+    if first_user and first_user.id == user_id and session_user.id != user_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+
+    # Revocation must remain available when API keys or the user's permission are disabled.
+    await Users.delete_user_api_key_by_id(user_id, db=db)
+    await publish_event(
+        request,
+        EVENTS.AUTH_API_KEY_DELETED,
+        actor=session_user,
+        subject_id=user_id,
+        subject_type='user',
+        source='admin',
+    )
+    return True
+
+
 @router.post('/{user_id}/update', response_model=UserModel | None)
 async def update_user_by_id(
     request: Request,

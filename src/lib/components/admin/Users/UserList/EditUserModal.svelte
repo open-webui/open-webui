@@ -6,11 +6,18 @@
 
 	import { goto } from '$app/navigation';
 
-	import { updateUserById, getUserGroupsById, revokeUserSessions } from '$lib/apis/users';
+	import {
+		updateUserById,
+		getUserGroupsById,
+		revokeUserSessions,
+		deleteUserAPIKeyById
+	} from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	let showRevokeConfirmation = false;
+	let showDeleteAPIKeyConfirmation = false;
+	let deletingAPIKey = false;
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -66,6 +73,24 @@
 		});
 	};
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteAPIKeyConfirmation}
+	title={$i18n.t('Delete API Key?')}
+	message={$i18n.t('This will revoke the current API key.')}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={async () => {
+		deletingAPIKey = true;
+		try {
+			await deleteUserAPIKeyById(localStorage.token, selectedUser.id);
+			toast.success($i18n.t('API Key deleted.'));
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : String(error));
+		} finally {
+			deletingAPIKey = false;
+		}
+	}}
+/>
 
 <ConfirmDialog
 	bind:show={showRevokeConfirmation}
@@ -230,6 +255,17 @@
 												required={false}
 											/>
 										</div>
+									</div>
+									<div class="flex items-center justify-between w-full">
+										<div class="text-xs text-gray-500">{$i18n.t('API Key')}</div>
+										<button
+											type="button"
+											class="text-xs text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-200"
+											disabled={deletingAPIKey}
+											on:click={() => {
+												showDeleteAPIKeyConfirmation = true;
+											}}>{$i18n.t('Delete')}</button
+										>
 									</div>
 								</div>
 							</div>

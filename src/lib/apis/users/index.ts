@@ -757,3 +757,13 @@ export const revokeUserSessions = async (token: string, userId: string) => {
 	if (!response.ok) throw new Error(result.detail || 'Failed to revoke sessions');
 	return result;
 };
+
+export const deleteUserAPIKeyById = async (token: string, userId: string) => {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/api_key`, {
+		method: 'DELETE',
+		headers: { Authorization: `Bearer ${token}` }
+	});
+	const result = await response.json();
+	if (!response.ok) throw new Error(result.detail || 'Failed to delete API key');
+	return result;
+};
