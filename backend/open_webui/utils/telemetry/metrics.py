@@ -41,12 +41,14 @@ from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
     OTLPMetricExporter as OTLPHttpMetricExporter,
 )
+from opentelemetry.instrumentation.asgi import get_host_port_url_tuple
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
     PeriodicExportingMetricReader,
 )
 from opentelemetry.sdk.metrics.view import View
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.util.http import get_excluded_urls
 from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session
 
@@ -222,9 +224,16 @@ def setup_metrics(app: FastAPI, resource: Resource, db_engine: Engine) -> None:
         callbacks=[observe_users_active_today],
     )
 
+    # OTEL_PYTHON_FASTAPI_EXCLUDED_URLS, shared with traces
+    excluded_urls = get_excluded_urls('FASTAPI')
+
     # FastAPI middleware
     @app.middleware('http')
     async def _metrics_middleware(request: Request, call_next):
+        _, _, url = get_host_port_url_tuple(request.scope)
+        if excluded_urls.url_disabled(url):
+            return await call_next(request)
+
         start_time = time.perf_counter()
 
         status_code = None
