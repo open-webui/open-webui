@@ -12,7 +12,7 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folder, Folders
 from open_webui.models.groups import Groups
 from open_webui.models.messages import Message
-from open_webui.models.notes import Note, PinnedNote
+from open_webui.models.notes import Note, PinnedNote, matching_page
 from open_webui.models.shared_chats import SharedChat
 from open_webui.models.users import User
 from open_webui.utils.access_control import has_permission
@@ -338,7 +338,9 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
             db, select(Note, pinned, note_shared), Note, {'user_id': user.id, 'group_ids': groups}, 'note', 'read'
         )
         stmt = stmt.where(sharing_filter(Note.user_id))
-        stmt = apply_match(stmt, Note, Note.data['content']['md'].as_string())
+        stmt = apply_match(
+            stmt, Note, func.coalesce(Note.data['search_text'].as_string(), Note.data['content']['md'].as_string())
+        )
         rank = title_rank(Note.title, query) if query else case((pinned, 0), else_=3)
         sources['note'] = (Note, stmt, rank, cast(Note.updated_at.op('/')(literal(1_000_000_000)), BigInteger))
 
@@ -421,14 +423,15 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
                 match.rank,
             )
         elif match.source == 'note':
-            content = ((item.data or {}).get('content') or {}).get('md') or ''
+            page = matching_page(item.data, query)
+            content = page['content'].get('md', '')
             append_result(
                 'note:' + item.id,
                 'note',
                 item.title,
                 'Shared note' if item.user_id != user.id or row[2] else 'Personal note',
                 content if isinstance(content, str) else '',
-                '/notes/' + item.id + ('?' + urlencode({'search': query}) if query else ''),
+                '/notes/' + item.id + '?' + urlencode({'page': page['id'], 'search': query}),
                 match.updated_at,
                 item.user_id != user.id or row[2],
                 row[1],

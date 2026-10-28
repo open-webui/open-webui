@@ -52,7 +52,6 @@ from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.models import Models
-from open_webui.models.notes import Notes
 from open_webui.models.users import UserModel, Users
 from open_webui.retrieval.utils import filter_source_metadata, get_sources_from_items
 from open_webui.routers.images import (
@@ -2486,28 +2485,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         activated_skill_ids = mentioned_skill_ids
     available_skills = []
     terminal_skills = []
-    if is_note_chat:
-        note_id = (chat.meta or {}).get('note_id')
-        note = await Notes.get_note_by_id(note_id) if note_id else None
-        if note and (
-            user.role == 'admin'
-            or note.user_id == user.id
-            or await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='note',
-                resource_id=note.id,
-                permission='read',
-            )
-        ):
-            note_files = [
-                file
-                for file in ((note.data or {}).get('files') or [])
-                if isinstance(file, dict)
-                and file.get('type') != 'image'
-                and not (file.get('content_type') or '').startswith('image/')
-            ]
-            if note_files:
-                files = [*(files or []), *note_files]
 
     model_builtin_tools = model.get('info', {}).get('meta', {}).get('builtinTools') or {}
 

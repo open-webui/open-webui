@@ -8,7 +8,7 @@ from open_webui.models.folders import FolderModel
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
-from open_webui.models.notes import NoteModel, Notes
+from open_webui.models.notes import NoteModel, Notes, get_note_files
 from open_webui.models.users import UserModel, Users
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,14 +28,14 @@ def get_note_file_ids(entries: list[dict] | None) -> set[str]:
 
 
 async def has_access_to_note_files(
-    note: NoteModel, entries: list[dict] | None, user: UserModel, db: AsyncSession | None = None
+    note: NoteModel | None, entries: list[dict] | None, user: UserModel, db: AsyncSession | None = None
 ) -> bool:
     """Check the editor's read access to newly attached files."""
     if entries is not None and not isinstance(entries, list):
         return False
 
     # Existing attachments may belong to another editor; only additions need permission.
-    added_ids = get_note_file_ids(entries) - get_note_file_ids((note.data or {}).get('files'))
+    added_ids = get_note_file_ids(entries) - get_note_file_ids(get_note_files(note.data) if note else [])
     if not added_ids or user.role == 'admin':
         return True
 

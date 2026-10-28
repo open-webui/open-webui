@@ -46,6 +46,7 @@ export class SocketIOCollaborationProvider {
 	private synced = false;
 	private editor: Editor | null = null;
 	private editorContentGetter: EditorContentGetter | null = null;
+	private listeners: Array<[string, (...args: any[]) => void]> = [];
 	private contentSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(
@@ -168,9 +169,31 @@ export class SocketIOCollaborationProvider {
 		}
 	}
 
+	private listen(event: string, handler: (...args: any[]) => void) {
+		this.listeners.push([event, handler]);
+		this.socket.on(event, handler);
+	}
+
+	public async flush() {
+		await tick();
+		if (!this.isConnected || !this.synced || !this.editorContentGetter) {
+			throw new Error('Tab is not connected. Reconnect before leaving this tab.');
+		}
+		if (this.contentSnapshotTimer) {
+			clearTimeout(this.contentSnapshotTimer);
+			this.contentSnapshotTimer = null;
+		}
+		const result = await this.socket.timeout(10000).emitWithAck('ydoc:document:update', {
+			document_id: this.documentId,
+			flush: true,
+			data: { content: this.editorContentGetter() }
+		});
+		if (!result?.ok) throw new Error(result?.error || 'Failed to save page');
+	}
+
 	private setupEventListeners() {
 		// Listen for document updates from server
-		this.socket.on('ydoc:document:update', (data) => {
+		this.listen('ydoc:document:update', (data) => {
 			if (data.document_id === this.documentId && data.socket_id !== this.socket.id) {
 				try {
 					const update = new Uint8Array(data.update);
@@ -188,7 +211,7 @@ export class SocketIOCollaborationProvider {
 		});
 
 		// Listen for document state from server
-		this.socket.on('ydoc:document:state', async (data) => {
+		this.listen('ydoc:document:state', async (data) => {
 			if (data.document_id === this.documentId) {
 				try {
 					if (data.state) {
@@ -241,7 +264,7 @@ export class SocketIOCollaborationProvider {
 		});
 
 		// Listen for awareness updates
-		this.socket.on('ydoc:awareness:update', (data) => {
+		this.listen('ydoc:awareness:update', (data) => {
 			if (data.document_id === this.documentId) {
 				try {
 					const awarenessUpdate = new Uint8Array(data.update);
@@ -260,6 +283,7 @@ export class SocketIOCollaborationProvider {
 		this.doc.on('update', async (update, origin) => {
 			if (this.editor && origin !== 'server' && this.isConnected) {
 				await tick(); // Ensure the DOM is updated before sending
+				if (!this.editor || !this.isConnected) return;
 				this.socket.emit('ydoc:document:update', {
 					document_id: this.documentId,
 					user_id: this.user?.id,
@@ -316,9 +340,8 @@ export class SocketIOCollaborationProvider {
 	};
 
 	public destroy() {
-		this.socket.off('ydoc:document:update');
-		this.socket.off('ydoc:document:state');
-		this.socket.off('ydoc:awareness:update');
+		for (const [event, handler] of this.listeners) this.socket.off(event, handler);
+		this.listeners = [];
 		this.socket.off('connect', this.onConnect);
 		this.socket.off('disconnect', this.onDisconnect);
 
@@ -336,6 +359,8 @@ export class SocketIOCollaborationProvider {
 
 		this.editor = null;
 		this.editorContentGetter = null;
+		this.isConnected = false;
+		this.doc.destroy();
 	}
 }
 

@@ -40,7 +40,7 @@ from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
-from open_webui.models.notes import Notes, NoteUpdateForm
+from open_webui.models.notes import Notes, NoteUpdateForm, document_page, get_content_files, get_page, normalize_pages
 from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.encryption import Relay
 from open_webui.socket.redis_room_channels import AsyncRedisRoomChannelManager
@@ -695,7 +695,7 @@ async def join_channel(sid, data):
             await sio.enter_room(sid, f'channel:{channel.id}')
 
 
-@sio.on('join-note')
+@sio.on('note:join')
 async def join_note(sid, data):
     auth = data['auth'] if 'auth' in data else None
     if not auth or 'token' not in auth:
@@ -734,6 +734,13 @@ async def join_note(sid, data):
 
     log.debug('Joining note %s for user %s', note.id, user.id)
     await sio.enter_room(sid, f'note:{note.id}')
+
+
+@sio.on('note:leave')
+async def leave_note(sid, data):
+    note_id = data.get('note_id')
+    if isinstance(note_id, str):
+        await sio.leave_room(sid, f'note:{note_id}')
 
 
 @sio.on('events:channel')
@@ -886,6 +893,23 @@ def normalize_document_id(document_id: str) -> str:
     return document_id
 
 
+async def close_changed_note_documents(previous, current):
+    remaining = {p['id']: p.get('generation', 0) for p in normalize_pages(current.data)['pages']} if current else {}
+    for page in normalize_pages(previous.data)['pages']:
+        if remaining.get(page['id']) == page.get('generation', 0):
+            continue
+        ids = [f'note:{previous.id}:page:{page["id"]}:{page.get("generation", 0)}']
+        if len(previous.data['pages']) == 1:
+            ids.append(f'note:{previous.id}')
+        for document_id in ids:
+            async with YDOC_MANAGER.lock(document_id):
+                await stop_item_tasks(REDIS, document_id)
+                await sio.close_room(f'doc_{document_id}')
+                for sid in list(await YDOC_MANAGER.get_users(document_id)):
+                    await YDOC_MANAGER.remove_user(document_id, sid)
+                await YDOC_MANAGER.clear_document(document_id)
+
+
 def with_document_lock(handler):
     @wraps(handler)
     async def wrapped(sid, data):
@@ -920,6 +944,7 @@ async def ydoc_document_join(sid, data):
             if not note:
                 log.error(f'Note {note_id} not found')
                 return
+            page = document_page(note.data, document_id)
 
             if (
                 user.get('role') != 'admin'
@@ -964,7 +989,7 @@ async def ydoc_document_join(sid, data):
             {
                 'document_id': document_id,
                 'state': list(state_update),  # Convert bytes to list for JSON
-                'content': note.data.get('content') if document_id.startswith('note:') and note.data else None,
+                'content': page['content'] if document_id.startswith('note:') else None,
             },
             room=sid,
         )
@@ -1012,7 +1037,31 @@ async def document_save_handler(document_id, data, user):
             log.error(f'User {user.get("id")} does not have write access to note {note_id}')
             return
 
-        return await Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
+        page = document_page(note.data, document_id)
+        if not isinstance(data.get('content'), dict):
+            return None
+        editor = await Users.get_user_by_id(user['id'])
+        if not editor or not await has_access_to_note_files(note, get_content_files(data['content']), editor):
+            raise ValueError('Cannot attach files you cannot access')
+        saved = await Notes.update_note_by_id(
+            note_id,
+            NoteUpdateForm(
+                data={'content': data['content']},
+                page_id=page['id'],
+                page_generation=page.get('generation', 0),
+            ),
+        )
+        if saved:
+            await sio.emit(
+                'events:note',
+                {
+                    'id': note_id,
+                    'page': get_page(saved.data, page['id']),
+                    'updated_at': saved.updated_at,
+                },
+                to=f'note:{note_id}',
+            )
+        return saved
 
 
 @sio.on('ydoc:document:state')
@@ -1084,6 +1133,7 @@ async def yjs_document_update(sid, data):
             if not note:
                 log.error(f'Note {note_id} not found')
                 return
+            page = document_page(note.data, document_id)
 
             if (
                 user.get('role') != 'admin'
@@ -1099,9 +1149,9 @@ async def yjs_document_update(sid, data):
                 return
 
             snapshot = data.get('data')
-            if isinstance(snapshot, dict) and 'files' in snapshot:
+            if isinstance(snapshot, dict) and 'content' in snapshot:
                 editor = await Users.get_user_by_id(user['id'])
-                if not editor or not await has_access_to_note_files(note, snapshot['files'], editor):
+                if not editor or not await has_access_to_note_files(note, get_content_files(snapshot['content']), editor):
                     await sio.emit('error', {'message': 'Cannot attach files you cannot access'}, room=sid)
                     return
 
@@ -1143,6 +1193,11 @@ async def yjs_document_update(sid, data):
             if data.get('initialize'):
                 return update if stored else None
 
+        if data.get('flush'):
+            await stop_item_tasks(REDIS, document_id)
+            saved = await document_save_handler(document_id, data.get('data', {}), user)
+            return {'ok': bool(saved)}
+
         async def debounced_save():
             await asyncio.sleep(0.5)
             async with YDOC_MANAGER.lock(document_id):
@@ -1167,6 +1222,7 @@ async def yjs_document_update(sid, data):
 
     except Exception as e:
         log.error(f'Error in yjs_document_update: {e}')
+        return {'error': str(e)}
 
 
 @sio.on('ydoc:document:leave')

@@ -1461,8 +1461,20 @@ async def get_sources_from_items(
             ):
                 # User has access to the note
                 query_result = {
-                    'documents': [[note.data.get('content', {}).get('md', '')]],
-                    'metadatas': [[{'file_id': note.id, 'name': note.title}]],
+                    'documents': [[page['content'].get('md', '') for page in note.data['pages']]],
+                    'metadatas': [
+                        [
+                            {
+                                'file_id': note.id,
+                                'note_id': note.id,
+                                'page_id': page['id'],
+                                'parent_id': page.get('parent_id'),
+                                'name': f'{note.title} / {page["title"]}',
+                                'source': f'/notes/{note.id}?page={page["id"]}',
+                            }
+                            for page in note.data['pages']
+                        ]
+                    ],
                 }
 
         elif item.get('type') == 'chat':

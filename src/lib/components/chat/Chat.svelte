@@ -151,6 +151,9 @@
 	export let embeddedDraftKey = '';
 	export let suggestedPrompts = [];
 	export let selectedText = '';
+	export let notePageId = '';
+	export let noteFiles = [];
+	export let onBeforeNoteSubmit: (() => Promise<void>) | null = null;
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onCloseEmbedded: (() => void) | null = null;
 	export let onNewEmbeddedChat: (() => void | Promise<void>) | null = null;
@@ -856,10 +859,16 @@
 		}
 	};
 
-	const withSelectedText = (text: string) =>
-		embedded && selectedText?.trim()
-			? `${text}\n\nSelected note text for replace_note_content operations:\n${selectedText.trim()}`
-			: text;
+	const withSelectedText = (text: string) => {
+		if (!embedded) return text;
+		return (
+			text +
+			(notePageId ? `\n\nActive note page_id: ${notePageId}` : '') +
+			(selectedText?.trim()
+				? `\n\nSelected note text for replace_note_content operations:\n${selectedText.trim()}`
+				: '')
+		);
+	};
 	const noteChatDebug = (message: string, data: Record<string, unknown> = {}) => {
 		if (!embedded) return;
 		console.info('[note-chat]', message, {
@@ -3136,7 +3145,11 @@
 			entry.files.some((file: any) => file.type === 'filesystem')
 		);
 		const queuedMessages =
-			boundary === 0 ? queue.slice(0, 1) : boundary < 0 ? [...queue] : queue.slice(0, boundary);
+			embedded || boundary === 0
+				? queue.slice(0, 1)
+				: boundary < 0
+					? [...queue]
+					: queue.slice(0, boundary);
 		const queuedMessageIds = new Set(queuedMessages.map((m) => m.id));
 		try {
 			const combinedPrompt = queuedMessages.map((m) => m.prompt).join('\n\n');
@@ -3840,6 +3853,14 @@
 			bridge: bridgeRequest = null
 		}: { _raw?: boolean; bridge?: { userMessageId: string; modelId: string } | null } = {}
 	): Promise<BridgeSubmission> => {
+		if (embedded && onBeforeNoteSubmit) {
+			try {
+				await onBeforeNoteSubmit();
+			} catch (error) {
+				toast.error(String(error));
+				return { status: 'rejected' };
+			}
+		}
 		if (processing === 'uploading') return { status: 'deferred' };
 		emitTyping(false);
 		if (bridgeRequest && (selectedModelIds.length !== 1 || !bridgeRequest.modelId))
@@ -4390,7 +4411,11 @@
 					stop: getStopTokens()
 				},
 
-				files: (files?.length ?? 0) > 0 ? files : undefined,
+				files: embedded
+					? [...(files ?? []), ...noteFiles]
+					: (files?.length ?? 0) > 0
+						? files
+						: undefined,
 
 				filter_ids:
 					$config?.features?.enable_functions && selectedFilterIds.length > 0
