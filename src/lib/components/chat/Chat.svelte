@@ -5257,6 +5257,7 @@
 							chat={{
 								id: $chatId,
 								archived: chat?.archived ?? false,
+								folder_id: chat?.folder_id,
 								chat: {
 									title: $chatTitle,
 									models: selectedModels,
