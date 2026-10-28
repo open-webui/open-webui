@@ -3,10 +3,12 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import math
 import mimetypes
 import os
 import re
 import shutil
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -132,6 +134,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 TIKTOKEN_DISALLOWED_SPECIAL = ()
+
+EMBEDDING_INSERT_GROUP_SIZE = 1000
 
 ##########################################
 #
@@ -1529,38 +1533,63 @@ def save_docs_to_vector_db(
             concurrent_requests=config['rag.embedding_concurrent_requests'],
         )
 
+        batch_size = config['rag.embedding_batch_size']
+        group_size = len(texts)
+        if isinstance(batch_size, int) and batch_size > 0:
+            # Whole batches per group so the requests sent to the provider stay the same
+            group_size = batch_size * math.ceil(EMBEDDING_INSERT_GROUP_SIZE / batch_size)
+
         # Run async embedding in sync context using the main event loop
         # This allows the main loop to stay responsive to health checks during long operations
         embedding_timeout = RAG_EMBEDDING_TIMEOUT
 
-        future = asyncio.run_coroutine_threadsafe(
-            embedding_function(
-                list(map(lambda x: x.replace('\n', ' '), texts)),
-                prefix=config['rag.embedding_content_prefix'],
-                user=user,
-            ),
-            request.app.state.main_loop,
-        )
-        embeddings = future.result(timeout=embedding_timeout)
-        log.info('embeddings generated %s for %s items', len(embeddings), len(texts))
-
-        items = [
-            {
-                'id': str(uuid.uuid4()),
-                'text': text,
-                'vector': embeddings[idx],
-                'metadata': metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
-
         log.info('adding to collection %s', collection_name)
-        get_vector_db_client().insert(
-            collection_name=collection_name,
-            items=items,
-        )
+        inserted_ids = []
+        try:
+            for start in range(0, len(texts), group_size):
+                group_texts = texts[start : start + group_size]
+                future = asyncio.run_coroutine_threadsafe(
+                    embedding_function(
+                        list(map(lambda x: x.replace('\n', ' '), group_texts)),
+                        prefix=config['rag.embedding_content_prefix'],
+                        user=user,
+                    ),
+                    request.app.state.main_loop,
+                )
+                started_at = time.monotonic()
+                try:
+                    embeddings = future.result(timeout=embedding_timeout)
+                except TimeoutError:
+                    future.cancel()
+                    raise
+                if embedding_timeout is not None:
+                    embedding_timeout = max(embedding_timeout - (time.monotonic() - started_at), 0)
+                log.info('embeddings generated %s for %s items', len(embeddings), len(group_texts))
 
-        log.info('added %s items to collection %s', len(items), collection_name)
+                items = [
+                    {
+                        'id': str(uuid.uuid4()),
+                        'text': text,
+                        'vector': embeddings[idx],
+                        'metadata': metadatas[start + idx],
+                    }
+                    for idx, text in enumerate(group_texts)
+                ]
+
+                inserted_ids.extend(item['id'] for item in items)
+                get_vector_db_client().insert(
+                    collection_name=collection_name,
+                    items=items,
+                )
+        except Exception:
+            if inserted_ids:
+                try:
+                    get_vector_db_client().delete(collection_name=collection_name, ids=inserted_ids)
+                except Exception:
+                    log.exception('failed to remove partially added items from collection %s', collection_name)
+            raise
+
+        log.info('added %s items to collection %s', len(texts), collection_name)
         return True
     except Exception as e:
         log.exception(e)
