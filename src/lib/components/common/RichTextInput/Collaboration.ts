@@ -16,6 +16,7 @@ import { createNodeFromContent, Editor, Extension } from '@tiptap/core';
 import { keymap } from 'prosemirror-keymap';
 import { Plugin } from 'prosemirror-state';
 import { tick } from 'svelte';
+import tippy, { type Instance } from 'tippy.js';
 
 const USER_COLORS = [
 	'#FF6B6B',
@@ -116,6 +117,57 @@ export class SocketIOCollaborationProvider {
 								tr.setMeta('preventAutolink', true);
 							}
 							return true;
+						},
+						view: (view) => {
+							const labels = new Map<HTMLElement, Instance>();
+							const update = () => {
+								for (const [cursor, label] of labels) {
+									if (!view.dom.contains(cursor)) {
+										label.destroy();
+										labels.delete(cursor);
+									}
+								}
+								for (const cursor of view.dom.querySelectorAll<HTMLElement>(
+									'.ProseMirror-yjs-cursor'
+								)) {
+									if (!labels.has(cursor)) {
+										const label = cursor.querySelector('div');
+										if (!label) continue;
+										// Float above the caret without being clipped by the editor's scroll area.
+										label.remove();
+										label.className = 'ProseMirror-yjs-cursor-label';
+										labels.set(
+											cursor,
+											tippy(cursor, {
+												appendTo: () => document.body,
+												render: () => ({ popper: label }),
+												trigger: 'manual',
+												showOnCreate: true,
+												hideOnClick: false,
+												animation: false,
+												placement: 'top-start',
+												offset: [0, 2],
+												zIndex: 30,
+												popperOptions: {
+													strategy: 'fixed',
+													modifiers: [{ name: 'flip', enabled: false }]
+												}
+											})
+										);
+									}
+									labels.get(cursor)?.popperInstance?.forceUpdate();
+								}
+							};
+							update();
+							const resizeObserver = new ResizeObserver(update);
+							resizeObserver.observe(view.dom);
+							return {
+								update,
+								destroy: () => {
+									resizeObserver.disconnect();
+									labels.forEach((label) => label.destroy());
+								}
+							};
 						}
 					}),
 					ySyncPlugin(yXmlFragment),

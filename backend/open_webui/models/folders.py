@@ -54,6 +54,7 @@ class FolderMetadataResponse(BaseModel):
 
 class FolderNameIdResponse(BaseModel):
     id: str
+    user_id: str
     name: str
     meta: Optional[FolderMetadataResponse] = None
     parent_id: Optional[str] = None
