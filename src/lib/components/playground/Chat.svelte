@@ -118,7 +118,7 @@
 						: undefined,
 					...messages
 				].filter((message) => message),
-				...(Object.keys(activeParams).length > 0 ? activeParams : {})
+				...(Object.keys(activeParams).length > 0 ? { params: activeParams } : {})
 			},
 			`${WEBUI_BASE_URL}/api`
 		);
