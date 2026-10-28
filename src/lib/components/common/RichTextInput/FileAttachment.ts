@@ -2,6 +2,7 @@ import { Node } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { createClassComponent } from 'svelte/legacy';
+import { ySyncPluginKey } from 'y-prosemirror';
 import FileItem from '../FileItem.svelte';
 
 export const fileUploadsKey = new PluginKey<DecorationSet>('fileUploads');
@@ -66,38 +67,56 @@ export default Node.create<{ context: Map<any, any> }>({
 				state: {
 					init: () => DecorationSet.empty,
 					apply: (transaction, decorations) => {
-						decorations = decorations.map(transaction.mapping, transaction.doc);
+						// Yjs replaces the whole document, including on undo, dropping local widgets.
+						if (transaction.docChanged && transaction.getMeta(ySyncPluginKey)?.isChangeOrigin) {
+							const widgets = decorations.find().map((widget) => {
+								// shortcut: Keep the old offset; use Yjs relative positions for exact placement across edits.
+								const pos = Math.min(widget.from, transaction.doc.content.size);
+								return widget.spec.create(pos);
+							});
+							decorations = DecorationSet.create(transaction.doc, widgets);
+						} else {
+							decorations = decorations.map(transaction.mapping, transaction.doc);
+						}
 						const action = transaction.getMeta(fileUploadsKey);
 						if (action?.add) {
 							const { id, pos, file } = action.add;
-							let component;
-							const placeholder = Decoration.widget(
-								pos,
-								(view) => {
-									const dom = document.createElement('div');
-									dom.className = 'not-prose my-2 w-fit max-w-full';
-									dom.setAttribute('aria-busy', 'true');
-									component = createClassComponent({
-										component: FileItem,
-										target: dom,
-										context: this.options.context,
-										props: {
-											...fileItemStyle,
-											name: file.name,
-											size: file.size,
-											type: 'file',
-											loading: true,
-											dismissible: true
-										}
-									});
-									component.$on('dismiss', () => {
-										view.dispatch(view.state.tr.setMeta(fileUploadsKey, { remove: id }));
-									});
-									return dom;
-								},
-								{ id, side: -1, stopEvent: () => true, destroy: () => component?.$destroy() }
-							);
-							decorations = decorations.add(transaction.doc, [placeholder]);
+							const create = (pos: number) => {
+								let component;
+								return Decoration.widget(
+									pos,
+									(view) => {
+										const dom = document.createElement('div');
+										dom.className = 'not-prose my-2 w-fit max-w-full';
+										dom.setAttribute('aria-busy', 'true');
+										component = createClassComponent({
+											component: FileItem,
+											target: dom,
+											context: this.options.context,
+											props: {
+												...fileItemStyle,
+												name: file.name,
+												size: file.size,
+												type: 'file',
+												loading: true,
+												dismissible: true
+											}
+										});
+										component.$on('dismiss', () => {
+											view.dispatch(view.state.tr.setMeta(fileUploadsKey, { remove: id }));
+										});
+										return dom;
+									},
+									{
+										id,
+										create,
+										side: -1,
+										stopEvent: () => true,
+										destroy: () => component?.$destroy()
+									}
+								);
+							};
+							decorations = decorations.add(transaction.doc, [create(pos)]);
 						}
 						if (action?.remove) {
 							decorations = decorations.remove(
