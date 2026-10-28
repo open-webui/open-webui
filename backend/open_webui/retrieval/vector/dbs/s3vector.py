@@ -592,11 +592,13 @@ class S3VectorClient(VectorDBBase):
             if ids:
                 # Delete by specific vector IDs/keys
                 log.info("Deleting %s vectors by IDs from collection '%s'", len(ids), collection_name)
-                self.client.delete_vectors(
-                    vectorBucketName=self.bucket_name,
-                    indexName=collection_name,
-                    keys=ids,
-                )
+                # S3 Vectors accepts at most 500 keys per delete request.
+                for start in range(0, len(ids), 500):
+                    self.client.delete_vectors(
+                        vectorBucketName=self.bucket_name,
+                        indexName=collection_name,
+                        keys=ids[start : start + 500],
+                    )
                 log.info("Deleted %s vectors from index '%s'", len(ids), collection_name)
 
             elif filter:
@@ -623,11 +625,7 @@ class S3VectorClient(VectorDBBase):
                     log.info('Found %s vectors matching filter, deleting them', len(matching_ids))
 
                     # Delete the matching vectors by ID
-                    self.client.delete_vectors(
-                        vectorBucketName=self.bucket_name,
-                        indexName=collection_name,
-                        keys=matching_ids,
-                    )
+                    self.delete(collection_name, ids=matching_ids)
                     log.info("Deleted %s vectors from index '%s' using filter", len(matching_ids), collection_name)
                 else:
                     log.warning('No vectors found matching the filter criteria')

@@ -758,6 +758,15 @@ try:
 except ValueError:
     AIOHTTP_POOL_DNS_TTL = 300
 
+# Target chunks buffered before insertion, rounded up to a whole embedding batch.
+try:
+    RAG_EMBEDDING_BUFFER_SIZE = int(os.getenv('RAG_EMBEDDING_BUFFER_SIZE', '1000'))
+    if RAG_EMBEDDING_BUFFER_SIZE <= 0:
+        raise ValueError
+except ValueError:
+    log.warning('RAG_EMBEDDING_BUFFER_SIZE must be a positive integer. Defaulting to 1000.')
+    RAG_EMBEDDING_BUFFER_SIZE = 1000
+
 RAG_EMBEDDING_TIMEOUT = os.getenv('RAG_EMBEDDING_TIMEOUT', '')
 
 if RAG_EMBEDDING_TIMEOUT == '':
