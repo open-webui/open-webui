@@ -1403,8 +1403,16 @@
 				local?.done === false &&
 				(local.user_id ?? chat?.user_id) === $user?.id &&
 				(taskIds?.length || generating);
+			// Loading a chat finishes interrupted replies only in the browser; the saved copy stays unfinished.
+			const finishedLocally =
+				local?.done === true &&
+				message.done === false &&
+				(local.user_id ?? chat?.user_id) === $user?.id &&
+				!taskIds?.length &&
+				!generating;
 			if (!local || (!ownActive && (!baseline || baseline[id] === local))) {
 				history.messages[id] = { ...local, ...message };
+				if (finishedLocally) history.messages[id].done = true;
 			}
 			if (local) {
 				history.messages[id] = {
