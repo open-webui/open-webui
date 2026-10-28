@@ -70,12 +70,14 @@
 	import { deleteChatById } from '$lib/apis/chats';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
+	import { fileUploadsKey } from '../common/RichTextInput/FileAttachment';
 	import Spinner from '../common/Spinner.svelte';
 	import Mic from '../icons/Mic.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import AccessButton from '../common/AccessButton.svelte';
+	import ChatParticipants from '../common/ChatParticipants.svelte';
 
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import RecordMenu from './RecordMenu.svelte';
@@ -129,6 +131,39 @@
 	let loadGeneration = 0;
 	let pageScroll: Record<string, number> = {};
 	$: activePage = note?.data?.pages?.find((p) => p.id === activePageId);
+	$: activeDocumentId = activePage
+		? `note:${note.id}:page:${activePage.id}:${activePage.generation}`
+		: '';
+	let presenceNoteId = '';
+	let cursorTarget = null;
+	let liveParticipants: {
+		id: string;
+		name: string;
+		page_id?: string;
+		document_id?: string;
+		cursor?: any;
+		cursor_position?: number;
+	}[] = [];
+	const clearPresence = () => (liveParticipants = []);
+	$: if (presenceNoteId !== note?.id) {
+		presenceNoteId = note?.id;
+		clearPresence();
+	}
+	const presenceEventHandler = (event: { note_id: string; users: typeof liveParticipants }) => {
+		if (!$socket?.connected || event.note_id !== note?.id) return;
+		liveParticipants = event.users.filter((person) => person.id !== $user?.id);
+	};
+	const joinNote = () => {
+		if (note?.id)
+			$socket?.emit('note:join', { note_id: note.id, auth: { token: localStorage.token } });
+	};
+	const goToParticipant = async (person) => {
+		const target = liveParticipants.find((participant) => participant.id === person.id);
+		if (!target?.page_id || pageBusy) return;
+		await selectPage(target.page_id);
+		await tick();
+		if (activePageId === target.page_id) cursorTarget = { ...target };
+	};
 	$: if (
 		note?.id === id &&
 		$page.url.searchParams.get('page') &&
@@ -142,6 +177,7 @@
 		if (!target || target.id === activePageId) return;
 		const body = document.getElementById('note-content-container');
 		if (body && activePageId) pageScroll[activePageId] = body.scrollTop;
+		cursorTarget = null;
 		activePageId = target.id;
 		selectedContent = null;
 		versionIdx = null;
@@ -360,14 +396,15 @@
 				note.access_grants = [];
 			}
 
-			$socket?.emit('note:join', {
-				note_id: id,
-				auth: {
-					token: localStorage.token
-				}
-			});
 			$socket?.off('events:note', noteEventHandler);
 			$socket?.on('events:note', noteEventHandler);
+			$socket?.off('note:presence', presenceEventHandler);
+			$socket?.on('note:presence', presenceEventHandler);
+			$socket?.off('disconnect', clearPresence);
+			$socket?.on('disconnect', clearPresence);
+			$socket?.off('connect', joinNote);
+			$socket?.on('connect', joinNote);
+			joinNote();
 		} else {
 			goto('/');
 			return;
@@ -606,21 +643,24 @@ ${content}
 		pos = uploadEditor?.state.selection.from
 	) => {
 		if (!uploadEditor || uploadEditor.isDestroyed || !file) return Promise.resolve(null);
-		// Keep the insertion point attached to the document while the upload is in flight.
-		let position = pos;
-		const trackPosition = ({ transaction }) => {
-			position = transaction.mapping.map(position);
-		};
-		uploadEditor.on('transaction', trackPosition);
+		const id = uuidv4();
+		// Keep upload UI local so unfinished files never enter saved or shared content.
+		uploadEditor.view.dispatch(
+			uploadEditor.state.tr.setMeta(fileUploadsKey, { add: { id, pos, file } })
+		);
 		const pending = (async () => {
-			const uploading = toast.loading($i18n.t('Uploading...'));
 			try {
 				const item = await processInputFile(file);
 				if (!item || uploadEditor.isDestroyed) return null;
+				const placeholder = fileUploadsKey
+					.getState(uploadEditor.state)
+					?.find(undefined, undefined, (spec) => spec.id === id)[0];
+				if (!placeholder) return null;
 				uploadEditor
 					.chain()
+					.setMeta(fileUploadsKey, { remove: id })
 					.insertContentAt(
-						position,
+						placeholder.from,
 						item.type === 'image'
 							? { type: 'image', attrs: { src: item.url } }
 							: { type: 'fileAttachment', attrs: { id: item.id, name: item.name, size: item.size } }
@@ -632,8 +672,9 @@ ${content}
 				toast.error(String(error));
 				return null;
 			} finally {
-				toast.dismiss(uploading);
-				uploadEditor.off('transaction', trackPosition);
+				if (!uploadEditor.isDestroyed) {
+					uploadEditor.view.dispatch(uploadEditor.state.tr.setMeta(fileUploadsKey, { remove: id }));
+				}
 			}
 		})();
 		pendingFileUploads.add(pending);
@@ -957,6 +998,9 @@ ${content}
 		$socket?.emit('note:leave', { note_id: note?.id });
 		if (debounceTimeout) clearTimeout(debounceTimeout);
 		$socket?.off('events:note', noteEventHandler);
+		$socket?.off('note:presence', presenceEventHandler);
+		$socket?.off('disconnect', clearPresence);
+		$socket?.off('connect', joinNote);
 
 		const dropzoneElement = document.getElementById('note-editor');
 
@@ -1263,6 +1307,17 @@ ${content}
 									</button>
 								</NoteMenu>
 
+								{#if liveParticipants.length > 0}
+									<div class="ms-1 me-0.5">
+										<ChatParticipants
+											participants={liveParticipants}
+											onSelect={goToParticipant}
+											mode="presence"
+											avatarClass="size-5"
+										/>
+									</div>
+								{/if}
+
 								{#if note?.write_access}
 									{#if $user?.permissions?.sharing?.notes || $user?.role === 'admin'}
 										<div class="ml-1.5">
@@ -1442,7 +1497,8 @@ ${content}
 									json={true}
 									bind:value={renderedPage.content.json}
 									html={editorHtml}
-									documentId={`note:${note.id}:page:${renderedPage.id}:${renderedPage.generation}`}
+									documentId={activeDocumentId}
+									bind:cursorTarget
 									collaboration={true}
 									socket={$socket}
 									user={$user}

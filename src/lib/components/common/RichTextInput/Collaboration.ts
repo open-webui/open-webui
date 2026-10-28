@@ -7,7 +7,8 @@ import {
 	yUndoPlugin,
 	undo,
 	redo,
-	prosemirrorJSONToYDoc
+	prosemirrorJSONToYDoc,
+	relativePositionToAbsolutePosition
 } from 'y-prosemirror';
 import type { Socket } from 'socket.io-client';
 import type { SessionUser } from '$lib/stores';
@@ -48,6 +49,38 @@ export class SocketIOCollaborationProvider {
 	private editorContentGetter: EditorContentGetter | null = null;
 	private listeners: Array<[string, (...args: any[]) => void]> = [];
 	private contentSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
+	private cursorTarget: any = null;
+
+	public revealCursor(target: any) {
+		this.cursorTarget = target;
+		this.revealPendingCursor();
+	}
+
+	private revealPendingCursor() {
+		if (!this.synced || !this.editor || !this.cursorTarget) return;
+		const target = this.cursorTarget;
+		this.cursorTarget = null;
+		const editor = this.editor;
+		let position = target.cursor_position ?? 0;
+		try {
+			const state = ySyncPluginKey.getState(editor.state);
+			if (target.cursor?.head && state?.binding) {
+				position =
+					relativePositionToAbsolutePosition(
+						this.doc,
+						state.type,
+						Y.createRelativePositionFromJSON(target.cursor.head),
+						state.binding.mapping
+					) ?? position;
+			}
+		} catch {
+			// A replaced document can no longer resolve the old relative cursor.
+		}
+		queueMicrotask(() => {
+			if (!editor.isDestroyed)
+				editor.commands.focus(Math.min(position, editor.state.doc.content.size));
+		});
+	}
 
 	constructor(
 		private readonly documentId: string,
@@ -131,6 +164,7 @@ export class SocketIOCollaborationProvider {
 				if (!state || !this.editor) return;
 				Y.applyUpdate(this.doc, new Uint8Array(state), 'server');
 				this.synced = true;
+				this.revealPendingCursor();
 				if (!this.contentSnapshotTimer) this.sendContentSnapshot();
 			}
 		);
@@ -252,6 +286,7 @@ export class SocketIOCollaborationProvider {
 						}
 					}
 					this.synced = true;
+					this.revealPendingCursor();
 				} catch (error) {
 					console.error('Error applying Yjs state:', error);
 
@@ -318,7 +353,9 @@ export class SocketIOCollaborationProvider {
 					this.socket.emit('ydoc:awareness:update', {
 						document_id: this.documentId,
 						user_id: this.socket.id,
-						update: Array.from(awarenessUpdate)
+						update: Array.from(awarenessUpdate),
+						cursor: this.awareness.getLocalState()?.cursor,
+						cursor_position: this.editor?.state.selection.head
 					});
 				}
 			}

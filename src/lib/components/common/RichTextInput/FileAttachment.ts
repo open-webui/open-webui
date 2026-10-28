@@ -1,6 +1,16 @@
 import { Node } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { createClassComponent } from 'svelte/legacy';
 import FileItem from '../FileItem.svelte';
+
+export const fileUploadsKey = new PluginKey<DecorationSet>('fileUploads');
+
+const fileItemStyle = {
+	small: true,
+	className: 'w-56 max-w-full',
+	colorClassName: 'bg-gray-50/60 dark:bg-white/[0.03] border border-gray-100/80 dark:border-white/5'
+};
 
 export default Node.create<{ context: Map<any, any> }>({
 	name: 'fileAttachment',
@@ -49,6 +59,58 @@ export default Node.create<{ context: Map<any, any> }>({
 	renderText({ node }) {
 		return node.attrs.name;
 	},
+	addProseMirrorPlugins() {
+		return [
+			new Plugin({
+				key: fileUploadsKey,
+				state: {
+					init: () => DecorationSet.empty,
+					apply: (transaction, decorations) => {
+						decorations = decorations.map(transaction.mapping, transaction.doc);
+						const action = transaction.getMeta(fileUploadsKey);
+						if (action?.add) {
+							const { id, pos, file } = action.add;
+							let component;
+							const placeholder = Decoration.widget(
+								pos,
+								(view) => {
+									const dom = document.createElement('div');
+									dom.className = 'not-prose my-2 w-fit max-w-full';
+									dom.setAttribute('aria-busy', 'true');
+									component = createClassComponent({
+										component: FileItem,
+										target: dom,
+										context: this.options.context,
+										props: {
+											...fileItemStyle,
+											name: file.name,
+											size: file.size,
+											type: 'file',
+											loading: true,
+											dismissible: true
+										}
+									});
+									component.$on('dismiss', () => {
+										view.dispatch(view.state.tr.setMeta(fileUploadsKey, { remove: id }));
+									});
+									return dom;
+								},
+								{ id, side: -1, stopEvent: () => true, destroy: () => component?.$destroy() }
+							);
+							decorations = decorations.add(transaction.doc, [placeholder]);
+						}
+						if (action?.remove) {
+							decorations = decorations.remove(
+								decorations.find(undefined, undefined, (spec) => spec.id === action.remove)
+							);
+						}
+						return decorations;
+					}
+				},
+				props: { decorations: (state) => fileUploadsKey.getState(state) }
+			})
+		];
+	},
 	addNodeView() {
 		return ({ node, editor, getPos }) => {
 			const dom = document.createElement('div');
@@ -60,6 +122,7 @@ export default Node.create<{ context: Map<any, any> }>({
 				target: dom,
 				context: this.options.context,
 				props: {
+					...fileItemStyle,
 					item: { ...node.attrs, type: 'file' },
 					name: node.attrs.name,
 					type: 'file',
@@ -67,11 +130,7 @@ export default Node.create<{ context: Map<any, any> }>({
 					url: node.attrs.id,
 					dismissible: editor.isEditable,
 					edit: editor.isEditable,
-					small: true,
-					modal: true,
-					className: 'w-56 max-w-full',
-					colorClassName:
-						'bg-gray-50/60 dark:bg-white/[0.03] border border-gray-100/80 dark:border-white/5'
+					modal: true
 				}
 			});
 			component.$on('dismiss', () => {

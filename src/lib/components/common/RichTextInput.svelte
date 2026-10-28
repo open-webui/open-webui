@@ -423,6 +423,14 @@
 	$: serializeContent(richText);
 
 	let provider: SocketIOCollaborationProvider | null = null;
+	export let cursorTarget = null;
+	$: if (cursorTarget && editor) {
+		const target = cursorTarget;
+		cursorTarget = null;
+		if (provider) provider.revealCursor(target);
+		else
+			editor.commands.focus(Math.min(target.cursor_position ?? 0, editor.state.doc.content.size));
+	}
 	export const flush = async () => {
 		await tick();
 		await provider?.flush();
@@ -836,6 +844,23 @@
 				})
 			];
 		}
+	});
+
+	onMount(() => {
+		// Read-only viewers join for presence without starting the editing provider.
+		if (!collaboration || editable || !documentId || !socket || !user) return;
+		const presenceSocket = socket;
+		const presenceDocumentId = documentId;
+		const join = () =>
+			presenceSocket.emit('ydoc:document:join', { document_id: presenceDocumentId });
+		presenceSocket.on('connect', join);
+		if (presenceSocket.connected) join();
+		return () => {
+			presenceSocket.off('connect', join);
+			if (presenceSocket.connected) {
+				presenceSocket.emit('ydoc:document:leave', { document_id: presenceDocumentId });
+			}
+		};
 	});
 
 	onMount(async () => {
