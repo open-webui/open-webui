@@ -138,13 +138,13 @@
 			},
 			{
 				id: 'skills-import-folder',
-				label: 'Import folder',
+				label: $i18n.t('Import folder'),
 				onClick: () => folderImportInput?.click(),
 				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import
 			},
 			{
 				id: 'skills-export-zip',
-				label: 'Export ZIP',
+				label: $i18n.t('Export ZIP'),
 				onClick: async () => {
 					try {
 						saveAs(await exportSkillBundle(localStorage.token, 'zip'), 'skills.zip');
