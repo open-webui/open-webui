@@ -352,6 +352,7 @@
 	];
 
 	let showDeleteConfirm = false;
+	let noteDeleted = false;
 	let showAccessControlModal = false;
 	let savedAccessGrants = [];
 
@@ -440,7 +441,7 @@
 	};
 
 	onNavigate(async () => {
-		if (!note || !inputElement || loading || pageBusy) return;
+		if (!note || !inputElement || loading || pageBusy || noteDeleted) return;
 		try {
 			await flushActivePage();
 		} catch (error) {
@@ -889,6 +890,7 @@ ${content}
 		});
 
 		if (res) {
+			noteDeleted = true;
 			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			toast.success($i18n.t('Note deleted successfully'));
 			goto('/notes');
