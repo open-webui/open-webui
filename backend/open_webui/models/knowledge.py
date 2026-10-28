@@ -911,12 +911,38 @@ class KnowledgeTable:
         """Get all files in a KB with their directory_id from KnowledgeFile."""
         try:
             async with get_async_db_context(db) as db:
+                # Leave out File.data: it holds each file's full extracted text, which callers load per file.
                 result = await db.execute(
-                    select(File, KnowledgeFile.directory_id)
+                    select(
+                        File.id,
+                        File.user_id,
+                        File.hash,
+                        File.filename,
+                        File.path,
+                        File.meta,
+                        File.created_at,
+                        File.updated_at,
+                        KnowledgeFile.directory_id,
+                    )
                     .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
                     .filter(KnowledgeFile.knowledge_id == knowledge_id)
                 )
-                return [(FileModel.model_validate(file), dir_id) for file, dir_id in result.all()]
+                return [
+                    (
+                        FileModel(
+                            id=row.id,
+                            user_id=row.user_id,
+                            hash=row.hash,
+                            filename=row.filename,
+                            path=row.path,
+                            meta=row.meta,
+                            created_at=row.created_at,
+                            updated_at=row.updated_at,
+                        ),
+                        row.directory_id,
+                    )
+                    for row in result.all()
+                ]
         except Exception:
             return []
 
