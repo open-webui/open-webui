@@ -737,7 +737,8 @@ ${content}
 				$settings?.audio?.stt?.language
 					? { language: $settings.audio.stt.language }
 					: null;
-			const uploaded = await uploadFile(localStorage.token, file, metadata);
+			// Save the attachment as soon as it is uploaded; transcription runs on the server.
+			const uploaded = await uploadFile(localStorage.token, file, metadata, null, false);
 			if (!uploaded?.id) return null;
 			if (uploaded.error) toast.warning(uploaded.error);
 			return { type: 'file', id: uploaded.id, name: file.name, size: file.size };
