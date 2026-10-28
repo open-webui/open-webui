@@ -468,7 +468,7 @@
 				</DropdownSub>
 			{/if}
 
-			{#if !readOnly && !$temporaryChatEnabled && chat?.id}
+			{#if (!readOnly || $folders.find((folder) => folder.id === chat?.folder_id)?.user_id === $user?.id) && !$temporaryChatEnabled && chat?.id}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
