@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.12.5] - 2026-10-28
+## [0.12.5] - 2026-10-29
 
 ### Added
 
@@ -56,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📋 **Shift paste in channels.** Holding Shift while pasting long text into a channel message or thread reply now keeps it as text when Paste Large Text as File is on, as it already did in chats. [#33190](https://github.com/open-webui/open-webui/pull/33190), [#33189](https://github.com/open-webui/open-webui/issues/33189), [Commit](https://github.com/open-webui/open-webui/commit/eb2bcba2154a27d76f1bad6deda78d1ff90ec2fc)
 - 👥 **Analytics model chats by group.** A model's Chats tab in Admin Analytics now follows the User group filter, where it listed every user's chats with that model. [#33207](https://github.com/open-webui/open-webui/pull/33207), [#33206](https://github.com/open-webui/open-webui/issues/33206), [Commit](https://github.com/open-webui/open-webui/commit/02821c50584193377da4e0320cf8a14652ab2327)
 - 🙈 **Hidden files in folder counts.** The item count under a folder in a chat's terminal file browser now leaves out hidden files while Show Hidden Files is off. [#33213](https://github.com/open-webui/open-webui/pull/33213), [#33212](https://github.com/open-webui/open-webui/issues/33212), [Commit](https://github.com/open-webui/open-webui/commit/4cb37dd539f94f2d80fae9f1448f317553430872)
+- 📌 **Pins kept in shared folders.** A member's chat now keeps its pin when the owner of a shared folder moves it to another folder inside that folder, where it dropped out of the member's Pinned list. [#33342](https://github.com/open-webui/open-webui/pull/33342), [#33341](https://github.com/open-webui/open-webui/issues/33341), [Commit](https://github.com/open-webui/open-webui/commit/226dca18cdd79cac04bc36888ea0f834762b90cc)
 - 🌙 **Overnight calendar events.** A calendar event that ends after midnight, such as 8:00 PM to 1:00 AM, now keeps its end time on the next day, where saving dropped it and stored the event as ending at its start time. [#33290](https://github.com/open-webui/open-webui/pull/33290), [#33289](https://github.com/open-webui/open-webui/issues/33289), [Commit](https://github.com/open-webui/open-webui/commit/a8e8e7e792201346553c6e911c3f81306f23d60f)
 - 🪝 **Old webhook removable.** A notification webhook carried over from before v0.11 now stays removed from Settings > Notifications, where it came right back after Remove. [#33295](https://github.com/open-webui/open-webui/pull/33295), [#33294](https://github.com/open-webui/open-webui/issues/33294), [Commit](https://github.com/open-webui/open-webui/commit/0ac55c8e7205aed414c1f265ca8e7047a772c08d)
 - 🔔 **New default notification target.** A notification target added after removing the last one now becomes the default, where it never did. [#33284](https://github.com/open-webui/open-webui/pull/33284), [#33283](https://github.com/open-webui/open-webui/issues/33283), [Commit](https://github.com/open-webui/open-webui/commit/77398eba3126eb6b3614e8bc868a268aff668e44)
