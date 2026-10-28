@@ -60,44 +60,64 @@ export default Node.create<{ context: Map<any, any> }>({
 		return node.attrs.name;
 	},
 	addProseMirrorPlugins() {
+		const placeholderWidget = (id: string, pos: number, file: File) => {
+			let component;
+			return Decoration.widget(
+				pos,
+				(view) => {
+					const dom = document.createElement('div');
+					dom.className = 'not-prose my-2 w-fit max-w-full';
+					dom.setAttribute('aria-busy', 'true');
+					component = createClassComponent({
+						component: FileItem,
+						target: dom,
+						context: this.options.context,
+						props: {
+							...fileItemStyle,
+							name: file.name,
+							size: file.size,
+							type: 'file',
+							loading: true,
+							dismissible: true
+						}
+					});
+					component.$on('dismiss', () => {
+						view.dispatch(view.state.tr.setMeta(fileUploadsKey, { remove: id }));
+					});
+					return dom;
+				},
+				{ id, file, side: -1, stopEvent: () => true, destroy: () => component?.$destroy() }
+			);
+		};
 		return [
 			new Plugin({
 				key: fileUploadsKey,
 				state: {
 					init: () => DecorationSet.empty,
 					apply: (transaction, decorations) => {
+						const placeholders = decorations.find();
 						decorations = decorations.map(transaction.mapping, transaction.doc);
+						const lost = placeholders.filter(
+							(placeholder) =>
+								!decorations.find(undefined, undefined, (spec) => spec.id === placeholder.spec.id)
+									.length
+						);
+						if (lost.length) {
+							decorations = decorations.add(
+								transaction.doc,
+								lost.map((placeholder) =>
+									placeholderWidget(
+										placeholder.spec.id,
+										Math.min(placeholder.from, transaction.doc.content.size),
+										placeholder.spec.file
+									)
+								)
+							);
+						}
 						const action = transaction.getMeta(fileUploadsKey);
 						if (action?.add) {
 							const { id, pos, file } = action.add;
-							let component;
-							const placeholder = Decoration.widget(
-								pos,
-								(view) => {
-									const dom = document.createElement('div');
-									dom.className = 'not-prose my-2 w-fit max-w-full';
-									dom.setAttribute('aria-busy', 'true');
-									component = createClassComponent({
-										component: FileItem,
-										target: dom,
-										context: this.options.context,
-										props: {
-											...fileItemStyle,
-											name: file.name,
-											size: file.size,
-											type: 'file',
-											loading: true,
-											dismissible: true
-										}
-									});
-									component.$on('dismiss', () => {
-										view.dispatch(view.state.tr.setMeta(fileUploadsKey, { remove: id }));
-									});
-									return dom;
-								},
-								{ id, side: -1, stopEvent: () => true, destroy: () => component?.$destroy() }
-							);
-							decorations = decorations.add(transaction.doc, [placeholder]);
+							decorations = decorations.add(transaction.doc, [placeholderWidget(id, pos, file)]);
 						}
 						if (action?.remove) {
 							decorations = decorations.remove(
