@@ -1442,6 +1442,18 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
+async def get_image_generation_url(item, request, metadata, user) -> str | None:
+    result = item.get('result')
+    if not isinstance(result, str) or not result:
+        return None
+
+    # OpenAI returns bare base64, OpenRouter a data URL.
+    if not result.startswith('data:'):
+        result = f'data:image/{item.get("output_format") or "png"};base64,{result}'
+
+    return await get_image_url_from_base64(request, result, metadata, user)
+
+
 def add_file_context(messages: list) -> list:
     """
     Add file URLs to messages for native function calling.
@@ -4741,6 +4753,26 @@ async def streaming_chat_response_handler(response, ctx):
                         )
                         stream_size = 0
 
+                    async def attach_message_images(image_urls: list[str]):
+                        image_file_list = [{'type': 'image', 'url': url} for url in image_urls]
+                        message_files = image_file_list
+                        if save_to_chat:
+                            message_files = await Chats.add_message_files_by_id_and_message_id(
+                                metadata['chat_id'],
+                                metadata['message_id'],
+                                image_file_list,
+                            )
+                            if message_files is None:
+                                message_files = image_file_list
+
+                        # 'files' would make the emitter save these again.
+                        await event_emitter(
+                            {
+                                'type': 'chat:message:files',
+                                'data': {'files': message_files},
+                            }
+                        )
+
                     filter_extra_params = {'__body__': current_form_data, **extra_params} if filter_functions else None
 
                     async for line in response.body_iterator:
@@ -4855,6 +4887,10 @@ async def streaming_chat_response_handler(response, ctx):
                                                                     },
                                                                 }
                                                             )
+                                        elif item.get('type') == 'image_generation_call':
+                                            image_url = await get_image_generation_url(item, request, metadata, user)
+                                            if image_url:
+                                                await attach_message_images([image_url])
 
                                     # Merge any metadata (usage, etc.)
                                     # Strip 'done' — response.completed emits
@@ -5122,24 +5158,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         else []
                                     )
                                     if image_urls:
-                                        image_file_list = [{'type': 'image', 'url': url} for url in image_urls]
-                                        message_files = image_file_list
-                                        if save_to_chat:
-                                            message_files = await Chats.add_message_files_by_id_and_message_id(
-                                                metadata['chat_id'],
-                                                metadata['message_id'],
-                                                image_file_list,
-                                            )
-                                            if message_files is None:
-                                                message_files = image_file_list
-
-                                        # 'files' would make the emitter save these again.
-                                        await event_emitter(
-                                            {
-                                                'type': 'chat:message:files',
-                                                'data': {'files': message_files},
-                                            }
-                                        )
+                                        await attach_message_images(image_urls)
 
                                     # content and reasoning deltas are raw JSON: a stream filter can make them any type
                                     value = delta.get('content')
