@@ -2546,7 +2546,6 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 chat = await session.get(Chat, id)
                 chat.folder_id = folder_id
-                chat.updated_at = int(time.time())
                 if chat.user_id == user_id:
                     chat.last_read_at = int(time.time())
                 chat.pinned = False
