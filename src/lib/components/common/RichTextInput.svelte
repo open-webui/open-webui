@@ -1051,6 +1051,7 @@
 				...(collaboration && provider ? [provider.getEditorExtension()] : [])
 			],
 			content: provider ? undefined : content,
+			editable,
 			autofocus: messageInput && !$showCallOverlay,
 			onTransaction: ({ transaction }) => {
 				if (!editor) return;
