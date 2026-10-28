@@ -3,7 +3,7 @@
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 
 	import { decodeString } from '$lib/utils';
-	import { getChatList, getChatListBySearchText } from '$lib/apis/chats';
+	import { getChatList, getChatListBySearchText, getChatSearchSnippet } from '$lib/apis/chats';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -29,6 +29,54 @@
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let requestId = 0;
 
+	let snippetDebounceTimer: ReturnType<typeof setTimeout>;
+	const snippetCache = new Map<string, string | null>();
+	const snippetRequests = new Set<string>();
+
+	const applySnippet = (id: string, text: string, snippet: string | null | undefined) => {
+		// The query may have moved on while this was in flight
+		if (!snippet || searchedQuery.trim() !== text) {
+			return;
+		}
+
+		const idx = items.findIndex((item) => item.id === id);
+		if (idx !== -1) {
+			items[idx] = { ...items[idx], snippet };
+		}
+	};
+
+	// Previews are read per chat, so only fetch once the pointer settles on one
+	const loadSnippet = (item: { id: string; snippet?: string }) => {
+		clearTimeout(snippetDebounceTimer);
+
+		const text = searchedQuery.trim();
+		if (!text || item.snippet) {
+			return;
+		}
+
+		const key = `${item.id}:${text}`;
+		if (snippetCache.has(key)) {
+			applySnippet(item.id, text, snippetCache.get(key));
+			return;
+		}
+		if (snippetRequests.has(key)) {
+			return;
+		}
+
+		snippetDebounceTimer = setTimeout(async () => {
+			snippetRequests.add(key);
+			const snippet = await getChatSearchSnippet(localStorage.token, item.id, text).catch(
+				() => undefined
+			);
+			snippetRequests.delete(key);
+
+			if (snippet !== undefined) {
+				snippetCache.set(key, snippet);
+				applySnippet(item.id, text, snippet);
+			}
+		}, 200);
+	};
+
 	// Only re-run the search when the query actually changes. Flipping `initialized`
 	// after the initial load would otherwise trigger a second, identical request.
 	$: if (initialized && query !== searchedQuery) {
@@ -37,10 +85,12 @@
 
 	const scheduleSearch = () => {
 		clearTimeout(searchDebounceTimer);
+		clearTimeout(snippetDebounceTimer);
 		searchDebounceTimer = setTimeout(init, 200);
 	};
 
 	const init = async () => {
+		clearTimeout(snippetDebounceTimer);
 		requestId += 1;
 		searchedQuery = query;
 		page = 1;
@@ -101,6 +151,7 @@
 	});
 
 	onDestroy(() => {
+		clearTimeout(snippetDebounceTimer);
 		clearTimeout(searchDebounceTimer);
 	});
 </script>
@@ -130,8 +181,10 @@
 							}}
 							on:mousemove={() => {
 								selectedIdx = idx;
+								loadSnippet(item);
 							}}
 							on:mouseleave={() => {
+								clearTimeout(snippetDebounceTimer);
 								if (idx === 0) {
 									selectedIdx = -1;
 								}

@@ -18,6 +18,7 @@ from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
 from open_webui.models.tags import Tag, TagModel, Tags
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
@@ -31,6 +32,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     and_,
+    cast,
     delete,
     exists,
     func,
@@ -47,11 +49,36 @@ from sqlalchemy.sql.expression import bindparam
 log = logging.getLogger(__name__)
 ACTIVE_CHAT_GAP_SECONDS = 30 * 60
 CHAT_SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
+CHAT_SEARCH_BODY_CHAR_LIMIT = 1_048_576
+CHAT_SEARCH_SNIPPET_MAX_TERMS = 12
+
+# json_each and json_array_elements raise on a value of the wrong shape, so the container is checked first
+POSTGRES_HISTORY_MESSAGES_SQL = (
+    "CASE WHEN json_typeof(Chat.chat#>'{history,messages}') = 'object' "
+    "THEN Chat.chat#>'{history,messages}' ELSE '{}'::json END"
+)
+POSTGRES_LEGACY_MESSAGES_SQL = (
+    "CASE WHEN json_typeof(Chat.chat->'messages') = 'array' THEN Chat.chat->'messages' ELSE '[]'::json END"
+)
 
 
 def chat_search_content_query(text: str) -> str:
     words = sanitize_text_for_db(text).lower().strip().split()
     return ' '.join(word for word in words if not word.startswith(CHAT_SEARCH_FILTER_PREFIXES)).strip()
+
+
+def chat_message_list(chat: dict) -> list:
+    """Return a chat's messages as a list, whatever shape the stored body happens to be in."""
+    if not isinstance(chat, dict):
+        return []
+
+    history = chat.get('history')
+    messages = history.get('messages') if isinstance(history, dict) else None
+    if not messages:
+        messages = chat.get('messages')
+    if isinstance(messages, dict):
+        return list(messages.values())
+    return messages if isinstance(messages, list) else []
 
 
 def chat_search_terms(text: str) -> list[str]:
@@ -64,13 +91,23 @@ def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
         (
             EXISTS (
                 SELECT 1
-                FROM json_each(Chat.chat, '$.history.messages') AS history_message
-                WHERE LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
+                FROM json_each(
+                    CASE WHEN json_type(Chat.chat, '$.history.messages') IN ('object', 'array')
+                    THEN json_extract(Chat.chat, '$.history.messages') ELSE '{{}}' END
+                ) AS history_message
+                WHERE LOWER(
+                    CASE WHEN history_message.type = 'object' THEN history_message.value->>'content' END
+                ) LIKE '%' || :{key} || '%'
             )
             OR EXISTS (
                 SELECT 1
-                FROM json_each(Chat.chat, '$.messages') AS legacy_message
-                WHERE LOWER(legacy_message.value->>'content') LIKE '%' || :{key} || '%'
+                FROM json_each(
+                    CASE WHEN json_type(Chat.chat, '$.messages') IN ('object', 'array')
+                    THEN json_extract(Chat.chat, '$.messages') ELSE '[]' END
+                ) AS legacy_message
+                WHERE LOWER(
+                    CASE WHEN legacy_message.type = 'object' THEN legacy_message.value->>'content' END
+                ) LIKE '%' || :{key} || '%'
             )
         )
         """
@@ -88,13 +125,13 @@ def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
             )
             OR EXISTS (
                 SELECT 1
-                FROM json_each(Chat.chat#>'{{history,messages}}') AS history_message
+                FROM json_each({POSTGRES_HISTORY_MESSAGES_SQL}) AS history_message
                 WHERE json_typeof(history_message.value->'content') = 'string'
                 AND LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
             )
             OR EXISTS (
                 SELECT 1
-                FROM json_array_elements(Chat.chat->'messages') AS legacy_message
+                FROM json_array_elements({POSTGRES_LEGACY_MESSAGES_SQL}) AS legacy_message
                 WHERE json_typeof(legacy_message->'content') = 'string'
                 AND LOWER(legacy_message->>'content') LIKE '%' || :{key} || '%'
             )
@@ -2171,7 +2208,7 @@ class ChatTable:
         skip: int = 0,
         limit: int = 60,
         db: AsyncSession | None = None,
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         """
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
         """
@@ -2219,7 +2256,9 @@ class ChatTable:
         search_terms = [term for term in chat_search_terms(phrase_query) if term != phrase_query]
 
         async with get_async_db_context(db) as session:
-            stmt = select(Chat).filter(Chat.user_id == user_id)
+            stmt = select(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.archived
+            ).filter(Chat.user_id == user_id)
             stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
 
             if is_archived is not None:
@@ -2347,12 +2386,33 @@ class ChatTable:
             # Perform pagination at the SQL level
             stmt = stmt.offset(skip).limit(limit)
             result = await session.execute(stmt)
-            all_chats = result.scalars().all()
+            all_chats = result.mappings().all()
 
             log.info('The number of chats: %s', len(all_chats))
 
             # Validate and return chats
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [ChatTitleIdResponse.model_validate(row) for row in all_chats]
+
+    async def get_chat_search_bodies_by_ids(
+        self, ids: list[str], user_id: str, db: AsyncSession | None = None
+    ) -> dict[str, dict]:
+        """Read enough of the named chats to build a search snippet, skipping any too large to parse."""
+        bodies = {}
+        try:
+            async with get_async_db_context(db) as session:
+                body_slice = func.substr(cast(Chat.chat, Text), 1, CHAT_SEARCH_BODY_CHAR_LIMIT)
+                stmt = select(Chat.id, body_slice).where(Chat.id.in_(ids), Chat.user_id == user_id)
+                result = await session.execute(stmt)
+
+                for chat_id, body in result.all():
+                    if not body or len(body) >= CHAT_SEARCH_BODY_CHAR_LIMIT:
+                        continue
+                    parsed = JSONCodec.loads(body)
+                    if isinstance(parsed, dict):
+                        bodies[chat_id] = parsed
+        except Exception:
+            return {}
+        return bodies
 
     async def get_chats_by_folder_id_and_user_id(
         self,

@@ -18,6 +18,7 @@ from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import (
+    CHAT_SEARCH_SNIPPET_MAX_TERMS,
     AggregateChatStats,
     ChatBody,
     ChatForm,
@@ -30,6 +31,7 @@ from open_webui.models.chats import (
     ChatTitleIdResponse,
     ChatUsageStatsListResponse,
     MessageStats,
+    chat_message_list,
     chat_search_content_query,
     chat_search_terms,
 )
@@ -223,6 +225,10 @@ class ChatConfigForm(BaseModel):
     TOOL_SEARCH_DEFER_BUILTIN_TOOLS: bool = True
 
 
+class ChatSearchSnippetResponse(BaseModel):
+    snippet: str | None = None
+
+
 class CompactChatForm(BaseModel):
     model: str | None = None
 
@@ -235,15 +241,10 @@ def chat_search_snippet(chat: dict, search_text: str, max_length: int = 200) -> 
     if not search_text:
         return None
 
-    history = chat.get('history', {})
-    messages = history.get('messages') if isinstance(history, dict) else None
-    if not messages:
-        messages = chat.get('messages', []) or []
-    if isinstance(messages, dict):
-        messages = messages.values()
+    messages = chat_message_list(chat)
 
     needles = list(dict.fromkeys([search_text, *chat_search_terms(search_text)]))
-    for needle in needles:
+    for needle in needles[:CHAT_SEARCH_SNIPPET_MAX_TERMS]:
         for message in messages:
             if not isinstance(message, dict):
                 continue
@@ -954,21 +955,7 @@ async def search_user_chats(
     limit = 60
     skip = (page - 1) * limit
 
-    search_text = chat_search_content_text(text)
-    chat_list = []
-    for chat in await Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db):
-        # Explicit fields: model_dump() would deep-copy the entire chat blob per row
-        chat_list.append(
-            ChatTitleIdResponse(
-                id=chat.id,
-                title=chat.title,
-                updated_at=chat.updated_at,
-                created_at=chat.created_at,
-                last_read_at=chat.last_read_at,
-                snippet=chat_search_snippet(chat.chat, search_text),
-                archived=chat.archived,
-            )
-        )
+    chat_list = await Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db)
 
     # Delete tag if no chat is found
     words = text.strip().split(' ')
@@ -980,6 +967,26 @@ async def search_user_chats(
                 await Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
 
     return await add_active_state_to_chat_list(request, chat_list)
+
+
+############################
+# GetChatSearchSnippet
+############################
+
+
+@router.get('/{id}/search/snippet', response_model=ChatSearchSnippetResponse)
+async def get_chat_search_snippet(
+    id: str,
+    text: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    search_text = chat_search_content_text(text)
+    if not search_text:
+        return ChatSearchSnippetResponse()
+
+    bodies = await Chats.get_chat_search_bodies_by_ids([id], user.id, db=db)
+    return ChatSearchSnippetResponse(snippet=chat_search_snippet(bodies.get(id, {}), search_text))
 
 
 ############################

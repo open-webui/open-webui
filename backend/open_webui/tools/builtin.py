@@ -21,7 +21,13 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.channels import Channel, ChannelMember, Channels
-from open_webui.models.chats import Chats, chat_search_content_query, chat_search_terms
+from open_webui.models.chats import (
+    CHAT_SEARCH_SNIPPET_MAX_TERMS,
+    Chats,
+    chat_message_list,
+    chat_search_content_query,
+    chat_search_terms,
+)
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
@@ -74,6 +80,7 @@ from open_webui.utils.terminals import upload_files_to_terminal
 log = logging.getLogger(__name__)
 
 MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
+SEARCH_CHATS_MAX_COUNT = 50
 
 
 async def _has_write_access_to_note(note, user_id: str) -> bool:
@@ -1654,7 +1661,7 @@ async def search_chats(
     supported.
 
     :param query: Exact phrase or descriptive keyword query to find matching previous chats
-    :param count: Maximum number of results to return (default: 5)
+    :param count: Maximum number of results to return (default: 5, at most 50)
     :param start_timestamp: Only include chats updated after this Unix timestamp (seconds)
     :param end_timestamp: Only include chats updated before this Unix timestamp (seconds)
     :return: JSON with matching chats containing id, title, updated_at, and content snippet
@@ -1668,6 +1675,7 @@ async def search_chats(
     try:
         user_id = __user__.get('id')
 
+        count = max(1, min(count, SEARCH_CHATS_MAX_COUNT))
         chats = await Chats.get_chats_by_user_id_and_search_text(
             user_id=user_id,
             search_text=query,
@@ -1676,7 +1684,7 @@ async def search_chats(
             limit=count * 3,  # Fetch more for filtering
         )
 
-        results = []
+        matched = []
         for chat in chats:
             # Skip the current chat to avoid showing it in search results
             if __chat_id__ and chat.id == __chat_id__:
@@ -1688,19 +1696,25 @@ async def search_chats(
             if end_timestamp and chat.updated_at > end_timestamp:
                 continue
 
+            matched.append(chat)
+            if len(matched) >= count:
+                break
+
+        lower_query = chat_search_content_query(query)
+        needles = list(dict.fromkeys([lower_query, *chat_search_terms(lower_query)])) if lower_query else []
+        # Only the chats that survived the filters need their text read
+        bodies = {}
+        if needles and matched:
+            bodies = await Chats.get_chat_search_bodies_by_ids([chat.id for chat in matched], user_id)
+
+        results = []
+        for chat in matched:
             # Find a matching message snippet
             snippet = ''
-            messages = (getattr(chat, 'chat', None) or {}).get('history', {}).get('messages', {})
-            if not messages:
-                messages = (getattr(chat, 'chat', None) or {}).get('messages', {}) or {}
-            if isinstance(messages, list):
-                messages = {str(idx): message for idx, message in enumerate(messages)}
+            messages = chat_message_list(bodies.get(chat.id, {}))
 
-            lower_query = chat_search_content_query(query)
-            needles = list(dict.fromkeys([lower_query, *chat_search_terms(lower_query)])) if lower_query else []
-
-            for needle in needles:
-                for msg_id, msg in messages.items():
+            for needle in needles[:CHAT_SEARCH_SNIPPET_MAX_TERMS]:
+                for msg in messages:
                     content = msg.get('content', '') if isinstance(msg, dict) else ''
                     if isinstance(content, str) and needle in content.lower():
                         idx = content.lower().find(needle)
@@ -1725,9 +1739,6 @@ async def search_chats(
                     'updated_at': chat.updated_at,
                 }
             )
-
-            if len(results) >= count:
-                break
 
         return JSONCodec.dumps(results, ensure_ascii=False)
     except Exception as e:
