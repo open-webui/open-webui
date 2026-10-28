@@ -368,6 +368,11 @@
 	let pendingWebSearchPrompt: string | null = null;
 	let webSearchConfirmed = false;
 
+	// Before webSearchActive, so it sees the new defaults in the same update
+	$: if (!loading && modelDefaults && !equal(selectedModelIds, defaultsModelIds)) {
+		setDefaults(true);
+	}
+
 	$: {
 		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
 		const allModelsSupportWebSearch =
@@ -1102,10 +1107,6 @@
 	let defaultsModelIds: string[] = [];
 	let modelDefaults: Record<string, any> | null = null;
 	let settingDefaults: Promise<void> | null = null;
-
-	$: if (!loading && modelDefaults && !equal(selectedModelIds, defaultsModelIds)) {
-		setDefaults(true);
-	}
 
 	const setDefaults = async (preserveSelections = false) => {
 		const modelIds = atSelectedModel ? [atSelectedModel.id] : [...selectedModels];
