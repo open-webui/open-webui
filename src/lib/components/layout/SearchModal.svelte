@@ -70,6 +70,14 @@
 		shared: 'search for shared chats',
 		archived: 'search for archived chats'
 	};
+	// Fixed labels from the search API; folder and channel names stay as typed.
+	$: contextLabels = new Map([
+		['Personal chat', $i18n.t('Personal chat')],
+		['Shared chat', $i18n.t('Shared chat')],
+		['Shared snapshot', $i18n.t('Shared snapshot')],
+		['Personal note', $i18n.t('Personal note')],
+		['Shared note', $i18n.t('Shared note')]
+	]);
 	$: selected = results[selectedIndex];
 	$: suggestions = suggesting && !panel ? getSuggestions(query, $tags, $folders) : [];
 	$: scopeName = scopes.find((item) => item.id === scope)?.name ?? '';
@@ -544,7 +552,7 @@
 					class="flex h-6 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
 				>
 					<span id="workspace-search-results-label"
-						>{$i18n.t(query.trim() ? 'Results' : 'Pinned & recent')}</span
+						>{query.trim() ? $i18n.t('Results') : $i18n.t('Pinned & recent')}</span
 					><span aria-live="polite"
 						>{loading
 							? $i18n.t('Searching…')
@@ -591,7 +599,7 @@
 										><HighlightedText text={result.title} {query} /></span
 									><span
 										class="hidden max-w-[35%] truncate text-[0.6875rem] text-gray-500 dark:text-gray-400 sm:block"
-										>{result.context}</span
+										>{contextLabels.get(result.context) ?? result.context}</span
 									>{#if result.pinned}<Pin className="size-2.5 shrink-0 text-gray-400" />{/if}
 								</div>
 								{#if query.trim() && result.snippet}<div
@@ -623,7 +631,7 @@
 				{:else if !loading && !results.length}<div
 						class="m-auto px-5 py-6 text-center text-xs text-gray-500 dark:text-gray-400"
 					>
-						<p>{$i18n.t(query ? 'No matches found' : 'Nothing here yet')}</p>
+						<p>{query ? $i18n.t('No matches found') : $i18n.t('Nothing here yet')}</p>
 						<p class="mt-1 text-[0.6875rem]">
 							{$i18n.t('Try another word or broaden your filters.')}
 						</p>
@@ -678,7 +686,9 @@
 						<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3 scrollbar-hidden">
 							<h2 class="text-[0.8125rem] font-normal leading-5 break-words">{selected.title}</h2>
 							<div class="mt-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
-								{selected.context} · {formatSearchDate(selected.updated_at)}
+								{contextLabels.get(selected.context) ?? selected.context} · {formatSearchDate(
+									selected.updated_at
+								)}
 							</div>
 							<div class="mt-3 break-words text-xs leading-snug text-gray-600 dark:text-gray-300">
 								{#if selected.kind === 'note'}
@@ -708,7 +718,7 @@
 								setPreview(!preview);
 								panel = null;
 								input.focus();
-							}}>{$i18n.t(preview ? 'Hide preview' : 'Show preview')}</button
+							}}>{preview ? $i18n.t('Hide preview') : $i18n.t('Show preview')}</button
 						><button on:click={copyLink}>{$i18n.t('Copy link')}</button>
 						<hr class="border-gray-100 dark:border-gray-800" />{/if}<button
 						on:click={() => create('chat')}>{$i18n.t('Start a new conversation')}</button
@@ -721,7 +731,9 @@
 			class="flex h-8 shrink-0 items-center justify-between gap-2 border-t border-gray-100/60 px-2 dark:border-gray-800/40"
 		>
 			<span class="min-w-0 truncate pl-1 text-[0.6875rem] text-gray-500 dark:text-gray-400"
-				>{selected ? selected.context : $i18n.t('Workspace search')}</span
+				>{selected
+					? (contextLabels.get(selected.context) ?? selected.context)
+					: $i18n.t('Workspace search')}</span
 			>
 			<div class="flex shrink-0 items-center gap-0.5">
 				<button class={quietButton} disabled={!selected} on:click={() => open()}

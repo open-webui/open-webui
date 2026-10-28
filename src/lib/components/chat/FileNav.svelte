@@ -193,7 +193,7 @@
 		const text = source?.text ?? selection.toString();
 		if (!text.trim()) return;
 		if (new TextEncoder().encode(text).length > 16384) {
-			toast.error('Select less text (maximum 16 KiB).');
+			toast.error($i18n.t('Select less text (maximum 16 KiB).'));
 			return;
 		}
 		const page =
@@ -2275,15 +2275,16 @@
 				role="status"
 				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
 			>
-				File updated on disk. Your local changes are preserved. <button
+				{$i18n.t('File updated on disk. Your local changes are preserved.')}
+				<button
 					class="underline"
 					on:click={() => openEntry({ name: selectedFile!.split('/').pop()!, type: 'file' })}
-					>Reload</button
+					>{$i18n.t('Reload')}</button
 				>
 				<button
 					class="underline"
 					on:click={() => filePreviewRef.save().catch((e) => toast.error(String(e)))}
-					>Save local changes</button
+					>{$i18n.t('Save local changes')}</button
 				>
 			</div>{/if}
 		<!-- Content -->
