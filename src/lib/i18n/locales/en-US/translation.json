@@ -2878,7 +2878,7 @@
 	"settings.admin.documents.reindex.label": "Reindex",
 	"settings.admin.documents.reindexKnowledgeAndMemoryVectors.description": "Rebuild vectors for existing knowledge files, knowledge search, and memories.",
 	"settings.admin.documents.reindexKnowledgeAndMemoryVectors.label": "Reindex Knowledge and Memory Vectors",
-	"settings.admin.documents.relevanceThreshold.description": "Only return documents with a score greater than or equal to this value.",
+	"settings.admin.documents.relevanceThreshold.description": "Only return documents with a score greater than or equal to this value. Negative values are valid for rerankers that return raw scores outside the 0 to 1 range.",
 	"settings.admin.documents.relevanceThreshold.label": "Relevance Threshold",
 	"settings.admin.documents.rerankingBatchSize.description": "Number of results processed per reranking batch.",
 	"settings.admin.documents.rerankingBatchSize.label": "Reranking Batch Size",

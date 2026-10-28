@@ -1431,8 +1431,6 @@
 									placeholder={$i18n.t('Enter Score')}
 									bind:value={RAGConfig.RELEVANCE_THRESHOLD}
 									autocomplete="off"
-									min="0.0"
-									title={$i18n.t('The score should be a value between 0.0 (0%) and 1.0 (100%).')}
 								/>
 							</AdminSettingField>
 
