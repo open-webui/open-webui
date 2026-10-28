@@ -27,6 +27,7 @@ DICT_CONFIG_KEY_ALIASES = {
     'ollama.api_configs': ('OLLAMA_API_CONFIGS',),
     'rag.mineru_params': ('MINERU_PARAMS',),
     'rag.docling_params': ('DOCLING_PARAMS',),
+    'rag.mistral_ocr_params': ('MISTRAL_OCR_PARAMS',),
     'web.search.linkup_search_params': ('LINKUP_SEARCH_PARAMS',),
     'image_generation.automatic1111.api_params': ('AUTOMATIC1111_PARAMS',),
     'image_generation.openai.params': ('IMAGES_OPENAI_API_PARAMS',),
