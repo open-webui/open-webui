@@ -45,6 +45,8 @@ export const CONTROL_LABELS = {
 	'chat.attach_notes': 'Attach Notes',
 	'chat.attach_knowledge': 'Attach Knowledge',
 	'chat.reference_chats': 'Reference Chats',
+	'chat.available_tools': 'Available Tools',
+	'chat.available_skills': 'Available Skills',
 	'chat.status': '/status',
 	'chat.model_command': '/model',
 	'chat.settings_command': '/settings',

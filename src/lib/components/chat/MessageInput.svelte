@@ -42,7 +42,8 @@
 		showFileNavDir,
 		selectedTerminalId,
 		TTSWorker,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		visibleControls
 	} from '$lib/stores';
 
 	import {
@@ -2574,7 +2575,7 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5 shrink-0">
-										{#if (selectedToolIds ?? []).length > 0}
+										{#if (selectedToolIds ?? []).length > 0 && $visibleControls['chat.available_tools']}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
 													COUNT: (selectedToolIds ?? []).length
@@ -2597,7 +2598,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if (selectedSkillIds ?? []).length > 0}
+										{#if (selectedSkillIds ?? []).length > 0 && $visibleControls['chat.available_skills']}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Skills', {
 													COUNT: (selectedSkillIds ?? []).length
