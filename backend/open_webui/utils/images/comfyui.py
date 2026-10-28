@@ -99,6 +99,8 @@ async def _ws_get_images(ws, workflow, client_id, base_url, api_key):
         if node_id in workflow and workflow[node_id].get('class_type') in [
             'SaveImage',
             'SaveImageAdvanced',
+            'SaveAnimatedWEBP',
+            'SaveAnimatedPNG',
             'PreviewImage',
         ]:
             if 'images' in node_output:
