@@ -4881,12 +4881,20 @@
 		if (isShared) return;
 		if (!$chatId || $temporaryChatEnabled || chat?.id !== $chatId) return;
 		const loaded = chat?.chat ?? {};
-		if (equal(chatFiles, loaded.files ?? []) && equal(selectedModels, loaded.models ?? [])) return;
+		const saveModels =
+			selectedModels.length > 0 &&
+			selectedModels.every(Boolean) &&
+			(loaded.models ?? []).every((modelId) => $models.some((model) => model.id === modelId));
+		if (
+			equal(chatFiles, loaded.files ?? []) &&
+			(!saveModels || equal(selectedModels, loaded.models ?? []))
+		)
+			return;
 		const id = $chatId;
 
 		const res = await updateChatById(localStorage.token, id, {
 			files: chatFiles,
-			...(selectedModels.length && selectedModels.every(Boolean) ? { models: selectedModels } : {})
+			...(saveModels ? { models: selectedModels } : {})
 		}).catch((err) => {
 			console.error('[controls autosave]', err);
 			return null;
