@@ -335,6 +335,7 @@
 					{allowEmbeds}
 					{save}
 					{preview}
+					{onPreview}
 					{compactPreview}
 					{editCodeBlock}
 					{onTaskClick}
@@ -379,6 +380,7 @@
 							{allowEmbeds}
 							{save}
 							{preview}
+							{onPreview}
 							{compactPreview}
 							{editCodeBlock}
 							{onTaskClick}
@@ -422,6 +424,7 @@
 									{allowEmbeds}
 									{save}
 									{preview}
+									{onPreview}
 									{compactPreview}
 									{editCodeBlock}
 									{onTaskClick}
@@ -440,6 +443,7 @@
 								{allowEmbeds}
 								{save}
 								{preview}
+								{onPreview}
 								{compactPreview}
 								{editCodeBlock}
 								{onTaskClick}
@@ -500,6 +504,7 @@
 									{allowEmbeds}
 									{save}
 									{preview}
+									{onPreview}
 									{compactPreview}
 									{editCodeBlock}
 									{onTaskClick}
@@ -561,6 +566,7 @@
 						{allowEmbeds}
 						{save}
 						{preview}
+						{onPreview}
 						{compactPreview}
 						{editCodeBlock}
 						{onTaskClick}
