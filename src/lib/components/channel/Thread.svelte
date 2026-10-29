@@ -96,9 +96,18 @@
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
 
+			if (
+				messages === null &&
+				type !== 'typing' &&
+				(data?.parent_id === threadId || (data?.id === threadId && type !== 'message:delete'))
+			) {
+				// Restart the fetch; loadVersion prevents its stale response from being applied.
+				return initHandler(searchAnchor);
+			}
+
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === threadId) {
-					if (messages) {
+					if (messages && !messages.some((message) => message.id === data.id)) {
 						messages = [{ ...data, temp_id: null }, ...messages];
 
 						if (typingUsers.find((user) => user.id === event.user.id)) {
