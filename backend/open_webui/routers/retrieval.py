@@ -278,6 +278,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'DATALAB_MARKER_USE_LLM': 'rag.datalab_marker_use_llm',
     'DDGS_BACKEND': 'web.search.ddgs_backend',
     'DOCLING_API_KEY': 'rag.docling_api_key',
+    'DOCLING_OCR_MODE': 'rag.docling_ocr_mode',
     'DOCLING_PARAMS': 'rag.docling_params',
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
     'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',

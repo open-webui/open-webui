@@ -184,6 +184,7 @@ async def get_content_from_url(request, url: str, *, config: dict | None = None)
             'rag.datalab_marker_strip_existing_ocr',
             'rag.datalab_marker_use_llm',
             'rag.docling_api_key',
+            'rag.docling_ocr_mode',
             'rag.docling_params',
             'rag.docling_server_url',
             'rag.document_intelligence_endpoint',

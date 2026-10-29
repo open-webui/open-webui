@@ -30,6 +30,7 @@ from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
 from open_webui.retrieval.loaders.pdf import PDFLoader
+from open_webui.retrieval.loaders.pdf_text_layer import needs_ocr
 from open_webui.utils.headers import get_user_groups_for_custom_headers
 from open_webui.utils.json_codec import JSONCodec
 
@@ -254,13 +255,46 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None):
+    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None, ocr_mode=''):
         self.url = url.rstrip('/')
         self.api_key = api_key
         self.file_path = file_path
         self.mime_type = mime_type
 
-        self.params = params or {}
+        # Copy: the params come from the stored config and must stay untouched.
+        self.params = dict(params or {})
+        self.ocr_mode = (ocr_mode or '').strip().lower()
+        if self.ocr_mode == 'auto':
+            self._set_ocr_for_text_layer()
+
+    def _is_pdf(self) -> bool:
+        if (self.mime_type or '').lower() == 'application/pdf':
+            return True
+        return str(self.file_path or '').lower().endswith('.pdf')
+
+    def _set_ocr_for_text_layer(self):
+        """Set ``do_ocr`` for this file from its own text layer (DOCLING_OCR_MODE=auto)."""
+        if not self._is_pdf():
+            # Non-PDF formats (images, office files) keep the configured value.
+            return
+
+        ocr_needed = needs_ocr(self.file_path)
+        name = os.path.basename(str(self.file_path))
+        if ocr_needed is None:
+            log.warning(
+                'Docling OCR mode auto: could not read the text layer of %s, keeping do_ocr=%s',
+                name,
+                self.params.get('do_ocr'),
+            )
+            return
+
+        self.params['do_ocr'] = ocr_needed
+        log.info(
+            'Docling OCR mode auto: %s %s, do_ocr=%s',
+            name,
+            'looks like a scan' if ocr_needed else 'has a text layer',
+            ocr_needed,
+        )
 
     def load(self) -> list[Document]:
         page_break_marker = '\f'
@@ -650,6 +684,7 @@ class Loader:
                     file_path=file_path,
                     mime_type=file_content_type,
                     params=params,
+                    ocr_mode=self.config.get('rag.docling_ocr_mode') or '',
                 )
         elif (
             self.engine == 'document_intelligence'

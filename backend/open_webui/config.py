@@ -953,6 +953,10 @@ except JSONCodec.JSONDecodeError:
 
 DOCLING_PARAMS = docling_params
 
+# 'auto' lets Open WebUI decide per PDF whether Docling should run OCR: off for
+# files that carry a text layer, on for scans. Empty keeps DOCLING_PARAMS as is.
+DOCLING_OCR_MODE = os.getenv('DOCLING_OCR_MODE', '').strip().lower()
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = os.getenv('DOCUMENT_INTELLIGENCE_ENDPOINT', '')
 
 DOCUMENT_INTELLIGENCE_KEY = os.getenv('DOCUMENT_INTELLIGENCE_KEY', '')
@@ -2995,6 +2999,7 @@ DEFAULT_CONFIG = {
     'rag.docling_server_url': DOCLING_SERVER_URL,
     'rag.docling_api_key': DOCLING_API_KEY,
     'rag.docling_params': DOCLING_PARAMS,
+    'rag.docling_ocr_mode': DOCLING_OCR_MODE,
     'rag.document_intelligence_endpoint': DOCUMENT_INTELLIGENCE_ENDPOINT,
     'rag.document_intelligence_key': DOCUMENT_INTELLIGENCE_KEY,
     'rag.document_intelligence_model': DOCUMENT_INTELLIGENCE_MODEL,
