@@ -4092,7 +4092,9 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
                     if continuing:
-                        usage = merge_usage((ctx.get('assistant_message') or {}).get('usage'), usage or {'incomplete': True})
+                        usage = merge_usage(
+                            (ctx.get('assistant_message') or {}).get('usage'), usage or {'incomplete': True}
+                        )
                     finish_reason = choices[0].get('finish_reason') if choices else None
 
                     if save_to_chat:
@@ -4909,7 +4911,9 @@ async def streaming_chat_response_handler(response, ctx):
 
                                         # Normalize and capture usage for DB persistence
                                         if response_metadata.get('usage'):
-                                            current_usage = update_usage_snapshot(current_usage, response_metadata['usage'])
+                                            current_usage = update_usage_snapshot(
+                                                current_usage, response_metadata['usage']
+                                            )
                                             usage = merge_usage(prior_usage, current_usage)
                                             response_metadata['usage'] = usage
 
@@ -5782,7 +5786,9 @@ async def streaming_chat_response_handler(response, ctx):
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call['call_id']
                         tool_function_name = tool_call.get('name', '')
-                        tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[tool_call['call_id']]
+                        tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[
+                            tool_call['call_id']
+                        ]
                         if tool_result is None:
                             results.append(
                                 {

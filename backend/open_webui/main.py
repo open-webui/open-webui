@@ -1698,7 +1698,9 @@ async def chat_completion(
 
                     async def emit_cancel_event():
                         if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
-                            async with Chats.edit_message_output(metadata['chat_id'], metadata['message_id']) as message:
+                            async with Chats.edit_message_output(
+                                metadata['chat_id'], metadata['message_id']
+                            ) as message:
                                 if message is not None:
                                     response_meta = dict(message.get('meta') or {})
                                     response_meta.setdefault('response_ended_at', time.time())

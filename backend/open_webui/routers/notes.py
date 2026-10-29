@@ -552,9 +552,8 @@ async def update_note_by_id(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    if (
-        form_data.data
-        and not await has_access_to_note_files(note, get_content_files(form_data.data.get('content')), user, db=db)
+    if form_data.data and not await has_access_to_note_files(
+        note, get_content_files(form_data.data.get('content')), user, db=db
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 

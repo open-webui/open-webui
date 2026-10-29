@@ -1601,7 +1601,9 @@ async def replace_note_content(
             update_data['title'] = title
 
         editor = await Users.get_user_by_id(__user__['id'])
-        if not editor or not await has_access_to_note_files(note, get_content_files(update_data['data']['content']), editor):
+        if not editor or not await has_access_to_note_files(
+            note, get_content_files(update_data['data']['content']), editor
+        ):
             return JSONCodec.dumps({'error': 'Cannot attach files you cannot access'})
         form = NoteUpdateForm(**update_data)
         updated_note = await Notes.update_note_by_id(note_id, form)
