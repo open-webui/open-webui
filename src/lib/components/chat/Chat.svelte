@@ -488,6 +488,10 @@
 	let taskIds = null;
 	let liveStatus = '';
 
+	// Each person can stop only the replies they started.
+	$: canStopResponse =
+		(history.messages[history.currentId]?.user_id ?? chat?.user_id ?? $user?.id) === $user?.id;
+
 	$: if (loading || !history.currentId) {
 		liveStatus = '';
 	} else if (
@@ -5423,6 +5427,7 @@
 										bind:dragged
 										dropzoneId={messageInputDropzoneId}
 										chatId={$chatId}
+										{canStopResponse}
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}
@@ -5520,6 +5525,7 @@
 										bind:dragged
 										dropzoneId={messageInputDropzoneId}
 										chatId={$chatId}
+										{canStopResponse}
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}

@@ -154,6 +154,7 @@
 	export let statusHandler: Function = () => {};
 	export let forkHandler: Function = () => {};
 	export let chatId = '';
+	export let canStopResponse: boolean = true;
 	export let terminalContext: TerminalContext | null = null;
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
@@ -2799,7 +2800,7 @@
 									</div>
 									<ModelControls selectedModels={selectedModelIds} />
 
-									{#if isActive && prompt === '' && files.length === 0}
+									{#if isActive && canStopResponse && prompt === '' && files.length === 0}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
