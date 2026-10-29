@@ -513,7 +513,19 @@
 		onRequestClose={requestClose}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div class="diff-editor flex h-full min-h-0 flex-col text-xs" on:keydown|capture={preventSave}>
+		<div
+			class="diff-editor flex h-full min-h-0 flex-col text-xs"
+			on:keydown|capture={preventSave}
+			on:keydown={(event) => {
+				if (
+					event.key === 'Escape' &&
+					event.target instanceof Element &&
+					event.target.closest('.cm-editor')
+				) {
+					event.stopPropagation();
+				}
+			}}
+		>
 			<header class="flex shrink-0 flex-wrap items-center gap-2 px-5 pt-4 pb-2">
 				<div class="min-w-0 flex-1">
 					<Tooltip content={session.path ?? ''} allowHTML={false} className="min-w-0">
