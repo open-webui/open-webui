@@ -256,6 +256,11 @@ async def connect_mcp_server(
         tool_specs = await client.list_tool_specs()
         if function_name_filter_list:
             tool_specs = [spec for spec in tool_specs if is_string_allowed(spec['name'], function_name_filter_list)]
+            client.tool_definitions = {
+                name: tool
+                for name, tool in client.tool_definitions.items()
+                if is_string_allowed(name, function_name_filter_list)
+            }
         return client, tool_specs
     except BaseException:
         await client.disconnect()

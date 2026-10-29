@@ -69,6 +69,7 @@
 		"@huggingface/transformers": "^3.0.0",
 		"@joplin/turndown-plugin-gfm": "^1.0.62",
 		"@mediapipe/tasks-vision": "^0.10.17",
+		"@modelcontextprotocol/ext-apps": "2.0.4",
 		"@pixiv/three-vrm": "3.5.5",
 		"@pixiv/three-vrm-animation": "3.5.5",
 		"@pyscript/core": "^0.4.32",

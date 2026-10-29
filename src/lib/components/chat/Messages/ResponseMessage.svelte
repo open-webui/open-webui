@@ -72,6 +72,7 @@
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
+	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import OutputEditView from './OutputEditView.svelte';
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 
@@ -759,13 +760,17 @@
 							>
 								{#each message.embeds as embed, idx}
 									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
-										<FullHeightIframe
-											src={embed}
-											allowScripts={true}
-											allowForms={$settings?.iframeSandboxAllowForms ?? true}
-											allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
-											allowPopups={true}
-										/>
+										{#if typeof embed === 'object' && embed?.type === 'mcp_app'}
+											{#key embed}<MCPApp app={embed} />{/key}
+										{:else if typeof embed === 'string'}
+											<FullHeightIframe
+												src={embed}
+												allowScripts={true}
+												allowForms={$settings?.iframeSandboxAllowForms ?? true}
+												allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
+												allowPopups={true}
+											/>
+										{/if}
 									</div>
 								{/each}
 							</div>
