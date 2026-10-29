@@ -1106,7 +1106,7 @@
 								{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
 									{@const index = visibleStart + i}
 									<ModelItem
-										{selectedModelIdx}
+										bind:selectedModelIdx
 										{item}
 										{index}
 										value={primaryValue}
