@@ -2799,7 +2799,7 @@
 									</div>
 									<ModelControls selectedModels={selectedModelIds} />
 
-									{#if isActive && prompt === '' && files.length === 0}
+									{#if isActive && (history.messages[history.currentId]?.user_id ?? $_user?.id) === $_user?.id && prompt === '' && files.length === 0}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
