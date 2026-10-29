@@ -21,7 +21,7 @@
 	};
 
 	onMount(() => {
-		mediaQuery = window.matchMedia('(min-width: 1000px)');
+		mediaQuery = window.matchMedia('(min-width: 768px)');
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
 	});
