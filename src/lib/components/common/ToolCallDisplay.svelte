@@ -165,6 +165,7 @@
 	};
 
 	const toggleOpenOnKeydown = (event: KeyboardEvent) => {
+		if (event.target !== event.currentTarget) return;
 		if (event.key !== 'Enter' && event.key !== ' ') {
 			return;
 		}
@@ -204,6 +205,7 @@
 			class="{buttonClassName} w-full min-w-0 cursor-pointer"
 			role="button"
 			tabindex="0"
+			aria-expanded={open}
 			on:click={toggleOpen}
 			on:keydown={toggleOpenOnKeydown}
 		>
