@@ -108,6 +108,12 @@
 		contentEl.style.top = `${top}px`;
 	}
 
+	function markMenuItems() {
+		contentEl
+			?.querySelectorAll('button:not([role]), a[href]:not([role])')
+			.forEach((item) => item.setAttribute('role', 'menuitem'));
+	}
+
 	async function openSub(focus = false) {
 		open = true;
 		await tick();
@@ -115,9 +121,7 @@
 		// Re-position after transition starts rendering real dimensions
 		setTimeout(positionContent, 50);
 
-		contentEl
-			?.querySelectorAll('button:not([role]), a[href]:not([role])')
-			.forEach((item) => item.setAttribute('role', 'menuitem'));
+		markMenuItems();
 
 		if (focus) {
 			(
@@ -175,8 +179,13 @@
 
 	function portal(node: HTMLElement) {
 		document.body.appendChild(node);
+
+		const mutationObserver = new MutationObserver(markMenuItems);
+		mutationObserver.observe(node, { childList: true, subtree: true });
+
 		return {
 			destroy() {
+				mutationObserver.disconnect();
 				if (node.parentNode) {
 					node.parentNode.removeChild(node);
 				}
