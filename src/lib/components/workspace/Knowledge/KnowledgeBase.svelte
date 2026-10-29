@@ -141,13 +141,6 @@
 	) => {
 		if (!knowledge) return false;
 		if (count === 0) return true;
-		const maxCount = $config?.file?.max_count;
-		if (maxCount != null && count > maxCount) {
-			toast.error(
-				$i18n.t('You can only upload a maximum of {{maxCount}} file(s) per batch.', { maxCount })
-			);
-			return false;
-		}
 		try {
 			await validateKnowledgeUpload(
 				localStorage.token,

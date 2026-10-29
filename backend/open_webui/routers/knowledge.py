@@ -1418,7 +1418,7 @@ async def check_knowledge_upload_limits(
     db=None,
 ) -> None:
     if batch:
-        batch_limit = await Config.get('rag.file.max_count')
+        batch_limit = await Config.get('knowledge.max_upload_count')
         if batch_limit is not None and count > int(batch_limit):
             raise HTTPException(400, f'You can only upload a maximum of {batch_limit} file(s) per batch.')
 
@@ -2156,7 +2156,7 @@ async def add_files_to_knowledge_batch(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    batch_limit = await Config.get('rag.file.max_count')
+    batch_limit = await Config.get('knowledge.max_upload_count')
     if batch_limit is not None and len(form_data) > int(batch_limit):
         raise HTTPException(400, f'You can only upload a maximum of {batch_limit} file(s) per batch.')
 

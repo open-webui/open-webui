@@ -305,6 +305,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'FILE_IMAGE_COMPRESSION_HEIGHT': 'file.image_compression_height',
     'FILE_IMAGE_COMPRESSION_WIDTH': 'file.image_compression_width',
     'FILE_MAX_COUNT': 'rag.file.max_count',
+    'KNOWLEDGE_MAX_UPLOAD_COUNT': 'knowledge.max_upload_count',
     'KNOWLEDGE_MAX_FILE_COUNT': 'knowledge.max_file_count',
     'KNOWLEDGE_MAX_FILE_SIZE': 'knowledge.max_file_size',
     'FILE_MAX_SIZE': 'rag.file.max_size',
@@ -686,6 +687,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # File upload settings
         'FILE_MAX_SIZE': config['rag.file.max_size'],
         'FILE_MAX_COUNT': config['rag.file.max_count'],
+        'KNOWLEDGE_MAX_UPLOAD_COUNT': config['knowledge.max_upload_count'],
         'KNOWLEDGE_MAX_FILE_COUNT': config['knowledge.max_file_count'],
         'KNOWLEDGE_MAX_FILE_SIZE': config['knowledge.max_file_size'],
         'FILE_IMAGE_COMPRESSION_WIDTH': config['file.image_compression_width'],
@@ -939,6 +941,7 @@ class ConfigForm(BaseModel):
     # File upload settings
     FILE_MAX_SIZE: Union[int, str | None] = None
     FILE_MAX_COUNT: Union[int, str | None] = None
+    KNOWLEDGE_MAX_UPLOAD_COUNT: Union[int, str | None] = None
     KNOWLEDGE_MAX_FILE_COUNT: Union[int, str | None] = None
     KNOWLEDGE_MAX_FILE_SIZE: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_WIDTH: Union[int, str | None] = None
@@ -1007,6 +1010,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     for field in (
         'FILE_MAX_SIZE',
         'FILE_MAX_COUNT',
+        'KNOWLEDGE_MAX_UPLOAD_COUNT',
         'KNOWLEDGE_MAX_FILE_COUNT',
         'KNOWLEDGE_MAX_FILE_SIZE',
         'FILE_IMAGE_COMPRESSION_WIDTH',
@@ -1016,6 +1020,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             updates[RETRIEVAL_CONFIG_KEYS[field]] = None
 
     for field, label in (
+        ('KNOWLEDGE_MAX_UPLOAD_COUNT', 'Knowledge batch upload limit'),
         ('KNOWLEDGE_MAX_FILE_COUNT', 'Knowledge file count limit'),
         ('KNOWLEDGE_MAX_FILE_SIZE', 'Knowledge file size limit'),
     ):
@@ -1145,6 +1150,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         # File upload settings
         'FILE_MAX_SIZE': config['rag.file.max_size'],
         'FILE_MAX_COUNT': config['rag.file.max_count'],
+        'KNOWLEDGE_MAX_UPLOAD_COUNT': config['knowledge.max_upload_count'],
         'KNOWLEDGE_MAX_FILE_COUNT': config['knowledge.max_file_count'],
         'KNOWLEDGE_MAX_FILE_SIZE': config['knowledge.max_file_size'],
         'FILE_IMAGE_COMPRESSION_WIDTH': config['file.image_compression_width'],
