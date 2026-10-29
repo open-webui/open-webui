@@ -4,6 +4,7 @@
 	import {
 		chatId as activeChatId,
 		config,
+		mobile,
 		settings,
 		showControls,
 		showSettings,
@@ -68,7 +69,7 @@
 	const selectDirect = async (terminal: (typeof directTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.url ? null : terminal.url;
 		selectedTerminalId.set(newId);
-		if (newId && window.matchMedia('(min-width: 1024px)').matches) {
+		if (newId && !$mobile) {
 			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
 		}
 
@@ -92,7 +93,7 @@
 	const selectSystem = async (terminal: (typeof systemTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.id ? null : terminal.id;
 		selectedTerminalId.set(newId);
-		if (newId && window.matchMedia('(min-width: 1024px)').matches) {
+		if (newId && !$mobile) {
 			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
 		}
 

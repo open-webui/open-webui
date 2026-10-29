@@ -88,9 +88,11 @@
 	const quietButton =
 		'focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center gap-1 rounded-lg px-1.5 text-[0.6875rem] font-normal text-gray-500 hover:bg-gray-50/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-200';
 	$: if (show && typeof window !== 'undefined') {
+		const savedPreview = localStorage.getItem('searchPreview');
 		preview =
-			window.matchMedia('(min-width: 1024px)').matches &&
-			localStorage.getItem('searchPreview') !== 'false';
+			savedPreview === null
+				? window.matchMedia('(min-width: 768px)').matches
+				: savedPreview === 'true';
 	}
 	$: schedule(show, query, kind, sharing, scope);
 

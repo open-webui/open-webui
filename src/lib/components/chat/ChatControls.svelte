@@ -347,7 +347,7 @@
 	<ResizableSidePanel
 		open={$showControls}
 		bind:width={controlsWidth}
-		minWidth={300}
+		minWidth={280}
 		minSiblingWidth={360}
 		storageKey="chatControlsSize"
 		className="h-full z-10 bg-white dark:bg-gray-900"

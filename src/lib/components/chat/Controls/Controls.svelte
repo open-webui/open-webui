@@ -139,7 +139,10 @@
 					chevronClassName="size-2.5"
 					chevronStrokeWidth="2"
 				>
-					<div class="pt-1 pb-1 text-xs" slot="content">
+					<div
+						class="pt-1 pb-1 text-xs [&_label]:truncate [&_label]:pb-1 [&_label]:-mb-1 [&_label+div]:shrink-0 [&_.inline-tooltip_label]:cursor-help!"
+						slot="content"
+					>
 						<div>
 							<AdvancedParams
 								admin={$user?.role === 'admin'}
