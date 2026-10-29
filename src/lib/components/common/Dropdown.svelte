@@ -247,6 +247,9 @@
 
 	async function afterOpen() {
 		await tick();
+		contentEl
+			?.querySelectorAll('button:not([role]), a[href]:not([role])')
+			.forEach((item) => item.setAttribute('role', 'menuitem'));
 		positionContent();
 
 		// Re-check after transition renders real dimensions
