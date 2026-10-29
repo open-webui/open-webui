@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrant, AccessGrants
 from open_webui.models.channels import ChannelMember, Channels
-from open_webui.models.chats import Chat, chat_search_content_query
+from open_webui.models.chats import Chat, chat_message_list, chat_search_content_query
 from open_webui.models.config import Config
 from open_webui.models.folders import Folder, Folders
 from open_webui.models.groups import Groups
@@ -73,9 +73,7 @@ def excerpt(content: str, query: str, length: int = 200) -> str:
 
 
 def chat_passage(data: dict, query: str) -> tuple[str, str | None]:
-    history = (data.get('history') or {}).get('messages') or {}
-    messages = list(history.values()) if history else data.get('messages') or []
-    messages = [m for m in messages if isinstance(m, dict) and isinstance(m.get('content'), str)]
+    messages = [m for m in chat_message_list(data) if isinstance(m, dict) and isinstance(m.get('content'), str)]
     terms = terms_for(query)
     match = next((m for m in messages if terms and all(t in m['content'].lower() for t in terms)), None)
     if match is None:
@@ -97,13 +95,19 @@ def message_match_sql(table: str, dialect: str, key: str):
         return text(
             '('
             + ' OR '.join(
-                f"EXISTS (SELECT 1 FROM {source} AS m WHERE json_type(m.value, '$.content') = 'text' "
-                f"AND lower(m.value ->> 'content') LIKE :{key} ESCAPE '\\')"
+                f"EXISTS (SELECT 1 FROM {source} AS m WHERE lower(CASE WHEN m.type = 'object' "
+                f"AND json_type(m.value, '$.content') = 'text' THEN m.value ->> 'content' END) "
+                f"LIKE :{key} ESCAPE '\\')"
                 for source in sources
             )
             + ')'
         )
-    sources = [f"json_each({table}.chat->'history'->'messages')", f"json_array_elements({table}.chat->'messages')"]
+    sources = [
+        f"json_each(CASE WHEN json_typeof({table}.chat->'history'->'messages') = 'object' "
+        f"THEN {table}.chat->'history'->'messages' ELSE '{{}}'::json END)",
+        f"json_array_elements(CASE WHEN json_typeof({table}.chat->'messages') = 'array' "
+        f"THEN {table}.chat->'messages' ELSE '[]'::json END)",
+    ]
     return text(
         '('
         + ' OR '.join(

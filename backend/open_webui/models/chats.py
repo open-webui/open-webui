@@ -58,6 +58,51 @@ def chat_search_terms(text: str) -> list[str]:
     return list(dict.fromkeys(re.findall(r'[a-z0-9]+', text.lower())))
 
 
+def chat_message_list(chat: dict) -> list:
+    if not isinstance(chat, dict):
+        return []
+    history = chat.get('history')
+    messages = history.get('messages') if isinstance(history, dict) else None
+    if not isinstance(messages, (dict, list)) or not messages:
+        messages = chat.get('messages')
+    if isinstance(messages, dict):
+        return list(messages.values())
+    return messages if isinstance(messages, list) else []
+
+
+def chat_search_snippet(chat: dict, search_text: str, max_length: int = 200) -> str | None:
+    search_text = chat_search_content_query(search_text)
+    if not search_text:
+        return None
+
+    messages = chat_message_list(chat)
+
+    needles = list(dict.fromkeys([search_text, *chat_search_terms(search_text)]))
+    for needle in needles:
+        for message in messages:
+            if not isinstance(message, dict):
+                continue
+
+            content = message.get('content')
+            if not isinstance(content, str):
+                continue
+
+            index = content.lower().find(needle)
+            if index == -1:
+                continue
+
+            start = max(index - max_length // 2, 0)
+            end = min(start + max_length, len(content))
+            if index + len(needle) > end:
+                end = min(index + len(needle), len(content))
+                start = max(end - max_length, 0)
+
+            snippet = ' '.join(content[start:end].split())
+            return f'{"..." if start else ""}{snippet}{"..." if end < len(content) else ""}'
+
+    return None
+
+
 def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
     if dialect_name == 'sqlite':
         return f"""
@@ -65,12 +110,14 @@ def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
             EXISTS (
                 SELECT 1
                 FROM json_each(Chat.chat, '$.history.messages') AS history_message
-                WHERE LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
+                WHERE LOWER(CASE WHEN history_message.type = 'object'
+                    THEN history_message.value->>'content' END) LIKE '%' || :{key} || '%'
             )
             OR EXISTS (
                 SELECT 1
                 FROM json_each(Chat.chat, '$.messages') AS legacy_message
-                WHERE LOWER(legacy_message.value->>'content') LIKE '%' || :{key} || '%'
+                WHERE LOWER(CASE WHEN legacy_message.type = 'object'
+                    THEN legacy_message.value->>'content' END) LIKE '%' || :{key} || '%'
             )
         )
         """
@@ -88,13 +135,15 @@ def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
             )
             OR EXISTS (
                 SELECT 1
-                FROM json_each(Chat.chat#>'{{history,messages}}') AS history_message
+                FROM json_each(CASE WHEN json_typeof(Chat.chat#>'{{history,messages}}') = 'object'
+                    THEN Chat.chat#>'{{history,messages}}' ELSE '{{}}'::json END) AS history_message
                 WHERE json_typeof(history_message.value->'content') = 'string'
                 AND LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
             )
             OR EXISTS (
                 SELECT 1
-                FROM json_array_elements(Chat.chat->'messages') AS legacy_message
+                FROM json_array_elements(CASE WHEN json_typeof(Chat.chat->'messages') = 'array'
+                    THEN Chat.chat->'messages' ELSE '[]'::json END) AS legacy_message
                 WHERE json_typeof(legacy_message->'content') = 'string'
                 AND LOWER(legacy_message->>'content') LIKE '%' || :{key} || '%'
             )
@@ -2171,9 +2220,9 @@ class ChatTable:
         skip: int = 0,
         limit: int = 60,
         db: AsyncSession | None = None,
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         """
-        Filters chats based on a search query using Python, allowing pagination using skip and limit.
+        Search chats without loading their bodies, with pagination applied in SQL.
         """
         search_text = sanitize_text_for_db(search_text).lower().strip()
 
@@ -2219,7 +2268,9 @@ class ChatTable:
         search_terms = [term for term in chat_search_terms(phrase_query) if term != phrase_query]
 
         async with get_async_db_context(db) as session:
-            stmt = select(Chat).filter(Chat.user_id == user_id)
+            stmt = select(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.archived
+            ).filter(Chat.user_id == user_id)
             stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
 
             if is_archived is not None:
@@ -2347,12 +2398,21 @@ class ChatTable:
             # Perform pagination at the SQL level
             stmt = stmt.offset(skip).limit(limit)
             result = await session.execute(stmt)
-            all_chats = result.scalars().all()
+            all_chats = result.mappings().all()
 
             log.info('The number of chats: %s', len(all_chats))
 
             # Validate and return chats
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [ChatTitleIdResponse.model_validate(chat) for chat in all_chats]
+
+    async def get_chat_search_snippets(
+        self, ids: list[str], user_id: str, search_text: str, db: AsyncSession | None = None
+    ) -> dict[str, str | None]:
+        if not ids or not chat_search_content_query(search_text):
+            return {}
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(Chat.id, Chat.chat).where(Chat.id.in_(ids), Chat.user_id == user_id))
+            return {id: chat_search_snippet(body, search_text) for id, body in result.all()}
 
     async def get_chats_by_folder_id_and_user_id(
         self,

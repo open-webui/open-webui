@@ -481,6 +481,18 @@ export const getAllChats = async (token: string) => {
 	return chats;
 };
 
+export const getChatSearchSnippet = async (token: string, id: string, text: string) => {
+	const searchParams = new URLSearchParams({ text });
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/search/snippet?${searchParams}`, {
+		headers: {
+			Accept: 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	});
+	if (!res.ok) throw getErrorDetail(await res.json());
+	return (await res.json()) as string | null;
+};
+
 export const getChatListBySearchText = async (token: string, text: string, page: number = 1) => {
 	let error = null;
 

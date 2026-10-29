@@ -1676,7 +1676,7 @@ async def search_chats(
             limit=count * 3,  # Fetch more for filtering
         )
 
-        results = []
+        matched = []
         for chat in chats:
             # Skip the current chat to avoid showing it in search results
             if __chat_id__ and chat.id == __chat_id__:
@@ -1688,31 +1688,16 @@ async def search_chats(
             if end_timestamp and chat.updated_at > end_timestamp:
                 continue
 
-            # Find a matching message snippet
-            snippet = ''
-            messages = (getattr(chat, 'chat', None) or {}).get('history', {}).get('messages', {})
-            if not messages:
-                messages = (getattr(chat, 'chat', None) or {}).get('messages', {}) or {}
-            if isinstance(messages, list):
-                messages = {str(idx): message for idx, message in enumerate(messages)}
+            matched.append(chat)
+            if len(matched) >= count:
+                break
 
-            lower_query = chat_search_content_query(query)
-            needles = list(dict.fromkeys([lower_query, *chat_search_terms(lower_query)])) if lower_query else []
-
-            for needle in needles:
-                for msg_id, msg in messages.items():
-                    content = msg.get('content', '') if isinstance(msg, dict) else ''
-                    if isinstance(content, str) and needle in content.lower():
-                        idx = content.lower().find(needle)
-                        start = max(0, idx - 50)
-                        end = min(len(content), idx + len(needle) + 100)
-                        snippet = (
-                            ('...' if start > 0 else '') + content[start:end] + ('...' if end < len(content) else '')
-                        )
-                        break
-                if snippet:
-                    break
-
+        snippets = await Chats.get_chat_search_snippets([chat.id for chat in matched], user_id, query)
+        lower_query = chat_search_content_query(query)
+        needles = list(dict.fromkeys([lower_query, *chat_search_terms(lower_query)])) if lower_query else []
+        results = []
+        for chat in matched:
+            snippet = snippets.get(chat.id) or ''
             title = chat.title or ''
             if not snippet and any(needle in title.lower() for needle in needles):
                 snippet = f'Title match: {title}'
@@ -1725,9 +1710,6 @@ async def search_chats(
                     'updated_at': chat.updated_at,
                 }
             )
-
-            if len(results) >= count:
-                break
 
         return JSONCodec.dumps(results, ensure_ascii=False)
     except Exception as e:
