@@ -1939,6 +1939,22 @@ def strip_reasoning_details(output: list) -> list:
     ]
 
 
+def strip_tool_images(output: list, model: dict) -> list:
+    """Replace tool result images with a text note when the model has Vision turned off."""
+    if (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('vision', True):
+        return output
+    stripped_output = []
+    for item in output:
+        if isinstance(item, dict) and item.get('type') == 'function_call_output':
+            parts = [
+                {'type': 'input_text', 'text': '\n[image]'} if part.get('type') == 'input_image' else part
+                for part in item.get('output', [])
+            ]
+            item = {**item, 'output': parts}
+        stripped_output.append(item)
+    return stripped_output
+
+
 def process_messages_with_output(
     messages: list[dict],
     reasoning_format: str | None = None,
@@ -2192,6 +2208,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # for output produced by the same model.
         if message.get('role') == 'assistant' and message.get('model') != model['id'] and isinstance(output, list):
             message['output'] = strip_reasoning_details(output)
+        if message.get('role') == 'assistant' and isinstance(output, list):
+            message['output'] = strip_tool_images(message['output'], model)
 
     form_data['messages'] = process_messages_with_output(
         form_data.get('messages', []),
@@ -2990,6 +3008,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         assistant_message = dict(pending_assistant_message)
         if assistant_message.get('model') != model['id'] and isinstance(assistant_message.get('output'), list):
             assistant_message['output'] = strip_reasoning_details(assistant_message['output'])
+        if isinstance(assistant_message.get('output'), list):
+            assistant_message['output'] = strip_tool_images(assistant_message['output'], model)
         form_data['messages'].extend(
             process_messages_with_output([assistant_message], reasoning_format=get_reasoning_format(model))
         )
@@ -5911,12 +5931,12 @@ async def streaming_chat_response_handler(response, ctx):
                             new_form_data['messages'] = (
                                 [system_message] if system_message else []
                             ) + convert_output_to_messages(
-                                output, raw=True, reasoning_format=get_reasoning_format(model)
+                                strip_tool_images(output, model), raw=True, reasoning_format=get_reasoning_format(model)
                             )
                             new_form_data['previous_response_id'] = last_response_id
                         else:
                             tool_messages = convert_output_to_messages(
-                                output,
+                                strip_tool_images(output, model),
                                 raw=True,
                                 reasoning_format=get_reasoning_format(model),
                                 flatten_tool_images=True,
@@ -6241,7 +6261,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 'messages': [
                                     *messages,
                                     *convert_output_to_messages(
-                                        output,
+                                        strip_tool_images(output, model),
                                         raw=True,
                                         reasoning_format=get_reasoning_format(model),
                                         flatten_tool_images=True,
