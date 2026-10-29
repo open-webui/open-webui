@@ -973,8 +973,8 @@ async def terminal_event_handler(
         path = result.get('path') or tool_function_params.get('path', '')
         if not path:
             return
-        # Only emit if the file actually exists
-        if result.get('exists') is False:
+        # Only open the viewer for existing files that are not displayed inline.
+        if result.get('exists') is False or result.get('displayed') is True:
             return
         page = tool_function_params.get('page')
 
@@ -982,7 +982,6 @@ async def terminal_event_handler(
             {
                 'type': f'terminal:{tool_function_name}',
                 'data': {
-                    **result,
                     'path': path,
                     **({'page': page} if page else {}),
                 },

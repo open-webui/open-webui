@@ -3150,7 +3150,7 @@ async def display_file(
 
     :param path: Terminal file path, or file_id or /api/v1/files/<file_id>/content for a chat or knowledge base file
     :param page: For PDF, DOCX, and PPTX files, open the preview at this 1-based page or slide number
-    :param inline: Show the file inline in chat instead of opening the file viewer
+    :param inline: Show terminal files inline instead of opening the file viewer; uploaded files always display inline
     :return: JSON with the file's path, name, content type, and display state
     """
     if __request__ is None:
@@ -3182,7 +3182,7 @@ async def display_file(
             'type': 'file',
             'source': 'open_webui',
             'exists': True,
-            'displayed': inline,
+            'displayed': True,
             'path': path,
             'full_path': path,
             'name': file_meta.get('name') or file.filename,
