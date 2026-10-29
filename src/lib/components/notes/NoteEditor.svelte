@@ -416,6 +416,7 @@
 	let debounceTimeout: NodeJS.Timeout | null = null;
 
 	const saveHandler = async (propagateError = false) => {
+		if (!note) return;
 		const res = await updateNoteById(localStorage.token, id, {
 			title: note?.title === '' ? $i18n.t('Untitled') : note.title
 		}).catch((e) => {
@@ -890,6 +891,10 @@ ${content}
 		});
 
 		if (res) {
+			if (debounceTimeout) clearTimeout(debounceTimeout);
+			debounceTimeout = null;
+			$socket?.emit('note:leave', { note_id: id });
+			note = null;
 			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			toast.success($i18n.t('Note deleted successfully'));
 			goto('/notes');
@@ -996,7 +1001,7 @@ ${content}
 
 	onDestroy(() => {
 		loadGeneration++;
-		$socket?.emit('note:leave', { note_id: note?.id });
+		if (note?.id) $socket?.emit('note:leave', { note_id: note.id });
 		if (debounceTimeout) clearTimeout(debounceTimeout);
 		$socket?.off('events:note', noteEventHandler);
 		$socket?.off('note:presence', presenceEventHandler);
@@ -1064,7 +1069,7 @@ ${content}
 	}}
 >
 	<div class=" text-sm text-gray-500">
-		{$i18n.t('This will delete')} <span class="  font-normal">{note.title}</span>.
+		{$i18n.t('This will delete')} <span class="  font-normal">{note?.title}</span>.
 	</div>
 </DeleteConfirmDialog>
 
@@ -1077,7 +1082,7 @@ ${content}
 						<Spinner className="size-5" />
 					</div>
 				</div>
-			{:else}
+			{:else if note && activePage}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 					<div class="shrink-0 w-full flex justify-between items-center px-3">
 						<div class="w-full min-w-0 flex items-center">
@@ -1591,7 +1596,7 @@ ${content}
 			<div class="flex h-full items-center justify-center">
 				<Spinner className="size-5" />
 			</div>
-		{:else if noteChatId || noteChatDraftKey}
+		{:else if note && (noteChatId || noteChatDraftKey)}
 			<Chat
 				embedded={true}
 				chatIdProp={noteChatId ?? ''}
