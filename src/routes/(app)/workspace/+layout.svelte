@@ -146,7 +146,7 @@
 
 				<div class="flex w-full items-center">
 					<div
-						class="flex min-w-0 mr-1.5 items-center gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+						class="flex min-w-0 mr-1.5 items-center gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal bg-transparent py-1 touch-auto pointer-events-auto"
 					>
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
