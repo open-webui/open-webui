@@ -46,7 +46,7 @@ from open_webui.utils.access_control import filter_allowed_access_grants, has_pe
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.json_codec import JSONCodec
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -1169,6 +1169,12 @@ async def update_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    if form_data.meta is not None:
+        if knowledge.user_id != user.id and user.role != 'admin':
+            raise HTTPException(403, ERROR_MESSAGES.ACCESS_PROHIBITED)
+        if is_external_knowledge(knowledge):
+            external_knowledge_error()
+
     knowledge = await Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
         # Re-embed knowledge base for semantic search
@@ -1402,6 +1408,65 @@ async def get_knowledge_files_by_id(
 ############################
 
 
+async def check_knowledge_upload_limits(
+    knowledge_id: str,
+    count: int,
+    *,
+    batch: bool = False,
+    file_size: int | None = None,
+    exclude_file_ids: list[str] | None = None,
+    db=None,
+) -> None:
+    if batch:
+        batch_limit = await Config.get('rag.file.max_count')
+        if batch_limit is not None and count > int(batch_limit):
+            raise HTTPException(400, f'You can only upload a maximum of {batch_limit} file(s) per batch.')
+
+    knowledge = await Knowledges.get_knowledge_by_id(knowledge_id, db=db)
+    if not knowledge:
+        raise HTTPException(404, ERROR_MESSAGES.NOT_FOUND)
+    limits = await Knowledges.get_file_limits(knowledge.meta)
+
+    if file_size is not None:
+        for max_size in (await Config.get('rag.file.max_size'), limits['max_file_size']):
+            if max_size and file_size > int(max_size) * 1024 * 1024:
+                raise HTTPException(413, ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'))
+
+    limit = limits['max_file_count']
+    if limit is not None and count > 0:
+        current_count = await Knowledges.get_file_count_by_id(
+            knowledge_id, include_pending=True, exclude_file_ids=exclude_file_ids, db=db
+        )
+        if current_count + count > int(limit):
+            raise HTTPException(400, f'Knowledge base file limit exceeded ({limit} files maximum).')
+
+
+class KnowledgeUploadValidationForm(BaseModel):
+    count: int = Field(ge=0)
+    file_size: int | None = Field(default=None, ge=0)
+    removed_file_ids: list[str] = Field(default_factory=list)
+
+
+@router.post('/{id}/files/validate')
+async def validate_knowledge_upload(
+    id: str,
+    form_data: KnowledgeUploadValidationForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await _verify_knowledge_write_access(id, user, db)
+    # This is a preflight only. Actual additions recheck capacity without removal credits.
+    await check_knowledge_upload_limits(
+        id,
+        form_data.count,
+        batch=True,
+        file_size=form_data.file_size,
+        exclude_file_ids=form_data.removed_file_ids,
+        db=db,
+    )
+    return {'status': True}
+
+
 class KnowledgeFileIdForm(BaseModel):
     file_id: str
     directory_id: Optional[str] = None
@@ -1462,24 +1527,34 @@ async def add_file_to_knowledge_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-    # Add content to the vector database
+    already_linked = await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db)
+    if not already_linked:
+        await check_knowledge_upload_limits(
+            id, 1, batch=True, file_size=(file.meta or {}).get('size', 0), exclude_file_ids=[form_data.file_id], db=db
+        )
+
+    linked = None
     try:
+        # Claim capacity atomically before indexing into the knowledge collection.
+        if not already_linked:
+            linked = await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id,
+                file_id=form_data.file_id,
+                user_id=user.id,
+                directory_id=form_data.directory_id,
+                db=db,
+            )
+            if not linked:
+                raise ValueError(f'Failed to link file {form_data.file_id} to knowledge {id}')
         await process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
             db=db,
         )
-
-        # Add file to knowledge base
-        await Knowledges.add_file_to_knowledge_by_id(
-            knowledge_id=id,
-            file_id=form_data.file_id,
-            user_id=user.id,
-            directory_id=form_data.directory_id,
-            db=db,
-        )
     except Exception as e:
+        if linked:
+            await Knowledges.remove_file_from_knowledge_by_id(id, form_data.file_id, db=db)
         log.debug(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1943,6 +2018,18 @@ async def sync_knowledge_diff(
         if key not in manifest_keys:
             deleted.append({'file_id': file_info['file_id'], 'filename': key[1]})
 
+    changed_keys = {(entry['path'], entry['filename']) for entry in added + modified}
+    await check_knowledge_upload_limits(
+        id,
+        len(added) + len(modified),
+        file_size=max(
+            (entry.size for entry in form_data.manifest if (entry.path, entry.filename) in changed_keys), default=0
+        ),
+        batch=True,
+        exclude_file_ids=[entry['file_id'] for entry in deleted] + [entry['stale_file_id'] for entry in modified],
+        db=db,
+    )
+
     # ── Diff directories ──
     required_directory_paths: set[str] = set()
     for entry in form_data.manifest:
@@ -2069,6 +2156,10 @@ async def add_files_to_knowledge_batch(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    batch_limit = await Config.get('rag.file.max_count')
+    if batch_limit is not None and len(form_data) > int(batch_limit):
+        raise HTTPException(400, f'You can only upload a maximum of {batch_limit} file(s) per batch.')
+
     for directory_id in {form.directory_id for form in form_data if form.directory_id}:
         await _verify_directory_in_knowledge(id, directory_id, db, detail='Target directory not found.')
 
@@ -2112,8 +2203,29 @@ async def add_files_to_knowledge_batch(
     new_file_ids = {form.file_id for form in new_entries}
     files = [f for f in files if f.id in new_file_ids]
 
-    # Process files
+    await check_knowledge_upload_limits(
+        id,
+        len(files),
+        file_size=max(((file.meta or {}).get('size', 0) or 0 for file in files), default=0),
+        exclude_file_ids=list(new_file_ids),
+        db=db,
+    )
+
+    # Claim slots before embedding; release them if processing fails.
+    reserved_ids = []
+    dir_map = {form.file_id: form.directory_id for form in new_entries}
     try:
+        for file in files:
+            linked = await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id,
+                file_id=file.id,
+                user_id=user.id,
+                directory_id=dir_map.get(file.id),
+                db=db,
+            )
+            if not linked:
+                raise ValueError(f'Failed to link file {file.id} to knowledge {id}')
+            reserved_ids.append(file.id)
         result = await process_files_batch(
             request=request,
             form_data=BatchProcessFilesForm(files=files, collection_name=id),
@@ -2121,20 +2233,14 @@ async def add_files_to_knowledge_batch(
             db=db,
         )
     except Exception as e:
+        for file_id in reserved_ids:
+            await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
         log.error(f'add_files_to_knowledge_batch: Exception occurred: {e}', exc_info=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
-    dir_map = {form.file_id: form.directory_id for form in new_entries}
-    for file_id in successful_file_ids:
-        await Knowledges.add_file_to_knowledge_by_id(
-            knowledge_id=id,
-            file_id=file_id,
-            user_id=user.id,
-            directory_id=dir_map.get(file_id),
-            db=db,
-        )
+    for file_id in set(reserved_ids) - set(successful_file_ids):
+        await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
 
     # If there were any errors, include them in the response
     if result.errors:

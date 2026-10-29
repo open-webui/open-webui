@@ -24,7 +24,7 @@
 
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ItemMenu from './Knowledge/ItemMenu.svelte';
-	import CreateKnowledgeBase from './Knowledge/CreateKnowledgeBase.svelte';
+	import KnowledgeEditor from './Knowledge/KnowledgeEditor.svelte';
 	import Badge from '../common/Badge.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
@@ -322,7 +322,7 @@
 	/>
 
 	<Modal bind:show={showCreateModal} size="md" ariaLabel={$i18n.t('Create a knowledge base')}>
-		<CreateKnowledgeBase
+		<KnowledgeEditor
 			modal={true}
 			onBack={() => {
 				closeCreateModal();

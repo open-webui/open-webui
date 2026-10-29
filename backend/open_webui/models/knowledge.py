@@ -6,6 +6,7 @@ from typing import Optional
 from open_webui.config import RAG_FILE_CONTENT_SEARCH_MAX_CHARS
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.files import (
     File,
     FileMetadataResponse,
@@ -162,10 +163,16 @@ class KnowledgeUserResponse(KnowledgeUserModel):
     pass
 
 
+class KnowledgeMeta(BaseModel):
+    max_file_count: int | None = Field(default=None, gt=0)
+    max_file_size: int | None = Field(default=None, gt=0)
+
+
 class KnowledgeForm(BaseModel):
     name: str
     description: str
     access_grants: Optional[list[dict]] = None
+    meta: KnowledgeMeta | None = None
 
 
 class FileUserResponse(FileModelResponse):
@@ -209,7 +216,8 @@ class KnowledgeTable:
         async with get_async_db_context(db) as db:
             knowledge = KnowledgeModel(
                 **{
-                    **form_data.model_dump(exclude={'access_grants'}),
+                    **form_data.model_dump(exclude={'access_grants', 'meta'}),
+                    'meta': form_data.meta.model_dump() if form_data.meta else None,
                     'id': str(uuid.uuid4()),
                     'user_id': user_id,
                     'created_at': int(time.time()),
@@ -671,6 +679,37 @@ class KnowledgeTable:
         except Exception:
             return []
 
+    async def get_file_limits(self, meta: dict | None) -> dict[str, int | None]:
+        local = meta or {}
+        counts = [
+            int(value) for value in (await Config.get('knowledge.max_file_count'), local.get('max_file_count')) if value
+        ]
+        sizes = [
+            int(value) for value in (await Config.get('knowledge.max_file_size'), local.get('max_file_size')) if value
+        ]
+        return {'max_file_count': min(counts, default=None), 'max_file_size': min(sizes, default=None)}
+
+    async def get_file_count_by_id(
+        self,
+        knowledge_id: str,
+        include_pending: bool = False,
+        exclude_file_ids: list[str] | None = None,
+        db: Optional[AsyncSession] = None,
+    ) -> int:
+        async with get_async_db_context(db) as db:
+            linked = select(KnowledgeFile.file_id.label('file_id')).where(KnowledgeFile.knowledge_id == knowledge_id)
+            if include_pending:
+                pending = select(File.id.label('file_id')).where(
+                    File.meta['data']['knowledge_id'].as_string() == knowledge_id,
+                    File.data['status'].as_string().in_(['pending', 'processing']),
+                )
+                linked = linked.union(pending)
+            files = linked.subquery()
+            stmt = select(func.count()).select_from(files)
+            if exclude_file_ids:
+                stmt = stmt.where(files.c.file_id.notin_(exclude_file_ids))
+            return (await db.execute(stmt)).scalar_one()
+
     async def add_file_to_knowledge_by_id(
         self,
         knowledge_id: str,
@@ -679,7 +718,27 @@ class KnowledgeTable:
         directory_id: Optional[str] = None,
         db: Optional[AsyncSession] = None,
     ) -> Optional[KnowledgeFileModel]:
+        global_limit = await Config.get('knowledge.max_file_count')
         async with get_async_db_context(db) as db:
+            # Read the local limit under the same write lock as count + insert.
+            await db.execute(
+                update(Knowledge).where(Knowledge.id == knowledge_id).values(updated_at=Knowledge.updated_at)
+            )
+            meta = await db.scalar(select(Knowledge.meta).where(Knowledge.id == knowledge_id))
+            local_limit = (meta or {}).get('max_file_count')
+            limit = min((int(value) for value in (global_limit, local_limit) if value), default=None)
+            if limit is not None:
+                existing = await db.scalar(select(KnowledgeFile).filter_by(knowledge_id=knowledge_id, file_id=file_id))
+                if existing:
+                    await db.commit()
+                    # Preserve duplicate-insert semantics; callers must not release another request's slot.
+                    return None
+                count = await db.scalar(
+                    select(func.count()).select_from(KnowledgeFile).where(KnowledgeFile.knowledge_id == knowledge_id)
+                )
+                if count >= int(limit):
+                    await db.rollback()
+                    raise ValueError(f'Knowledge base file limit exceeded ({limit} files maximum).')
             knowledge_file = KnowledgeFileModel(
                 **{
                     'id': str(uuid.uuid4()),
@@ -702,6 +761,7 @@ class KnowledgeTable:
                 else:
                     return None
             except Exception:
+                await db.rollback()
                 return None
 
     async def has_file(self, knowledge_id: str, file_id: str, db: Optional[AsyncSession] = None) -> bool:
@@ -758,11 +818,15 @@ class KnowledgeTable:
     ) -> Optional[KnowledgeModel]:
         try:
             async with get_async_db_context(db) as db:
+                values = form_data.model_dump(exclude={'access_grants', 'meta'})
+                if form_data.meta is not None:
+                    meta = await db.scalar(select(Knowledge.meta).where(Knowledge.id == id)) or {}
+                    values['meta'] = {**meta, **form_data.meta.model_dump(exclude_unset=True)}
                 await db.execute(
                     update(Knowledge)
                     .filter_by(id=id)
                     .values(
-                        **form_data.model_dump(exclude={'access_grants'}),
+                        **values,
                         updated_at=int(time.time()),
                     )
                 )

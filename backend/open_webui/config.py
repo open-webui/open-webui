@@ -996,6 +996,12 @@ ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
 
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
+KNOWLEDGE_MAX_FILE_COUNT = int(os.getenv('KNOWLEDGE_MAX_FILE_COUNT')) if os.getenv('KNOWLEDGE_MAX_FILE_COUNT') else None
+KNOWLEDGE_MAX_FILE_SIZE = int(os.getenv('KNOWLEDGE_MAX_FILE_SIZE')) if os.getenv('KNOWLEDGE_MAX_FILE_SIZE') else None
+if KNOWLEDGE_MAX_FILE_COUNT is not None and KNOWLEDGE_MAX_FILE_COUNT <= 0:
+    raise ValueError('KNOWLEDGE_MAX_FILE_COUNT must be a positive integer or unset')
+if KNOWLEDGE_MAX_FILE_SIZE is not None and KNOWLEDGE_MAX_FILE_SIZE <= 0:
+    raise ValueError('KNOWLEDGE_MAX_FILE_SIZE must be a positive integer or unset')
 
 RAG_FILE_MAX_SIZE = int(os.getenv('RAG_FILE_MAX_SIZE')) if os.getenv('RAG_FILE_MAX_SIZE') else None
 
@@ -3013,6 +3019,8 @@ DEFAULT_CONFIG = {
     'rag.enable_hybrid_search_enriched_texts': ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
     'rag.full_context': RAG_FULL_CONTEXT,
     'rag.file.max_count': RAG_FILE_MAX_COUNT,
+    'knowledge.max_file_count': KNOWLEDGE_MAX_FILE_COUNT,
+    'knowledge.max_file_size': KNOWLEDGE_MAX_FILE_SIZE,
     'rag.file.max_size': RAG_FILE_MAX_SIZE,
     'file.image_compression_width': FILE_IMAGE_COMPRESSION_WIDTH,
     'file.image_compression_height': FILE_IMAGE_COMPRESSION_HEIGHT,

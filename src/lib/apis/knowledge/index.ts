@@ -1,10 +1,35 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+type KnowledgeMeta = {
+	max_file_count: number | null;
+	max_file_size: number | null;
+};
+
+export const validateKnowledgeUpload = async (
+	token: string,
+	id: string,
+	count: number,
+	removedFileIds: string[] = [],
+	fileSize?: number
+) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/files/validate`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ count, removed_file_ids: removedFileIds, file_size: fileSize })
+	});
+	if (!res.ok) throw (await res.json()).detail;
+	return res.json();
+};
+
 export const createNewKnowledge = async (
 	token: string,
 	name: string,
 	description: string,
-	accessGrants: object[]
+	accessGrants: object[],
+	meta?: KnowledgeMeta
 ) => {
 	let error = null;
 
@@ -18,7 +43,8 @@ export const createNewKnowledge = async (
 		body: JSON.stringify({
 			name: name,
 			description: description,
-			access_grants: accessGrants
+			access_grants: accessGrants,
+			meta: meta
 		})
 	})
 		.then(async (res) => {
@@ -605,6 +631,7 @@ export const streamPendingKnowledgeFiles = async (token: string, id: string) => 
 };
 
 type KnowledgeUpdateForm = {
+	meta?: KnowledgeMeta;
 	name?: string;
 	description?: string;
 	data?: object;
@@ -623,7 +650,8 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 		body: JSON.stringify({
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
-			data: form?.data ? form.data : undefined
+			data: form?.data ? form.data : undefined,
+			meta: form.meta
 		})
 	})
 		.then(async (res) => {
