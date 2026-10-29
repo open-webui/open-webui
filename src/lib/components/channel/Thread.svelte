@@ -23,7 +23,7 @@
 
 	let messages = null;
 	let searchAnchor = '';
-	let loadVersion = 0;
+	let loading = null;
 	let top = false;
 
 	let messagesContainerElement = null;
@@ -49,7 +49,7 @@
 	};
 
 	const initHandler = async (anchor = '') => {
-		const version = ++loadVersion;
+		loading = null;
 		searchAnchor = anchor;
 		messages = null;
 		top = false;
@@ -59,19 +59,16 @@
 		typingUsersTimeout = {};
 
 		if (channel) {
-			const loaded = await getChannelThreadMessages(
-				localStorage.token,
-				channel.id,
-				threadId,
-				0,
-				50,
-				{ around: anchor }
-			).catch((error) => {
-				toast.error(String(error));
+			loading = getChannelThreadMessages(localStorage.token, channel.id, threadId, 0, 50, {
+				around: anchor
+			}).catch((error) => {
+				if (request === loading) toast.error(String(error));
 				return [];
 			});
-			if (version !== loadVersion) return;
-			messages = loaded;
+			const request = loading;
+			const loaded = await request;
+			if (request !== loading) return;
+			messages = loaded ?? [];
 
 			if (messages.length < 50) {
 				top = true;
@@ -96,13 +93,10 @@
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
 
-			if (
-				messages === null &&
-				type !== 'typing' &&
-				(data?.parent_id === threadId || (data?.id === threadId && type !== 'message:delete'))
-			) {
-				// Restart the fetch; loadVersion prevents its stale response from being applied.
-				return initHandler(searchAnchor);
+			if (messages === null && type !== 'typing') {
+				const request = loading;
+				await request;
+				if (request !== loading) return;
 			}
 
 			if (type === 'message') {
@@ -224,6 +218,7 @@
 	});
 
 	onDestroy(() => {
+		loading = null;
 		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
