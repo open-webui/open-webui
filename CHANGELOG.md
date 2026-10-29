@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.6] - 2026-10-29
+
+### Added
+
+- ✨ **Generate title from top bar.** The rename field at the top of an open chat now has the same sparkle button as the sidebar, which generates a title from the conversation and saves it right away. [#33382](https://github.com/open-webui/open-webui/pull/33382)
+- 📐 **Side panels on tablets.** On screens from 768 pixels wide, such as tablets and narrow windows, channel threads and the pages list and chat in notes now open beside the content instead of over it, picking a terminal opens its files beside the chat as well, and the search dialog shows its preview there by default and remembers whether you turned it on or off at any window size. [Commit](https://github.com/open-webui/open-webui/commit/cbeb8e3630cafd7ef6fd28b552bf7114729f21b9), [Commit](https://github.com/open-webui/open-webui/commit/c5981aaea6b25bb9b9601e62b9ff75da33aaaf4e)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Portuguese (Brazil) were enhanced and expanded.
+
+### Fixed
+
+- 🔃 **New chats stay in sync.** A chat started from the home page keeps syncing with the server again after it is created, so files removed in Chat Controls no longer come back after a reload and the owner of a chat shared with Allow replies gets Regenerate on other people's replies again. [#33377](https://github.com/open-webui/open-webui/pull/33377), [#33376](https://github.com/open-webui/open-webui/issues/33376)
+
+### Changed
+
+- 🔁 **Higher tool-call limit.** A single response with native function calling can now run up to 1024 rounds of tool calls before it stops with "Tool-call limit reached", up from 256, and setting "CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS" to 256 keeps the old limit. [#33384](https://github.com/open-webui/open-webui/pull/33384)
+
 ## [0.12.5] - 2026-10-29
 
 ### Added
