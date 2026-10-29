@@ -36,7 +36,7 @@
 		const map: Record<string, CalendarEventModel[]> = {};
 		for (const e of filteredEvents) {
 			const startMs = e.start_at / NS;
-			const endMs = (e.end_at || e.start_at) / NS;
+			const endMs = Math.max(startMs, (e.end_at || e.start_at) / NS - 1);
 			// Get local midnight for event start/end
 			const startDate = new Date(startMs);
 			const endDate = new Date(endMs);
