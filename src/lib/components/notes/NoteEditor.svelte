@@ -1121,6 +1121,13 @@ ${content}
 										return;
 									}
 
+									if (
+										e.relatedTarget instanceof HTMLElement &&
+										e.relatedTarget.id === 'generate-title-button'
+									) {
+										return;
+									}
+
 									titleInputFocused = false;
 									changeDebounceHandler();
 								}}
@@ -1134,10 +1141,15 @@ ${content}
 										<button
 											class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 											id="generate-title-button"
+											aria-label={$i18n.t('Generate')}
 											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 												titleGenerating}
 											on:mouseenter={() => {
 												ignoreBlur = true;
+											}}
+											on:blur={() => {
+												titleInputFocused = false;
+												changeDebounceHandler();
 											}}
 											on:click={(e) => {
 												e.preventDefault();
