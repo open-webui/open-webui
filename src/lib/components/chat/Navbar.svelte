@@ -37,8 +37,12 @@
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import Sparkles from '$lib/components/layout/Sidebar/icons/Sparkles.svelte';
 	import { isTemporaryChatId } from '$lib/utils/chatId';
+	import { createMessagesList } from '$lib/utils';
+	import { generateTitle } from '$lib/apis';
 	import { updateChatById } from '$lib/apis/chats';
+	import { getOutputText } from './Messages/structuredOutput';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 	import ChatParticipants from '$lib/components/common/ChatParticipants.svelte';
 
@@ -75,6 +79,7 @@
 	let confirmEdit = false;
 	let chatTitle = '';
 	let chatTitleInput: HTMLInputElement;
+	let generating = false;
 
 	const renameHandler = async () => {
 		chatTitle = title || chat?.chat?.title || '';
@@ -88,7 +93,8 @@
 	};
 
 	const editChatTitle = async () => {
-		if (!confirmEdit) return;
+		// Disabling the field to generate a title blurs it, which would save the empty field
+		if (!confirmEdit || generating) return;
 		confirmEdit = false;
 
 		const newTitle = chatTitle.trim();
@@ -106,9 +112,33 @@
 		);
 		if (!res) return;
 
-		_chatTitle.set(newTitle);
+		if (chat.id === $chatId) {
+			_chatTitle.set(newTitle);
+		}
 		await refreshChatList(localStorage.token, { refreshPinned: true });
 		await refreshFolderChatLists();
+	};
+
+	const generateTitleHandler = async () => {
+		generating = true;
+		chatTitle = '';
+
+		const messages = createMessagesList(history, history.currentId).map((message) => ({
+			role: message.role,
+			content: getOutputText(message.output) || message.content || ''
+		}));
+		const model = chat.chat.models.find((modelId: string) => modelId) ?? '';
+
+		const generatedTitle = await generateTitle(localStorage.token, model, messages).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+		generating = false;
+
+		chatTitle = generatedTitle || title;
+		await editChatTitle();
 	};
 </script>
 
@@ -170,6 +200,8 @@
 									bind:value={chatTitle}
 									class="min-w-0 flex-1 bg-transparent py-1 text-[0.9375rem] font-normal text-gray-700 outline-hidden dark:text-gray-300"
 									aria-label={$i18n.t('Title')}
+									placeholder={generating ? $i18n.t('Generating...') : ''}
+									disabled={generating}
 									on:keydown={(e) => {
 										if (e.isComposing || e.keyCode === 229) return;
 
@@ -183,6 +215,21 @@
 									}}
 									on:blur={editChatTitle}
 								/>
+
+								<Tooltip content={$i18n.t('Generate')}>
+									<button
+										class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+										id="generate-title-button"
+										aria-label={$i18n.t('Generate')}
+										disabled={generating}
+										on:mousedown={(e) => e.preventDefault()}
+										on:click={() => {
+											generateTitleHandler();
+										}}
+									>
+										<Sparkles strokeWidth="1.5" />
+									</button>
+								</Tooltip>
 							{:else}
 								<h1
 									class="min-w-0 truncate py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
