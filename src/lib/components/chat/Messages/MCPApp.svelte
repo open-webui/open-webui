@@ -16,6 +16,7 @@
 	import { AppBridge, PostMessageTransport } from '@modelcontextprotocol/ext-apps/app-bridge';
 	import { WEBUI_API_BASE_URL, WEBUI_VERSION } from '$lib/constants';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { injectCsp } from '$lib/utils/csp';
 
 	export let app: MCPAppEmbed;
@@ -25,7 +26,7 @@
 	let bridge: AppBridge | undefined;
 	let initialized = false;
 	let closing = false;
-	let status = 'Loading widget…';
+	let status = '';
 	let link = '';
 	let showConfirmation = false;
 	let confirmationText = '';
@@ -34,7 +35,7 @@
 	let loadTimeout: ReturnType<typeof setTimeout>;
 
 	async function rpc(method: string, params: object, signal?: AbortSignal) {
-		if (closing) throw new Error('Widget closed');
+		if (closing) throw new Error('App closed');
 		const response = await fetch(
 			`${WEBUI_API_BASE_URL}/tools/id/${encodeURIComponent(`server:mcp:${app.server_id}`)}/mcp/app/rpc`,
 			{
@@ -54,9 +55,7 @@
 		if (!response.ok) {
 			const error = await response.json().catch(() => null);
 			throw new Error(
-				typeof error?.detail === 'string'
-					? error.detail
-					: `Widget request failed (${response.status})`
+				typeof error?.detail === 'string' ? error.detail : `App request failed (${response.status})`
 			);
 		}
 		return response.json();
@@ -138,7 +137,7 @@
 			void bridge!.sendToolResult(app.result);
 		};
 		bridge.onerror = () => {
-			status = 'Widget communication failed';
+			status = 'App communication failed';
 		};
 		observer = new ResizeObserver(() => {
 			if (initialized)
@@ -186,7 +185,7 @@
 
 	onMount(() => {
 		loadTimeout = setTimeout(() => {
-			status = 'Widget did not initialize';
+			status = 'App did not initialize';
 			stop();
 		}, 30000);
 		void start().catch((error) => {
@@ -199,12 +198,22 @@
 	onDestroy(stop);
 </script>
 
-<div out:teardown|global>
-	{#if status}<p role="status" class="text-sm text-gray-500">{$i18n.t(status)}</p>{/if}
+<div class="relative" out:teardown|global>
+	{#if status}
+		<p role="status" class="text-sm text-gray-500">{$i18n.t(status)}</p>
+	{:else if !initialized && !closing}
+		<div
+			class="absolute inset-0 grid place-items-center pointer-events-none"
+			role="status"
+			aria-label={$i18n.t('Loading')}
+		>
+			<Spinner />
+		</div>
+	{/if}
 	<iframe
 		bind:this={iframe}
 		title={app.tool_name}
-		class="w-full border-0 rounded-xl"
+		class="block w-full border-0 rounded-xl"
 		style="height:300px"
 		sandbox="allow-scripts allow-downloads allow-popups"
 		referrerpolicy="no-referrer"
