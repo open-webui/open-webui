@@ -753,10 +753,11 @@ export const getChatListByTagName = async (token: string = '', tagName: string) 
 	}));
 };
 
-export const getChatById = async (token: string, id: string) => {
+export const getChatById = async (token: string, id: string, signal?: AbortSignal) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
+		signal,
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -772,6 +773,7 @@ export const getChatById = async (token: string, id: string) => {
 			return json;
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			error = err.detail;
 
 			console.error(err);
@@ -1465,10 +1467,11 @@ export const deleteChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const getTagsById = async (token: string, id: string) => {
+export const getTagsById = async (token: string, id: string, signal?: AbortSignal) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags`, {
+		signal,
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -1484,6 +1487,7 @@ export const getTagsById = async (token: string, id: string) => {
 			return json;
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			error = getErrorDetail(err);
 
 			console.error(err);

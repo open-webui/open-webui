@@ -166,6 +166,7 @@
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
+	export let onModelSelect: (models: string[]) => void = () => {};
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
@@ -2791,6 +2792,7 @@
 										<ModelSelector
 											bind:this={modelSelector}
 											bind:selectedModels
+											{onModelSelect}
 											showSetDefault={!history?.currentId}
 											placement="auto"
 											align="end"

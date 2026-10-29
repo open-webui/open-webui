@@ -46,6 +46,7 @@
 
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
+	export let onModelSelect: (models: string[]) => void = () => {};
 
 	export let history;
 	export let chatId = '';
@@ -262,6 +263,7 @@
 						bind:this={messageInput}
 						{history}
 						bind:selectedModels
+						{onModelSelect}
 						bind:files
 						bind:prompt
 						bind:autoScroll
