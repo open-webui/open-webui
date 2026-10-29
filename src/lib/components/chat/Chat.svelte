@@ -950,7 +950,7 @@
 	};
 
 	const initEmbeddedDraft = async () => {
-		chatLoadController.abort();
+		startChatLoad();
 		modelDefaults = null;
 		terminalContext = null;
 		clearTimeout(saveControlsTimer);
@@ -2619,7 +2619,7 @@
 	};
 
 	const initNewChat = async () => {
-		chatLoadController.abort();
+		startChatLoad();
 		modelDefaults = null;
 		clearTimeout(saveControlsTimer);
 		await saveControls();
