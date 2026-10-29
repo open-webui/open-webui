@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ✨ **Generate title from top bar.** The rename field at the top of an open chat now has the same sparkle button as the sidebar, which generates a title from the conversation and saves it right away. [#33382](https://github.com/open-webui/open-webui/pull/33382)
 - 📐 **Side panels on tablets.** On screens from 768 pixels wide, such as tablets and narrow windows, channel threads and the pages list and chat in notes now open beside the content instead of over it, picking a terminal opens its files beside the chat as well, and the search dialog shows its preview there by default and remembers whether you turned it on or off at any window size. [Commit](https://github.com/open-webui/open-webui/commit/cbeb8e3630cafd7ef6fd28b552bf7114729f21b9), [Commit](https://github.com/open-webui/open-webui/commit/c5981aaea6b25bb9b9601e62b9ff75da33aaaf4e)
+- 📏 **Knowledge base file limits.** Administrators can now cap how many files a knowledge base holds and how large each of its files may be, for all knowledge bases in Admin Settings > Documents or with "KNOWLEDGE_MAX_FILE_COUNT" and "KNOWLEDGE_MAX_FILE_SIZE", and a knowledge base's owner can set its own limits under Advanced when creating it or from Settings in its menu, while the global limits always apply. [Commit](https://github.com/open-webui/open-webui/commit/7618df3f53a8db2ad5352a789c88673a736b07a4), [#33318](https://github.com/open-webui/open-webui/issues/33318), [#24845](https://github.com/open-webui/open-webui/discussions/24845)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for Portuguese (Brazil) were enhanced and expanded.
 
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - 🔁 **Higher tool-call limit.** A single response with native function calling can now run up to 1024 rounds of tool calls before it stops with "Tool-call limit reached", up from 256, and setting "CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS" to 256 keeps the old limit. [#33384](https://github.com/open-webui/open-webui/pull/33384)
+- 📤 **Upload count covers knowledge.** The "Max Upload Count" setting in Admin Settings > Documents now also limits how many files can be uploaded or synced into a knowledge base at once, so uploading or syncing a folder with more new or changed files than that is refused. [Commit](https://github.com/open-webui/open-webui/commit/7618df3f53a8db2ad5352a789c88673a736b07a4)
 
 ## [0.12.5] - 2026-10-29
 
