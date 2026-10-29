@@ -1810,6 +1810,7 @@ async def delegate_task(
     context: str = '',
     file_ids: list[str] | None = None,
     background: bool = False,
+    model_id: str | None = None,
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
@@ -1824,6 +1825,7 @@ async def delegate_task(
     :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
         do not put file IDs only in context.
     :param background: Return immediately and continue this chat when the sub-agent finishes
+    :param model_id: ID of one of the listed sub-agent models. Omit to use the current model
     :return: Foreground result text, or a JSON dispatch handle for background work
     """
     if __request__ is None:
@@ -1838,6 +1840,7 @@ async def delegate_task(
         context,
         background,
         file_ids=file_ids,
+        model_id=model_id,
         request=__request__,
         user_data=__user__ or {},
         metadata=__metadata__ or {},

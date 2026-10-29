@@ -913,11 +913,22 @@ async def get_builtin_tools(
         )
 
         spec = get_builtin_tool_spec(func)
-        if func.__name__ == 'delegate_task' and not config.get('subagents.background_enabled'):
+        if func.__name__ == 'delegate_task':
+            from open_webui.utils.subagents import get_subagent_models
+
             parameters = spec.get('parameters', {})
-            parameters.get('properties', {}).pop('background', None)
-            if isinstance(parameters.get('required'), list):
-                parameters['required'] = [name for name in parameters['required'] if name != 'background']
+            properties = parameters.get('properties', {})
+            if not config.get('subagents.background_enabled'):
+                properties.pop('background', None)
+                if isinstance(parameters.get('required'), list):
+                    parameters['required'] = [name for name in parameters['required'] if name != 'background']
+
+            subagent_models = await get_subagent_models(request, UserModel(**user)) if user else []
+            if subagent_models:
+                properties['model_id']['enum'] = [subagent_model['id'] for subagent_model in subagent_models]
+                spec['description'] += f' Available models: {JSONCodec.dumps(subagent_models)}'
+            else:
+                properties.pop('model_id', None)
 
         tools_dict[func.__name__] = {
             'tool_id': f'builtin:{func.__name__}',

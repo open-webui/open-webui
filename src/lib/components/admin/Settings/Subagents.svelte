@@ -4,16 +4,22 @@
 	import { toast } from 'svelte-sonner';
 
 	import { config as appConfig } from '$lib/stores';
-	import { getBackendConfig } from '$lib/apis';
+	import { getBackendConfig, getModels } from '$lib/apis';
 	import { getSubagentsConfig, setSubagentsConfig } from '$lib/apis/configs';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
 	let loading = true;
 	let saving = false;
 	let enabled = false;
+	let subagentModels: { id: string; description: string }[] = [];
+	let models: any[] = [];
 	let backgroundEnabled = false;
 	let maxConcurrent = 20;
 	let maxAsync = 20;
@@ -25,12 +31,14 @@
 		try {
 			const config = await getSubagentsConfig(localStorage.token);
 			enabled = config?.ENABLE_SUBAGENTS ?? false;
+			subagentModels = config?.SUBAGENTS_MODELS ?? [];
 			backgroundEnabled = config?.SUBAGENTS_BACKGROUND_ENABLED ?? false;
 			maxConcurrent = Number(config?.SUBAGENTS_MAX_CONCURRENT) || 20;
 			maxAsync = Number(config?.SUBAGENTS_MAX_ASYNC) || 20;
 			maxIterations = Number(config?.SUBAGENTS_MAX_ITERATIONS) || 30;
 			maxOutput = Number(config?.SUBAGENTS_MAX_OUTPUT) || 30000;
 			systemPrompt = config?.SUBAGENTS_SYSTEM_PROMPT ?? '';
+			models = await getModels(localStorage.token, null, false);
 		} catch (error) {
 			toast.error(`${error}`);
 		} finally {
@@ -43,6 +51,7 @@
 		try {
 			await setSubagentsConfig(localStorage.token, {
 				ENABLE_SUBAGENTS: enabled,
+				SUBAGENTS_MODELS: subagentModels,
 				SUBAGENTS_BACKGROUND_ENABLED: backgroundEnabled,
 				SUBAGENTS_MAX_CONCURRENT: maxConcurrent,
 				SUBAGENTS_MAX_ASYNC: maxAsync,
@@ -83,6 +92,74 @@
 				</p>
 
 				{#if enabled}
+					<div>
+						<div class="mb-1 flex min-h-7 w-full items-center justify-between gap-2">
+							<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
+								{$i18n.t('settings.admin.subagents.models.label')}
+							</div>
+							<button
+								class="flex size-6 shrink-0 items-center justify-center text-gray-400 dark:text-gray-600"
+								type="button"
+								aria-label={$i18n.t('settings.admin.subagents.addModel.label')}
+								on:click={() => {
+									if (
+										subagentModels.length === 0 ||
+										subagentModels[subagentModels.length - 1]?.id !== ''
+									) {
+										subagentModels = [...subagentModels, { id: '', description: '' }];
+									}
+								}}
+							>
+								<Plus />
+							</button>
+						</div>
+						<div class="mb-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							{$i18n.t('settings.admin.subagents.models.description')}
+						</div>
+						<div class="flex flex-col gap-1.5">
+							{#each subagentModels as subagentModel, subagentModelIdx}
+								<div
+									class="flex items-center gap-1 rounded-lg border border-gray-100/40 bg-transparent px-2 py-1 transition focus-within:border-blue-400 dark:border-gray-850/50 dark:focus-within:border-blue-500"
+								>
+									<SettingsSelect
+										bind:value={subagentModel.id}
+										required
+										ariaLabel={$i18n.t('Model')}
+										className="w-48 max-w-full shrink-0"
+										selectClassName="!h-6 !border-transparent !bg-transparent !ps-1 dark:!bg-transparent"
+									>
+										<option value="" disabled hidden>{$i18n.t('Select a model')}</option>
+										{#each models.filter((model: any) => model.id === subagentModel.id || !subagentModels.some((otherModel) => otherModel.id === model.id)) as model}
+											<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+												{model.name}
+												{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+											</option>
+										{/each}
+									</SettingsSelect>
+									<input
+										class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
+										aria-label={$i18n.t('Description')}
+										placeholder={$i18n.t('settings.admin.subagents.modelDescription.placeholder')}
+										bind:value={subagentModel.description}
+									/>
+									<Tooltip content={$i18n.t('Delete')}>
+										<button
+											class="flex size-6 shrink-0 items-center justify-center text-gray-400 opacity-70 transition hover:text-gray-700 hover:opacity-100 dark:text-gray-600 dark:hover:text-gray-300"
+											type="button"
+											aria-label={$i18n.t('Delete')}
+											on:click={() => {
+												subagentModels.splice(subagentModelIdx, 1);
+												subagentModels = subagentModels;
+											}}
+										>
+											<XMark className="size-3.5" />
+										</button>
+									</Tooltip>
+								</div>
+							{/each}
+						</div>
+					</div>
+
 					<div>
 						<label class="text-xs text-gray-600 dark:text-gray-400" for="sa-concurrent">
 							{$i18n.t('settings.admin.subagents.maxConcurrent.label')}
