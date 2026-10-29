@@ -94,7 +94,7 @@
 	let availableModelIds = new Set<string>();
 
 	let filteredModels = [];
-	let selectedModelId = null;
+	let selectedModelId: string | null = null;
 
 	let showManageModal = false;
 	let showResetModal = false;
@@ -1343,6 +1343,7 @@
 			admin
 			edit
 			model={models.find((m) => m.id === selectedModelId)}
+			providerModel={allModels.find((m) => m.id === selectedModelId)}
 			preset={false}
 			onAccessUpdate={(model) => {
 				savedModels = [...savedModels.filter((m) => m.id !== model.id), model];

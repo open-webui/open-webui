@@ -90,6 +90,7 @@
 
 	let loaded = false;
 	let draggedOver = false;
+	let shiftKey = false;
 
 	let recording = false;
 	let content = '';
@@ -542,9 +543,23 @@
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Shift') {
+			shiftKey = true;
+		}
+
 		if (event.key === 'Escape') {
 			draggedOver = false;
 		}
+	};
+
+	const handleKeyUp = (event: KeyboardEvent) => {
+		if (event.key === 'Shift') {
+			shiftKey = false;
+		}
+	};
+
+	const handleBlur = () => {
+		shiftKey = false;
 	};
 
 	const onDragOver = (e: DragEvent) => {
@@ -792,6 +807,8 @@
 		}, 100);
 
 		window.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('keyup', handleKeyUp);
+		window.addEventListener('blur', handleBlur);
 
 		let dropzoneElement: HTMLElement | null = null;
 		const initialize = async () => {
@@ -812,6 +829,8 @@
 			isDestroyed = true;
 
 			window.removeEventListener('keydown', handleKeyDown);
+			window.removeEventListener('keyup', handleKeyUp);
+			window.removeEventListener('blur', handleBlur);
 
 			if (dropzoneElement) {
 				dropzoneElement.removeEventListener('dragover', onDragOver);
@@ -1085,7 +1104,7 @@
 													navigator.maxTouchPoints > 0 ||
 													navigator.msMaxTouchPoints > 0
 												)}
-											largeTextAsFile={$settings?.largeTextAsFile ?? false}
+											largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 											floatingMenuPlacement={'top-start'}
 											{suggestions}
 											on:pasted={resolveInputMentions}
@@ -1167,7 +1186,7 @@
 												if (clipboardData && clipboardData.items) {
 													for (const item of clipboardData.items) {
 														if (item.type === 'text/plain') {
-															if ($settings?.largeTextAsFile ?? false) {
+															if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																const text = clipboardData.getData('text/plain');
 
 																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {

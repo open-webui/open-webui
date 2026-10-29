@@ -48,6 +48,7 @@ class UserAnalyticsEntry(BaseModel):
 
 class UserAnalyticsResponse(BaseModel):
     users: list[UserAnalyticsEntry]
+    total: int
 
 
 ####################
@@ -77,7 +78,8 @@ async def get_user_analytics(
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    limit: int = Query(50, description='Max users to return'),
+    skip: int = Query(0, ge=0, description='Number of users to skip'),
+    limit: int = Query(50, ge=1, description='Max users to return'),
     metric: Literal['messages', 'tokens'] = Query('messages'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -91,8 +93,9 @@ async def get_user_analytics(
         key=lambda uid: (
             -usage[uid]['total_tokens'] if metric == 'tokens' else -usage[uid]['message_count'],
             -usage[uid]['message_count'],
+            uid or '',
         ),
-    )[:limit]
+    )[skip : skip + limit]
     user_info = {u.id: u for u in await Users.get_users_by_user_ids(top_user_ids, db=db)}
 
     users = []
@@ -111,7 +114,7 @@ async def get_user_analytics(
             )
         )
 
-    return UserAnalyticsResponse(users=users)
+    return UserAnalyticsResponse(users=users, total=len(usage))
 
 
 @router.get('/messages', response_model=list[ChatMessageModel])
@@ -310,6 +313,7 @@ async def get_model_chats(
     limit: int = Query(50, le=100),
     order_by: str = Query('updated_at'),
     direction: str = Query('desc'),
+    group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -319,6 +323,8 @@ async def get_model_chats(
         filter['start_date'] = start_date
     if end_date:
         filter['end_date'] = end_date
+    if group_id:
+        filter['group_id'] = group_id
     if order_by in MODEL_CHAT_ORDER_FIELDS:
         filter['order_by'] = order_by
     if direction in {'asc', 'desc'}:
@@ -438,3 +444,139 @@ async def get_model_overview(
     tags = [TagEntry(tag=tag, count=count) for tag, count in sorted(tag_counts.items(), key=lambda x: -x[1])[:10]]
 
     return ModelOverviewResponse(history=history, tags=tags)
+
+
+####################
+# Session Explorer
+####################
+
+
+def require_session_access(user=Depends(get_admin_user)):
+    from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS
+
+    if not ENABLE_ADMIN_CHAT_ACCESS:
+        raise HTTPException(403, detail='Admin chat access is disabled')
+    return user
+
+
+def validate_session_range(start_date, end_date):
+    if start_date is not None and end_date is not None and start_date > end_date:
+        raise HTTPException(400, detail='Start date must be before end date')
+
+
+@router.get('/sessions')
+async def get_sessions(
+    start_date: int | None = Query(None, ge=0),
+    end_date: int | None = Query(None, ge=0),
+    group_id: str | None = None,
+    query: str = Query('', max_length=200),
+    model_id: str | None = None,
+    hide_subagents: bool = False,
+    order_by: Literal['title', 'user', 'recent', 'tokens', 'responses', 'errors', 'duration'] = 'recent',
+    direction: Literal['asc', 'desc'] = 'desc',
+    include_summary: bool = False,
+    token_min: int | None = Query(None, ge=0),
+    token_max: int | None = Query(None, ge=1),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=50),
+    user=Depends(require_session_access),
+    db: AsyncSession = Depends(get_async_session),
+):
+    from open_webui.models.analytics_sessions import list_sessions
+
+    validate_session_range(start_date, end_date)
+    if token_min is not None and token_max is not None and token_min >= token_max:
+        raise HTTPException(400, detail='Minimum tokens must be below maximum tokens')
+    return await list_sessions(
+        db,
+        start_date=start_date,
+        end_date=end_date,
+        group_id=group_id,
+        query=query,
+        model_id=model_id,
+        hide_subagents=hide_subagents,
+        order_by=order_by,
+        direction=direction,
+        include_summary=include_summary,
+        token_min=token_min,
+        token_max=token_max,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get('/sessions/{chat_id}')
+async def get_session_messages(
+    chat_id: str,
+    start_date: int | None = Query(None, ge=0),
+    end_date: int | None = Query(None, ge=0),
+    group_id: str | None = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=50),
+    user=Depends(require_session_access),
+    db: AsyncSession = Depends(get_async_session),
+):
+    from open_webui.models.analytics_sessions import session_messages
+
+    validate_session_range(start_date, end_date)
+    result = await session_messages(
+        db, chat_id, start_date=start_date, end_date=end_date, group_id=group_id, skip=skip, limit=limit
+    )
+    if result is None:
+        raise HTTPException(404, detail='Session not found in this range')
+    return result
+
+
+@router.get('/sessions/{chat_id}/messages/{message_id}/events')
+async def get_session_events(
+    chat_id: str,
+    message_id: str,
+    start_date: int | None = Query(None, ge=0),
+    end_date: int | None = Query(None, ge=0),
+    group_id: str | None = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),
+    user=Depends(require_session_access),
+    db: AsyncSession = Depends(get_async_session),
+):
+    from open_webui.models.analytics_sessions import message_events
+
+    validate_session_range(start_date, end_date)
+    result = await message_events(
+        db, chat_id, message_id, start_date=start_date, end_date=end_date, group_id=group_id, skip=skip, limit=limit
+    )
+    if result is None:
+        raise HTTPException(404, detail='Message not found in this session')
+    return result
+
+
+@router.get('/sessions/{chat_id}/trace')
+async def get_session_trace(
+    chat_id: str,
+    start_date: int | None = Query(None, ge=0),
+    end_date: int | None = Query(None, ge=0),
+    group_id: str | None = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=50),
+    view: Literal['all', 'tools', 'errors'] = 'all',
+    include_chart: bool = False,
+    user=Depends(require_session_access),
+    db: AsyncSession = Depends(get_async_session),
+):
+    from open_webui.models.analytics_sessions import session_trace
+
+    validate_session_range(start_date, end_date)
+    result = await session_trace(
+        db,
+        chat_id,
+        start_date=start_date,
+        end_date=end_date,
+        group_id=group_id,
+        skip=skip,
+        limit=limit,
+        view=view,
+        include_chart=include_chart,
+    )
+    if result is None:
+        raise HTTPException(404, detail='Session not found in this range')
+    return result

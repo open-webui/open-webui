@@ -40,7 +40,7 @@ from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
-from open_webui.models.notes import Notes, NoteUpdateForm
+from open_webui.models.notes import Notes, NoteUpdateForm, document_page, get_content_files, get_page, normalize_pages
 from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.encryption import Relay
 from open_webui.socket.redis_room_channels import AsyncRedisRoomChannelManager
@@ -274,6 +274,46 @@ async def publish_chat_presence(chat_id: str):
         log.exception('Failed to publish presence for chat %s', chat_id)
 
 
+async def publish_note_presence(note_id: str):
+    lock = (
+        REDIS.lock(
+            f'{REDIS_KEY_PREFIX}:note:{note_id}:presence:lock',
+            timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+            blocking_timeout=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+        )
+        if REDIS is not None
+        else SOCKET_EVENT_LOCKS.setdefault(('note', note_id), asyncio.Lock())
+    )
+    async with lock, asyncio.timeout(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2):
+        now = time.time()
+        people = {}
+        for batch in get_session_pool_batches():
+            for _, session in batch:
+                if (
+                    not session
+                    or note_id not in session.get('note_ids', [])
+                    or now - session.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT
+                ):
+                    continue
+                location = session.get('note_locations', {}).get(note_id, {})
+                previous = people.get(session['id'])
+                if previous is None or location.get('updated_at', 0) > previous.get('updated_at', 0):
+                    people[session['id']] = {**location, 'id': session['id'], 'name': session.get('name', '')}
+        if REDIS is not None and not await lock.owned():
+            return
+        await sio.emit(
+            'note:presence',
+            {'note_id': note_id, 'users': sorted(people.values(), key=lambda person: person['id'])},
+            room=f'note:{note_id}',
+        )
+
+
+async def remove_document_session(sid: str):
+    for document_id in await YDOC_MANAGER.remove_user_from_all_documents(sid):
+        async with YDOC_MANAGER.lock(document_id):
+            await sio.leave_room(sid, f'doc_{document_id}')
+
+
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
@@ -306,6 +346,12 @@ async def periodic_session_pool_cleanup():
                                 if sid in expired
                                 for chat_id in entry.get('chat_ids', [])
                             }
+                            note_ids = {
+                                note_id
+                                for sid, entry in batch
+                                if sid in expired
+                                for note_id in entry.get('note_ids', [])
+                            }
                             if WEBSOCKET_MANAGER == 'redis':
                                 SESSION_POOL.delete_many(*expired)
                             else:
@@ -315,8 +361,13 @@ async def periodic_session_pool_cleanup():
                                 if sid in expired:
                                     for chat_id in entry.get('chat_ids', []):
                                         await sio.leave_room(sid, f'chat:{chat_id}')
+                                    for note_id in entry.get('note_ids', []):
+                                        await sio.leave_room(sid, f'note:{note_id}')
+                                    await remove_document_session(sid)
                             for chat_id in chat_ids:
                                 await publish_chat_presence(chat_id)
+                            for note_id in note_ids:
+                                await publish_note_presence(note_id)
                         await asyncio.sleep(0)  # don't hold the loop for the whole sweep
 
                     next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
@@ -500,7 +551,15 @@ async def leave_room_for_users(room: str, user_ids: list[str]):
     """Make all sessions of each user leave a room, including sessions on other workers."""
     for sid in get_session_ids_by_user_ids(user_ids):
         try:
-            await sio.leave_room(sid, room)
+            if room.startswith('doc_'):
+                document_id = room.removeprefix('doc_')
+                async with YDOC_MANAGER.lock(document_id):
+                    await sio.leave_room(sid, room)
+                    await YDOC_MANAGER.remove_user(document_id, sid)
+            elif room.startswith('note:'):
+                await leave_note(sid, {'note_id': room.removeprefix('note:')})
+            else:
+                await sio.leave_room(sid, room)
         except Exception as e:
             log.debug('Failed to make session %s leave room %s: %s', sid, room, e)
 
@@ -603,7 +662,7 @@ async def user_join(sid, data):
         'last_seen_at': int(time.time()),
     }
 
-    SESSION_POOL[sid] = {**socket_user, 'chat_ids': (SESSION_POOL.get(sid) or {}).get('chat_ids', [])}
+    SESSION_POOL[sid] = {**(SESSION_POOL.get(sid) or {}), **socket_user}
     await sio.save_session(sid, {'user': socket_user, 'token': auth['token']})
     LOCAL_AUTHENTICATED_SIDS.add(sid)
     await sio.enter_room(sid, f'user:{user.id}')
@@ -666,8 +725,8 @@ async def heartbeat(sid, data):
     user = await get_socket_session_user(sid)
     if user:
         SESSION_POOL[sid] = {
+            **(SESSION_POOL.get(sid) or {}),
             **user,
-            'chat_ids': (SESSION_POOL.get(sid) or {}).get('chat_ids', []),
             'last_seen_at': int(time.time()),
         }
         await Users.update_last_active_by_id(user['id'])
@@ -695,7 +754,7 @@ async def join_channel(sid, data):
             await sio.enter_room(sid, f'channel:{channel.id}')
 
 
-@sio.on('join-note')
+@sio.on('note:join')
 async def join_note(sid, data):
     auth = data['auth'] if 'auth' in data else None
     if not auth or 'token' not in auth:
@@ -734,6 +793,27 @@ async def join_note(sid, data):
 
     log.debug('Joining note %s for user %s', note.id, user.id)
     await sio.enter_room(sid, f'note:{note.id}')
+    session = SESSION_POOL.get(sid)
+    if session:
+        SESSION_POOL[sid] = {**session, 'note_ids': list(set(session.get('note_ids', [])) | {note.id})}
+        await publish_note_presence(note.id)
+
+
+@sio.on('note:leave')
+async def leave_note(sid, data):
+    note_id = data.get('note_id')
+    if isinstance(note_id, str):
+        await sio.leave_room(sid, f'note:{note_id}')
+        session = SESSION_POOL.get(sid)
+        if session:
+            locations = dict(session.get('note_locations', {}))
+            locations.pop(note_id, None)
+            SESSION_POOL[sid] = {
+                **session,
+                'note_ids': [id for id in session.get('note_ids', []) if id != note_id],
+                'note_locations': locations,
+            }
+        await publish_note_presence(note_id)
 
 
 @sio.on('events:channel')
@@ -886,6 +966,23 @@ def normalize_document_id(document_id: str) -> str:
     return document_id
 
 
+async def close_changed_note_documents(previous, current):
+    remaining = {p['id']: p.get('generation', 0) for p in normalize_pages(current.data)['pages']} if current else {}
+    for page in normalize_pages(previous.data)['pages']:
+        if remaining.get(page['id']) == page.get('generation', 0):
+            continue
+        ids = [f'note:{previous.id}:page:{page["id"]}:{page.get("generation", 0)}']
+        if len(previous.data['pages']) == 1:
+            ids.append(f'note:{previous.id}')
+        for document_id in ids:
+            async with YDOC_MANAGER.lock(document_id):
+                await stop_item_tasks(REDIS, document_id)
+                await sio.close_room(f'doc_{document_id}')
+                for sid in list(await YDOC_MANAGER.get_users(document_id)):
+                    await YDOC_MANAGER.remove_user(document_id, sid)
+                await YDOC_MANAGER.clear_document(document_id)
+
+
 def with_document_lock(handler):
     @wraps(handler)
     async def wrapped(sid, data):
@@ -920,6 +1017,7 @@ async def ydoc_document_join(sid, data):
             if not note:
                 log.error(f'Note {note_id} not found')
                 return
+            page = document_page(note.data, document_id)
 
             if (
                 user.get('role') != 'admin'
@@ -934,8 +1032,8 @@ async def ydoc_document_join(sid, data):
                 log.error(f'User {user.get("id")} does not have access to note {note_id}')
                 return
 
-        user_id = data.get('user_id', sid)
-        user_name = data.get('user_name', 'Anonymous')
+        user_id = user['id']
+        user_name = user.get('name', '')
         user_color = data.get('user_color', '#000000')
 
         if (
@@ -950,6 +1048,17 @@ async def ydoc_document_join(sid, data):
 
         # Join Socket.IO room
         await sio.enter_room(sid, f'doc_{document_id}')
+        if document_id.startswith('note:'):
+            session = SESSION_POOL.get(sid)
+            if session:
+                SESSION_POOL[sid] = {
+                    **session,
+                    'note_locations': {
+                        **session.get('note_locations', {}),
+                        note_id: {'page_id': page['id'], 'document_id': document_id, 'updated_at': time.time()},
+                    },
+                }
+                await publish_note_presence(note_id)
 
         # Get the Yjs document state
         ydoc = Y.Doc()
@@ -964,7 +1073,7 @@ async def ydoc_document_join(sid, data):
             {
                 'document_id': document_id,
                 'state': list(state_update),  # Convert bytes to list for JSON
-                'content': note.data.get('content') if document_id.startswith('note:') and note.data else None,
+                'content': page['content'] if document_id.startswith('note:') else None,
             },
             room=sid,
         )
@@ -1012,7 +1121,31 @@ async def document_save_handler(document_id, data, user):
             log.error(f'User {user.get("id")} does not have write access to note {note_id}')
             return
 
-        return await Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
+        page = document_page(note.data, document_id)
+        if not isinstance(data.get('content'), dict):
+            return None
+        editor = await Users.get_user_by_id(user['id'])
+        if not editor or not await has_access_to_note_files(note, get_content_files(data['content']), editor):
+            raise ValueError('Cannot attach files you cannot access')
+        saved = await Notes.update_note_by_id(
+            note_id,
+            NoteUpdateForm(
+                data={'content': data['content']},
+                page_id=page['id'],
+                page_generation=page.get('generation', 0),
+            ),
+        )
+        if saved:
+            await sio.emit(
+                'events:note',
+                {
+                    'id': note_id,
+                    'page': get_page(saved.data, page['id']),
+                    'updated_at': saved.updated_at,
+                },
+                to=f'note:{note_id}',
+            )
+        return saved
 
 
 @sio.on('ydoc:document:state')
@@ -1084,6 +1217,7 @@ async def yjs_document_update(sid, data):
             if not note:
                 log.error(f'Note {note_id} not found')
                 return
+            page = document_page(note.data, document_id)
 
             if (
                 user.get('role') != 'admin'
@@ -1099,9 +1233,11 @@ async def yjs_document_update(sid, data):
                 return
 
             snapshot = data.get('data')
-            if isinstance(snapshot, dict) and 'files' in snapshot:
+            if isinstance(snapshot, dict) and 'content' in snapshot:
                 editor = await Users.get_user_by_id(user['id'])
-                if not editor or not await has_access_to_note_files(note, snapshot['files'], editor):
+                if not editor or not await has_access_to_note_files(
+                    note, get_content_files(snapshot['content']), editor
+                ):
                     await sio.emit('error', {'message': 'Cannot attach files you cannot access'}, room=sid)
                     return
 
@@ -1143,6 +1279,11 @@ async def yjs_document_update(sid, data):
             if data.get('initialize'):
                 return update if stored else None
 
+        if data.get('flush'):
+            await stop_item_tasks(REDIS, document_id)
+            saved = await document_save_handler(document_id, data.get('data', {}), user)
+            return {'ok': bool(saved)}
+
         async def debounced_save():
             await asyncio.sleep(0.5)
             async with YDOC_MANAGER.lock(document_id):
@@ -1167,6 +1308,7 @@ async def yjs_document_update(sid, data):
 
     except Exception as e:
         log.error(f'Error in yjs_document_update: {e}')
+        return {'error': str(e)}
 
 
 @sio.on('ydoc:document:leave')
@@ -1214,6 +1356,29 @@ async def yjs_awareness_update(sid, data):
         if room not in sio.rooms(sid):  # must have joined the document first
             return
         update = data['update']
+        if document_id.startswith('note:'):
+            note_id = document_id.split(':')[1]
+            session = SESSION_POOL.get(sid)
+            location = (session or {}).get('note_locations', {}).get(note_id)
+            cursor = data.get('cursor')
+            position = data.get('cursor_position')
+            if (
+                location
+                and location.get('document_id') == document_id
+                and isinstance(cursor, dict)
+                and isinstance(cursor.get('head'), dict)
+                and len(dumps_bytes(cursor)) <= 1024
+                and isinstance(position, int)
+                and 0 <= position <= 100_000_000
+            ):
+                SESSION_POOL[sid] = {
+                    **session,
+                    'note_locations': {
+                        **session.get('note_locations', {}),
+                        note_id: {**location, 'cursor': cursor, 'cursor_position': position, 'updated_at': time.time()},
+                    },
+                }
+                await publish_note_presence(note_id)
 
         # Broadcast to the room; user_id is the authenticated identity, not client-supplied
         await sio.emit(
@@ -1233,7 +1398,11 @@ async def disconnect(sid, reason=None):
     LOCAL_AUTHENTICATED_SIDS.discard(sid)
     if sid in SESSION_POOL:
         chat_ids = (SESSION_POOL.get(sid) or {}).get('chat_ids', [])
+        note_ids = (SESSION_POOL.get(sid) or {}).get('note_ids', [])
         del SESSION_POOL[sid]
+        for note_id in note_ids:
+            await sio.leave_room(sid, f'note:{note_id}')
+            await publish_note_presence(note_id)
         for chat_id in chat_ids:
             await sio.leave_room(sid, f'chat:{chat_id}')
             await publish_chat_presence(chat_id)
@@ -1247,10 +1416,7 @@ async def disconnect(sid, reason=None):
                 else:
                     USAGE_POOL[model_id] = connections
 
-        await YDOC_MANAGER.remove_user_from_all_documents(sid)
-    else:
-        pass
-        # print(f"Unknown session ID {sid} disconnected")
+    await remove_document_session(sid)
 
 
 async def redis_event_listener() -> None:

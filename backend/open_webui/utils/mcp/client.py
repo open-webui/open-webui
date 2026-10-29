@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import math
-from contextlib import AsyncExitStack
 from typing import Optional
 from urllib.parse import urlsplit
 
@@ -67,7 +66,7 @@ class OAuthTokenAuth(httpx2.Auth):
 class MCPClient:
     def __init__(self, event_caller=None, server_name=''):
         self.client: Optional[Client] = None
-        self.exit_stack = None
+        self.session_task: Optional[asyncio.Task] = None
         self.event_caller = event_caller
         self.server_name = server_name
         self.instructions: Optional[str] = None
@@ -108,26 +107,42 @@ class MCPClient:
             return ElicitResult(action='cancel')
 
     async def connect(self, url: str, headers: Optional[dict] = None, auth: Optional[httpx2.Auth] = None):
-        async with AsyncExitStack() as exit_stack:
-            try:
-                http_client = await exit_stack.enter_async_context(create_httpx_client(headers=headers, auth=auth))
+        # A failed request makes the SDK cancel the task that opened the session, so it gets its own task.
+        connected = asyncio.get_running_loop().create_future()
+        self.session_task = asyncio.create_task(self.run_session(url, headers, auth, connected))
+        try:
+            await connected
+        except BaseException:
+            await self.disconnect()
+            raise
 
+    async def run_session(
+        self, url: str, headers: Optional[dict], auth: Optional[httpx2.Auth], connected: asyncio.Future
+    ) -> None:
+        try:
+            async with create_httpx_client(headers=headers, auth=auth) as http_client:
                 # mode='auto' (the default) probes server/discover for the stateless
                 # 2026-07-28 protocol and falls back to the initialize handshake on
                 # legacy servers. The read timeout bounds that handshake and every
                 # later request that does not set its own; the SDK caps the probe itself.
-                self.client = await exit_stack.enter_async_context(
-                    Client(
-                        streamable_http_client(url, http_client=http_client),
-                        read_timeout_seconds=MCP_INITIALIZE_TIMEOUT,
-                        elicitation_callback=self.elicit if self.event_caller else None,
-                    )
-                )
-                self.instructions = self.client.instructions
-                self.exit_stack = exit_stack.pop_all()
-            except Exception as e:
-                await self.disconnect()
-                raise e
+                async with Client(
+                    streamable_http_client(url, http_client=http_client),
+                    read_timeout_seconds=MCP_INITIALIZE_TIMEOUT,
+                    elicitation_callback=self.elicit if self.event_caller else None,
+                ) as client:
+                    self.client = client
+                    self.instructions = client.instructions
+                    connected.set_result(None)
+                    await asyncio.sleep(math.inf)
+        except Exception as e:
+            if connected.done():
+                log.exception("Lost connection to MCP server '%s'", self.server_name)
+            else:
+                connected.set_exception(e)
+        finally:
+            self.client = None
+            if not connected.done():
+                connected.set_exception(RuntimeError('MCP client failed to connect.'))
 
     async def list_tool_specs(self) -> Optional[dict]:
         if not self.client:
@@ -242,38 +257,26 @@ class MCPClient:
         This method is idempotent — calling it multiple times or on a
         client that was never connected is safe.
         """
-        exit_stack = self.exit_stack
-        if exit_stack is None:
+        session_task = self.session_task
+        if session_task is None:
             return
 
         # Prevent double-close from concurrent callers
-        self.exit_stack = None
+        self.session_task = None
         self.client = None
+        session_task.cancel()
 
         try:
-            # IMPORTANT: Do NOT use asyncio.shield() or asyncio.wait_for()
-            # because they create a new asyncio task, which violates the MCP SDK's
-            # requirement that its TaskGroup be exited in the exact same task.
-            # ALSO do NOT use anyio.CancelScope(shield=True) or anyio.fail_after(),
-            # because they push a new cancel scope onto the task, violating LIFO
-            # order when aclose() attempts to exit the inner TaskGroup.
-            # We simply call aclose() directly. If the task is cancelled, the
-            # sockets will eventually be cleaned up by garbage collection.
-            await exit_stack.aclose()
-        except asyncio.CancelledError as exc:
+            await session_task
+        except asyncio.CancelledError:
             task = asyncio.current_task()
             if task is not None and task.cancelling():
                 raise
-            log.debug('MCPClient.disconnect() suppressed internal cancellation: %s', exc)
-        except RuntimeError as exc:
-            log.debug('MCPClient.disconnect() suppressed RuntimeError: %s', exc)
         except Exception as exc:
             log.debug('MCPClient.disconnect() error: %s', exc)
 
     async def __aenter__(self):
-        await self.exit_stack.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self.exit_stack.__aexit__(exc_type, exc_value, traceback)
         await self.disconnect()

@@ -5,9 +5,10 @@ import hashlib
 import logging
 import ntpath
 import posixpath
+from pathlib import Path
 from urllib.parse import quote
 
-from open_webui.env import ENABLE_TOOL_SERVERS
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT_TERMINAL, ENABLE_TOOL_SERVERS
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.skill_files import (
     SKILL_CONTENT_MAX_CHARS,
@@ -129,23 +130,22 @@ def terminal_chat_uploads(connection: dict) -> str:
     return value if value in TERMINAL_CHAT_UPLOAD_MODES else 'default'
 
 
-async def get_terminal_json(request, user, metadata: dict, path: str, extra_params: dict | None = None):
-    """Read from an admin terminal on the backend or a personal terminal in its browser."""
-    if not ENABLE_TOOL_SERVERS:
+async def get_terminal_json(
+    request, user, metadata: dict, path: str, extra_params: dict | None = None, *, file: dict | None = None
+):
+    """Read JSON or upload a file through an admin terminal or a personal terminal's browser."""
+    metadata = metadata or {}
+    terminal_id = metadata.get('terminal_id')
+    if not ENABLE_TOOL_SERVERS or not terminal_id:
         return None
 
     import aiohttp
-    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
+    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
     from open_webui.models.config import Config
     from open_webui.models.groups import Groups
     from open_webui.models.users import UserModel
     from open_webui.utils.access_control import has_connection_access
     from open_webui.utils.tools import build_tool_server_headers
-
-    metadata = metadata or {}
-    terminal_id = metadata.get('terminal_id')
-    if not terminal_id:
-        return None
 
     user_model = user if isinstance(user, UserModel) else UserModel(**user)
     connections = await Config.get('terminal_server.connections', []) or []
@@ -179,27 +179,90 @@ async def get_terminal_json(request, user, metadata: dict, path: str, extra_para
             headers['X-Session-Id'] = metadata['chat_id']
         if context_id:
             headers[TERMINAL_CONTEXT_HEADER] = context_id
-        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(
-                f'{get_terminal_server_url(connection)}{path}',
-                headers=headers,
-                cookies=cookies,
-                ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
-                allow_redirects=False,
-            ) as response:
-                return await response.json() if response.status == 200 else None
+        body = None
+        if file:
+            from open_webui.models.files import Files
+            from open_webui.storage.provider import Storage
+
+            source = await Files.get_file_by_id(file['id'])
+            if not source or source.user_id != user_model.id or not source.path:
+                return None
+            local_path = await asyncio.to_thread(Storage.get_file, source.path)
+            body = aiohttp.FormData()
+            body.add_field(
+                'file',
+                await asyncio.to_thread(Path(local_path).read_bytes),
+                filename=file['name'],
+                content_type=(source.meta or {}).get('content_type') or 'application/octet-stream',
+            )
+            headers = {key: value for key, value in headers.items() if key.lower() != 'content-type'}
+        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                async with session.request(
+                    'POST' if file else 'GET',
+                    f'{get_terminal_server_url(connection)}{path}',
+                    headers=headers,
+                    cookies=cookies,
+                    data=body,
+                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                    allow_redirects=False,
+                ) as response:
+                    return await response.json() if 200 <= response.status < 300 else None
+        except TimeoutError as error:
+            raise TimeoutError(
+                f"Terminal '{connection.get('name') or terminal_id}' timed out. "
+                'It may still be starting. Please try again.'
+            ) from error
 
     event_caller = (extra_params or {}).get('__event_call__')
     if event_caller:
         result = await event_caller(
             {
                 'type': 'request:terminal',
-                'data': {'terminal_id': terminal_id, 'path': path, 'session_id': metadata.get('session_id')},
+                'data': {
+                    'terminal_id': terminal_id,
+                    'path': path,
+                    'session_id': metadata.get('session_id'),
+                    **({'file': file} if file else {}),
+                },
             }
         )
         return result.get('data') if isinstance(result, dict) else None
     return None
+
+
+async def upload_files_to_terminal(request, user, files: list[dict], metadata: dict, extra_params: dict):
+    """Copy Open WebUI files to the selected terminal, adding terminal_path or terminal_error to each entry."""
+    if not metadata.get('terminal_id') or not files:
+        return
+    try:
+        cwd = await asyncio.wait_for(
+            get_terminal_json(request, user, metadata, '/files/cwd', extra_params),
+            timeout=AIOHTTP_CLIENT_TIMEOUT_TERMINAL,
+        )
+        directory = cwd.get('cwd') if isinstance(cwd, dict) else None
+        if not directory:
+            raise ValueError('Terminal working directory unavailable')
+        path = f'/files/upload?directory={quote(directory, safe="")}'
+        for entry in files:
+            try:
+                # The file ID keeps separate files from overwriting one another.
+                file = {'id': entry['id'], 'name': f'{entry["id"]}{Path(entry["name"]).suffix}'}
+                result = await asyncio.wait_for(
+                    get_terminal_json(request, user, metadata, path, extra_params, file=file),
+                    timeout=AIOHTTP_CLIENT_TIMEOUT_TERMINAL,
+                )
+                if not isinstance(result, dict) or not isinstance(result.get('path'), str) or not result['path']:
+                    raise ValueError('Terminal upload failed')
+                entry['terminal_path'] = result['path']
+            except Exception as error:
+                log.warning('File terminal upload failed (%s)', type(error).__name__)
+                entry['terminal_error'] = 'File saved in Open WebUI, but upload to the selected terminal failed.'
+    except Exception as error:
+        log.warning('File terminal unavailable (%s)', type(error).__name__)
+        for entry in files:
+            entry['terminal_error'] = 'File saved in Open WebUI, but the selected terminal is unavailable.'
 
 
 async def get_terminal_agents_md(request, user, metadata: dict, extra_params: dict | None = None) -> str | None:

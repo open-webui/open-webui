@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	import dayjs from 'dayjs';
-	import { models } from '$lib/stores';
+	import { models, config } from '$lib/stores';
 	import {
 		getSummary,
 		getModelAnalytics,
@@ -21,6 +21,7 @@
 		type UsageInterval
 	} from './UsageChart.svelte';
 	import AnalyticsModelModal from './AnalyticsModelModal.svelte';
+	import SessionExplorer from './SessionExplorer.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { formatNumber } from '$lib/utils';
@@ -110,6 +111,19 @@
 		{ key: 'total_tokens', label: $i18n.t('Total') }
 	] as const;
 	let selectedLeaderboard = 'models';
+	let analyticsView: 'overview' | 'sessions' = 'overview';
+	let dateRange: { start: number | null; end: number | null };
+	$: {
+		selectedPeriod;
+		customStart;
+		customEnd;
+		dateRange = getDateRange(selectedPeriod);
+	}
+	$: sessionScope = {
+		startDate: dateRange.start,
+		endDate: dateRange.end,
+		groupId: selectedGroupId
+	};
 
 	// Data
 	let summary = { total_messages: 0, total_chats: 0, total_models: 0, total_users: 0 };
@@ -229,7 +243,7 @@
 		}
 	};
 
-	$: if (mounted) {
+	$: if (mounted && analyticsView === 'overview') {
 		selectedPeriod;
 		customStart;
 		customEnd;
@@ -374,234 +388,187 @@
 	</div>
 </div>
 
-<!-- Model Details Modal -->
-<AnalyticsModelModal
-	bind:show={showModelModal}
-	model={selectedModel}
-	startDate={getDateRange(selectedPeriod).start}
-	endDate={getDateRange(selectedPeriod).end}
-/>
-
-{#if !loading && !loadError && validRange}
-	<dl
-		class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400"
+<div class="flex items-center gap-4 mb-2.5" aria-label={$i18n.t('Analytics view')}>
+	<button
+		type="button"
+		class="analytics-tab"
+		class:tab-selected={analyticsView === 'overview'}
+		aria-pressed={analyticsView === 'overview'}
+		on:click={() => (analyticsView = 'overview')}>{$i18n.t('Overview')}</button
 	>
-		{#each [{ label: $i18n.t('Tokens'), value: formatNumber(totalTokens.total), exact: totalTokens.total }, { label: $i18n.t('Input'), value: formatNumber(totalTokens.input), exact: totalTokens.input }, { label: $i18n.t('Output'), value: formatNumber(totalTokens.output), exact: totalTokens.output }, { label: $i18n.t('Messages'), value: summary.total_messages.toLocaleString(), exact: summary.total_messages }, { label: $i18n.t('Chats'), value: summary.total_chats.toLocaleString(), exact: summary.total_chats }, { label: $i18n.t('Users'), value: summary.total_users.toLocaleString(), exact: summary.total_users }] as metric}
-			<div class="flex items-baseline gap-1.5 whitespace-nowrap">
-				<dt>{metric.label}</dt>
-				<dd
-					class="tabular-nums text-gray-900 dark:text-gray-200"
-					title={metric.exact.toLocaleString()}
-				>
-					{metric.value}
-				</dd>
-			</div>
-		{/each}
-	</dl>
-	<section class="mt-3 min-w-0" aria-label={$i18n.t('Usage over time')}>
-		<div class="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
-			<!-- Previous selector labels retained for i18n extraction: {$i18n.t('Chart metric')} -->
-			<!-- {$i18n.t('10-Minute Messages')} {$i18n.t('Hourly Messages')} {$i18n.t('Daily Messages')} -->
-			<!-- {$i18n.t('10-Minute Tokens')} {$i18n.t('Hourly Tokens')} {$i18n.t('Daily Tokens')} -->
-			<div class="flex items-center gap-3" aria-label={$i18n.t('Usage metric')}>
-				{#each [{ key: 'tokens', label: $i18n.t('Tokens') }, { key: 'messages', label: $i18n.t('Messages') }] as metric}
-					<button
-						type="button"
-						class="analytics-tab"
-						class:tab-selected={selectedMetric === metric.key}
-						aria-pressed={selectedMetric === metric.key}
-						on:click={() => selectMetric(metric.key as 'tokens' | 'messages')}
-						>{metric.label}</button
+	{#if $config?.features?.enable_admin_chat_access}
+		<button
+			type="button"
+			class="analytics-tab"
+			class:tab-selected={analyticsView === 'sessions'}
+			aria-pressed={analyticsView === 'sessions'}
+			on:click={() => (analyticsView = 'sessions')}>{$i18n.t('Sessions')}</button
+		>
+	{/if}
+</div>
+
+{#if analyticsView === 'sessions'}
+	{#if validRange && $config?.features?.enable_admin_chat_access}
+		<SessionExplorer scope={sessionScope} {modelNames} />
+	{:else if !validRange}<p class="py-10 text-center text-xs text-gray-500">
+			{$i18n.t('Choose a valid start and end date.')}
+		</p>{/if}
+{:else}
+	<!-- Model Details Modal -->
+	<AnalyticsModelModal
+		bind:show={showModelModal}
+		model={selectedModel}
+		startDate={dateRange.start}
+		endDate={dateRange.end}
+		groupId={selectedGroupId}
+	/>
+
+	{#if !loading && !loadError && validRange}
+		<dl
+			class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400"
+		>
+			{#each [{ label: $i18n.t('Tokens'), value: formatNumber(totalTokens.total), exact: totalTokens.total }, { label: $i18n.t('Input'), value: formatNumber(totalTokens.input), exact: totalTokens.input }, { label: $i18n.t('Output'), value: formatNumber(totalTokens.output), exact: totalTokens.output }, { label: $i18n.t('Messages'), value: summary.total_messages.toLocaleString(), exact: summary.total_messages }, { label: $i18n.t('Chats'), value: summary.total_chats.toLocaleString(), exact: summary.total_chats }, { label: $i18n.t('Users'), value: summary.total_users.toLocaleString(), exact: summary.total_users }] as metric}
+				<div class="flex items-baseline gap-1.5 whitespace-nowrap">
+					<dt>{metric.label}</dt>
+					<dd
+						class="tabular-nums text-gray-900 dark:text-gray-200"
+						title={metric.exact.toLocaleString()}
 					>
-				{/each}
-			</div>
-			<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-				{#if chartView === 'volume'}
-					<button
-						type="button"
-						class="analytics-tab disabled:opacity-40 disabled:cursor-default"
-						class:tab-selected={comparing}
-						aria-pressed={comparing}
-						disabled={selectedPeriod === 'all'}
-						title={selectedPeriod === 'all'
-							? $i18n.t('Choose a date range to compare')
-							: $i18n.t('Compare to previous period')}
-						on:click={() => (compare = !compare)}>{$i18n.t('Compare')}</button
-					>
-				{/if}
-				<div class="flex items-center gap-3" aria-label={$i18n.t('Chart view')}>
-					{#each [{ key: 'volume', label: $i18n.t('Volume') }, { key: 'activity', label: $i18n.t('Activity') }] as view}
+						{metric.value}
+					</dd>
+				</div>
+			{/each}
+		</dl>
+		<section class="mt-3 min-w-0" aria-label={$i18n.t('Usage over time')}>
+			<div class="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
+				<!-- Previous selector labels retained for i18n extraction: {$i18n.t('Chart metric')} -->
+				<!-- {$i18n.t('10-Minute Messages')} {$i18n.t('Hourly Messages')} {$i18n.t('Daily Messages')} -->
+				<!-- {$i18n.t('10-Minute Tokens')} {$i18n.t('Hourly Tokens')} {$i18n.t('Daily Tokens')} -->
+				<div class="flex items-center gap-3" aria-label={$i18n.t('Usage metric')}>
+					{#each [{ key: 'tokens', label: $i18n.t('Tokens') }, { key: 'messages', label: $i18n.t('Messages') }] as metric}
 						<button
 							type="button"
 							class="analytics-tab"
-							class:tab-selected={chartView === view.key}
-							aria-pressed={chartView === view.key}
-							on:click={() => (chartView = view.key as 'volume' | 'activity')}>{view.label}</button
+							class:tab-selected={selectedMetric === metric.key}
+							aria-pressed={selectedMetric === metric.key}
+							on:click={() => selectMetric(metric.key as 'tokens' | 'messages')}
+							>{metric.label}</button
 						>
 					{/each}
 				</div>
-				<select
-					bind:value={granularity}
-					aria-label={$i18n.t('Chart interval')}
-					class="w-fit pr-5 py-1 text-xs bg-transparent outline-none text-gray-500 dark:text-gray-400"
-				>
-					{#if selectedPeriod === '24h'}<option value="10m">{$i18n.t('10 min')}</option>{/if}
-					{#if ['24h', '7d', '30d'].includes(selectedPeriod)}<option value="hourly"
-							>{$i18n.t('Hourly')}</option
-						>{/if}
-					{#if selectedPeriod === '30d'}
-						<option value="3h">{$i18n.t('3 hours')}</option>
-						<option value="6h">{$i18n.t('6 hours')}</option>
-					{/if}
-					<option value="daily">{$i18n.t('Daily')}</option>
-				</select>
-			</div>
-		</div>
-		{#if dailyStats.length && (summary.total_messages > 0 || comparing)}
-			<UsageChart
-				data={dailyStats}
-				compare={comparing}
-				{granularity}
-				{metricLabel}
-				{modelNames}
-				bind:selectedModel={chartModel}
-				view={chartView}
-			/>
-		{:else}<div
-				class="h-40 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400"
-			>
-				{$i18n.t('No activity in this period')}
-			</div>{/if}
-	</section>
-{/if}
-
-{#if !validRange}
-	<div class="my-10 text-center text-xs text-gray-500 dark:text-gray-400">
-		{$i18n.t('Choose a valid start and end date.')}
-	</div>
-{:else if loadError}
-	<div role="alert" class="my-10 text-center text-xs text-gray-500 dark:text-gray-400">
-		{$i18n.t('Unable to load analytics. Please try again.')}
-		<button class="ml-2 underline underline-offset-2" on:click={loadDashboard}
-			>{$i18n.t('Retry')}</button
-		>
-	</div>
-{:else if loading}
-	<div class="my-10 flex justify-center">
-		<Spinner className="size-5" />
-	</div>
-{:else}
-	<div class="mt-4 min-w-0">
-		<div class="mb-2 flex items-center gap-3">
-			<div class="flex items-center gap-3">
-				{#each [{ key: 'models', label: $i18n.t('Models') }, { key: 'users', label: $i18n.t('Users') }] as tab}
-					<button
-						type="button"
-						class="analytics-tab"
-						class:tab-selected={selectedLeaderboard === tab.key}
-						aria-pressed={selectedLeaderboard === tab.key}
-						on:click={() => (selectedLeaderboard = tab.key)}>{tab.label}</button
-					>
-				{/each}
-			</div>
-		</div>
-		<div class="min-w-0">
-			{#if selectedLeaderboard === 'models'}
-				<!-- Model Usage Table -->
-				<!-- {$i18n.t('Model Usage')} -->
-				<div>
-					<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-						<table
-							class="w-full text-xs tabular-nums text-left text-gray-500 dark:text-gray-400 table-auto"
+				<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+					{#if chartView === 'volume'}
+						<button
+							type="button"
+							class="analytics-tab disabled:opacity-40 disabled:cursor-default"
+							class:tab-selected={comparing}
+							aria-pressed={comparing}
+							disabled={selectedPeriod === 'all'}
+							title={selectedPeriod === 'all'
+								? $i18n.t('Choose a date range to compare')
+								: $i18n.t('Compare to previous period')}
+							on:click={() => (compare = !compare)}>{$i18n.t('Compare')}</button
 						>
-							<thead
-								class="text-[0.6875rem] font-normal text-gray-500 bg-transparent dark:text-gray-400"
+					{/if}
+					<div class="flex items-center gap-3" aria-label={$i18n.t('Chart view')}>
+						{#each [{ key: 'volume', label: $i18n.t('Volume') }, { key: 'activity', label: $i18n.t('Activity') }] as view}
+							<button
+								type="button"
+								class="analytics-tab"
+								class:tab-selected={chartView === view.key}
+								aria-pressed={chartView === view.key}
+								on:click={() => (chartView = view.key as 'volume' | 'activity')}
+								>{view.label}</button
 							>
-								<tr>
-									<th scope="col" class="font-normal px-2.5 py-1.5 w-8">#</th>
-									<th
-										scope="col"
-										class="font-normal px-2.5 py-1.5 cursor-pointer select-none"
-										on:click={() => toggleModelSort('name')}
-									>
-										<div class="flex gap-1.5 items-center">
-											{$i18n.t('Model')}
-											{#if modelOrderBy === 'name'}
-												<span class="font-normal">
-													{#if modelDirection === 'asc'}<ChevronUp
-															className="size-2"
-														/>{:else}<ChevronDown className="size-2" />{/if}
-												</span>
-											{:else}
-												<span class="invisible"><ChevronUp className="size-2" /></span>
-											{/if}
-										</div>
-									</th>
-									<th
-										scope="col"
-										class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
-										on:click={() => toggleModelSort('count')}
-									>
-										<div class="flex gap-1.5 items-center justify-end">
-											{$i18n.t('Messages')}
-											{#if modelOrderBy === 'count'}
-												<span class="font-normal">
-													{#if modelDirection === 'asc'}<ChevronUp
-															className="size-2"
-														/>{:else}<ChevronDown className="size-2" />{/if}
-												</span>
-											{:else}
-												<span class="invisible"><ChevronUp className="size-2" /></span>
-											{/if}
-										</div>
-									</th>
-									<th
-										scope="col"
-										class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
-										on:click={() => toggleModelSort('users')}
-									>
-										<div class="flex gap-1.5 items-center justify-end">
-											{$i18n.t('Users')}
-											{#if modelOrderBy === 'users'}
-												<span class="font-normal">
-													{#if modelDirection === 'asc'}<ChevronUp
-															className="size-2"
-														/>{:else}<ChevronDown className="size-2" />{/if}
-												</span>
-											{:else}
-												<span class="invisible"><ChevronUp className="size-2" /></span>
-											{/if}
-										</div>
-									</th>
-									<th
-										scope="col"
-										class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
-										on:click={() => toggleModelSort('chats')}
-									>
-										<div class="flex gap-1.5 items-center justify-end">
-											{$i18n.t('Chats')}
-											{#if modelOrderBy === 'chats'}
-												<span class="font-normal">
-													{#if modelDirection === 'asc'}<ChevronUp
-															className="size-2"
-														/>{:else}<ChevronDown className="size-2" />{/if}
-												</span>
-											{:else}
-												<span class="invisible"><ChevronUp className="size-2" /></span>
-											{/if}
-										</div>
-									</th>
-									<!-- {$i18n.t('Tokens')} -->
-									{#each tokenColumns as column}
+						{/each}
+					</div>
+					<select
+						bind:value={granularity}
+						aria-label={$i18n.t('Chart interval')}
+						class="w-fit pr-5 py-1 text-xs bg-transparent outline-none text-gray-500 dark:text-gray-400"
+					>
+						{#if selectedPeriod === '24h'}<option value="10m">{$i18n.t('10 min')}</option>{/if}
+						{#if ['24h', '7d', '30d'].includes(selectedPeriod)}<option value="hourly"
+								>{$i18n.t('Hourly')}</option
+							>{/if}
+						{#if selectedPeriod === '30d'}
+							<option value="3h">{$i18n.t('3 hours')}</option>
+							<option value="6h">{$i18n.t('6 hours')}</option>
+						{/if}
+						<option value="daily">{$i18n.t('Daily')}</option>
+					</select>
+				</div>
+			</div>
+			{#if dailyStats.length && (summary.total_messages > 0 || comparing)}
+				<UsageChart
+					data={dailyStats}
+					compare={comparing}
+					{granularity}
+					{metricLabel}
+					{modelNames}
+					bind:selectedModel={chartModel}
+					view={chartView}
+				/>
+			{:else}<div
+					class="h-40 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400"
+				>
+					{$i18n.t('No activity in this period')}
+				</div>{/if}
+		</section>
+	{/if}
+
+	{#if !validRange}
+		<div class="my-10 text-center text-xs text-gray-500 dark:text-gray-400">
+			{$i18n.t('Choose a valid start and end date.')}
+		</div>
+	{:else if loadError}
+		<div role="alert" class="my-10 text-center text-xs text-gray-500 dark:text-gray-400">
+			{$i18n.t('Unable to load analytics. Please try again.')}
+			<button class="ml-2 underline underline-offset-2" on:click={loadDashboard}
+				>{$i18n.t('Retry')}</button
+			>
+		</div>
+	{:else if loading}
+		<div class="my-10 flex justify-center">
+			<Spinner className="size-5" />
+		</div>
+	{:else}
+		<div class="mt-4 min-w-0">
+			<div class="mb-2 flex items-center gap-3">
+				<div class="flex items-center gap-3">
+					{#each [{ key: 'models', label: $i18n.t('Models') }, { key: 'users', label: $i18n.t('Users') }] as tab}
+						<button
+							type="button"
+							class="analytics-tab"
+							class:tab-selected={selectedLeaderboard === tab.key}
+							aria-pressed={selectedLeaderboard === tab.key}
+							on:click={() => (selectedLeaderboard = tab.key)}>{tab.label}</button
+						>
+					{/each}
+				</div>
+			</div>
+			<div class="min-w-0">
+				{#if selectedLeaderboard === 'models'}
+					<!-- Model Usage Table -->
+					<!-- {$i18n.t('Model Usage')} -->
+					<div>
+						<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
+							<table
+								class="w-full text-xs tabular-nums text-left text-gray-500 dark:text-gray-400 table-auto"
+							>
+								<thead
+									class="text-[0.6875rem] font-normal text-gray-500 bg-transparent dark:text-gray-400"
+								>
+									<tr>
+										<th scope="col" class="font-normal px-2.5 py-1.5 w-8">#</th>
 										<th
 											scope="col"
-											title={`${column.label} ${$i18n.t('tokens')}`}
-											class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
-											on:click={() => toggleModelSort(column.key)}
+											class="font-normal px-2.5 py-1.5 cursor-pointer select-none"
+											on:click={() => toggleModelSort('name')}
 										>
-											<div class="flex gap-1.5 items-center justify-end">
-												{column.label}
-												{#if modelOrderBy === column.key}
+											<div class="flex gap-1.5 items-center">
+												{$i18n.t('Model')}
+												{#if modelOrderBy === 'name'}
 													<span class="font-normal">
 														{#if modelDirection === 'asc'}<ChevronUp
 																className="size-2"
@@ -612,162 +579,198 @@
 												{/if}
 											</div>
 										</th>
-									{/each}
-									<th
-										scope="col"
-										class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right w-16"
-										on:click={() => toggleModelSort('percentage')}
-									>
-										<div class="flex gap-1.5 items-center justify-end">
-											{selectedMetric === 'tokens'
-												? $i18n.t('Token share')
-												: $i18n.t('Message share')}
-											{#if modelOrderBy === 'percentage'}
-												<span class="font-normal">
-													{#if modelDirection === 'asc'}<ChevronUp
-															className="size-2"
-														/>{:else}<ChevronDown className="size-2" />{/if}
-												</span>
-											{:else}
-												<span class="invisible"><ChevronUp className="size-2" /></span>
-											{/if}
-										</div>
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each sortedModels as model, idx (model.model_id)}
-									{@const value =
-										selectedMetric === 'tokens'
-											? (tokenStats[model.model_id]?.total_tokens ?? 0)
-											: model.count}
-									<tr
-										class="text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-										on:click={() => {
-											selectedModel = { id: model.model_id, name: model.name };
-											showModelModal = true;
-										}}
-									>
-										<td class="font-normal px-3 py-1.5 text-gray-400">{idx + 1}</td>
-										<td class="font-normal px-3 py-1.5 text-gray-900 dark:text-white">
-											<div class="flex items-center gap-2">
-												<img
-													src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
-													alt={model.name}
-													class="size-5 rounded-full object-cover shrink-0"
-													on:error={(e) => {
-														// LICENSE covers this Open WebUI fallback logo.
-														// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-														// https://docs.openwebui.com/license.
-														const image = e.currentTarget as HTMLImageElement;
-														if (!image.src.endsWith('/favicon.png')) image.src = '/favicon.png';
-													}}
-												/>
-												<span class="truncate max-w-[9.375rem]">{model.name}</span>
-											</div>
-										</td>
-										<td class="font-normal px-3 py-1.5 text-right"
-											>{model.count.toLocaleString()}</td
-										>
-										<td class="font-normal px-3 py-1.5 text-right"
-											>{(model.unique_users ?? 0).toLocaleString()}</td
-										>
-										<td class="font-normal px-3 py-1.5 text-right"
-											>{(model.unique_chats ?? 0).toLocaleString()}</td
-										>
-										{#each tokenColumns as column}
-											<td class="font-normal px-3 py-1.5 text-right"
-												>{formatNumber(tokenStats[model.model_id]?.[column.key] ?? 0)}</td
-											>
-										{/each}
-										<td class="font-normal px-3 py-1.5 text-right text-gray-400">
-											<div class="flex items-center justify-end gap-2 tabular-nums">
-												<div
-													class="h-1 w-16 bg-gray-100 dark:bg-gray-800 overflow-hidden"
-													aria-hidden="true"
-												>
-													<div
-														class="h-full"
-														style:background-color={modelColor(model.model_id)}
-														style:width={`${metricTotal > 0 ? (value / metricTotal) * 100 : 0}%`}
-													></div>
-												</div>
-												<span class="w-12">{usageShare(value, metricTotal)}</span>
-											</div>
-										</td>
-									</tr>
-								{/each}
-								{#if sortedModels.length === 0}
-									<tr
-										><td colspan="9" class="font-normal px-3 py-1.5 text-center text-gray-400"
-											>{$i18n.t('No data')}</td
-										></tr
-									>
-								{/if}
-							</tbody>
-						</table>
-					</div>
-				</div>
-			{:else}
-				<!-- User Activity Table -->
-				<!-- {$i18n.t('User Activity')} -->
-				<div>
-					<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-						<table
-							class="w-full text-xs tabular-nums text-left text-gray-500 dark:text-gray-400 table-auto"
-						>
-							<thead
-								class="text-[0.6875rem] font-normal text-gray-500 bg-transparent dark:text-gray-400"
-							>
-								<tr>
-									<th scope="col" class="font-normal px-2.5 py-1.5 w-8">#</th>
-									<th
-										scope="col"
-										class="font-normal px-2.5 py-1.5 cursor-pointer select-none"
-										on:click={() => toggleUserSort('name')}
-									>
-										<div class="flex gap-1.5 items-center">
-											{$i18n.t('User')}
-											{#if userOrderBy === 'name'}
-												<span class="font-normal">
-													{#if userDirection === 'asc'}<ChevronUp
-															className="size-2"
-														/>{:else}<ChevronDown className="size-2" />{/if}
-												</span>
-											{:else}
-												<span class="invisible"><ChevronUp className="size-2" /></span>
-											{/if}
-										</div>
-									</th>
-									<th
-										scope="col"
-										class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
-										on:click={() => toggleUserSort('count')}
-									>
-										<div class="flex gap-1.5 items-center justify-end">
-											{$i18n.t('Messages')}
-											{#if userOrderBy === 'count'}
-												<span class="font-normal">
-													{#if userDirection === 'asc'}<ChevronUp
-															className="size-2"
-														/>{:else}<ChevronDown className="size-2" />{/if}
-												</span>
-											{:else}
-												<span class="invisible"><ChevronUp className="size-2" /></span>
-											{/if}
-										</div>
-									</th>
-									<!-- {$i18n.t('Tokens')} -->
-									{#each tokenColumns as column}
 										<th
 											scope="col"
-											title={`${column.label} ${$i18n.t('tokens')}`}
 											class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
-											on:click={() => toggleUserSort(column.key)}
+											on:click={() => toggleModelSort('count')}
 										>
 											<div class="flex gap-1.5 items-center justify-end">
-												{column.label}
-												{#if userOrderBy === column.key}
+												{$i18n.t('Messages')}
+												{#if modelOrderBy === 'count'}
+													<span class="font-normal">
+														{#if modelDirection === 'asc'}<ChevronUp
+																className="size-2"
+															/>{:else}<ChevronDown className="size-2" />{/if}
+													</span>
+												{:else}
+													<span class="invisible"><ChevronUp className="size-2" /></span>
+												{/if}
+											</div>
+										</th>
+										<th
+											scope="col"
+											class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
+											on:click={() => toggleModelSort('users')}
+										>
+											<div class="flex gap-1.5 items-center justify-end">
+												{$i18n.t('Users')}
+												{#if modelOrderBy === 'users'}
+													<span class="font-normal">
+														{#if modelDirection === 'asc'}<ChevronUp
+																className="size-2"
+															/>{:else}<ChevronDown className="size-2" />{/if}
+													</span>
+												{:else}
+													<span class="invisible"><ChevronUp className="size-2" /></span>
+												{/if}
+											</div>
+										</th>
+										<th
+											scope="col"
+											class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
+											on:click={() => toggleModelSort('chats')}
+										>
+											<div class="flex gap-1.5 items-center justify-end">
+												{$i18n.t('Chats')}
+												{#if modelOrderBy === 'chats'}
+													<span class="font-normal">
+														{#if modelDirection === 'asc'}<ChevronUp
+																className="size-2"
+															/>{:else}<ChevronDown className="size-2" />{/if}
+													</span>
+												{:else}
+													<span class="invisible"><ChevronUp className="size-2" /></span>
+												{/if}
+											</div>
+										</th>
+										<!-- {$i18n.t('Tokens')} -->
+										{#each tokenColumns as column}
+											<th
+												scope="col"
+												title={`${column.label} ${$i18n.t('tokens')}`}
+												class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
+												on:click={() => toggleModelSort(column.key)}
+											>
+												<div class="flex gap-1.5 items-center justify-end">
+													{column.label}
+													{#if modelOrderBy === column.key}
+														<span class="font-normal">
+															{#if modelDirection === 'asc'}<ChevronUp
+																	className="size-2"
+																/>{:else}<ChevronDown className="size-2" />{/if}
+														</span>
+													{:else}
+														<span class="invisible"><ChevronUp className="size-2" /></span>
+													{/if}
+												</div>
+											</th>
+										{/each}
+										<th
+											scope="col"
+											class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right w-16"
+											on:click={() => toggleModelSort('percentage')}
+										>
+											<div class="flex gap-1.5 items-center justify-end">
+												{selectedMetric === 'tokens'
+													? $i18n.t('Token share')
+													: $i18n.t('Message share')}
+												{#if modelOrderBy === 'percentage'}
+													<span class="font-normal">
+														{#if modelDirection === 'asc'}<ChevronUp
+																className="size-2"
+															/>{:else}<ChevronDown className="size-2" />{/if}
+													</span>
+												{:else}
+													<span class="invisible"><ChevronUp className="size-2" /></span>
+												{/if}
+											</div>
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each sortedModels as model, idx (model.model_id)}
+										{@const value =
+											selectedMetric === 'tokens'
+												? (tokenStats[model.model_id]?.total_tokens ?? 0)
+												: model.count}
+										<tr
+											class="text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+											on:click={() => {
+												selectedModel = { id: model.model_id, name: model.name };
+												showModelModal = true;
+											}}
+										>
+											<td class="font-normal px-3 py-1.5 text-gray-400">{idx + 1}</td>
+											<td class="font-normal px-3 py-1.5 text-gray-900 dark:text-white">
+												<div class="flex items-center gap-2">
+													<img
+														src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
+														alt={model.name}
+														class="size-5 rounded-full object-cover shrink-0"
+														on:error={(e) => {
+															// LICENSE covers this Open WebUI fallback logo.
+															// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+															// https://docs.openwebui.com/license.
+															const image = e.currentTarget as HTMLImageElement;
+															if (!image.src.endsWith('/favicon.png')) image.src = '/favicon.png';
+														}}
+													/>
+													<span class="truncate max-w-[9.375rem]">{model.name}</span>
+												</div>
+											</td>
+											<td class="font-normal px-3 py-1.5 text-right"
+												>{model.count.toLocaleString()}</td
+											>
+											<td class="font-normal px-3 py-1.5 text-right"
+												>{(model.unique_users ?? 0).toLocaleString()}</td
+											>
+											<td class="font-normal px-3 py-1.5 text-right"
+												>{(model.unique_chats ?? 0).toLocaleString()}</td
+											>
+											{#each tokenColumns as column}
+												<td class="font-normal px-3 py-1.5 text-right"
+													>{formatNumber(tokenStats[model.model_id]?.[column.key] ?? 0)}</td
+												>
+											{/each}
+											<td class="font-normal px-3 py-1.5 text-right text-gray-400">
+												<div class="flex items-center justify-end gap-2 tabular-nums">
+													<div
+														class="h-1 w-16 bg-gray-100 dark:bg-gray-800 overflow-hidden"
+														aria-hidden="true"
+													>
+														<div
+															class="h-full"
+															style:background-color={modelColor(model.model_id)}
+															style:width={`${metricTotal > 0 ? (value / metricTotal) * 100 : 0}%`}
+														></div>
+													</div>
+													<span class="w-12">{usageShare(value, metricTotal)}</span>
+												</div>
+											</td>
+										</tr>
+									{/each}
+									{#if sortedModels.length === 0}
+										<tr
+											><td colspan="9" class="font-normal px-3 py-1.5 text-center text-gray-400"
+												>{$i18n.t('No data')}</td
+											></tr
+										>
+									{/if}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{:else}
+					<!-- User Activity Table -->
+					<!-- {$i18n.t('User Activity')} -->
+					<div>
+						<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
+							<table
+								class="w-full text-xs tabular-nums text-left text-gray-500 dark:text-gray-400 table-auto"
+							>
+								<thead
+									class="text-[0.6875rem] font-normal text-gray-500 bg-transparent dark:text-gray-400"
+								>
+									<tr>
+										<th scope="col" class="font-normal px-2.5 py-1.5 w-8">#</th>
+										<th
+											scope="col"
+											class="font-normal px-2.5 py-1.5 cursor-pointer select-none"
+											on:click={() => toggleUserSort('name')}
+										>
+											<div class="flex gap-1.5 items-center">
+												{$i18n.t('User')}
+												{#if userOrderBy === 'name'}
 													<span class="font-normal">
 														{#if userDirection === 'asc'}<ChevronUp
 																className="size-2"
@@ -778,100 +781,141 @@
 												{/if}
 											</div>
 										</th>
-									{/each}
-									<th
-										scope="col"
-										class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right w-16"
-										on:click={() => toggleUserSort('percentage')}
-									>
-										<div class="flex gap-1.5 items-center justify-end">
-											{selectedMetric === 'tokens'
-												? $i18n.t('Token share')
-												: $i18n.t('Message share')}
-											{#if userOrderBy === 'percentage'}
-												<span class="font-normal">
-													{#if userDirection === 'asc'}<ChevronUp
-															className="size-2"
-														/>{:else}<ChevronDown className="size-2" />{/if}
-												</span>
-											{:else}
-												<span class="invisible"><ChevronUp className="size-2" /></span>
-											{/if}
-										</div>
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each sortedUsers as user, idx (user.user_id)}
-									{@const value =
-										selectedMetric === 'tokens' ? (user.total_tokens ?? 0) : user.count}
-									<tr class="text-xs">
-										<td class="font-normal px-3 py-1.5 text-gray-400">{idx + 1}</td>
-										<td class="font-normal px-3 py-1.5 text-gray-900 dark:text-white">
-											<div class="flex items-center gap-2">
-												<ProfilePreview
-													user={{ id: user.user_id, name: user.name || user.email }}
-													side="right"
-													align="center"
-													sideOffset={6}
-												>
-													<img
-														src="{WEBUI_API_BASE_URL}/users/{user.user_id}/profile/image"
-														alt={user.name || 'User'}
-														class="size-5 rounded-full object-cover shrink-0"
-														on:error={(e) => {
-															const image = e.currentTarget as HTMLImageElement;
-															if (!image.src.endsWith('/user.png')) image.src = '/user.png';
-														}}
-													/>
-												</ProfilePreview>
-												<span class="truncate max-w-[9.375rem]"
-													>{user.name || user.email || user.user_id.substring(0, 8)}</span
-												>
-											</div>
-										</td>
-										<td class="font-normal px-3 py-1.5 text-right">{user.count.toLocaleString()}</td
+										<th
+											scope="col"
+											class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
+											on:click={() => toggleUserSort('count')}
 										>
-										{#each tokenColumns as column}
-											<td class="font-normal px-3 py-1.5 text-right"
-												>{formatNumber(user[column.key] ?? 0)}</td
-											>
-										{/each}
-
-										<td class="font-normal px-3 py-1.5 text-right text-gray-400">
-											<div class="flex items-center justify-end gap-2 tabular-nums">
-												<div
-													class="h-1 w-16 bg-gray-100 dark:bg-gray-800 overflow-hidden"
-													aria-hidden="true"
-												>
-													<div
-														class="h-full bg-gray-400"
-														style:width={`${metricTotal > 0 ? (value / metricTotal) * 100 : 0}%`}
-													></div>
-												</div>
-												<span class="w-12">{usageShare(value, metricTotal)}</span>
+											<div class="flex gap-1.5 items-center justify-end">
+												{$i18n.t('Messages')}
+												{#if userOrderBy === 'count'}
+													<span class="font-normal">
+														{#if userDirection === 'asc'}<ChevronUp
+																className="size-2"
+															/>{:else}<ChevronDown className="size-2" />{/if}
+													</span>
+												{:else}
+													<span class="invisible"><ChevronUp className="size-2" /></span>
+												{/if}
 											</div>
-										</td>
+										</th>
+										<!-- {$i18n.t('Tokens')} -->
+										{#each tokenColumns as column}
+											<th
+												scope="col"
+												title={`${column.label} ${$i18n.t('tokens')}`}
+												class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right"
+												on:click={() => toggleUserSort(column.key)}
+											>
+												<div class="flex gap-1.5 items-center justify-end">
+													{column.label}
+													{#if userOrderBy === column.key}
+														<span class="font-normal">
+															{#if userDirection === 'asc'}<ChevronUp
+																	className="size-2"
+																/>{:else}<ChevronDown className="size-2" />{/if}
+														</span>
+													{:else}
+														<span class="invisible"><ChevronUp className="size-2" /></span>
+													{/if}
+												</div>
+											</th>
+										{/each}
+										<th
+											scope="col"
+											class="font-normal px-2.5 py-1.5 cursor-pointer select-none text-right w-16"
+											on:click={() => toggleUserSort('percentage')}
+										>
+											<div class="flex gap-1.5 items-center justify-end">
+												{selectedMetric === 'tokens'
+													? $i18n.t('Token share')
+													: $i18n.t('Message share')}
+												{#if userOrderBy === 'percentage'}
+													<span class="font-normal">
+														{#if userDirection === 'asc'}<ChevronUp
+																className="size-2"
+															/>{:else}<ChevronDown className="size-2" />{/if}
+													</span>
+												{:else}
+													<span class="invisible"><ChevronUp className="size-2" /></span>
+												{/if}
+											</div>
+										</th>
 									</tr>
-								{/each}
-								{#if sortedUsers.length === 0}
-									<tr
-										><td colspan="7" class="font-normal px-3 py-1.5 text-center text-gray-400"
-											>{$i18n.t('No data')}</td
-										></tr
-									>
-								{/if}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{#each sortedUsers as user, idx (user.user_id)}
+										{@const value =
+											selectedMetric === 'tokens' ? (user.total_tokens ?? 0) : user.count}
+										<tr class="text-xs">
+											<td class="font-normal px-3 py-1.5 text-gray-400">{idx + 1}</td>
+											<td class="font-normal px-3 py-1.5 text-gray-900 dark:text-white">
+												<div class="flex items-center gap-2">
+													<ProfilePreview
+														user={{ id: user.user_id, name: user.name || user.email }}
+														side="right"
+														align="center"
+														sideOffset={6}
+													>
+														<img
+															src="{WEBUI_API_BASE_URL}/users/{user.user_id}/profile/image"
+															alt={user.name || 'User'}
+															class="size-5 rounded-full object-cover shrink-0"
+															on:error={(e) => {
+																const image = e.currentTarget as HTMLImageElement;
+																if (!image.src.endsWith('/user.png')) image.src = '/user.png';
+															}}
+														/>
+													</ProfilePreview>
+													<span class="truncate max-w-[9.375rem]"
+														>{user.name || user.email || user.user_id.substring(0, 8)}</span
+													>
+												</div>
+											</td>
+											<td class="font-normal px-3 py-1.5 text-right"
+												>{user.count.toLocaleString()}</td
+											>
+											{#each tokenColumns as column}
+												<td class="font-normal px-3 py-1.5 text-right"
+													>{formatNumber(user[column.key] ?? 0)}</td
+												>
+											{/each}
+
+											<td class="font-normal px-3 py-1.5 text-right text-gray-400">
+												<div class="flex items-center justify-end gap-2 tabular-nums">
+													<div
+														class="h-1 w-16 bg-gray-100 dark:bg-gray-800 overflow-hidden"
+														aria-hidden="true"
+													>
+														<div
+															class="h-full bg-gray-400"
+															style:width={`${metricTotal > 0 ? (value / metricTotal) * 100 : 0}%`}
+														></div>
+													</div>
+													<span class="w-12">{usageShare(value, metricTotal)}</span>
+												</div>
+											</td>
+										</tr>
+									{/each}
+									{#if sortedUsers.length === 0}
+										<tr
+											><td colspan="7" class="font-normal px-3 py-1.5 text-center text-gray-400"
+												>{$i18n.t('No data')}</td
+											></tr
+										>
+									{/if}
+								</tbody>
+							</table>
+						</div>
 					</div>
-				</div>
-			{/if}
+				{/if}
+			</div>
 		</div>
-	</div>
-	<div class="mt-2 text-[0.6875rem] text-gray-400 dark:text-gray-500">
-		{$i18n.t('Message counts are based on assistant responses.')}
-		{$i18n.t('Token counts are estimates and may not reflect actual API usage')}
-	</div>
+		<div class="mt-2 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+			{$i18n.t('Message counts are based on assistant responses.')}
+			{$i18n.t('Token counts are estimates and may not reflect actual API usage')}
+		</div>
+	{/if}
 {/if}
 
 <style>

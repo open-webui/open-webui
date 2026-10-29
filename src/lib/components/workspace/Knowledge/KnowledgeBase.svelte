@@ -49,6 +49,7 @@
 	let pendingSyncFiles: Array<{ path: string; filename: string; file: File }> | null = null;
 	let syncing: string | null = null;
 	let showAccessControlModal = false;
+	let savedAccessGrants = [];
 	let showResetConfirm = false;
 
 	type DirectoryFileEntry = { path: string; filename: string; file: File };
@@ -886,9 +887,15 @@
 				$user?.role === 'admin'}
 			onChange={async () => {
 				try {
-					await updateKnowledgeAccessGrants(localStorage.token, id, knowledge.access_grants ?? []);
+					const saved = await updateKnowledgeAccessGrants(
+						localStorage.token,
+						id,
+						knowledge.access_grants ?? []
+					);
+					savedAccessGrants = structuredClone(saved.access_grants);
 					toast.success($i18n.t('Saved'));
 				} catch (error) {
+					knowledge.access_grants = structuredClone(savedAccessGrants);
 					toast.error(`${error}`);
 				}
 			}}
@@ -903,7 +910,10 @@
 			>
 			<!-- Previous file count label: {$i18n.t('{{COUNT}} files')} -->
 			{#if knowledge.write_access}{#if $user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}<AccessButton
-						on:click={() => (showAccessControlModal = true)}
+						on:click={() => {
+							savedAccessGrants = structuredClone(knowledge.access_grants ?? []);
+							showAccessControlModal = true;
+						}}
 					/>{/if}{:else}<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
 		</div>
 		<div class="shrink-0 px-1 pb-2.5">

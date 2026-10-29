@@ -43,6 +43,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
+	import ProviderDetails from './ProviderDetails.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from './LocalizedPromptSuggestions.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
@@ -73,6 +74,7 @@
 	export let onBack: null | Function = null;
 
 	export let model: any = null;
+	export let providerModel: unknown = null;
 	export let edit = false;
 	export let admin = false;
 
@@ -210,6 +212,10 @@
 	let params: Record<string, any> = {
 		system: ''
 	};
+	$: reportedModel =
+		providerModel ??
+		$models.find((entry) => entry.id === (info.base_model_id || id)) ??
+		(info.base_model_id ? null : model);
 
 	$: modifiedParamCount = Object.entries(params).reduce((count, [key, value]) => {
 		if (key === 'system' || key === 'model_controls') return count;
@@ -858,7 +864,7 @@
 					toast.success($i18n.t('Saved'));
 				} catch (error) {
 					accessGrants = structuredClone(model.access_grants ?? []);
-					toast.error(`${error}`);
+					toast.error(`${error?.detail ?? error}`);
 				} finally {
 					loading = false;
 				}
@@ -1360,6 +1366,11 @@
 						</fieldset>
 
 						<div class="px-2.5 md:px-4">
+							{#if $user?.role === 'admin' && !readOnly}
+								<div class="mt-2">
+									<ProviderDetails model={reportedModel} />
+								</div>
+							{/if}
 							<section class="mt-4">
 								<div class="space-y-2 px-1">
 									<div

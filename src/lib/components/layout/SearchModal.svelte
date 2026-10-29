@@ -2,7 +2,7 @@
 	import { getContext, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { settings } from '$lib/stores';
+	import { folders, settings, tags } from '$lib/stores';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -55,9 +55,31 @@
 	let request: AbortController | undefined;
 	let timer: ReturnType<typeof setTimeout>;
 	let generation = 0;
+	let suggesting = false;
+	let suggestionIndex = -1;
 	const icons = { chat: ChatBubble, message: Hashtag, note: Document };
 	const labels = { chat: 'Chats', message: 'Messages', note: 'Notes' };
+	const locations = [
+		{ kind: 'folder', label: 'Folders', type: 'chat' },
+		{ kind: 'channel', label: 'Channels', type: 'message' }
+	];
+	const filterDescriptions: Record<string, string> = {
+		tag: 'search for tags',
+		folder: 'search for folders',
+		pinned: 'search for pinned chats',
+		shared: 'search for shared chats',
+		archived: 'search for archived chats'
+	};
+	// Fixed labels from the search API; folder and channel names stay as typed.
+	$: contextLabels = new Map([
+		['Personal chat', $i18n.t('Personal chat')],
+		['Shared chat', $i18n.t('Shared chat')],
+		['Shared snapshot', $i18n.t('Shared snapshot')],
+		['Personal note', $i18n.t('Personal note')],
+		['Shared note', $i18n.t('Shared note')]
+	]);
 	$: selected = results[selectedIndex];
+	$: suggestions = suggesting && !panel ? getSuggestions(query, $tags, $folders) : [];
 	$: scopeName = scopes.find((item) => item.id === scope)?.name ?? '';
 	$: canCreateNote = kinds.includes('note');
 	$: selectionClass = $settings?.highContrastMode
@@ -122,8 +144,56 @@
 		}
 	}
 
+	function getSuggestions(
+		text: string,
+		tagList: { id: string; name: string }[],
+		folderList: { name: string }[]
+	) {
+		const word = text.split(' ').at(-1)?.toLowerCase() ?? '';
+		const [name, value] = word.split(':');
+		if (value === undefined) {
+			return word
+				? Object.keys(filterDescriptions)
+						.filter((key) => key.startsWith(word))
+						.map((key) => ({
+							value: `${key}:`,
+							label: `${key}:`,
+							description: $i18n.t(filterDescriptions[key])
+						}))
+				: [];
+		}
+		const items =
+			name === 'tag'
+				? [...tagList, { id: 'none', name: $i18n.t('Untagged') }]
+				: name === 'folder'
+					? folderList.map((folder) => ({
+							id: folder.name.replaceAll(' ', '_').toLowerCase(),
+							name: folder.name
+						}))
+					: name in filterDescriptions
+						? [
+								{ id: 'true', name: 'true' },
+								{ id: 'false', name: 'false' }
+							]
+						: [];
+		return items
+			.filter((item) => item.id.startsWith(value) && item.id !== value)
+			.map((item) => ({
+				value: `${name}:${item.id} `,
+				label: item.name,
+				description: item.id === item.name ? '' : item.id
+			}));
+	}
+
+	function applySuggestion(suggestion: { value: string }) {
+		query = query.slice(0, query.lastIndexOf(' ') + 1) + suggestion.value;
+		suggestionIndex = 0;
+		input.focus();
+	}
+
 	function close() {
 		show = false;
+		suggesting = false;
 		panel = null;
 		preview = false;
 		onClose();
@@ -142,7 +212,28 @@
 	}
 
 	function keydown(event: KeyboardEvent) {
-		if (!show || event.isComposing || event.key === 'Escape') return;
+		if (!show || event.isComposing) return;
+		if (event.target === input && suggestions.length) {
+			if (event.key === 'Escape') {
+				event.stopPropagation();
+				suggesting = false;
+				return;
+			}
+			if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+				event.preventDefault();
+				suggestionIndex = Math.max(
+					0,
+					Math.min(suggestions.length - 1, suggestionIndex + (event.key === 'ArrowDown' ? 1 : -1))
+				);
+				return;
+			}
+			if (event.key === 'Tab' || (event.key === 'Enter' && suggestions[suggestionIndex])) {
+				event.preventDefault();
+				applySuggestion(suggestions[Math.max(0, suggestionIndex)]);
+				return;
+			}
+		}
+		if (event.key === 'Escape') return;
 		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 			event.preventDefault();
 			event.stopPropagation();
@@ -231,12 +322,25 @@
 				aria-label={$i18n.t('Search your workspace')}
 				role="combobox"
 				aria-autocomplete="list"
-				aria-expanded={results.length > 0}
-				aria-controls="workspace-search-results"
-				aria-activedescendant={selected ? `search-result-${selectedIndex}` : undefined}
+				aria-expanded={suggestions.length > 0 || results.length > 0}
+				aria-controls={suggestions.length
+					? 'workspace-search-suggestions'
+					: 'workspace-search-results'}
+				aria-activedescendant={suggestions.length
+					? suggestions[suggestionIndex]
+						? `search-suggestion-${suggestionIndex}`
+						: undefined
+					: selected
+						? `search-result-${selectedIndex}`
+						: undefined}
 				autocomplete="off"
 				spellcheck="false"
 				maxlength="500"
+				on:input={(event) => {
+					suggesting = true;
+					suggestionIndex = event.currentTarget.value.split(' ').at(-1)?.includes(':') ? 0 : -1;
+				}}
+				on:blur={() => (suggesting = false)}
 			/>
 			{#if query}<button
 					class={quietButton}
@@ -288,6 +392,32 @@
 					>{/if}
 			</div>
 		{/if}
+		{#if suggestions.length}
+			<div
+				id="workspace-search-suggestions"
+				class="absolute left-6 top-10 z-10 w-64 max-w-[calc(100%-2rem)]"
+				role="listbox"
+				aria-label={$i18n.t('Search options')}
+			>
+				<DropdownMenu className="max-h-64 overflow-y-auto scrollbar-hover font-normal"
+					>{#each suggestions as suggestion, index}<button
+							id="search-suggestion-{index}"
+							role="option"
+							aria-selected={suggestionIndex === index}
+							tabindex="-1"
+							class={suggestionIndex === index ? selectionClass : ''}
+							on:mousedown={(e) => e.preventDefault()}
+							on:mouseenter={() => (suggestionIndex = index)}
+							on:click={() => applySuggestion(suggestion)}
+							><span class="min-w-0 truncate">{suggestion.label}</span
+							>{#if suggestion.description}<span
+									class="ml-auto truncate text-[0.6875rem] text-gray-500 dark:text-gray-400"
+									>{suggestion.description}</span
+								>{/if}</button
+						>{/each}</DropdownMenu
+				>
+			</div>
+		{/if}
 		{#if panel === 'types'}
 			<div class="absolute top-10 right-12 z-10" data-search-panel>
 				<DropdownMenu className="min-w-32 font-normal"
@@ -300,6 +430,12 @@
 					>{#each kinds as type}<button
 							on:click={() => {
 								kind = type;
+								if (
+									!locations.some(
+										(group) => group.type === type && scope.startsWith(`${group.kind}:`)
+									)
+								)
+									scope = '';
 								panel = null;
 								input.focus();
 							}}
@@ -370,8 +506,8 @@
 						>
 							{$i18n.t('Everywhere')}{#if !scope}<Check className="ml-auto size-3.5" />{/if}
 						</button>
-						{#each [{ kind: 'folder', label: 'Folders' }, { kind: 'channel', label: 'Channels' }] as group}
-							{#if scopes.some((item) => item.kind === group.kind)}
+						{#each locations as group}
+							{#if (kind === 'all' || kind === group.type) && scopes.some((item) => item.kind === group.kind)}
 								<div
 									data-search-panel
 									class="px-2 pb-1 pt-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
@@ -416,7 +552,7 @@
 					class="flex h-6 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
 				>
 					<span id="workspace-search-results-label"
-						>{$i18n.t(query.trim() ? 'Results' : 'Pinned & recent')}</span
+						>{query.trim() ? $i18n.t('Results') : $i18n.t('Pinned & recent')}</span
 					><span aria-live="polite"
 						>{loading
 							? $i18n.t('Searching…')
@@ -463,7 +599,7 @@
 										><HighlightedText text={result.title} {query} /></span
 									><span
 										class="hidden max-w-[35%] truncate text-[0.6875rem] text-gray-500 dark:text-gray-400 sm:block"
-										>{result.context}</span
+										>{contextLabels.get(result.context) ?? result.context}</span
 									>{#if result.pinned}<Pin className="size-2.5 shrink-0 text-gray-400" />{/if}
 								</div>
 								{#if query.trim() && result.snippet}<div
@@ -495,7 +631,7 @@
 				{:else if !loading && !results.length}<div
 						class="m-auto px-5 py-6 text-center text-xs text-gray-500 dark:text-gray-400"
 					>
-						<p>{$i18n.t(query ? 'No matches found' : 'Nothing here yet')}</p>
+						<p>{query ? $i18n.t('No matches found') : $i18n.t('Nothing here yet')}</p>
 						<p class="mt-1 text-[0.6875rem]">
 							{$i18n.t('Try another word or broaden your filters.')}
 						</p>
@@ -550,7 +686,9 @@
 						<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3 scrollbar-hidden">
 							<h2 class="text-[0.8125rem] font-normal leading-5 break-words">{selected.title}</h2>
 							<div class="mt-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
-								{selected.context} · {formatSearchDate(selected.updated_at)}
+								{contextLabels.get(selected.context) ?? selected.context} · {formatSearchDate(
+									selected.updated_at
+								)}
 							</div>
 							<div class="mt-3 break-words text-xs leading-snug text-gray-600 dark:text-gray-300">
 								{#if selected.kind === 'note'}
@@ -580,7 +718,7 @@
 								setPreview(!preview);
 								panel = null;
 								input.focus();
-							}}>{$i18n.t(preview ? 'Hide preview' : 'Show preview')}</button
+							}}>{preview ? $i18n.t('Hide preview') : $i18n.t('Show preview')}</button
 						><button on:click={copyLink}>{$i18n.t('Copy link')}</button>
 						<hr class="border-gray-100 dark:border-gray-800" />{/if}<button
 						on:click={() => create('chat')}>{$i18n.t('Start a new conversation')}</button
@@ -593,7 +731,9 @@
 			class="flex h-8 shrink-0 items-center justify-between gap-2 border-t border-gray-100/60 px-2 dark:border-gray-800/40"
 		>
 			<span class="min-w-0 truncate pl-1 text-[0.6875rem] text-gray-500 dark:text-gray-400"
-				>{selected ? selected.context : $i18n.t('Workspace search')}</span
+				>{selected
+					? (contextLabels.get(selected.context) ?? selected.context)
+					: $i18n.t('Workspace search')}</span
 			>
 			<div class="flex shrink-0 items-center gap-0.5">
 				<button class={quietButton} disabled={!selected} on:click={() => open()}

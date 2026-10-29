@@ -44,6 +44,7 @@
 
 	export let chatId = '';
 	export let archived = false;
+	export let readonly = false;
 
 	let show = false;
 	let pinned = false;
@@ -305,7 +306,7 @@
 		}
 	};
 
-	$: if (show) {
+	$: if (show && !readonly) {
 		checkPinned();
 	}
 </script>
@@ -348,7 +349,7 @@
 
 	<div slot="content">
 		<DropdownMenu className="select-none min-w-[12.5rem] transition">
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
+			{#if !readonly && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<button
 					role="menuitem"
 					draggable="false"
@@ -362,7 +363,7 @@
 				</button>
 			{/if}
 
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+			{#if !readonly && ($user?.role === 'admin' || ($user.permissions?.chat?.export ?? true))}
 				<DropdownSub contentClass="select-none z-50">
 					<button
 						role="menuitem"
@@ -421,110 +422,112 @@
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
 			</button>
 
-			<button
-				role="menuitem"
-				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
-				on:click={() => {
-					markUnreadHandler();
-				}}
-			>
-				<ChatCheckIcon className="size-3.5" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Mark as unread')}</div>
-			</button>
-
-			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
-
-			<button
-				role="menuitem"
-				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
-				on:click={() => {
-					pinHandler();
-				}}
-			>
-				{#if pinned}
-					<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Unpin')}</div>
-				{:else}
-					<PinIcon className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Pin')}</div>
-				{/if}
-			</button>
-
-			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true)}
+			{#if !readonly}
 				<button
 					role="menuitem"
 					draggable="false"
 					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
 					on:click={() => {
-						cloneChatHandler();
+						markUnreadHandler();
 					}}
 				>
-					<CopyIcon className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Clone')}</div>
+					<ChatCheckIcon className="size-3.5" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Mark as unread')}</div>
 				</button>
-			{/if}
 
-			{#if chatId && $folders.length > 0}
-				<DropdownSub contentClass="select-none z-50 max-h-52 overflow-y-auto scrollbar-hidden">
+				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
+
+				<button
+					role="menuitem"
+					draggable="false"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+					on:click={() => {
+						pinHandler();
+					}}
+				>
+					{#if pinned}
+						<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Unpin')}</div>
+					{:else}
+						<PinIcon className="size-3.5" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Pin')}</div>
+					{/if}
+				</button>
+
+				{#if $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true)}
 					<button
 						role="menuitem"
-						slot="trigger"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 select-none w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						on:click={() => {
+							cloneChatHandler();
+						}}
 					>
-						<FolderIcon className="size-3.5" />
-						<div class="flex items-center">{$i18n.t('Move')}</div>
+						<CopyIcon className="size-3.5" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Clone')}</div>
 					</button>
+				{/if}
 
-					{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
+				{#if chatId && $folders.length > 0}
+					<DropdownSub contentClass="select-none z-50 max-h-52 overflow-y-auto scrollbar-hidden">
 						<button
 							role="menuitem"
+							slot="trigger"
 							draggable="false"
-							class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 overflow-hidden w-full"
-							on:click={() => {
-								moveChatHandler(chatId, folder.id);
-							}}
+							class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 select-none w-full"
 						>
-							<div class="shrink-0">
-								<FolderIcon className="size-3.5" />
-							</div>
-
-							<div class="truncate">{folder?.name ?? 'Folder'}</div>
+							<FolderIcon className="size-3.5" />
+							<div class="flex items-center">{$i18n.t('Move')}</div>
 						</button>
-					{/each}
-				</DropdownSub>
-			{/if}
 
-			{#if $visibleControls['chat.archive']}
-				<button
-					role="menuitem"
-					draggable="false"
-					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
-					on:click={() => {
-						archiveChatHandler();
-					}}
-				>
-					<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
-					<div class="flex items-center">
-						{archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
-					</div>
-				</button>
-			{/if}
+						{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
+							<button
+								role="menuitem"
+								draggable="false"
+								class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 overflow-hidden w-full"
+								on:click={() => {
+									moveChatHandler(chatId, folder.id);
+								}}
+							>
+								<div class="shrink-0">
+									<FolderIcon className="size-3.5" />
+								</div>
 
-			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
-				<button
-					role="menuitem"
-					draggable="false"
-					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
-					on:click={() => {
-						deleteHandler();
-					}}
-				>
-					<TrashIcon className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Delete')}</div>
-				</button>
+								<div class="truncate">{folder?.name ?? 'Folder'}</div>
+							</button>
+						{/each}
+					</DropdownSub>
+				{/if}
+
+				{#if $visibleControls['chat.archive']}
+					<button
+						role="menuitem"
+						draggable="false"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						on:click={() => {
+							archiveChatHandler();
+						}}
+					>
+						<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
+						<div class="flex items-center">
+							{archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
+						</div>
+					</button>
+				{/if}
+
+				{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+					<button
+						role="menuitem"
+						draggable="false"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						on:click={() => {
+							deleteHandler();
+						}}
+					>
+						<TrashIcon className="size-3.5" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Delete')}</div>
+					</button>
+				{/if}
 			{/if}
 		</DropdownMenu>
 	</div>

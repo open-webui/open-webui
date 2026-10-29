@@ -58,7 +58,6 @@
 	import ChatParticipants from '$lib/components/common/ChatParticipants.svelte';
 	import ChatIcon from './icons/Chat.svelte';
 	import MoreHorizontalIcon from './icons/MoreHorizontal.svelte';
-	import EditPencilIcon from './icons/EditPencil.svelte';
 	import SparklesIcon from './icons/Sparkles.svelte';
 	import ArchiveBoxIcon from '$lib/components/icons/ArchiveBox.svelte';
 	import GarbageBinIcon from '$lib/components/icons/GarbageBin.svelte';
@@ -246,7 +245,7 @@
 	let showShareChatModal = false;
 	let confirmEdit = false;
 
-	let chatTitle = title;
+	let chatTitle = '';
 
 	const editChatTitle = async (id, title) => {
 		title = title?.trim();
@@ -773,7 +772,7 @@
 		</div>
 	{/if}
 
-	{#if (!readonly || canRename) && !selecting}
+	{#if (!readonly || (canRename && !confirmEdit)) && !selecting}
 		<div
 			id="sidebar-chat-item-menu"
 			class="{$mobile
@@ -784,20 +783,7 @@
 				? 'right-[0.5rem]'
 				: 'right-1'} inset-y-0 mr-1.5 flex items-center"
 		>
-			{#if readonly}
-				{#if !confirmEdit}
-					<Tooltip content={$i18n.t('Rename')} className="flex self-center z-10 items-end">
-						<button
-							type="button"
-							aria-label={$i18n.t('Rename')}
-							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition"
-							on:click={renameHandler}
-						>
-							<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
-						</button>
-					</Tooltip>
-				{/if}
-			{:else if confirmEdit}
+			{#if confirmEdit}
 				<div
 					class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
 				>
@@ -814,7 +800,7 @@
 						</button>
 					</Tooltip>
 				</div>
-			{:else if shiftKey && mouseOver && !chatSelection}
+			{:else if !readonly && shiftKey && mouseOver && !chatSelection}
 				<div class=" flex items-center self-center space-x-1.5">
 					{#if $visibleControls['chat.archive']}
 						<Tooltip content={$i18n.t('Archive')} className="flex items-center">
@@ -849,6 +835,7 @@
 			{:else}
 				<div class="flex self-center z-10 items-end">
 					<ChatMenu
+						{readonly}
 						chatId={id}
 						cloneChatHandler={() => {
 							cloneChatHandler(id);

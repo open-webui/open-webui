@@ -19,7 +19,9 @@
 		try {
 			const note = await getNoteById(localStorage.token, noteId);
 			if (note) {
-				title = note.title || '';
+				const pageId = new URL(href, window.location.origin).searchParams.get('page');
+				const page = note.data?.pages?.find((p) => p.id === pageId);
+				title = page ? `${note.title} / ${page.title}` : note.title || '';
 
 				if (note.user_id) {
 					try {
@@ -48,7 +50,7 @@
 	on:click|preventDefault|stopPropagation={() => {
 		try {
 			const url = new URL(href, window.location.origin);
-			goto(url.pathname);
+			goto(url.pathname + url.search + url.hash);
 		} catch {
 			// fallback
 		}

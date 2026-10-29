@@ -87,11 +87,20 @@ async def _ws_get_images(ws, workflow, client_id, base_url, api_key):
         # binary messages (previews) are silently skipped
 
     history = (await get_history(prompt_id, base_url, api_key))[prompt_id]
+    status = history.get('status', {})
+    if status.get('status_str') == 'error':
+        error = next((data for kind, data in status.get('messages', []) if kind == 'execution_error'), {})
+        raise Exception(
+            f'ComfyUI {error.get("node_type", "workflow")} failed: {error.get("exception_message", "").strip()}'
+        )
+
     for node_id in history['outputs']:
         node_output = history['outputs'][node_id]
         if node_id in workflow and workflow[node_id].get('class_type') in [
             'SaveImage',
             'SaveImageAdvanced',
+            'SaveAnimatedWEBP',
+            'SaveAnimatedPNG',
             'PreviewImage',
         ]:
             if 'images' in node_output:

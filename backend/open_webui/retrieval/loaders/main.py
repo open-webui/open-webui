@@ -704,6 +704,7 @@ class Loader:
                 api_key=self.config['rag.mistral_ocr_api_key'],
                 file_path=file_path,
                 use_base64=self.config['rag.mistral_ocr_use_base64'],
+                params=self.config['rag.mistral_ocr_params'],
                 user=self.user,
             )
         elif (

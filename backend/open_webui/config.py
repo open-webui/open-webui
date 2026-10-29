@@ -965,6 +965,16 @@ MISTRAL_OCR_API_KEY = os.getenv('MISTRAL_OCR_API_KEY', '')
 
 MISTRAL_OCR_USE_BASE64 = os.getenv('MISTRAL_OCR_USE_BASE64', 'False').lower() == 'true'
 
+mistral_ocr_params = os.getenv('MISTRAL_OCR_PARAMS', '')
+try:
+    mistral_ocr_params = JSONCodec.loads(mistral_ocr_params)
+except JSONCodec.JSONDecodeError:
+    mistral_ocr_params = {}
+if not isinstance(mistral_ocr_params, dict):
+    mistral_ocr_params = {}
+
+MISTRAL_OCR_PARAMS = mistral_ocr_params
+
 PADDLEOCR_VL_BASE_URL = os.getenv('PADDLEOCR_VL_BASE_URL', 'http://localhost:8080')
 
 PADDLEOCR_VL_TOKEN = os.getenv('PADDLEOCR_VL_TOKEN', '')
@@ -2991,6 +3001,7 @@ DEFAULT_CONFIG = {
     'rag.mistral_ocr_api_base_url': MISTRAL_OCR_API_BASE_URL,
     'rag.mistral_ocr_api_key': MISTRAL_OCR_API_KEY,
     'rag.mistral_ocr_use_base64': MISTRAL_OCR_USE_BASE64,
+    'rag.mistral_ocr_params': MISTRAL_OCR_PARAMS,
     'rag.paddleocr_vl_base_url': PADDLEOCR_VL_BASE_URL,
     'rag.paddleocr_vl_token': PADDLEOCR_VL_TOKEN,
     'rag.bypass_embedding_and_retrieval': BYPASS_EMBEDDING_AND_RETRIEVAL,
@@ -3012,6 +3023,8 @@ DEFAULT_CONFIG = {
     'rag.embedding_model': RAG_EMBEDDING_MODEL,
     'rag.tokenizer_model': RAG_TOKENIZER_MODEL,
     'rag.embedding_batch_size': RAG_EMBEDDING_BATCH_SIZE,
+    'rag.embedding_query_prefix': RAG_EMBEDDING_QUERY_PREFIX,
+    'rag.embedding_content_prefix': RAG_EMBEDDING_CONTENT_PREFIX,
     'rag.enable_async_embedding': ENABLE_ASYNC_EMBEDDING,
     'rag.embedding_concurrent_requests': RAG_EMBEDDING_CONCURRENT_REQUESTS,
     'rag.reranking_engine': RAG_RERANKING_ENGINE,

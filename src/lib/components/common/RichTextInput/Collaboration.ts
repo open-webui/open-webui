@@ -7,7 +7,8 @@ import {
 	yUndoPlugin,
 	undo,
 	redo,
-	prosemirrorJSONToYDoc
+	prosemirrorJSONToYDoc,
+	relativePositionToAbsolutePosition
 } from 'y-prosemirror';
 import type { Socket } from 'socket.io-client';
 import type { SessionUser } from '$lib/stores';
@@ -15,6 +16,7 @@ import { createNodeFromContent, Editor, Extension } from '@tiptap/core';
 import { keymap } from 'prosemirror-keymap';
 import { Plugin } from 'prosemirror-state';
 import { tick } from 'svelte';
+import tippy, { type Instance } from 'tippy.js';
 
 const USER_COLORS = [
 	'#FF6B6B',
@@ -46,7 +48,40 @@ export class SocketIOCollaborationProvider {
 	private synced = false;
 	private editor: Editor | null = null;
 	private editorContentGetter: EditorContentGetter | null = null;
+	private listeners: Array<[string, (...args: any[]) => void]> = [];
 	private contentSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
+	private cursorTarget: any = null;
+
+	public revealCursor(target: any) {
+		this.cursorTarget = target;
+		this.revealPendingCursor();
+	}
+
+	private revealPendingCursor() {
+		if (!this.synced || !this.editor || !this.cursorTarget) return;
+		const target = this.cursorTarget;
+		this.cursorTarget = null;
+		const editor = this.editor;
+		let position = target.cursor_position ?? 0;
+		try {
+			const state = ySyncPluginKey.getState(editor.state);
+			if (target.cursor?.head && state?.binding) {
+				position =
+					relativePositionToAbsolutePosition(
+						this.doc,
+						state.type,
+						Y.createRelativePositionFromJSON(target.cursor.head),
+						state.binding.mapping
+					) ?? position;
+			}
+		} catch {
+			// A replaced document can no longer resolve the old relative cursor.
+		}
+		queueMicrotask(() => {
+			if (!editor.isDestroyed)
+				editor.commands.focus(Math.min(position, editor.state.doc.content.size));
+		});
+	}
 
 	constructor(
 		private readonly documentId: string,
@@ -82,6 +117,57 @@ export class SocketIOCollaborationProvider {
 								tr.setMeta('preventAutolink', true);
 							}
 							return true;
+						},
+						view: (view) => {
+							const labels = new Map<HTMLElement, Instance>();
+							const update = () => {
+								for (const [cursor, label] of labels) {
+									if (!view.dom.contains(cursor)) {
+										label.destroy();
+										labels.delete(cursor);
+									}
+								}
+								for (const cursor of view.dom.querySelectorAll<HTMLElement>(
+									'.ProseMirror-yjs-cursor'
+								)) {
+									if (!labels.has(cursor)) {
+										const label = cursor.querySelector('div');
+										if (!label) continue;
+										// Float above the caret without being clipped by the editor's scroll area.
+										label.remove();
+										label.className = 'ProseMirror-yjs-cursor-label';
+										labels.set(
+											cursor,
+											tippy(cursor, {
+												appendTo: () => document.body,
+												render: () => ({ popper: label }),
+												trigger: 'manual',
+												showOnCreate: true,
+												hideOnClick: false,
+												animation: false,
+												placement: 'top-start',
+												offset: [0, 2],
+												zIndex: 30,
+												popperOptions: {
+													strategy: 'fixed',
+													modifiers: [{ name: 'flip', enabled: false }]
+												}
+											})
+										);
+									}
+									labels.get(cursor)?.popperInstance?.forceUpdate();
+								}
+							};
+							update();
+							const resizeObserver = new ResizeObserver(update);
+							resizeObserver.observe(view.dom);
+							return {
+								update,
+								destroy: () => {
+									resizeObserver.disconnect();
+									labels.forEach((label) => label.destroy());
+								}
+							};
 						}
 					}),
 					ySyncPlugin(yXmlFragment),
@@ -130,6 +216,7 @@ export class SocketIOCollaborationProvider {
 				if (!state || !this.editor) return;
 				Y.applyUpdate(this.doc, new Uint8Array(state), 'server');
 				this.synced = true;
+				this.revealPendingCursor();
 				if (!this.contentSnapshotTimer) this.sendContentSnapshot();
 			}
 		);
@@ -168,9 +255,31 @@ export class SocketIOCollaborationProvider {
 		}
 	}
 
+	private listen(event: string, handler: (...args: any[]) => void) {
+		this.listeners.push([event, handler]);
+		this.socket.on(event, handler);
+	}
+
+	public async flush() {
+		await tick();
+		if (!this.isConnected || !this.synced || !this.editorContentGetter) {
+			throw new Error('Tab is not connected. Reconnect before leaving this tab.');
+		}
+		if (this.contentSnapshotTimer) {
+			clearTimeout(this.contentSnapshotTimer);
+			this.contentSnapshotTimer = null;
+		}
+		const result = await this.socket.timeout(10000).emitWithAck('ydoc:document:update', {
+			document_id: this.documentId,
+			flush: true,
+			data: { content: this.editorContentGetter() }
+		});
+		if (!result?.ok) throw new Error(result?.error || 'Failed to save page');
+	}
+
 	private setupEventListeners() {
 		// Listen for document updates from server
-		this.socket.on('ydoc:document:update', (data) => {
+		this.listen('ydoc:document:update', (data) => {
 			if (data.document_id === this.documentId && data.socket_id !== this.socket.id) {
 				try {
 					const update = new Uint8Array(data.update);
@@ -188,7 +297,7 @@ export class SocketIOCollaborationProvider {
 		});
 
 		// Listen for document state from server
-		this.socket.on('ydoc:document:state', async (data) => {
+		this.listen('ydoc:document:state', async (data) => {
 			if (data.document_id === this.documentId) {
 				try {
 					if (data.state) {
@@ -229,6 +338,7 @@ export class SocketIOCollaborationProvider {
 						}
 					}
 					this.synced = true;
+					this.revealPendingCursor();
 				} catch (error) {
 					console.error('Error applying Yjs state:', error);
 
@@ -241,7 +351,7 @@ export class SocketIOCollaborationProvider {
 		});
 
 		// Listen for awareness updates
-		this.socket.on('ydoc:awareness:update', (data) => {
+		this.listen('ydoc:awareness:update', (data) => {
 			if (data.document_id === this.documentId) {
 				try {
 					const awarenessUpdate = new Uint8Array(data.update);
@@ -260,6 +370,7 @@ export class SocketIOCollaborationProvider {
 		this.doc.on('update', async (update, origin) => {
 			if (this.editor && origin !== 'server' && this.isConnected) {
 				await tick(); // Ensure the DOM is updated before sending
+				if (!this.editor || !this.isConnected) return;
 				this.socket.emit('ydoc:document:update', {
 					document_id: this.documentId,
 					user_id: this.user?.id,
@@ -294,7 +405,9 @@ export class SocketIOCollaborationProvider {
 					this.socket.emit('ydoc:awareness:update', {
 						document_id: this.documentId,
 						user_id: this.socket.id,
-						update: Array.from(awarenessUpdate)
+						update: Array.from(awarenessUpdate),
+						cursor: this.awareness.getLocalState()?.cursor,
+						cursor_position: this.editor?.state.selection.head
 					});
 				}
 			}
@@ -316,9 +429,8 @@ export class SocketIOCollaborationProvider {
 	};
 
 	public destroy() {
-		this.socket.off('ydoc:document:update');
-		this.socket.off('ydoc:document:state');
-		this.socket.off('ydoc:awareness:update');
+		for (const [event, handler] of this.listeners) this.socket.off(event, handler);
+		this.listeners = [];
 		this.socket.off('connect', this.onConnect);
 		this.socket.off('disconnect', this.onDisconnect);
 
@@ -336,6 +448,8 @@ export class SocketIOCollaborationProvider {
 
 		this.editor = null;
 		this.editorContentGetter = null;
+		this.isConnected = false;
+		this.doc.destroy();
 	}
 }
 

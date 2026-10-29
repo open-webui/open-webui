@@ -193,7 +193,7 @@
 		const text = source?.text ?? selection.toString();
 		if (!text.trim()) return;
 		if (new TextEncoder().encode(text).length > 16384) {
-			toast.error('Select less text (maximum 16 KiB).');
+			toast.error($i18n.t('Select less text (maximum 16 KiB).'));
 			return;
 		}
 		const page =
@@ -1475,8 +1475,7 @@
 			uploading = false;
 			if (selectedTerminal?.url === terminal.url && (chatId ?? undefined) === sessionId) {
 				invalidateTreeCache(destination);
-				if (currentPath === destination && !selectedFile)
-					await loadDir(destination, { preserveTree: true });
+				if (currentPath === destination && !selectedFile) await refreshBrowser();
 			}
 		}
 	};
@@ -1523,7 +1522,7 @@
 			result ? $i18n.t('Folder created') : $i18n.t('Failed to create folder')
 		);
 		invalidateTreeCache(currentPath);
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	// ── File creation ────────────────────────────────────────────────────
@@ -1560,7 +1559,7 @@
 			result ? $i18n.t('File created') : $i18n.t('Failed to create file')
 		);
 		invalidateTreeCache(currentPath);
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	// ── Delete ───────────────────────────────────────────────────────────
@@ -1575,7 +1574,7 @@
 				: $i18n.t('Failed to delete {{name}}', { name })
 		);
 		invalidateTreeCache(currentPath, path);
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	const requestDelete = (path: string, name: string) => {
@@ -1660,7 +1659,7 @@
 			toast.success($i18n.t('Renamed to {{name}}', { name: newName }));
 		}
 		invalidateTreeCache(currentPath, oldPath);
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	// ── Multi-select ────────────────────────────────────────────────────
@@ -1737,7 +1736,7 @@
 		);
 		invalidateTreeCache(currentPath, ...paths);
 		clearSelection();
-		await loadDir(currentPath, { preserveTree: true });
+		await refreshBrowser();
 	};
 
 	const bulkDownload = async () => {
@@ -2275,15 +2274,16 @@
 				role="status"
 				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
 			>
-				File updated on disk. Your local changes are preserved. <button
+				{$i18n.t('File updated on disk. Your local changes are preserved.')}
+				<button
 					class="underline"
 					on:click={() => openEntry({ name: selectedFile!.split('/').pop()!, type: 'file' })}
-					>Reload</button
+					>{$i18n.t('Reload')}</button
 				>
 				<button
 					class="underline"
 					on:click={() => filePreviewRef.save().catch((e) => toast.error(String(e)))}
-					>Save local changes</button
+					>{$i18n.t('Save local changes')}</button
 				>
 			</div>{/if}
 		<!-- Content -->
@@ -2632,6 +2632,7 @@
 									onLongPress={enterSelectionMode}
 									onToggleExpand={toggleExpand}
 									showDate={sortBy === 'date'}
+									{showHidden}
 									parentWritable={currentWritable}
 								/>
 							{/each}

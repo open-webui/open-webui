@@ -42,7 +42,8 @@
 		showFileNavDir,
 		selectedTerminalId,
 		TTSWorker,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		visibleControls
 	} from '$lib/stores';
 
 	import {
@@ -165,6 +166,7 @@
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
+	export let onModelSelect: (models: string[]) => void = () => {};
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
@@ -926,6 +928,18 @@
 			$config?.audio?.realtime?.enabled ||
 			($config?.audio?.stt?.engine !== 'web' &&
 				($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))));
+
+	$: if (webSearchCapableModels.length < selectedModelIds.length) webSearchEnabled = false;
+	$: if (imageGenerationCapableModels.length < selectedModelIds.length)
+		imageGenerationEnabled = false;
+	$: if (codeInterpreterCapableModels.length < selectedModelIds.length)
+		codeInterpreterEnabled = false;
+	$: {
+		const filterIds = selectedFilterIds.filter((id) =>
+			toggleFilters.some((filter: { id: string }) => filter.id === id)
+		);
+		if (filterIds.length !== selectedFilterIds.length) selectedFilterIds = filterIds;
+	}
 
 	// Disable code interpreter when terminal is active (mutually exclusive)
 	$: if ($selectedTerminalId && codeInterpreterEnabled) {
@@ -2562,7 +2576,7 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5 shrink-0">
-										{#if (selectedToolIds ?? []).length > 0}
+										{#if (selectedToolIds ?? []).length > 0 && $visibleControls['chat.selected_tools']}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
 													COUNT: (selectedToolIds ?? []).length
@@ -2585,7 +2599,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if (selectedSkillIds ?? []).length > 0}
+										{#if (selectedSkillIds ?? []).length > 0 && $visibleControls['chat.selected_skills']}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Skills', {
 													COUNT: (selectedSkillIds ?? []).length
@@ -2610,7 +2624,7 @@
 
 										{#each selectedFilterIds as filterId (filterId)}
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
-											{#if filter}
+											{#if filter && $visibleControls['chat.selected_filters']}
 												<Tooltip
 													content={resolveLocalizedFunction(
 														filter,
@@ -2679,7 +2693,7 @@
 											{/if}
 										{/each}
 
-										{#if webSearchEnabled && showWebSearchButton}
+										{#if webSearchEnabled && showWebSearchButton && $visibleControls['chat.selected_web_search']}
 											<Tooltip content={$i18n.t('Web Search')} placement="top">
 												<button
 													aria-label={$i18n.t('Web Search')}
@@ -2699,7 +2713,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if imageGenerationEnabled && showImageGenerationButton}
+										{#if imageGenerationEnabled && showImageGenerationButton && $visibleControls['chat.selected_image_generation']}
 											<Tooltip content={$i18n.t('Image')} placement="top">
 												<button
 													aria-label={$i18n.t('Image')}
@@ -2719,7 +2733,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if codeInterpreterEnabled && showCodeInterpreterButton}
+										{#if codeInterpreterEnabled && showCodeInterpreterButton && $visibleControls['chat.selected_code_interpreter']}
 											<Tooltip content={$i18n.t('Code Interpreter')} placement="top">
 												<button
 													aria-label={codeInterpreterEnabled
@@ -2778,6 +2792,7 @@
 										<ModelSelector
 											bind:this={modelSelector}
 											bind:selectedModels
+											{onModelSelect}
 											showSetDefault={!history?.currentId}
 											placement="auto"
 											align="end"
@@ -2786,7 +2801,7 @@
 									</div>
 									<ModelControls selectedModels={selectedModelIds} />
 
-									{#if isActive && prompt === '' && files.length === 0}
+									{#if isActive && (history.messages[history.currentId]?.user_id ?? $_user?.id) === $_user?.id && prompt === '' && files.length === 0}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
 												<button

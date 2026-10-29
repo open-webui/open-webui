@@ -103,9 +103,18 @@
 				e.target instanceof Node &&
 				!modalElement.contains(e.target) &&
 				(e.type === 'pointerdown' ||
-					(e.target instanceof Element && e.target.closest('[role="menu"], [role="listbox"]')))
+					(e.target instanceof Element &&
+						e.target.closest('[role="menu"], [role="listbox"], [role="combobox"]')))
 			) {
 				focusTrap.pause();
+			} else if (
+				focusTrap &&
+				modalElement &&
+				e.target instanceof Element &&
+				modalElement.compareDocumentPosition(e.target) & Node.DOCUMENT_POSITION_PRECEDING &&
+				!e.target.closest('[data-sonner-toast]')
+			) {
+				focusTrap.unpause();
 			}
 		};
 		handleModalFocusIn = () => {

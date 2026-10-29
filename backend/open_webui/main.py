@@ -1645,6 +1645,17 @@ async def chat_completion(
         error_detail = None
         try:
             try:
+                if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
+                    async with Chats.edit_message_output(metadata['chat_id'], metadata['message_id']) as message:
+                        if message is not None:
+                            response_meta = dict(message.get('meta') or {})
+                            # Continuations retain the original start, including approval pauses.
+                            # A historical response without a recorded start remains unknown.
+                            if not metadata.get('assistant_message_id'):
+                                response_meta['response_started_at'] = time.time()
+                            response_meta.pop('response_ended_at', None)
+                            message['meta'] = response_meta
+                            message['done'] = False
                 if not metadata.get('direct'):
                     target = (
                         model_info
@@ -1686,6 +1697,15 @@ async def chat_completion(
                 try:
 
                     async def emit_cancel_event():
+                        if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
+                            async with Chats.edit_message_output(
+                                metadata['chat_id'], metadata['message_id']
+                            ) as message:
+                                if message is not None:
+                                    response_meta = dict(message.get('meta') or {})
+                                    response_meta.setdefault('response_ended_at', time.time())
+                                    message['meta'] = response_meta
+                                    message['done'] = True
                         event_emitter = await get_event_emitter(metadata)
                         if event_emitter:
                             await event_emitter({'type': 'chat:tasks:cancel'})
@@ -1711,6 +1731,7 @@ async def chat_completion(
                                         'parentId': metadata.get('user_message_id'),
                                         'error': {'content': error_detail},
                                         'done': True,
+                                        'meta': {'response_ended_at': time.time()},
                                     },
                                 )
                             except Exception:
@@ -1736,15 +1757,6 @@ async def chat_completion(
             # Clean up MCP clients.  Each client is isolated so one
             # failure doesn't skip the rest.
             #
-            # NOTE: asyncio.wait_for() / asyncio.shield() must NOT be used
-            # here — they create new asyncio Tasks, which violate anyio
-            # cancel-scope task-ownership rules when the MCPClient's
-            # exit_stack contains anyio transport resources (streamable_http).
-            # Exiting those cancel scopes from the wrong task raises
-            # "Attempted to exit a cancel scope that isn't the current
-            # task's current cancel scope", which propagates as a
-            # BaseException through the finally block, discards the response
-            # return value, and surfaces as a 500 "No response returned."
             # MCPClient.disconnect() suppresses known transport teardown errors
             # while still propagating real task cancellation.
             try:

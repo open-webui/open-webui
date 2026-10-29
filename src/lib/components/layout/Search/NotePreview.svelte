@@ -21,8 +21,21 @@
 		content = '';
 		const note = await getNoteById(localStorage.token, noteId).catch(() => null);
 		if (version !== generation) return;
-		if (note) content = note.data?.content?.md ?? '';
-		else error = true;
+		if (note) {
+			const terms = search.toLowerCase().split(/\s+/).filter(Boolean);
+			const pages = note.data?.pages ?? [];
+			const match =
+				pages.find(
+					(p) =>
+						terms.length &&
+						terms.every((t) => `${p.title} ${p.content.md}`.toLowerCase().includes(t))
+				) ??
+				pages.find((p) =>
+					terms.some((t) => `${p.title} ${p.content.md}`.toLowerCase().includes(t))
+				) ??
+				pages[0];
+			content = match ? `## ${match.title}\n\n${match.content.md}` : (note.data?.content?.md ?? '');
+		} else error = true;
 		loading = false;
 		await tick();
 		if (version !== generation || !body || !search.trim()) return;

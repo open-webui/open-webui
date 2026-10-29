@@ -17,7 +17,7 @@ from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import add_or_update_system_message, get_message_list
+from open_webui.utils.misc import add_or_update_system_message, get_message_list, is_raster_image_content_type
 from open_webui.utils.tool_search import strip_deferred_tools_manifest
 from starlette.datastructures import Headers
 
@@ -343,30 +343,36 @@ async def delegate(
         return 'Error: model context is required.'
     if run.get('direct'):
         return 'Error: sub-agents are unavailable for direct connections.'
+    delegated_files = []
     if file_ids:
         requested_file_ids = {str(file_id) for file_id in file_ids if file_id}
-        run['files'] = [
-            copy.deepcopy(file)
-            for file in metadata.get('files') or []
-            if str(file.get('id') or '') in requested_file_ids
-            or str(file.get('url') or '') in requested_file_ids
-            or (isinstance(file.get('file'), dict) and str(file.get('file', {}).get('id') or '') in requested_file_ids)
+        chat_messages = await Chats.get_messages_map_by_chat_id(parent_chat_id) or {}
+        # Photos are left out of the request's files, so also look on the chat's messages.
+        attached_files = [
+            *(metadata.get('files') or []),
+            *(
+                file
+                for message in chat_messages.values()
+                if message.get('role') == 'user'
+                for file in message.get('files') or []
+                if file.get('type') == 'image' or is_raster_image_content_type(file.get('content_type'))
+            ),
         ]
-        found_file_ids = {
-            str(value)
-            for file in run['files']
-            for value in (
-                file.get('id'),
-                file.get('url'),
-                file.get('file', {}).get('id') if isinstance(file.get('file'), dict) else None,
-            )
-            if value
-        }
+        found_file_ids = set()
+        for file in attached_files:
+            nested_file = file.get('file') if isinstance(file.get('file'), dict) else {}
+            keys = {str(value) for value in (file.get('id'), file.get('url'), nested_file.get('id')) if value}
+            if keys & requested_file_ids and not keys & found_file_ids:
+                delegated_files.append(copy.deepcopy(file))
+                found_file_ids |= keys
         missing_file_ids = sorted(requested_file_ids - found_file_ids)
         if missing_file_ids:
             return f'Error: file_ids not attached or unavailable: {", ".join(missing_file_ids)}'
-    else:
-        run['files'] = []
+    run['files'] = [
+        file
+        for file in delegated_files
+        if file.get('type') != 'image' and not is_raster_image_content_type(file.get('content_type'))
+    ]
 
     delegation_id = f'deleg_{uuid4().hex[:8]}'
     foreground_semaphore = None
@@ -391,7 +397,7 @@ async def delegate(
         user_message_id = str(uuid4())
         assistant_message_id = str(uuid4())
         prompt = f'{task}\n\n## Context\n{context}' if context else task
-        prompt_files = copy.deepcopy(run.get('files') or [])
+        prompt_files = delegated_files
         user_message = {
             'id': user_message_id,
             'parentId': None,
@@ -520,6 +526,8 @@ async def delegate(
             if len(summary) > max_output:
                 summary = f'{summary[:max_output]}\n\n[output truncated]'
             error = message.get('error')
+            if isinstance(error, dict):
+                error = error.get('content') or 'Sub-agent failed.'
             return {
                 'status': 'error' if error else 'completed',
                 'summary': summary or ('Sub-agent produced no output.' if not error else ''),
@@ -707,5 +715,8 @@ async def delegate(
         return f'Error: {exc}'
 
     if result.get('status') != 'completed':
-        return f'Error: {result.get("error") or "sub-agent failed."}'
+        error_text = f'Error: {result.get("error") or "sub-agent failed."}'
+        if result.get('summary'):
+            return f'{error_text}\nPartial output:\n{result["summary"]}'
+        return error_text
     return result.get('summary') or 'Sub-agent produced no output.'

@@ -17,6 +17,7 @@
 	import { settings, user } from '$lib/stores';
 	import { canManageChats, canUseTemporaryChats } from '$lib/utils/settings-access';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 	import ShortcutItem from '../ShortcutItem.svelte';
 
 	type ShortcutEntry = {
@@ -242,6 +243,15 @@
 											on:click={() => (recordingShortcut = id)}
 										>
 											{formatChord(chord)}
+										</button>
+										<button
+											class="rounded-lg p-0.5 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+											type="button"
+											aria-label={$i18n.t('Remove')}
+											title={$i18n.t('Remove')}
+											on:click={() => setBinding(id, '')}
+										>
+											<XMark className="size-3" strokeWidth="2" />
 										</button>
 									{:else}
 										<button

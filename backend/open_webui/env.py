@@ -674,6 +674,23 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
+# Terminal requests can provision a container before returning metadata.
+AIOHTTP_CLIENT_TIMEOUT_TERMINAL = os.getenv(
+    'AIOHTTP_CLIENT_TIMEOUT_TERMINAL',
+    os.getenv('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA', '60'),
+)
+
+if AIOHTTP_CLIENT_TIMEOUT_TERMINAL == '':
+    AIOHTTP_CLIENT_TIMEOUT_TERMINAL = None
+else:
+    try:
+        AIOHTTP_CLIENT_TIMEOUT_TERMINAL = int(AIOHTTP_CLIENT_TIMEOUT_TERMINAL)
+    except (ValueError, TypeError):
+        AIOHTTP_CLIENT_TIMEOUT_TERMINAL = 60
+
+if AIOHTTP_CLIENT_TIMEOUT_TERMINAL is not None and AIOHTTP_CLIENT_TIMEOUT_TERMINAL <= 0:
+    AIOHTTP_CLIENT_TIMEOUT_TERMINAL = None
+
 AIOHTTP_FILE_STREAM_CHUNK_SIZE = os.getenv('AIOHTTP_FILE_STREAM_CHUNK_SIZE', str(1024 * 1024))
 try:
     AIOHTTP_FILE_STREAM_CHUNK_SIZE = int(AIOHTTP_FILE_STREAM_CHUNK_SIZE)
@@ -740,6 +757,15 @@ try:
         AIOHTTP_POOL_DNS_TTL = 300
 except ValueError:
     AIOHTTP_POOL_DNS_TTL = 300
+
+# Target chunks buffered before insertion, rounded up to a whole embedding batch.
+try:
+    RAG_EMBEDDING_BUFFER_SIZE = int(os.getenv('RAG_EMBEDDING_BUFFER_SIZE', '1000'))
+    if RAG_EMBEDDING_BUFFER_SIZE <= 0:
+        raise ValueError
+except ValueError:
+    log.warning('RAG_EMBEDDING_BUFFER_SIZE must be a positive integer. Defaulting to 1000.')
+    RAG_EMBEDDING_BUFFER_SIZE = 1000
 
 RAG_EMBEDDING_TIMEOUT = os.getenv('RAG_EMBEDDING_TIMEOUT', '')
 

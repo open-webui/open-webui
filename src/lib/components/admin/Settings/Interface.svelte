@@ -103,7 +103,11 @@
 						features: {
 							...current.features,
 							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION,
-							enable_tool_permissions: chatConfig.ENABLE_TOOL_PERMISSIONS
+							enable_tool_permissions: chatConfig.ENABLE_TOOL_PERMISSIONS,
+							enable_title_generation: taskConfig.ENABLE_TITLE_GENERATION,
+							enable_follow_up_generation: taskConfig.ENABLE_FOLLOW_UP_GENERATION,
+							enable_tags_generation: taskConfig.ENABLE_TAGS_GENERATION,
+							enable_autocomplete_generation: taskConfig.ENABLE_AUTOCOMPLETE_GENERATION
 						}
 					}
 				: current

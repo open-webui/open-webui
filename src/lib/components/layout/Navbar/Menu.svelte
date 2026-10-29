@@ -37,6 +37,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
+	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -44,6 +45,7 @@
 	export let readOnly: boolean = false;
 
 	export let shareHandler: Function;
+	export let renameHandler: Function;
 	export let moveChatHandler: Function;
 
 	export let archiveChatHandler: Function;
@@ -464,7 +466,22 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
 					</button>
 				</DropdownSub>
+			{/if}
 
+			{#if (!readOnly || $folders.find((folder) => folder.id === chat?.folder_id)?.user_id === $user?.id) && !$temporaryChatEnabled && chat?.id}
+				<button
+					draggable="false"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					on:click={() => {
+						renameHandler();
+					}}
+				>
+					<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Rename')}</div>
+				</button>
+			{/if}
+
+			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"

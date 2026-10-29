@@ -132,10 +132,11 @@
 		replacement: (content) => `<u>${content}</u>`
 	});
 
-	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import { onMount, onDestroy, tick, getContext, getAllContexts } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const componentContext = getAllContexts();
 	const eventDispatch = createEventDispatcher();
 
 	import { Fragment, DOMParser, Slice, type Node, type Schema } from 'prosemirror-model';
@@ -150,13 +151,40 @@
 	// Bubble and Floating menus are currently fixed to v2 due to styling issues in v3
 	// TODO: Update to v3 when styling issues are resolved
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
-	import FloatingMenu from '@tiptap/extension-floating-menu';
+	import FloatingMenu, { FloatingMenuView } from '@tiptap/extension-floating-menu';
+
+	class MountedFloatingMenuView extends FloatingMenuView {
+		updatePosition() {
+			// Tiptap leaves a pending resize timer alive after destroying a menu.
+			// Switching note tabs can destroy its view before that timer runs.
+			if (this.editor.isDestroyed || this.view.isDestroyed) return;
+			super.updatePosition();
+		}
+	}
+
+	const MountedFloatingMenu = FloatingMenu.extend({
+		addProseMirrorPlugins() {
+			const element = this.options.element;
+			if (!element) return [];
+			return [
+				new Plugin({
+					key:
+						typeof this.options.pluginKey === 'string'
+							? new PluginKey(this.options.pluginKey)
+							: this.options.pluginKey,
+					view: (view) =>
+						new MountedFloatingMenuView({ ...this.options, element, editor: this.editor, view })
+				})
+			];
+		}
+	});
 
 	import { TableKit } from '@tiptap/extension-table';
 	import { ListKit } from '@tiptap/extension-list';
 	import { Placeholder, CharacterCount } from '@tiptap/extensions';
 
 	import Image from './RichTextInput/Image/index.js';
+	import FileAttachment from './RichTextInput/FileAttachment';
 	// import TiptapImage from '@tiptap/extension-image';
 
 	import FileHandler from '@tiptap/extension-file-handler';
@@ -218,6 +246,7 @@
 	);
 
 	export let editor: Editor | null = null;
+	$: eventDispatch('editor', editor);
 
 	export let socket = null;
 	export let user = null;
@@ -246,6 +275,7 @@
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
+	export let attachments = false;
 	export let suggestions = null;
 
 	export let onFileDrop = (currentEditor, files, pos) => {
@@ -393,6 +423,18 @@
 	$: serializeContent(richText);
 
 	let provider: SocketIOCollaborationProvider | null = null;
+	export let cursorTarget = null;
+	$: if (cursorTarget && editor) {
+		const target = cursorTarget;
+		cursorTarget = null;
+		if (provider) provider.revealCursor(target);
+		else
+			editor.commands.focus(Math.min(target.cursor_position ?? 0, editor.state.doc.content.size));
+	}
+	export const flush = async () => {
+		await tick();
+		await provider?.flush();
+	};
 
 	let floatingMenuElement: Element | null = null;
 	let bubbleMenuElement: Element | null = null;
@@ -804,6 +846,23 @@
 		}
 	});
 
+	onMount(() => {
+		// Read-only viewers join for presence without starting the editing provider.
+		if (!collaboration || editable || !documentId || !socket || !user) return;
+		const presenceSocket = socket;
+		const presenceDocumentId = documentId;
+		const join = () =>
+			presenceSocket.emit('ydoc:document:join', { document_id: presenceDocumentId });
+		presenceSocket.on('connect', join);
+		if (presenceSocket.connected) join();
+		return () => {
+			presenceSocket.off('connect', join);
+			if (presenceSocket.connected) {
+				presenceSocket.emit('ydoc:document:leave', { document_id: presenceDocumentId });
+			}
+		};
+	});
+
 	onMount(async () => {
 		content = value;
 
@@ -912,7 +971,8 @@
 					: []),
 
 				CharacterCount.configure({}),
-				...(image ? [Image] : []),
+				...(image ? [Image.configure({ allowBase64: attachments })] : []),
+				...(attachments ? [FileAttachment.configure({ context: componentContext })] : []),
 				...(fileHandler
 					? [
 							FileHandler.configure({
@@ -958,7 +1018,7 @@
 									return view.hasFocus() && from !== to;
 								}
 							}),
-							FloatingMenu.configure({
+							MountedFloatingMenu.configure({
 								element: floatingMenuElement,
 								appendTo: () => document.body,
 								options: {
@@ -991,6 +1051,7 @@
 				...(collaboration && provider ? [provider.getEditorExtension()] : [])
 			],
 			content: provider ? undefined : content,
+			editable,
 			autofocus: messageInput && !$showCallOverlay,
 			onTransaction: ({ transaction }) => {
 				if (!editor) return;
@@ -1403,6 +1464,7 @@
 
 		if (editor) {
 			editor.destroy();
+			editor = null;
 		}
 	});
 

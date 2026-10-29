@@ -19,12 +19,18 @@ from open_webui.models.notes import (
     NoteForm,
     NoteListResponse,
     NoteModel,
+    NotePageConflict,
+    NotePageOperation,
     Notes,
     NoteUpdateForm,
     NoteUserResponse,
+    get_content_files,
+    get_note_files,
+    matching_page,
+    normalize_pages,
 )
 from open_webui.models.users import UserModel, UserResponse, Users
-from open_webui.socket.main import leave_room_for_users, sio
+from open_webui.socket.main import close_changed_note_documents, leave_room_for_users, sio
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_permission,
@@ -56,11 +62,17 @@ async def check_notes_access(user: UserModel, db: AsyncSession):
         )
 
 
-def _truncate_note_data(data: Optional[dict], max_length: int = 1000) -> Optional[dict]:
+def _truncate_note_data(data: Optional[dict], max_length: int = 1000, query: str = '') -> Optional[dict]:
     if not data:
         return data
-    md = (data.get('content') or {}).get('md') or ''
-    return {'content': {'md': md[:max_length]}}
+    page = matching_page(data, query)
+    md = page['content'].get('md') or ''
+    return {
+        'content': {'md': md[:max_length]},
+        'page_count': len(data.get('pages') or [None]),
+        'page_id': page['id'],
+        'page_title': page['title'],
+    }
 
 
 async def leave_note_rooms_for_revoked_users(
@@ -76,7 +88,10 @@ async def leave_note_rooms_for_revoked_users(
     users = await Users.get_users_by_user_ids(list(revoked_user_ids), db=db)
     # Admins retain access to notes regardless of grants.
     user_ids = [user.id for user in users if user.role != 'admin']
-    for room in [f'note:{note.id}', f'doc_note:{note.id}']:
+    page_rooms = [
+        f'doc_note:{note.id}:page:{p["id"]}:{p.get("generation", 0)}' for p in normalize_pages(note.data)['pages']
+    ]
+    for room in [f'note:{note.id}', f'doc_note:{note.id}', *page_rooms]:
         await leave_room_for_users(room, user_ids)
 
 
@@ -210,7 +225,7 @@ async def search_notes(
     pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
     for note in result.items:
         note.is_pinned = note.id in pinned_note_ids
-        note.data = _truncate_note_data(note.data)
+        note.data = _truncate_note_data(note.data, query=query or '')
     return result
 
 
@@ -236,6 +251,9 @@ async def create_new_note(
         resource_type='note',
         db=db,
     )
+
+    if not await has_access_to_note_files(None, get_note_files(form_data.data), user, db=db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
         note = await Notes.insert_new_note(user.id, form_data, db=db)
@@ -534,15 +552,17 @@ async def update_note_by_id(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    if (
-        form_data.data
-        and 'files' in form_data.data
-        and not await has_access_to_note_files(note, form_data.data['files'], user, db=db)
+    if form_data.data and not await has_access_to_note_files(
+        note, get_content_files(form_data.data.get('content')), user, db=db
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
+        if form_data.page_generation is not None:
+            raise ValueError('Page generation is managed by collaboration')
+        previous = note
         note = await Notes.update_note_by_id(id, form_data, db=db)
+        await close_changed_note_documents(previous, note)
 
         pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
         note.is_pinned = note.id in pinned_note_ids
@@ -552,6 +572,8 @@ async def update_note_by_id(
             event_data['data'] = {
                 key: note.data.get(key) for key in form_data.data.keys() if note.data is not None and key in note.data
             }
+        if form_data.page_operation or (form_data.data and {'content', 'files'} & form_data.data.keys()):
+            event_data['data'] = note.data
 
         await sio.emit(
             'events:note',
@@ -567,9 +589,24 @@ async def update_note_by_id(
             data={'title': note.title},
         )
         return note
+    except NotePageConflict as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
+
+
+@router.post('/{id}/pages/update', response_model=NoteModel)
+async def update_note_pages(
+    request: Request,
+    id: str,
+    form_data: NotePageOperation,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await update_note_by_id(request, id, NoteUpdateForm(page_operation=form_data), user, db)
 
 
 ############################
@@ -704,8 +741,13 @@ async def delete_note_by_id(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
+        previous = note
+        page_rooms = [
+            f'doc_note:{id}:page:{p["id"]}:{p.get("generation", 0)}' for p in normalize_pages(note.data)['pages']
+        ]
         note = await Notes.delete_note_by_id(id, db=db)
-        for room in [f'note:{id}', f'doc_note:{id}']:
+        await close_changed_note_documents(previous, None)
+        for room in [f'note:{id}', f'doc_note:{id}', *page_rooms]:
             await sio.close_room(room)
 
         await publish_event(

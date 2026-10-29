@@ -254,7 +254,8 @@ export const getModelChats = async (
 	skip: number = 0,
 	limit: number = 50,
 	orderBy: string | null = null,
-	direction: string | null = null
+	direction: string | null = null,
+	groupId: string | null = null
 ) => {
 	let error = null;
 
@@ -265,6 +266,7 @@ export const getModelChats = async (
 	if (limit) searchParams.append('limit', limit.toString());
 	if (orderBy) searchParams.append('order_by', orderBy);
 	if (direction) searchParams.append('direction', direction);
+	if (groupId) searchParams.append('group_id', groupId);
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/analytics/models/${encodeURIComponent(modelId)}/chats?${searchParams.toString()}`,

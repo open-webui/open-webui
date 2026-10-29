@@ -14,7 +14,6 @@ from urllib.parse import unquote
 
 from fastapi import HTTPException, Request
 
-from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.env import (
     KNOWLEDGE_GREP_MAX_MATCHES,
     VIEW_FILE_DEFAULT_MAX_CHARS,
@@ -27,8 +26,8 @@ from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
 from open_webui.models.messages import Message, Messages
-from open_webui.models.notes import Notes
-from open_webui.models.users import UserModel
+from open_webui.models.notes import NotePageConflict, Notes, get_content_files, get_page, matching_page
+from open_webui.models.users import UserModel, Users
 from open_webui.retrieval.utils import filter_source_metadata, get_content_from_url
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
@@ -62,14 +61,15 @@ from open_webui.routers.memories import (
     update_memories as _update_memories,
 )
 from open_webui.routers.retrieval import search_web as _search_web
-from open_webui.socket.main import sio
-from open_webui.tasks import stop_item_tasks
+from open_webui.socket.main import close_changed_note_documents, sio
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
+from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
+from open_webui.utils.terminals import upload_files_to_terminal
 
 log = logging.getLogger(__name__)
 
@@ -376,6 +376,8 @@ async def generate_image(
     __event_emitter__: callable = None,
     __chat_id__: str = None,
     __message_id__: str = None,
+    __metadata__: dict = None,
+    __event_call__: callable = None,
 ) -> str:
     """
     Generate an image based on a text prompt.
@@ -383,7 +385,7 @@ async def generate_image(
     :param prompt: A detailed description of the image to generate
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
-    :return: Confirmation that the image was generated, or an error message
+    :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -400,6 +402,10 @@ async def generate_image(
                 else None
             ),
             user=user,
+        )
+
+        await upload_files_to_terminal(
+            __request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__}
         )
 
         # Prepare file entries for the images
@@ -429,7 +435,10 @@ async def generate_image(
             return JSONCodec.dumps(
                 {
                     'status': 'success',
-                    'message': 'The image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.',
+                    'message': (
+                        'The image is already visible in chat. Use terminal_path with terminal tools or '
+                        'display_file when available to continue the requested task.'
+                    ),
                     'images': images,
                 },
                 ensure_ascii=False,
@@ -450,6 +459,8 @@ async def edit_image(
     __event_emitter__: callable = None,
     __chat_id__: str = None,
     __message_id__: str = None,
+    __metadata__: dict = None,
+    __event_call__: callable = None,
 ) -> str:
     """
     Transform one or more existing images according to a text prompt.
@@ -459,7 +470,7 @@ async def edit_image(
     :param image_urls: Source image URLs to modify or use as composition inputs
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
-    :return: Confirmation that the images were edited, or an error message
+    :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -476,6 +487,10 @@ async def edit_image(
                 else None
             ),
             user=user,
+        )
+
+        await upload_files_to_terminal(
+            __request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__}
         )
 
         # Prepare file entries for the images
@@ -505,7 +520,10 @@ async def edit_image(
             return JSONCodec.dumps(
                 {
                     'status': 'success',
-                    'message': 'The edited image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.',
+                    'message': (
+                        'The edited image is already visible in chat. Use terminal_path with terminal tools or '
+                        'display_file when available to continue the requested task.'
+                    ),
                     'images': images,
                 },
                 ensure_ascii=False,
@@ -1184,10 +1202,11 @@ async def search_notes(
             if end_ts and note.updated_at > end_ts:
                 continue
 
-            # Extract a snippet from the markdown content
+            # Extract a snippet from the matching page.
+            page = matching_page(note.data, query)
             content_snippet = ''
-            if note.data and note.data.get('content', {}).get('md'):
-                md_content = note.data['content']['md']
+            if page['content'].get('md'):
+                md_content = page['content']['md']
                 content_lower = md_content.lower()
 
                 # Find the first matching word to center the snippet around.
@@ -1217,6 +1236,9 @@ async def search_notes(
                     'id': note.id,
                     'title': note.title,
                     'snippet': content_snippet,
+                    'page_id': page['id'],
+                    'page_title': page['title'],
+                    'url': f'/notes/{note.id}?page={page["id"]}',
                     'updated_at': note.updated_at,
                 }
             )
@@ -1232,6 +1254,7 @@ async def search_notes(
 
 async def view_note(
     note_id: str,
+    page_id: Optional[str] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -1239,6 +1262,7 @@ async def view_note(
     Get the full content of a note by its ID.
 
     :param note_id: The ID of the note to retrieve
+    :param page_id: Page to read; omit to inspect the complete note and its page directory
     :return: JSON with the note's id, title, and full markdown content
     """
     if __request__ is None:
@@ -1272,16 +1296,24 @@ async def view_note(
         ):
             return JSONCodec.dumps({'error': 'Access denied'})
 
-        # Extract markdown content
-        content = ''
-        if note.data and note.data.get('content', {}).get('md'):
-            content = note.data['content']['md']
+        page = get_page(note.data, page_id) if page_id or len(note.data['pages']) == 1 else None
+        content = page['content'].get('md', '') if page else note.data['content'].get('md', '')
+        # Keep the version read by this tool run out of the model-facing interface.
+        if not hasattr(__request__.state, 'note_page_revisions'):
+            __request__.state.note_page_revisions = {}
+        for read_page in [page] if page else note.data['pages']:
+            __request__.state.note_page_revisions[(user_id, note.id, read_page['id'])] = read_page.get('revision', 0)
 
         return JSONCodec.dumps(
             {
                 'id': note.id,
                 'title': note.title,
                 'content': content,
+                'page_id': page['id'] if page else None,
+                'page_title': page['title'] if page else None,
+                'pages': [
+                    {'id': p['id'], 'title': p['title'], 'parent_id': p.get('parent_id')} for p in note.data['pages']
+                ],
                 'updated_at': note.updated_at,
                 'created_at': note.created_at,
             },
@@ -1322,6 +1354,9 @@ async def write_note(
             access_grants=[],  # Private by default - only owner can access
         )
 
+        editor = await Users.get_user_by_id(user_id)
+        if not editor or not await has_access_to_note_files(None, get_content_files(form.data['content']), editor):
+            return JSONCodec.dumps({'error': 'Cannot attach files you cannot access'})
         new_note = await Notes.insert_new_note(user_id, form)
 
         if not new_note:
@@ -1346,12 +1381,14 @@ async def replace_note_content(
     content: Optional[str] = None,
     operations: Optional[list[dict]] = None,
     title: Optional[str] = None,
+    page_id: Optional[str] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
     """
     Update an existing note by replacing the whole markdown content, exact text, or character ranges.
 
+    Read the note with view_note before editing. If it changes meanwhile, read it again before retrying.
     Prefer "replace_text" when only part of the note changes. Supply either find or start/end, not both.
     find is non-empty, literal, and case-sensitive.
     Text matches are non-overlapping. Multiple matches require a 0-indexed occurrence or replace_all=true;
@@ -1371,6 +1408,7 @@ async def replace_note_content(
     - {"action": "replace_text", "start": 0, "end": 10, "content": "...", "expected": "..."}
     - {"action": "replace_text", "find": "old text", "content": "new text", "occurrence": 0, "replace_all": false}
     :param title: Optional new title for the note
+    :param page_id: Page to edit; required for notes with multiple pages. Use the active page_id supplied in the request unless the user selects another page
     :return: JSON with success status and updated note info
     """
     if __request__ is None:
@@ -1391,7 +1429,16 @@ async def replace_note_content(
         if __user__.get('role') != 'admin' and not await _has_write_access_to_note(note, user_id):
             return JSONCodec.dumps({'error': 'Write access denied', 'code': 'write_access_denied'})
 
-        current_content = ((note.data or {}).get('content') or {}).get('md') or ''
+        page = get_page(note.data, page_id)
+        page_id = page['id']
+        read_revisions = getattr(__request__.state, 'note_page_revisions', {})
+        read_key = (user_id, note.id, page_id)
+        if read_key not in read_revisions:
+            return JSONCodec.dumps({'error': 'Read this page with view_note before editing', 'code': 'read_required'})
+        read_revision = read_revisions[read_key]
+        if read_revision != page.get('revision', 0):
+            raise NotePageConflict('Page changed since you read it. Use view_note again before editing')
+        current_content = page['content'].get('md') or ''
         applied_operation_count = 0
         range_operations = []
         if operations is not None:
@@ -1539,37 +1586,40 @@ async def replace_note_content(
         elif content is None:
             return JSONCodec.dumps({'error': 'content or operations is required', 'code': 'content_required'})
 
-        try:
-            await stop_item_tasks(__request__.app.state.redis, f'note:{note_id}')
-        except Exception:
-            pass
-
         update_data = {
+            'page_id': page_id,
+            'page_revision': read_revision,
             'data': {
-                **(note.data or {}),
                 'content': {
-                    **((note.data or {}).get('content') or {}),
                     'json': None,
                     'html': '',
                     'md': content,
                 },
-            }
+            },
         }
         if title:
             update_data['title'] = title
 
+        editor = await Users.get_user_by_id(__user__['id'])
+        if not editor or not await has_access_to_note_files(
+            note, get_content_files(update_data['data']['content']), editor
+        ):
+            return JSONCodec.dumps({'error': 'Cannot attach files you cannot access'})
         form = NoteUpdateForm(**update_data)
         updated_note = await Notes.update_note_by_id(note_id, form)
 
         if not updated_note:
             return JSONCodec.dumps({'error': 'Failed to update note', 'code': 'update_failed'})
 
+        read_revisions[read_key] = get_page(updated_note.data, page_id).get('revision', 0)
+        await close_changed_note_documents(note, updated_note)
         await _emit_note_updated(__request__, __user__, updated_note)
 
         return JSONCodec.dumps(
             {
                 'status': 'success',
                 'id': updated_note.id,
+                'page_id': page_id,
                 'title': updated_note.title,
                 'updated_at': updated_note.updated_at,
                 'applied_operation_count': applied_operation_count,
@@ -1577,6 +1627,8 @@ async def replace_note_content(
             },
             ensure_ascii=False,
         )
+    except NotePageConflict as e:
+        return JSONCodec.dumps({'error': str(e), 'code': 'page_conflict'})
     except Exception as e:
         log.exception(f'replace_note_content error: {e}')
         return JSONCodec.dumps({'error': str(e), 'code': 'unexpected_error'})
@@ -1626,7 +1678,7 @@ async def search_chats(
             limit=count * 3,  # Fetch more for filtering
         )
 
-        results = []
+        matched = []
         for chat in chats:
             # Skip the current chat to avoid showing it in search results
             if __chat_id__ and chat.id == __chat_id__:
@@ -1638,31 +1690,16 @@ async def search_chats(
             if end_timestamp and chat.updated_at > end_timestamp:
                 continue
 
-            # Find a matching message snippet
-            snippet = ''
-            messages = (getattr(chat, 'chat', None) or {}).get('history', {}).get('messages', {})
-            if not messages:
-                messages = (getattr(chat, 'chat', None) or {}).get('messages', {}) or {}
-            if isinstance(messages, list):
-                messages = {str(idx): message for idx, message in enumerate(messages)}
+            matched.append(chat)
+            if len(matched) >= count:
+                break
 
-            lower_query = chat_search_content_query(query)
-            needles = list(dict.fromkeys([lower_query, *chat_search_terms(lower_query)])) if lower_query else []
-
-            for needle in needles:
-                for msg_id, msg in messages.items():
-                    content = msg.get('content', '') if isinstance(msg, dict) else ''
-                    if isinstance(content, str) and needle in content.lower():
-                        idx = content.lower().find(needle)
-                        start = max(0, idx - 50)
-                        end = min(len(content), idx + len(needle) + 100)
-                        snippet = (
-                            ('...' if start > 0 else '') + content[start:end] + ('...' if end < len(content) else '')
-                        )
-                        break
-                if snippet:
-                    break
-
+        snippets = await Chats.get_chat_search_snippets([chat.id for chat in matched], user_id, query)
+        lower_query = chat_search_content_query(query)
+        needles = list(dict.fromkeys([lower_query, *chat_search_terms(lower_query)])) if lower_query else []
+        results = []
+        for chat in matched:
+            snippet = snippets.get(chat.id) or ''
             title = chat.title or ''
             if not snippet and any(needle in title.lower() for needle in needles):
                 snippet = f'Title match: {title}'
@@ -1675,9 +1712,6 @@ async def search_chats(
                     'updated_at': chat.updated_at,
                 }
             )
-
-            if len(results) >= count:
-                break
 
         return JSONCodec.dumps(results, ensure_ascii=False)
     except Exception as e:
@@ -3086,6 +3120,67 @@ async def view_knowledge_file(
         return JSONCodec.dumps({'error': str(e)})
 
 
+async def display_file(
+    path: str,
+    page: int | None = None,
+    inline: bool = False,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: list[dict] | None = None,
+) -> str:
+    """
+    Show a terminal, chat, or knowledge base file to the user.
+    After display_file succeeds, do not display the same file again or emit Markdown for it.
+
+    :param path: Terminal file path, or file_id or /api/v1/files/<file_id>/content for a chat or knowledge base file
+    :param page: For PDF, DOCX, and PPTX files, open the preview at this 1-based page or slide number
+    :param inline: Show terminal files inline instead of opening the file viewer; uploaded files always display inline
+    :return: JSON with the file's path, name, content type, and display state
+    """
+    if __request__ is None:
+        return JSONCodec.dumps({'error': 'Request context not available', 'exists': False})
+
+    if not __user__:
+        return JSONCodec.dumps({'error': 'User context not available', 'exists': False})
+
+    try:
+        from open_webui.models.files import Files
+
+        if '/' not in path:
+            path = f'/api/v1/files/{path}/content'
+        parts = path.split('/')
+        if len(parts) != 6 or parts[:4] != ['', 'api', 'v1', 'files'] or parts[-1] != 'content':
+            return JSONCodec.dumps(
+                {'error': 'Use file_id or /api/v1/files/<file_id>/content for an uploaded file.', 'exists': False}
+            )
+
+        file = await Files.get_file_by_id(parts[4])
+        if not file:
+            return JSONCodec.dumps({'error': 'File not found', 'exists': False})
+
+        if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
+            return JSONCodec.dumps({'error': 'File not found', 'exists': False})
+
+        file_meta = file.meta or {}
+        result = {
+            'type': 'file',
+            'source': 'open_webui',
+            'exists': True,
+            'displayed': True,
+            'path': path,
+            'full_path': path,
+            'name': file_meta.get('name') or file.filename,
+            'content_type': file_meta.get('content_type') or 'application/octet-stream',
+            'mime_type': file_meta.get('content_type') or 'application/octet-stream',
+        }
+        if page:
+            result['page'] = page
+        return JSONCodec.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'display_file error: {e}')
+        return JSONCodec.dumps({'error': str(e), 'exists': False})
+
+
 async def list_knowledge(
     knowledge_id: Optional[str] = None,
     skip: int = 0,
@@ -3496,7 +3591,9 @@ async def query_knowledge_bases(
         if not embedding_function:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
         user_model = UserModel(**__user__)
-        query_embedding = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user_model)
+        query_embedding = await embedding_function(
+            query, prefix=await Config.get('rag.embedding_query_prefix'), user=user_model
+        )
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
         top_results_heap = []
@@ -3604,6 +3701,7 @@ async def view_skill(
             return JSONCodec.dumps(skill, ensure_ascii=False)
 
         from types import SimpleNamespace
+
         from open_webui.models.skills import get_skill_snapshot
         from open_webui.routers.skills import authorized_skill
         from open_webui.utils.skill_files import file_summaries
@@ -3651,6 +3749,7 @@ async def read_skill_file(
     try:
         from types import SimpleNamespace
         from urllib.parse import urlencode
+
         from open_webui.models.skills import get_skill_snapshot
         from open_webui.routers.skills import authorized_skill
         from open_webui.utils.skill_files import file_summaries
@@ -3757,6 +3856,7 @@ async def grep_skill_files(
             files = [{'path': 'SKILL.md', 'content': skill['content']}]
         else:
             from types import SimpleNamespace
+
             from open_webui.models.skills import get_skill_snapshot
             from open_webui.routers.skills import authorized_skill
 
@@ -3807,10 +3907,11 @@ async def create_skill(
     """
     try:
         from types import SimpleNamespace
-        from open_webui.routers.skills import create_new_skill
+
         from open_webui.models.skills import SkillForm
-        from open_webui.utils.skill_files import frontmatter
+        from open_webui.routers.skills import create_new_skill
         from open_webui.utils.access_control import has_permission
+        from open_webui.utils.skill_files import frontmatter
 
         if __request__ is None or not __user__:
             raise ValueError('Request and user context required')
@@ -3857,9 +3958,10 @@ async def update_skill_files(
     """
     try:
         from types import SimpleNamespace
-        from open_webui.routers.skills import authorized_skill
-        from open_webui.models.skills import Skills
+
         from open_webui.events import EVENTS, publish_event
+        from open_webui.models.skills import Skills
+        from open_webui.routers.skills import authorized_skill
 
         if __request__ is None or not __user__:
             raise ValueError('Request and user context required')
@@ -4127,7 +4229,7 @@ async def create_automation(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, AutomationTarget, Automations
+        from open_webui.models.automations import AutomationData, AutomationForm, Automations, AutomationTarget
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
@@ -4226,7 +4328,7 @@ async def update_automation(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, AutomationTarget, Automations
+        from open_webui.models.automations import AutomationData, AutomationForm, Automations, AutomationTarget
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule

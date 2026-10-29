@@ -133,9 +133,10 @@
 				const model_id = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
 				const { KokoroTTS } = await import('kokoro-js');
+				const adapter = await navigator?.gpu?.requestAdapter().catch(() => null);
 				TTSModel = await KokoroTTS.from_pretrained(model_id, {
 					dtype: TTSEngineConfig.dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
-					device: !!navigator?.gpu ? 'webgpu' : 'wasm', // Detect WebGPU
+					device: adapter ? 'webgpu' : 'wasm', // Detect WebGPU
 					progress_callback: (e) => {
 						TTSModelProgress = e;
 						console.log(e);

@@ -87,7 +87,7 @@
 		} else action();
 	};
 	beforeNavigate(({ cancel }) => {
-		if (dirty && !window.confirm('Discard unsaved skill changes?')) cancel();
+		if (dirty && !window.confirm($i18n.t('Discard unsaved skill changes?'))) cancel();
 	});
 	const loadHistory = async () => {
 		historyLoading = true;
@@ -224,6 +224,7 @@
 
 	let accessGrants: any[] = [];
 	let showAccessControlModal = false;
+	let savedAccessGrants: any[] = [];
 	const handleContentChange = (path: string, content: string) => {
 		if (edit || path !== 'SKILL.md') return;
 		const fields = parseFrontmatter(content);
@@ -301,7 +302,7 @@
 
 <ConfirmDialog
 	bind:show={discard}
-	title="Discard unsaved changes?"
+	title={$i18n.t('Discard unsaved changes?')}
 	on:confirm={() => {
 		remember();
 		discardAction();
@@ -329,9 +330,11 @@
 	onChange={async () => {
 		if (edit && skill?.id) {
 			try {
-				await updateSkillAccessGrants(localStorage.token, skill.id, accessGrants);
+				const saved = await updateSkillAccessGrants(localStorage.token, skill.id, accessGrants);
+				savedAccessGrants = structuredClone(saved.access_grants);
 				toast.success($i18n.t('Saved'));
 			} catch (error) {
+				accessGrants = structuredClone(savedAccessGrants);
 				toast.error(`${error}`);
 			}
 		}
@@ -359,7 +362,12 @@
 				<LanguageModeSelect bind:value={locale} translatedLocales={Object.keys(meta.i18n ?? {})} />
 				{#if !disabled}
 					{#if $user?.permissions?.sharing?.skills || $user?.role === 'admin'}
-						<AccessButton on:click={() => (showAccessControlModal = true)} />
+						<AccessButton
+							on:click={() => {
+								savedAccessGrants = structuredClone(accessGrants);
+								showAccessControlModal = true;
+							}}
+						/>
 					{/if}
 				{:else}
 					<span class="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-500 dark:bg-gray-850">
@@ -427,12 +435,12 @@
 				role="alert"
 				class="flex flex-wrap gap-3 bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100"
 			>
-				<span>This skill has a newer version. Your draft is preserved.</span><button
+				<span>{$i18n.t('This skill has a newer version. Your draft is preserved.')}</span><button
 					type="button"
-					on:click={() => confirmDiscard(reload)}>Reload latest</button
-				><button type="button" on:click={saveCopy}>Save draft as copy</button><button
+					on:click={() => confirmDiscard(reload)}>{$i18n.t('Reload latest')}</button
+				><button type="button" on:click={saveCopy}>{$i18n.t('Save draft as copy')}</button><button
 					type="button"
-					on:click={() => (conflict = false)}>Keep editing</button
+					on:click={() => (conflict = false)}>{$i18n.t('Keep editing')}</button
 				>
 			</div>{/if}
 		<div
@@ -486,7 +494,7 @@
 								>
 									<button
 										type="button"
-										aria-label="Select version"
+										aria-label={$i18n.t('Select version')}
 										class="flex h-7 max-w-full items-center gap-2 rounded-lg bg-transparent px-2 text-xs text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
 									>
 										<span class="truncate"
@@ -612,8 +620,8 @@
 			<div class="flex shrink-0 justify-end gap-3 py-2">
 				<input
 					class="min-w-0 flex-1 bg-transparent px-2 text-xs outline-hidden"
-					placeholder="Describe this change"
-					aria-label="Commit message"
+					placeholder={$i18n.t('Describe this change')}
+					aria-label={$i18n.t('Commit message')}
 					bind:value={commitMessage}
 				/>
 				<button

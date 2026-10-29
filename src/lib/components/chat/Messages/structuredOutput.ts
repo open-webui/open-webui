@@ -51,6 +51,11 @@ export type OutputDisplayItem =
 			text: string;
 	  }
 	| {
+			type: 'image';
+			id: string;
+			src: string;
+	  }
+	| {
 			type: 'detail_single';
 			id: string;
 			token: OutputDetailToken;
@@ -181,14 +186,15 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 	}
 
 	const result = parseJSONStringValue(getToolResultText(resultItem)) as Record<string, unknown>;
+	const isTerminalFile = result?.source === 'open_terminal' && !!result.terminal_selector;
+	const isOpenWebUIFile = result?.source === 'open_webui';
 	if (
 		!result ||
 		typeof result !== 'object' ||
 		result.type !== 'file' ||
-		result.source !== 'open_terminal' ||
-		result.exists === false ||
 		!result.path ||
-		!result.terminal_selector
+		result.exists === false ||
+		!(isTerminalFile || isOpenWebUIFile)
 	) {
 		return null;
 	}
@@ -432,6 +438,20 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 					type: 'message',
 					id: item.id ?? `message-${index}`,
 					text
+				});
+			}
+			return;
+		}
+
+		if (item.type === 'image_generation_call') {
+			if (typeof item.result === 'string' && item.result) {
+				flushDetails();
+				displayItems.push({
+					type: 'image',
+					id: item.id ?? `image-${index}`,
+					src: item.result.startsWith('data:')
+						? item.result
+						: `data:image/${item.output_format || 'png'};base64,${item.result}`
 				});
 			}
 			return;

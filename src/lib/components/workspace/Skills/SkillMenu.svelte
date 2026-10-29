@@ -133,7 +133,7 @@
 					on:click={() => {
 						exportHandler('zip');
 						closeMenu();
-					}}><Download className="size-3.5" />Export ZIP</button
+					}}><Download className="size-3.5" />{$i18n.t('Export ZIP')}</button
 				>
 			{/if}
 

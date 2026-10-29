@@ -13,6 +13,7 @@
 	export let activeProfileId: string | null = null;
 	export let overflowOpen = false;
 	export let mode: 'contributors' | 'presence' = 'contributors';
+	export let onSelect: ((person: ChatParticipant) => void) | null = null;
 
 	// Preserve the base overflow label alongside its generated plural forms.
 	// $i18n.t('Show all {{count}} contributors');
@@ -54,25 +55,40 @@
 			: '-space-x-1'} rtl:space-x-reverse"
 	>
 		{#each people.slice(0, 3) as person (person.id)}
-			<div class="relative rounded-full hover:z-10 focus-within:z-10">
-				<ProfilePreview
-					side={mode === 'presence' ? 'bottom' : 'right'}
-					align={mode === 'presence' ? 'end' : 'center'}
-					user={{ id: person.id, name: person.name || $i18n.t('Unknown User') }}
-					bind:openPreview={
-						() => !overflowOpen && activeProfileId === person.id,
-						(open) => setProfileOpen(person.id, open)
-					}
-				>
-					{@render avatar(
-						person,
-						`${avatarClass} bg-white dark:bg-gray-900 ${
-							mode === 'presence'
-								? `ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
-								: 'ring-1 ring-white dark:ring-gray-900'
-						}`
-					)}
-				</ProfilePreview>
+			<div class="relative flex items-center rounded-full hover:z-10 focus-within:z-10">
+				{#if onSelect}
+					<button
+						type="button"
+						class="flex items-center justify-center rounded-full focus-visible:outline"
+						aria-label={person.name || $i18n.t('Unknown User')}
+						title={person.name || $i18n.t('Unknown User')}
+						onclick={() => onSelect(person)}
+					>
+						{@render avatar(
+							person,
+							`${avatarClass} bg-white dark:bg-gray-900 ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
+						)}
+					</button>
+				{:else}
+					<ProfilePreview
+						side={mode === 'presence' ? 'bottom' : 'right'}
+						align={mode === 'presence' ? 'end' : 'center'}
+						user={{ id: person.id, name: person.name || $i18n.t('Unknown User') }}
+						bind:openPreview={
+							() => !overflowOpen && activeProfileId === person.id,
+							(open) => setProfileOpen(person.id, open)
+						}
+					>
+						{@render avatar(
+							person,
+							`${avatarClass} bg-white dark:bg-gray-900 ${
+								mode === 'presence'
+									? `ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
+									: 'ring-1 ring-white dark:ring-gray-900'
+							}`
+						)}
+					</ProfilePreview>
+				{/if}
 			</div>
 		{/each}
 	</div>
@@ -80,9 +96,10 @@
 	{#if people.length > 3}
 		<Popover.Root bind:open={overflowOpen} onOpenChange={() => (activeProfileId = null)}>
 			<Popover.Trigger
-				class="shrink-0 rounded px-0.5 {mode === 'presence'
+				class="inline-flex shrink-0 items-center justify-center rounded bg-transparent px-0.5 leading-none {mode ===
+				'presence'
 					? 'h-6 text-xs'
-					: 'text-[0.625rem]'} text-gray-500 hover:bg-gray-100 focus-visible:outline dark:text-gray-400 dark:hover:bg-gray-800"
+					: 'text-[0.625rem]'} text-gray-500 hover:text-gray-900 focus-visible:outline dark:text-gray-400 dark:hover:text-gray-100"
 				aria-label={mode === 'presence'
 					? $i18n.t('Collaborators')
 					: $i18n.t('Show all {{count}} contributors', { count: people.length })}
@@ -109,20 +126,36 @@
 							<li
 								class="rounded-lg p-1 hover:bg-gray-50 dark:hover:bg-gray-800 [&>button]:max-w-full"
 							>
-								<ProfilePreview
-									side={mode === 'presence' ? 'bottom' : 'right'}
-									align={mode === 'presence' ? 'end' : 'center'}
-									user={{ id: person.id, name: person.name || $i18n.t('Unknown User') }}
-									bind:openPreview={
-										() => overflowOpen && activeProfileId === person.id,
-										(open) => setProfileOpen(person.id, open)
-									}
-								>
-									{@render avatar(person, 'size-6')}
-									<span class="ms-2 min-w-0 truncate text-sm">
-										{person.name || $i18n.t('Unknown User')}
-									</span>
-								</ProfilePreview>
+								{#if onSelect}
+									<button
+										type="button"
+										class="flex w-full items-center rounded-lg text-left"
+										onclick={() => {
+											overflowOpen = false;
+											onSelect(person);
+										}}
+									>
+										{@render avatar(person, 'size-6')}
+										<span class="ms-2 min-w-0 truncate text-sm"
+											>{person.name || $i18n.t('Unknown User')}</span
+										>
+									</button>
+								{:else}
+									<ProfilePreview
+										side={mode === 'presence' ? 'bottom' : 'right'}
+										align={mode === 'presence' ? 'end' : 'center'}
+										user={{ id: person.id, name: person.name || $i18n.t('Unknown User') }}
+										bind:openPreview={
+											() => overflowOpen && activeProfileId === person.id,
+											(open) => setProfileOpen(person.id, open)
+										}
+									>
+										{@render avatar(person, 'size-6')}
+										<span class="ms-2 min-w-0 truncate text-sm">
+											{person.name || $i18n.t('Unknown User')}
+										</span>
+									</ProfilePreview>
+								{/if}
 							</li>
 						{/each}
 					</ul>

@@ -31,6 +31,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
@@ -43,10 +44,13 @@
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
 	let showReindexConfirm = false;
+	let showEmbeddingAdvanced = false;
 	let showExternalDocumentLoaderHeadersHint = false;
 
 	let RAG_EMBEDDING_ENGINE = '';
 	let RAG_EMBEDDING_MODEL = '';
+	let RAG_EMBEDDING_QUERY_PREFIX = '';
+	let RAG_EMBEDDING_CONTENT_PREFIX = '';
 	let RAG_EMBEDDING_BATCH_SIZE = 1;
 	let ENABLE_ASYNC_EMBEDDING = true;
 	let RAG_EMBEDDING_CONCURRENT_REQUESTS = 0;
@@ -126,6 +130,8 @@
 		const payload: Parameters<typeof updateEmbeddingConfig>[1] = {
 			RAG_EMBEDDING_ENGINE: RAG_EMBEDDING_ENGINE,
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
+			RAG_EMBEDDING_QUERY_PREFIX,
+			RAG_EMBEDDING_CONTENT_PREFIX,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
 			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS
@@ -257,6 +263,18 @@
 				return;
 			}
 		}
+		if (RAGConfig.MISTRAL_OCR_PARAMS) {
+			try {
+				JSON.parse(RAGConfig.MISTRAL_OCR_PARAMS);
+			} catch {
+				toast.error(
+					$i18n.t('Invalid JSON format in {{NAME}}', {
+						NAME: $i18n.t('Mistral OCR Parameters')
+					})
+				);
+				return;
+			}
+		}
 
 		const res = await updateRAGConfig(localStorage.token, {
 			...RAGConfig,
@@ -284,6 +302,11 @@
 					: RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.split(',')
 							.map((mimeType: string) => mimeType.trim())
 							.filter((mimeType: string) => mimeType !== ''),
+			MISTRAL_OCR_PARAMS:
+				typeof RAGConfig.MISTRAL_OCR_PARAMS === 'string' &&
+				RAGConfig.MISTRAL_OCR_PARAMS.trim() !== ''
+					? JSON.parse(RAGConfig.MISTRAL_OCR_PARAMS)
+					: {},
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
@@ -301,6 +324,9 @@
 		if (embeddingConfig) {
 			RAG_EMBEDDING_ENGINE = embeddingConfig.RAG_EMBEDDING_ENGINE;
 			RAG_EMBEDDING_MODEL = embeddingConfig.RAG_EMBEDDING_MODEL;
+			RAG_EMBEDDING_QUERY_PREFIX = embeddingConfig.RAG_EMBEDDING_QUERY_PREFIX ?? '';
+			RAG_EMBEDDING_CONTENT_PREFIX = embeddingConfig.RAG_EMBEDDING_CONTENT_PREFIX ?? '';
+			showEmbeddingAdvanced = Boolean(RAG_EMBEDDING_QUERY_PREFIX || RAG_EMBEDDING_CONTENT_PREFIX);
 			RAG_EMBEDDING_BATCH_SIZE = embeddingConfig.RAG_EMBEDDING_BATCH_SIZE ?? 1;
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
 			RAG_EMBEDDING_CONCURRENT_REQUESTS = embeddingConfig.RAG_EMBEDDING_CONCURRENT_REQUESTS ?? 0;
@@ -331,6 +357,11 @@
 			typeof config.MINERU_PARAMS === 'object'
 				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
 				: config.MINERU_PARAMS;
+
+		config.MISTRAL_OCR_PARAMS =
+			typeof config.MISTRAL_OCR_PARAMS === 'object'
+				? JSON.stringify(config.MISTRAL_OCR_PARAMS ?? {}, null, 2)
+				: config.MISTRAL_OCR_PARAMS;
 
 		config.EXTERNAL_DOCUMENT_LOADER_HEADERS =
 			typeof config.EXTERNAL_DOCUMENT_LOADER_HEADERS === 'object'
@@ -794,6 +825,17 @@
 					>
 						<Switch bind:state={RAGConfig.MISTRAL_OCR_USE_BASE64} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.documents.mistralOcrParams.label')}
+						description={$i18n.t('settings.admin.documents.mistralOcrParams.description')}
+					>
+						<Textarea
+							className={textareaClass}
+							bind:value={RAGConfig.MISTRAL_OCR_PARAMS}
+							placeholder={$i18n.t('Enter additional parameters in JSON format')}
+							minSize={100}
+						/>
+					</AdminSettingField>
 				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'paddleocr_vl'}
 					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 						<AdminSettingField
@@ -1225,6 +1267,40 @@
 							/>
 						</AdminSettingRow>
 					{/if}
+
+					<Collapsible
+						title={$i18n.t('Advanced')}
+						bind:open={showEmbeddingAdvanced}
+						buttonClassName="w-full py-1 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+					>
+						<div slot="content" class="flex flex-col gap-2.5 pt-2.5">
+							<AdminSettingField
+								label={$i18n.t('settings.admin.documents.embeddingQueryPrefix.label')}
+								description={$i18n.t('settings.admin.documents.embeddingQueryPrefix.description')}
+								forId="embedding-query-prefix"
+							>
+								<input
+									id="embedding-query-prefix"
+									class={inputClass}
+									placeholder={$i18n.t('Optional')}
+									bind:value={RAG_EMBEDDING_QUERY_PREFIX}
+								/>
+							</AdminSettingField>
+
+							<AdminSettingField
+								label={$i18n.t('settings.admin.documents.embeddingContentPrefix.label')}
+								description={$i18n.t('settings.admin.documents.embeddingContentPrefix.description')}
+								forId="embedding-content-prefix"
+							>
+								<input
+									id="embedding-content-prefix"
+									class={inputClass}
+									placeholder={$i18n.t('Optional')}
+									bind:value={RAG_EMBEDDING_CONTENT_PREFIX}
+								/>
+							</AdminSettingField>
+						</div>
+					</Collapsible>
 				</AdminSettingSection>
 			{/if}
 
@@ -1388,8 +1464,6 @@
 									placeholder={$i18n.t('Enter Score')}
 									bind:value={RAGConfig.RELEVANCE_THRESHOLD}
 									autocomplete="off"
-									min="0.0"
-									title={$i18n.t('The score should be a value between 0.0 (0%) and 1.0 (100%).')}
 								/>
 							</AdminSettingField>
 

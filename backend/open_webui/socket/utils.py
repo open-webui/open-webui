@@ -393,7 +393,7 @@ class YdocManager:
                 if not self._users[document_id]:
                     del self._users[document_id]
 
-    async def remove_user_from_all_documents(self, user_id: str):
+    async def remove_user_from_all_documents(self, user_id: str) -> list[str]:
         if self._redis:
             session_key = f'{self._redis_key_prefix}:session:{user_id}:documents'
             document_ids = await self._redis.smembers(session_key)
@@ -405,6 +405,7 @@ class YdocManager:
                 await self.remove_user(document_id, user_id)
                 if not await self.get_users(document_id) and not await has_active_tasks(self._redis, document_id):
                     await self.clear_document(document_id)
+        return list(document_ids)
 
     async def clear_document(self, document_id: str):
         if self._redis:

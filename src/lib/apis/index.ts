@@ -361,10 +361,11 @@ export const stopTasksByChatId = async (token: string, chat_id: string) => {
 	return res;
 };
 
-export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
+export const getTaskIdsByChatId = async (token: string, chat_id: string, signal?: AbortSignal) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chat_id)}`, {
+		signal,
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -377,6 +378,7 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 			return res.json();
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;

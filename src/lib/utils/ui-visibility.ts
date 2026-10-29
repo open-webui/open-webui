@@ -45,6 +45,14 @@ export const CONTROL_LABELS = {
 	'chat.attach_notes': 'Attach Notes',
 	'chat.attach_knowledge': 'Attach Knowledge',
 	'chat.reference_chats': 'Reference Chats',
+	'chat.selected_tools': 'settings.admin.interface.visibility.selectedTools.label',
+	'chat.selected_skills': 'settings.admin.interface.visibility.selectedSkills.label',
+	'chat.selected_filters': 'settings.admin.interface.visibility.selectedFilters.label',
+	'chat.selected_web_search': 'settings.admin.interface.visibility.selectedWebSearch.label',
+	'chat.selected_image_generation':
+		'settings.admin.interface.visibility.selectedImageGeneration.label',
+	'chat.selected_code_interpreter':
+		'settings.admin.interface.visibility.selectedCodeInterpreter.label',
 	'chat.status': '/status',
 	'chat.model_command': '/model',
 	'chat.settings_command': '/settings',

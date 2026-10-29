@@ -142,7 +142,7 @@
 		loading = true;
 		try {
 			const startNs = dateTimeToNs(startDate, allDay ? '00:00' : startTime);
-			const endDays = overnight && !endsPastMidnight() ? 0 : endDayOffset;
+			const endDays = endsPastMidnight() ? Math.max(endDayOffset, 1) : overnight ? 0 : endDayOffset;
 			const shiftedEndDate = endDate
 				? nsToDateStr(dateTimeToNs(startDate, '12:00') + endDays * 24 * 60 * 60 * 1000 * NS)
 				: '';
@@ -222,14 +222,18 @@
 				type="text"
 				bind:value={title}
 				placeholder={$i18n.t('Event title')}
+				aria-label={$i18n.t('Event title')}
 			/>
 		</div>
 
 		<div class="px-4 pb-2 flex flex-col gap-2.5">
 			<!-- Calendar -->
 			<div>
-				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Calendar')}</div>
+				<div id="event-calendar-label" class="mb-1 text-xs text-gray-500">
+					{$i18n.t('Calendar')}
+				</div>
 				<select
+					aria-labelledby="event-calendar-label"
 					class="w-full text-sm bg-transparent outline-hidden cursor-pointer"
 					bind:value={calendarId}
 				>
@@ -247,18 +251,21 @@
 						type="date"
 						class="bg-transparent outline-hidden dark:scheme-dark"
 						bind:value={startDate}
+						aria-label={$i18n.t('Start date')}
 					/>
 					{#if !allDay}
 						<input
 							type="time"
 							class="bg-transparent outline-hidden dark:scheme-dark"
 							bind:value={startTime}
+							aria-label={$i18n.t('Start time')}
 						/>
 						<span class="text-gray-300 dark:text-gray-600">–</span>
 						<input
 							type="time"
 							class="bg-transparent outline-hidden dark:scheme-dark"
 							bind:value={endTime}
+							aria-label={$i18n.t('End time')}
 						/>
 					{/if}
 					<label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400 ml-auto">
@@ -270,8 +277,11 @@
 
 			<!-- Location -->
 			<div>
-				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Location')}</div>
+				<div id="event-location-label" class="mb-1 text-xs text-gray-500">
+					{$i18n.t('Location')}
+				</div>
 				<input
+					aria-labelledby="event-location-label"
 					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 					placeholder={$i18n.t('Add location')}
 					bind:value={location}
@@ -280,8 +290,11 @@
 
 			<!-- Reminder -->
 			<div>
-				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Reminder')}</div>
+				<div id="event-reminder-label" class="mb-1 text-xs text-gray-500">
+					{$i18n.t('Reminder')}
+				</div>
 				<select
+					aria-labelledby="event-reminder-label"
 					class="w-full text-sm bg-transparent outline-hidden cursor-pointer"
 					bind:value={alertMinutes}
 				>
@@ -297,8 +310,9 @@
 
 			<!-- Repeat -->
 			<div>
-				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Repeat')}</div>
+				<div id="event-repeat-label" class="mb-1 text-xs text-gray-500">{$i18n.t('Repeat')}</div>
 				<select
+					aria-labelledby="event-repeat-label"
 					class="w-full text-sm bg-transparent outline-hidden cursor-pointer"
 					bind:value={repeatFrequency}
 				>
@@ -313,8 +327,11 @@
 
 			<!-- Description -->
 			<div>
-				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
+				<div id="event-description-label" class="mb-1 text-xs text-gray-500">
+					{$i18n.t('Description')}
+				</div>
 				<textarea
+					aria-labelledby="event-description-label"
 					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[4rem]"
 					placeholder={$i18n.t('Add description')}
 					bind:value={description}

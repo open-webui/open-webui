@@ -362,7 +362,9 @@
 						</button>
 					</th>
 
-					<th scope="col" class="px-2.5 py-1.5 font-normal text-right"></th>
+					<th scope="col" class="px-2.5 py-1.5 font-normal text-right"
+						><span class="sr-only">{$i18n.t('Actions')}</span></th
+					>
 				</tr>
 			</thead>
 			<tbody class="">

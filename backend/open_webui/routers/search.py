@@ -7,12 +7,12 @@ from fastapi import APIRouter, Depends, Query
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrant, AccessGrants
 from open_webui.models.channels import ChannelMember, Channels
-from open_webui.models.chats import Chat
+from open_webui.models.chats import Chat, chat_message_list, chat_search_content_query
 from open_webui.models.config import Config
-from open_webui.models.folders import Folder
+from open_webui.models.folders import Folder, Folders
 from open_webui.models.groups import Groups
 from open_webui.models.messages import Message
-from open_webui.models.notes import Note, PinnedNote
+from open_webui.models.notes import Note, PinnedNote, matching_page
 from open_webui.models.shared_chats import SharedChat
 from open_webui.models.users import User
 from open_webui.utils.access_control import has_permission
@@ -73,9 +73,7 @@ def excerpt(content: str, query: str, length: int = 200) -> str:
 
 
 def chat_passage(data: dict, query: str) -> tuple[str, str | None]:
-    history = (data.get('history') or {}).get('messages') or {}
-    messages = list(history.values()) if history else data.get('messages') or []
-    messages = [m for m in messages if isinstance(m, dict) and isinstance(m.get('content'), str)]
+    messages = [m for m in chat_message_list(data) if isinstance(m, dict) and isinstance(m.get('content'), str)]
     terms = terms_for(query)
     match = next((m for m in messages if terms and all(t in m['content'].lower() for t in terms)), None)
     if match is None:
@@ -97,13 +95,19 @@ def message_match_sql(table: str, dialect: str, key: str):
         return text(
             '('
             + ' OR '.join(
-                f"EXISTS (SELECT 1 FROM {source} AS m WHERE json_type(m.value, '$.content') = 'text' "
-                f"AND lower(m.value ->> 'content') LIKE :{key} ESCAPE '\\')"
+                f"EXISTS (SELECT 1 FROM {source} AS m WHERE lower(CASE WHEN m.type = 'object' "
+                f"AND json_type(m.value, '$.content') = 'text' THEN m.value ->> 'content' END) "
+                f"LIKE :{key} ESCAPE '\\')"
                 for source in sources
             )
             + ')'
         )
-    sources = [f"json_each({table}.chat->'history'->'messages')", f"json_array_elements({table}.chat->'messages')"]
+    sources = [
+        f"json_each(CASE WHEN json_typeof({table}.chat->'history'->'messages') = 'object' "
+        f"THEN {table}.chat->'history'->'messages' ELSE '{{}}'::json END)",
+        f"json_array_elements(CASE WHEN json_typeof({table}.chat->'messages') = 'array' "
+        f"THEN {table}.chat->'messages' ELSE '[]'::json END)",
+    ]
     return text(
         '('
         + ' OR '.join(
@@ -215,7 +219,16 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
     if scope and scope not in {s.id for s in scopes}:
         return SearchResponse(items=[], has_more=False, scopes=scopes, kinds=list(enabled))
 
-    query = query.strip()
+    words = query.lower().split()
+    tag_ids = [word.removeprefix('tag:') for word in words if word.startswith('tag:') and word != 'tag:']
+    folder_names = [word.removeprefix('folder:') for word in words if word.startswith('folder:') and word != 'folder:']
+    flags = {
+        name: value == 'true'
+        for name, _, value in (word.partition(':') for word in words)
+        if name in ('pinned', 'archived', 'shared') and value in ('true', 'false')
+    }
+    chat_filtered = bool(tag_ids or folder_names or flags)
+    query = chat_search_content_query(query)
     terms = terms_for(query)
     results = []
     dialect = db.bind.dialect.name
@@ -273,14 +286,35 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
         )
         stmt = select(Chat).where(
             live_access,
-            Chat.archived.is_(False),
+            Chat.archived.is_(flags.get('archived', False)),
             func.coalesce(Chat.meta['internal'].as_boolean(), False).is_(False),
             sharing_filter(Chat.user_id),
         )
         if scope:
             stmt = stmt.where(Chat.folder_id.in_(scoped_folders))
+        if chat_filtered:
+            stmt = stmt.where(Chat.user_id == user.id)
+        if 'pinned' in flags:
+            stmt = stmt.where(Chat.pinned.is_(flags['pinned']))
+        if 'shared' in flags:
+            stmt = stmt.where(Chat.share_id.isnot(None) if flags['shared'] else Chat.share_id.is_(None))
+        if folder_names:
+            matched_folders = await Folders.search_folders_by_names(user.id, folder_names, db=db)
+            stmt = stmt.where(Chat.folder_id.in_([folder.id for folder in matched_folders]))
+        tags, tag = (
+            ("json_each(chat.meta, '$.tags') AS tag", 'tag.value')
+            if dialect == 'sqlite'
+            else ("json_array_elements_text(chat.meta->'tags') AS tag", 'tag')
+        )
+        for index, tag_id in enumerate(tag_ids):
+            key = f'tag_{index}'
+            stmt = stmt.where(
+                text(f'NOT EXISTS (SELECT 1 FROM {tags})')
+                if tag_id == 'none'
+                else text(f'EXISTS (SELECT 1 FROM {tags} WHERE {tag} = :{key})').bindparams(**{key: tag_id})
+            )
         sources['chat'] = (Chat, apply_match(stmt, Chat), rank, Chat.updated_at)
-        if not scope and sharing != 'mine':
+        if not scope and sharing != 'mine' and not chat_filtered:
             stmt = select(SharedChat).where(
                 granted('shared_chat', SharedChat.chat_id), ~SharedChat.chat_id.in_(live_ids)
             )
@@ -293,7 +327,7 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
                 SharedChat.updated_at,
             )
 
-    if 'note' in enabled and kind in ('all', 'note') and not scope:
+    if 'note' in enabled and kind in ('all', 'note') and not scope and not chat_filtered:
         pinned = select(PinnedNote.id).where(PinnedNote.note_id == Note.id, PinnedNote.user_id == user.id).exists()
         note_shared = (
             select(AccessGrant.id)
@@ -308,11 +342,13 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
             db, select(Note, pinned, note_shared), Note, {'user_id': user.id, 'group_ids': groups}, 'note', 'read'
         )
         stmt = stmt.where(sharing_filter(Note.user_id))
-        stmt = apply_match(stmt, Note, Note.data['content']['md'].as_string())
+        stmt = apply_match(
+            stmt, Note, func.coalesce(Note.data['search_text'].as_string(), Note.data['content']['md'].as_string())
+        )
         rank = title_rank(Note.title, query) if query else case((pinned, 0), else_=3)
         sources['note'] = (Note, stmt, rank, cast(Note.updated_at.op('/')(literal(1_000_000_000)), BigInteger))
 
-    if 'message' in enabled and kind in ('all', 'message') and not scope.startswith('folder:'):
+    if 'message' in enabled and kind in ('all', 'message') and not scope.startswith('folder:') and not chat_filtered:
         ids = [scope.removeprefix('channel:')] if scope else list(channel_map)
         stmt = select(Message, User.name).outerjoin(User, User.id == Message.user_id).where(Message.channel_id.in_(ids))
         stmt = stmt.where(sharing_filter(Message.user_id))
@@ -391,14 +427,15 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
                 match.rank,
             )
         elif match.source == 'note':
-            content = ((item.data or {}).get('content') or {}).get('md') or ''
+            page = matching_page(item.data, query)
+            content = page['content'].get('md', '')
             append_result(
                 'note:' + item.id,
                 'note',
                 item.title,
                 'Shared note' if item.user_id != user.id or row[2] else 'Personal note',
                 content if isinstance(content, str) else '',
-                '/notes/' + item.id + ('?' + urlencode({'search': query}) if query else ''),
+                '/notes/' + item.id + '?' + urlencode({'page': page['id'], 'search': query}),
                 match.updated_at,
                 item.user_id != user.id or row[2],
                 row[1],

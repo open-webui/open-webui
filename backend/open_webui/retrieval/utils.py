@@ -19,9 +19,7 @@ from langchain_classic.retrievers import (
 )
 from langchain_core.documents import Document
 from open_webui.config import (
-    RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_PREFIX_FIELD_NAME,
-    RAG_EMBEDDING_QUERY_PREFIX,
     VECTOR_DB,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -213,6 +211,7 @@ async def get_content_from_url(request, url: str, *, config: dict | None = None)
             'rag.mineru_params',
             'rag.mistral_ocr_api_base_url',
             'rag.mistral_ocr_api_key',
+            'rag.mistral_ocr_params',
             'rag.mistral_ocr_use_base64',
             'rag.paddleocr_vl_base_url',
             'rag.paddleocr_vl_token',
@@ -321,7 +320,7 @@ class VectorSearchRetriever(BaseRetriever):
         *,
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
-        embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
+        embedding = await self.embedding_function(query, await Config.get('rag.embedding_query_prefix'))
         result = await ASYNC_VECTOR_DB_CLIENT.search(
             collection_name=self.collection_name,
             vectors=[embedding],
@@ -433,7 +432,7 @@ async def query_doc_with_native_hybrid_search(
 
         query_vectors = []
         if hybrid_bm25_weight < 1:
-            query_vectors = [await embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)]
+            query_vectors = [await embedding_function(query, await Config.get('rag.embedding_query_prefix'))]
 
         result = await ASYNC_VECTOR_DB_CLIENT.hybrid_search(
             collection_name=collection_name,
@@ -696,6 +695,7 @@ async def query_collection(
 ) -> dict:
     config = await Config.get_many(
         'rag.enable_hybrid_search',
+        'rag.embedding_query_prefix',
         'rag.top_k_reranker',
         'rag.relevance_threshold',
         'rag.hybrid_bm25_weight',
@@ -749,7 +749,7 @@ async def query_collection(
         return {'distances': [[]], 'documents': [[]], 'metadatas': [[]]}
 
     # Generate all query embeddings (in one call)
-    query_embeddings = await embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+    query_embeddings = await embedding_function(queries, prefix=config['rag.embedding_query_prefix'])
     log.debug('query_collection: processing %s queries across %s collections', len(queries), len(collection_names))
 
     task_results = await asyncio.gather(
@@ -1462,8 +1462,20 @@ async def get_sources_from_items(
             ):
                 # User has access to the note
                 query_result = {
-                    'documents': [[note.data.get('content', {}).get('md', '')]],
-                    'metadatas': [[{'file_id': note.id, 'name': note.title}]],
+                    'documents': [[page['content'].get('md', '') for page in note.data['pages']]],
+                    'metadatas': [
+                        [
+                            {
+                                'file_id': note.id,
+                                'note_id': note.id,
+                                'page_id': page['id'],
+                                'parent_id': page.get('parent_id'),
+                                'name': f'{note.title} / {page["title"]}',
+                                'source': f'/notes/{note.id}?page={page["id"]}',
+                            }
+                            for page in note.data['pages']
+                        ]
+                    ],
                 }
 
         elif item.get('type') == 'chat':
@@ -1851,9 +1863,11 @@ class RerankCompressor(BaseDocumentCompressor):
         if reranking:
             scores = await asyncio.to_thread(self.reranking_function, query, documents)
         else:
-            query_embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
+            query_embedding = await self.embedding_function(query, await Config.get('rag.embedding_query_prefix'))
             doc_texts = [doc.page_content for doc in documents]
-            document_embedding = await self.embedding_function(doc_texts, RAG_EMBEDDING_CONTENT_PREFIX)
+            document_embedding = await self.embedding_function(
+                doc_texts, await Config.get('rag.embedding_content_prefix')
+            )
             scores = cosine_similarity(query_embedding, document_embedding)
 
         if scores is not None:

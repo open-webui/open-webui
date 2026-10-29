@@ -14,7 +14,6 @@ from fastapi.responses import StreamingResponse
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     ENABLE_KNOWLEDGE_FILE_RETENTION,
-    RAG_EMBEDDING_CONTENT_PREFIX,
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
@@ -98,7 +97,9 @@ async def embed_knowledge_base_metadata(
     """Generate and store embedding for knowledge base."""
     try:
         content = f'{name}\n\n{description}' if description else name
-        embedding = await request.app.state.EMBEDDING_FUNCTION(content, prefix=RAG_EMBEDDING_CONTENT_PREFIX)
+        embedding = await request.app.state.EMBEDDING_FUNCTION(
+            content, prefix=await Config.get('rag.embedding_content_prefix')
+        )
         await ASYNC_VECTOR_DB_CLIENT.upsert(
             collection_name=KNOWLEDGE_BASES_COLLECTION,
             items=[
@@ -1179,7 +1180,7 @@ async def update_knowledge_by_id(
         )
         response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id),
+            files=[],
         )
         await publish_event(
             request,
@@ -1248,7 +1249,7 @@ async def update_knowledge_access_by_id(
 
     response = KnowledgeFilesResponse(
         **knowledge.model_dump(),
-        files=await Knowledges.get_file_metadatas_by_id(id, db=db),
+        files=[],
     )
     await publish_event(
         request,
@@ -1488,7 +1489,7 @@ async def add_file_to_knowledge_by_id(
     if knowledge:
         response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Files.get_file_metadatas_by_ids([form_data.file_id], db=db),
         )
         await publish_event(
             request,
@@ -1572,7 +1573,7 @@ async def update_file_from_knowledge_by_id(
     if knowledge:
         response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Files.get_file_metadatas_by_ids([form_data.file_id], db=db),
         )
         await publish_event(
             request,
@@ -1661,7 +1662,7 @@ async def remove_file_from_knowledge_by_id(
     if knowledge:
         response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=[],
         )
         await publish_event(
             request,
@@ -2104,7 +2105,7 @@ async def add_files_to_knowledge_batch(
     if not new_entries:
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=[],
         )
 
     # Narrow the file list to only new files for processing
@@ -2140,7 +2141,7 @@ async def add_files_to_knowledge_batch(
         error_details = [f'{err.file_id}: {err.error}' for err in result.errors]
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=await Files.get_file_metadatas_by_ids(successful_file_ids, db=db),
             warnings={
                 'message': 'Some files failed to process',
                 'errors': error_details,
@@ -2149,7 +2150,7 @@ async def add_files_to_knowledge_batch(
 
     return KnowledgeFilesResponse(
         **knowledge.model_dump(),
-        files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+        files=await Files.get_file_metadatas_by_ids(successful_file_ids, db=db),
     )
 
 

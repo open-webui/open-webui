@@ -16,7 +16,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES, STATIC_DIR
 from open_webui.internal.db import get_async_session
-from open_webui.models.auths import Auths
+from open_webui.models.auths import ApiKey, Auths
 from open_webui.models.config import Config
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
@@ -41,6 +41,7 @@ from open_webui.models.models import Models
 from open_webui.models.tools import Tools
 from open_webui.utils.access_control import fill_missing_permissions, get_permissions, has_permission
 from open_webui.utils.auth import (
+    create_api_key,
     get_admin_user,
     get_password_hash,
     get_verified_user,
@@ -921,6 +922,70 @@ async def revoke_user_sessions(request: Request, user_id: str, session_user=Depe
     await revoke_user_tokens(request, user_id)
     await publish_event(
         request, EVENTS.AUTH_SESSIONS_REVOKED, actor=session_user, subject_id=user_id, subject_type='user'
+    )
+    return True
+
+
+@router.post('/{user_id}/api_key/rotate', response_model=ApiKey)
+async def rotate_user_api_key_by_id(
+    request: Request,
+    response: Response,
+    user_id: str,
+    session_user: UserModel = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    target_user = await Users.get_user_by_id(user_id, db=db)
+    if target_user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.USER_NOT_FOUND)
+
+    first_user = await Users.get_first_user(db=db)
+    if first_user and first_user.id == user_id and session_user.id != user_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+
+    if not await Config.get('auth.enable_api_keys') or (
+        target_user.role != 'admin'
+        and not await has_permission(target_user.id, 'features.api_keys', await Config.get('user.permissions'), db=db)
+    ):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED)
+
+    api_key = create_api_key()
+    await Users.update_user_api_key_by_id(user_id, api_key, db=db)
+    await publish_event(
+        request,
+        EVENTS.AUTH_API_KEY_CREATED,
+        actor=session_user,
+        subject_id=user_id,
+        subject_type='user',
+        source='admin',
+    )
+    response.headers['Cache-Control'] = 'no-store'
+    return {'api_key': api_key}
+
+
+@router.delete('/{user_id}/api_key', response_model=bool)
+async def delete_user_api_key_by_id(
+    request: Request,
+    user_id: str,
+    session_user: UserModel = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    target_user = await Users.get_user_by_id(user_id, db=db)
+    if target_user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.USER_NOT_FOUND)
+
+    first_user = await Users.get_first_user(db=db)
+    if first_user and first_user.id == user_id and session_user.id != user_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+
+    # Revocation must remain available when API keys or the user's permission are disabled.
+    await Users.delete_user_api_key_by_id(user_id, db=db)
+    await publish_event(
+        request,
+        EVENTS.AUTH_API_KEY_DELETED,
+        actor=session_user,
+        subject_id=user_id,
+        subject_type='user',
+        source='admin',
     )
     return True
 

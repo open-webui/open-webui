@@ -8,42 +8,42 @@ from open_webui.utils.misc import (
 )
 
 
-# An honest ledger is worth more than a flattering one.
-# Let every cost here be counted true.
-def normalize_usage(usage: dict) -> dict:
-    """
-    Normalize usage statistics to standard format.
-    Handles OpenAI, Ollama, and llama.cpp formats.
+def usage_counter(value):
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        value = int(value)
+        return value if value >= 0 else None
+    except (ValueError, TypeError, OverflowError):
+        return None
 
-    Adds standardized token fields to the original data:
-    - input_tokens: Number of tokens in the prompt
-    - output_tokens: Number of tokens generated
-    - total_tokens: Sum of input and output tokens
-    """
+
+def normalize_usage(usage: dict) -> dict:
+    """Keep measured zero distinct from missing usage across provider formats."""
     if not usage:
         return {}
-
-    # Map various field names to standard names
-    input_tokens = usage.get('input_tokens') or usage.get('prompt_tokens') or usage.get('prompt_eval_count')
-    if input_tokens is None:
-        input_tokens = int(usage.get('prompt_n') or 0) + int(usage.get('cache_n') or 0)
-
-    output_tokens = (
-        usage.get('output_tokens')  # Already standard
-        or usage.get('completion_tokens')  # OpenAI
-        or usage.get('eval_count')  # Ollama
-        or usage.get('predicted_n')  # llama.cpp
-        or 0
-    )
-
-    total_tokens = usage.get('total_tokens') or (input_tokens + output_tokens)
-
-    # Add standardized fields to original data
     result = dict(usage)
-    result['input_tokens'] = int(input_tokens)
-    result['output_tokens'] = int(output_tokens)
-    result['total_tokens'] = int(total_tokens)
-
+    aliases = {
+        'input_tokens': ('input_tokens', 'prompt_tokens', 'prompt_eval_count'),
+        'output_tokens': ('output_tokens', 'completion_tokens', 'eval_count', 'predicted_n'),
+        'total_tokens': ('total_tokens',),
+    }
+    for target, keys in aliases.items():
+        value = next((n for key in keys if (n := usage_counter(usage.get(key))) is not None), None)
+        result.pop(target, None)
+        if value is not None:
+            result[target] = value
+    prompt = usage_counter(usage.get('prompt_n'))
+    if 'input_tokens' not in result and prompt is not None:
+        result['input_tokens'] = prompt + (usage_counter(usage.get('cache_n')) or 0)
+    if 'total_tokens' not in result and all(key in result for key in ('input_tokens', 'output_tokens')):
+        result['total_tokens'] = result['input_tokens'] + result['output_tokens']
+    # SQL fallback readers must not turn invalid aliases into zero or fail a cast.
+    for key in ('prompt_tokens', 'completion_tokens'):
+        value = usage_counter(usage.get(key))
+        result.pop(key, None)
+        if value is not None:
+            result[key] = value
     return result
 
 
@@ -51,6 +51,8 @@ USAGE_TOKEN_KEYS = {
     'input_tokens',
     'output_tokens',
     'total_tokens',
+    'cache_read_input_tokens',
+    'cache_creation_input_tokens',
 }
 
 USAGE_COST_KEYS = {
@@ -112,6 +114,13 @@ def merge_usage(current: dict | None, incoming: dict | None) -> dict:
         return incoming_usage
 
     result = {**current_usage, **incoming_usage}
+    result['incomplete'] = bool(
+        current_usage.get('incomplete')
+        or incoming_usage.get('incomplete')
+        or any(
+            key not in record for record in (current_usage, incoming_usage) for key in ('input_tokens', 'output_tokens')
+        )
+    )
 
     for key in USAGE_SUMMABLE_KEYS:
         if key in current_usage or key in incoming_usage:
@@ -129,17 +138,22 @@ def merge_usage(current: dict | None, incoming: dict | None) -> dict:
                 incoming_usage.get(key) if isinstance(incoming_usage.get(key), dict) else {},
             )
 
-    result['prompt_tokens'] = (
-        incoming_usage.get('prompt_tokens')
-        or incoming_usage.get('input_tokens')
-        or current_usage.get('prompt_tokens', 0)
-    )
-    result['completion_tokens'] = (
-        incoming_usage.get('completion_tokens')
-        or incoming_usage.get('output_tokens')
-        or current_usage.get('completion_tokens', 0)
-    )
+    # Aliases keep the latest call's size, which context compaction reads.
+    for alias, canonical in (('prompt_tokens', 'input_tokens'), ('completion_tokens', 'output_tokens')):
+        if canonical in incoming_usage:
+            result[alias] = incoming_usage[canonical]
 
+    return result
+
+
+def update_usage_snapshot(current: dict | None, incoming: dict | None) -> dict:
+    """Usage events within one provider call are snapshots, not extra model calls."""
+    result = {**(current or {}), **normalize_usage(incoming or {})}
+    for key in USAGE_DETAIL_KEYS:
+        if isinstance((current or {}).get(key), dict) and isinstance((incoming or {}).get(key), dict):
+            result[key] = {**current[key], **incoming[key]}
+    if all(key in result for key in ('input_tokens', 'output_tokens')):
+        result['total_tokens'] = result['input_tokens'] + result['output_tokens']
     return result
 
 
@@ -161,11 +175,11 @@ def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
 
 
 def convert_ollama_usage_to_openai(data: dict) -> dict:
-    input_tokens = int(data.get('prompt_eval_count', 0))
-    output_tokens = int(data.get('eval_count', 0))
+    input_tokens = usage_counter(data.get('prompt_eval_count')) or 0
+    output_tokens = usage_counter(data.get('eval_count')) or 0
     total_tokens = input_tokens + output_tokens
 
-    return {
+    result = {
         # Standardized fields
         'input_tokens': input_tokens,
         'output_tokens': output_tokens,
@@ -199,12 +213,22 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
         'approximate_total': (lambda s: f'{s // 3600}h{(s % 3600) // 60}m{s % 60}s')(
             (data.get('total_duration', 0) or 0) // 1_000_000_000
         ),
-        'completion_tokens_details': {
-            'reasoning_tokens': 0,
-            'accepted_prediction_tokens': 0,
-            'rejected_prediction_tokens': 0,
-        },
     }
+
+    for source, fields in (
+        ('prompt_eval_count', ('input_tokens', 'prompt_tokens', 'prompt_eval_count')),
+        ('eval_count', ('output_tokens', 'completion_tokens', 'eval_count')),
+    ):
+        if usage_counter(data.get(source)) is None:
+            for field in fields:
+                result.pop(field, None)
+            result.pop('total_tokens', None)
+    for key in ('total_duration', 'load_duration', 'prompt_eval_duration', 'eval_duration'):
+        if key not in data:
+            result.pop(key, None)
+    if 'total_duration' not in data:
+        result.pop('approximate_total', None)
+    return result
 
 
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:

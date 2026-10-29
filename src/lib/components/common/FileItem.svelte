@@ -23,7 +23,7 @@
 	export let modal = false;
 	export let loading = false;
 
-	export let item = null;
+	export let item: any = null;
 	export let edit = false;
 	export let small = false;
 
