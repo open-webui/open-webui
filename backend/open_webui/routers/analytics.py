@@ -48,6 +48,7 @@ class UserAnalyticsEntry(BaseModel):
 
 class UserAnalyticsResponse(BaseModel):
     users: list[UserAnalyticsEntry]
+    total: int
 
 
 ####################
@@ -77,7 +78,8 @@ async def get_user_analytics(
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    limit: int = Query(50, description='Max users to return'),
+    skip: int = Query(0, ge=0, description='Number of users to skip'),
+    limit: int = Query(50, ge=1, description='Max users to return'),
     metric: Literal['messages', 'tokens'] = Query('messages'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -91,8 +93,9 @@ async def get_user_analytics(
         key=lambda uid: (
             -usage[uid]['total_tokens'] if metric == 'tokens' else -usage[uid]['message_count'],
             -usage[uid]['message_count'],
+            uid or '',
         ),
-    )[:limit]
+    )[skip : skip + limit]
     user_info = {u.id: u for u in await Users.get_users_by_user_ids(top_user_ids, db=db)}
 
     users = []
@@ -111,7 +114,7 @@ async def get_user_analytics(
             )
         )
 
-    return UserAnalyticsResponse(users=users)
+    return UserAnalyticsResponse(users=users, total=len(usage))
 
 
 @router.get('/messages', response_model=list[ChatMessageModel])
