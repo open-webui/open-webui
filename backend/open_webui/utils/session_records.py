@@ -32,34 +32,38 @@ def normalize_tool_output(output):
     if not isinstance(output, list):
         return output
     items = [dict(item) for item in output if isinstance(item, dict)]
-    deduped = []
-    positions = {}
+    normalized = []
+    indices = {}
+    start = 0
     for item in items:
-        kind = item.get('type')
+        item_type = item.get('type')
+        # A new assistant item after tool results starts a new round.
+        if normalized and normalized[-1].get('type') == 'function_call_output' and item_type != 'function_call_output':
+            pair_results(normalized[start:])
+            indices.clear()
+            start = len(normalized)
         call_id = item.get('call_id') or item.get('id')
-        if kind in {'function_call', 'function_call_output'} and call_id:
-            key = (kind, call_id)
-            if key in positions:
-                deduped[positions[key]] = {**deduped[positions[key]], **item}
+        if item_type in {'function_call', 'function_call_output'} and call_id:
+            key = (item_type, call_id)
+            if key in indices:
+                normalized[indices[key]] = {**normalized[indices[key]], **item}
                 continue
-            positions[key] = len(deduped)
-        deduped.append(item)
-    return pair_results(deduped)
+            indices[key] = len(normalized)
+        normalized.append(item)
+    pair_results(normalized[start:])
+    return normalized
 
 
-def pair_results(deduped):
-    results = {item.get('call_id'): item for item in deduped if item.get('type') == 'function_call_output'}
-    for item in deduped:
+def pair_results(output):
+    results = {item.get('call_id'): item for item in output if item.get('type') == 'function_call_output'}
+    for item in output:
         if item.get('type') != 'function_call':
             continue
         result = results.get(item.get('call_id'))
         if result:
-            if result.get('status'):
-                item['status'] = result['status']
             for key in ('started_at', 'ended_at', 'duration', 'error_type'):
                 if key in result and key not in item:
                     item[key] = result[key]
         elif item.get('status') == 'completed':
             item['status'] = 'unknown'
-    return deduped
-
+    return output
