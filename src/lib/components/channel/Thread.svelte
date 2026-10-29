@@ -22,6 +22,7 @@
 	export let onPin = () => {};
 
 	let messages = null;
+	let pendingEvents: any[] = [];
 	let searchAnchor = '';
 	let loadVersion = 0;
 	let top = false;
@@ -52,6 +53,7 @@
 		const version = ++loadVersion;
 		searchAnchor = anchor;
 		messages = null;
+		pendingEvents = [];
 		top = false;
 		replyToMessage = null;
 
@@ -72,6 +74,8 @@
 			});
 			if (version !== loadVersion) return;
 			messages = loaded;
+			// The fetched thread can be older than events that arrived while it loaded.
+			for (const event of pendingEvents) channelEventHandler(event);
 
 			if (messages.length < 50) {
 				top = true;
@@ -96,9 +100,14 @@
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
 
+			if (messages === null && type !== 'typing') {
+				pendingEvents.push(event);
+				return;
+			}
+
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === threadId) {
-					if (messages) {
+					if (!messages.some((message) => message.id === data.id)) {
 						messages = [{ ...data, temp_id: null }, ...messages];
 
 						if (typingUsers.find((user) => user.id === event.user.id)) {
