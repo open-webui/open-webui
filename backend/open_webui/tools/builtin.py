@@ -3136,6 +3136,67 @@ async def view_knowledge_file(
         return JSONCodec.dumps({'error': str(e)})
 
 
+async def display_file(
+    path: str,
+    page: int | None = None,
+    inline: bool = False,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: list[dict] | None = None,
+) -> str:
+    """
+    Show a terminal, chat, or knowledge base file to the user.
+    After display_file succeeds, do not display the same file again or emit Markdown for it.
+
+    :param path: Terminal file path, or file_id or /api/v1/files/<file_id>/content for a chat or knowledge base file
+    :param page: For PDF, DOCX, and PPTX files, open the preview at this 1-based page or slide number
+    :param inline: Show the file inline in chat instead of opening the file viewer
+    :return: JSON with the file's path, name, content type, and display state
+    """
+    if __request__ is None:
+        return JSONCodec.dumps({'error': 'Request context not available', 'exists': False})
+
+    if not __user__:
+        return JSONCodec.dumps({'error': 'User context not available', 'exists': False})
+
+    try:
+        from open_webui.models.files import Files
+
+        if '/' not in path:
+            path = f'/api/v1/files/{path}/content'
+        parts = path.split('/')
+        if len(parts) != 6 or parts[:4] != ['', 'api', 'v1', 'files'] or parts[-1] != 'content':
+            return JSONCodec.dumps(
+                {'error': 'Use file_id or /api/v1/files/<file_id>/content for an uploaded file.', 'exists': False}
+            )
+
+        file = await Files.get_file_by_id(parts[4])
+        if not file:
+            return JSONCodec.dumps({'error': 'File not found', 'exists': False})
+
+        if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
+            return JSONCodec.dumps({'error': 'File not found', 'exists': False})
+
+        file_meta = file.meta or {}
+        result = {
+            'type': 'file',
+            'source': 'open_webui',
+            'exists': True,
+            'displayed': inline,
+            'path': path,
+            'full_path': path,
+            'name': file_meta.get('name') or file.filename,
+            'content_type': file_meta.get('content_type') or 'application/octet-stream',
+            'mime_type': file_meta.get('content_type') or 'application/octet-stream',
+        }
+        if page:
+            result['page'] = page
+        return JSONCodec.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'display_file error: {e}')
+        return JSONCodec.dumps({'error': str(e), 'exists': False})
+
+
 async def list_knowledge(
     knowledge_id: Optional[str] = None,
     skip: int = 0,

@@ -136,6 +136,7 @@
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Modal from '../common/Modal.svelte';
+	import ToolOutputFile from './Messages/ToolOutputFile.svelte';
 	import { isEmbedWindow } from '../common/FullHeightIframe.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
@@ -522,6 +523,8 @@
 	let params = {};
 	let chatVariables = {};
 	let showChatVariablesModal = false;
+	let showDisplayedFile = false;
+	let displayedFile: Record<string, unknown> | null = null;
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
 
@@ -1295,6 +1298,13 @@
 	};
 
 	const terminalEventHandler = (type: string, data: any, message: any) => {
+		if (type === 'terminal:display_file' && data?.source === 'open_webui') {
+			if ($settings?.terminalFileDisplay !== 'inline') {
+				displayedFile = data;
+				showDisplayedFile = true;
+			}
+			return;
+		}
 		const attachment = history.messages[message?.parentId]?.files?.find(
 			(file: any) => file.type === 'filesystem'
 		);
@@ -5051,6 +5061,17 @@
 </svelte:head>
 
 <audio id="audioElement" style="display: none;"></audio>
+
+<Modal bind:show={showDisplayedFile} size="xl">
+	<button
+		class="float-right p-2"
+		aria-label={$i18n.t('Close')}
+		on:click={() => (showDisplayedFile = false)}
+	>
+		<XMark className="size-4" />
+	</button>
+	<ToolOutputFile item={displayedFile} chatId={$chatId} />
+</Modal>
 
 {#if getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts.length > 0}
 	<Modal bind:show={showChatVariablesModal} size="md">

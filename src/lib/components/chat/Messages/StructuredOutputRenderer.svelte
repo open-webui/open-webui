@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
-	import TerminalOutputFile from './TerminalOutputFile.svelte';
+	import ToolOutputFile from './ToolOutputFile.svelte';
 	import { resolveChatMessageToolCall } from '$lib/apis/chats';
 	import { settings } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
@@ -169,7 +169,7 @@
 		</ConsecutiveDetailsGroup>
 	{:else if displayItem.type === 'file'}
 		{#if displayItem.item?.displayed || $settings?.terminalFileDisplay === 'inline'}
-			<TerminalOutputFile item={displayItem.item} {chatId} />
+			<ToolOutputFile item={displayItem.item} {chatId} />
 		{/if}
 	{:else if displayItem.type === 'context_compaction'}
 		<ContextCompactionLabel summary={displayItem.summary} {compactPreview} />

@@ -155,7 +155,9 @@ from open_webui.utils.tool_approval import complete_tool_call, pending_tool_call
 from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
 from open_webui.utils.tools import (
     connect_mcp_server,
+    display_file,
     get_attached_knowledge,
+    get_builtin_tool_spec,
     get_builtin_tools,
     get_terminal_tools,
     get_tools,
@@ -332,7 +334,8 @@ def build_terminal_file_tool_result(
         **tool_result,
         'type': 'file',
         'source': 'open_terminal',
-        **({'displayed': True} if tool_function_params.get('inline') is True else {}),
+        'exists': True,
+        'displayed': tool_function_params.get('inline') is True,
         'terminal_selector': terminal_selector,
         **({'terminal_id': terminal_id} if terminal_id else {}),
         **({'terminal_url': server_url} if server_url and not terminal_id else {}),
@@ -979,6 +982,7 @@ async def terminal_event_handler(
             {
                 'type': f'terminal:{tool_function_name}',
                 'data': {
+                    **result,
                     'path': path,
                     **({'page': page} if page else {}),
                 },
@@ -2810,7 +2814,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                 for tool in tool_specs:
                     tools_dict[tool['name']] = {
-                        'spec': tool,
+                        'spec': (
+                            get_builtin_tool_spec(display_file)
+                            if tool_server.get('is_terminal') and tool['name'] == 'display_file'
+                            else tool
+                        ),
                         'direct': True,
                         'server': tool_server,
                     }
@@ -2864,6 +2872,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
+                elif name == 'display_file' and (
+                    tools_dict[name].get('type') == 'terminal'
+                    or tools_dict[name].get('server', {}).get('is_terminal') is True
+                ):
+                    tools_dict[name] = {**tools_dict[name], 'file_tool': tool_dict}
 
         # Connections can keep shell tools advertised across browser disconnects for prompt caching.
         shell_tools = {
@@ -3103,6 +3116,14 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     tool = metadata.get('tools', {}).get(name)
     if not tool:
         return params, f'Error: Tool "{name}" not found.', None, None, False
+    if name == 'display_file' and (
+        str(params.get('path', '')).startswith('/api/v1/files/')
+        or re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', str(params.get('path', '')))
+    ):
+        if tool.get('file_tool'):
+            tool = tool['file_tool']
+        elif tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True:
+            return params, 'Error: Uploaded file display is not available.', None, None, False
     tool_type = tool.get('type', '')
     direct_tool = tool.get('direct', False)
     # MCP servers validate their own arguments
