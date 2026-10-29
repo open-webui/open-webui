@@ -39,6 +39,7 @@ from open_webui.utils.access_control import (
     validate_access_grants,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.plugin import (
     get_tool_contents_cache,
     get_tool_module_from_cache,
@@ -128,6 +129,10 @@ async def get_tools(
         server_id = f'server:{server.get("id")}'
         server_connections[server_id] = connection
 
+        function_name_filter_list = (connection.get('config') or {}).get('function_name_filter_list', '')
+        if isinstance(function_name_filter_list, str):
+            function_name_filter_list = function_name_filter_list.split(',')
+
         tools.append(
             ToolUserResponse(
                 **{
@@ -137,6 +142,11 @@ async def get_tools(
                     'meta': {
                         'description': server.get('openapi', {}).get('info', {}).get('description', ''),
                     },
+                    'specs': [
+                        spec
+                        for spec in server.get('specs', [])
+                        if not function_name_filter_list or is_string_allowed(spec['name'], function_name_filter_list)
+                    ],
                     'updated_at': int(time.time()),
                     'created_at': int(time.time()),
                 }
