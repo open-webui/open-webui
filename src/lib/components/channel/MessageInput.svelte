@@ -182,6 +182,14 @@
 			}
 		}
 
+		if (text.includes('{{USER_ROLE}}')) {
+			const role = sessionUser?.role || '';
+
+			if (role) {
+				text = text.replaceAll('{{USER_ROLE}}', role);
+			}
+		}
+
 		if (text.includes('{{USER_BIO}}')) {
 			const bio = sessionUser?.bio || '';
 
