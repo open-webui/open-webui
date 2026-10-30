@@ -349,7 +349,7 @@
 
 <h1 class="sr-only">{$i18n.t('Skills')}</h1>
 
-<Comments bind:view={comments} resourceType="skill">
+<Comments modal bind:view={comments} resourceType="skill">
 {#if loaded}
 	<ImportModal
 		bind:show={showImportFromLink}

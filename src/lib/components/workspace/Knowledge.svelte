@@ -317,7 +317,7 @@
 
 <h1 class="sr-only">{$i18n.t('Knowledge')}</h1>
 
-<Comments bind:view={comments} resourceType="knowledge">
+<Comments modal bind:view={comments} resourceType="knowledge">
 {#if loaded}
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}

@@ -357,7 +357,7 @@
 	successMessage={$i18n.t('Tool imported successfully')}
 />
 
-<Comments bind:view={comments} resourceType="tool">
+<Comments modal bind:view={comments} resourceType="tool">
 {#if loaded}
 	<input
 		id="documents-import-input"

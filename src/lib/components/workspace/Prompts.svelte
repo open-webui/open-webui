@@ -397,7 +397,7 @@
 
 <h1 class="sr-only">{$i18n.t('Prompts')}</h1>
 
-<Comments bind:view={comments} resourceType="prompt">
+<Comments modal bind:view={comments} resourceType="prompt">
 {#if loaded}
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}

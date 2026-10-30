@@ -527,7 +527,7 @@
 
 <h1 class="sr-only">{$i18n.t('Models')}</h1>
 
-<Comments bind:view={comments} resourceType="model">
+<Comments modal bind:view={comments} resourceType="model">
 {#if loaded}
 	<ModelDeleteConfirmDialog
 		bind:show={showModelDeleteConfirm}
