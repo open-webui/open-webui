@@ -650,7 +650,7 @@
 								<div class="flex items-center flex-wrap gap-1 mt-1 mb-1">
 									{#each message.reactions as reaction}
 										<Tooltip
-											content={reaction.count !== undefined
+											content={reaction.users.length === 0
 												? `${reaction.count} :${reaction.name}:`
 												: $i18n.t('{{NAMES}} reacted with {{REACTION}}', {
 														NAMES: reaction.users
