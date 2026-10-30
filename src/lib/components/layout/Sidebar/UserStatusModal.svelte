@@ -114,13 +114,13 @@
 									emoji = name;
 								}}
 							>
-								<div class=" flex items-center">
+								<button type="button" aria-label={$i18n.t('Emoji')} class=" flex items-center">
 									{#if emoji}
 										<Emoji shortCode={emoji} />
 									{:else}
 										<FaceSmile />
 									{/if}
-								</div>
+								</button>
 							</EmojiPicker>
 
 							<input
